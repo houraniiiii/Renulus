@@ -1,5 +1,5 @@
 import { createServer, type Server } from 'node:http';
-import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { startFrontend } from './frontend';
@@ -32,5 +32,17 @@ describe('native same-origin API boundary', () => {
     const app = await fixture(); const response = await fetch(app.origin + '/api/v1/stream', { headers: { 'x-renulus-token': 'synthetic-session' } });
     expect(response.headers.get('content-type')).toBe('text/event-stream'); expect(await response.text()).toContain('"completed"'); expect(app.received()).toBe('synthetic-session');
     expect((await fetch(app.origin + '/api/v1/health', { headers: { 'x-renulus-token': 'synthetic-session', Origin: 'https://untrusted.example' } })).status).toBe(403);
+  });
+  it('allows the blob PDF frame in both CSPs while retaining the object restriction', async () => {
+    const app = await fixture();
+    const response = await fetch(app.origin);
+    const header = response.headers.get('content-security-policy');
+    const index = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+    const meta = index.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)"/i)?.[1];
+    for (const policy of [header, meta]) {
+      expect(policy).toContain("frame-src 'self' blob:");
+      expect(policy).toContain("object-src 'none'");
+      expect(policy).toContain("connect-src 'self'");
+    }
   });
 });

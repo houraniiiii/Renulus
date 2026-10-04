@@ -6,6 +6,7 @@ import { allowedAuthorizationUrl, allowedSourceUrl, resolveProfile, type Desktop
 import { startBackend, type ManagedBackend } from './backend';
 import { startFrontend } from './frontend';
 import { createStartupWindow } from './startup-window';
+import { isBuiltinPdfResource } from './pdf-resources';
 import { activateWindow, ensureMainWindow } from './upstream/main-window-lifecycle';
 
 app.setName('Renulus');
@@ -37,7 +38,7 @@ function createWindow() {
   isolated.setPermissionCheckHandler(() => false);
   isolated.webRequest.onBeforeRequest((details, callback) => {
     const local = details.url.startsWith(origin + '/') || details.url === origin;
-    callback({ cancel: !local && !details.url.startsWith('data:') && !details.url.startsWith('blob:') });
+    callback({ cancel: !local && !details.url.startsWith('data:') && !details.url.startsWith('blob:') && !isBuiltinPdfResource(details.url) });
   });
   isolated.webRequest.onBeforeSendHeaders({ urls: [origin + '/api/v1/*'] }, (details, callback) => {
     if (details.webContentsId !== owner.webContents.id) { callback({ cancel: true }); return; }
