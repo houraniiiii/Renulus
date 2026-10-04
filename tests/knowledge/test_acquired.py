@@ -272,10 +272,11 @@ def test_ambiguous_duplicate_metadata_fields_are_unavailable(repository, case):
 
 
 @pytest.mark.parametrize("changes,code", [
-    ({"publication_status": "final", "latest_final_verified": True, "content_reviewed": True}, "article_version_review_required"),
     ({"retracted": True}, "article_status_unavailable"),
+    ({"repository_removed": True}, "article_status_unavailable"),
+    ({"superseded": True}, "article_status_unavailable"),
     ({"access_changed": True}, "article_status_unavailable")])
-def test_existing_source_journal_cannot_silently_promote_or_override_version_evidence(repository, case, changes, code):
+def test_existing_source_journal_restrictions_override_version_receipts(repository, case, changes, code):
     repository.update_source_status({"contract_version": 1, "event_id": "synthetic-review", "source_id": "L02",
         "identity": {"pmcid": "PMC90001"}, "changes": changes, "evidence": [{"inspected": True}]})
     collection = case.register(repository)
@@ -379,6 +380,7 @@ def test_real_knowledge_durable_queue_seam_and_canonical_provenance(repository, 
         evidence = json.loads(next(n[len(EVIDENCE_PREFIX):] for n in metadata["notes"] if n.startswith(EVIDENCE_PREFIX)))
         assert revision["sha256"] == hashlib.sha256(derivative).hexdigest() == evidence["derivative_sha256"]
         assert evidence["original_sha256"] == hashlib.sha256(case.xml.read_bytes()).hexdigest()
+        assert metadata["original_sha256"] == evidence["original_sha256"] != revision["sha256"]
         assert evidence["metadata_sha256"] == hashlib.sha256(case.meta.read_bytes()).hexdigest()
         assert metadata["edition"] == "PMC90001.1" and metadata["pmcid"] == "PMC90001"
         assert metadata["publication_status"] == "unknown" and not metadata["latest_final_verified"] and not metadata["content_reviewed"]

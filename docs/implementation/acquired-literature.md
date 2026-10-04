@@ -85,7 +85,9 @@ The local derivative retains the article licence, authors/copyright credit,
 canonical article link, exact licence URL and modification notice.
 
 Canonical SourceMetadata contains source L02, DOI/PMID/PMCID, edition such as PMC90001.1,
-publication date when present, acquisition topic IDs and acquired-jats role.
+the verified original JATS receipt SHA-256 in original_sha256, publication date
+when present, acquisition topic IDs and acquired-jats role. The canonical revision
+sha256 remains the extracted text derivative hash; it is not the original hash.
 Its notes include a stable renulus-acquired-v1 JSON evidence record: exact
 original and metadata paths/hashes, publisher XML URL/MD5, acquisition provenance,
 licence URL/statement, derivative hash/byte count and exclusions. Catalogue
@@ -104,16 +106,32 @@ The Library original endpoint serves the UTF-8 input derivative; the acquired
 JATS stays external, with its path/hash retained as provenance. Text citations
 use derivative character spans, without invented original PDF page numbers.
 
-Currentness is unknown: publication_status unknown, latest_final_verified false,
-content_reviewed false, with the acquired nonretraction flag explicitly labelled
-as a dated metadata observation. Existing negative source-journal status also
-blocks import. The parent journal currently matches publication IDs without a
-version/hash identity, so a publication-wide positive review cannot safely be
-replayed onto a fresh acquired version. This adapter returns
-article_version_review_required before queuing when that would happen. The
-narrow parent prerequisite is an exact edition/original-hash binding for positive
-currentness review; publication-level retraction/access restrictions must still
-apply. No shared journal/schema change was made in this lease.
+Acquisition currentness remains unknown: publication_status unknown,
+latest_final_verified false and content_reviewed false, with the nonretraction
+flag labelled as a dated metadata observation. Catalogue metadata and the
+renulus-acquired-v1 evidence retain this observation. A separately inspected
+review may establish canonical Library currentness through the parent journal.
+
+The follow-up starts from c7c0e373 in branch build/acquired-version-binding and
+sibling Renulus-wt-acquired-binding. Parent prerequisite 18a3814a (locally
+cherry-picked as e7ba40b4) adds paired identity.edition/original_sha256 matching;
+see [the parent currency contract](acquired-version-currency.md). The adapter
+sets original_sha256 only after receipt SHA/size and publisher MD5 checks. The
+blanket article_version_review_required guard is removed. import_text still
+receives the observed article.metadata and replays the journal before canonical
+persistence; a positive or clearing review must match both edition and original
+hash. Unbound reviews, other editions, different original bytes and derivative
+hashes cannot promote or clear acquired status.
+
+The restriction guard remains. Publication retracted/repository_removed/
+access_changed true denies every matching acquired version, including other
+topics. Bound superseded true applies only to the exact file; broad legacy
+supersession still denies import. Unknown/currentness invalidations remain
+effective. An exact inspected review can clear a journal restriction, while
+receipt/JATS permission and retraction checks still run independently. Earlier
+acquired revisions bind through their retained original-hash provenance note;
+same-proof retries need no duplicate import. This follow-up does not edit the
+parent journal, models, Updates, repository, schema or locks.
 
 Primary technical evidence: the [PMC dataset README](https://pmc-oa-opendata.s3.amazonaws.com/README.txt),
 retrieved October 4, 2026 UTC, 14,524 bytes, SHA-256
@@ -160,7 +178,27 @@ FastEmbed 0.8.1, LanceDB 0.39.0, ONNX Runtime 1.30.0 and defusedxml 0.7.1.
 The text route builds a DoclingDocument, runs HybridChunker with the selected
 embedding tokenizer, CPU FastEmbed, and real LanceDB staging/retrieval.
 
-Final relevant synthetic/API/repository/worker run: 80 passed in 44.09 seconds.
+Binding follow-up verification on October 4, 2026 UTC (October 5 Warsaw):
+121 checks passed in 54.20 seconds using the integration CPython 3.14.4 venv:
+
+```
+python -m pytest tests/knowledge/test_acquired.py tests/knowledge/test_acquired_binding.py tests/knowledge/test_acquired_api.py tests/knowledge/test_api_collection.py tests/knowledge/test_repository.py tests/knowledge/test_worker.py tests/knowledge/test_source_status.py tests/knowledge/test_source_version.py -q
+```
+
+The new binding file contributes 24 checks covering exact review-before-import,
+matching versions within one selected batch, broad/different edition/original/
+derivative reviews, publication restrictions across editions/topics, ignored
+unbound and other-file clearing, exact clearing, supersession scope, observed
+currentness invalidation, changed original bytes with unchanged prose, legacy
+provenance and durable same-proof retry. Canonical original and derivative
+hashes are separately asserted at the worker and API seams. Fixtures use real
+SQLite/LanceDB and explicitly synthetic extraction/embedding; external sockets
+are forbidden in the focused acquired tests. The existing Starlette TestClient
+deprecation warning remains. No actual external collection import or body read
+was run in this follow-up. Workspace check passed with 17,844 public files and
+226 local links; git diff --check passed.
+
+Original-slice synthetic/API/repository/worker run: 80 passed in 44.09 seconds.
 The workspace check passed (17813 public files, 225 local links). A final actual
 rerun passed in 193.22 seconds, with the same two ready versions, original/
 metadata/derivative hashes and 38 passages. Its evidence was recorded at

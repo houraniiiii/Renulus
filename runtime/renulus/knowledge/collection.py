@@ -249,8 +249,8 @@ class CollectionCatalogue:
             effective = self.repository.source_status.effective(article.metadata)
             if any((effective.retracted, effective.superseded, effective.repository_removed, effective.access_changed)):
                 raise ApiError("article_status_unavailable", "A recorded source-status restriction overrides the acquired receipt", 409)
-            if effective.publication_status == "final" or effective.latest_final_verified or effective.content_reviewed:
-                raise ApiError("article_version_review_required", "Publication-wide review does not establish currentness for this acquired article version; a version-specific status review is required", 409)
+            # The parent journal binds positive/clearing reviews to this exact
+            # edition and verified original hash; import_text replays that state.
             base = article.key
             version_prefix = "acquired:L02:" + article.metadata.edition + ":"
             previous = self.db.fetch_one("SELECT j.id,j.state,j.idempotency_key,r.sha256,r.document_id,d.deleted_at FROM knowledge_jobs j JOIN knowledge_revisions r ON r.id=j.revision_id JOIN knowledge_documents d ON d.id=r.document_id WHERE j.idempotency_key>=? AND j.idempotency_key<? ORDER BY (d.deleted_at IS NOT NULL),j.created_at DESC,r.ordinal DESC,j.id DESC LIMIT 1", (version_prefix, version_prefix + "\uffff"))

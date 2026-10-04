@@ -307,6 +307,7 @@ class AcquiredLiterature:
         metadata = SourceMetadata(source_id="L02", source_owner=article["publisher"],
             canonical_url="https://pmc.ncbi.nlm.nih.gov/articles/" + identity[0] + "/",
             access_class="open-licence-inspected", edition=name, publication_date=article["publication_date"],
+            original_sha256=item["sha256"],
             retrieved_at=item.get("retrieved_utc"), doi=article["doi"] or record.get("doi"),
             pmid=article["pmid"] or (str(record["pmid"]) if record.get("pmid") else None), pmcid=identity[0],
             topic_ids=topic_ids, asset_role=[MARKER, "extracted-article-text"],

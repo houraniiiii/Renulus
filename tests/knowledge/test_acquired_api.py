@@ -33,3 +33,4 @@ def test_existing_api_inspects_deliberate_selection_and_preserves_scope_and_batc
         inspected = next(e for e in api.get("/api/v1/library/collection/catalogue?source_id=L02").json()["entries"] if e["id"] == entry["id"])
         assert inspected["eligibility"] == "eligible" and inspected["rights"]["embedding"]
         assert inspected["processing_status"] == "queued" and not inspected["metadata"]["latest_final_verified"]
+        assert inspected["metadata"]["original_sha256"] == case.items[0]["sha256"]
