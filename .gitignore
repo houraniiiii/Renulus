@@ -1,0 +1,46 @@
+# Local links to preserved material, runtime state and migration evidence.
+/.local/
+/archive/
+/archives/
+/node_modules/
+**/node_modules/
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+/dist/
+/build/
+/artifacts/
+/logs/
+*.log
+
+# Secrets and private working content never belong in the product repository.
+.env
+.env.*
+!.env.example
+**/*.pem
+**/*.key
+**/*credentials*
+**/*secrets*
+**/*.sqlite
+**/*.sqlite3
+**/*.sqlite-wal
+**/*.sqlite-shm
+**/*.db
+/private/
+/data/
+
+# Machine-specific tool state and engine binaries. Vendor text is versioned.
+/.claude/settings.local.json
+/.impeccable/
+**/scripts/bin/
+*.exe
+*.dll
+*.zip
+*.tar.gz
+
+# Editor and OS scratch files.
+/.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp

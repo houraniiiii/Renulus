@@ -1,0 +1,25 @@
+# Renulus project declarations. Paths resolve from this .codex directory.
+# Native trust, account state, provider settings and launch profiles stay local.
+
+[agents.impeccable_asset_producer]
+description = "Produces reusable raster assets from approved Impeccable references."
+config_file = "../.agents/skills/impeccable/agents/impeccable_asset_producer.toml"
+
+[agents.impeccable_documenter]
+description = "Records the design system from an existing finished artifact."
+config_file = "../.agents/skills/impeccable/agents/impeccable_documenter.toml"
+
+[agents.impeccable_finish_reviewer]
+description = "Reviews supplied artifacts and screenshots against their agreed direction."
+config_file = "../.agents/skills/impeccable/agents/impeccable_finish_reviewer.toml"
+
+[agents.impeccable_manual_edit_applier]
+description = "Applies approved visual copy edits to their corresponding source."
+config_file = "../.agents/skills/impeccable/agents/impeccable_manual_edit_applier.toml"
+
+# Public Figma selection declarations; they provide no account authentication.
+[plugins."figma@openai-curated-remote"]
+enabled = true
+
+[apps.connector_68df038e0ba48191908c8434991bbac2]
+enabled = true

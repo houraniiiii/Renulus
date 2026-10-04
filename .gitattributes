@@ -1,0 +1,17 @@
+* text=auto eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.jsonl text eol=lf
+*.toml text eol=lf
+*.mjs text eol=lf
+*.py text eol=lf
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.png binary
+*.ico binary
+
+# Preserve reviewed vendor bytes, including their original line endings.
+/.agents/skills/** -text
+/.claude/skills/** -text
+/.claude/agents/** -text
+/.claude/commands/** -text

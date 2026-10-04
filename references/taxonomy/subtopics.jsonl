@@ -1,0 +1,199 @@
+{"topic_id":"T01","topic":"Foundations of kidney science","subtopic_id":"T01.S01","subtopic":"Anatomy \u0026 embryology (kidney, vasculature, urinary tract; CAKUT overview)"}
+{"topic_id":"T01","topic":"Foundations of kidney science","subtopic_id":"T01.S02","subtopic":"Histology \u0026 cell biology (glomerulus, tubules, interstitium, vessels)"}
+{"topic_id":"T01","topic":"Foundations of kidney science","subtopic_id":"T01.S03","subtopic":"Renal physiology â€” GFR \u0026 autoregulation; renal hemodynamics"}
+{"topic_id":"T01","topic":"Foundations of kidney science","subtopic_id":"T01.S04","subtopic":"Renal physiology â€” tubular transport (Na, water, glucose, urea, bicarbonate)"}
+{"topic_id":"T01","topic":"Foundations of kidney science","subtopic_id":"T01.S05","subtopic":"Renal physiology â€” concentrating/diluting mechanisms; ADH axis"}
+{"topic_id":"T01","topic":"Foundations of kidney science","subtopic_id":"T01.S06","subtopic":"Renal physiology â€” RAAS \u0026 natriuretic peptides"}
+{"topic_id":"T01","topic":"Foundations of kidney science","subtopic_id":"T01.S07","subtopic":"Renal physiology â€” acidâ€“base physiology (buffers, ammoniagenesis)"}
+{"topic_id":"T01","topic":"Foundations of kidney science","subtopic_id":"T01.S08","subtopic":"Renal physiology â€” endocrine functions (EPO, vitamin D, klotho; BP regulation)"}
+{"topic_id":"T01","topic":"Foundations of kidney science","subtopic_id":"T01.S09","subtopic":"Renal immunology \u0026 inflammation (mechanisms relevant to GN, AIN, transplant)"}
+{"topic_id":"T01","topic":"Foundations of kidney science","subtopic_id":"T01.S10","subtopic":"Renal pathology â€” patterns of injury; clinicopathologic syndromes"}
+{"topic_id":"T01","topic":"Foundations of kidney science","subtopic_id":"T01.S11","subtopic":"Renal pathology â€” biopsy processing (LM/IF/EM), reporting, scoring systems (conceptual)"}
+{"topic_id":"T02","topic":"Clinical approach, diagnostics, and decision-making","subtopic_id":"T02.S01","subtopic":"Nephrology history \u0026 exam (volume status, uremic symptoms, systemic clues)"}
+{"topic_id":"T02","topic":"Clinical approach, diagnostics, and decision-making","subtopic_id":"T02.S02","subtopic":"Urine-based diagnostics â€” dipstick limitations; urine microscopy (casts, dysmorphic RBCs)"}
+{"topic_id":"T02","topic":"Clinical approach, diagnostics, and decision-making","subtopic_id":"T02.S03","subtopic":"Urine-based diagnostics â€” protein quantification (ACR/PCR/24h); hematuria workup"}
+{"topic_id":"T02","topic":"Clinical approach, diagnostics, and decision-making","subtopic_id":"T02.S04","subtopic":"Kidney function assessment â€” eGFR equations; cystatin C; measured GFR concepts"}
+{"topic_id":"T02","topic":"Clinical approach, diagnostics, and decision-making","subtopic_id":"T02.S05","subtopic":"Kidney function assessment â€” differentiating AKI vs CKD vs AKD"}
+{"topic_id":"T02","topic":"Clinical approach, diagnostics, and decision-making","subtopic_id":"T02.S06","subtopic":"Core nephrology testing â€” serologic workup (GN panels), complements, paraprotein screening"}
+{"topic_id":"T02","topic":"Clinical approach, diagnostics, and decision-making","subtopic_id":"T02.S07","subtopic":"Genetic testing â€” indications, test selection, counseling basics"}
+{"topic_id":"T02","topic":"Clinical approach, diagnostics, and decision-making","subtopic_id":"T02.S08","subtopic":"Imaging in nephrology â€” ultrasound/Doppler, CT/MRI, nuclear medicine basics"}
+{"topic_id":"T02","topic":"Clinical approach, diagnostics, and decision-making","subtopic_id":"T02.S09","subtopic":"Imaging in nephrology â€” obstruction, cystic disease, renovascular disease"}
+{"topic_id":"T02","topic":"Clinical approach, diagnostics, and decision-making","subtopic_id":"T02.S10","subtopic":"Kidney biopsy â€” indications/contraindications; complications; post-biopsy care"}
+{"topic_id":"T02","topic":"Clinical approach, diagnostics, and decision-making","subtopic_id":"T02.S11","subtopic":"Clinical epidemiology \u0026 evidence-based nephrology (trials, observational data, risk prediction; staging frameworks)"}
+{"topic_id":"T03","topic":"Sodium, water, and volume disorders","subtopic_id":"T03.S01","subtopic":"Hyponatremia (hypotonic/euvolemic/hypervolemic; SIADH; low-solute; adrenal insufficiency)"}
+{"topic_id":"T03","topic":"Sodium, water, and volume disorders","subtopic_id":"T03.S02","subtopic":"Hypernatremia (free water deficit; diabetes insipidus framework)"}
+{"topic_id":"T03","topic":"Sodium, water, and volume disorders","subtopic_id":"T03.S03","subtopic":"Edema states (nephrotic syndrome, cirrhosis, heart failure)"}
+{"topic_id":"T03","topic":"Sodium, water, and volume disorders","subtopic_id":"T03.S04","subtopic":"Diuretic therapy (loop/thiazide/MRA; resistance; sequential nephron blockade)"}
+{"topic_id":"T03","topic":"Sodium, water, and volume disorders","subtopic_id":"T03.S05","subtopic":"IV fluids \u0026 resuscitation in kidney disease (balanced crystalloids, saline, colloidsâ€”principles)"}
+{"topic_id":"T03","topic":"Sodium, water, and volume disorders","subtopic_id":"T03.S06","subtopic":"Disorders of osmolality and safe correction (principles)"}
+{"topic_id":"T04","topic":"Acidâ€“base and potassium disorders","subtopic_id":"T04.S01","subtopic":"Metabolic acidosis (anion gap vs non-anion gap; CKD acidosis; RTA overview)"}
+{"topic_id":"T04","topic":"Acidâ€“base and potassium disorders","subtopic_id":"T04.S02","subtopic":"Metabolic alkalosis (chloride responsive vs resistant)"}
+{"topic_id":"T04","topic":"Acidâ€“base and potassium disorders","subtopic_id":"T04.S03","subtopic":"Respiratory acidâ€“base disorders and mixed disorders (interpretation)"}
+{"topic_id":"T04","topic":"Acidâ€“base and potassium disorders","subtopic_id":"T04.S04","subtopic":"Hyperkalemia â€” acute management; chronic management; RAASi continuation strategies"}
+{"topic_id":"T04","topic":"Acidâ€“base and potassium disorders","subtopic_id":"T04.S05","subtopic":"Hypokalemia (renal vs extrarenal losses; periodic paralysis concepts)"}
+{"topic_id":"T04","topic":"Acidâ€“base and potassium disorders","subtopic_id":"T04.S06","subtopic":"Dialysis-related acidâ€“base/electrolyte issues (principles)"}
+{"topic_id":"T05","topic":"Calcium, phosphate, magnesium disorders and mineral metabolism","subtopic_id":"T05.S01","subtopic":"Hypocalcemia and hypercalcemia"}
+{"topic_id":"T05","topic":"Calcium, phosphate, magnesium disorders and mineral metabolism","subtopic_id":"T05.S02","subtopic":"Hypophosphatemia and hyperphosphatemia"}
+{"topic_id":"T05","topic":"Calcium, phosphate, magnesium disorders and mineral metabolism","subtopic_id":"T05.S03","subtopic":"Hypomagnesemia and hypermagnesemia"}
+{"topic_id":"T05","topic":"Calcium, phosphate, magnesium disorders and mineral metabolism","subtopic_id":"T05.S04","subtopic":"Secondary hyperparathyroidism and vitamin D axis"}
+{"topic_id":"T05","topic":"Calcium, phosphate, magnesium disorders and mineral metabolism","subtopic_id":"T05.S05","subtopic":"CKDâ€“mineral and bone disorder (CKD-MBD): bone turnover concepts; vascular/soft tissue calcification; calciphylaxis (conceptual)"}
+{"topic_id":"T05","topic":"Calcium, phosphate, magnesium disorders and mineral metabolism","subtopic_id":"T05.S06","subtopic":"Stone-relevant mineral metabolism (hypercalciuria, hyperoxaluria concepts)"}
+{"topic_id":"T06","topic":"Acute kidney injury (AKI) and acute kidney disease (AKD)","subtopic_id":"T06.S01","subtopic":"Definitions, staging, trajectories (AKI vs AKD; recovery phenotypes)"}
+{"topic_id":"T06","topic":"Acute kidney injury (AKI) and acute kidney disease (AKD)","subtopic_id":"T06.S02","subtopic":"AKI etiologies â€” hemodynamic/prerenal"}
+{"topic_id":"T06","topic":"Acute kidney injury (AKI) and acute kidney disease (AKD)","subtopic_id":"T06.S03","subtopic":"AKI etiologies â€” intrinsic renal (ATI/ATN, AIN, GN, vascular causes)"}
+{"topic_id":"T06","topic":"Acute kidney injury (AKI) and acute kidney disease (AKD)","subtopic_id":"T06.S04","subtopic":"AKI etiologies â€” postrenal/obstructive"}
+{"topic_id":"T06","topic":"Acute kidney injury (AKI) and acute kidney disease (AKD)","subtopic_id":"T06.S05","subtopic":"AKI in sepsis/shock; surgery/trauma/burns"}
+{"topic_id":"T06","topic":"Acute kidney injury (AKI) and acute kidney disease (AKD)","subtopic_id":"T06.S06","subtopic":"AKI in cardiorenal/hepatorenal contexts (initial approach)"}
+{"topic_id":"T06","topic":"Acute kidney injury (AKI) and acute kidney disease (AKD)","subtopic_id":"T06.S07","subtopic":"Pregnancy-related AKI (framework)"}
+{"topic_id":"T06","topic":"Acute kidney injury (AKI) and acute kidney disease (AKD)","subtopic_id":"T06.S08","subtopic":"Transplant-related AKI (framework)"}
+{"topic_id":"T06","topic":"Acute kidney injury (AKI) and acute kidney disease (AKD)","subtopic_id":"T06.S09","subtopic":"AKI diagnostics â€” urine indices, microscopy, imaging"}
+{"topic_id":"T06","topic":"Acute kidney injury (AKI) and acute kidney disease (AKD)","subtopic_id":"T06.S10","subtopic":"AKI diagnostics â€” biomarkers (concepts and limitations)"}
+{"topic_id":"T06","topic":"Acute kidney injury (AKI) and acute kidney disease (AKD)","subtopic_id":"T06.S11","subtopic":"Prevention \u0026 supportive care (nephrotoxin stewardship, hemodynamics, contrast risk mitigationâ€”principles)"}
+{"topic_id":"T06","topic":"Acute kidney injury (AKI) and acute kidney disease (AKD)","subtopic_id":"T06.S12","subtopic":"Renal recovery and follow-up (AKI-to-CKD transition)"}
+{"topic_id":"T07","topic":"Critical care nephrology","subtopic_id":"T07.S01","subtopic":"RRT in ICU â€” indications and timing concepts"}
+{"topic_id":"T07","topic":"Critical care nephrology","subtopic_id":"T07.S02","subtopic":"CRRT modalities (CVVH/CVVHD/CVVHDF), SLED, intermittent HD in ICU (principles)"}
+{"topic_id":"T07","topic":"Critical care nephrology","subtopic_id":"T07.S03","subtopic":"Anticoagulation for CRRT (heparin vs citrateâ€”principles)"}
+{"topic_id":"T07","topic":"Critical care nephrology","subtopic_id":"T07.S04","subtopic":"Fluid balance/ultrafiltration targets; solute dosing concepts"}
+{"topic_id":"T07","topic":"Critical care nephrology","subtopic_id":"T07.S05","subtopic":"AKI with organ support (ventilation interactions; ECMO considerationsâ€”high-level)"}
+{"topic_id":"T07","topic":"Critical care nephrology","subtopic_id":"T07.S06","subtopic":"Extracorporeal therapies for poisonings/toxin removal (principles)"}
+{"topic_id":"T08","topic":"Chronic kidney disease (CKD): evaluation and progression","subtopic_id":"T08.S01","subtopic":"CKD definition, staging, and cause-based evaluation"}
+{"topic_id":"T08","topic":"Chronic kidney disease (CKD): evaluation and progression","subtopic_id":"T08.S02","subtopic":"Progression risk assessment (albuminuria, BP, diabetes, nephrotoxins, genetics)"}
+{"topic_id":"T08","topic":"Chronic kidney disease (CKD): evaluation and progression","subtopic_id":"T08.S03","subtopic":"Nephroprotection strategies â€” BP/proteinuria management; RAASi stewardship"}
+{"topic_id":"T08","topic":"Chronic kidney disease (CKD): evaluation and progression","subtopic_id":"T08.S04","subtopic":"Nephroprotection strategies â€” diabetes kidney protection strategy framework (high-level classes)"}
+{"topic_id":"T08","topic":"Chronic kidney disease (CKD): evaluation and progression","subtopic_id":"T08.S05","subtopic":"CKD complications overview (anemia, CKD-MBD, acidosis, hyperkalemia, volume overload)"}
+{"topic_id":"T08","topic":"Chronic kidney disease (CKD): evaluation and progression","subtopic_id":"T08.S06","subtopic":"CKD cardiovascular risk; dyslipidemia; uremic symptoms (overview)"}
+{"topic_id":"T08","topic":"Chronic kidney disease (CKD): evaluation and progression","subtopic_id":"T08.S07","subtopic":"CKD surveillance and timing of referral (concepts)"}
+{"topic_id":"T08","topic":"Chronic kidney disease (CKD): evaluation and progression","subtopic_id":"T08.S08","subtopic":"Preparation for kidney replacement therapy (education, access planning)"}
+{"topic_id":"T08","topic":"Chronic kidney disease (CKD): evaluation and progression","subtopic_id":"T08.S09","subtopic":"Conservative kidney management (non-dialysis pathway basics)"}
+{"topic_id":"T09","topic":"Hypertension and vascular nephrology","subtopic_id":"T09.S01","subtopic":"Accurate BP diagnosis (ABPM/HBPM principles; pseudohypertension concepts)"}
+{"topic_id":"T09","topic":"Hypertension and vascular nephrology","subtopic_id":"T09.S02","subtopic":"Primary hypertension in CKD"}
+{"topic_id":"T09","topic":"Hypertension and vascular nephrology","subtopic_id":"T09.S03","subtopic":"Secondary hypertension â€” renovascular (RAS, FMD)"}
+{"topic_id":"T09","topic":"Hypertension and vascular nephrology","subtopic_id":"T09.S04","subtopic":"Secondary hypertension â€” endocrine (primary aldosteronism, pheochromocytoma, thyroid/parathyroidâ€”high-level)"}
+{"topic_id":"T09","topic":"Hypertension and vascular nephrology","subtopic_id":"T09.S05","subtopic":"Secondary hypertension â€” OSA, drug-induced, pregnancy-related"}
+{"topic_id":"T09","topic":"Hypertension and vascular nephrology","subtopic_id":"T09.S06","subtopic":"Hypertensive emergencies and kidney involvement"}
+{"topic_id":"T09","topic":"Hypertension and vascular nephrology","subtopic_id":"T09.S07","subtopic":"Renal vascular disorders â€” atheroembolic kidney disease"}
+{"topic_id":"T09","topic":"Hypertension and vascular nephrology","subtopic_id":"T09.S08","subtopic":"Renal vascular disorders â€” renal vein thrombosis"}
+{"topic_id":"T09","topic":"Hypertension and vascular nephrology","subtopic_id":"T09.S09","subtopic":"Renal vascular disorders â€” ischemic nephropathy concepts"}
+{"topic_id":"T10","topic":"Glomerular diseases","subtopic_id":"T10.S01","subtopic":"Syndromic presentations (nephrotic, nephritic, RPGN, isolated hematuria/proteinuria)"}
+{"topic_id":"T10","topic":"Glomerular diseases","subtopic_id":"T10.S02","subtopic":"Primary glomerulopathies â€” minimal change disease"}
+{"topic_id":"T10","topic":"Glomerular diseases","subtopic_id":"T10.S03","subtopic":"Primary glomerulopathies â€” FSGS (primary vs secondary concepts)"}
+{"topic_id":"T10","topic":"Glomerular diseases","subtopic_id":"T10.S04","subtopic":"Primary glomerulopathies â€” membranous nephropathy"}
+{"topic_id":"T10","topic":"Glomerular diseases","subtopic_id":"T10.S05","subtopic":"Primary glomerulopathies â€” IgA nephropathy"}
+{"topic_id":"T10","topic":"Glomerular diseases","subtopic_id":"T10.S06","subtopic":"Primary glomerulopathies â€” MPGN patterns; C3 glomerulopathy (high-level separation)"}
+{"topic_id":"T10","topic":"Glomerular diseases","subtopic_id":"T10.S07","subtopic":"Secondary GN â€” lupus nephritis"}
+{"topic_id":"T10","topic":"Glomerular diseases","subtopic_id":"T10.S08","subtopic":"Secondary GN â€” ANCA-associated vasculitis"}
+{"topic_id":"T10","topic":"Glomerular diseases","subtopic_id":"T10.S09","subtopic":"Secondary GN â€” anti-GBM disease"}
+{"topic_id":"T10","topic":"Glomerular diseases","subtopic_id":"T10.S10","subtopic":"Secondary GN â€” infection-related GN"}
+{"topic_id":"T10","topic":"Glomerular diseases","subtopic_id":"T10.S11","subtopic":"Secondary GN â€” cryoglobulinemic GN"}
+{"topic_id":"T10","topic":"Glomerular diseases","subtopic_id":"T10.S12","subtopic":"Secondary GN â€” paraprotein-related GN / MGRS overlap (link to onconephrology)"}
+{"topic_id":"T10","topic":"Glomerular diseases","subtopic_id":"T10.S13","subtopic":"Therapeutic principles â€” supportive care (BP/proteinuria/edema; thrombosis prevention concepts)"}
+{"topic_id":"T10","topic":"Glomerular diseases","subtopic_id":"T10.S14","subtopic":"Therapeutic principles â€” immunosuppression classes \u0026 monitoring (principles)"}
+{"topic_id":"T10","topic":"Glomerular diseases","subtopic_id":"T10.S15","subtopic":"Relapse, remission, monitoring, and complications"}
+{"topic_id":"T11","topic":"Tubular, tubulointerstitial, and urinary concentrating disorders","subtopic_id":"T11.S01","subtopic":"Acute tubular injury / ATN (ischemic/toxic; diagnosis principles)"}
+{"topic_id":"T11","topic":"Tubular, tubulointerstitial, and urinary concentrating disorders","subtopic_id":"T11.S02","subtopic":"Acute interstitial nephritis (drug/infection/systemic; biopsy concepts)"}
+{"topic_id":"T11","topic":"Tubular, tubulointerstitial, and urinary concentrating disorders","subtopic_id":"T11.S03","subtopic":"Chronic tubulointerstitial nephritis (reflux, toxins, analgesic, obstructiveâ€”high-level)"}
+{"topic_id":"T11","topic":"Tubular, tubulointerstitial, and urinary concentrating disorders","subtopic_id":"T11.S04","subtopic":"Renal tubular acidoses (types 1/2/4)"}
+{"topic_id":"T11","topic":"Tubular, tubulointerstitial, and urinary concentrating disorders","subtopic_id":"T11.S05","subtopic":"Salt-handling syndromes (Bartter/Gitelman; Liddle; apparent mineralocorticoid excessâ€”concepts)"}
+{"topic_id":"T11","topic":"Tubular, tubulointerstitial, and urinary concentrating disorders","subtopic_id":"T11.S06","subtopic":"Fanconi syndrome and proximal tubulopathies"}
+{"topic_id":"T11","topic":"Tubular, tubulointerstitial, and urinary concentrating disorders","subtopic_id":"T11.S07","subtopic":"Diabetes insipidus (central vs nephrogenic; lithium-related concepts)"}
+{"topic_id":"T12","topic":"Cystic, hereditary, and congenital kidney diseases","subtopic_id":"T12.S01","subtopic":"ADPKD (diagnosis, complications, extrarenal screening concepts, disease-modifying therapy concepts)"}
+{"topic_id":"T12","topic":"Cystic, hereditary, and congenital kidney diseases","subtopic_id":"T12.S02","subtopic":"ARPKD and hepatorenal fibrocystic diseases (high-level)"}
+{"topic_id":"T12","topic":"Cystic, hereditary, and congenital kidney diseases","subtopic_id":"T12.S03","subtopic":"Nephronophthisis and ciliopathies"}
+{"topic_id":"T12","topic":"Cystic, hereditary, and congenital kidney diseases","subtopic_id":"T12.S04","subtopic":"Alport syndrome and thin basement membrane disease"}
+{"topic_id":"T12","topic":"Cystic, hereditary, and congenital kidney diseases","subtopic_id":"T12.S05","subtopic":"Tuberous sclerosis complex kidney involvement"}
+{"topic_id":"T12","topic":"Cystic, hereditary, and congenital kidney diseases","subtopic_id":"T12.S06","subtopic":"Fabry disease and other storage disorders (high-level)"}
+{"topic_id":"T12","topic":"Cystic, hereditary, and congenital kidney diseases","subtopic_id":"T12.S07","subtopic":"CAKUT and reflux nephropathy (life-course implications; transition to adult care)"}
+{"topic_id":"T13","topic":"Nephrolithiasis, obstruction, and crystal nephropathies","subtopic_id":"T13.S01","subtopic":"Stone types and evaluation (calcium, uric acid, struvite, cystine; metabolic evaluation; prevention)"}
+{"topic_id":"T13","topic":"Nephrolithiasis, obstruction, and crystal nephropathies","subtopic_id":"T13.S02","subtopic":"Drug-associated stones/crystalluria (principles)"}
+{"topic_id":"T13","topic":"Nephrolithiasis, obstruction, and crystal nephropathies","subtopic_id":"T13.S03","subtopic":"Crystal nephropathies â€” oxalate nephropathy"}
+{"topic_id":"T13","topic":"Nephrolithiasis, obstruction, and crystal nephropathies","subtopic_id":"T13.S04","subtopic":"Crystal nephropathies â€” uric acid nephropathy / tumor lysis link"}
+{"topic_id":"T13","topic":"Nephrolithiasis, obstruction, and crystal nephropathies","subtopic_id":"T13.S05","subtopic":"Crystal nephropathies â€” pigment nephropathy links (rhabdomyolysis/hemolysis)"}
+{"topic_id":"T13","topic":"Nephrolithiasis, obstruction, and crystal nephropathies","subtopic_id":"T13.S06","subtopic":"Obstructive uropathy (acute vs chronic; post-obstructive diuresis; urology coordination concepts)"}
+{"topic_id":"T14","topic":"Diabetic kidney disease and metabolic kidney disorders","subtopic_id":"T14.S01","subtopic":"Diabetic kidney disease (DKD): diagnosis, staging, and differential with non-diabetic kidney disease"}
+{"topic_id":"T14","topic":"Diabetic kidney disease and metabolic kidney disorders","subtopic_id":"T14.S02","subtopic":"DKD therapy framework (kidney-protective strategiesâ€”high-level)"}
+{"topic_id":"T14","topic":"Diabetic kidney disease and metabolic kidney disorders","subtopic_id":"T14.S03","subtopic":"Obesity-related kidney disease (hyperfiltration, secondary FSGS concepts)"}
+{"topic_id":"T14","topic":"Diabetic kidney disease and metabolic kidney disorders","subtopic_id":"T14.S04","subtopic":"Hyperuricemia and gout in CKD (riskâ€“benefit concepts)"}
+{"topic_id":"T14","topic":"Diabetic kidney disease and metabolic kidney disorders","subtopic_id":"T14.S05","subtopic":"Metabolic syndrome and kidney risk (high-level)"}
+{"topic_id":"T14","topic":"Diabetic kidney disease and metabolic kidney disorders","subtopic_id":"T14.S06","subtopic":"Postâ€“bariatric surgery kidney issues (stones/oxalate riskâ€”conceptual)"}
+{"topic_id":"T15","topic":"Thrombotic microangiopathies and complement-mediated disease","subtopic_id":"T15.S01","subtopic":"TMA syndromes: definitions and differential diagnosis"}
+{"topic_id":"T15","topic":"Thrombotic microangiopathies and complement-mediated disease","subtopic_id":"T15.S02","subtopic":"TTP vs HUS vs complement-mediated aHUS (distinguishing concepts)"}
+{"topic_id":"T15","topic":"Thrombotic microangiopathies and complement-mediated disease","subtopic_id":"T15.S03","subtopic":"Secondary TMAs (malignant HTN, pregnancy/HELLP, drugs, infection, transplant-associated)"}
+{"topic_id":"T15","topic":"Thrombotic microangiopathies and complement-mediated disease","subtopic_id":"T15.S04","subtopic":"Complement testing and genetics (indications and interpretation basics)"}
+{"topic_id":"T15","topic":"Thrombotic microangiopathies and complement-mediated disease","subtopic_id":"T15.S05","subtopic":"Therapeutic principles (plasma exchange vs complement inhibitionâ€”concepts; kidney prognosis; transplant implications)"}
+{"topic_id":"T16","topic":"Kidney involvement in systemic diseases","subtopic_id":"T16.S01","subtopic":"Autoimmune/rheumatologic kidney disease (SLE, vasculitis spectrum, scleroderma renal crisis, SjÃ¶gren, sarcoidosisâ€”high-level)"}
+{"topic_id":"T16","topic":"Kidney involvement in systemic diseases","subtopic_id":"T16.S02","subtopic":"Infectious systemic diseases with kidney involvement (high-level; link to ID section)"}
+{"topic_id":"T16","topic":"Kidney involvement in systemic diseases","subtopic_id":"T16.S03","subtopic":"Hematologic and multisystem kidney disease (sickle cell nephropathyâ€”high-level; amyloidosis link)"}
+{"topic_id":"T16","topic":"Kidney involvement in systemic diseases","subtopic_id":"T16.S04","subtopic":"Pregnancy-related systemic syndromes with kidney injury (preeclampsia spectrumâ€”conceptual)"}
+{"topic_id":"T17","topic":"Infectious diseases in nephrology","subtopic_id":"T17.S01","subtopic":"UTI spectrum (uncomplicated/complicated; pyelonephritis; recurrent UTI evaluation)"}
+{"topic_id":"T17","topic":"Infectious diseases in nephrology","subtopic_id":"T17.S02","subtopic":"Infections in CKD and dialysis â€” vascular access infections; bloodstream infection prevention principles"}
+{"topic_id":"T17","topic":"Infectious diseases in nephrology","subtopic_id":"T17.S03","subtopic":"Infections in CKD and dialysis â€” PD peritonitis and exit-site infections"}
+{"topic_id":"T17","topic":"Infectious diseases in nephrology","subtopic_id":"T17.S04","subtopic":"Transplant infectious syndromes (CMV, BK, EBV/PTLD risk concepts, PJP prophylaxis, fungal infectionsâ€”high-level)"}
+{"topic_id":"T17","topic":"Infectious diseases in nephrology","subtopic_id":"T17.S05","subtopic":"Infection-related GN (clinical patterns; management principles)"}
+{"topic_id":"T17","topic":"Infectious diseases in nephrology","subtopic_id":"T17.S06","subtopic":"Vaccination and prophylaxis strategies in CKD/dialysis/transplant (principles)"}
+{"topic_id":"T18","topic":"Onconephrology and paraprotein-related kidney disease","subtopic_id":"T18.S01","subtopic":"Cancer-related kidney injury (obstruction, infiltration, hypercalcemia-mediated injury)"}
+{"topic_id":"T18","topic":"Onconephrology and paraprotein-related kidney disease","subtopic_id":"T18.S02","subtopic":"Tumor lysis syndrome (prevention and management concepts)"}
+{"topic_id":"T18","topic":"Onconephrology and paraprotein-related kidney disease","subtopic_id":"T18.S03","subtopic":"Paraprotein disorders â€” myeloma cast nephropathy"}
+{"topic_id":"T18","topic":"Onconephrology and paraprotein-related kidney disease","subtopic_id":"T18.S04","subtopic":"Paraprotein disorders â€” AL amyloidosis; light chain deposition disease"}
+{"topic_id":"T18","topic":"Onconephrology and paraprotein-related kidney disease","subtopic_id":"T18.S05","subtopic":"MGRS framework (when to suspect; biopsy role)"}
+{"topic_id":"T18","topic":"Onconephrology and paraprotein-related kidney disease","subtopic_id":"T18.S06","subtopic":"Nephrotoxicity from cancer therapies (chemotherapy/targeted therapy principles; checkpoint inhibitor kidney toxicity concepts)"}
+{"topic_id":"T18","topic":"Onconephrology and paraprotein-related kidney disease","subtopic_id":"T18.S07","subtopic":"Dialysis/transplant considerations in oncology (high-level)"}
+{"topic_id":"T19","topic":"Clinical pharmacology, drug dosing, and nephrotoxicology","subtopic_id":"T19.S01","subtopic":"Pharmacokinetics in CKD, dialysis, and transplant (principles)"}
+{"topic_id":"T19","topic":"Clinical pharmacology, drug dosing, and nephrotoxicology","subtopic_id":"T19.S02","subtopic":"Dose adjustment frameworks (eGFR/CrCl; dialysis clearance concepts)"}
+{"topic_id":"T19","topic":"Clinical pharmacology, drug dosing, and nephrotoxicology","subtopic_id":"T19.S03","subtopic":"Therapeutic drug monitoring (when/why; common pitfalls)"}
+{"topic_id":"T19","topic":"Clinical pharmacology, drug dosing, and nephrotoxicology","subtopic_id":"T19.S04","subtopic":"Drug-induced kidney disease (hemodynamic injury, AIN, GN, crystal nephropathy, pigment-related mechanisms)"}
+{"topic_id":"T19","topic":"Clinical pharmacology, drug dosing, and nephrotoxicology","subtopic_id":"T19.S05","subtopic":"Contrast-associated kidney injury risk mitigation (principles)"}
+{"topic_id":"T19","topic":"Clinical pharmacology, drug dosing, and nephrotoxicology","subtopic_id":"T19.S06","subtopic":"Extracorporeal removal of toxins (when dialysis helpsâ€”principles)"}
+{"topic_id":"T20","topic":"Kidney failure therapies: hemodialysis, peritoneal dialysis, and home modalities","subtopic_id":"T20.S01","subtopic":"Modality selection \u0026 shared decision-making"}
+{"topic_id":"T20","topic":"Kidney failure therapies: hemodialysis, peritoneal dialysis, and home modalities","subtopic_id":"T20.S02","subtopic":"Hemodialysis â€” access types (AVF/AVG/catheters), surveillance, complications"}
+{"topic_id":"T20","topic":"Kidney failure therapies: hemodialysis, peritoneal dialysis, and home modalities","subtopic_id":"T20.S03","subtopic":"Hemodialysis â€” prescription basics (dialyzer, dialysate composition, UF strategy)"}
+{"topic_id":"T20","topic":"Kidney failure therapies: hemodialysis, peritoneal dialysis, and home modalities","subtopic_id":"T20.S04","subtopic":"Hemodialysis â€” adequacy and outcomes (Kt/V concepts; symptom-based adequacy)"}
+{"topic_id":"T20","topic":"Kidney failure therapies: hemodialysis, peritoneal dialysis, and home modalities","subtopic_id":"T20.S05","subtopic":"Hemodialysis â€” intradialytic complications (hypotension, cramps, arrhythmias)"}
+{"topic_id":"T20","topic":"Kidney failure therapies: hemodialysis, peritoneal dialysis, and home modalities","subtopic_id":"T20.S06","subtopic":"Hemodialysis â€” water quality \u0026 infection control (unit-level safety concepts)"}
+{"topic_id":"T20","topic":"Kidney failure therapies: hemodialysis, peritoneal dialysis, and home modalities","subtopic_id":"T20.S07","subtopic":"Peritoneal dialysis â€” catheter care; prescriptions (CAPD/APD)"}
+{"topic_id":"T20","topic":"Kidney failure therapies: hemodialysis, peritoneal dialysis, and home modalities","subtopic_id":"T20.S08","subtopic":"Peritoneal dialysis â€” peritonitis recognition and management (principles)"}
+{"topic_id":"T20","topic":"Kidney failure therapies: hemodialysis, peritoneal dialysis, and home modalities","subtopic_id":"T20.S09","subtopic":"Peritoneal dialysis â€” mechanical/metabolic complications (UF failure concepts)"}
+{"topic_id":"T20","topic":"Kidney failure therapies: hemodialysis, peritoneal dialysis, and home modalities","subtopic_id":"T20.S10","subtopic":"Home therapies â€” home HD framework; monitoring and safety (high-level)"}
+{"topic_id":"T20","topic":"Kidney failure therapies: hemodialysis, peritoneal dialysis, and home modalities","subtopic_id":"T20.S11","subtopic":"Dialysis complications of CKD (anemia/CKD-MBD/pruritus/nutrition issuesâ€”conceptual)"}
+{"topic_id":"T21","topic":"Kidney transplantation","subtopic_id":"T21.S01","subtopic":"Referral, listing, and pre-transplant optimization"}
+{"topic_id":"T21","topic":"Kidney transplantation","subtopic_id":"T21.S02","subtopic":"Living donation (evaluation, ethics, long-term donor follow-up concepts)"}
+{"topic_id":"T21","topic":"Kidney transplantation","subtopic_id":"T21.S03","subtopic":"Transplant immunology (HLA, sensitization, crossmatch; desensitization concepts)"}
+{"topic_id":"T21","topic":"Kidney transplantation","subtopic_id":"T21.S04","subtopic":"Immunosuppression (induction/maintenance classes; monitoring principles; toxicities)"}
+{"topic_id":"T21","topic":"Kidney transplantation","subtopic_id":"T21.S05","subtopic":"Allograft dysfunction (delayed graft function; rejection syndromes; biopsy roleâ€”conceptual)"}
+{"topic_id":"T21","topic":"Kidney transplantation","subtopic_id":"T21.S06","subtopic":"Post-transplant complications (infection syndromes high-level; malignancy risk; metabolic syndrome)"}
+{"topic_id":"T21","topic":"Kidney transplantation","subtopic_id":"T21.S07","subtopic":"Recurrent/de novo glomerular disease after transplant"}
+{"topic_id":"T21","topic":"Kidney transplantation","subtopic_id":"T21.S08","subtopic":"Special scenarios (pregnancy post-transplant; pediatric-to-adult transition; multi-organ transplant overview)"}
+{"topic_id":"T22","topic":"Interventional nephrology and practical procedures","subtopic_id":"T22.S01","subtopic":"Urine microscopy competency"}
+{"topic_id":"T22","topic":"Interventional nephrology and practical procedures","subtopic_id":"T22.S02","subtopic":"Point-of-care ultrasound (POCUS) for volume/access assessment (high-level)"}
+{"topic_id":"T22","topic":"Interventional nephrology and practical procedures","subtopic_id":"T22.S03","subtopic":"Kidney biopsy procedure workflow and complications management (practical)"}
+{"topic_id":"T22","topic":"Interventional nephrology and practical procedures","subtopic_id":"T22.S04","subtopic":"Dialysis access procedures â€” temporary/tunneled catheter insertion care (conceptual)"}
+{"topic_id":"T22","topic":"Interventional nephrology and practical procedures","subtopic_id":"T22.S05","subtopic":"Access troubleshooting and referral pathways (high-level)"}
+{"topic_id":"T22","topic":"Interventional nephrology and practical procedures","subtopic_id":"T22.S06","subtopic":"PD catheter concepts (placement options; complication recognition)"}
+{"topic_id":"T22","topic":"Interventional nephrology and practical procedures","subtopic_id":"T22.S07","subtopic":"Dialysis machine and prescription troubleshooting (high-level)"}
+{"topic_id":"T23","topic":"Extracorporeal blood purification and apheresis","subtopic_id":"T23.S01","subtopic":"Therapeutic plasma exchange (indications, replacement fluids, complications)"}
+{"topic_id":"T23","topic":"Extracorporeal blood purification and apheresis","subtopic_id":"T23.S02","subtopic":"Immunoadsorption / LDL apheresis (high-level)"}
+{"topic_id":"T23","topic":"Extracorporeal blood purification and apheresis","subtopic_id":"T23.S03","subtopic":"Adsorption/hemoperfusion concepts (selected indications)"}
+{"topic_id":"T23","topic":"Extracorporeal blood purification and apheresis","subtopic_id":"T23.S04","subtopic":"Extracorporeal therapy for toxin removal (principles; link to toxicology)"}
+{"topic_id":"T24","topic":"Special populations and life-course nephrology","subtopic_id":"T24.S01","subtopic":"Pediatric nephrology essentials for adult nephrologists (CAKUT, pediatric nephrotic syndrome, pediatric AKI/HUSâ€”high-level)"}
+{"topic_id":"T24","topic":"Special populations and life-course nephrology","subtopic_id":"T24.S02","subtopic":"Adolescents and transition to adult care"}
+{"topic_id":"T24","topic":"Special populations and life-course nephrology","subtopic_id":"T24.S03","subtopic":"Pregnancy and reproductive nephrology (CKD in pregnancy, preeclampsia spectrum, dialysis in pregnancy, contraception/fertility counseling concepts)"}
+{"topic_id":"T24","topic":"Special populations and life-course nephrology","subtopic_id":"T24.S04","subtopic":"Geriatric nephrology (frailty, polypharmacy, goals-of-care in advanced CKD)"}
+{"topic_id":"T24","topic":"Special populations and life-course nephrology","subtopic_id":"T24.S05","subtopic":"Global nephrology / resource-limited settings (high-level)"}
+{"topic_id":"T25","topic":"Nutrition, lifestyle, prevention, and rehabilitation","subtopic_id":"T25.S01","subtopic":"Dietary management across CKD stages (sodium, protein, potassium, phosphate, fluidâ€”principles)"}
+{"topic_id":"T25","topic":"Nutrition, lifestyle, prevention, and rehabilitation","subtopic_id":"T25.S02","subtopic":"Dialysis nutrition (protein-energy wasting concepts)"}
+{"topic_id":"T25","topic":"Nutrition, lifestyle, prevention, and rehabilitation","subtopic_id":"T25.S03","subtopic":"Transplant metabolic health (weight gain, diabetes, lipidsâ€”high-level)"}
+{"topic_id":"T25","topic":"Nutrition, lifestyle, prevention, and rehabilitation","subtopic_id":"T25.S04","subtopic":"Lifestyle and prevention (exercise, smoking cessation, vaccination, CKD screening strategiesâ€”conceptual)"}
+{"topic_id":"T25","topic":"Nutrition, lifestyle, prevention, and rehabilitation","subtopic_id":"T25.S05","subtopic":"Patient education and self-management frameworks"}
+{"topic_id":"T26","topic":"Ethics, palliative nephrology, quality, leadership, and research","subtopic_id":"T26.S01","subtopic":"Ethics \u0026 law (consent/capacity, confidentiality, transplant ethics, living donor ethics)"}
+{"topic_id":"T26","topic":"Ethics, palliative nephrology, quality, leadership, and research","subtopic_id":"T26.S02","subtopic":"Supportive care and end-of-life nephrology (conservative kidney management; dialysis initiation/withdrawal; symptom control concepts)"}
+{"topic_id":"T26","topic":"Ethics, palliative nephrology, quality, leadership, and research","subtopic_id":"T26.S03","subtopic":"Patient safety \u0026 quality improvement (dialysis safety, infection prevention, adverse event review, registries/metrics)"}
+{"topic_id":"T26","topic":"Ethics, palliative nephrology, quality, leadership, and research","subtopic_id":"T26.S04","subtopic":"Leadership \u0026 operations (dialysis unit operations; transplant program interfaces; workforce/team leadership)"}
+{"topic_id":"T26","topic":"Ethics, palliative nephrology, quality, leadership, and research","subtopic_id":"T26.S05","subtopic":"Health equity \u0026 access (disparities in CKD care, dialysis access, transplant eligibility/outcomes)"}
+{"topic_id":"T26","topic":"Ethics, palliative nephrology, quality, leadership, and research","subtopic_id":"T26.S06","subtopic":"Research literacy (trial design, registries, observational bias, guideline appraisal)"}
+{"topic_id":"T27","topic":"Interfaces with other specialties (adjacent knowledge)","subtopic_id":"T27.S01","subtopic":"Cardiology interface (HF/cardiorenal care frameworks)"}
+{"topic_id":"T27","topic":"Interfaces with other specialties (adjacent knowledge)","subtopic_id":"T27.S02","subtopic":"Endocrinology interface (diabetes, mineral metabolism)"}
+{"topic_id":"T27","topic":"Interfaces with other specialties (adjacent knowledge)","subtopic_id":"T27.S03","subtopic":"Rheumatology/Immunology interface (systemic autoimmune disease frameworks)"}
+{"topic_id":"T27","topic":"Interfaces with other specialties (adjacent knowledge)","subtopic_id":"T27.S04","subtopic":"Hematology/Oncology interface (paraproteins, cancer therapy kidney injury)"}
+{"topic_id":"T27","topic":"Interfaces with other specialties (adjacent knowledge)","subtopic_id":"T27.S05","subtopic":"Infectious diseases interface (immunosuppressed host)"}
+{"topic_id":"T27","topic":"Interfaces with other specialties (adjacent knowledge)","subtopic_id":"T27.S06","subtopic":"Urology interface (obstruction, stones, urinary tract anatomy)"}
+{"topic_id":"T27","topic":"Interfaces with other specialties (adjacent knowledge)","subtopic_id":"T27.S07","subtopic":"Obstetrics interface (pregnancy kidney syndromes)"}
+{"topic_id":"T27","topic":"Interfaces with other specialties (adjacent knowledge)","subtopic_id":"T27.S08","subtopic":"ICU/Anesthesiology interface (shock, RRT in critical illness)"}
