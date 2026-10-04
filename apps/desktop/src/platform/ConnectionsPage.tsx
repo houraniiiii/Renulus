@@ -4,6 +4,8 @@ import { api, ApiError, isCancelled } from './api';
 import { useResource } from './useResource';
 import { Badge, Button, ErrorState, Input, LoadingState, Notice, PageHeader } from '../ui';
 import type { Health } from './contracts';
+import { DataManagement } from './DataManagement';
+import { RetrievalConnections } from './RetrievalConnections';
 
 type Provider = 'codex' | 'opencode-go';
 interface Connection {
@@ -113,5 +115,7 @@ export function ConnectionsPage() {
       </section>
       <aside className="section"><section className="section"><h2>Your local runtime</h2><p>Runtime {resource.data.health.version} · API {resource.data.health.api_version}</p><p>Subscription and model availability are reported by the backend. Image input remains unverified until a live check.</p></section><Notice><p>Renulus uses your selected subscription. It does not silently switch subscriptions or add a paid API fallback.</p></Notice><p className="muted">Connecting and checking models do not send a learning prompt. Ask and other model-dependent flows need separate working integration evidence.</p></aside>
     </div>}
+    <RetrievalConnections />
+    <DataManagement />
   </>;
 }

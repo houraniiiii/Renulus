@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron';
 import { randomBytes } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
-import { allowedAuthorizationUrl, resolveProfile, type DesktopProfile } from './profile';
+import { allowedAuthorizationUrl, allowedSourceUrl, resolveProfile, type DesktopProfile } from './profile';
 import { startBackend, type ManagedBackend } from './backend';
 import { startFrontend } from './frontend';
 import { activateWindow, ensureMainWindow } from './upstream/main-window-lifecycle';
@@ -41,7 +41,12 @@ function createWindow() {
     if (details.webContentsId !== owner.webContents.id) { callback({ cancel: true }); return; }
     callback({ requestHeaders: { ...details.requestHeaders, 'x-renulus-token': token } });
   });
-  owner.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  owner.webContents.setWindowOpenHandler(({ url }) => {
+    if (allowedSourceUrl(url)) void shell.openExternal(url).catch(() => {
+      dialog.showErrorBox('The source could not open', 'Try the source link again after checking your default browser.');
+    });
+    return { action: 'deny' };
+  });
   owner.webContents.on('will-navigate', (event, url) => { if (new URL(url).origin !== origin) event.preventDefault(); });
   owner.webContents.on('will-attach-webview', event => event.preventDefault());
   owner.once('ready-to-show', () => owner.show());

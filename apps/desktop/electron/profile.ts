@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { isIP } from 'node:net';
 
 export interface DesktopProfile { root: string; desktop: string; session: string; instance: string }
 export function resolveProfile(profile: string | undefined, packaged: boolean, localAppData?: string): DesktopProfile {
@@ -25,5 +26,16 @@ export function allowedAuthorizationUrl(value: string): boolean {
   try {
     const url = new URL(value);
     return url.protocol === 'https:' && !url.username && !url.password && !url.port && url.hostname === 'auth.openai.com' && url.pathname === '/api/accounts/authorize';
+  } catch { return false; }
+}
+
+/** Source references open in the system browser, outside the local renderer. */
+export function allowedSourceUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    return url.protocol === 'https:' && !url.username && !url.password && !url.port &&
+      host.includes('.') && !isIP(host.replace(/^\[|\]$/g, '')) &&
+      !/(?:^|\.)(?:localhost|local|internal|lan|home)$/.test(host);
   } catch { return false; }
 }

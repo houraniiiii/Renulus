@@ -16,7 +16,7 @@ from .contracts import API_VERSION, ApiError
 from .services import Services
 from .storage import AppPaths, Database
 
-MODULE_ORDER = ("runtime", "content", "knowledge", "learn", "cases",
+MODULE_ORDER = ("runtime", "content", "knowledge", "retrieval", "learn", "cases",
                 "assessment", "memory", "study", "updates")
 
 

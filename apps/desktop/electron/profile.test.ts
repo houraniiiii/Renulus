@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { allowedAuthorizationUrl, backendEnvironment, resolveProfile } from './profile';
+import { allowedAuthorizationUrl, allowedSourceUrl, backendEnvironment, resolveProfile } from './profile';
 import { stopBackendChild } from './upstream/backend-child';
 import { runBackendStartStep } from './upstream/backend-start-cancellation';
 import { activateWindow } from './upstream/main-window-lifecycle';
@@ -19,6 +19,10 @@ describe('isolated native profile and upstream lifecycle', () => {
   it('only permits HTTPS account sign-in URLs', () => {
     expect(allowedAuthorizationUrl('https://auth.openai.com/api/accounts/authorize?state=synthetic')).toBe(true);
     for (const url of ['http://auth.openai.com', 'https://auth.openai.com.attacker.test', 'file:///private', 'https://user@auth.openai.com', 'https://auth.openai.com:444', 'https://auth.openai.com/unrelated']) expect(allowedAuthorizationUrl(url)).toBe(false);
+  });
+  it('opens publisher references without granting local or custom-protocol access', () => {
+    for (const url of ['https://kdigo.org/guidelines/', 'https://doi.org/10.1234/synthetic', 'https://pubmed.ncbi.nlm.nih.gov/123/']) expect(allowedSourceUrl(url)).toBe(true);
+    for (const url of ['file:///private', 'ms-settings:privacy', 'javascript:alert(1)', 'http://example.org', 'https://user@example.org', 'https://example.org:444', 'https://127.0.0.1', 'https://[::1]', 'https://10.0.0.1', 'https://localhost', 'https://app.local']) expect(allowedSourceUrl(url)).toBe(false);
   });
   it('uses the imported Windows tree-kill only for its explicitly owned child', () => {
     const pids: number[] = []; stopBackendChild({ pid: 8123, kill: () => { throw new Error('Unexpected direct kill'); } }, { isWindows: true, forceKillProcessTree: pid => { pids.push(pid); } }); expect(pids).toEqual([8123]);
