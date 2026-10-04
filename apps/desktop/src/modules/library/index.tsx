@@ -5,6 +5,7 @@ import { useResource } from '../../platform/useResource';
 import { useNavigation } from '../../shell/navigation';
 import { Badge, Button, EmptyState, ErrorState, Input, LoadingState, Notice, PageHeader, Panel, Select, Textarea } from '../../ui';
 import type { Capabilities, Catalogue, CatalogueEntry, Citation, ImportResult, LibraryDocument, Passage, Rights } from './types';
+import { Discovery } from './Discovery';
 import './library.css';
 
 const libraryScope = { kind: 'personal-library' as const };
@@ -43,6 +44,7 @@ export default function LibraryPage() {
   const processing = documents.resource.status === 'ready' && documents.resource.data.documents.some(d => d.status === 'queued' || d.status === 'processing');
 
   useEffect(() => { if (temporary) { setText(''); setTitle(''); setFile(null); setMode('browse'); } }, [temporary]);
+  useEffect(() => { if (navigation.handoff?.mode === 'discover') setMode('browse'); }, [navigation.revision]);
   useEffect(() => { catalogue.retry(); setSelectedEntries(new Set()); }, [sourceId, offset]);
   useEffect(() => {
     const documentId = navigation.handoff?.document_id;
@@ -139,6 +141,11 @@ export default function LibraryPage() {
     {error !== undefined && <ErrorState error={error} title="The library action could not finish" />}
     <div className="library-layout">
       <div className="library-main">
+        {mode === 'browse' && <Discovery blocked={navigation.scope.kind !== 'study' && navigation.scope.kind !== 'personal-library'}
+          requestedTopicId={navigation.handoff?.mode === 'discover' && typeof navigation.handoff.topic_id === 'string' ? navigation.handoff.topic_id : undefined}
+          handoffRevision={navigation.revision}
+          libraryDocuments={documents.resource.status === 'ready' ? documents.resource.data.documents : undefined}
+          onLibraryChange={documents.retry} onInspect={document => void act(() => inspect(document))} />}
         {(mode === 'text' || mode === 'file') && <Panel><div className="library-mode">
           <Button variant={mode === 'text' ? 'primary' : 'ghost'} onClick={() => setMode('text')}>Study note</Button>
           <Button variant={mode === 'file' ? 'primary' : 'ghost'} onClick={() => setMode('file')}><Upload size={16} />Document</Button>
