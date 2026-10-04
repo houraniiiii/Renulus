@@ -88,14 +88,14 @@ export function RetrievalConnections({ openSource }: { openSource?: (url: string
     setTopic(topicId); setProvider(source);
   }
 
-  async function run(action: (signal: AbortSignal) => Promise<void>) {
+  async function run(action: (signal: AbortSignal) => Promise<void>, refreshUsage = false) {
     operation.current?.abort();
     const controller = new AbortController();
     operation.current = controller;
     setBusy(true); setError(undefined); setNotice('');
     try { await action(controller.signal); }
     catch (problem) { if (!controller.signal.aborted && !isCancelled(problem)) setError(problem); }
-    finally { if (!controller.signal.aborted) setBusy(false); }
+    finally { if (!controller.signal.aborted) { setBusy(false); if (refreshUsage) retry(); } }
   }
   async function configure(path: string, method: string, body?: unknown) {
     await run(async signal => {
@@ -111,8 +111,8 @@ export function RetrievalConnections({ openSource }: { openSource?: (url: string
       const result = await api<Discovery>('/retrieval/discover', { method: 'POST', signal,
         timeoutMs: 60_000,
         body: { topic_id: topic, scope: { kind: 'study' }, provider, limit: 5 } });
-      if (!signal.aborted && result.topic_id === selectedTopic) { setDiscovery(result); retry(); }
-    });
+      if (!signal.aborted && result.topic_id === selectedTopic) setDiscovery(result);
+    }, true);
   }
   async function importArticle(topicId: string, pmcid: string) {
     const binding = topicId + ':' + pmcid;
@@ -122,8 +122,8 @@ export function RetrievalConnections({ openSource }: { openSource?: (url: string
       const result = await api<{ import: { status: string } }>('/retrieval/articles/import', {
         method: 'POST', signal, timeoutMs: 60_000, body: { topic_id: topicId, pmcid, scope: { kind: 'personal-library' }, idempotency_key: idempotencyKey },
       });
-      if (!signal.aborted) { setNotice('Eligible article text added to your library queue: ' + result.import.status + '. Currency and content review remain unverified.'); retry(); }
-    });
+      if (!signal.aborted) setNotice('Eligible article text added to your library queue: ' + result.import.status + '. Currency and content review remain unverified.');
+    }, true);
   }
   async function copySource(url: string) {
     await run(async signal => {

@@ -207,3 +207,66 @@ def test_vendor_result_cap_and_unsafe_links_are_discovery_only(services):
     assert [row["url"] for row in result["records"]] == ["https://example.org/paper"]
     assert result["records"][0]["publication_date"] == "2026-09-01"
     assert result["provider_usage"] == {"reported_cost_dollars": 0.007} and result["billing_verified"] is False
+
+
+@pytest.mark.parametrize("status", [200, 401])
+def test_replaced_key_cannot_inherit_late_old_request_health(services, status):
+    async def run():
+        entered, release = asyncio.Event(), asyncio.Event()
+        calls = []
+        async def handler(request):
+            calls.append(request)
+            entered.set()
+            await release.wait()
+            return httpx.Response(status, json={"results": []})
+        service = make(services, handler)
+        await service.configure("exa", api_key="SYNTHETIC_OLD_KEY", enabled=True)
+        await service.select("exa")
+        pending = asyncio.create_task(service.discover("T21", scope=STUDY, provider="exa"))
+        await asyncio.wait_for(entered.wait(), 2)
+        await service.configure("exa", api_key="SYNTHETIC_NEW_KEY", enabled=True)
+        release.set()
+        with pytest.raises(ApiError) as error:
+            await pending
+        assert error.value.code == "retrieval_connection_changed"
+        row = next(row for row in service.status()["connections"] if row["provider"] == "exa")
+        assert row["auth_status"] == "not_checked" and not row.get("last_success_at")
+        assert row["requests_used"] == row["credits_used"] == 1
+        assert len(calls) == 1 and calls[0].headers["x-api-key"] == "SYNTHETIC_OLD_KEY"
+        assert "SYNTHETIC_" not in str(service.status())
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize("change", ["disconnect", "disable", "deselect", "reselect"])
+def test_ncbi_setting_change_stops_second_request_and_retains_actual_usage(services, change):
+    async def run():
+        entered, release = asyncio.Event(), asyncio.Event()
+        calls = []
+        async def handler(request):
+            calls.append(request)
+            if request.url.path.endswith("esearch.fcgi"):
+                entered.set()
+                await release.wait()
+                return httpx.Response(200, json={"esearchresult": {"idlist": ["10001"]}})
+            return httpx.Response(200, json={"result": {"10001": {"title": "Synthetic paper"}}})
+        service = make(services, handler)
+        await service.configure("ncbi", api_key="SYNTHETIC_NCBI", enabled=True)
+        await service.select("ncbi")
+        pending = asyncio.create_task(service.discover("T21", scope=STUDY, provider="ncbi"))
+        await asyncio.wait_for(entered.wait(), 2)
+        if change == "disconnect":
+            await service.disconnect("ncbi")
+        elif change == "disable":
+            await service.configure("ncbi", enabled=False)
+        else:
+            await service.select(None)
+            if change == "reselect":
+                await service.select("ncbi")
+        release.set()
+        with pytest.raises(ApiError) as error:
+            await pending
+        assert error.value.code == "retrieval_connection_changed"
+        assert len(calls) == 1
+        row = next(row for row in service.status()["connections"] if row["provider"] == "ncbi")
+        assert row["requests_used"] == 1 and row["auth_status"] == "not_checked"
+    asyncio.run(run())

@@ -572,3 +572,27 @@ XSD coverage; a real selected licensed-article queue/engine round trip; packaged
 native retrieval UI/clipboard/public-source opening. No inference or installer
 proof is claimed here. Scope/dependency/API decisions were posted with gh --repo
 houraniiiii/Renulus in issue #11; parent packaging relays were posted in #1.
+
+## Request-state follow-up
+
+The Library UI preparation exposed two real request-lifetime gaps. A failed
+explicit search counted its attempted request in SQLite, but Connections did
+not refresh the displayed usage or authentication state. An in-flight keyed
+request could also publish its old key's health after the key was replaced;
+NCBI's two-request search could continue using old authorization after the
+connection was disabled, disconnected or deselected.
+
+Connections now refreshes public status after both successful and failed
+search/import attempts. Runtime binds each optional-tool operation to its
+connection and selection versions. Obsolete responses cannot change current
+key health, and authorization is checked again before NCBI's second request.
+Already attempted requests remain counted; the UI never retries a billed call
+automatically. Settings changes return retrieval_connection_changed and require
+a deliberate search. This is additive behavior with no schema/API/dependency
+change.
+
+Regression checks first failed for both delayed old-key response cases and the
+stale displayed counter. After the fix the complete suite passed **64 Python
+checks in 22.58 s** on CPython 3.14.4 (the same existing Starlette warning),
+**9 Vitest checks in 5.64 s**, and TypeScript no-emit checking. All keys and
+responses were synthetic; no network/provider usage was involved.

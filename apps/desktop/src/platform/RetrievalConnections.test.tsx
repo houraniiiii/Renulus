@@ -83,6 +83,27 @@ describe('Explicit topic discovery and retrieval connections', () => {
     expect((screen.getByLabelText('Discovery source') as HTMLSelectElement).value).toBe('europe-pmc');
   });
 
+  it('refreshes actual usage and auth state after a failed explicit search', async () => {
+    connections.selected_tool = 'tavily';
+    Object.assign(connections.connections.find(row => row.provider === 'tavily')!, { enabled: true, configured: true, selected: true });
+    request.mockImplementation(async (url, options) => {
+      if (url === '/api/v1/retrieval/discover') {
+        Object.assign(connections.connections.find(row => row.provider === 'tavily')!, { requests_used: 1, credits_used: 1, auth_status: 'retrieval_authentication_required' });
+        return json({ error: { code: 'retrieval_authentication_required', message: 'Synthetic key permission failure.', retryable: false } }, 401);
+      }
+      return base(url, options);
+    });
+    await ready();
+    fireEvent.change(screen.getByLabelText('Study topic'), { target: { value: 'T21' } });
+    fireEvent.change(screen.getByLabelText('Discovery source'), { target: { value: 'selected-tool' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Discover literature' }));
+    await screen.findByText('Synthetic key permission failure.');
+    await screen.findByText('Today UTC: 1/100 requests attempted · 1/20 credits');
+    expect(screen.getAllByText(/Check key permissions/).length).toBeGreaterThan(0);
+    expect(request.mock.calls.filter(([url]) => url === '/api/v1/retrieval/discover')).toHaveLength(1);
+    expect(request.mock.calls.filter(([url]) => url === '/api/v1/retrieval/connections')).toHaveLength(2);
+  });
+
   it('changing the topic aborts stale work and never attaches an old article to the new topic', async () => {
     let release!: (value: Response) => void;
     request.mockImplementation(async (url, options) => url === '/api/v1/retrieval/discover'

@@ -28,6 +28,8 @@ class RetrievalService:
         self._ncbi_lock = asyncio.Lock()
         self._import_lock = asyncio.Lock()
         self._last_ncbi = 0.0
+        self._connection_versions = {provider: 0 for provider in TOOLS}
+        self._selection_version = 0
 
     @staticmethod
     def _scope(scope, *, importing=False) -> ContextScope:
@@ -75,19 +77,31 @@ class RetrievalService:
 
     async def configure(self, provider: str, **values) -> dict:
         async with self._settings_lock:
+            previous = self.connections.settings["selected_provider"]
             self.connections.configure(provider, **values)
+            self._connection_versions[provider] += 1
+            if self.connections.settings["selected_provider"] != previous:
+                self._selection_version += 1
             if values.get("api_key") is not None:
                 self.db.execute("DELETE FROM retrieval_health WHERE provider=?", (provider,))
         return self.status()
 
     async def select(self, provider: str | None) -> dict:
         async with self._settings_lock:
+            previous = self.connections.settings["selected_provider"]
             self.connections.select(provider)
+            if provider != previous:
+                self._selection_version += 1
         return self.status()
 
     async def disconnect(self, provider: str) -> dict:
         async with self._settings_lock:
+            previous = self.connections.settings["selected_provider"]
             self.connections.disconnect(provider)
+            if provider in TOOLS:
+                self._connection_versions[provider] += 1
+            if self.connections.settings["selected_provider"] != previous:
+                self._selection_version += 1
             self.db.execute("DELETE FROM retrieval_health WHERE provider=?", (provider,))
         return self.status()
 
@@ -111,11 +125,19 @@ class RetrievalService:
             else:
                 conn.execute("UPDATE retrieval_health SET last_success_at=?,error_code=NULL WHERE provider=?", (utc_now(), provider))
 
-    async def _ncbi(self, provider: str, route: str, params: dict) -> dict:
+    def _require_authorization(self, provider: str, authorization) -> None:
+        if authorization is not None:
+            current = (self._connection_versions[provider], self._selection_version)
+            record = self.connections.config(provider)
+            if current != authorization or self.connections.settings["selected_provider"] != provider or not record["enabled"] or not record.get("api_key"):
+                raise ApiError("retrieval_connection_changed", "Retrieval settings changed during this request. Check your selection and repeat the search deliberately.", 409)
+
+    async def _ncbi(self, provider: str, route: str, params: dict, authorization=None) -> dict:
         async with self._ncbi_lock:
             delay = max(0, 0.35 - (time.monotonic() - self._last_ncbi))
             if delay:
                 await asyncio.sleep(delay)
+            self._require_authorization(provider, authorization)
             self._last_ncbi = time.monotonic()
             self._reserve(provider, 1, 0)
             return await self.http.json("GET", PUBMED + "/" + route, params=params)
@@ -134,6 +156,7 @@ class RetrievalService:
             if provider in TOOLS and (not config["enabled"] or not config.get("api_key") or self.connections.settings["selected_provider"] != provider):
                 raise ApiError("retrieval_tool_disabled", "The optional tool must be configured, enabled and selected before use.", 409)
             key = config.get("api_key") if provider in TOOLS else None
+            authorization = (self._connection_versions[provider], self._selection_version) if provider in TOOLS else None
         provider_usage = {}
         try:
             if provider == "europe-pmc":
@@ -142,14 +165,15 @@ class RetrievalService:
                 records = europe_records(data, limit)
             elif provider in ("pubmed", "ncbi"):
                 params = {"db": "pubmed", "retmode": "json", "tool": "renulus", **({"api_key": key} if key else {})}
-                found = await self._ncbi(provider, "esearch.fcgi", {**params, "term": '"' + topic["label"] + '"[Title/Abstract]', "retmax": limit})
+                found = await self._ncbi(provider, "esearch.fcgi", {**params, "term": '"' + topic["label"] + '"[Title/Abstract]', "retmax": limit}, authorization)
+                self._require_authorization(provider, authorization)
                 envelope = found.get("esearchresult")
                 if not isinstance(envelope, dict) or found.get("error") or envelope.get("errorlist"):
                     raise ApiError("retrieval_invalid_response", "PubMed could not interpret the installed topic search.", 502)
                 ids = envelope.get("idlist")
                 if not isinstance(ids, list) or any(not isinstance(value, str) or not re.fullmatch(r"[1-9][0-9]{0,10}", value) for value in ids):
                     raise ApiError("retrieval_invalid_response", "PubMed returned unsupported identifiers.", 502)
-                records = pubmed_records(await self._ncbi(provider, "esummary.fcgi", {**params, "id": ",".join(ids[:limit])}), ids[:limit]) if ids else []
+                records = pubmed_records(await self._ncbi(provider, "esummary.fcgi", {**params, "id": ",".join(ids[:limit])}, authorization), ids[:limit]) if ids else []
             else:
                 self._reserve(provider, 1, 1)
                 tool_limit = min(limit, 5)
@@ -175,15 +199,18 @@ class RetrievalService:
                         value = value.get("total")
                     if type(value) in (int, float) and math.isfinite(value) and value >= 0:
                         provider_usage["reported_cost_dollars"] = value
+            self._require_authorization(provider, authorization)
             self._health(provider)
             return {"topic_id": topic["id"], "topic_label": topic["label"], "provider": provider,
                     "queried_at": utc_now(), "records": records, "passage_evidence": False,
                     "latest_final_verified": False, "query_basis": "installed_topic_label",
                     "provider_usage": provider_usage, "billing_verified": False}
         except ApiError as error:
+            self._require_authorization(provider, authorization)
             self._health(provider, error)
             raise
         except (KeyError, TypeError, ValueError):
+            self._require_authorization(provider, authorization)
             error = ApiError("retrieval_invalid_response", "The source returned unsupported discovery metadata.", 502)
             self._health(provider, error)
             raise error from None
