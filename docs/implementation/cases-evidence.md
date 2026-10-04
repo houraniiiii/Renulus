@@ -41,12 +41,12 @@ Producer and shell contracts:
   There is no need to override its scope propagation.
 
 No new runtime dependency, paid inference, unsafe disk extraction or separate
-content reader is proposed. Images/PDFs will be honestly unavailable until a
-verified volatile provider/parser route exists. Explain/practice handoffs carry
-only app-owned references and inherit the case scope; destination integration
-will require the same commit guard. No unrestricted transcript memory capture
-is exposed. Generic learning evidence needs a separately scoped explicit path
-that excludes raw case facts.
+content reader is proposed. Images/PDFs are unavailable until a verified volatile
+provider/parser route exists. Explain/practice handoffs carry an app-owned ticket,
+question and revealed case text only in memory/HTTP with temporary scope. The
+destination must use the guarded context/commit seam below. No unrestricted
+transcript memory capture is exposed. Generic learning evidence needs a separately
+scoped explicit path that excludes raw case facts.
 
 ## First backend handoff
 
@@ -105,3 +105,58 @@ no input bytes/path are accepted for disk extraction. Generic principle capture
 is not exposed. Explain/practice tickets expose an internal guarded context and
 cancellation seam; destination integration is still required. UI follows this
 backend commit; installer and complete S2 acceptance are not claimed.
+
+## Additive producer handoff for integration
+
+Baseline backend commit: `454a8015c29c3415a203ba4b3f21d8e6e5c4c447`.
+The proposed `cases/schema.sql` remains unchanged: only explicit Save writes
+`case_sessions`; the shared `deletion_ledger` is the deletion authority. No table
+is added for temporary handoffs, messages, runs or drafts.
+
+`POST /api/v1/cases/sessions/{case_id}/handoff` accepts
+`{revision, target: "explain" | "generated-practice", question?: string}`.
+Question is optional, trimmed and bounded to 12,000 characters. Its direct JSON
+response is `{id, case_handoff_id, case_id, revision, target, expires_at, question,
+case_text, scope: {kind: "temporary-case", entity_id: case_id}}`. Both ticket-ID
+fields name the same ticket. Even saved snapshots hand off with temporary scope.
+Teaching `case_text` includes only revealed narratives. Successful case responses
+send `Cache-Control: no-store`. Keep the payload in React memory; no URL, browser
+storage, ordinary study thread, tool history, export or memory record may receive it.
+
+Consumers resolve the ticket through the registered repository:
+
+```python
+cases = services.registry["cases"]
+context = cases.resolve_handoff(ticket_id, "explain")
+# context: case_id, revision, question, scope (ContextScope),
+#          cancel (asyncio.Event), messages (pinned visible context)
+# Use the approved Provider.stream with context["scope"].
+# Combine messages with the requested question in volatile memory only.
+cases.commit_handoff(ticket_id, "explain", answer,
+                     cancel=context["cancel"], scope=context["scope"])
+```
+
+Check the cancellation event before emitting/committing output. `commit_handoff`
+rechecks expiry, cancellation-token identity, case revision, saved canonical
+revision, deletion, idle state and temporary scope. It appends the handoff question
+and permitted completed answer to the live case only. Returning to Cases should
+pass `{case_id}` so the UI can reopen the RAM session. Saving this result is a
+separate explicit Cases action; Learn must never auto-save or create study evidence.
+Edit, Save, close and delete invalidate tickets. `cancel_handoff(ticket_id)` or
+`DELETE /api/v1/cases/handoffs/{ticket_id}` idempotently signals cancellation.
+
+Additional checks on October 4, 2026:
+
+- `python -m pytest tests/cases tests/integration -q --tb=short`: **38 passed**.
+- Saved-case Explain result leaves the canonical snapshot unchanged until Save;
+  reopening confirms the explicit promotion, deletion purges the sentinel.
+- Volatile HTTP payloads send no-store; teaching handoff excludes hidden material;
+  cross-repository canonical edits reject late handoff commits.
+- A storage failure returns a safe retryable `case_save_failed` response and
+  leaves the session temporary. Invalid answers cannot append orphan questions.
+- `git diff --check`: passed. No live inference was invoked.
+
+Integration requests: wire Learn to this guarded seam and preserve the opaque
+`case_id` when returning to Cases. The shell disclosure currently says temporary
+case is not saved even after explicit Save; adjust the shared copy to distinguish
+temporary processing from a saved snapshot. Temporary scope itself remains correct.

@@ -81,6 +81,7 @@ class Handoff:
     revision: int
     target: str
     expires_at: str
+    question: str = ""
     cancel: asyncio.Event = field(default_factory=asyncio.Event, compare=False)
 
 
@@ -366,19 +367,26 @@ class CaseRepository:
             self._check_revision(session, request.revision)
             self._check_idle(session)
             now = datetime.now(timezone.utc)
-            self._handoffs = {k: t for k, t in self._handoffs.items()
-                              if t.expires_at > now.isoformat()}
+            for ticket_id, old in list(self._handoffs.items()):
+                if old.expires_at <= now.isoformat():
+                    old.cancel.set()
+                    del self._handoffs[ticket_id]
             if len(self._handoffs) >= MAX_RUNS:
                 raise ApiError("handoff_capacity", "Finish an existing handoff before starting another", 429)
             ticket = Handoff(durable_id("case_handoff"), case_id, session.revision, request.target,
-                             (now + timedelta(minutes=15)).isoformat())
+                             (now + timedelta(minutes=15)).isoformat(), question=request.question)
             self._handoffs[ticket.id] = ticket
-            return {"id": ticket.id, "case_id": case_id, "revision": ticket.revision,
+            teaching = self._teaching_view(session)
+            text = session.text
+            if teaching:
+                text += "\n\n" + "\n\n".join(stage["narrative"] for stage in teaching["stages"])
+            return {"id": ticket.id, "case_handoff_id": ticket.id, "case_id": case_id,
+                    "question": ticket.question, "case_text": text.strip(), "revision": ticket.revision,
                     "target": ticket.target, "expires_at": ticket.expires_at,
                     "scope": ContextScope(kind=Scope.TEMPORARY_CASE, entity_id=case_id).model_dump(mode="json")}
 
     def resolve_handoff(self, ticket_id: str, target: Literal["explain", "generated-practice"]) -> dict:
-        """Internal integration seam. Raw context is never returned by the HTTP ticket route.
+        """Internal integration seam; HTTP handoff payload and context are volatile.
 
         Consumers must use commit_handoff(), not write this context into study,
         generated-practice, tool history or memory stores.
@@ -387,6 +395,7 @@ class CaseRepository:
             ticket = self._current_handoff(ticket_id, target)
             session = self._load(ticket.case_id)
             return {"case_id": session.id, "revision": session.revision,
+                    "question": ticket.question,
                     "scope": ContextScope(kind=Scope.TEMPORARY_CASE, entity_id=session.id),
                     "cancel": ticket.cancel,
                     "messages": deepcopy(self._context(session))}
@@ -399,7 +408,19 @@ class CaseRepository:
         session = self._load(ticket.case_id)
         self._check_revision(session, ticket.revision)
         self._check_idle(session)
+        if session.saved_revision is not None:
+            row = self.db.fetch_one("SELECT revision FROM case_sessions WHERE id=?", (session.id,))
+            if row is None or row["revision"] != session.saved_revision:
+                ticket.cancel.set()
+                raise ApiError("case_revision_conflict", "The saved case changed before this response completed", 409, True)
         return ticket
+
+    def cancel_handoff(self, ticket_id: str) -> dict:
+        with self._lock:
+            ticket = self._handoffs.pop(ticket_id, None)
+            if ticket is not None:
+                ticket.cancel.set()
+            return {"id": ticket_id, "cancelled": True}
 
     def commit_handoff(self, ticket_id: str, target: str, content: str, *,
                        cancel: asyncio.Event, scope: ContextScope) -> dict:
@@ -407,10 +428,19 @@ class CaseRepository:
             ticket = self._current_handoff(ticket_id, target)
             session = self._load(ticket.case_id)
             expected = ContextScope(kind=Scope.TEMPORARY_CASE, entity_id=session.id)
-            if cancel.is_set():
+            if cancel is not ticket.cancel or cancel.is_set():
                 raise ApiError("case_run_cancelled", "This response was stopped", 409)
             if scope != expected:
                 raise ApiError("case_scope_mismatch", "Case handoffs must stay temporary", 409)
+            # Validate the pair before appending either message. Save remains explicit.
+            if ticket.question:
+                if not content.strip() or len(content) > MAX_OUTPUT_CHARACTERS:
+                    raise ApiError("case_response_invalid", "The provider did not return a usable response", 502, True)
+                if len(session.messages) >= MAX_MESSAGES - 2:
+                    raise ApiError("case_context_full", "Start a new session for further discussion", 413)
+                self._check_message_capacity(session, ticket.question + content)
+                session.messages.append({"id": durable_id("case_message"), "role": "user",
+                                         "content": ticket.question, "created_at": utc_now()})
             self._append_assistant(session, content)
             return self._view(session)
 

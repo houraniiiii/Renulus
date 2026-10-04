@@ -47,6 +47,7 @@ class DiscussCase(RevisionInput):
 
 class HandoffCase(RevisionInput):
     target: Literal["explain", "generated-practice"]
+    question: str = Field(default="", max_length=12000)
 
 
 class AttachmentInput(RevisionInput):

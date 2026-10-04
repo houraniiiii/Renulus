@@ -67,3 +67,43 @@ def test_payload_cannot_set_scope_or_supply_unsafe_attachment_path(tmp_path):
             assert response.status_code == 409
             assert response.json()["error"]["code"] == f"volatile_{kind}_unavailable"
     assert_absent_from_profile(app.state.services, SENTINEL)
+
+
+def test_failed_save_is_a_safe_json_error_and_does_not_promote(tmp_path):
+    app = create_app(tmp_path / "case-save-error")
+    services = app.state.services
+    services.db.execute("CREATE TRIGGER reject_save BEFORE INSERT ON case_sessions "
+                        "BEGIN SELECT RAISE(ABORT, 'synthetic storage failure'); END")
+    with TestClient(app) as client:
+        case = client.post("/api/v1/cases/sessions", json={"text": SENTINEL}).json()
+        response = client.post(f"/api/v1/cases/sessions/{case['id']}/save", json={"revision": 1})
+        assert response.status_code == 503
+        assert response.json()["error"]["code"] == "case_save_failed"
+        assert response.json()["error"]["retryable"]
+        assert SENTINEL not in response.text
+        current = client.get(f"/api/v1/cases/sessions/{case['id']}").json()
+        assert current["scope"]["kind"] == "temporary-case" and not current["saved"]
+    assert_absent_from_profile(services, SENTINEL)
+
+
+def test_handoff_payload_is_volatile_not_cached_and_cancel_is_idempotent(tmp_path):
+    app = create_app(tmp_path / "case-handoff")
+    services = app.state.services
+    with TestClient(app) as client:
+        case = client.post("/api/v1/cases/sessions", json={"text": SENTINEL}).json()
+        url = f"/api/v1/cases/sessions/{case['id']}/handoff"
+        response = client.post(url, json={"revision": 1, "target": "explain",
+                                          "question": "Explain a synthetic mechanism"})
+        assert response.status_code == 201
+        assert response.headers["cache-control"] == "no-store"
+        ticket = response.json()
+        assert ticket["case_text"] == SENTINEL
+        assert ticket["question"] == "Explain a synthetic mechanism"
+        assert ticket["scope"] == {"kind": "temporary-case", "entity_id": case["id"]}
+        assert client.get(f"/api/v1/cases/sessions/{case['id']}").headers["cache-control"] == "no-store"
+        context = services.registry["cases"].resolve_handoff(ticket["id"], "explain")
+        for _ in range(2):
+            cancelled = client.delete(f"/api/v1/cases/handoffs/{ticket['id']}")
+            assert cancelled.json() == {"id": ticket["id"], "cancelled": True}
+        assert context["cancel"].is_set()
+    assert_absent_from_profile(services, SENTINEL)

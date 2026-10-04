@@ -315,7 +315,9 @@ def test_teacher_reveals_are_pinned_and_hidden_from_context(repository, services
 def test_handoff_keeps_temporary_scope_and_only_guarded_result_in_memory(repository, services, target):
     case = start(repository)
     ticket = repository.handoff(case["id"], HandoffCase(revision=1, target=target))
-    assert SENTINEL not in json.dumps(ticket)
+    assert ticket["case_text"] == SENTINEL
+    assert ticket["case_handoff_id"] == ticket["id"]
+    assert ticket["scope"]["kind"] == "temporary-case"
     context = repository.resolve_handoff(ticket["id"], target)
     assert context["scope"].kind == Scope.TEMPORARY_CASE
     assert SENTINEL in json.dumps(context["messages"])
@@ -327,6 +329,77 @@ def test_handoff_keeps_temporary_scope_and_only_guarded_result_in_memory(reposit
                                      cancel=context["cancel"], scope=context["scope"])
     assert len(view["messages"]) == 1
     assert view["scope"]["kind"] == "temporary-case"
+    assert_absent_from_profile(services, SENTINEL)
+
+
+async def test_saved_case_explain_handoff_stays_volatile_until_explicit_save(repository, services):
+    case = start(repository)
+    saved = repository.save(case["id"], 1)
+    ticket = repository.handoff(case["id"], HandoffCase(
+        revision=saved["revision"], target="explain", question="Explain this synthetic situation"))
+    context = repository.resolve_handoff(ticket["id"], "explain")
+    assert ticket["scope"]["kind"] == "temporary-case"
+    assert context["scope"].kind == Scope.TEMPORARY_CASE
+    assert context["question"] == ticket["question"]
+    provider = ProviderFixture([LATE_SENTINEL])
+    answer = "".join([text async for text in provider.stream(
+        context["messages"] + [{"role": "user", "content": context["question"]}],
+        scope=context["scope"], run_id="synthetic-explain", purpose="explain")])
+    view = repository.commit_handoff(ticket["id"], "explain", answer,
+                                     cancel=context["cancel"], scope=context["scope"])
+    assert view["saved"] and view["dirty"]
+    assert [m["role"] for m in view["messages"]] == ["user", "assistant"]
+    assert services.db.fetch_one("SELECT messages_json FROM case_sessions WHERE id=?",
+                                 (case["id"],))["messages_json"] == "[]"
+    assert services.db.fetch_all("SELECT * FROM learning_evidence") == []
+    assert_absent_from_profile(services, LATE_SENTINEL)
+    repository.save(case["id"], view["revision"])
+    reopened = CaseRepository(services).get(case["id"])
+    assert reopened["messages"][-1]["content"] == LATE_SENTINEL
+    repository.delete(case["id"], view["revision"])
+    assert_absent_from_profile(services, SENTINEL, LATE_SENTINEL)
+
+
+def test_handoff_cannot_commit_after_another_repository_changes_saved_revision(repository, services):
+    case = start(repository)
+    repository.save(case["id"], 1)
+    ticket = repository.handoff(case["id"], HandoffCase(revision=1, target="explain"))
+    context = repository.resolve_handoff(ticket["id"], "explain")
+    other = CaseRepository(services)
+    changed = other.edit(case["id"], EditCase(revision=1, title="Updated elsewhere"))
+    other.save(case["id"], changed["revision"])
+    with pytest.raises(ApiError) as error:
+        repository.commit_handoff(ticket["id"], "explain", LATE_SENTINEL,
+                                  cancel=context["cancel"], scope=context["scope"])
+    assert error.value.code == "case_revision_conflict"
+    assert context["cancel"].is_set()
+    assert_absent_from_profile(services, LATE_SENTINEL)
+
+
+def test_teaching_handoff_includes_only_revealed_case_material(repository, services):
+    case = repository.start(StartCase(kind="teaching", teaching_case_id="case-synthetic-transplant"))
+    ticket = repository.handoff(case["id"], HandoffCase(revision=1, target="explain"))
+    assert "Initial synthetic presentation" in ticket["case_text"]
+    assert HIDDEN_SENTINEL not in json.dumps(ticket)
+    context = repository.resolve_handoff(ticket["id"], "explain")
+    assert HIDDEN_SENTINEL not in json.dumps(context["messages"])
+    repository.cancel_handoff(ticket["id"])
+    assert context["cancel"].is_set()
+    with pytest.raises(ApiError):
+        repository.commit_handoff(ticket["id"], "explain", LATE_SENTINEL,
+                                  cancel=context["cancel"], scope=context["scope"])
+    assert_absent_from_profile(services, HIDDEN_SENTINEL, LATE_SENTINEL)
+
+
+def test_invalid_handoff_answer_does_not_append_the_question(repository, services):
+    case = start(repository)
+    ticket = repository.handoff(case["id"], HandoffCase(
+        revision=1, target="explain", question="A synthetic question"))
+    context = repository.resolve_handoff(ticket["id"], "explain")
+    with pytest.raises(ApiError):
+        repository.commit_handoff(ticket["id"], "explain", "  ",
+                                  cancel=context["cancel"], scope=context["scope"])
+    assert repository.get(case["id"])["messages"] == []
     assert_absent_from_profile(services, SENTINEL)
 
 

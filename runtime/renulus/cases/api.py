@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: MIT
 """Cases API; the server mounts this router once under /api/v1."""
 
-from fastapi import APIRouter, Query
+import sqlite3
+
+from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import StreamingResponse
 
 from renulus.contracts import ApiError
@@ -14,7 +16,10 @@ from .streaming import cancel_provider, events
 def create_router(services) -> APIRouter:
     repository = CaseRepository(services)
     services.registry["cases"] = repository
-    router = APIRouter(prefix="/cases", tags=["cases"])
+    async def no_store(response: Response):
+        response.headers["Cache-Control"] = "no-store"
+
+    router = APIRouter(prefix="/cases", tags=["cases"], dependencies=[Depends(no_store)])
 
     @router.get("/capabilities")
     async def capabilities():
@@ -71,7 +76,11 @@ def create_router(services) -> APIRouter:
 
     @router.post("/sessions/{case_id}/save")
     async def save(case_id: str, body: RevisionInput):
-        return repository.save(case_id, body.revision)
+        try:
+            return repository.save(case_id, body.revision)
+        except sqlite3.Error:
+            raise ApiError("case_save_failed", "The case could not be saved. Your temporary work is still open",
+                           503, True) from None
 
     @router.post("/sessions/{case_id}/reveal")
     async def reveal(case_id: str, body: RevisionInput):
@@ -80,6 +89,10 @@ def create_router(services) -> APIRouter:
     @router.post("/sessions/{case_id}/handoff", status_code=201)
     async def handoff(case_id: str, body: HandoffCase):
         return repository.handoff(case_id, body)
+
+    @router.delete("/handoffs/{ticket_id}")
+    async def cancel_handoff(ticket_id: str):
+        return repository.cancel_handoff(ticket_id)
 
     @router.post("/sessions/{case_id}/attachments")
     async def attachment(case_id: str, body: AttachmentInput):
