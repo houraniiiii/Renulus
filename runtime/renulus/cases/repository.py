@@ -17,6 +17,7 @@ from typing import Any, Literal
 from renulus.contracts import ApiError, ContextScope, Event, Scope, durable_id
 from renulus.storage.database import utc_now
 
+from .currency import pinned_currency
 from .models import DiscussCase, EditCase, HandoffCase, StartCase
 
 MAX_SESSIONS = 64
@@ -146,7 +147,7 @@ class CaseRepository:
                 ticket.cancel.set()
                 del self._handoffs[ticket_id]
 
-    def _teaching_view(self, session: Session) -> dict | None:
+    def _teaching_view(self, session: Session, *, annotate: bool = True) -> dict | None:
         item = session.teaching
         if item is None:
             return None
@@ -162,6 +163,8 @@ class CaseRepository:
                   "revealed_count": session.revealed_count, "debriefed": session.debriefed,
                   "stages": stages, "review": deepcopy(item.get("review", {})),
                   "license": item.get("license"), "synthetic": True}
+        if annotate:
+            result["currency"] = pinned_currency(self.services, item["id"], item["version"])
         if session.debriefed:
             result["take_home"] = deepcopy(item.get("take_home", []))
         return result
@@ -182,17 +185,28 @@ class CaseRepository:
 
     def list_saved(self) -> list[dict]:
         # The list describes canonical snapshots, not uncommitted live edits.
-        return self.db.fetch_all(
-            "SELECT c.id, c.kind, c.title, c.revision, c.created_at, c.updated_at, c.saved_at "
+        rows = self.db.fetch_all(
+            "SELECT c.id, c.kind, c.title, c.revision, c.created_at, c.updated_at, c.saved_at, "
+            "json_extract(c.teaching_json,'$.id') AS teaching_id, "
+            "json_extract(c.teaching_json,'$.version') AS teaching_version "
             "FROM case_sessions c WHERE NOT EXISTS (SELECT 1 FROM deletion_ledger d "
             "WHERE d.entity_type='case' AND d.entity_id=c.id) ORDER BY c.saved_at DESC, c.id")
+        for row in rows:
+            identifier, version = row.pop("teaching_id"), row.pop("teaching_version")
+            if row["kind"] == "teaching":
+                row["currency"] = pinned_currency(self.services, identifier, version)
+        return rows
 
     def list_teaching(self) -> list[dict]:
         content = self.services.get("content")
         # Do not send stages/solutions from a full repository list to the composer.
-        return [{key: deepcopy(item[key]) for key in
-                 ("id", "version", "title", "summary", "topic_id", "review", "license")
-                 if key in item} for item in content.list_cases()]
+        result = []
+        for item in content.list_cases():
+            summary = {key: deepcopy(item[key]) for key in
+                       ("id", "version", "title", "summary", "topic_id", "review", "license") if key in item}
+            summary["currency"] = pinned_currency(self.services, item["id"], item["version"])
+            result.append(summary)
+        return result
 
     def start(self, request: StartCase) -> dict:
         teaching = None
@@ -355,7 +369,7 @@ class CaseRepository:
     def _context(self, session: Session) -> list[dict]:
         # Hidden teaching stages are excluded from model context as well as the UI.
         text = session.text
-        teaching = self._teaching_view(session)
+        teaching = self._teaching_view(session, annotate=False)
         if teaching:
             text += "\n\n" + json.dumps(teaching, ensure_ascii=False)
         return [{"role": "system", "content":
@@ -381,7 +395,7 @@ class CaseRepository:
             ticket = Handoff(durable_id("case_handoff"), case_id, session.revision, request.target,
                              (now + timedelta(minutes=15)).isoformat(), question=request.question)
             self._handoffs[ticket.id] = ticket
-            teaching = self._teaching_view(session)
+            teaching = self._teaching_view(session, annotate=False)
             text = session.text
             if teaching:
                 text += "\n\n" + "\n\n".join(stage["narrative"] for stage in teaching["stages"])

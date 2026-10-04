@@ -3,6 +3,13 @@ import type { ContextScope } from '../../platform/contracts';
 
 export interface CaseMessage { id: string; role: 'user' | 'assistant'; content: string; created_at: string }
 export interface SourceLocator { source_id: string; locator: string }
+export interface CaseCurrency {
+  kind: 'case'; id: string | null; version: number | null;
+  status: 'needs-re-review' | 'no-known-impact' | 'unavailable'; needs_re_review: boolean | null;
+  annotations: { entry_id: string; title: string; detected_at: string | null;
+    state: 'needs-re-review' | 'dismissed'; review_state: 'pending' | 'reviewed' | 'dismissed' }[];
+  annotation_count: number; truncated: boolean;
+}
 export interface TeachingStage {
   id: string; narrative: string; prompts: string[]; teaching_points?: string[]; sources?: SourceLocator[];
 }
@@ -10,6 +17,7 @@ export interface TeachingView {
   id: string; version: number; topic_id: string; stage_count: number; revealed_count: number;
   debriefed: boolean; stages: TeachingStage[]; review: { status?: string };
   license: string; synthetic: true; take_home?: string[];
+  currency: CaseCurrency;
 }
 export interface CaseSession {
   id: string; kind: 'daily' | 'teaching'; title: string; text: string; revision: number;
@@ -20,10 +28,12 @@ export interface CaseSession {
 export interface CaseSummary {
   id: string; kind: 'daily' | 'teaching'; title: string; revision: number;
   created_at: string; updated_at: string; saved_at: string;
+  currency?: CaseCurrency;
 }
 export interface TeachingSummary {
   id: string; version: number; title: string; summary: string; topic_id: string;
   review?: { status?: string }; license?: string;
+  currency: CaseCurrency;
 }
 export interface CaseCapabilities {
   inputs: Record<'text' | 'image' | 'pdf', { supported: boolean; code?: string; reason?: string; max_characters?: number }>;

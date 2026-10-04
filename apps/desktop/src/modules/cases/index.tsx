@@ -5,6 +5,7 @@ import { Badge, Button, EmptyState, ErrorState, Input, LoadingState, Notice, Pag
 import { useNavigation } from '../../shell/navigation';
 import { useCases } from './useCases';
 import { CaseAttachments } from './CaseAttachments';
+import { CaseCurrencyLabel, CaseCurrencyNotice } from './CaseCurrency';
 import './cases.css';
 
 export default function CasesPage() {
@@ -77,7 +78,11 @@ export default function CasesPage() {
               {item.dirty ? 'Temporary' : 'Saved snapshot'}</Badge>
               {item.teaching && <span className="muted">Original synthetic teaching case · Version {item.teaching.version}</span>}
             </div>
-            {item.teaching ? <section className="case-teaching" aria-label="Teaching case stages">
+            {item.teaching ? <><CaseCurrencyNotice teaching={item.teaching} disabled={disabled} refreshing={cases.busy === 'currency'}
+              onRefresh={() => void cases.refreshCurrency()} onUpdates={() => navigation.navigate('updates', {
+                scope: { kind: 'temporary-case', entity_id: item.id }, payload: { case_id: item.id },
+              })} />
+            <section className="case-teaching" aria-label="Teaching case stages">
               {item.teaching.stages.map((stage, index) => <article className="case-stage" key={stage.id}>
                 <h2>Stage {index + 1} of {item.teaching!.stage_count}</h2>
                 <p className="case-text prose">{stage.narrative}</p>
@@ -90,7 +95,7 @@ export default function CasesPage() {
               {item.teaching.take_home && <section className="section"><h2>Take-home learning</h2><ul>{item.teaching.take_home.map(point => <li key={point}>{point}</li>)}</ul></section>}
               {!item.teaching.debriefed && <Button variant="secondary" disabled={disabled} busy={cases.busy === 'reveal'} onClick={() => void cases.reveal()}>
                 {item.teaching.revealed_count < item.teaching.stage_count ? 'Reveal next stage' : 'Reveal debrief'}<ArrowRight size={17} aria-hidden="true" /></Button>}
-            </section> : <details className="case-details" open><summary>Case details</summary><p className="case-text prose">{item.text}</p></details>}
+            </section></> : <details className="case-details" open><summary>Case details</summary><p className="case-text prose">{item.text}</p></details>}
           </div>
           {item.kind === 'daily' && <CaseAttachments session={item} capabilities={cases.capabilities} disabled={disabled} apply={cases.applyPreview} />}
           <section className="case-discussion" aria-label="Case discussion">
@@ -123,13 +128,14 @@ export default function CasesPage() {
             {cases.teaching.length ? <ul className="case-list">{cases.teaching.map(teaching => <li key={teaching.id}>
               <button disabled={!!item || !!cases.busy} onClick={() => void cases.start({ kind: 'teaching', teaching_case_id: teaching.id })}>
                 <strong>{teaching.title}</strong><span>{teaching.topic_id.replaceAll('-', ' ')} · v{teaching.version}</span>
+                <CaseCurrencyLabel currency={teaching.currency} />
               </button></li>)}</ul> : <p className="muted">Teaching cases appear when an original content pack is installed.</p>}
           </section>
           <section className="section"><h2>Saved cases</h2>
             {cases.saved.length ? <ul className="case-list">{cases.saved.map(saved => <li key={saved.id}>
               <button disabled={!!item || !!cases.busy} onClick={() => void cases.open(saved.id)}><strong>{saved.title}</strong><span>
                 Saved {new Date(saved.saved_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-              </span></button></li>)}</ul> : <EmptyState title="No saved cases"><p>Cases you explicitly save appear here.</p></EmptyState>}
+              </span>{saved.kind === 'teaching' && <CaseCurrencyLabel currency={saved.currency} />}</button></li>)}</ul> : <EmptyState title="No saved cases"><p>Cases you explicitly save appear here.</p></EmptyState>}
             {item && <p className="muted">Close the current case to open another.</p>}
           </section>
         </>}

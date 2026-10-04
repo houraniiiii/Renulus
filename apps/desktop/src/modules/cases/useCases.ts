@@ -110,6 +110,11 @@ export function useCases(resumeCaseId?: string) {
     return change('start', () => request<CaseSession>('/cases/sessions', { method: 'POST', body }));
   }
   function open(id: string) { return change('open', () => request<CaseSession>(casePath(id))); }
+  function refreshCurrency() {
+    const item = current.current;
+    if (!item?.teaching || active.current) return;
+    return change('currency', () => request<CaseSession>(casePath(item.id)));
+  }
   async function handoff(question: string) {
     const item = current.current;
     if (!item || active.current || !question.trim()) return;
@@ -249,5 +254,5 @@ export function useCases(resumeCaseId?: string) {
 
   return { session, capabilities, saved, teaching, loading, busy, error, catalogueError,
     running, partial, pendingQuestion, purgePending, reload, start, open, save, reveal,
-    close, remove, retryPurge, stop, send, handoff, applyPreview };
+    close, remove, retryPurge, stop, send, handoff, applyPreview, refreshCurrency };
 }

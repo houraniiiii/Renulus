@@ -14,6 +14,13 @@
 .case-text { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
 .case-details[open] .case-text { margin-top: var(--space-8); }
 .case-teaching { display: grid; gap: var(--space-24); }
+.case-currency .notice > div { min-width: 0; }
+.case-currency-heading { display: flex; gap: var(--space-12); flex-wrap: wrap; align-items: center; margin-bottom: var(--space-8); }
+.case-currency-details summary { cursor: pointer; min-height: 44px; padding: var(--space-12) 0; color: var(--ink-strong); }
+.case-currency-details ul { display: grid; gap: var(--space-16); padding-left: var(--space-24); }
+.case-currency-details li { overflow-wrap: anywhere; }
+.case-currency-details li span { display: block; font-size: 13px; margin-top: var(--space-4); }
+.case-list .case-currency-label[data-status="needs-re-review"] { color: var(--ink-strong); font-weight: 600; }
 .case-stage { display: grid; gap: var(--space-12); }
 .case-stage + .case-stage { padding-top: var(--space-24); border-top: 1px solid var(--line-subtle); }
 .case-prompts { margin: 0; padding-left: var(--space-24); color: var(--ink-strong); }

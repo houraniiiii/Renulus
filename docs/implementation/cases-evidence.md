@@ -407,3 +407,82 @@ the guarded native-stream write/socket-denial check also passed. The Windows
 WMI `platform._wmi_query` startup diagnostic `0x8007000e` recurred before
 payload acceptance and the process continued. No live subscription, image
 interpretation, Electron packaging or clean-machine engine stability is claimed.
+
+## Pinned teaching-case currency follow-up
+
+October 4, 2026. Parent is adopting attachment commit `453a35fa`; its check and
+14-file evidence is already on issue #7, comment `5984376512`. This next slice
+starts a clean `build/cases-currency` branch from that commit. The approved
+producer is parent `6243c651`:
+
+`services.registry["updates"].affected.needs_re_review("case", content_id, version)`.
+
+Cases passes only the original teaching-case ID and pinned version. Daily cases,
+session IDs, narratives, messages and attachment text never enter this lookup.
+The producer performs a local read; Cases requests no source fetch or generation.
+No prerequisite commits are replayed, and no shared/Updates/schema file is edited.
+The actual producer check reads the clean parent Updates module from integration
+(observed HEAD later `1da890b2`) and applies its schema only in test-owned state.
+
+Currency is an additive response projection on `teaching.currency` in sessions,
+`currency` in teaching-catalogue rows, and `currency` in saved teaching-case
+summaries. Saved summary queries extract only the pinned content ID/version from
+canonical teaching JSON. Daily summaries have no currency field or Updates call.
+The projection has `kind, id, version, status, needs_re_review, annotations,
+annotation_count, truncated`. States are `needs-re-review`, `no-known-impact`
+and `unavailable`. Missing provider/migration, read failure or mismatched identity
+returns unavailable with a null boolean, never a current/clear claim. Exceptions
+are not logged or stringified. No recorded impact does not establish currency or
+change the original content's review state.
+
+Responses show at most 12 source-impact annotation records, active warnings first,
+with total/truncation indicators. Each projects only bounded entry ID, title,
+detection date, impact state and update-review state. Hidden-stage locators,
+objectives and future producer payloads are excluded. Original content versions,
+stage/reveal/debrief state, discussion, timestamps, revisions, scoped handoffs
+and saved SQLite snapshots are unchanged by a currency read. Dynamic annotations
+are excluded from stored teaching JSON and model/handoff context; only explicit
+Save retains case content, exactly as before.
+
+The Flow module uses the existing Notice, Badge and Button primitives. Currency
+appears beside the pinned teaching case and in teaching/saved selection rows.
+Source notices are collapsed initially and distinguish pending source review
+from reviewed/dismissed updates. Refresh currency issues the existing guarded
+GET for the session; it preserves the unsent learning question and does not Save
+or reveal a stage. Late refresh responses after deletion are ignored. Open Updates
+passes only a volatile `case_id` reference and an explicit temporary-case scope;
+no narrative enters navigation payload, URL or browser storage. Parent `6243c651`
+already provides the scope-enrichment seam needed for sidebar return to Cases.
+This lane's older shell remains untouched; its test harness explicitly returns
+the volatile session reference, and destination Updates UI remains parent-owned.
+
+Current checks:
+
+- `RENULUS_CASES_UPDATES_SOURCE=<integration>; python -m pytest tests/cases
+  tests/integration -q --tb=short`: **82 passed, 3 optional attachment-engine
+  skips in 10.01 seconds**. The real Updates producer check is included. Without
+  that installed/configured producer, its one opt-in check skips accurately.
+- `tests/cases/test_currency.py` with the real parent producer: **13 passed**.
+  A synthetic source correction flags only pinned version 1; version 2 stays
+  unaffected. Dismissal changes the live annotation while canonical teaching and
+  saved discussion rows remain identical. Daily-case/error sentinel checks,
+  hidden-stage filtering and bounded annotation responses pass.
+- `npm test -- --reporter=dot`: **38 passed** across five files. Currency states,
+  pending-review copy, refresh/no Save/no reveal, draft retention, volatile Updates
+  return and late refresh after deletion are covered.
+- `npm run typecheck`, `npx vite build`, Python compileall and diff checks:
+  passed. The renderer build is not an Electron packaging check.
+- Browser smoke on 8882/5202 uses the real parent AffectedVersions reader with
+  synthetic original pack/source-impact fixtures and isolated
+  `.local/runtime/cases-currency-preview`. Selecting the teaching case shows
+  Needs re-review; expanding notices shows a pending source correction. Refresh
+  retains Stage 1 of 2, temporary state, and an empty saved-case catalogue.
+  The default desktop Flow notice/stage layout was inspected. No provider,
+  attachment parser, source network fetch or automatic Save was invoked.
+  The owned preview processes were stopped after the check; no case snapshot
+  was persisted during this browser smoke.
+
+The status is a warning about recorded source impacts. It does not perform a new
+educational review, switch to a newer pack, rewrite teaching/history, or claim
+live clinical currency. The response is bounded; the exact approved producer
+still returns its local annotation list before Cases projects those 12 records.
