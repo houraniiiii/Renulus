@@ -2,7 +2,46 @@
 
 Recorded: **2026-10-04**. Renulus preserves selected development tooling as
 unchanged vendor resources. Their licences govern those resources separately
-from any Renulus-authored work. No licence for the new product is inferred here.
+from any Renulus-authored work. The owner has selected MIT for Renulus's own code
+and CC BY 4.0 for original teaching content. Scoped licence files will accompany
+source/content adoption; those choices do not relicense vendor resources.
+
+## Hermes — planned adoption
+
+- Upstream: [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent).
+- Research revision: `af90026aa09949579bd423d24def3d38f743cde0`.
+- [Licence at that revision](https://github.com/NousResearch/hermes-agent/blob/af90026aa09949579bd423d24def3d38f743cde0/LICENSE):
+  MIT, copyright (c) 2025 Nous Research.
+- Status: selected fork foundation; application source has not been imported.
+  Retain the full upstream licence, identify downstream changes and record the
+  actual imported revision during S0. Its transitive dependencies retain their
+  own terms; the top-level MIT licence does not cover every bundled asset.
+
+See the [adoption evidence](docs/research/2026-10-planning/hermes-adoption.md).
+Supermemory remains excluded; other unselected candidates are preserved as
+research. Planning selection does not mean a package is installed/distributed.
+
+## Knowledge and memory stack — selected for planned adoption
+
+The user approved this starting stack on 2026-10-04. No application package,
+helper-model artifact or engine source has been installed/imported by this
+planning update. The following are the top-level code terms recorded in research:
+
+| Component | Planned use | Recorded code licence |
+| --- | --- | --- |
+| Mem0 OSS | Learner-memory processing through Hermes | Apache-2.0 |
+| Docling / Docling-core HybridChunker | Structured extraction, OCR integration and chunking | MIT |
+| FastEmbed | CPU embeddings | Apache-2.0 |
+| LanceDB OSS | Embedded document full-text/vector retrieval | Apache-2.0 |
+| Qdrant Python client local mode | Initial derived Mem0 memory index | Apache-2.0 |
+
+The [stack evidence](docs/research/2026-10-04-starting-stack-evidence.md) links
+the inspected engine/licence sources. On adoption retain complete applicable
+licences/notices, identify patches and record the actual compatible versions.
+Inventory the native dependencies and model/tokenizer/language artifacts that
+are actually shipped, with hashes and their independent terms. Top-level code
+licences do not cover every helper weight or binary. No final embedding or OCR
+artifact is selected by this table, and it is not a distribution clearance.
 
 ## Impeccable
 

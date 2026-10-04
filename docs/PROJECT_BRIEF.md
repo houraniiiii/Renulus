@@ -1,36 +1,116 @@
 # Renulus project brief
 
-Confirmed direction recorded: 2026-10-04.
+Confirmed direction updated on 2026-10-04 from the
+[user's answers in rounds 1–3 and subsequent stack approval](planning/2026-10-04-user-answers.md).
 
-Renulus is an independent open-source learning application intended for doctors
-during nephrology specialisation. A complete application is the deliverable.
+Renulus is an independent open-source Windows application for nephrologists
+practising in the EU. Its central job is to support education and learning
+throughout specialisation, active study and staying up to date. A complete
+product is intended. The first implementation must establish reusable learning
+capabilities across nephrology. A single-subject product or a plan to perfect
+acid–base before supporting the broader discipline has been explicitly rejected.
 
-Its purpose is to help trainees:
+## Experience
 
-- Understand nephrology through clear explanations and relevant educational visuals.
-- Practise applying their knowledge through educational cases and questions.
-- Prepare for relevant nephrology examinations.
+Support topic explanations, educational cases, examination preparation and
+guided study. Doctors may visit briefly during the day or spend a focused
+session studying. They can discuss questions arising from daily practice as
+part of the educational experience.
 
-Use existing models. Retraining or fine-tuning a model is outside this direction.
-Doctors are learners, not technical operators; model and tool configuration should
-support their experience behind the interface.
+Organise learning by general nephrology topics with an ESENeph examination
+track; add specific national programme mappings where useful. Support text,
+summaries, PDFs, images and other useful input methods. Staying current includes
+guidelines and selected important research.
 
-The selected name is **Renulus**. The selected logo direction is **C — Renal flow**,
-using the displayed teal treatment. The agreed character is modern medical: calm,
-precise and approachable, with a subtle abstract renal reference. See the
-[brand record](../assets/brand/README.md).
+Chat/Explain and Test are separate modes. A reviewed question bank supports
+scored assessment; generated questions serve practice. Automatically retain
+useful learning information without redundant records, with inspection and
+editing. Raw daily-practice cases and attachments persist only after explicit
+Save. Uploaded study documents can form a reusable personal library with
+passage/page citations.
+
+Explain answers directly by default, with optional guided teaching. Offer an
+adaptive study plan while preserving free exploration and manual changes.
+Automatically retrieve reliable evidence when needed and show sources, dates
+and retrieval failures. The home presents Ask, Resume, suggested review and
+relevant updates, with easy access to topics and Test.
+
+English is the first product language. Other EU-relevant languages are possible
+later. Personal Windows computers are the delivery target. Model and tool configuration
+should sit behind a straightforward experience for doctors.
+
+The [single development source register](SOURCES.md) includes open content,
+authorised member/institutional downloads, personal imports and research access,
+with a user acquisition method for each. The owner confirms ERA user downloads
+as an acquisition direction. Use current final guidance with corrections and
+supersession tracking. Optional user-supplied keys for web/literature search and
+related retrieval tools are supported, with explicit activation and usage
+controls; they are separate from the selected generative subscriptions.
+
+## Operating model
+
+Renulus is a harness using existing models, with no retraining or fine-tuning.
+The project owner will not host a service or model inference. Use existing
+OpenCode Go and/or Codex subscriptions, restricted to this selected model list:
+
+- Codex: GPT 6.1 Sol, GPT 6 Astra and GPT 6 Luna.
+- OpenCode Go: MiMo V2.6 Pro and DeepSeek V4.1 Flash.
+
+Authentication and account-specific availability remain integration work.
+Do not silently add conversational models, introduce a paid API fallback or
+require user-managed local inference. Small CPU models bundled and managed by
+Renulus for embeddings/OCR are accepted, without GPU, Docker, model server or
+setup for doctors. Select automatically within the user's chosen subscription and
+allowed/available models, with manual override and no silent subscription switch.
+
+The backend foundation is a **Hermes fork**. Preserve its licence and upstream
+attribution, reuse its existing capabilities, and add Renulus-specific logic
+only where needed. Research supports reusing its existing Electron/React desktop
+foundation and Python runtime as the engineering baseline. The user has excluded
+Supermemory from adoption because the reusable engine itself must be open source.
+The user approved **Mem0 OSS + Docling/HybridChunker + FastEmbed + LanceDB OSS**
+behind Hermes. Mem0 supplies learner-memory processing; Docling and its chunker
+supply structured document ingestion and source mapping; FastEmbed supplies CPU
+vectors; LanceDB supplies document keyword/vector retrieval. Reuse Hermes's
+context hooks and compressor. Canonical records stay in SQLite, with derived
+engine indexes; initial Mem0 storage uses its embedded local Qdrant client.
+
+The [framework research](research/2026-10-04-context-framework-recommendation.md)
+and [stack evidence](research/2026-10-04-starting-stack-evidence.md) preserve the
+rationale, sources and alternatives. Exact helper/model/package artifacts,
+subscription adapters, extraction quality, retention and installed Windows
+performance still need verification. The approval is a planning decision, not
+a claim of implemented capability or permission to add every optional model.
+
+Every implementation stage must advance the real product: working user flows,
+real persistence and real integrations. Prototypes help choose designs; they
+do not count as implemented functionality. Divide work into vertical slices
+with explicit module ownership and dependencies suitable for parallel worktrees.
+
+## Design and review
+
+The name is **Renulus**. The selected logo is **C — Renal flow**, in the selected
+teal treatment. The character is modern medical: calm, precise and approachable,
+with a subtle abstract renal reference. See [the brand record](../assets/brand/README.md).
+
+Use Figma for the design process, informed by Impeccable and Interface Design.
+The user and assistant lead development, review and validation. Practical checks
+of sources, question keys, learner journeys and software behaviour should guide
+acceptance; an external review panel is not a prerequisite for starting work.
 
 ## Current status
 
-The clean repository holds selected documentation, brand assets, design tooling
-and references. Product research, learning-experience design and application
-implementation remain pending. This cleanup does not select architecture,
-navigation, modules, models or providers.
+Workspace cleanup and the reviewed implementation plan are complete; no new
+application framework, screens or working learning product have been implemented.
+The inherited clinical MVP and batch/research project remain separately archived.
+Their code and checks do not establish Renulus's functionality or effectiveness.
 
-The inherited clinical MVP and batch/research project are preserved separately.
-Their code and historical checks are reference evidence; they do not establish
-that this learning application exists or is effective.
+Eligible sources and a reviewed assessment bank still need to be assembled across
+the discipline. Multi-format input is a product requirement; this planning work
+does not import actual patient files or connect hospital systems. See [source boundaries](SOURCES.md),
+[confirmed decisions](DECISIONS.md), [implementation stages](planning/IMPLEMENTATION_PLAN.md)
+and [remaining engineering checks](planning/DECISION_QUEUE.md).
 
-Teaching sources, assessment items and reusable assets still need source-specific
-use review. See [source boundaries](SOURCES.md). Confirmed choices and unresolved
-work are recorded in [decisions](DECISIONS.md).
+Renulus's own code uses MIT and its original teaching content CC BY 4.0, allowing
+permissive reuse with attribution. Third-party and personal material retain
+their own terms. Add scoped licence files with source/content adoption.

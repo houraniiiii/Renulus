@@ -1,5 +1,16 @@
 # Renulus design tools
 
+## Planning update — 2026-10-04
+
+The preservation audit below remains historical evidence. Product planning is
+now active. Impeccable and Interface Design are available locally, and official
+Figma plugin skills are advertised in the current agent session. No callable
+Figma connector tools are exposed here, so account, seat and file access have
+not been verified. The [design workflow](research/2026-10-planning/design-workflow.md)
+records how these tools will support the Windows product.
+
+## Preservation audit
+
 Recorded: **2026-10-04**. The audited file-based tooling has been preserved in
 Renulus for later interface work. This cleanup creates no product context,
 design system, UI or application architecture.
