@@ -2,7 +2,8 @@
 
 Started October 4, 2026, 19:21 UTC (21:21 Warsaw). Target work window ends
 October 5, 2026, 03:21 UTC (05:21 Warsaw). The user authorised implementation,
-parallel bounded agents, GitHub tracking and a heartbeat every 30 minutes.
+parallel bounded agents, GitHub tracking and a heartbeat every 15 minutes
+(updated by the owner on 2026-10-04).
 
 GitHub issues are the live queue. The earlier plans explain product intent;
 they are adjustable engineering baselines, not immutable specifications.

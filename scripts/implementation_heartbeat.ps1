@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true)][string]$WorkspaceRoot,
-    [int]$IntervalMinutes = 30
+    [int]$IntervalMinutes = 15
 )
 $ErrorActionPreference = 'Stop'
 $runRoot = (Resolve-Path -LiteralPath $WorkspaceRoot).Path

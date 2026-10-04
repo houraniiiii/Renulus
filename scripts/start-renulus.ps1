@@ -7,87 +7,75 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$WorkspaceRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$PointerPath = Join-Path $WorkspaceRoot '.local/legacy-preview.json'
+$renulusWorkspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+$renulusDesktop = Join-Path $renulusWorkspace 'apps/desktop'
+$renulusDeliveryPath = Join-Path $renulusWorkspace '.local/delivery.json'
 
 try {
-    if (-not (Test-Path -LiteralPath $PointerPath -PathType Leaf)) {
-        throw 'No local inherited reference preview is configured. Set archiveRoot in the ignored .local/legacy-preview.json to the preserved archive folder. A fresh Renulus clone contains no inherited application or runtime.'
+    $renulusDelivery = $null
+    if (Test-Path -LiteralPath $renulusDeliveryPath -PathType Leaf) {
+        $renulusDelivery = Get-Content -LiteralPath $renulusDeliveryPath -Raw | ConvertFrom-Json
     }
-    try {
-        $Pointer = Get-Content -LiteralPath $PointerPath -Raw | ConvertFrom-Json -ErrorAction Stop
-    } catch {
-        throw 'The ignored .local/legacy-preview.json must be valid JSON with an archiveRoot string.'
+    $renulusExecutable = $null
+    $renulusArguments = @()
+    if ($renulusDelivery -and $renulusDelivery.executable) {
+        $renulusExecutable = [string]$renulusDelivery.executable
+        if (-not [IO.Path]::IsPathRooted($renulusExecutable) -or
+            [IO.Path]::GetFileName($renulusExecutable) -notmatch '^Renulus(?: Development)?[.]exe$') {
+            throw 'The local delivery record must identify the built Renulus executable.'
+        }
+        if ([string]::IsNullOrWhiteSpace($UserDataDirectory) -and $renulusDelivery.profile) {
+            $UserDataDirectory = [string]$renulusDelivery.profile
+        }
+    } else {
+        $renulusExecutable = Join-Path $renulusDesktop 'node_modules/electron/dist/electron.exe'
+        foreach ($renulusRequired in @('dist/index.html', 'dist-electron/main.cjs')) {
+            if (-not (Test-Path -LiteralPath (Join-Path $renulusDesktop $renulusRequired) -PathType Leaf)) {
+                throw 'Build apps/desktop with npm run build, or install the delivered Windows bundle first.'
+            }
+        }
+        if (-not (Test-Path -LiteralPath (Join-Path $renulusWorkspace '.venv/Scripts/python.exe') -PathType Leaf)) {
+            throw 'The contributor runtime is missing. Use the Windows bundle, or run uv sync for development.'
+        }
+        $renulusArguments = @('"' + $renulusDesktop + '"')
+        if ([string]::IsNullOrWhiteSpace($UserDataDirectory)) {
+            $UserDataDirectory = Join-Path $renulusWorkspace '.local/runtime/desktop-user'
+        }
     }
-    if ($Pointer -isnot [pscustomobject] -or $Pointer.archiveRoot -isnot [string] -or
-        [string]::IsNullOrWhiteSpace($Pointer.archiveRoot)) {
-        throw 'The ignored .local/legacy-preview.json must contain a nonempty archiveRoot string.'
+    if (-not (Test-Path -LiteralPath $renulusExecutable -PathType Leaf)) {
+        throw 'The Renulus executable is missing. Rebuild or restore the delivered bundle.'
     }
-    if ($Pointer.archiveRoot -notmatch '^[A-Za-z]:[\/]' -or
-        $Pointer.archiveRoot -match '[\x00-\x1f]') {
-        throw 'archiveRoot must be an absolute local Windows folder path.'
+    if (-not [string]::IsNullOrWhiteSpace($UserDataDirectory)) {
+        if (-not [IO.Path]::IsPathRooted($UserDataDirectory) -or $UserDataDirectory -match '[\x00-\x1f]') {
+            throw 'Choose an absolute local folder for this learning profile.'
+        }
+        $UserDataDirectory = [IO.Path]::GetFullPath($UserDataDirectory)
+        if ($UserDataDirectory -eq [IO.Path]::GetPathRoot($UserDataDirectory)) {
+            throw 'The learning profile cannot be a drive root.'
+        }
     }
-    $ArchiveRoot = [IO.Path]::GetFullPath($Pointer.archiveRoot).TrimEnd([char[]]'\/')
-    $WorkspacePrefix = $WorkspaceRoot.TrimEnd([char[]]'\/') + [IO.Path]::DirectorySeparatorChar
-    if ($ArchiveRoot.Equals($WorkspaceRoot, [StringComparison]::OrdinalIgnoreCase) -or
-        $ArchiveRoot.StartsWith($WorkspacePrefix, [StringComparison]::OrdinalIgnoreCase)) {
-        throw 'The inherited archive must stay outside the active Renulus workspace.'
-    }
-    if (-not (Test-Path -LiteralPath $ArchiveRoot -PathType Container)) {
-        throw 'The configured inherited archive folder is missing. Restore or update the local archive pointer; this launcher never downloads or builds the application.'
-    }
-    $ArchiveLauncher = Join-Path $ArchiveRoot 'integrations/desktop/start-renulus.ps1'
-    if (-not (Test-Path -LiteralPath $ArchiveLauncher -PathType Leaf)) {
-        throw 'The inherited archive has no integrations/desktop/start-renulus.ps1. Point archiveRoot at the complete preserved baseline.'
-    }
-
-    # Inspect the script interface without executing the inherited application.
-    $LauncherTokens = $null
-    $LauncherErrors = $null
-    $LauncherAst = [Management.Automation.Language.Parser]::ParseFile(
-        $ArchiveLauncher, [ref]$LauncherTokens, [ref]$LauncherErrors)
-    if ($LauncherErrors.Count -gt 0) {
-        throw 'The archived launcher cannot be parsed. Restore the preserved launcher before opening the reference preview.'
-    }
-    $LauncherParameters = @($LauncherAst.ParamBlock.Parameters |
-        ForEach-Object { $_.Name.VariablePath.UserPath })
-    if ($LauncherParameters -notcontains 'UserDataDirectory' -or
-        $LauncherParameters -notcontains 'AccessibilityTesting') {
-        throw 'The archived launcher does not support the expected UserDataDirectory and AccessibilityTesting options.'
-    }
+    if ($AccessibilityTesting) { $renulusArguments += '--force-renderer-accessibility' }
     if ($CheckOnly) {
-        Write-Output 'Renulus inherited reference preview: archive pointer and launcher interface checked. No application was started; build and runtime readiness were not tested.'
+        Write-Output ('Renulus learning app launcher checked: ' + $renulusExecutable)
+        Write-Output 'No application was launched. Runtime and account availability require an app run.'
         exit 0
     }
-
-    $InheritedParameters = @{}
-    if ($PSBoundParameters.ContainsKey('UserDataDirectory')) {
-        $InheritedParameters.UserDataDirectory = $UserDataDirectory
+    if (-not [string]::IsNullOrWhiteSpace($UserDataDirectory)) {
+        $env:RENULUS_PROFILE = $UserDataDirectory
     }
-    if ($PSBoundParameters.ContainsKey('AccessibilityTesting')) {
-        $InheritedParameters.AccessibilityTesting = [bool]$AccessibilityTesting
-    }
-    Write-Output 'Opening Renulus inherited reference preview (archived clinical MVP). The independent learning application remains pending.'
-    # The inherited script supplies --renulus-source-preview to Electron.
-    # CheckOnly belongs to this wrapper and is never passed to that script.
-    & $ArchiveLauncher @InheritedParameters
-    if (-not $?) {
-        throw 'The inherited reference launcher reported a failure.'
-    }
+    Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
+    $renulusLaunch = @{ FilePath = $renulusExecutable; WorkingDirectory = $renulusWorkspace; WindowStyle = 'Hidden'; PassThru = $true }
+    if ($renulusArguments.Count) { $renulusLaunch.ArgumentList = $renulusArguments }
+    $renulusProcess = Start-Process @renulusLaunch
+    Write-Output ('Opened Renulus learning app (process ' + $renulusProcess.Id + ').')
     exit 0
 } catch {
-    [Console]::Error.WriteLine('Renulus inherited reference preview: ' + $_.Exception.Message)
+    [Console]::Error.WriteLine('Renulus: ' + $_.Exception.Message)
     if ($ShowErrorDialog -and -not $CheckOnly) {
         try {
             Add-Type -AssemblyName System.Windows.Forms
-            [void][System.Windows.Forms.MessageBox]::Show(
-                'Inherited reference preview unavailable. See docs/WORKSPACE.md in the Renulus workspace for the local archive setup.',
-                'Renulus inherited reference preview',
-                [System.Windows.Forms.MessageBoxButtons]::OK,
-                [System.Windows.Forms.MessageBoxIcon]::Warning)
-        } catch {
-            [Console]::Error.WriteLine('Renulus inherited reference preview: the error dialog could not be shown.')
-        }
+            [void][System.Windows.Forms.MessageBox]::Show($_.Exception.Message, 'Renulus could not start')
+        } catch { [Console]::Error.WriteLine('Renulus startup details are available in this launcher output.') }
     }
     exit 1
 }

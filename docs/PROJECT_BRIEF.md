@@ -100,14 +100,22 @@ acceptance; an external review panel is not a prerequisite for starting work.
 
 ## Current status
 
-Workspace cleanup and the reviewed implementation plan are complete; no new
-application framework, screens or working learning product have been implemented.
+The working integration build now has the Flow renderer, managed local API,
+attributed Hermes routes and canonical SQLite records. Learn, Library, Cases,
+reviewed Test/generated practice, Memory, Today/study planning and Updates have
+real service implementations. Native packaging and combined delivery checks
+continue in parallel; see [the implementation run](implementation/EXECUTION.md)
+and [startup guidance](implementation/RUNNING.md).
 The inherited clinical MVP and batch/research project remain separately archived.
 Their code and checks do not establish Renulus's functionality or effectiveness.
 
-Eligible sources and a reviewed assessment bank still need to be assembled across
-the discipline. Multi-format input is a product requirement; this planning work
-does not import actual patient files or connect hospital systems. See [source boundaries](SOURCES.md),
+Original question/case packs span nephrology and record assistant source/key
+review separately from independent human review. Authorised eligible acquired
+files are being indexed from the external collection. Actual CPU-backed text,
+PDF and image extraction, passage retrieval and learner memory have separate
+proof records. Temporary case input remains volatile until explicit Save;
+patient files and hospital systems are not part of development verification.
+See [source boundaries](SOURCES.md),
 [confirmed decisions](DECISIONS.md), [implementation stages](planning/IMPLEMENTATION_PLAN.md)
 and [remaining engineering checks](planning/DECISION_QUEUE.md).
 

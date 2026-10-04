@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 import subprocess
 import sys
@@ -10,6 +11,11 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
+# This is the pinned upstream development script, not a user's environment.
+# A changed vendor copy loses the exception and must be reviewed explicitly.
+PUBLIC_VENDOR_ENV = {
+    "upstream/hermes/.envrc": "428874265091e570d27bd70c666e425ca60a18909ea3b746c4e371a70a23d9ef",
+}
 REQUIRED = (
     "README.md", "AGENTS.md", ".gitignore", ".gitattributes",
     "docs/PROJECT_BRIEF.md", "docs/DECISIONS.md", "docs/SOURCES.md",
@@ -84,7 +90,8 @@ def main() -> int:
                 f"Local/private file must not be published: {name}")
         require(path.suffix.lower() not in {".exe", ".dll", ".db", ".sqlite", ".sqlite3", ".pem", ".key"},
                 f"Runtime or private artifact must not be published: {name}")
-        require(not path.name.startswith(".env") or path.name == ".env.example",
+        vendor_environment = name in PUBLIC_VENDOR_ENV and hashlib.sha256((ROOT / name).read_bytes()).hexdigest() == PUBLIC_VENDOR_ENV[name]
+        require(not path.name.startswith(".env") or path.name == ".env.example" or vendor_environment,
                 f"Environment state must not be published: {name}")
 
     try:
@@ -108,10 +115,13 @@ def main() -> int:
 
     link_count = 0
     for name in files:
-        if not name.endswith(".md") or name.startswith((".agents/", ".claude/", ".codex/")):
+        if not name.endswith(".md") or name.startswith((".agents/", ".claude/", ".codex/", "upstream/hermes/")):
             continue
         document = ROOT / name
-        for match in re.finditer(r"!?\[[^\]]*\]\(([^\n)]+)\)", document.read_text(encoding="utf-8-sig")):
+        markdown = document.read_text(encoding="utf-8-sig")
+        markdown = re.sub(r"(?ms)^```.*?^```[^\n]*$", "", markdown)
+        markdown = re.sub(r"`[^`\n]*`", "", markdown)
+        for match in re.finditer(r"!?\[[^\]]*\]\(([^\n)]+)\)", markdown):
             target = match.group(1).strip().split(' "', 1)[0].strip("<>")
             if not target or target.startswith("#") or urlsplit(target).scheme:
                 continue

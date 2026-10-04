@@ -71,11 +71,11 @@ def initialise():
     STATE.parent.mkdir(parents=True, exist_ok=True)
     parent = issue("Renulus end-to-end implementation — Flow, parallel lanes and evidence",
         "User-authorised implementation run beginning 2026-10-04 19:21 UTC, targeting the next eight hours. Flow is selected. This issue is the live queue; plans remain flexible engineering baselines.\n\n"
-        "Each vertical ticket owns code, behaviour and validation. Ready work starts in the next available lane. Dependencies govern integration, not speculative completion. Decisions, test evidence and concrete blockers go into the relevant ticket. Every 30 minutes a heartbeat records observed progress and next work.\n\n"
+        "Each vertical ticket owns code, behaviour and validation. Ready work starts in the next available lane. Dependencies govern integration, not speculative completion. Decisions, test evidence and concrete blockers go into the relevant ticket. Every 15 minutes a heartbeat records observed progress and next work.\n\n"
         "Foundation: pinned Hermes, Electron/React, canonical SQLite, Docling/HybridChunker, FastEmbed, LanceDB OSS and Hermes/Mem0 OSS/local Qdrant. Keep exact approved subscriptions/models, source terms and temporary-case retention. No fake responses, paid-provider usage, secret copying or restricted-source redistribution.\n\n"
         "See docs/implementation/EXECUTION.md on the integration branch. UI/source acquisition sessions retain ownership of their active work.")
     state = {"parent": parent, "started_utc": "2026-10-04T19:21:00+00:00",
-             "deadline_utc": "2026-10-05T03:21:00+00:00", "active": True,
+             "deadline_utc": "2026-10-05T03:21:00+00:00", "active": True, "heartbeat_minutes": 15,
              "tickets": {}, "checkpoint": "Foundation code being established; runtime, desktop and content agents running."}
     save(state)
     for key, title, behaviour, acceptance in TICKETS:
