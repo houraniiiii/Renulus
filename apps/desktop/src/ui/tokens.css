@@ -1,0 +1,47 @@
+/* Flow palette and proportions ported from the accepted UX exploration. */
+:root {
+  --renal-teal: #17675f;
+  --renal-teal-hover: #11564f;
+  --renal-teal-soft: #e9f1ed;
+  --paper: #faf9f6;
+  --surface: #fff;
+  --rail: #eff2ec;
+  --rail-hover: #e3eae0;
+  --rail-selected: #dce9df;
+  --ink: #243b34;
+  --ink-strong: #18392f;
+  --ink-secondary: #50635c;
+  --ink-muted: #53655b;
+  --ink-disabled: #718076;
+  --line: #dce3db;
+  --line-subtle: #e7ebe4;
+  --line-emphasis: #a8bdb0;
+  --warning-ink: #785217;
+  --warning-bg: #f8f0dd;
+  --error-ink: #8c352b;
+  --error-bg: #fbede9;
+  --focus: #17675f;
+  --selection: #c8e0d5;
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-40: 40px;
+  --radius-control: 7px;
+  --radius-panel: 12px;
+  --radius: 12px;
+  --rail-width: 212px;
+  --reading-measure: 72ch;
+  --shadow-overlay: 0 16px 56px #18392f24;
+  --font-ui: 'Source Sans 3 Variable', 'Segoe UI', sans-serif;
+  --motion-fast: 160ms;
+  --ease-out: cubic-bezier(.23, 1, .32, 1);
+  color: var(--ink);
+  background: var(--paper);
+  font: 400 16px/1.5 var(--font-ui);
+  font-synthesis: none;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
