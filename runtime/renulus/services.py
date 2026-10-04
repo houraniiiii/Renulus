@@ -10,6 +10,8 @@ class Services:
     db: Database
     registry: dict[str, Any] = field(default_factory=dict)
     capabilities: dict[str, dict] = field(default_factory=dict)
+    on_startup: list = field(default_factory=list)
+    on_shutdown: list = field(default_factory=list)
 
     def get(self, name: str):
         from .contracts import ApiError

@@ -4,6 +4,8 @@ import importlib
 import os
 from pathlib import Path
 import secrets
+from contextlib import asynccontextmanager
+import inspect
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -21,7 +23,21 @@ MODULE_ORDER = ("runtime", "content", "knowledge", "learn", "cases",
 def create_app(profile: str | Path, token: str | None = None, source_root=None) -> FastAPI:
     paths = AppPaths.create(profile, source_root)
     services = Services(paths, Database(paths.database))
-    app = FastAPI(title="Renulus local API", version=__version__, docs_url=None, redoc_url=None)
+    @asynccontextmanager
+    async def lifespan(app):
+        for callback in services.on_startup:
+            result = callback()
+            if inspect.isawaitable(result):
+                await result
+        try:
+            yield
+        finally:
+            for callback in reversed(services.on_shutdown):
+                result = callback()
+                if inspect.isawaitable(result):
+                    await result
+
+    app = FastAPI(title="Renulus local API", version=__version__, docs_url=None, redoc_url=None, lifespan=lifespan)
     app.state.services = services
     app.state.session_token = token
 

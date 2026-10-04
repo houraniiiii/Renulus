@@ -67,7 +67,7 @@ def save(state):
 
 def initialise():
     if STATE.exists():
-        return json.loads(STATE.read_text(encoding="utf-8"))
+        return json.loads(STATE.read_text(encoding="utf-8-sig"))
     STATE.parent.mkdir(parents=True, exist_ok=True)
     parent = issue("Renulus end-to-end implementation — Flow, parallel lanes and evidence",
         "User-authorised implementation run beginning 2026-10-04 19:21 UTC, targeting the next eight hours. Flow is selected. This issue is the live queue; plans remain flexible engineering baselines.\n\n"
@@ -93,7 +93,7 @@ def initialise():
 
 
 def heartbeat():
-    state = json.loads(STATE.read_text(encoding="utf-8"))
+    state = json.loads(STATE.read_text(encoding="utf-8-sig"))
     if not state.get("active"):
         return {"status": "inactive"}
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
