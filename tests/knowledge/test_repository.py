@@ -117,6 +117,85 @@ def test_replacement_and_deletion_physically_prune_old_lance_versions(repository
         repository.original(replaced["revision_id"])
 
 
+def test_rebuild_uses_eligible_canonical_passages_and_survives_restart(repository):
+    active = import_note(repository, "Dialysis access stenosis learning note")
+    import_note(repository, "Reserved examination sentinel", reserved=True)
+    import_note(repository, "Retracted teaching sentinel", metadata=SourceMetadata(retracted=True))
+    deleted = import_note(repository, "Deleted kidney sentinel")
+    repository.db.mark_deleted("knowledge-document", deleted["document_id"])
+    old_path = repository.index.path
+    repository.index.stage([{"passage_id": "orphan", "revision_id": "orphan", "document_id": "orphan",
+                             "text": "Stale index sentinel", "vector": [1.0] + [0.0] * 383}])
+    result = repository.rebuild_index()
+    assert result["status"] == "ready" and result["passages"] == 1
+    assert not result["cleanup_pending"]
+    assert not old_path.exists()
+    assert repository.get_document(deleted["document_id"], include_deleted=True)["deleted_at"]
+    restored = KnowledgeRepository(repository.services, extractor=SyntheticExtractor(), embedder=SyntheticEmbedder())
+    assert restored.index.path == repository.index.path
+    assert restored.index._open().count_rows() == 1
+    assert restored.retrieve("stenosis", scope=STUDY)["passages"][0]["document_revision"] == active["revision_id"]
+    restored.index.close()
+
+
+def test_failed_rebuild_keeps_active_index_and_retries_cleanly(repository, monkeypatch):
+    note = import_note(repository, "Transplant immunology learning note")
+    previous = repository.index
+    selector = repository.db.fetch_one("SELECT value FROM preferences WHERE key='knowledge.index_generation'")
+    def reject(self, identities):
+        raise ApiError("index_validation_failed", "Synthetic rejected index", 503, True)
+    with monkeypatch.context() as patch:
+        patch.setattr(LanceIndex, "validate_passages", reject)
+        with pytest.raises(ApiError) as caught:
+            repository.rebuild_index()
+        assert caught.value.code == "index_validation_failed"
+    assert repository.index is previous
+    assert repository.db.fetch_one("SELECT value FROM preferences WHERE key='knowledge.index_generation'") == selector
+    assert repository.retrieve("immunology", scope=STUDY)["passages"][0]["document_revision"] == note["revision_id"]
+    assert not list((repository.paths.indexes / "knowledge-generations").glob("index_*"))
+    assert repository.rebuild_index()["passages"] == 1
+
+
+def test_empty_rebuild_and_abandoned_generation_cleanup(repository):
+    first = repository.rebuild_index()
+    assert first["passages"] == 0
+    abandoned = repository.paths.indexes / "knowledge-generations" / ("index_" + "f" * 32)
+    abandoned.mkdir()
+    (abandoned / "partial.txt").write_text("Synthetic abandoned index")
+    assert repository.cleanup() == []
+    assert not abandoned.exists()
+    assert repository.index.path.exists()
+    assert repository.rebuild_index()["passages"] == 0
+
+
+def test_delete_during_rebuild_cannot_leave_a_retrievable_or_retained_passage(repository):
+    note = import_note(repository, "SYNTHETIC_REBUILD_DELETE_SENTINEL anemia learning")
+    started, release, deleting = Event(), Event(), Event()
+    base = repository.embedder
+    class BlockedEmbedder(SyntheticEmbedder):
+        def embed(self, texts, **kwargs):
+            started.set()
+            assert release.wait(10)
+            return base.embed(texts, **kwargs)
+    repository.embedder = BlockedEmbedder()
+    def remove():
+        deleting.set()
+        return repository.delete_document(note["document_id"])
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        rebuild = pool.submit(repository.rebuild_index)
+        assert started.wait(10)
+        deletion = pool.submit(remove)
+        assert deleting.wait(10)
+        release.set()
+        assert rebuild.result(timeout=10)["status"] == "ready"
+        assert not deletion.result(timeout=10)["cleanup_pending"]
+    repository.embedder = base
+    assert repository.retrieve("anemia", scope=STUDY)["passages"] == []
+    assert repository.index._open().count_rows() == 0
+    assert len(repository.index._open().list_versions()) == 1
+    assert len(list((repository.paths.indexes / "knowledge-generations").glob("index_*"))) == 1
+
+
 def test_temporary_and_unclassified_imports_do_not_write(repository, tmp_path):
     before = {str(p): p.read_bytes() for p in repository.paths.root.rglob("*") if p.is_file()}
     for kind in (Scope.TEMPORARY_CASE, Scope.UNCLASSIFIED, Scope.SAVED_CASE):

@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
+import re
 import shutil
 from threading import RLock
 
@@ -27,9 +28,92 @@ class KnowledgeRepository:
         self.assets = OfflineAssets(services)
         self.extractor = extractor or DoclingExtractor(self.assets)
         self.embedder = embedder or FastEmbedEngine(self.assets)
-        self.index = index or LanceIndex(self.paths.indexes / "knowledge")
+        self.index = index or LanceIndex(self._selected_index_path())
         self._lock = RLock()
         self._ingest_lock = RLock()
+
+    def _selected_index_path(self):
+        row = self.db.fetch_one("SELECT value FROM preferences WHERE key='knowledge.index_generation'")
+        if row is None:
+            return self.paths.indexes / "knowledge"
+        try:
+            generation = json.loads(row["value"])
+        except (TypeError, ValueError):
+            generation = None
+        if not isinstance(generation, str) or not re.fullmatch(r"index_[0-9a-f]{32}", generation):
+            raise ApiError("invalid_index_generation", "The library index selector needs recovery", 503, True)
+        return self.paths.indexes / "knowledge-generations" / generation
+
+    def _remove_index_folder(self, path):
+        path = Path(path)
+        if not path.exists():
+            return
+        if path.is_symlink() or not path.resolve().is_relative_to(self.paths.indexes.resolve()):
+            raise ApiError("unsafe_index_path", "Derived index cleanup left its owned folder", 409)
+        shutil.rmtree(path)
+
+    def _cleanup_index_generations(self):
+        active = self.index.path.resolve()
+        candidates = [self.paths.indexes / "knowledge"]
+        generations = self.paths.indexes / "knowledge-generations"
+        if generations.is_dir():
+            candidates += [path for path in generations.iterdir()
+                           if re.fullmatch(r"index_[0-9a-f]{32}", path.name)]
+        pending = []
+        for path in candidates:
+            if path.resolve() != active:
+                try:
+                    self._remove_index_folder(path)
+                except Exception:
+                    pending.append(path.name)
+        return pending
+
+    def rebuild_index(self):
+        """Stage canonical eligible passages, validate, then atomically select them."""
+        with self._ingest_lock, self._lock:
+            # A restore can bring an older active row beside a newer tombstone.
+            deleted = self.db.fetch_all("SELECT d.id FROM knowledge_documents d JOIN deletion_ledger l ON l.entity_id=d.id AND l.entity_type='knowledge-document' WHERE d.deleted_at IS NULL")
+            for row in deleted:
+                self.delete_document(row["id"])
+            if self.cleanup():
+                raise ApiError("knowledge_cleanup_pending", "Finish deleted-document cleanup before rebuilding the library", 503, True)
+            generation = durable_id("index")
+            candidate = LanceIndex(self.paths.indexes / "knowledge-generations" / generation, self.embedder.dimensions)
+            previous = self.index
+            activated = False
+            try:
+                revisions = self.db.fetch_all("SELECT r.*,d.title FROM knowledge_revisions r JOIN knowledge_documents d ON d.active_revision=r.id WHERE d.deleted_at IS NULL AND d.reserved=0 AND d.scope_kind='personal-library' AND r.status='ready'")
+                identities = set()
+                for revision in revisions:
+                    if not self._eligible(json.loads(revision["metadata_json"]), json.loads(revision["rights_json"]), None, False):
+                        continue
+                    passages = self.db.fetch_all("SELECT id,context_text FROM knowledge_passages WHERE revision_id=? ORDER BY ordinal", (revision["id"],))
+                    for offset in range(0, len(passages), 64):
+                        batch = passages[offset:offset + 64]
+                        vectors = self.embedder.embed([row["context_text"] for row in batch])
+                        rows = [{"passage_id": row["id"], "revision_id": revision["id"],
+                                 "document_id": revision["document_id"], "text": row["context_text"], "vector": vector}
+                                for row, vector in zip(batch, vectors, strict=True)]
+                        candidate.stage(rows, create_fts=False)
+                        identities.update((row["passage_id"], row["revision_id"], row["document_id"]) for row in rows)
+                candidate.build_fts()
+                candidate.validate_passages(identities)
+                with self.db.transaction() as conn:
+                    conn.execute("INSERT INTO preferences VALUES('knowledge.index_generation',?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at", (json.dumps(generation), utc_now()))
+                self.index = candidate
+                activated = True
+                previous.close()
+                pending = self._cleanup_index_generations()
+                return {"status": "ready", "passages": len(identities), "generation": generation,
+                        "cleanup_pending": bool(pending)}
+            except Exception:
+                if not activated:
+                    candidate.close()
+                    try:
+                        self._remove_index_folder(candidate.path)
+                    except Exception:
+                        pass  # Startup cleanup retries abandoned staging folders.
+                raise
 
     def capabilities(self):
         return self.assets.capabilities()
@@ -252,7 +336,10 @@ class KnowledgeRepository:
                     self.db.execute("DELETE FROM knowledge_cleanup WHERE revision_id=?", (task["revision_id"],))
                 except Exception:
                     self.db.execute("UPDATE knowledge_cleanup SET error_code='cleanup_pending' WHERE revision_id=?", (task["revision_id"],))
-            return self.db.fetch_all("SELECT revision_id,error_code FROM knowledge_cleanup")
+            pending = self.db.fetch_all("SELECT revision_id,error_code FROM knowledge_cleanup")
+            pending += [{"generation": name, "error_code": "index_cleanup_pending"}
+                        for name in self._cleanup_index_generations()]
+            return pending
 
     def recover(self):
         """Resume durable jobs, discard partial index rows and retain stored originals."""

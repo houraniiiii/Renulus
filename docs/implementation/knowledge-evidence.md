@@ -96,3 +96,28 @@ Temporary extraction is still disabled pending a real no-write stream proof.
 Browser-native PDF viewing is implemented in the library UI; no PDF.js
 dependency or exact-region overlay is claimed. The edition/currentness of
 third-party acquisitions is not inferred from receipt or successful OCR.
+# Integrated rebuild and volatile-input proof — October 4, 2026
+
+`KnowledgeRepository.rebuild_index()` now serializes with ingestion and mutations,
+reconciles deletion markers, stages canonical eligible passages in a new owned
+generation, and validates exact passage/revision/document identities before an
+atomic SQLite selector change. The previous index survives failure. The pinned
+LanceDB 0.39.0 synchronous wrappers release their underlying public
+AsyncTable/AsyncConnection handles before old or abandoned generations are
+removed. Internal index selectors are derived configuration and are excluded from
+canonical backup preferences. FTS is built once after batched embedding during
+rebuild.
+
+Repository/worker checks passed 15 tests using real LanceDB and explicitly
+synthetic embedding/extraction adapters. These include failed validation, empty
+rebuild, restart selection, tombstone reconciliation, abandoned staging cleanup
+and concurrent deletion without passage resurrection. A separate actual
+Docling/HybridChunker → FastEmbed → LanceDB text/rebuild/retrieval proof passed
+with the verified offline helpers and external connections denied.
+
+The latest temporary extraction gate and all four input formats were rerun
+together: 2 passed in 131.72 seconds. Text, native PDF, scanned PDF and image
+inputs passed with input-phase filesystem mutation and sockets denied. The
+capability requires prepared, verified helpers; framework initialization happens
+before input in owned cache/TEMP locations. This establishes OCR/text extraction,
+not clinical image interpretation.

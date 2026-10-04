@@ -317,6 +317,7 @@ class LanceIndex:
         self.path = Path(path).resolve()
         self.dimensions = dimensions
         self._table = None
+        self._connection = None
 
     def _open(self):
         if self._table is None:
@@ -326,6 +327,7 @@ class LanceIndex:
             except ImportError:
                 raise ApiError("helper_package_unavailable", "LanceDB is not installed", 503, True) from None
             connection = lancedb.connect(str(self.path))
+            self._connection = connection
             schema = pa.schema([pa.field("passage_id", pa.string()),
                 pa.field("revision_id", pa.string()), pa.field("document_id", pa.string()),
                 pa.field("text", pa.string()), pa.field("vector", pa.list_(pa.float32(), self.dimensions))])
@@ -334,11 +336,38 @@ class LanceIndex:
                 raise ApiError("incompatible_index", "The library index requires a coordinated rebuild", 503)
         return self._table
 
-    def stage(self, rows: list[dict]):
+    def stage(self, rows: list[dict], *, create_fts=True):
+        table = self._open()
+        if rows:
+            table.add(rows)
+        if create_fts:
+            self.build_fts()
+
+    def build_fts(self):
         from lancedb.index import FTS
         table = self._open()
-        table.add(rows)
         table.create_index("text", config=FTS(with_position=True), replace=True)
+
+    def validate_passages(self, identities: set[tuple[str, str, str]]):
+        table = self._open()
+        if table.count_rows() != len(identities):
+            raise ApiError("index_validation_failed", "The rebuilt library index has an unexpected passage count", 503, True)
+        rows = table.search().select(["passage_id", "revision_id", "document_id"]).limit(len(identities) + 1).to_list()
+        actual = {(row["passage_id"], row["revision_id"], row["document_id"]) for row in rows}
+        if actual != identities:
+            raise ApiError("index_validation_failed", "The rebuilt library index does not match its canonical passages", 503, True)
+
+    def close(self):
+        # The pinned synchronous SDK wraps the public AsyncTable/Connection
+        # lifecycle. Their close methods are synchronous and release Rust handles.
+        table, connection = self._table, self._connection
+        self._table = self._connection = None
+        try:
+            if table is not None:
+                table._table.close()
+        finally:
+            if connection is not None:
+                connection._conn.close()
 
     def search(self, query: str, vector: list[float], revision_ids: list[str], limit: int) -> list[dict]:
         if not revision_ids:

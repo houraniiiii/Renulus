@@ -69,6 +69,10 @@ def test_real_text_hybrid_roundtrip_and_shared_token_budget(live_repository):
     hits = repository.retrieve("fistula stenosis", scope=ContextScope(kind=Scope.STUDY))
     assert any(p["document_revision"] == result["revision_id"] and "fistula" in p["text"] for p in hits["passages"]), hits
     assert hits["passages"][0]["locators"][0]["page"] is None
+    rebuilt = repository.rebuild_index()
+    assert rebuilt["status"] == "ready" and rebuilt["passages"] > 0
+    after = repository.retrieve("fistula stenosis", scope=ContextScope(kind=Scope.STUDY))
+    assert any(p["document_revision"] == result["revision_id"] for p in after["passages"])
     repository.delete_document(result["document_id"])
 
 
