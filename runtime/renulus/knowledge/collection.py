@@ -1,15 +1,17 @@
 """Read-only acquisition metadata and explicit, selected import batches."""
 from __future__ import annotations
+import base64
 import hashlib
 import json
 from pathlib import Path
+import re
 
 from ..contracts import ApiError, ContextScope, Scope
 from ..storage.database import utc_now
 from .models import Rights, SourceMetadata
 from .repository import MEDIA
-from .acquired import (AcquiredLiterature, MARKER, catalogue_policy, collection_path,
-                       version_identity, version_name, acquisition_topic_ids)
+from .acquired import (AcquiredLiterature, AcquisitionCancelled, MARKER, catalogue_policy, collection_path,
+                       version_identity, version_name, acquisition_topic_ids, unique_object)
 
 COLLECTION = Path.home() / "Documents" / "Renulus-data"
 MANIFEST = "metadata/acquisition-2026-10-04/acquisition-manifest.jsonl"
@@ -198,12 +200,69 @@ class CollectionCatalogue:
             entry["processing_status"] = entry["processing_status"] or "acquired"
         return {"entries": entries, "total": count, "offset": offset}
 
-    def import_selected(self, entry_ids: list[str]):
+    def import_next(self, *, source_id="L02", query="", limit=100, cursor=None, cancelled=None):
+        """Adopt one bounded pending acquired page through the existing queue."""
+        if source_id != "L02" or type(limit) is not int or not 1 <= limit <= 250:
+            raise ApiError("invalid_collection_bulk", "Choose L02 and a page size from 1 to 250", 422)
+        if not isinstance(query, str) or len(query) > 200:
+            raise ApiError("invalid_collection_filter", "Use a literal title query of at most 200 characters", 422)
+        fingerprint = hashlib.sha256(json.dumps([source_id, query], ensure_ascii=False).encode()).hexdigest()
+        after, through = "", None
+        if cursor is not None:
+            try:
+                if not isinstance(cursor, str) or len(cursor) > 1000:
+                    raise ValueError()
+                value = json.loads(base64.b64decode(cursor + "=" * (-len(cursor) % 4), altchars=b"-_", validate=True), object_pairs_hook=unique_object)
+                if not isinstance(value, dict) or set(value) != {"after", "through", "filter"} or value["filter"] != fingerprint:
+                    raise ValueError()
+                after, through = value["after"], value["through"]
+                if not isinstance(after, str) or (after and not re.fullmatch(r"asset_[0-9a-f]{24}", after)) or not isinstance(through, str) or not re.fullmatch(r"asset_[0-9a-f]{24}", through) or after > through:
+                    raise ValueError()
+            except (ValueError, TypeError, UnicodeError):
+                raise ApiError("invalid_collection_cursor", "Restart bulk selection with the same source and title filter", 422) from None
+        # Asset IDs remain stable when inspection changes title/eligibility.
+        # Skip live jobs for the exact edition/original hash. Changed receipts
+        # and retries still pass through inspection and canonical deduplication.
+        joins = " FROM knowledge_catalogue c LEFT JOIN knowledge_jobs j ON j.id=c.job_id LEFT JOIN knowledge_revisions r ON r.id=j.revision_id LEFT JOIN knowledge_documents d ON d.id=r.document_id"
+        clauses = ["c.source_id=?", "c.reserved=0", "c.eligibility IN ('eligible','inspection_required')",
+            "EXISTS (SELECT 1 FROM json_each(c.metadata_json,'$.asset_role') WHERE value=?)",
+            "(j.id IS NULL OR j.state NOT IN ('queued','processing','ready') OR d.deleted_at IS NOT NULL OR json_extract(r.metadata_json,'$.original_sha256') IS NOT c.expected_sha256 OR json_extract(r.metadata_json,'$.edition') IS NOT json_extract(c.metadata_json,'$.edition'))"]
+        args = [source_id, MARKER]
+        if query:
+            term = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            clauses.append("c.title LIKE ? ESCAPE '\\'")
+            args.append("%" + term + "%")
+        where = " WHERE " + " AND ".join(clauses)
+        if through is None:
+            through = self.db.fetch_one("SELECT MAX(c.id) AS last" + joins + where, args)["last"] or ""
+        page_where = where + " AND c.id>? AND c.id<=?"
+        page_args = [*args, after, through]
+        entries = self.db.fetch_all("SELECT c.id" + joins + page_where + " ORDER BY c.id LIMIT ?", [*page_args, limit])
+        result = self.import_selected([entry["id"] for entry in entries], cancelled=cancelled, report_replay=True)
+        results = result["results"]
+        if results:
+            after = results[-1]["entry_id"]
+        remaining = self.db.fetch_one("SELECT COUNT(*) AS n" + joins + page_where, [*args, after, through])["n"]
+        next_cursor = base64.urlsafe_b64encode(json.dumps({"after": after, "through": through, "filter": fingerprint}, separators=(",", ":")).encode()).decode().rstrip("=") if remaining else None
+        accepted = {entry["job"]["id"] for entry in results if "job" in entry}
+        new_jobs = {entry["job"]["id"] for entry in results if "job" in entry and not entry.get("replayed")}
+        rejections = {}
+        for entry in results:
+            if "job" not in entry:
+                rejections[entry["code"]] = rejections.get(entry["code"], 0) + 1
+        return {**result, "selected": len(entries), "attempted": len(results), "accepted": len(accepted),
+            "newly_queued": len(new_jobs), "replayed": sum(entry.get("replayed", False) for entry in results),
+            "rejected": sum(rejections.values()), "rejections": rejections, "remaining": remaining,
+            "next_cursor": next_cursor, "done": remaining == 0, "cancelled": bool(cancelled and cancelled())}
+
+    def import_selected(self, entry_ids: list[str], *, cancelled=None, report_replay=False):
         if len(entry_ids) > 250:
             raise ApiError("batch_limit", "Select at most 250 files per import batch", 413)
         results = []
         acquired_selection = None
         for entry_id in dict.fromkeys(entry_ids):
+            if cancelled and cancelled():
+                break
             entry = self.db.fetch_one("SELECT * FROM knowledge_catalogue WHERE id=?", (entry_id,))
             if not entry:
                 results.append({"entry_id": entry_id, "status": "failed", "code": "catalogue_entry_missing"})
@@ -224,9 +283,13 @@ class CollectionCatalogue:
                             if candidate and not candidate["reserved"] and candidate["eligibility"] in ("eligible", "inspection_required") and MARKER in json.loads(candidate["metadata_json"]).get("asset_role", []):
                                 candidates.append(candidate)
                         try:
-                            acquired_selection = AcquiredLiterature(self.root).selections(candidates)
+                            acquired_selection = AcquiredLiterature(self.root).selections(candidates, cancelled=cancelled)
                         except (OSError, UnicodeError):
-                            raise ApiError("acquisition_manifest_unavailable", "The acquisition manifest cannot be read; refresh it before selecting articles", 409) from None
+                            acquired_selection = ApiError("acquisition_manifest_unavailable", "The acquisition manifest cannot be read; refresh it before selecting articles", 409)
+                        except ApiError as error:
+                            acquired_selection = error
+                    if isinstance(acquired_selection, ApiError):
+                        raise acquired_selection
                     selected, matched = acquired_selection
                     item = selected.get(entry_id)
                     if isinstance(item, ApiError):
@@ -236,7 +299,11 @@ class CollectionCatalogue:
                     if item.get("sha256") != entry["expected_sha256"] or item.get("bytes") != entry["bytes"]:
                         raise ApiError("catalogue_receipt_changed", "Refresh the catalogue before selecting this changed receipt", 409)
                     article = AcquiredLiterature(self.root).inspect(item, matched.get(version_identity(item), {}))
+                    if cancelled and cancelled():
+                        break
                     result = self._import_acquired(entry, article)
+                    if not report_replay:
+                        result.pop("replayed", None)
                     results.append({"entry_id": entry_id, **result})
                     continue
                 previous = self.db.fetch_one("SELECT j.id,j.state,r.sha256,d.deleted_at FROM knowledge_jobs j JOIN knowledge_revisions r ON r.id=j.revision_id JOIN knowledge_documents d ON d.id=r.document_id WHERE j.id=?", (entry["job_id"],)) if entry["job_id"] else None
@@ -255,6 +322,8 @@ class CollectionCatalogue:
                     idempotency_key=key, document_id=replacement, process=False)
                 self.db.execute("UPDATE knowledge_catalogue SET document_id=?,job_id=? WHERE id=?", (result["document_id"], result["job"]["id"], entry_id))
                 results.append({"entry_id": entry_id, **result})
+            except AcquisitionCancelled:
+                break
             except ApiError as error:
                 if is_acquired:
                     metadata["notes"].append("Selected inspection unavailable: " + error.code + " — " + error.message)
@@ -278,7 +347,7 @@ class CollectionCatalogue:
             previous = self.db.fetch_one("SELECT j.id,j.state,j.idempotency_key,r.sha256,r.document_id,d.deleted_at FROM knowledge_jobs j JOIN knowledge_revisions r ON r.id=j.revision_id JOIN knowledge_documents d ON d.id=r.document_id WHERE j.idempotency_key>=? AND j.idempotency_key<? ORDER BY (d.deleted_at IS NOT NULL),j.created_at DESC,r.ordinal DESC,j.id DESC LIMIT 1", (version_prefix, version_prefix + "\uffff"))
             same_proof = previous and (previous["idempotency_key"] == base or previous["idempotency_key"].startswith(base + ":"))
             if same_proof and not previous["deleted_at"] and previous["sha256"] == article.evidence["derivative_sha256"] and previous["state"] in ("queued", "processing", "ready"):
-                result = self.repository._result(previous["id"])
+                result = {**self.repository._result(previous["id"]), "replayed": True}
             else:
                 key, replacement = base, None
                 if previous:
@@ -290,6 +359,7 @@ class CollectionCatalogue:
                 result = self.repository.import_text(article.text, title=article.title,
                     metadata=article.metadata, rights=article.rights, scope=ContextScope(kind=Scope.LIBRARY),
                     idempotency_key=key, document_id=replacement, process=False)
+                result["replayed"] = False
             self.db.execute("UPDATE knowledge_catalogue SET title=?,eligibility='eligible',metadata_json=?,rights_json=?,document_id=?,job_id=?,checked_at=? WHERE id=?",
                 (article.title, article.metadata.model_dump_json(), article.rights.model_dump_json(),
                  result["document_id"], result["job"]["id"], utc_now(), entry["id"]))

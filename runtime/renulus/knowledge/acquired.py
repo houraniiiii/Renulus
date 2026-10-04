@@ -27,6 +27,10 @@ MD5 = re.compile(r"[0-9a-f]{32}")
 EXCLUSIONS = "Figures, tables, media, supplementary material, quotations, boxed text and marked third-party blocks omitted; original JATS unchanged"
 
 
+class AcquisitionCancelled(Exception):
+    """Stop a deliberate selection without recording a permission failure."""
+
+
 def unique_object(pairs):
     value = {}
     for key, item in pairs:
@@ -208,7 +212,7 @@ class AcquiredLiterature:
     def __init__(self, root):
         self.root = Path(root).resolve()
 
-    def selections(self, entries):
+    def selections(self, entries, *, cancelled=None):
         """Read only manifest metadata; retain exact selections and matching metadata."""
         wanted = {entry["id"]: entry for entry in entries}
         identities = set()
@@ -222,6 +226,8 @@ class AcquiredLiterature:
         path = collection_path(self.root, MANIFEST)
         with path.open(encoding="utf-8-sig") as stream:
             for line in stream:
+                if cancelled and cancelled():
+                    raise AcquisitionCancelled()
                 try:
                     item = json.loads(line)
                     if not isinstance(item, dict) or item.get("source_id") != "L02":

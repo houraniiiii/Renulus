@@ -2,6 +2,7 @@ import asyncio
 from contextlib import asynccontextmanager
 import json
 from pathlib import Path
+from threading import Event as CancelEvent
 from typing import Literal
 from urllib.parse import unquote
 
@@ -42,6 +43,15 @@ class SelectedBatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
     entry_ids: list[str] = Field(max_length=250)
     scope: ContextScope
+
+
+class NextAcquiredBatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    scope: ContextScope
+    source_id: Literal["L02"] = "L02"
+    query: str = Field(default="", max_length=200)
+    limit: int = Field(default=100, ge=1, le=250)
+    cursor: str | None = Field(default=None, max_length=1000)
 
 
 def create_router(services) -> APIRouter:
@@ -205,6 +215,27 @@ def create_router(services) -> APIRouter:
     def import_selected(body: SelectedBatch):
         repository._import_scope(body.scope)
         result = collection.import_selected(body.entry_ids)
+        if result["queued"]:
+            worker.wake()
+        return result
+
+    @router.post("/collection/import-next", status_code=202)
+    async def import_next(body: NextAcquiredBatch, request: Request):
+        repository._import_scope(body.scope)
+        cancelled = CancelEvent()
+        task = asyncio.create_task(asyncio.to_thread(collection.import_next,
+            source_id=body.source_id, query=body.query, limit=body.limit,
+            cursor=body.cursor, cancelled=cancelled.is_set))
+        try:
+            while not task.done():
+                await asyncio.wait({task}, timeout=0.1)
+                if await request.is_disconnected():
+                    cancelled.set()
+            result = await task
+        finally:
+            # A disconnected/cancelled request stops further adoption. Jobs
+            # already committed remain durable and use normal job cancellation.
+            cancelled.set()
         if result["queued"]:
             worker.wake()
         return result

@@ -29,9 +29,10 @@ def test_acquired_batch_and_replay_finish_before_blocked_extraction_releases(rep
         extracting = pool.submit(repository.run_job, background["job"]["id"])
         try:
             assert started.wait(10)
-            adopted = pool.submit(collection.import_selected, case.selected).result(timeout=10)
+            adopted = pool.submit(collection.import_next, limit=5).result(timeout=10)
             assert not release.is_set() and not extracting.done()
             assert adopted["queued"] == 5
+            assert adopted["newly_queued"] == 5 and adopted["done"]
             jobs = {result["job"]["id"] for result in adopted["results"]}
             assert len(jobs) == 5
             assert all(repository.get_job(job)["state"] == "queued" for job in jobs)

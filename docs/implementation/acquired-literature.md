@@ -454,3 +454,149 @@ The 178k-row fixture was not repeated after the memory constraint. Public
 evidence records counts and hashes, without source passages. No actual
 registration, import, downloads, providers or live profile mutation occurred
 in this sidecar.
+
+## Deliberate bulk acquisition queue — October 4, 2026 UTC
+
+The bulk lane starts from integrated parent 8005bd99 (enqueue/receipt patches
+9702920e and 0237590f), in branch build/acquired-bulk and the existing isolated
+Renulus-wt-acquired-binding worktree. The smallest existing seam is
+CollectionCatalogue.import_selected: it already reads the manifest once for a
+bounded page, inspects only selected article/version artifacts and commits
+import_text(process=False) jobs under the canonical mutation lock. Bulk adds
+registered-candidate selection and continuation around that seam. It adds no
+scheduler, queue, schema, index, recovery or CPU-worker implementation.
+
+The reserved public operation is POST /api/v1/library/collection/import-next,
+returning HTTP 202. Its request is:
+
+~~~json
+{
+  "scope": {"kind": "personal-library"},
+  "source_id": "L02",
+  "query": "",
+  "limit": 100,
+  "cursor": null
+}
+~~~
+
+source_id accepts L02 only. query is an optional literal title substring of at
+most 200 characters; empty query includes every domain. Percent, underscore and
+backslash remain literal. limit is 1–250, default 100. cursor is an optional
+opaque continuation, at most 1,000 characters. Personal-library scope is checked
+before candidate inspection; temporary-case or other scope is refused.
+
+The parent UI can start one deliberate run and issue sequential bounded pages,
+passing each next_cursor and retaining the original source/query. A cursor
+contains the last attempted stable asset ID, the initial upper ID and the
+source/query fingerprint. Strict decoding/duplicate-field checks, field shape
+and asset-ID checks reject malformed or differently filtered continuations.
+It is a traversal checkpoint, not a permission token. Every selected receipt
+still passes normal version/source/rights checks. Stable ID ordering avoids
+offset skips when inspection changes catalogue titles and eligibility. Existing
+CollectionCatalogue.list ordering and response shape are unchanged.
+
+Only registered, nonreserved acquired-jats L02 rows classified eligible or
+inspection_required are candidates. Already bound queued/processing/ready jobs
+with the same edition and verified original receipt hash are skipped. Failed/cancelled jobs,
+deleted documents and changed-original receipts follow existing inspection,
+retry/reimport and version deduplication. Alternate JATS receipts can reuse one
+canonical job/document. Unsupported/negative/reserved/media/metadata routes do
+not become candidates. inspection_required remains a claim to be inspected;
+metadata labels do not grant processing rights.
+
+Each page returns results and queued as the existing batch does, plus:
+
+| Field | Meaning within this bounded page |
+| --- | --- |
+| selected | Registered receipt rows selected before inspection |
+| attempted | Receipt rows with a completed result |
+| accepted | Distinct accepted canonical job IDs returned |
+| newly_queued | Distinct newly created canonical job IDs |
+| replayed | Receipt entries reusing an existing canonical job |
+| rejected | Completed receipt failures/exclusions |
+| rejections | Error code to rejected-entry count |
+| remaining | Pending matching rows after the last attempted ID, within the cursor bound |
+| next_cursor | Continuation, or null when that traversal is exhausted |
+| done | No later pending rows in that bounded filtered traversal |
+| cancelled | Selection was stopped by its cancellation signal |
+
+Bulk results retain the existing per-entry IDs/status/job or code/message,
+adding a replayed boolean for accepted entries. The legacy explicit-ID
+/collection/import request and response remain unchanged. queued counts
+distinct jobs currently queued in the response, including reused jobs;
+newly_queued is the count for new-work progress. Job IDs allow a client to
+deduplicate totals across pages. done does not assert indexing completion,
+corpus currentness or clinical/content review. The normal queue/job routes show
+later extraction/index status and support cancellation of committed jobs.
+
+Stop future page requests to stop a run. The new async collection route also
+signals request disconnect/cancellation to its bounded inspection call. The
+signal is checked during manifest iteration, before every receipt and after
+inspection before adoption. A stopped scan/inspection does not create a
+permission failure or clear candidate rights/state. A partial response resumes
+after the last completed receipt; unattempted rows remain pending. A canonical
+adoption already in its critical section may complete; committed jobs remain
+durable and are cancelled explicitly through the existing job API. No bulk
+operation deletes originals or undoes previously committed jobs.
+
+Inspection keeps the strict CC BY 2/3/4 or CC0 route, exact source/version JSON,
+explicit dated nonretraction, SHA/size/publisher checksum, provenance, path,
+attribution and exclusion checks. Journal replay and restriction denials still
+use the parent exact edition/original-SHA identity. Unknown acquisition
+currentness is preserved; bulk supplies no source review. The adapter holds
+only one inspected article at a time plus a bounded page of receipt metadata
+and job results, not a corpus of article text. Selection failures reading the
+manifest are cached for the page instead of repeating the failed scan per
+article. One serial CPU worker remains the native indexing lane.
+
+Initial regression on the integration CPython 3.14.4 interpreter: 129 checks passed,
+one large catalogue fixture deselected, in 33.87 seconds, with the existing
+TestClient deprecation warning:
+
+~~~powershell
+python -m pytest tests/knowledge/test_acquired.py tests/knowledge/test_acquired_binding.py tests/knowledge/test_acquired_api.py tests/knowledge/test_acquired_bulk.py tests/knowledge/test_acquired_enqueue.py tests/knowledge/test_acquired_catalogue.py tests/knowledge/test_source_status.py tests/knowledge/test_source_version.py tests/knowledge/test_collection_filters_api.py -k "not test_large_catalogue_filters_and_pages_without_registration_or_file_reads" -q
+~~~
+
+The final skip guard also checks edition: identical JATS bytes across two
+versions cannot suppress inspection of a pending version whose catalogue job
+binding points to the other edition. Its exact bound review does not promote
+the other edition. Final bulk/concurrency/binding verification after this
+refinement passed 33 checks in 16.77 seconds, with the existing warning:
+
+~~~powershell
+python -m pytest tests/knowledge/test_acquired_bulk.py tests/knowledge/test_acquired_enqueue.py tests/knowledge/test_acquired_binding.py -q
+~~~
+
+The eight bulk checks plus the adapted existing concurrency proof exercise
+real SQLite, API and LanceDB with synthetic extraction/embeddings and receipts.
+Four two-entry pages attempt seven candidates with exactly four manifest
+opens, create three jobs under T06/T08/T21, reuse one alternate receipt, and
+reject licence, retraction and original-hash failures with their exact codes.
+NC-labelled/reserved/unselected alternate PDF files are never opened. Title and
+eligibility changes do not skip or repeat asset IDs. The durable worker drains
+the three jobs, retains exact original hashes, serves the three specific topic
+gates and excludes unrelated T24. A hard publication removal scoped to another
+topic still denies every matching article version. Scan, inspection and
+post-adoption cancellation preserve unattempted rows and resume correctly.
+The API proof exercises disconnect, scope/limit/source refusal, a literal
+percent query, continuation and unchanged explicit-ID replay. The existing
+blocked-extraction proof now selects through import_next and queues all five
+versions before the CPU lock is released. External synthetic originals remain
+byte identical. No large catalogue fixture or live collection import is used.
+
+Parent-reported actual UI evidence, distinct from this lane's synthetic checks:
+the 50-candidate L02 selection accepted 29 and rejected 21 with
+article_permission_required, across 19 accepted canonical topic domains.
+Persisted inspections ran October 4, 2026 23:40:47.650–23:40:52.385 UTC, after
+the manifest pass. The reported overall snapshot was 189 documents, 136 ready,
+one processing and 52 queued. These are dated parent observations, not a live
+profile read or independent throughput/corpus-completion verification here.
+
+Remaining limits are one complete manifest metadata pass per bounded page,
+selected body/version inspection and serial native indexing. The parent owns
+BulkImportControl and actual runs, including pausing selection while the queue
+drains. This lane edits only acquired.py, collection.py, the new collection API
+DTO/route/import, focused acquired tests and this evidence. Citation API paths
+remain with Feynman; repository/source-status/models/schema/worker/recovery and
+Library UI paths are unchanged. No downloads, providers, training, live profile
+mutation, source-text publication or acquired-original redistribution occurred.
