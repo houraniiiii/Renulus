@@ -11,6 +11,7 @@ const request = vi.fn<typeof fetch>();
 const states = ['ready', 'queued', 'processing', 'failed', 'cancelled'] as const;
 let records: LibraryDocument[];
 let catalogueEntries: CatalogueEntry[];
+let catalogueCounts: boolean;
 function documentFor(number: number): LibraryDocument {
   const id = 'doc_' + String(number).padStart(3, '0');
   const status = number <= 100 ? 'ready' : number <= 140 ? 'queued' : number <= 150 ? 'processing' : number <= 155 ? 'failed' : 'cancelled';
@@ -29,6 +30,21 @@ function pageFor(url: string) {
   const counts = Object.fromEntries(states.map(state => [state, records.filter(document => document.status === state).length]));
   return { documents: matching.slice(offset, offset + limit), total: matching.length, counts, offset, limit };
 }
+function receiptFor(number: number, eligibility = 'inspection_required', overrides: Partial<CatalogueEntry> = {}): CatalogueEntry {
+  return { id: 'receipt_' + number, title: 'Synthetic receipt ' + String(number).padStart(3, '0'), source_id: 'L02', eligibility,
+    reserved: eligibility === 'reserved', bytes: 1200, metadata: { ...documentFor(1).revisions[0].metadata, source_id: 'L02', asset_role: ['acquired-jats'] },
+    rights: documentFor(1).revisions[0].rights, document_id: null, job_id: null, processing_status: 'acquired', error_code: null, ...overrides } as CatalogueEntry;
+}
+const receiptBucket = (entry: CatalogueEntry) => entry.reserved || entry.eligibility === 'reserved' ? 'reserved' : entry.eligibility === 'eligible' || entry.eligibility === 'inspection_required' ? entry.eligibility : 'unavailable';
+function receiptPageFor(url: string) {
+  const params = new URL(url, 'http://127.0.0.1').searchParams;
+  const sourceId = params.get('source_id'), query = (params.get('query') ?? '').toLowerCase(), eligibility = params.get('eligibility');
+  const limit = Number(params.get('limit')), offset = Number(params.get('offset'));
+  const sourceEntries = catalogueEntries.filter(entry => !sourceId || entry.source_id === sourceId);
+  const matching = sourceEntries.filter(entry => (!query || entry.title.toLowerCase().includes(query)) && (!eligibility || receiptBucket(entry) === eligibility));
+  const counts = Object.fromEntries(['eligible', 'inspection_required', 'reserved', 'unavailable'].map(bucket => [bucket, sourceEntries.filter(entry => receiptBucket(entry) === bucket).length]));
+  return { entries: matching.slice(offset, offset + limit), total: matching.length, offset, limit, ...(catalogueCounts ? { counts } : {}) };
+}
 const base = async (url: RequestInfo | URL, options?: RequestInit): Promise<Response> => {
   const path = String(url);
   if (path.startsWith('/api/v1/library/documents?')) return json(pageFor(path));
@@ -45,11 +61,7 @@ const base = async (url: RequestInfo | URL, options?: RequestInit): Promise<Resp
     return json({ document_id: document.id, document_revision: revision, title: document.title, page: page ? Number(page) : null, locators: [{ page: Number(page ?? 1), char_span: [0, 100], item_ref: '#/texts/0' }], original_url: '/library/revisions/' + revision + '/original' });
   }
   if (path === '/api/v1/library/capabilities') return json({ text_import: true, pdf_image_import: false, temporary_extraction: false });
-  if (path.startsWith('/api/v1/library/collection/catalogue?')) {
-    const sourceId = new URL(path, 'http://127.0.0.1').searchParams.get('source_id');
-    const entries = catalogueEntries.filter(entry => !sourceId || entry.source_id === sourceId);
-    return json({ entries, total: entries.length, offset: 0 });
-  }
+  if (path.startsWith('/api/v1/library/collection/catalogue?')) return json(receiptPageFor(path));
   if (path === '/api/v1/content/topics') return json([{ id: 'T21', label: 'Kidney transplantation' }, { id: 'T19', label: 'Medicines and nephrotoxicity' }]);
   if (path === '/api/v1/retrieval/connections') return json({ selected_tool: null, connections: ['europe-pmc', 'pubmed'].map(provider => ({ provider, enabled: true, configured: false, selected: false, requests_used: 0, daily_request_limit: 100, credits_used: 0, daily_credit_limit: 20, auth_status: 'not_checked' })) });
   if (path === '/api/v1/retrieval/discover') return json({ topic_id: 'T21', topic_label: 'Kidney transplantation', provider: 'europe-pmc', queried_at: '2026-01-01T12:00:00Z', records: [{ id: 'MED:10001', title: 'Synthetic discovered source', url: 'https://pubmed.ncbi.nlm.nih.gov/10001/', pmcid: 'PMC10001', publication_date: '2026-01-01' }] });
@@ -60,6 +72,7 @@ const base = async (url: RequestInfo | URL, options?: RequestInit): Promise<Resp
 beforeEach(() => {
   records = Array.from({ length: 156 }, (_, index) => documentFor(index + 1));
   catalogueEntries = [];
+  catalogueCounts = false;
   navigation.scope.kind = 'study'; navigation.handoff = {}; navigation.revision = 0;
   request.mockReset().mockImplementation(base);
   vi.stubGlobal('fetch', request);
@@ -71,6 +84,13 @@ const summary = () => screen.getByLabelText('Library processing summary');
 function count(label: string) { return within(summary()).getByText(label, { selector: 'dt' }).nextElementSibling?.textContent; }
 async function mount() { const view = render(<LibraryPage />); await screen.findByText('1–25 of 156 documents'); return view; }
 async function next(range: string) { fireEvent.click(screen.getByRole('button', { name: 'Next documents' })); await screen.findByText(range); }
+const collectionCalls = () => request.mock.calls.filter(([url]) => String(url).startsWith('/api/v1/library/collection/catalogue?'));
+const receipts = () => screen.getByRole('region', { name: 'Collected source receipts' });
+async function mountCollection() {
+  const view = await mount(); fireEvent.click(screen.getByRole('button', { name: 'Collected sources' }));
+  fireEvent.change(screen.getByLabelText('Source register'), { target: { value: 'L02' } });
+  await screen.findByRole('region', { name: 'Collected source receipts' }); return view;
+}
 
 describe('Library document browser', () => {
   it('bounds a 156-document library to 25 visible rows and displays global status counts', async () => {
@@ -345,5 +365,166 @@ describe('Library document browser', () => {
     await act(async () => { view.rerender(<LibraryPage />); });
     fireEvent.click(screen.getByRole('button', { name: 'Collected sources' }));
     expect((screen.getByRole('checkbox', { name: 'Select Synthetic JATS inspection' }) as HTMLInputElement).disabled).toBe(true);
+  });
+});
+
+describe('Collection receipt filters', () => {
+  it('bounds a reported 178k-receipt catalogue and shows supplied counts without selecting or importing anything', async () => {
+    const counts = { eligible: 1000, inspection_required: 172000, reserved: 1000, unavailable: 4000 };
+    request.mockImplementation(async (url, options) => String(url).startsWith('/api/v1/library/collection/catalogue?') && String(url).includes('source_id=L02')
+      ? json({ entries: Array.from({ length: 50 }, (_, index) => receiptFor(index + 1)), total: 178000, offset: 0, limit: 50, counts }) : base(url, options));
+    await mountCollection();
+    expect(within(receipts()).getAllByRole('listitem')).toHaveLength(50);
+    expect(screen.getByText('1–50 of 178000 receipts')).toBeTruthy();
+    expect(screen.getByText('Page 1 of 3560')).toBeTruthy();
+    const summary = screen.getByLabelText('Collection eligibility summary');
+    expect(within(summary).getByText('Candidates needing inspection', { selector: 'dt' }).nextElementSibling?.textContent).toBe('172000');
+    expect((screen.getByRole('button', { name: 'Queue selected (0)' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByLabelText('Find a source') as HTMLInputElement).maxLength).toBe(200);
+    expect(receipts().tabIndex).toBe(0);
+    expect(request.mock.calls.some(([url]) => url === '/api/v1/library/collection/import')).toBe(false);
+  });
+
+  it('filters candidates and eligible receipts while preserving explicit selection and clearing it on each change', async () => {
+    catalogueCounts = true;
+    catalogueEntries = [receiptFor(1), receiptFor(2, 'eligible'), receiptFor(3, 'reserved'), receiptFor(4, 'article_permission_required')];
+    await mountCollection();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Synthetic receipt 001' }));
+    expect((screen.getByRole('button', { name: 'Queue selected (1)' }) as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.change(screen.getByLabelText('Receipt eligibility'), { target: { value: 'inspection_required' } });
+    await screen.findByText('1–1 of 1 matching receipts');
+    expect(within(receipts()).getAllByRole('listitem')).toHaveLength(1);
+    expect((screen.getByRole('checkbox', { name: 'Select Synthetic receipt 001' }) as HTMLInputElement).checked).toBe(false);
+    expect(screen.getByRole('button', { name: 'Queue selected (0)' })).toBeTruthy();
+    const summary = screen.getByLabelText('Collection eligibility summary');
+    expect(within(summary).getByText('Eligible', { selector: 'dt' }).nextElementSibling?.textContent).toBe('1');
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Synthetic receipt 001' }));
+    fireEvent.change(screen.getByLabelText('Receipt eligibility'), { target: { value: 'eligible' } });
+    await screen.findByRole('checkbox', { name: 'Select Synthetic receipt 002' });
+    expect(screen.queryByRole('checkbox', { name: 'Select Synthetic receipt 001' })).toBeNull();
+    expect((screen.getByRole('checkbox', { name: 'Select Synthetic receipt 002' }) as HTMLInputElement).checked).toBe(false);
+    expect(String(collectionCalls().at(-1)![0])).toBe('/api/v1/library/collection/catalogue?limit=50&offset=0&source_id=L02&eligibility=eligible');
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Synthetic receipt 002' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear source filters' }));
+    await screen.findByText('1–4 of 4 receipts');
+    expect(screen.getByRole('button', { name: 'Queue selected (0)' })).toBeTruthy();
+    expect(new URL(String(collectionCalls().at(-1)![0]), 'http://127.0.0.1').searchParams.has('eligibility')).toBe(false);
+    expect(request.mock.calls.some(([url]) => url === '/api/v1/library/collection/import')).toBe(false);
+  });
+
+  it('encodes a literal title, resets paging, and does not send a draft or overlong query', async () => {
+    catalogueEntries = Array.from({ length: 55 }, (_, index) => receiptFor(index + 1));
+    catalogueEntries[0].title = 'Synthetic 100%_ & eligibility=reserved';
+    await mountCollection();
+    fireEvent.click(screen.getByRole('button', { name: 'Next sources' }));
+    await screen.findByText('51–55 of 55 receipts');
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Synthetic receipt 051' }));
+    const prior = collectionCalls().length;
+    fireEvent.change(screen.getByLabelText('Find a source'), { target: { value: '100%_ & eligibility=reserved' } });
+    expect(collectionCalls()).toHaveLength(prior);
+    expect(screen.getByRole('button', { name: 'Queue selected (0)' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Filter sources' }));
+    await screen.findByText('1–1 of 1 matching receipts');
+    const params = new URL(String(collectionCalls().at(-1)![0]), 'http://127.0.0.1').searchParams;
+    expect(params.get('offset')).toBe('0'); expect(params.get('query')).toBe('100%_ & eligibility=reserved'); expect(params.has('eligibility')).toBe(false);
+    const filteredCalls = collectionCalls().length;
+    fireEvent.change(screen.getByLabelText('Find a source'), { target: { value: 'x'.repeat(201) } });
+    const filter = screen.getByRole('button', { name: 'Filter sources' }) as HTMLButtonElement;
+    expect(filter.disabled).toBe(true); fireEvent.submit(filter.closest('form')!);
+    expect(collectionCalls()).toHaveLength(filteredCalls);
+    expect(JSON.stringify(request.mock.calls)).not.toContain('SYNTHETIC_PRIVATE_SENTINEL');
+  });
+
+  it('keeps reserved and unavailable rows visible but blocked; omits counts when the API supplies none', async () => {
+    catalogueEntries = [receiptFor(1, 'reserved'), receiptFor(2, 'article_permission_required')];
+    await mountCollection();
+    expect(screen.queryByLabelText('Collection eligibility summary')).toBeNull();
+    fireEvent.change(screen.getByLabelText('Receipt eligibility'), { target: { value: 'reserved' } });
+    await screen.findByText('1–1 of 1 matching receipts');
+    const reserved = screen.getByRole('checkbox', { name: 'Select Synthetic receipt 001' }) as HTMLInputElement;
+    expect(reserved.disabled).toBe(true); fireEvent.click(reserved); expect(reserved.checked).toBe(false);
+    fireEvent.change(screen.getByLabelText('Receipt eligibility'), { target: { value: 'unavailable' } });
+    await screen.findByRole('checkbox', { name: 'Select Synthetic receipt 002' });
+    const unavailable = screen.getByRole('checkbox', { name: 'Select Synthetic receipt 002' }) as HTMLInputElement;
+    expect(unavailable.disabled).toBe(true); fireEvent.click(unavailable); expect(unavailable.checked).toBe(false);
+    expect(request.mock.calls.some(([url]) => url === '/api/v1/library/collection/import')).toBe(false);
+  });
+
+  it('distinguishes an empty filter from an empty collection and keeps the source register when clearing', async () => {
+    catalogueEntries = [receiptFor(1)];
+    await mountCollection();
+    fireEvent.change(screen.getByLabelText('Find a source'), { target: { value: 'No synthetic receipt matches' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Filter sources' }));
+    await screen.findByText('No collected sources match these filters');
+    expect(screen.getByText('0 matching receipts')).toBeTruthy();
+    expect(screen.queryByText('This collection has no catalogue records yet')).toBeNull();
+    expect((screen.getByRole('button', { name: 'Next sources' }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Show all receipts' }));
+    await screen.findByText('1–1 of 1 receipts');
+    expect((screen.getByLabelText('Source register') as HTMLSelectElement).value).toBe('L02');
+    expect((screen.getByLabelText('Find a source') as HTMLInputElement).value).toBe('');
+    expect((screen.getByRole('checkbox', { name: 'Select Synthetic receipt 001' }) as HTMLInputElement).checked).toBe(false);
+  });
+
+  it('retries a failed candidate filter without hiding its criteria or making an import', async () => {
+    catalogueEntries = [receiptFor(1)];
+    let fail = true;
+    request.mockImplementation(async (url, options) => String(url).includes('eligibility=inspection_required') && fail
+      ? json({ error: { code: 'catalogue_unavailable', message: 'Synthetic receipt filter unavailable.', retryable: true } }, 503) : base(url, options));
+    await mountCollection();
+    fireEvent.change(screen.getByLabelText('Receipt eligibility'), { target: { value: 'inspection_required' } });
+    await screen.findByText('Synthetic receipt filter unavailable.');
+    expect(screen.queryByText('No collected sources match these filters')).toBeNull();
+    expect((screen.getByLabelText('Receipt eligibility') as HTMLSelectElement).value).toBe('inspection_required');
+    fail = false; fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await screen.findByText('1–1 of 1 matching receipts');
+    expect(collectionCalls().slice(-2).map(([url]) => url)).toEqual([
+      '/api/v1/library/collection/catalogue?limit=50&offset=0&source_id=L02&eligibility=inspection_required',
+      '/api/v1/library/collection/catalogue?limit=50&offset=0&source_id=L02&eligibility=inspection_required']);
+    expect(request.mock.calls.some(([url]) => url === '/api/v1/library/collection/import')).toBe(false);
+  });
+
+  it('discards a delayed candidate response after a newer eligible filter and resets selection on source changes', async () => {
+    catalogueEntries = [receiptFor(1), receiptFor(2, 'eligible'), receiptFor(3, 'eligible', { source_id: 'E01' })];
+    let release!: (value: unknown) => void;
+    request.mockImplementation(async (url, options) => {
+      if (String(url).includes('eligibility=inspection_required')) {
+        const response = json({}); response.json = () => new Promise(resolve => { release = resolve; }); return response;
+      }
+      return base(url, options);
+    });
+    await mountCollection();
+    fireEvent.change(screen.getByLabelText('Receipt eligibility'), { target: { value: 'inspection_required' } });
+    await waitFor(() => expect(release).toBeTypeOf('function'));
+    fireEvent.change(screen.getByLabelText('Receipt eligibility'), { target: { value: 'eligible' } });
+    await screen.findByRole('checkbox', { name: 'Select Synthetic receipt 002' });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Synthetic receipt 002' }));
+    await act(async () => release(receiptPageFor('/api/v1/library/collection/catalogue?limit=50&offset=0&source_id=L02&eligibility=inspection_required')));
+    expect(screen.queryByRole('checkbox', { name: 'Select Synthetic receipt 001' })).toBeNull();
+    expect((screen.getByRole('checkbox', { name: 'Select Synthetic receipt 002' }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.change(screen.getByLabelText('Source register'), { target: { value: 'E01' } });
+    await screen.findByRole('checkbox', { name: 'Select Synthetic receipt 003' });
+    expect(screen.getByRole('button', { name: 'Queue selected (0)' })).toBeTruthy();
+    expect((screen.getByRole('checkbox', { name: 'Select Synthetic receipt 003' }) as HTMLInputElement).checked).toBe(false);
+  });
+
+  it('does not let document polling abort a slow receipt filter or silently submit its selection', async () => {
+    vi.useFakeTimers(); catalogueEntries = [receiptFor(1)];
+    let release!: (value: Response) => void;
+    request.mockImplementation(async (url, options) => String(url).includes('eligibility=inspection_required')
+      ? await new Promise<Response>(resolve => { release = resolve; }) : base(url, options));
+    await act(async () => { render(<LibraryPage />); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Collected sources' })); });
+    await act(async () => { fireEvent.change(screen.getByLabelText('Source register'), { target: { value: 'L02' } }); });
+    await act(async () => { fireEvent.click(screen.getByRole('checkbox', { name: 'Select Synthetic receipt 001' })); fireEvent.change(screen.getByLabelText('Receipt eligibility'), { target: { value: 'inspection_required' } }); });
+    expect(release).toBeTypeOf('function');
+    const pending = collectionCalls().at(-1)!;
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+    expect(pending[1]!.signal!.aborted).toBe(false);
+    expect(collectionCalls().filter(([url]) => String(url).includes('eligibility=inspection_required'))).toHaveLength(1);
+    await act(async () => { release(json(receiptPageFor(String(pending[0])))); });
+    expect(screen.getByText('1–1 of 1 matching receipts')).toBeTruthy();
+    expect((screen.getByRole('checkbox', { name: 'Select Synthetic receipt 001' }) as HTMLInputElement).checked).toBe(false);
+    expect(request.mock.calls.some(([url]) => url === '/api/v1/library/collection/import')).toBe(false);
   });
 });

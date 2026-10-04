@@ -22,6 +22,11 @@ type DocumentStatus = typeof documentStatuses[number];
 type DocumentCounts = Partial<Record<DocumentStatus, number>>;
 interface DocumentPage { documents: LibraryDocument[]; total: number; counts: DocumentCounts; offset: number; limit: number }
 interface DocumentSnapshot { path: string; page: DocumentPage }
+const collectionPageSize = 50;
+const collectionEligibilityLabels = { eligible: 'Eligible', inspection_required: 'Candidates needing inspection', reserved: 'Reserved', unavailable: 'Unavailable' } as const;
+type CollectionEligibility = keyof typeof collectionEligibilityLabels;
+interface CataloguePage extends Catalogue { counts?: Partial<Record<CollectionEligibility, number>>; limit?: number }
+interface CatalogueSnapshot { path: string; page: CataloguePage }
 function requiresLicenceInspection(entry: CatalogueEntry) {
   const roles = (entry.metadata as CatalogueEntry['metadata'] & { asset_role?: string[] }).asset_role;
   return entry.source_id === 'L02' && entry.eligibility === 'inspection_required' && Array.isArray(roles) && roles.includes('acquired-jats');
@@ -38,6 +43,21 @@ async function loadDocumentPage(path: string, offset: number, signal: AbortSigna
       page.documents.length > page.total || !page.counts || typeof page.counts !== 'object' || Array.isArray(page.counts) || documentStatuses.some(status => page.counts[status] !== undefined &&
         (!Number.isInteger(page.counts[status]) || page.counts[status]! < 0))) {
     throw new ApiError('The library returned an incomplete document page. Try again.', 0, 'invalid_document_page', true);
+  }
+  return { path, page };
+}
+
+async function loadCataloguePage(path: string, offset: number, signal: AbortSignal): Promise<CatalogueSnapshot> {
+  const page = await api<CataloguePage>(path, { signal });
+  if (!Array.isArray(page.entries) || !Number.isInteger(page.total) || page.total < 0 || page.offset !== offset ||
+      page.entries.length > collectionPageSize || page.entries.length > page.total ||
+      (page.limit !== undefined && page.limit !== collectionPageSize) ||
+      (page.counts !== undefined && (!page.counts || typeof page.counts !== 'object' || Array.isArray(page.counts) ||
+        Object.keys(collectionEligibilityLabels).some(key => {
+          const count = page.counts![key as CollectionEligibility];
+          return count !== undefined && (!Number.isInteger(count) || count < 0);
+        })))) {
+    throw new ApiError('The collection returned an incomplete receipt page. Try again.', 0, 'invalid_catalogue_page', true);
   }
   return { path, page };
 }
@@ -63,6 +83,10 @@ export default function LibraryPage() {
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
   const [sourceId, setSourceId] = useState('E01');
   const [offset, setOffset] = useState(0);
+  const [collectionQueryInput, setCollectionQueryInput] = useState('');
+  const [collectionQuery, setCollectionQuery] = useState('');
+  const [collectionEligibility, setCollectionEligibility] = useState<CollectionEligibility | ''>('');
+  const [catalogueSnapshot, setCatalogueSnapshot] = useState<CatalogueSnapshot>();
   const [documentQueryInput, setDocumentQueryInput] = useState('');
   const [documentQuery, setDocumentQuery] = useState('');
   const [documentStatus, setDocumentStatus] = useState<DocumentStatus | ''>('');
@@ -75,9 +99,15 @@ export default function LibraryPage() {
   if (documentStatus) documentParams.set('status', documentStatus);
   const documentPath = '/library/documents?' + documentParams;
   const documentRequestPath = useRef(documentPath);
+  const collectionParams = new URLSearchParams({ limit: String(collectionPageSize), offset: String(offset) });
+  if (sourceId) collectionParams.set('source_id', sourceId);
+  if (collectionQuery) collectionParams.set('query', collectionQuery);
+  if (collectionEligibility) collectionParams.set('eligibility', collectionEligibility);
+  const cataloguePath = '/library/collection/catalogue?' + collectionParams;
+  const catalogueRequestPath = useRef(cataloguePath);
   const documents = useResource(signal => loadDocumentPage(documentPath, documentOffset, signal));
   const capabilities = useResource(signal => api<Capabilities>('/library/capabilities', { signal }));
-  const catalogue = useResource(signal => api<Catalogue>('/library/collection/catalogue?limit=50&offset=' + offset + (sourceId ? '&source_id=' + encodeURIComponent(sourceId) : ''), { signal }));
+  const catalogue = useResource(signal => loadCataloguePage(cataloguePath, offset, signal));
   const ready = capabilities.resource.status === 'ready' ? capabilities.resource.data : null;
   const loadedPage = documents.resource.status === 'ready' && documents.resource.data.path === documentPath
     ? documents.resource.data.page : documentSnapshot?.path === documentPath ? documentSnapshot.page : undefined;
@@ -86,6 +116,10 @@ export default function LibraryPage() {
   const documentPage = beyondLastPage ? undefined : loadedPage;
   const processing = !!documentCounts && ((documentCounts.queued ?? 0) + (documentCounts.processing ?? 0) > 0);
   const filteredDocuments = !!documentQuery || !!documentStatus;
+  const loadedCatalogue = catalogue.resource.status === 'ready' && catalogue.resource.data.path === cataloguePath
+    ? catalogue.resource.data.page : catalogueSnapshot?.path === cataloguePath ? catalogueSnapshot.page : undefined;
+  const cataloguePage = loadedCatalogue && offset <= (loadedCatalogue.total > 0 ? Math.floor((loadedCatalogue.total - 1) / collectionPageSize) * collectionPageSize : 0) ? loadedCatalogue : undefined;
+  const filteredCollection = !!collectionQuery || !!collectionEligibility;
 
   useEffect(() => {
     if (documentRequestPath.current === documentPath) return;
@@ -99,10 +133,20 @@ export default function LibraryPage() {
     const lastOffset = snapshot.page.total > 0 ? Math.floor((snapshot.page.total - 1) / documentPageSize) * documentPageSize : 0;
     if (documentOffset > lastOffset) setDocumentOffset(lastOffset);
   }, [documents.resource, documentPath, documentOffset]);
+  useEffect(() => {
+    if (catalogueRequestPath.current === cataloguePath) return;
+    catalogueRequestPath.current = cataloguePath; setSelectedEntries(new Set()); catalogue.retry();
+  }, [cataloguePath, catalogue.retry]);
+  useEffect(() => {
+    if (catalogue.resource.status !== 'ready' || catalogue.resource.data.path !== cataloguePath) return;
+    const snapshot = catalogue.resource.data;
+    setCatalogueSnapshot(snapshot);
+    const lastOffset = snapshot.page.total > 0 ? Math.floor((snapshot.page.total - 1) / collectionPageSize) * collectionPageSize : 0;
+    if (offset > lastOffset) setOffset(lastOffset);
+  }, [catalogue.resource, cataloguePath, offset]);
 
   useEffect(() => { if (temporary) { setText(''); setTitle(''); setFile(null); setMode('browse'); } }, [temporary]);
   useEffect(() => { if (navigation.handoff?.mode === 'discover') setMode('browse'); }, [navigation.revision]);
-  useEffect(() => { catalogue.retry(); setSelectedEntries(new Set()); }, [sourceId, offset]);
   useEffect(() => {
     const documentId = navigation.handoff?.document_id;
     const revision = navigation.handoff?.document_revision ?? navigation.handoff?.revision_id;
@@ -118,9 +162,9 @@ export default function LibraryPage() {
   }, [navigation.revision]);
   useEffect(() => {
     if (!processing || documents.resource.status === 'loading') return;
-    const timer = window.setInterval(() => { documents.retry(); catalogue.retry(); }, 3000);
+    const timer = window.setInterval(() => { documents.retry(); if (catalogue.resource.status !== 'loading') catalogue.retry(); }, 3000);
     return () => window.clearInterval(timer);
-  }, [processing, documents.resource.status]);
+  }, [processing, documents.resource.status, catalogue.resource.status]);
   useEffect(() => () => { if (original?.url) URL.revokeObjectURL(original.url); }, [original?.url]);
 
   async function act(action: () => Promise<void>) {
@@ -201,6 +245,9 @@ export default function LibraryPage() {
   function clearDocumentFilters() {
     setDocumentQueryInput(''); setDocumentQuery(''); setDocumentStatus(''); setDocumentOffset(0);
   }
+  function clearCollectionFilters() {
+    setCollectionQueryInput(''); setCollectionQuery(''); setCollectionEligibility(''); setOffset(0); setSelectedEntries(new Set());
+  }
 
   return <>
     <PageHeader title="Your library" description="Read, search and return to the sources behind your learning." actions={<>
@@ -232,23 +279,41 @@ export default function LibraryPage() {
           <div className="actions"><Button busy={busy} disabled={temporary || (mode === 'text' ? !text.trim() || !ready?.text_import : !file || !allowed || !(file.name.endsWith('.txt') || file.name.endsWith('.md') ? ready?.text_import : ready?.pdf_image_import))} onClick={mode === 'text' ? addText : addFile}>Add {mode === 'text' ? 'note' : 'document'}</Button>
             <Button variant="ghost" onClick={() => setMode('browse')}>Close</Button></div>
         </div></Panel>}
-        {mode === 'catalogue' && <section className="section">
+        {mode === 'catalogue' && <section className="section library-collection">
           <div className="library-section-title"><h2>Collected sources</h2><Button variant="ghost" onClick={() => setMode('browse')}>Back to library</Button></div>
-          <div className="library-tools"><Select label="Source register" value={sourceId} onChange={event => { setSourceId(event.target.value); setOffset(0); }}>
+          <div className="library-tools"><Select label="Source register" value={sourceId} disabled={busy} onChange={event => { setSourceId(event.target.value); setOffset(0); setSelectedEntries(new Set()); }}>
             <option value="">All collected sources</option><option value="E01">ERA Neph-Manual</option><option value="K01">KDIGO CKD</option><option value="K02">KDIGO anemia</option><option value="E06">Educational reviews</option><option value="L02">PMC full text</option>
           </Select><Button variant="secondary" busy={busy} onClick={catalogueSources}>Read collection catalogue</Button></div>
           <p className="muted">Acquired files appear immediately. Only completed imports enter search. The manual receipt date does not establish an edition.</p>
-          {catalogue.resource.status === 'loading' ? <LoadingState label="Loading collected source records" /> : catalogue.resource.status === 'error' ? <ErrorState error={catalogue.resource.error} onRetry={catalogue.retry} /> : <>
-            {catalogue.resource.data.entries.length === 0 ? <EmptyState title="This collection has no catalogue records yet"><p>Read the collection metadata to list its acquired files, then select a processing batch.</p></EmptyState> : <>
-              <Button busy={busy} disabled={temporary || selectedEntries.size === 0 || selectedEntries.size > 250} onClick={importSelected}>Queue selected ({selectedEntries.size})</Button>
-              <ul className="library-list">{catalogue.resource.data.entries.map(entry => <li key={entry.id} className="library-catalogue-row">
+          <form className="library-collection-filters" onSubmit={event => { event.preventDefault(); if (busy || collectionQueryInput.trim().length > 200) return; setCollectionQuery(collectionQueryInput.trim()); setOffset(0); setSelectedEntries(new Set()); }}>
+            <Input label="Find a source" placeholder="Literal title within the source register" value={collectionQueryInput} maxLength={200} disabled={busy} onChange={event => { setCollectionQueryInput(event.target.value); setSelectedEntries(new Set()); }} />
+            <Select label="Receipt eligibility" value={collectionEligibility} disabled={busy} onChange={event => { setCollectionEligibility(event.target.value as CollectionEligibility | ''); setOffset(0); setSelectedEntries(new Set()); }}>
+              <option value="">All receipts</option>{Object.entries(collectionEligibilityLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </Select>
+            <Button type="submit" variant="secondary" disabled={busy || collectionQueryInput.trim().length > 200}>Filter sources</Button>
+            {(filteredCollection || collectionQueryInput) && <Button variant="ghost" disabled={busy} onClick={clearCollectionFilters}>Clear source filters</Button>}
+          </form>
+          <p className="field-hint">Choose candidates or eligible receipts, then check the files to import. Changing filters clears your selection; no source is selected automatically.</p>
+          {cataloguePage?.counts && <dl className="library-counts" aria-label="Collection eligibility summary">{Object.entries(collectionEligibilityLabels).map(([value, label]) => {
+            const count = cataloguePage.counts![value as CollectionEligibility];
+            return count !== undefined ? <div key={value}><dt>{label}</dt><dd>{count}</dd></div> : null;
+          })}</dl>}
+          {catalogue.resource.status === 'error' && <ErrorState title="Collected sources could not be loaded" error={catalogue.resource.error} onRetry={catalogue.retry} />}
+          {!cataloguePage ? catalogue.resource.status !== 'error' && <LoadingState label="Loading collected source records" /> : <>
+            <div className="library-document-page-heading"><p role="status" aria-live="polite">{cataloguePage.total ? <>{offset + 1}–{Math.min(offset + collectionPageSize, cataloguePage.total)} of {cataloguePage.total} {filteredCollection ? 'matching receipts' : 'receipts'}</> : '0 ' + (filteredCollection ? 'matching receipts' : 'receipts')}</p>
+              {catalogue.resource.status === 'loading' && <span className="muted">Refreshing…</span>}
+              {catalogue.resource.status === 'error' && <span className="muted">Showing the last loaded receipts</span>}
+            </div>
+            {cataloguePage.entries.length === 0 ? filteredCollection ? <EmptyState title="No collected sources match these filters"><p>Try another title or eligibility, or show all receipts in this source register.</p><Button variant="secondary" onClick={clearCollectionFilters}>Show all receipts</Button></EmptyState> : <EmptyState title="This collection has no catalogue records yet"><p>Read the collection metadata to list its acquired files, then select a processing batch.</p></EmptyState> : <>
+              <Button busy={busy} disabled={temporary || catalogue.resource.status === 'error' || selectedEntries.size === 0 || selectedEntries.size > 250} onClick={importSelected}>Queue selected ({selectedEntries.size})</Button>
+              <div className="library-collection-list-region" role="region" aria-label="Collected source receipts" tabIndex={0}><ul className="library-list">{cataloguePage.entries.map(entry => <li key={entry.id} className="library-catalogue-row">
                 <label className="library-check"><input type="checkbox" aria-label={'Select ' + entry.title} checked={selectedEntries.has(entry.id)} disabled={busy || !selectableEntry(entry, temporary) || (!selectedEntries.has(entry.id) && selectedEntries.size >= 250)} onChange={() => toggleEntry(entry)} /></label>
                 <div><h3>{entry.title}</h3><div className="library-meta"><Badge tone={statusTone(entry.processing_status)}>{statusLabel(entry.processing_status)}</Badge>{requiresLicenceInspection(entry) && <Badge tone="warning">Check licence on import</Badge>}<span>{entry.metadata.collection_section ?? entry.source_id}</span><span>{(entry.bytes / 1024 / 1024).toFixed(1)} MiB</span></div>
                   {entry.eligibility !== 'eligible' && <p className="muted">{entry.reserved ? 'Reserved assessment material is excluded from learning retrieval.' : requiresLicenceInspection(entry) ? 'Renulus checks the matching article version, file hash and licence before saving eligible text. This does not establish source currentness.' : 'Processing permission or format needs verification.'}</p>}
                   {entry.error_code && <p className="field-error">Import needs attention: {entry.error_code}</p>}
-                </div></li>)}</ul>
-              <div className="library-pagination"><Button variant="secondary" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 50))}>Previous</Button><span className="muted">{offset + 1}–{Math.min(offset + 50, catalogue.resource.data.total)} of {catalogue.resource.data.total}</span><Button variant="secondary" disabled={offset + 50 >= catalogue.resource.data.total} onClick={() => setOffset(offset + 50)}>Next</Button></div>
+                </div></li>)}</ul></div>
             </>}
+            <nav className="library-pagination" aria-label="Collection receipt pages"><Button variant="secondary" disabled={busy || offset === 0} onClick={() => { setOffset(Math.max(0, offset - collectionPageSize)); setSelectedEntries(new Set()); }}>Previous sources</Button><span className="muted">Page {Math.floor(offset / collectionPageSize) + 1} of {Math.max(1, Math.ceil(cataloguePage.total / collectionPageSize))}</span><Button variant="secondary" disabled={busy || offset + collectionPageSize >= cataloguePage.total} onClick={() => { setOffset(offset + collectionPageSize); setSelectedEntries(new Set()); }}>Next sources</Button></nav>
           </>}
         </section>}
         {mode !== 'catalogue' && <>
