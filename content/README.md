@@ -70,3 +70,31 @@ ledger. Content adds no alternate service, provider, model, private dataset or
 engine dependency. Packaging must include the selected pack directory and may
 set `services.registry['content_pack_root']` before creating its router.
 Scoped licence terms are in `content/LICENSE`; source rights remain independent.
+
+Startup selects the highest numeric published bundle in the
+`renulus-foundations` lineage. It installs on a fresh profile or upgrades an
+older active version using the existing canonical SQLite transaction. It
+preserves historical pins, inactive profiles, previously installed inactive or
+withdrawn targets, newer active versions and different active lineages. Draft
+and empty release folders are excluded. A corrupt published latest bundle or
+immutable-version conflict leaves the existing bank intact and reports the
+failed activation; it does not silently fall back to an older bundle.
+
+The integrator may set an exact selection before router creation:
+
+```python
+services.registry["content_pack_selection"] = {
+    "id": "renulus-foundations",
+    "version": "1.1.0",
+    "upgrade_from": ["1.0.0", "1.0.1"],
+}
+```
+
+Omitting `version` uses latest bundled selection. Omitting `upgrade_from` permits
+any older active version in that lineage; an explicit list limits upgrades.
+`GET /api/v1/content/bootstrap` and `services.registry["content_bootstrap"]`
+return the startup outcome and any activation error without question content.
+`GET /api/v1/content/manifest` remains the current active selection, including
+later manual installs. Reactivating an eligible inactive bank requires an
+explicit install; a withdrawn bank cannot be reactivated. No public question
+stem/detail route is added.

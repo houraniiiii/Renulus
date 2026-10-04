@@ -320,3 +320,64 @@ repository. The authorized api.py bootstrap follow-up will choose the latest
 bundled published release and preserve historical pins and inactive/withdrawn
 states. No applied DDL or repository contract changes are needed. M4 can select
 the exact 1.1.0 manifest for its scoring/exposure/restart producer proof.
+
+## Authorized bundled-pack bootstrap follow-up
+
+October 4, 2026. The user expanded the lane write set to
+runtime/renulus/content/api.py for latest bundled activation. No repository,
+applied schema, shared storage/server, dependencies or global manifests changed.
+The original pack handoff is 80200228a4535e29ac7583eb0ef5c6dab7391ad1.
+
+With no override, create_router selects the highest numeric published
+renulus-foundations bundle. A fresh profile installs that release; an older
+active release in the same lineage upgrades through the existing install_pack
+transaction. Numeric 1.10.0 is newer than 1.9.0. Draft, empty and preview folders
+are excluded. The chosen manifest must match its directory identity/version,
+and the full maintained validator still checks source/key/schema/coverage/hash
+invariants before activation.
+
+Bootstrap preserves no-active historical profiles, previously installed inactive
+or withdrawn targets, different active lineages and equal/newer active versions.
+It does not reinterpret a withdrawn earlier bank as a fresh profile. A corrupt
+published latest bundle or immutable source/item conflict reports a failed
+activation and retains the old active pointer and snapshots. There is no silent
+fallback to an older candidate and no staged partial install after rollback.
+Existing global question-withdrawal guards also block an otherwise additive
+bundle selecting a withdrawn question. Explicit eligible reactivation still uses
+the existing install endpoint; pack withdrawals remain permanent.
+
+Exact integrator configuration before router creation is unchanged from the
+proposal: services.registry["content_pack_selection"] =
+{"id":"renulus-foundations","version":"1.1.0","upgrade_from":["1.0.0","1.0.1"]}.
+The optional version selects an exact bundled release; omitting it uses latest.
+Omitting upgrade_from permits older same-lineage upgrades; an explicit list
+limits them. Empty lists disable automatic upgrades on existing active profiles.
+content_pack_root remains the packaging override. No signature change or new
+migration is needed. Pydantic and jsonschema reuse verified shared dependencies.
+
+GET /api/v1/content/bootstrap and services.registry["content_bootstrap"] expose
+the startup outcome: status/reason/target/active plus an error when unavailable.
+Only public pack metadata is returned. This is the startup result; /manifest is
+the current canonical active selection after subsequent manual operations.
+Question summaries remain metadata only and the raw question-detail route is
+still absent for both original and newly added IDs. Trusted backend lookup and
+all peer method names/shapes are unchanged.
+
+Actual final run in shared CPython 3.14.4: 95 content/foundation tests passed,
+one existing Starlette/httpx warning, no failures/skips. The real shared FastAPI
+server booted 1.1.0 and served 27 topics / 26 cases / 160 summaries. SQLite
+bootstrap tests exercise both real predecessor upgrades, compare every prior
+private source/key snapshot, and prove restart/idempotency, inactive/withdrawn
+preservation, no downgrade/lineage replacement, numeric ordering, registry
+selection/allowlists, corrupt/mismatched bundles and rollback after immutable
+source or question-withdrawal conflicts.
+
+The withdrawn-pack test correctly expects current_version=None while retaining
+the historical key/source payload. That field is live selection metadata, not
+part of the immutable authored question. No medical key was changed for a test.
+All inputs and profiles are synthetic. Bank data is not passed to a provider.
+
+Integration: take the 1.1.0 pack commit first and this API follow-up next, package
+the owned content assets, and run combined M4/M3/M6 journeys against the exact
+manifest. The integration owner handles attempt/exposure/UI checks and native
+installation; the content suite does not claim those proofs.

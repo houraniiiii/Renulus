@@ -20,22 +20,25 @@ def client(app):
 
 
 def test_actual_shared_server_activates_real_original_pack(client, app):
-    assert client.get("/api/v1/content/manifest").json()["version"] == "1.0.0"
+    assert client.get("/api/v1/content/manifest").json()["version"] == "1.1.0"
     assert len(client.get("/api/v1/content/topics").json()) == 27
-    assert len(client.get("/api/v1/content/cases").json()) == 14
-    assert len(client.get("/api/v1/content/questions").json()) == 52
-    assert len(app.state.services.registry["content"].list_questions("T06")) == 6
+    assert len(client.get("/api/v1/content/cases").json()) == 26
+    assert len(client.get("/api/v1/content/questions").json()) == 160
+    assert len(app.state.services.registry["content"].list_questions("T06")) == 10
     assert client.get("/api/v1/content/sources/K10-2012").json()["register_id"] == "K10"
+    status = client.get("/api/v1/content/bootstrap").json()
+    assert status["status"] == "activated" and status["reason"] == "fresh_profile"
+    assert status["active"] == {"id": "renulus-foundations", "version": "1.1.0"}
 
 
 def test_http_question_catalogue_is_metadata_only(client):
     summaries = client.get("/api/v1/content/questions?topic_id=T21").json()
-    assert len(summaries) == 4
+    assert len(summaries) == 8
     private_fields = {"stem", "answer", "options", "rationale", "explanation", "correct_option_ids"}
     assert all(not private_fields.intersection(q) for q in summaries)
 
 
-@pytest.mark.parametrize("question_id", ["RN-CKD-001", "RN-TX-002", "RN-K-001"])
+@pytest.mark.parametrize("question_id", ["RN-CKD-001", "RN-TX-002", "RN-K-001", "RN11-T20-003"])
 def test_raw_question_http_route_cannot_bypass_exposure_but_private_lookup_survives(client, app, question_id):
     response = client.get(f"/api/v1/content/questions/{question_id}/versions/1")
     assert response.status_code == 404
@@ -58,7 +61,7 @@ def test_routes_reject_unselected_pack_path_and_user_case_save(client, app):
 
 def test_withdrawn_default_pack_is_not_reactivated_on_restart(app):
     repository = app.state.services.registry["content"]
-    repository.withdraw_pack("renulus-foundations", "1.0.0", "Synthetic pack hold")
+    repository.withdraw_pack("renulus-foundations", "1.1.0", "Synthetic pack hold")
     restarted = create_app(app.state.services.paths.root, token="synthetic-test-token")
     assert restarted.state.services.registry["content"].active_manifest() is None
     assert restarted.state.services.registry["content"].list_questions() == []
