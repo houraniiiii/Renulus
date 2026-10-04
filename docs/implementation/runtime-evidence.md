@@ -96,11 +96,12 @@ closure inside its still-active callback prevented the HTTP acknowledgement.
 They also exposed and fixed dropped system instructions in the upstream Responses
 converter: Renulus now passes them through the instructions field.
 
-The full selected helper stack installed from binary wheels and imported.
+The selected helper stack installed and imported; all packages except the
+pure Python ANTLR parser have compatible official binary/universal wheels.
 Torch reports no CUDA; ONNX Runtime exposes CPUExecutionProvider. Actual native
 LanceDB vector/full-text retrieval and delete, plus embedded Qdrant round trip
-and deletion, passed with synthetic vectors. This does not establish embeddings,
-OCR, Mem0 capture or educational accuracy. Two dependency deprecation warnings
+and deletion, passed with synthetic vectors. This does not establish Mem0 capture
+or educational accuracy. Actual embedding/OCR evidence is recorded below. Two dependency deprecation warnings
 remain: shared Starlette TestClient/httpx and legacy LanceDB create_fts_index in
 the package smoke test. They do not affect the test outcome.
 
@@ -110,9 +111,14 @@ the package smoke test. They do not affect the test outcome.
 runtime pins; [requirements-helpers.txt](../../packaging/runtime/requirements-helpers.txt)
 proposes the selected stack. The root manifests/global lock remain integrator-owned.
 [windows-cp314-wheels.json](../../packaging/runtime/windows-cp314-wheels.json)
-records official PyPI filenames/hashes for all 138 packages in the combined
-Windows x64 CPython 3.14 resolution; each has a matching Windows/ABI3/universal
-wheel. Actual installed relevant versions are Docling 2.133.0, Docling-core
+records official PyPI filenames/hashes for the 139-package combined Windows x64
+CPython 3.14 stack, with an explicit developer wheel exception for ANTLR 4.9.3.
+The earlier binary-only resolver selected OmegaConf 2.0.6: it imported but failed
+RapidOCR's Path assignment. The actual engine proof instead requires OmegaConf
+2.3.1 with ANTLR 4.9.3. The official ANTLR sdist was built into a universal wheel
+in the developer environment; doctors need no compiler or setup. The inventory
+records both source and built wheel hashes and does not claim that every package
+has an official wheel. Actual installed relevant versions are Docling 2.133.0, Docling-core
 2.99.0, FastEmbed 0.8.1, LanceDB 0.39.0, Mem0ai 2.2.1, Qdrant-client 1.19.1,
 ONNX Runtime 1.30.0, tokenizers 0.23.2, PyArrow 25.0.1, Torch 2.14.1,
 RapidOCR 3.9.2 and docling-parse 7.22.1. No Python downgrade is indicated by this
@@ -137,9 +143,43 @@ two threads avoid implicit downloads/GPU selection. Stable profile paths:
 Knowledge's immutable beecc7f developer acquisition script was reviewed and
 executed into F0's own explicit development profile. It acquired 67,412,843 bytes
 for embedding, 384,434,829 for Docling and 31,749,509 for OCR. These assets stay in
-ignored verification state, not source. Offline inference/extraction and asset
-notices are the next separate evidence step; acquisition alone is not a pass.
+ignored verification state, not source. Their exact public file hashes and
+immutable revisions are in [helper-assets.json](../../packaging/runtime/helper-assets.json).
 Temporary-case Docling remains disabled until its no-write path is proven.
+
+The ready public profile for integration is
+`C:/Users/karol/Documents/t3-workspaces/Renulus-wt-runtime/packaging/runtime/.verification/.local/runtime/cpu-helpers`.
+Copy only its complete `helpers` subtree, including manifest.json, into the
+explicit integration profile; validate through both HelperAssets methods before
+inference. No user state, credentials or private material is in this acquisition.
+
+## Actual offline CPU proof
+
+[prove_offline_helpers.py](../../packaging/runtime/prove_offline_helpers.py) uses
+the real selected engines with hash-validated local assets, an explicit profile,
+offline Hugging Face configuration and an external socket guard. Windows asyncio
+and embedded LanceDB may use loopback sockets; those remain allowed. Fixtures
+are synthetic and span CKD, dialysis, transplantation, glomerular disease and
+electrolytes. This development-only script writes its synthetic PDFs/index into
+its profile; it is not the temporary-case extraction path.
+
+[offline-helper-proof.json](../../packaging/runtime/offline-helper-proof.json)
+records actual FastEmbed CPU inference producing two 384-dimensional vectors;
+native PDF and scanned PDF OCR extraction; Docling HybridChunker using the local
+tokenizer with a page locator; and a real embedding-to-LanceDB retrieval round
+trip. External connection attempts were zero. The proof records elapsed time
+and sampled peak process RSS. These results establish the bounded local engine
+pipeline, not standalone image interpretation, full document fidelity, native
+installer acceptance or educational efficacy.
+
+The helper validator additionally requires the exact layout/table, three OCR
+files and tokenizer/model files to appear in the hash manifest. RapidOCR receives
+an explicit `Global.model_root_dir` inside `helpers/ocr`. Three focused
+helper-validation tests passed after this tightening.
+
+[helper-notices.md](../../packaging/runtime/helper-notices.md) records original
+model card licence tags and the developer-built ANTLR provenance. Complete
+package/model notices, including OCR artifact terms, remain a distribution step.
 
 ## Primary evidence and remaining integration
 
@@ -154,8 +194,8 @@ Official source inspected on October 4:
   acquisition manifest's pinned Hugging Face/Modelscope artifacts.
 
 Required remaining proof: real user-entered app-owned account login/catalogue/
-model response, image capability, native desktop process/installer, offline CPU
-asset inference/OCR/resource measurements and notices, controlled Hermes context
+model response, image capability, native desktop process/installer, release
+notices, controlled Hermes context
 management and M5 Mem0 capture/deletion integration. The present source/transport
 slice does not claim the full S0 acceptance gate or a complete installed product.
 No paid-provider inference, copied credential, patient input or main mutation

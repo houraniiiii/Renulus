@@ -2,8 +2,8 @@
   "verified_on": "2026-10-04",
   "python": "CPython 3.14",
   "platform": "Windows x64",
-  "package_count": 138,
-  "all_wheels_available": true,
+  "package_count": 139,
+  "all_wheels_available": false,
   "packages": [
     {
       "package": "accelerate",
@@ -667,13 +667,13 @@
     },
     {
       "package": "omegaconf",
-      "version": "2.0.6",
+      "version": "2.3.1",
       "available": true,
-      "filename": "omegaconf-2.0.6-py3-none-any.whl",
-      "sha256": "9e349fd76819b95b47aa628edea1ff83fed5b25108608abdd6c7fdca188e302a",
-      "bytes": 36834,
+      "filename": "omegaconf-2.3.1-py3-none-any.whl",
+      "sha256": "3d701d14e9a8828f1edd28bb70b725908b34277cdd72cf7d6a83f94dadc6b6a0",
+      "bytes": 79502,
       "requires_python": ">=3.6",
-      "source": "https://pypi.org/pypi/omegaconf/2.0.6/json"
+      "source": "https://pypi.org/pypi/omegaconf/2.3.1/json"
     },
     {
       "package": "onnxruntime",
@@ -1384,6 +1384,32 @@
       "bytes": 175315,
       "requires_python": ">=3.8",
       "source": "https://pypi.org/pypi/xlsxwriter/3.2.9/json"
+    },
+    {
+      "package": "antlr4-python3-runtime",
+      "version": "4.9.3",
+      "available": false,
+      "source": "https://pypi.org/pypi/antlr4-python3-runtime/4.9.3/json",
+      "source_distribution": {
+        "filename": "antlr4-python3-runtime-4.9.3.tar.gz",
+        "source_url": "https://files.pythonhosted.org/packages/3e/38/7859ff46355f76f8d19459005ca000b6e7012f2f1ca597746cbcd1fbfe5e/antlr4-python3-runtime-4.9.3.tar.gz",
+        "sha256": "f224469b4168294902bb1efa80a8bf7855f24c99aef99cbefc1bcd3cce77881b",
+        "bytes": 117034
+      },
+      "developer_wheel": {
+        "filename": "antlr4_python3_runtime-4.9.3-py3-none-any.whl",
+        "sha256": "d234a2e0a26cf1f0a1ae5b727d8c71c1c3305ef183f962f729a0b4b915bd20e7",
+        "bytes": 144616,
+        "tags": "py3-none-any",
+        "doctor_build_required": false,
+        "build_command": "python -m pip wheel --no-deps --wheel-dir packaging/runtime/.verification/wheels antlr4-python3-runtime==4.9.3"
+      }
     }
-  ]
+  ],
+  "developer_packaging_required": [
+    "antlr4-python3-runtime==4.9.3"
+  ],
+  "installed_stack_verified": true,
+  "verification": "Native Windows CPython 3.14.4; offline-helper-proof.json",
+  "correction": "OmegaConf 2.0.6 from the earlier binary-only resolution failed RapidOCR Path assignment. OmegaConf 2.3.1 with developer-built ANTLR 4.9.3 passed actual engines."
 }

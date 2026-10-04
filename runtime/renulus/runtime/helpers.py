@@ -61,9 +61,9 @@ class HelperAssets:
         declared = {record["path"] for record in metadata["files"]}
         tokenizer = root / "tokenizer.json"
         prefix = "fastembed/bge-small-en-v1.5/"
-        if metadata.get("model_id") != EMBEDDING_MODEL or prefix + "tokenizer.json" not in declared or not any(
-            path.startswith(prefix) and path.endswith(".onnx") for path in declared
-        ):
+        required = {prefix + name for name in ("model_optimized.onnx", "tokenizer.json",
+            "config.json", "tokenizer_config.json", "special_tokens_map.json")}
+        if metadata.get("model_id") != EMBEDDING_MODEL or not required.issubset(declared):
             raise ApiError("helper_assets_invalid", "The selected embedding model/tokenizer is not bundled.", 503)
         return {"model_id": EMBEDDING_MODEL, "dimensions": EMBEDDING_DIMENSIONS,
                 "max_tokens": EMBEDDING_TOKEN_LIMIT, "model_path": root,
@@ -71,10 +71,19 @@ class HelperAssets:
                 "local_files_only": True, "cpu_threads": 2, "fingerprint": fingerprint}
 
     def docling_config(self) -> dict:
-        _, document_hash = self._validate("docling")
-        _, ocr_hash = self._validate("ocr")
+        metadata, document_hash = self._validate("docling")
+        ocr_metadata, ocr_hash = self._validate("ocr")
+        document_files = {record["path"] for record in metadata["files"]}
+        ocr_files = {record["path"] for record in ocr_metadata["files"]}
+        required = {"docling/docling-project--docling-layout-heron/" + name for name in
+                    ("config.json", "model.safetensors", "preprocessor_config.json")}
+        required.update({"docling/docling-project--docling-models/model_artifacts/tableformer/accurate/" + name for name in
+                         ("tableformer_accurate.safetensors", "tm_config.json")})
+        if not required.issubset(document_files) or not {"ocr/det.onnx", "ocr/rec.onnx", "ocr/cls.onnx"}.issubset(ocr_files):
+            raise ApiError("helper_assets_invalid", "The selected document/OCR artifacts are not fully bundled.", 503)
         return {"artifacts_path": self.paths.helpers / "docling",
                 "ocr_path": self.paths.helpers / "ocr", "device": "cpu",
+                "rapidocr_params": {"Global.model_root_dir": str(self.paths.helpers / "ocr")},
                 "fingerprint": hashlib.sha256((document_hash + ocr_hash).encode()).hexdigest()}
 
     def status(self) -> dict:

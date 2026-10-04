@@ -26,7 +26,9 @@ def test_helpers_fail_closed_until_complete_hash_manifest_is_valid(app_paths):
     model = app_paths.helpers / "fastembed" / "bge-small-en-v1.5"
     model.mkdir(parents=True)
     files = []
-    for name, payload in (("model_optimized.onnx", b"synthetic-model"), ("tokenizer.json", b"{}")):
+    for name, payload in (("model_optimized.onnx", b"synthetic-model"), ("tokenizer.json", b"{}"),
+                          ("config.json", b"{}"), ("tokenizer_config.json", b"{}"),
+                          ("special_tokens_map.json", b"{}")):
         path = model / name
         path.write_bytes(payload)
         files.append({"path": path.relative_to(app_paths.helpers).as_posix(),
