@@ -1,21 +1,30 @@
 # SPDX-License-Identifier: MIT
 """Cases API; the server mounts this router once under /api/v1."""
 
+import asyncio
+import json
+from pathlib import PurePath
 import sqlite3
+from urllib.parse import unquote
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import StreamingResponse
+from pydantic import ValidationError
 
 from renulus.contracts import ApiError
 
-from .models import (AttachmentInput, DiscussCase, EditCase, HandoffCase, RevisionInput, StartCase)
+from .attachments import AttachmentPreviews, MEDIA, MAX_ATTACHMENT_BYTES
+from .models import (ApplyPreview, AttachmentInput, DiscussCase, EditCase, ExtractionOptions,
+                     HandoffCase, RevisionInput, StartCase)
 from .repository import CaseRepository
 from .streaming import cancel_provider, events
 
 
 def create_router(services) -> APIRouter:
     repository = CaseRepository(services)
+    previews = AttachmentPreviews(repository)
     services.registry["cases"] = repository
+    services.registry["case_previews"] = previews
     async def no_store(response: Response):
         response.headers["Cache-Control"] = "no-store"
 
@@ -23,12 +32,13 @@ def create_router(services) -> APIRouter:
 
     @router.get("/capabilities")
     async def capabilities():
+        extraction = previews.capabilities()
         return {"inputs": {
             "text": {"supported": True, "max_characters": 50000},
-            "image": {"supported": False, "code": "volatile_image_unavailable",
-                      "reason": "A verified in-memory image route is not installed"},
-            "pdf": {"supported": False, "code": "volatile_pdf_unavailable",
-                    "reason": "A verified in-memory PDF route is not installed"}},
+            "image": dict(extraction), "pdf": dict(extraction)},
+            "extraction": extraction,
+            "image_interpretation": {"supported": False, "code": "image_input_unverified",
+                "reason": "Cases discussion currently accepts extracted text; image interpretation is not enabled"},
             "discussion": {"adapter_installed": "provider" in services.registry,
                            "scope": "temporary-case"},
             "teaching": {"content_installed": "content" in services.registry},
@@ -99,8 +109,91 @@ def create_router(services) -> APIRouter:
         current = repository.get(case_id)
         if current["revision"] != body.revision:
             raise ApiError("case_revision_conflict", "Reload the current case and try again", 409, True)
+        if previews.capabilities()["supported"]:
+            raise ApiError("raw_attachment_required", "Select the file using the temporary text extraction route", 409)
         raise ApiError(f"volatile_{body.kind}_unavailable",
                        f"A verified in-memory {body.kind.upper()} route is not installed", 409)
+
+    def attachment_headers(request: Request):
+        options = request.headers.get("x-renulus-case-options", "")
+        filename_header = request.headers.get("x-renulus-filename", "")
+        try:
+            if len(options) > 2048 or len(filename_header) > 1024:
+                raise ValueError
+            body = ExtractionOptions.model_validate(json.loads(options))
+        except (ValueError, TypeError, ValidationError):
+            raise ApiError("invalid_extraction_options", "Check the attachment's temporary scope and case revision", 422) from None
+        filename = unquote(filename_header)
+        if not filename or len(filename) > 255 or any(c in filename for c in ("/", "\\", ":", "\x00", "\r", "\n")):
+            raise ApiError("invalid_attachment_name", "Choose a PDF, PNG or JPEG file with a plain filename", 422)
+        suffix = PurePath(filename).suffix.lower()
+        if suffix not in MEDIA or request.headers.get("content-type", "").split(";")[0].strip().lower() != MEDIA[suffix]:
+            raise ApiError("unsupported_attachment", "Choose a PDF, PNG or JPEG file", 415)
+        if request.headers.get("content-encoding", "identity") != "identity":
+            raise ApiError("unsupported_attachment", "Send the original uncompressed file", 415)
+        return body, filename, suffix
+
+    @router.post("/sessions/{case_id}/attachments/prepare", status_code=201)
+    async def prepare_attachment(case_id: str, request: Request):
+        # Reserve a cancellation handle before the UI sends any file bytes.
+        body, filename, _ = attachment_headers(request)
+        job = previews.preflight(case_id, body.revision, body.scope, filename, body.title)
+        return previews.view(job.id)
+
+    @router.post("/sessions/{case_id}/attachments/extract", status_code=202)
+    async def extract(case_id: str, request: Request):
+        # No UploadFile, multipart parser, original-copy path, disk staging or
+        # spooled file. Scope and safety are checked before the first body read.
+        body, filename, suffix = attachment_headers(request)
+        length = request.headers.get("content-length")
+        if length is not None:
+            try:
+                if not 0 < int(length) <= MAX_ATTACHMENT_BYTES:
+                    raise ValueError
+            except ValueError:
+                raise ApiError("case_attachment_limit", "Attachments must be between 1 byte and 10 MiB", 413) from None
+        preview_id = request.headers.get("x-renulus-preview-id")
+        if preview_id is None:
+            # Preserve the single-request seam for direct API consumers. The UI
+            # uses prepare so cancellation cannot lose its handle during upload.
+            preview_id = previews.preflight(case_id, body.revision, body.scope, filename, body.title).id
+        if not preview_id or len(preview_id) > 128:
+            raise ApiError("invalid_attachment_preview", "Prepare the attachment again before uploading", 422)
+        job = previews.claim_upload(preview_id, case_id, body.revision, body.scope, filename, body.title)
+        data = bytearray()
+        try:
+            async for block in request.stream():
+                with repository._lock:
+                    previews._guard(job)
+                if len(data) + len(block) > MAX_ATTACHMENT_BYTES:
+                    raise ApiError("case_attachment_limit", "The attachment exceeds 10 MiB", 413)
+                data.extend(block)
+            valid = (suffix == ".pdf" and data[:1024].lstrip().startswith(b"%PDF-")) or (
+                suffix == ".png" and data.startswith(b"\x89PNG\r\n\x1a\n")) or (
+                suffix in (".jpg", ".jpeg") and data.startswith(b"\xff\xd8\xff"))
+            if not valid:
+                raise ApiError("malformed_attachment", "The file does not match its PDF or image format", 422)
+            return previews.start(job, bytes(data))
+        except (ApiError, asyncio.CancelledError):
+            previews.cancel(job.id)
+            raise
+        except Exception:
+            previews.cancel(job.id)
+            raise ApiError("attachment_upload_interrupted", "The attachment upload stopped. Select the file again", 409, True) from None
+        finally:
+            data.clear()
+
+    @router.get("/attachments/{preview_id}")
+    async def preview(preview_id: str):
+        return previews.view(preview_id)
+
+    @router.delete("/attachments/{preview_id}")
+    async def discard_preview(preview_id: str):
+        return previews.cancel(preview_id)
+
+    @router.post("/attachments/{preview_id}/apply")
+    async def apply_preview(preview_id: str, body: ApplyPreview):
+        return previews.apply(preview_id, body.revision, body.text)
 
     @router.post("/sessions/{case_id}/discuss")
     async def discuss(case_id: str, body: DiscussCase):

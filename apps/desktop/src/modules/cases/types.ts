@@ -30,6 +30,16 @@ export interface CaseCapabilities {
   discussion: { adapter_installed: boolean; scope: 'temporary-case' };
   teaching: { content_installed: boolean };
   handoffs: Record<'explain' | 'generated-practice', string>; memory_capture: boolean;
+  extraction?: { supported: boolean; max_bytes: number; max_text_characters?: number; max_pages?: number; image_pixels?: number;
+    formats: string[]; scope: 'temporary-case'; code?: string | null; reason?: string | null };
+  image_interpretation?: { supported: boolean; code: string; reason: string };
+}
+export interface AttachmentPreview {
+  id: string; case_id: string; revision: number; scope: ContextScope;
+  state: 'reading' | 'processing' | 'ready' | 'failed' | 'cancelled' | 'applied';
+  filename: string; title: string; text: string;
+  ocr: { confidence?: number | null; used?: boolean | null };
+  error: { code: string; message: string; retryable: boolean } | null;
 }
 export interface CaseEvent {
   id: string; run_id: string; sequence: number;

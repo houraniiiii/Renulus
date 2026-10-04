@@ -142,6 +142,12 @@ export function useCases(resumeCaseId?: string) {
     return change('reveal', () => request<CaseSession>(casePath(item.id) + '/reveal',
       { method: 'POST', body: { revision: item.revision } }));
   }
+  function applyPreview(id: string, text: string) {
+    const item = current.current;
+    if (!item || active.current) return;
+    return change('apply-preview', () => request<CaseSession>('/cases/attachments/' + encodeURIComponent(id) + '/apply',
+      { method: 'POST', body: { revision: item.revision, text } }));
+  }
   function close() {
     const item = current.current;
     if (!item || active.current) return;
@@ -243,5 +249,5 @@ export function useCases(resumeCaseId?: string) {
 
   return { session, capabilities, saved, teaching, loading, busy, error, catalogueError,
     running, partial, pendingQuestion, purgePending, reload, start, open, save, reveal,
-    close, remove, retryPurge, stop, send, handoff };
+    close, remove, retryPurge, stop, send, handoff, applyPreview };
 }

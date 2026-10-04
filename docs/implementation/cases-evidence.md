@@ -213,6 +213,197 @@ UI checks on Windows, October 4, 2026:
 - `git diff --check`: passed. Python backend suite remains **38 passed**; UI
   changes do not alter its schema or provider adapter.
 
-Image/PDF extraction remains disabled until a real no-write parser/provider proof
-exists. Generic principle capture, live subscription retention, clean-machine
+At that UI handoff, image/PDF extraction remained disabled until a real no-write
+parser proof existed. Generic principle capture, live subscription retention, clean-machine
 installation and complete combined consumer verification remain follow-up work.
+
+## Temporary attachment consumer handoff
+
+October 4, 2026. Main integrated the preceding backend/UI commits as `3260cb91`
+and `1d71cbaa`. This slice changes only Cases runtime, module UI, tests and this
+evidence. It adds no dependency, shared-file change or schema migration. Main
+continues to own the guarded Learn/practice consumer handshake.
+
+Cases accepts the exact knowledge producer
+`extract_bytes(data, filename, title) -> Extracted(passages, document, ocr, status)`.
+It requires `knowledge.capabilities()["temporary_extraction"] is True` and a
+callable producer before reading body bytes. Durable library import, installed
+packages and truthy capability values do not enable temporary processing.
+Knowledge owns Docling/RapidOCR and the proof; Cases has no alternate parser.
+
+API additions under `/api/v1/cases`:
+
+| Operation | Result |
+| --- | --- |
+| `POST /sessions/{case_id}/attachments/prepare` | 201, empty RAM reservation with a cancellation ID before any file bytes |
+| `POST /sessions/{case_id}/attachments/extract` | 202, RAM-only extraction job |
+| `GET /attachments/{preview_id}` | Reading/processing/ready/failed/cancelled/applied state, text preview and OCR metadata |
+| `DELETE /attachments/{preview_id}` | Idempotent cancellation/discard |
+| `POST /attachments/{preview_id}/apply` | Explicitly reviewed text added to the live case, without Save |
+
+Upload a raw bounded body, never multipart/UploadFile. Headers are
+`Content-Type: application/pdf | image/png | image/jpeg`,
+`x-renulus-filename: <percent-encoded plain basename>` and
+`x-renulus-case-options: {"revision": 1, "scope": {"kind": "temporary-case",
+"entity_id": "<case_id>"}, "title": "Attachment text"}`. Title is optional and
+bounded to 120 characters. Scope, revision, saved canonical revision, daily-case
+kind, capacity, capability, filename/media and declared length are checked before
+the first `Request.stream()` read. Every chunk rechecks the live case. Actual
+length and file signatures are checked regardless of Content-Length. No source
+path, multipart spool, original-copy path or disk extraction is used.
+
+The module first calls the header-only prepare route, then supplies the returned
+ID in `x-renulus-preview-id` on the raw upload. Stop/unmount can therefore cancel
+even while the upload response is pending. A reservation is bound to the exact
+case, revision, scope, filename and title, can be claimed once, and expires after
+60 seconds while reading. Expired abandoned reservations release capacity on the
+next guard/preflight. No file bytes are sent before the UI receives the handle.
+The direct single-request extraction seam remains supported for other callers.
+
+The RAM response contains `id`, `case_id`, `revision`, `scope`, `state`,
+`filename`, `title`, `text`, `ocr: {used, confidence}` and safe optional `error`.
+Missing/invalid OCR confidence stays null; it is never invented. Apply accepts
+`{revision, text}` and returns the actual CaseSession. Successful Cases responses
+retain `Cache-Control: no-store`.
+
+Retention is explicit: preview in RAM → review/edit → **Use extracted text** →
+optional **Save case**. Apply appends the reviewed derivative to live case text.
+Only the existing atomic Save writes that text and permitted user/assistant
+messages into canonical SQLite. This slice does not retain an attachment copy;
+the original stays where the user selected it. No attachment, document, passage,
+index, memory, evidence or tool-history record is created automatically. Teaching
+continues to use its installed original stages.
+
+Bounds are 10 MiB per upload, 50,000 characters for preview/combined case text,
+16 RAM previews and two native worker slots. Producer-reported limits (currently
+20 PDF pages and 12 megapixels) appear in capabilities/UI when reported. Native
+conversion cannot be forcibly interrupted: Stop/discard clears visible text and
+job references immediately, but the worker retains its bounded slot/input until
+the CPU step ends. Cancellation, Session identity, case revision, saved canonical
+revision, deletion, idle state and temporary scope are checked before publication
+or Apply. Edit, discussion, Save, close and delete invalidate previews. Late
+output is discarded; engine exceptions are never stringified into responses/logs.
+
+The Flow page uses existing Input/Textarea/Button/Notice/ErrorState/API primitives.
+It sends File/Blob directly, polls a volatile job, offers editable text/OCR preview
+and explicit apply/discard, and aborts/cancels on unmount or revision change. No
+FormData, object URL, browser storage or URL payload is used. Cancelled/failed
+previews release the picker for retry. Capabilities control the picker; the
+unavailable state offers pasted text. Image interpretation stays unsupported:
+extraction reads words; the approved runtime has not published verified image
+input. No generative image call is made.
+
+Checks for this slice on Windows:
+
+- `python -m pytest tests/cases tests/integration -q --tb=short`: **69 passed,
+  3 skipped in 7.62 seconds**. Opt-in skips without producer/helper settings are not passes.
+  Fixtures verify application retention rules, not engine safety/OCR accuracy.
+- `npm test -- --reporter=dot`: **32 passed** across four files. Attachment UI checks cover disabled
+  capability, raw temporary upload, explicit reviewed apply/no autosave, unmount
+  cancellation, Stop before the upload response, explicit Discard without Save,
+  stale scope/revision, failed retry and cancelled retry.
+- `npm run typecheck`, `npx vite build`, `python -m compileall -q
+  runtime/renulus/cases` and `git diff --check`: passed. Renderer build only; no
+  packaging or live subscription inference is claimed.
+- Synthetic extraction → discussion error → Explain handoff → explicit Save/delete
+  scans all app-owned SQLite/WAL/cache/index/history/export/backup files and
+  logical tables. Partial uploads, changed canonical snapshots, blocked native
+  workers, partial producer results, cancellation and late output are covered separately.
+  Reserved uploads reject cancel/replay/case rebinding/expiry/capability loss
+  before the first body read; lost empty reservations cannot retain capacity.
+- Real unavailable-capability browser smoke used ports 8880/5198 and isolated
+  profile `.local/runtime/cases-attachment-preview`. An unsaved synthetic case
+  displayed the disabled picker and truthful extraction/interpretation states.
+  The final desktop layout was inspected. No file, Save or provider call occurred
+  in that smoke; no viewport override was introduced.
+
+During initial development `TEMPORARY_EXTRACTION_PROVEN` remained false. The
+strict cold check identified `filelock._strict._probe_link_follow_symlinks()`:
+`tempfile.TemporaryDirectory()` → `probe-source.touch()` →
+`os.link(..., "probe-link")` during dependency import. It probes default Windows
+Temp, so cold imports after accepting a case fail the strict no-write proof.
+Durable `KnowledgeRepository._import` is ineligible too: it writes
+`library/knowledge/{document_id}/{revision_id}/original.*`. Cases never calls it.
+Parent adopted F0 profile-owned startup/import preparation before payload
+acceptance and the actual guarded byte proof. Cases needs no contract change.
+
+Optional checks use explicit `RENULUS_CASES_KNOWLEDGE_SOURCE`,
+`RENULUS_CASES_HELPER_MODULE` and `RENULUS_CASES_HELPER_PROFILE` settings. They
+read only validated public helper artifacts; SQLite/cache/history/export state
+lives in pytest-owned profiles. Approved F0 startup runs before synthetic input
+construction. No capability is forced. Real PDF/PNG API flows require the actual
+producer capability; a separate direct native-stream check denies filesystem
+writes/mutations and connections after startup, and inspects inventories/logs.
+
+The selected-engine run using the knowledge lane public assets and F0 startup
+returned **1 passed, 2 skipped in 86.11 seconds**, process exit 0. The direct
+PDF/PNG stream passed write-denial, inventory and sentinel/log assertions; both
+API flows skipped at the false producer gate. **The run also emitted a Windows
+fatal access-violation diagnostic** in `docling_parse/pdf_parser.py`
+`_image_from_bytes` → `PIL.Image.copy`, through Docling page preprocessing. The
+process continued and assertions passed, but this is not a clean native stability
+proof. Parent was notified in issue #7; no enablement was based on this run.
+No no-write or native-readiness claim is inferred from its skipped API flows.
+
+### Published producer proof and actual Cases flow
+
+Parent subsequently reported **2 actual guarded checks passed in 94.77 seconds**
+for text/native PDF/scanned PDF/image OCR, with file-write/socket denial and no
+content logs/warnings. Parent enables the producer proof flag and additionally
+requires `helpers.startup` configured with Docling imports ready. F0 prerequisites
+`12fe822f` and `f9922270` are integrated; knowledge producer `5b70371f` supplies
+the stream method and the parent applies the startup readiness gate. This lane
+consumes the actual integration producer without replaying these prerequisite
+commits or editing their owned files.
+
+The user confirmed enabled prepared-helper integration at `50f4a72c`. The
+subsequent actual Cases checks consume clean knowledge/startup source in the
+integration worktree (observed HEAD `ea5af2e7`); neither prerequisite commits
+nor shared engine files are part of this lane's handoff.
+
+The first enabled selected-engine Cases suite used the integration knowledge/F0 source
+and only the already validated public helper artifacts in the knowledge lane:
+**3 passed in 168.49 seconds**, exit 0. Neither proof flag nor readiness was
+simulated. These checks cover actual bounded PDF/PNG HTTP bodies → RAM preview
+and OCR confidence (unknown/null) → explicit Apply → volatile guarded Explain
+and generated-practice inputs for both unsaved and saved cases → explicit
+Save/delete. Cancelled/deleted tickets reject further resolution. Sentinel scans
+confirm no payload in app-owned SQLite/cache/history/export before Save or after
+delete. No provider was installed or called: these prove the actual extraction
+and guarded inputs, not live generated answers.
+
+That run emitted generic package deprecation warnings and a Windows
+`0x8007000e` diagnostic from `platform._wmi_query` during Docling dependency
+startup; the process continued, imports were ready and all three checks passed.
+The earlier small-page PDF diagnostic remains recorded above. These native
+diagnostics are reported to the integrator rather than hidden or treated as a
+no-write failure. Main owns framework/native engine follow-up.
+
+The enabled browser smoke used the actual offline producer, isolated profile
+`.local/runtime/cases-attachment-preview-enabled` and ports 8880/5198. Normal
+approved startup completed before HTTP input; cold readiness took about four
+minutes on this machine. A synthetic PNG produced the actual text preview
+"Synthetic transplant rejection learning question", with accurately unreported
+OCR confidence. Explicit Use extracted text appended it to the case while the
+page still showed Temporary and No saved cases. Only explicit Save changed the
+module cue to Saved snapshot and added the saved-case entry. The default desktop
+layout was inspected, with no viewport override. No provider was installed or
+called. The owned synthetic snapshot was deleted through the guarded API, purge
+completed, the original synthetic files were retained, and both owned preview
+processes were stopped.
+
+The shared shell banner still says "Temporary case · not saved" after explicit
+Save while the module correctly shows Saved snapshot. The temporary branch is
+intentional for later Explain/practice; the inaccurate shell wording is an
+integrator-owned copy/state seam, reported on issue #7. This lane does not edit
+the reserved shell. Main also owns destination page wiring; actual tests here
+prove guarded Explain/practice inputs and invalidation, not live model output.
+
+After adding the reservation step, the current actual-engine suite was rerun
+with the same explicit producer/helper environment and returned **3 passed,
+7 generic deprecation warnings in 256.77 seconds**, process exit 0. Both PDF and
+PNG API checks now prepare a cancellation handle before sending bounded bytes;
+the guarded native-stream write/socket-denial check also passed. The Windows
+WMI `platform._wmi_query` startup diagnostic `0x8007000e` recurred before
+payload acceptance and the process continued. No live subscription, image
+interpretation, Electron packaging or clean-machine engine stability is claimed.

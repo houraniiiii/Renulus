@@ -4,6 +4,7 @@ import { ArrowRight, BookOpen, Save, Square, Trash2, X } from 'lucide-react';
 import { Badge, Button, EmptyState, ErrorState, Input, LoadingState, Notice, PageHeader, Textarea } from '../../ui';
 import { useNavigation } from '../../shell/navigation';
 import { useCases } from './useCases';
+import { CaseAttachments } from './CaseAttachments';
 import './cases.css';
 
 export default function CasesPage() {
@@ -67,7 +68,9 @@ export default function CasesPage() {
             placeholder="Describe the situation, relevant findings and your learning question." />
           <div className="actions"><Button type="submit" busy={cases.busy === 'start'}
             disabled={!text.trim() || !cases.capabilities?.inputs.text.supported}>Start temporary case<ArrowRight size={17} aria-hidden="true" /></Button></div>
-          <p className="muted">Text input is available. Images and PDFs cannot be added to this temporary session yet.</p>
+          <p className="muted">Start with your learning question. {cases.capabilities?.extraction?.supported ?
+            'You can then review text from a PDF or image in this temporary session.' :
+            'PDF and image text extraction is unavailable in this installation.'}</p>
         </form> : <>
           <div className="case-context">
             <div className="case-context-meta"><Badge tone={item.dirty ? 'warning' : 'default'}>
@@ -89,6 +92,7 @@ export default function CasesPage() {
                 {item.teaching.revealed_count < item.teaching.stage_count ? 'Reveal next stage' : 'Reveal debrief'}<ArrowRight size={17} aria-hidden="true" /></Button>}
             </section> : <details className="case-details" open><summary>Case details</summary><p className="case-text prose">{item.text}</p></details>}
           </div>
+          {item.kind === 'daily' && <CaseAttachments session={item} capabilities={cases.capabilities} disabled={disabled} apply={cases.applyPreview} />}
           <section className="case-discussion" aria-label="Case discussion">
             {item.messages.map(message => <article className={'case-message case-message-' + message.role} key={message.id}>
               <h3>{message.role === 'user' ? 'Your question' : 'Discussion'}</h3><p className="case-text prose">{message.content}</p>

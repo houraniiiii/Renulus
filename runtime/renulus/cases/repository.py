@@ -96,6 +96,7 @@ class CaseRepository:
         self._runs: dict[str, Run] = {}
         self._handoffs: dict[str, Handoff] = {}
         self._deleted: set[str] = set()
+        self._attachment_invalidator = None
 
     def _is_deleted(self, case_id: str, conn=None) -> bool:
         if case_id in self._deleted:
@@ -138,6 +139,8 @@ class CaseRepository:
     def _changed(self, session: Session):
         session.revision += 1
         session.updated_at = utc_now()
+        if self._attachment_invalidator:
+            self._attachment_invalidator(session.id)
         for ticket_id, ticket in list(self._handoffs.items()):
             if ticket.case_id == session.id:
                 ticket.cancel.set()
@@ -283,6 +286,8 @@ class CaseRepository:
 
     def _changed_scope(self, session: Session):
         # Context handles acquired before promotion cannot commit afterwards.
+        if self._attachment_invalidator:
+            self._attachment_invalidator(session.id)
         for ticket_id, ticket in list(self._handoffs.items()):
             if ticket.case_id == session.id:
                 ticket.cancel.set()

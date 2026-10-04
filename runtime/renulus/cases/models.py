@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from renulus.contracts import ContextScope
+
 
 class Input(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
@@ -51,5 +53,14 @@ class HandoffCase(RevisionInput):
 
 
 class AttachmentInput(RevisionInput):
-    # Deliberately no path, URI, base64 or byte input until volatile processing is proved.
+    # Legacy capability probe; bytes are accepted only by the guarded raw route.
     kind: Literal["image", "pdf"]
+
+
+class ExtractionOptions(RevisionInput):
+    scope: ContextScope
+    title: str = Field(default="Attachment", min_length=1, max_length=120)
+
+
+class ApplyPreview(RevisionInput):
+    text: str = Field(min_length=1, max_length=50000)

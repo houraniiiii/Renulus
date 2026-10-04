@@ -24,6 +24,9 @@
 .case-message h3 { font-size: 15px; color: var(--ink-secondary); }
 .case-message-assistant { padding-bottom: var(--space-24); border-bottom: 1px solid var(--line-subtle); }
 .case-composer .textarea { min-height: 112px; }
+.case-attachments h2 { display: flex; gap: var(--space-12); align-items: center; }
+.case-attachments .input[type="file"] { max-width: 100%; min-height: 44px; }
+.case-extraction-preview { display: grid; gap: var(--space-16); }
 .case-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
 .case-list button { width: 100%; display: grid; gap: var(--space-4); text-align: left; padding: var(--space-12); border-radius: var(--radius-control); min-height: 44px; overflow-wrap: anywhere; }
 .case-list button:hover:not(:disabled) { background: var(--renal-teal-soft); }
