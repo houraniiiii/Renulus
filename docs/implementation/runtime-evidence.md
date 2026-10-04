@@ -309,3 +309,23 @@ own lane; no native installer was verified by F0. The present source/transport
 slice does not claim the full S0 acceptance gate or a complete installed product.
 No paid-provider inference, copied credential, patient input or main mutation
 was performed. Tracking: houraniiiii/Renulus issue #2, parent #1.
+
+Integration follow-up on October 4: the current official open-source
+token-sharing sign-in and models/inference pages were fetched again. They retain
+the selected dynamic-registration, S256 PKCE, loopback callback and public
+Responses/model-catalogue direction. Renulus keeps the owner's exact allowlist
+and intersects it with actual account availability.
+
+The actual running local API then started a deliberate Codex login with
+`select:false` and cancelled it through its public route. Both responses were
+HTTP 200; the attempt changed from pending to cancelled. Authorization origin
+was auth.openai.com, S256 was present, the resource was the public v1 API and
+the requested scopes included `chatgpt.tokens.use.direct`. The authorization
+URL/state/nonce were not published or opened, and no account exchange or
+generative request occurred. Both providers remained disconnected and the
+selected provider stayed null. This proves the live app-owned initiation and
+cancellation seam, not completed login, available account models or inference.
+
+Later selected-engine and cross-module evidence is tracked in the Library,
+Cases, Memory, recovery and desktop records beside this file; the original F0
+remaining-proof list above describes that earlier isolated slice.
