@@ -596,3 +596,12 @@ stale displayed counter. After the fix the complete suite passed **64 Python
 checks in 22.58 s** on CPython 3.14.4 (the same existing Starlette warning),
 **9 Vitest checks in 5.64 s**, and TypeScript no-emit checking. All keys and
 responses were synthetic; no network/provider usage was involved.
+
+The parent's combined suite subsequently exposed an outdated index=object()
+test placeholder: generation cleanup now requires the public index.path and
+remove(revision_id) contract. test_import.py now injects a bounded QueuedIndex
+with that contract and asserts the actual removal call, disappearance of the
+queued original and an empty cleanup ledger after deletion. Production Journal,
+generation cleanup and replay guards are unchanged. All **22 focused import
+checks passed in 6.60 s** against the parent's current integration runtime,
+with PYTHONDONTWRITEBYTECODE and an isolated owned test profile.

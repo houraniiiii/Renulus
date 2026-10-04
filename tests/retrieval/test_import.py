@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+from pathlib import Path
 
 import httpx
 import pytest
@@ -14,6 +15,16 @@ from .fixtures import PMCID, article, europe
 LIBRARY = ContextScope(kind=Scope.LIBRARY)
 
 
+class QueuedIndex:
+    """Public path/remove contract; queued imports never call an inference engine."""
+    def __init__(self, path):
+        self.path = path
+        self.removed = []
+
+    def remove(self, revision_id):
+        self.removed.append(revision_id)
+
+
 def setup(services, *, metadata=None, raw=None):
     calls = []
     raw = article() if raw is None else raw
@@ -25,7 +36,8 @@ def setup(services, *, metadata=None, raw=None):
         assert request.url.path.endswith("/" + PMCID + "/fullTextXML")
         return httpx.Response(200, content=raw, headers={"Content-Type": "application/xml"})
     # Real original/rights/queue repository; no helper model is run by this route.
-    knowledge = KnowledgeRepository(services, extractor=object(), embedder=object(), index=object())
+    knowledge = KnowledgeRepository(services, extractor=object(), embedder=object(),
+                                    index=QueuedIndex(services.paths.indexes / "knowledge"))
     services.registry["knowledge"] = knowledge
     service = RetrievalService(services, transport=httpx.MockTransport(handler), protector=SyntheticProtector())
     return service, knowledge, calls
@@ -53,7 +65,6 @@ def test_real_library_import_exact_attribution_rights_queue_and_restart_replay(s
     assert "Synthetic Author" in rights["attribution"] and "Copyright Synthetic Author 2026" in rights["attribution"]
     assert "formatting changed" in rights["attribution"]
     original = services.db.fetch_one("SELECT original_path FROM knowledge_revisions WHERE id=?", (revision["id"],))
-    from pathlib import Path
     content = Path(original["original_path"]).read_text(encoding="utf-8")
     assert "\n\nResults\n\n" in content and "Kidney study paragraph" in content
     assert "EXCLUDED_" not in content
@@ -68,6 +79,9 @@ def test_real_library_import_exact_attribution_rights_queue_and_restart_replay(s
         asyncio.run(restarted.import_article("T19", PMCID, scope=LIBRARY, idempotency_key="synthetic_import"))
     assert conflict.value.code == "idempotency_conflict"
     knowledge.delete_document(document["id"])
+    assert knowledge.index.removed == [revision["id"]]
+    assert not Path(original["original_path"]).exists()
+    assert services.db.fetch_all("SELECT * FROM knowledge_cleanup") == []
     with pytest.raises(ApiError):
         asyncio.run(restarted.import_article("T21", PMCID, scope=LIBRARY, idempotency_key="synthetic_import"))
     assert knowledge.list_documents()["documents"] == []
