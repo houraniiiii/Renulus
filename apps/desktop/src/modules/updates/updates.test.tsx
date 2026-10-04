@@ -20,6 +20,7 @@ function mockApi(rows = [entry()], extra?: (path: string, options: RequestInit) 
         counts: { pending: rows.length, reviewed: 17, dismissed: 3 }, next_offset: offset + 50 < selected.length ? offset + 50 : null });
     }
     if (path.endsWith('/updates/sources')) return json({ sources: [] });
+    if (path.startsWith('/api/v1/library/source-versions?')) return json({ versions: [], limit: 100, truncated: false });
     if (path.endsWith('/updates/publications')) return json({ publications: [] });
     if (path.endsWith('/updates/schedule')) return json({ enabled: false, cadence_hours: 24, selection: [], options: [], jobs: [], running: false,
       next_due_at: null, last_run: null, max_batch: 5, max_selection: 20, max_retries: 2 });
@@ -96,6 +97,34 @@ describe('Updates review and bounded queue', () => {
     await screen.findByText('This review has no library metadata change to apply.');
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' })); await screen.findByText('Discovery dismissed. Its history remains in Dismissed.');
     expect(JSON.parse(fetch.mock.calls.find(([path]) => path.endsWith('/review'))![1]!.body as string)).toEqual({ summary: '', topic_ids: [], reviewer: 'learner', state: 'dismissed' });
+  });
+  it('deliberately binds an acquired version without requiring entry of its original hash', async () => {
+    const row = { ...entry(), source_id: 'L02', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC1234567/' };
+    const versions = ['a', 'b'].map((digest, index) => ({ document_id: 'doc-' + index, revision_id: 'rev-' + index,
+      title: 'Synthetic acquired publication', edition: 'PMC1234567.1', original_sha256: digest.repeat(64),
+      status: 'ready', canonical_url: row.url, doi: null, pmid: null, pmcid: 'PMC1234567' }));
+    const fetch = mockApi([row], path => path.startsWith('/api/v1/library/source-versions?')
+      ? json({ versions, limit: 100, truncated: false }) : undefined);
+    render(<Updates />); await openFirst(); inspectEvidence();
+    fireEvent.click(screen.getByText('Publication status and affected source'));
+    fireEvent.click(screen.getByLabelText('Record the source facts established by this evidence'));
+    const select = await screen.findByLabelText('Acquired version') as HTMLSelectElement;
+    await screen.findByRole('option', { name: /file bbbbbbbb/ });
+    expect(select.value).toBe('');
+    fireEvent.change(select, { target: { value: 'rev-1' } });
+    fireEvent.change(screen.getByLabelText('Publication status'), { target: { value: 'final' } });
+    fireEvent.click(screen.getByLabelText('Verified latest final for this scope'));
+    fireEvent.click(screen.getByLabelText('Content reviewed for the recorded educational scope'));
+    fireEvent.click(screen.getByRole('button', { name: 'Save reviewed update' }));
+    await screen.findByText('Your evidence and reviewed update are saved.');
+    const body = JSON.parse(fetch.mock.calls.find(([path]) => path.endsWith('/review'))![1]!.body as string);
+    expect(body.target).toMatchObject({ register_id: 'L02', canonical_url: row.url,
+      edition: 'PMC1234567.1', original_sha256: 'b'.repeat(64) });
+    expect(body.changes).toMatchObject({ publication_status: 'final', latest_final_verified: true, content_reviewed: true });
+    const lookup = fetch.mock.calls.find(([path]) => path.startsWith('/api/v1/library/source-versions?'))![0];
+    expect(new URLSearchParams(lookup.split('?')[1]).get('source_id')).toBe('L02');
+    expect(new URLSearchParams(lookup.split('?')[1]).get('canonical_url')).toBe(row.url);
+    expect(fetch.mock.calls.some(([path]) => path.startsWith('/api/v1/library/documents'))).toBe(false);
   });
   it('reports failures and truncated discovery without claiming an exhaustive no-change result', () => {
     expect(literatureMessage({ state: 'failed', discovered: 0, checks: [], max_records_per_topic: 25 })).toContain('failed');

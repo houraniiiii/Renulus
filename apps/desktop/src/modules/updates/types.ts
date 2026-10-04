@@ -1,7 +1,9 @@
 export type Filter = 'pending' | 'reviewed' | 'dismissed';
 export interface Topic { id: string; title: string }
 export interface Evidence { url: string; locator: string; finding: string; checked_on: string; inspected: boolean }
-export interface Target { register_id: string; canonical_url?: string; pinned_source_id?: string; doi?: string; pmid?: string; pmcid?: string; topic_ids?: string[]; locators?: string[] }
+export interface Target { register_id: string; canonical_url?: string; pinned_source_id?: string; doi?: string; pmid?: string; pmcid?: string; edition?: string; original_sha256?: string; topic_ids?: string[]; locators?: string[] }
+export interface AcquiredVersion { document_id: string; revision_id: string; title: string; edition: string; original_sha256: string; status: string; canonical_url: string | null; doi: string | null; pmid: string | null; pmcid: string | null }
+export interface AcquiredVersionPage { versions: AcquiredVersion[]; limit: number; truncated: boolean }
 export interface Changes { publication_status?: string; publication_date?: string; revision_date?: string; review_due?: string; latest_final_verified?: boolean; content_reviewed?: boolean; correction?: string; retracted?: boolean; superseded?: boolean; replaced_topics?: string[]; repository_removed?: boolean; access_changed?: boolean }
 export interface Entry {
   id: string; source_id: string; title: string; url: string; kind: string;
@@ -32,6 +34,7 @@ export const displayDate = (value: string | null | undefined) => value ? new Dat
 export interface ReviewDraft {
   summary: string; evidenceUrl: string; locator: string; finding: string; inspectedOn: string; inspected: boolean;
   metadata: boolean; targetUrl: string; pinnedSourceId: string; doi: string; pmid: string; pmcid: string;
+  edition: string; originalSha256: string;
   publicationStatus: string; publicationDate: string; revisionDate: string; reviewDue: string; latestFinal: boolean; contentReviewed: boolean;
   correction: string; retraction: string; replacement: string; replacementTopics: string[]; accessChanged: string; repositoryRemoved: string;
 }
@@ -41,6 +44,7 @@ export function reviewDraft(entry: Entry): ReviewDraft {
     locator: evidence?.locator ?? '', finding: evidence?.finding ?? '', inspectedOn: evidence?.checked_on ?? today(), inspected: false,
     metadata: !!target, targetUrl: target?.canonical_url ?? (entry.kind === 'publication-change' || entry.kind === 'research' ? entry.url : ''),
     pinnedSourceId: target?.pinned_source_id ?? '', doi: target?.doi ?? '', pmid: target?.pmid ?? '', pmcid: target?.pmcid ?? '',
+    edition: target?.edition ?? '', originalSha256: target?.original_sha256 ?? '',
     publicationStatus: changes?.publication_status ?? '', publicationDate: changes?.publication_date ?? '', revisionDate: changes?.revision_date ?? '',
     reviewDue: changes?.review_due ?? '', latestFinal: changes?.latest_final_verified ?? false, contentReviewed: changes?.content_reviewed ?? false,
     correction: changes?.correction ?? '', retraction: changes?.retracted === undefined ? '' : changes.retracted ? 'yes' : 'no',
@@ -58,6 +62,9 @@ export function reviewProblem(draft: ReviewDraft) {
   if (draft.inspectedOn > today()) return 'Use the date you inspected the evidence; it cannot be in the future.';
   if (!draft.inspected) return 'Confirm that you inspected the recorded evidence.';
   if (!draft.metadata) return '';
+  const edition = draft.edition.trim();
+  if (draft.edition && !edition || !!edition !== !!draft.originalSha256) return 'Choose an acquired version, or enter both its edition and original SHA256.';
+  if (edition.length > 160 || draft.originalSha256 && !/^[a-f0-9]{64}$/.test(draft.originalSha256)) return 'Use an edition up to 160 characters and a 64-character lowercase SHA256.';
   if (draft.targetUrl.trim() && !publicUrl(draft.targetUrl.trim())) return 'Use the public HTTPS URL for the affected publication.';
   if (!draft.targetUrl.trim() && !draft.pinnedSourceId.trim() && !draft.doi.trim() && !draft.pmid.trim() && !draft.pmcid.trim()) return 'Identify the exact affected publication.';
   const doi = draft.doi.trim().replace(/^(?:https?:\/\/(?:dx\.)?doi\.org\/|doi:\s*)/i, '');
@@ -78,6 +85,8 @@ export function reviewPayload(entry: Entry, draft: ReviewDraft, topicIds: string
   if (draft.doi.trim()) target.doi = draft.doi.trim();
   if (draft.pmid.trim()) target.pmid = draft.pmid.trim();
   if (draft.pmcid.trim()) target.pmcid = draft.pmcid.trim();
+  if (draft.edition.trim()) target.edition = draft.edition.trim();
+  if (draft.originalSha256) target.original_sha256 = draft.originalSha256;
   if (draft.publicationStatus) changes.publication_status = draft.publicationStatus;
   if (draft.publicationDate) changes.publication_date = draft.publicationDate;
   if (draft.revisionDate) changes.revision_date = draft.revisionDate;

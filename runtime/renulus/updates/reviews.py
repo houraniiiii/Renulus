@@ -51,7 +51,7 @@ class SourceReviews:
 
     def enqueue(self, conn, identifier, entry_id, target, changes, evidence, reason):
         payload = {"contract_version": 1, "event_id": identifier, "source_id": target["register_id"],
-                   "identity": {key: target[key] for key in ("canonical_url", "pinned_source_id", "doi", "pmid", "pmcid") if target.get(key)},
+                   "identity": {key: target[key] for key in ("canonical_url", "pinned_source_id", "doi", "pmid", "pmcid", "edition", "original_sha256") if target.get(key)},
                    "scope": {key: target.get(key, []) for key in ("topic_ids", "locators")},
                    "changes": changes, "evidence": evidence, "reason": reason}
         conn.execute("INSERT OR IGNORE INTO update_library_changes(id,entry_id,payload_json) VALUES(?,?,?)",
@@ -69,7 +69,8 @@ class SourceReviews:
         # prior review's applicability is invalidated for this exact URL.
         for row in conn.execute("SELECT target_key,target_json,status_json FROM update_source_statuses").fetchall():
             stored = json.loads(row["target_json"])
-            if stored["register_id"] == target["register_id"] and stored.get("canonical_url") == target.get("canonical_url"):
+            if (stored["register_id"] == target["register_id"] and stored.get("canonical_url")
+                    and urldefrag(stored["canonical_url"])[0] == urldefrag(target.get("canonical_url") or "")[0]):
                 status = {**json.loads(row["status_json"]), **changes}
                 conn.execute("UPDATE update_source_statuses SET status_json=? WHERE target_key=?", (canonical(status), row["target_key"]))
 
@@ -118,6 +119,11 @@ class SourceReviews:
                     key_identity[key] = exact[key]
                 if exact.get("pinned_source_id"):
                     key_identity["pinned_source_id"] = exact["pinned_source_id"]
+                # Edition and original file bytes identify an acquired version;
+                # reviewing one file cannot clear another file's source facts.
+                for key in ("edition", "original_sha256"):
+                    if key in exact:
+                        key_identity[key] = exact[key]
                 target_key = hashlib.sha256(canonical(key_identity).encode()).hexdigest()
                 current = conn.execute("SELECT target_json,status_json FROM update_source_statuses WHERE target_key=?", (target_key,)).fetchone()
                 if current:

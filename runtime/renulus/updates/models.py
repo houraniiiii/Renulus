@@ -57,11 +57,20 @@ class SourceTarget(StrictModel):
     doi: str | None = Field(default=None, max_length=500)
     pmid: str | None = Field(default=None, max_length=12)
     pmcid: str | None = Field(default=None, max_length=15)
+    edition: str | None = Field(default=None, min_length=1, max_length=160)
+    original_sha256: str | None = Field(default=None, min_length=64, max_length=64, pattern=r"^[a-f0-9]{64}$")
     topic_ids: list[str] = Field(default_factory=list, max_length=100)
     locators: list[str] = Field(default_factory=list, max_length=100)
 
+    @field_validator("edition", mode="before")
+    @classmethod
+    def acquired_edition(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
     @model_validator(mode="after")
     def identify(self):
+        if (self.edition is None) != (self.original_sha256 is None):
+            raise ValueError("An acquired version requires both its edition and original SHA256")
         identities = article_identity(self.model_dump())
         for key, value in identities.items():
             setattr(self, key, value)
