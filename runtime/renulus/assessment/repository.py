@@ -97,7 +97,8 @@ class AssessmentRepository:
         for row in rows:
             scores[row["score_bucket"]] = {"answered": row["answered"],
                 "correct": row["correct"], "accuracy": row["correct"] / row["answered"]}
-        return {"reviewed": scores, "generated": {"available": False, "answered": 0},
+        generated_count = conn.execute("SELECT COUNT(*) FROM assessment_generated_attempts").fetchone()[0] if session_id is None else 0
+        return {"reviewed": scores, "generated": {"available": self.services.registry.get("provider") is not None, "answered": generated_count},
                 "bucket_policy": "assisted takes precedence over repeat; both attempt flags are retained"}
 
     def _view(self, conn, session_id, present=False):
@@ -146,8 +147,9 @@ class AssessmentRepository:
                                 "reason": "The installed pack is not formally mapped to ESENeph"}],
                     "complete_exam_available": False,
                     "coverage_note": "A selected quiz is not a complete curriculum or exam simulation",
-                    "generated": {"available": False,
-                                  "reason": "Approved practice generation is not connected"}}
+                    "generated": {"available": self.services.registry.get("provider") is not None,
+                                  "reason": None if self.services.registry.get("provider") is not None else
+                                  "Connect an approved subscription before generating practice"}}
 
     def _choose(self, conn, summaries, count):
         exposures = {row["family_id"]: row["n"] for row in conn.execute(

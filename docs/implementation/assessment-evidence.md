@@ -162,9 +162,84 @@ limits are required; advisory design review does not create an external gate.
   quiz-narrow-css800.png as evidence. Captures remain in the isolated ignored
   .local/runtime/assessment-ui/evidence directory; no screenshot is a real bank.
 
-Remaining product limits: no complete exam or formal ESENeph blueprint, no
-generated-practice producer, no authored hints in the M8 contract, pending real
-teaching-pack adoption and pending native release verification. All generation
-must later use provider.stream(messages, scope, run_id, model, system, purpose),
-cancel(run_id) and status() from the shared approved seam. No extra model route
-or inference service has been introduced.
+Those first-handoff limits were historical. The generated follow-up and
+committed teaching-pack consumer checks below supersede the unavailable
+generated capability and candidate-only producer status. Complete examination,
+formal ESENeph blueprint, authored bank hints and native release verification
+remain separate work.
+
+## Generated practice follow-up
+
+The consumer now calls exactly provider.stream(messages, scope=ContextScope,
+run_id=..., model=None, system=..., purpose='generated-practice') and
+cancel(run_id). No second model route, paid-provider call, bank-question read
+or inference service was added. Adapter registration establishes the available
+software seam; authentication and real provider execution remain separate.
+
+GET /assessment/practice/capabilities and POST /assessment/practice/generate
+provide an actual capability result and ordered SSE. Every run has one terminal
+completed/error/cancelled outcome; progress counts text without exposing keyed
+provider JSON. The provider must return exactly 1–5 validated questions with
+unique options and one supplied-option key. Invalid JSON, keys, counts or
+invented evidence indices fail explicitly with no session. Provider exception
+text is never echoed. Idle cancellation and disconnect prevent publication.
+
+Generated endpoints under /assessment/practice/sessions mirror session, answer,
+help, review, pause, resume and end. Their responses and scores remain separate:
+unassisted/assisted comparisons with generated, unreviewed keys. Generated
+attempts never write assessment-answer or other learning_evidence, and never
+contribute to reviewed fresh/assisted/repeat scores. Durable generated scoring
+and its idempotency outcome are transactional. Question/key snapshots stay
+pinned after restart. The additive migration is migrations/002_generated.sql,
+ledger assessment-002_generated; assessment-001 was not changed. The router
+also applies this checked ledger for older foundation consumers, as a no-op
+when the integrator's numbered loader already applied the identical migration.
+
+Ordinary study creates generated-practice scope and separate SQLite records.
+Temporary and unclassified requests stay volatile; Cases tickets force
+temporary scope regardless of the request's study declaration. M4 calls
+Cases.resolve_handoff(ticket, 'generated-practice'), then commit_handoff with
+the exact resolved ContextScope and shared cancellation event. Only a key-free
+completion marker enters volatile case discussion. A new guarded ticket binds
+subsequent practice answers/review to the current case revision: edit, deletion,
+Save transition or ticket expiry revoke access, including idempotent replays.
+Case-derived questions, keys, answers, scores and request outcomes never enter
+SQLite, retrieval/embedding caches, indexes, URLs or browser storage. The renderer
+sends only the ticket and a separate practice instruction, not raw handoff text.
+
+Knowledge retrieval is used only for ordinary study, with generated-practice
+scope. Eligible passages must permit model input, caching and display; reserved
+bank items and withdrawn/superseded/retracted/access-changed material are
+excluded. Citations are copied from actual supplied passage locators, never
+model-created references, and source revisions are rechecked before publication.
+Missing/failed retrieval is visible and allows explicitly unverified generation.
+Source retrieval does not independently review a generated key.
+
+### Producer and consumer evidence
+
+- M8 committed producer 78481a0f and raw-stem HTTP guard c55a517d were consumed
+  unchanged. The actual manifest contains 52 original reviewed items, 14 staged
+  cases and 27 topic definitions; its SHA256 remains the value above. Assessment
+  exercises 50 items across the actual published keys and source locators.
+  These are producer/software checks, not independent medical accuracy review.
+- Combined suite with explicit actual Cases producer source: 83 passed, no
+  skips. Command: RENULUS_CASES_TEST_SOURCE=<Cases runtime/renulus directory>
+  python -m pytest tests/assessment tests/content
+  tests/integration/test_foundation.py -q. Generated subset: 17 passed, including
+  real Cases repository checks for saved/unsaved handoffs, edit revocation and
+  deletion during inference. Inputs and provider outputs are original synthetic
+  token exercises, with no live inference. Other checks cover duplicate answers,
+  failed command-insert rollback, restart, idempotent generation replay, invalid
+  provider output, source changes and cancellation of an idle provider.
+- No live or billed provider proof is claimed. No installed/native Windows
+  generated-practice release claim follows from local API tests.
+  This follow-up backend handoff precedes the isolated generated renderer
+  commit; its typecheck passes and live local API UI verification is in progress.
+
+Real generated limits: 5 questions per set, 64 KiB provider output, 180-second
+generation timeout, bounded in-memory runs/sessions (64 each) and 30-minute
+volatile retention. Cases' existing 15-minute guard expiry may end practice
+earlier. Temporary practice does not resume after process exit. Generated
+questions and key comparisons are unreviewed; no curriculum mastery or complete
+exam claim is made. Exact automatically selected provider/model identity is not
+available from the small string-delta seam and is not invented in records.
