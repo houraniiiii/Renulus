@@ -83,6 +83,9 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
         return {"version": __version__, "api_version": API_VERSION,
                 "modules": services.capabilities}
 
+    from .storage.api import create_router as data_router
+    app.include_router(data_router(services), prefix="/api/v1")
+
     for name in MODULE_ORDER:
         module_path = Path(__file__).parent / name
         api_path = module_path / "api.py"
