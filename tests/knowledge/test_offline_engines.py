@@ -31,7 +31,8 @@ def live_repository(monkeypatch):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         HelperAssets = module.HelperAssets
-    paths = AppPaths.create(profile)
+    source_root = Path(helper_path).parents[3] if 'helper_path' in locals() else None
+    paths = AppPaths.create(profile, source_root=source_root)
     db = Database(paths.database)
     schema = Path(__file__).parents[2] / "runtime/renulus/knowledge/schema.sql"
     db.apply_migration("knowledge-001", schema.read_text())

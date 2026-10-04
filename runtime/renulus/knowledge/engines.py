@@ -1,9 +1,11 @@
 """Selected engines only, with explicit CPU assets and no first-use downloads."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timedelta
 import importlib.util
 import math
+from io import BytesIO
 from pathlib import Path
+from threading import RLock
 from typing import Any
 
 from ..contracts import ApiError
@@ -15,12 +17,18 @@ CHUNK_TOKENS = 480  # Reserve space for special tokens and query/document prefix
 MAX_BYTES = 64 * 1024 * 1024
 MAX_PAGES = 300
 MAX_PASSAGES = 12000
+TEMP_MAX_BYTES = 10 * 1024 * 1024
+TEMP_MAX_PAGES = 20
+TEMP_MAX_PIXELS = 12_000_000
+TEMPORARY_EXTRACTION_PROVEN = False
 
 
 @dataclass
 class Extracted:
     passages: list[dict]
     document: dict
+    ocr: dict = field(default_factory=lambda: {"used": None, "confidence": None})
+    status: str = "extracted"
 
 
 class OfflineAssets:
@@ -61,6 +69,9 @@ class OfflineAssets:
         result["text_import"] = result["fastembed"]["ready"] and all(
             result["packages"][x] for x in ("docling_core", "fastembed", "lancedb"))
         result["pdf_image_import"] = result["text_import"] and result["docling"]["ready"] and result["ocr"]["ready"] and result["packages"]["docling"]
+        result["temporary_extraction"] = TEMPORARY_EXTRACTION_PROVEN and result["pdf_image_import"]
+        result["temporary_limits"] = {"max_bytes": TEMP_MAX_BYTES, "max_pages": TEMP_MAX_PAGES,
+                                      "image_pixels": TEMP_MAX_PIXELS, "ocr_confidence": "unavailable"}
         return result
 
 
@@ -99,6 +110,7 @@ class DoclingExtractor:
     def __init__(self, assets: OfflineAssets):
         self.assets = assets
         self._converter = None
+        self._conversion_lock = RLock()
 
     def _chunk(self, document, text_offsets=None) -> Extracted:
         try:
@@ -117,12 +129,13 @@ class DoclingExtractor:
         class LocalTokenizer(BaseTokenizer):
             model_config = ConfigDict(arbitrary_types_allowed=True)
             backend: Any
+            budget: int = CHUNK_TOKENS
 
             def count_tokens(self, text: str) -> int:
                 return len(self.backend.encode(text, add_special_tokens=False).ids)
 
             def get_max_tokens(self) -> int:
-                return CHUNK_TOKENS
+                return self.budget
 
             def get_tokenizer(self):
                 # semchunk accepts a token-count callable. Rust Tokenizer.encode
@@ -131,7 +144,17 @@ class DoclingExtractor:
                 return self.count_tokens
 
         local = LocalTokenizer(backend=tokenizer)
-        chunker = HybridChunker(tokenizer=local, merge_peers=True, repeat_table_header=True)
+        class BudgetedHybridChunker(HybridChunker):
+            def segment(self, doc_chunk, available_length, doc_serializer):
+                # Docling-core 2.99's table splitter uses self.max_tokens rather
+                # than available_length. Reserve heading/caption overhead in its
+                # maintained LineBasedTokenChunker, preserving repeated headers
+                # and the original table/page metadata. No embedding truncation.
+                bounded = self.model_copy(update={"tokenizer": LocalTokenizer(
+                    backend=tokenizer, budget=max(1, available_length - 8))})
+                return HybridChunker.segment(bounded, doc_chunk, max(1, available_length - 8), doc_serializer)
+
+        chunker = BudgetedHybridChunker(tokenizer=local, merge_peers=True, repeat_table_header=True)
         passages = []
         for chunk in chunker.chunk(dl_doc=document):
             context = chunker.contextualize(chunk=chunk)
@@ -193,29 +216,65 @@ class DoclingExtractor:
                 return self.extract_text(path.read_text(encoding="utf-8-sig"), title)
             except UnicodeError:
                 raise ApiError("invalid_text_encoding", "Use a UTF-8 text file", 422) from None
+        with self._conversion_lock:
+            return self._extract_document(path, path.suffix.lower(), title)
+
+    def extract_bytes(self, data: bytes, filename: str, title: str) -> Extracted:
+        """Docling input remains a BytesIO stream; this method never creates a file."""
+        suffix = Path(filename).suffix.lower()
+        if len(data) > TEMP_MAX_BYTES:
+            raise ApiError("document_limit", "Temporary input is limited to 10 MiB", 413)
+        if suffix not in (".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".txt", ".md"):
+            raise ApiError("unsupported_file", "Choose a PDF, image or UTF-8 text input", 415)
+        if suffix in (".txt", ".md"):
+            try:
+                result = self.extract_text(data.decode("utf-8-sig"), title)
+                result.ocr["used"] = False
+                return result
+            except UnicodeError:
+                raise ApiError("invalid_text_encoding", "Use UTF-8 text", 422) from None
+        if suffix == ".pdf" and not data.lstrip().startswith(b"%PDF-"):
+            raise ApiError("malformed_pdf", "The input has no PDF signature", 422)
+        from docling.datamodel.base_models import DocumentStream
+        source = DocumentStream(name="temporary" + suffix, stream=BytesIO(data))
+        with self._conversion_lock:
+            result = self._extract_document(source, suffix, title, temporary=True)
+        result.ocr["used"] = True if suffix != ".pdf" else None
+        return result
+
+    def _extract_document(self, source, suffix, title, temporary=False) -> Extracted:
         artifacts = self.assets.validate("docling")
         ocr_root = self.assets.validate("ocr")
         helper_config = self.assets.config("docling")
         try:
-            if path.suffix.lower() != ".pdf":
+            if suffix != ".pdf":
                 from PIL import Image
-                with Image.open(path) as image:
+                with Image.open(source.stream if temporary else source) as image:
                     frames = getattr(image, "n_frames", 1)
-                    if frames > MAX_PAGES:
+                    if frames > (TEMP_MAX_PAGES if temporary else MAX_PAGES):
                         raise ApiError("document_limit", "The image contains too many pages", 413)
                     pixels = 0
                     for frame in range(frames):
                         image.seek(frame)
                         pixels += image.width * image.height
-                    if pixels > 40_000_000:
-                        raise ApiError("document_limit", "The image exceeds the 40 megapixel extraction limit", 413)
+                    limit = TEMP_MAX_PIXELS if temporary else 40_000_000
+                    if pixels > limit:
+                        raise ApiError("document_limit", "The image exceeds the extraction pixel limit", 413)
                     if frames == 1:
                         image.verify()
+                if temporary:
+                    source.stream.seek(0)
             from docling.datamodel.base_models import ConversionStatus, InputFormat
             from docling.datamodel.pipeline_options import PdfPipelineOptions, RapidOcrOptions, OcrMode
             from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
             from docling.document_converter import DocumentConverter, PdfFormatOption, ImageFormatOption
             from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
+            rapidocr_params = {**helper_config.get("rapidocr_params", {}),
+                "Global.model_root_dir": str(ocr_root), "Global.log_level": "error",
+                "EngineConfig.onnxruntime.intra_op_num_threads": 2,
+                "EngineConfig.onnxruntime.inter_op_num_threads": 1,
+                "EngineConfig.onnxruntime.use_cuda": False,
+                "EngineConfig.onnxruntime.use_dml": False}
             options = PdfPipelineOptions(artifacts_path=artifacts, do_ocr=True,
                 do_table_structure=True, do_picture_classification=False,
                 do_picture_description=False, do_code_enrichment=False, do_formula_enrichment=False,
@@ -226,14 +285,15 @@ class DoclingExtractor:
                     det_model_path=str(ocr_root / "det.onnx"),
                     rec_model_path=str(ocr_root / "rec.onnx"),
                     cls_model_path=str(ocr_root / "cls.onnx"),
-                    rapidocr_params=helper_config.get("rapidocr_params", {"Global.model_root_dir": str(ocr_root)})))
+                    rapidocr_params=rapidocr_params))
             image_options = options.model_copy(deep=True)
             image_options.ocr_options.mode = OcrMode.FULL_PAGE
             if self._converter is None:
                 self._converter = DocumentConverter(allowed_formats=[InputFormat.PDF, InputFormat.IMAGE],
                     format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=options),
                         InputFormat.IMAGE: ImageFormatOption(pipeline_cls=StandardPdfPipeline, pipeline_options=image_options)})
-            result = self._converter.convert(path, max_num_pages=MAX_PAGES, max_file_size=MAX_BYTES, raises_on_error=False)
+            result = self._converter.convert(source, max_num_pages=TEMP_MAX_PAGES if temporary else MAX_PAGES,
+                max_file_size=TEMP_MAX_BYTES if temporary else MAX_BYTES, raises_on_error=False)
             if result.status != ConversionStatus.SUCCESS:
                 raise ApiError("extraction_failed", "Docling could not completely extract this document; it may be malformed, encrypted or over the page limit", 422)
             return self._chunk(result.document)

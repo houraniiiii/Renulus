@@ -16,7 +16,7 @@ def main():
     root = Path(args.profile).resolve()
     if ".local/runtime" not in root.as_posix():
         raise SystemExit("Use an explicit isolated development profile")
-    app = create_app(root, token="library-synthetic-verification")
+    app = create_app(root, token="library-synthetic-verification", source_root=Path(args.helper_module).parents[3])
     spec = importlib.util.spec_from_file_location("library_helper_verification", args.helper_module)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

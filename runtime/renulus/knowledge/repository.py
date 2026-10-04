@@ -34,6 +34,11 @@ class KnowledgeRepository:
     def capabilities(self):
         return self.assets.capabilities()
 
+    def extract_bytes(self, data: bytes, filename: str, title: str):
+        if self.capabilities()["temporary_extraction"] is not True:
+            raise ApiError("temporary_extraction_unavailable", "The verified temporary extraction path is not available", 503, True)
+        return self.extractor.extract_bytes(data, filename, title)
+
     @staticmethod
     def _scope(scope) -> ContextScope:
         if not isinstance(scope, ContextScope):

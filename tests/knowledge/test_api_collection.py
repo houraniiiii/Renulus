@@ -45,6 +45,9 @@ def test_api_text_original_retrieve_and_single_terminal_sse(client):
 
 def test_unsafe_raw_file_upload_is_rejected_before_stream_consumption(client):
     api, repository = client
+    # Quiesce the independent queue poller so SQLite's normal WAL/shared-memory
+    # lifecycle cannot obscure the endpoint's pre-body no-write check.
+    repository.services.registry["knowledge_worker"].stop()
     original_paths = set(repository.paths.root.rglob("*"))
     options = {"scope": {"kind": "temporary-case"}, "idempotency_key": "no-save"}
     response = api.post("/api/v1/library/import/file", content=b"PRIVATE_TEMPORARY_CASE_SENTINEL" * 100000,
