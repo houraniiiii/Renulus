@@ -27,6 +27,7 @@ class SourceMetadata(BaseModel):
     canonical_url: str | None = None
     access_class: str = "user-owned"
     edition: str | None = None
+    original_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     publication_date: str | None = None
     revision_date: str | None = None
     received_at: str | None = None

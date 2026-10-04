@@ -16,7 +16,9 @@ CHANGE_FIELDS = {
     "retracted", "superseded", "repository_removed", "access_changed",
     "supersedes", "replaced_topics", "excluded_pages",
 }
-IDENTITY_FIELDS = {"canonical_url", "pinned_source_id", "doi", "pmid", "pmcid"}
+IDENTITY_FIELDS = {"canonical_url", "pinned_source_id", "doi", "pmid", "pmcid",
+                   "edition", "original_sha256"}
+PUBLICATION_RESTRICTIONS = {"retracted", "repository_removed", "access_changed"}
 
 
 def canonical(value):
@@ -71,6 +73,11 @@ def validate_event(payload):
             raise ValueError()
         if not isinstance(changes, dict) or not changes or set(changes) - CHANGE_FIELDS:
             raise ValueError()
+        edition, digest = identity.get("edition"), identity.get("original_sha256")
+        if "edition" in identity or "original_sha256" in identity:
+            if (not isinstance(edition, str) or not edition.strip() or len(edition) > 160
+                    or not isinstance(digest, str) or not re.fullmatch(r"[a-f0-9]{64}", digest)):
+                raise ValueError()
         explicit = article_ids(identity)
         inferred = url_ids(identity.get("canonical_url"))
         if any(key in explicit and explicit[key] != value for key, value in inferred.items()):
@@ -98,7 +105,7 @@ def validate_event(payload):
         raise ApiError("source_status_invalid", "Check exact publication identity, reviewed evidence and source-status fields", 422) from None
 
 
-def matches(metadata, event):
+def publication_matches(metadata, event):
     if metadata["source_id"] != event["source_id"]:
         return False
     identity = event["identity"]
@@ -115,12 +122,64 @@ def matches(metadata, event):
         identified = bool(identity.get("canonical_url")) and urldefrag(identity["canonical_url"])[0] == urldefrag(metadata.get("canonical_url") or "")[0]
     if not identified:
         return False  # Pack-only IDs do not identify a Library revision.
+    return True
+
+
+def scope_matches(metadata, event):
     scope = event.get("scope", {})
     if scope.get("topic_ids") and metadata.get("topic_ids") and not set(scope["topic_ids"]) & set(metadata["topic_ids"]):
         return False
     if scope.get("locators") and not set(scope["locators"]) & {metadata.get("collection_chapter"), metadata.get("collection_section")}:
         return False  # Unmapped chapter/page identities require explicit review.
     return True
+
+
+def acquired_binding(metadata):
+    """Bind historical acquired imports without rewriting their provenance."""
+    edition, digest = metadata.get("edition"), metadata.get("original_sha256")
+    if digest:
+        return edition, digest
+    for note in metadata.get("notes", []):
+        if not isinstance(note, str) or not note.startswith("renulus-acquired-v1:"):
+            continue
+        try:
+            evidence = json.loads(note.removeprefix("renulus-acquired-v1:"))
+            digest = evidence.get("original_sha256")
+            if (evidence.get("adapter") == "pmc-acquired-jats-v1"
+                    and evidence.get("article_version") == edition
+                    and isinstance(digest, str) and re.fullmatch(r"[a-f0-9]{64}", digest)):
+                return edition, digest
+        except (ValueError, TypeError, AttributeError):
+            continue
+    return edition, None
+
+
+def applicable_changes(metadata, event):
+    if not publication_matches(metadata, event):
+        return {}
+    identity, changes = event["identity"], event["changes"]
+    acquired = "acquired-jats" in metadata.get("asset_role", [])
+    bound = "edition" in identity and "original_sha256" in identity
+    exact = bound and acquired_binding(metadata) == (identity["edition"], identity["original_sha256"])
+    scoped = scope_matches(metadata, event)
+    if scoped and (exact or (not acquired and not bound)):
+        return changes
+    # Publication-level loss of access or retraction applies to every acquired
+    # version, even when the notice was inspected against a particular file.
+    result = {key: value for key, value in changes.items()
+              if acquired and key in PUBLICATION_RESTRICTIONS and value is True}
+    if scoped and acquired:
+        for key, value in changes.items():
+            if (key in ("latest_final_verified", "content_reviewed") and value is False
+                    or key == "publication_status" and value != "final"
+                    or key == "superseded" and value is True and not bound
+                    or key == "correction" and isinstance(value, str) and value.strip()):
+                result[key] = value
+    return result
+
+
+def matches(metadata, event):
+    return bool(applicable_changes(metadata, event))
 
 
 class SourceStatusJournal:
@@ -139,8 +198,9 @@ class SourceStatusJournal:
     def effective(self, metadata, events=None):
         value = metadata.model_dump() if isinstance(metadata, SourceMetadata) else dict(metadata)
         for event in events if events is not None else self.events(value["source_id"]):
-            if matches(value, event):
-                value.update(event["changes"])
+            changes = applicable_changes(value, event)
+            if changes:
+                value.update(changes)
                 if value["publication_status"] != "final" or any(value[key] for key in ("retracted", "superseded", "repository_removed")):
                     value["latest_final_verified"] = False
         return SourceMetadata.model_validate(value, strict=True)
