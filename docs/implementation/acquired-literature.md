@@ -323,3 +323,39 @@ Parent 509bad0d fixes the pre-existing retrieval-test index-cleanup fixture
 mismatch found when testing the older base. No off-lease fixture/runtime fix was
 made here. Checks and remaining parent prerequisites are also recorded in
 GitHub issue #6; machine-only proof is in the isolated ignored profile.
+
+## Acquired enqueue during CPU extraction — October 4, 2026 UTC
+
+The live parent observed a five-article selection waiting between canonical
+adoptions while an existing conversion repeatedly acquired the CPU ingestion
+lock. The adapter only performs journal replay, version deduplication and
+import_text(process=False) inside this critical section. It now takes the
+repository mutation lock alone, as the normal import path does. Journal updates
+use that same lock; recovery holds it while changing canonical state. Receipt
+inspection remains outside the lock, and the worker retains one serial CPU
+extraction/embedding lane. No repository, worker, schema or shared-lock code
+changes are required.
+
+The controlled concurrency test uses five synthetic article versions and the
+existing blocked-extractor pattern. Before the fix, selected enqueue timed out
+after ten seconds while extraction held the CPU lock. After the fix, all five
+versions queue before extraction is released. Repeating the batch reuses exactly
+the same five jobs and documents. A publication-level retraction notice applied
+during the blocked extraction prevents every subsequent acquired adoption;
+there is no new document or job. All synthetic external originals remain byte
+identical. This proves canonical enqueue responsiveness, not native conversion
+or indexing throughput.
+
+Verification on base 1a29f8d3: 100 focused acquired/source checks passed in
+41.41 seconds with the integration CPython 3.14.4 interpreter:
+
+```
+python -m pytest tests/knowledge/test_acquired_enqueue.py tests/knowledge/test_acquired.py tests/knowledge/test_acquired_binding.py tests/knowledge/test_source_version.py tests/knowledge/test_source_status.py -q
+```
+
+The source family includes exact edition/original-hash promotion, ignored
+unbound/other-version positives, broad hard restrictions and version-specific
+supersession. The prior stale test failure on d38b7a04 is corrected in the
+1a29f8d3 baseline. No actual profile mutation, registration, body download or
+large import was performed for this fix; the 178k-row catalogue fixture was not
+rerun. Already recorded canonical source topic tags are unchanged.

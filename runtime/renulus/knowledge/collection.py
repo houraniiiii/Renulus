@@ -262,9 +262,10 @@ class CollectionCatalogue:
         return {"results": results, "queued": len({r["job"]["id"] for r in results if r["status"] == "queued"})}
 
     def _import_acquired(self, entry, article):
-        # Reuse the parent's existing ingestion/mutation guards. No new lock,
-        # schema or API contract is introduced by this adapter.
-        with self.repository._ingest_lock, self.repository._lock:
+        # Serialize canonical version adoption with journal updates and recovery.
+        # import_text(process=False) uses normal import guards; CPU extraction
+        # remains serial in the worker and must not block this enqueue path.
+        with self.repository._lock:
             effective = self.repository.source_status.effective(article.metadata)
             if any((effective.retracted, effective.superseded, effective.repository_removed, effective.access_changed)):
                 raise ApiError("article_status_unavailable", "A recorded source-status restriction overrides the acquired receipt", 409)
