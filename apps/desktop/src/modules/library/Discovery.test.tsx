@@ -22,7 +22,7 @@ const base = async (url: RequestInfo | URL, options?: RequestInit) => {
   if (url === '/api/v1/retrieval/articles/import') return json(accepted(JSON.parse(options!.body as string).topic_id));
   if (url === '/api/v1/library/jobs/job_synthetic') return json(job);
   if (url === '/api/v1/library/documents/doc_synthetic') return json(document);
-  if (url === '/api/v1/library/documents') return json({ documents: [] });
+  if (String(url).startsWith('/api/v1/library/documents?')) return json({ documents: [], total: 0, counts: {}, offset: 0, limit: 25 });
   if (url === '/api/v1/library/capabilities') return json({ text_import: true, pdf_image_import: false, temporary_extraction: false });
   if (String(url).startsWith('/api/v1/library/collection/catalogue?')) return json({ entries: [], total: 0, offset: 0 });
   throw new Error('Unexpected synthetic request: ' + url);
