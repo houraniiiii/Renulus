@@ -29,7 +29,13 @@ export function ConnectionsPage() {
   const [login, setLogin] = useState<Login>();
   const [notice, setNotice] = useState<string>();
   const active = useRef<AbortController | null>(null);
-  useEffect(() => () => { active.current?.abort(); }, []);
+  const pendingLogin = useRef<string | undefined>(undefined);
+  useEffect(() => () => {
+    active.current?.abort();
+    const id = pendingLogin.current;
+    pendingLogin.current = undefined;
+    if (id) void api('/connections/codex/login/' + encodeURIComponent(id), { method: 'DELETE', keepalive: true, timeoutMs: 5000 }).catch(() => {});
+  }, []);
 
   async function operation(id: string, run: (signal: AbortSignal) => Promise<void>) {
     active.current?.abort();
@@ -51,6 +57,8 @@ export function ConnectionsPage() {
   async function connectCodex() {
     await operation('codex', async signal => {
       const result = await api<Login>('/connections/codex/login', { method: 'POST', body: { select: false }, signal });
+      if (signal.aborted) return;
+      pendingLogin.current = result.status === 'pending' ? result.login_id : undefined;
       setLogin(result);
       if (result.authorization_url) {
         if (window.renulus) await window.renulus.openAuthorization(result.authorization_url);
@@ -66,13 +74,19 @@ export function ConnectionsPage() {
         const result = await api<Login>('/connections/codex/login/' + encodeURIComponent(login.login_id), { signal: controller.signal });
         if (controller.signal.aborted) return;
         if (result.status !== 'pending') {
+          pendingLogin.current = undefined;
           setLogin(result);
           if (result.error) setError(new ApiError(result.error.message, 400, result.error.code, result.error.retryable));
           if (result.status === 'connected') { setNotice('Codex is connected. Select it to use this subscription.'); retry(); }
           return;
         }
         timer = setTimeout(poll, 1500);
-      } catch (failure) { if (!controller.signal.aborted) { setError(failure); setLogin(undefined); } }
+      } catch (failure) { if (!controller.signal.aborted) {
+        setError(failure);
+        // Keep the pending session visible so a transient polling error does not
+        // hide the user's cancel action or leave an unseen listener behind.
+        timer = setTimeout(poll, 3000);
+      } }
     };
     timer = setTimeout(poll, 1500);
     return () => { clearTimeout(timer); controller.abort(); };
@@ -94,7 +108,7 @@ export function ConnectionsPage() {
             {connection.status === 'connected' && resource.data.connections.selected_provider !== connection.provider && <Button disabled={!!busy} onClick={() => operation('select', async signal => { await api('/connections/select', { method: 'POST', body: { provider: connection.provider }, signal }); })}>Use {names[connection.provider]}</Button>}
             {connection.status === 'connected' && <><Button variant="secondary" disabled={!!busy} onClick={() => operation('refresh', async signal => { await api('/connections/' + connection.provider + '/refresh', { method: 'POST', signal }); })}>Check models</Button><Button variant="ghost" disabled={!!busy} onClick={() => operation('disconnect', async signal => { await api('/connections/' + connection.provider, { method: 'DELETE', signal }); })}>Disconnect</Button></>}
           </div>
-          {connection.provider === 'codex' && login?.status === 'pending' && <Notice><div className="section"><p>Finish sign-in in your browser. Renulus is waiting for your account to connect.</p><div className="actions">{!window.renulus && login.authorization_url && <a href={login.authorization_url} target="_blank" rel="noreferrer">Open sign-in in your browser</a>}<Button variant="ghost" disabled={!!busy} onClick={() => operation('cancel-login', async signal => { await api('/connections/codex/login/' + encodeURIComponent(login.login_id), { method: 'DELETE', signal }); setLogin(undefined); })}>Cancel sign-in</Button></div></div></Notice>}
+          {connection.provider === 'codex' && login?.status === 'pending' && <Notice><div className="section"><p>Finish sign-in in your browser. Renulus is waiting for your account to connect.</p><div className="actions">{!window.renulus && login.authorization_url && <a href={login.authorization_url} target="_blank" rel="noreferrer">Open sign-in in your browser</a>}<Button variant="ghost" disabled={!!busy} onClick={() => operation('cancel-login', async signal => { await api('/connections/codex/login/' + encodeURIComponent(login.login_id), { method: 'DELETE', signal }); pendingLogin.current = undefined; setLogin(undefined); })}>Cancel sign-in</Button></div></div></Notice>}
         </section>)}
       </section>
       <aside className="section"><section className="section"><h2>Your local runtime</h2><p>Runtime {resource.data.health.version} · API {resource.data.health.api_version}</p><p>Subscription and model availability are reported by the backend. Image input remains unverified until a live check.</p></section><Notice><p>Renulus uses your selected subscription. It does not silently switch subscriptions or add a paid API fallback.</p></Notice><p className="muted">Connecting and checking models do not send a learning prompt. Ask and other model-dependent flows need separate working integration evidence.</p></aside>

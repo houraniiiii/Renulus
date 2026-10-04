@@ -78,3 +78,62 @@ not stopped. The production renderer/Electron build and typecheck pass with
 the new pins. The first parallel Vitest run hit a navigation worker startup
 timeout after 23 passing tests. npm test -- --maxWorkers=1 --pool=threads then
 passed all 26 tests across five files, including navigation isolation.
+
+## Patched native lifecycle and Connections handoff
+
+Electron main now owns an isolated local backend, authenticates its readiness
+and stops only its owned child. The attributed unchanged Hermes lifecycle
+helpers handle startup cancellation, Windows process-tree fallback and window
+focus. The renderer is served from a loopback origin with CSP/no-store, sandbox,
+context isolation and a nonpersistent partition. Main injects the session token;
+it is absent from the renderer bridge. Wrong Host/Origin and unauthenticated API
+requests are rejected. Sign-in only opens HTTPS auth.openai.com at the exact
+/api/accounts/authorize path; callback ownership stays with the backend.
+
+Development can attach to the integrator's explicit loopback URL/app-only token.
+This path never adopts or kills the shared backend. Shipping defaults still
+require a managed verified backend bundle. The Windows Hermes fallback uses
+taskkill /T /F, so successful process exit does not prove FastAPI lifespan hooks
+ran. That shared control-pipe/graceful-shutdown request was relayed in runtime #2;
+the integration owner retains server ownership.
+
+Connections consumes the public runtime JSON operations with no fabricated
+availability. A pending known OAuth login is cancelled with keepalive on page
+exit. Transient polling errors keep the cancel control available. An explicitly
+entered key is cleared immediately and does not auto-select the provider.
+Four synthetic UI tests exercise these behaviors; no account or provider request
+was made. Final npm test -- --maxWorkers=1 --pool=threads passes 30 tests across
+six files, and npm run build passes including native compilation.
+
+Actual Windows Electron 44.5.1 proof directories under apps/desktop/test-results/:
+
+- native-f851f6c6-00b8-4e7c-aba8-6162bc4ac1be: two simultaneously isolated
+  instances, distinct main PIDs/userData/sessionData, one owned Python backend
+  each, authenticated meta, nonpersistent sandboxed renderer, unauthenticated
+  request rejected with 401, external authorization rejected, all eight routes,
+  destination search and no horizontal overflow at 640 px. Both owned backend
+  PIDs are absent after app close. The interpreter was the explicitly selected
+  integration .venv CPython 3.14.4; the managed source was this lane's foundation.
+- native-7d412cff-6b64-4dba-97e4-ff42dd9f0816: two independent native profiles
+  attached to integrated F0 runtime on port 18765, zero adopted child processes,
+  public Connections reports both providers disconnected and all model
+  availability unknown. Image input is unverified. Shared backend still
+  authenticates after both desktop instances close.
+- browser-c4a4dd5f-5adb-48e1-b503-31443710992a: real Vite preview against the
+  integrated runtime, all eight routes, zero page errors, same honest Connections
+  state, no horizontal overflow at 390 px, three captures.
+
+Playwright 1.62.1 was explicitly installed as temporary unsaved test tooling; it
+did not change manifest/lock. The browser uses Chrome in its own synthetic
+profile; native uses the checksum-verified Electron binary. Four final desktop/
+Connections/compact captures were actually opened and reviewed in one bounded
+batch. Flow hierarchy/tokens remain coherent; no clipping or material defect was
+observed. Shared shell/UI and the integrator's Learn/Study/Updates files were not
+rewritten. Earlier Electron 40 captures are superseded.
+
+This proves source/native lifecycle and disconnected runtime display, not a
+self-contained installed product, signed installer, live account login, model
+generation or image capability. The integrator's newly verified 19 helper files
+(483,597,181 bytes) are available for an unsigned backend/helper bundle next.
+Only those public helper assets may be acquired from its profile; provider
+credentials, SQLite data and other private state remain outside packaging.
