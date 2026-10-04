@@ -1,0 +1,349 @@
+// @vitest-environment jsdom
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import LibraryPage from './index';
+import type { CatalogueEntry, LibraryDocument } from './types';
+
+const { navigation } = vi.hoisted(() => ({ navigation: { scope: { kind: 'study', entity_id: 'SYNTHETIC_PRIVATE_SENTINEL' }, handoff: {} as Record<string, unknown>, revision: 0 } }));
+vi.mock('../../shell/navigation', () => ({ useNavigation: () => navigation }));
+
+const request = vi.fn<typeof fetch>();
+const states = ['ready', 'queued', 'processing', 'failed', 'cancelled'] as const;
+let records: LibraryDocument[];
+let catalogueEntries: CatalogueEntry[];
+function documentFor(number: number): LibraryDocument {
+  const id = 'doc_' + String(number).padStart(3, '0');
+  const status = number <= 100 ? 'ready' : number <= 140 ? 'queued' : number <= 150 ? 'processing' : number <= 155 ? 'failed' : 'cancelled';
+  const revision = 'rev_' + String(number).padStart(3, '0');
+  return { id, title: 'Synthetic source ' + String(number).padStart(3, '0'), source_id: number % 3 === 0 ? 'SYNTHETIC-CKD' : 'SYNTHETIC-TRANSPLANT', status, reserved: false, cleanup_pending: false,
+    active_revision: status === 'ready' ? revision : null, latest_revision: revision, revisions: [{ id: revision, document_id: id, ordinal: 1, status, sha256: 'synthetic', media_type: 'text/plain', bytes: 100, passage_count: status === 'ready' ? 2 : 0,
+      metadata: { source_id: 'SYNTHETIC', source_owner: 'Synthetic Author', canonical_url: null, edition: 'Synthetic edition', publication_date: '2026-01-01', received_at: null, checked_at: null, publication_status: 'unverified', latest_final_verified: false, content_reviewed: false, collection_section: null, collection_chapter: null, notes: [] },
+      rights: { display: true, cache: true, index: true, embedding: true, model_input: true, derivation: false, evaluation: false, redistribution: false, licence: 'CC-BY-4.0', permission_reference: 'Synthetic test permission', attribution: 'Synthetic Author' } }] };
+}
+function json(value: unknown, status = 200) { return new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } }); }
+function pageFor(url: string) {
+  const params = new URL(url, 'http://127.0.0.1').searchParams;
+  const limit = Number(params.get('limit')), offset = Number(params.get('offset'));
+  const query = (params.get('query') ?? '').toLowerCase(), status = params.get('status');
+  const matching = records.filter(document => (!status || document.status === status) && (!query || (document.title + ' ' + document.source_id).toLowerCase().includes(query)));
+  const counts = Object.fromEntries(states.map(state => [state, records.filter(document => document.status === state).length]));
+  return { documents: matching.slice(offset, offset + limit), total: matching.length, counts, offset, limit };
+}
+const base = async (url: RequestInfo | URL, options?: RequestInit): Promise<Response> => {
+  const path = String(url);
+  if (path.startsWith('/api/v1/library/documents?')) return json(pageFor(path));
+  if (path.startsWith('/api/v1/library/documents/')) {
+    const id = path.split('/').at(-1);
+    const document = records.find(row => row.id === id);
+    if (options?.method === 'DELETE') { records = records.filter(row => row.id !== id); return json({ cleanup_pending: false }); }
+    return document ? json(document) : json({ error: { code: 'document_not_found', message: 'Synthetic document removed.', retryable: false } }, 404);
+  }
+  if (path.includes('/library/revisions/') && path.includes('/citation')) {
+    const revision = path.split('/')[5];
+    const document = records.find(row => row.latest_revision === revision)!;
+    const page = new URL(path, 'http://127.0.0.1').searchParams.get('page');
+    return json({ document_id: document.id, document_revision: revision, title: document.title, page: page ? Number(page) : null, locators: [{ page: Number(page ?? 1), char_span: [0, 100], item_ref: '#/texts/0' }], original_url: '/library/revisions/' + revision + '/original' });
+  }
+  if (path === '/api/v1/library/capabilities') return json({ text_import: true, pdf_image_import: false, temporary_extraction: false });
+  if (path.startsWith('/api/v1/library/collection/catalogue?')) {
+    const sourceId = new URL(path, 'http://127.0.0.1').searchParams.get('source_id');
+    const entries = catalogueEntries.filter(entry => !sourceId || entry.source_id === sourceId);
+    return json({ entries, total: entries.length, offset: 0 });
+  }
+  if (path === '/api/v1/content/topics') return json([{ id: 'T21', label: 'Kidney transplantation' }, { id: 'T19', label: 'Medicines and nephrotoxicity' }]);
+  if (path === '/api/v1/retrieval/connections') return json({ selected_tool: null, connections: ['europe-pmc', 'pubmed'].map(provider => ({ provider, enabled: true, configured: false, selected: false, requests_used: 0, daily_request_limit: 100, credits_used: 0, daily_credit_limit: 20, auth_status: 'not_checked' })) });
+  if (path === '/api/v1/retrieval/discover') return json({ topic_id: 'T21', topic_label: 'Kidney transplantation', provider: 'europe-pmc', queried_at: '2026-01-01T12:00:00Z', records: [{ id: 'MED:10001', title: 'Synthetic discovered source', url: 'https://pubmed.ncbi.nlm.nih.gov/10001/', pmcid: 'PMC10001', publication_date: '2026-01-01' }] });
+  if (path === '/api/v1/retrieval/articles/import') return json({ topic_id: 'T21', article: { pmcid: 'PMC10001', licence: 'CC-BY-4.0', licence_url: 'https://creativecommons.org/licenses/by/4.0/', attribution: 'Synthetic Author' }, import: { document_id: 'doc_050', revision_id: 'rev_050', status: 'ready', job: { id: 'job_synthetic', revision_id: 'rev_050', state: 'ready', phase: 'ready', error_code: null, error_message: null } }, replayed: false });
+  if (path === '/api/v1/library/jobs/job_synthetic') return json({ id: 'job_synthetic', revision_id: 'rev_050', state: 'ready', phase: 'ready', error_code: null, error_message: null });
+  throw new Error('Unexpected synthetic request: ' + path);
+};
+beforeEach(() => {
+  records = Array.from({ length: 156 }, (_, index) => documentFor(index + 1));
+  catalogueEntries = [];
+  navigation.scope.kind = 'study'; navigation.handoff = {}; navigation.revision = 0;
+  request.mockReset().mockImplementation(base);
+  vi.stubGlobal('fetch', request);
+});
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
+const listCalls = () => request.mock.calls.filter(([url]) => String(url).startsWith('/api/v1/library/documents?'));
+const list = () => screen.getByRole('region', { name: 'Library document list' });
+const summary = () => screen.getByLabelText('Library processing summary');
+function count(label: string) { return within(summary()).getByText(label, { selector: 'dt' }).nextElementSibling?.textContent; }
+async function mount() { const view = render(<LibraryPage />); await screen.findByText('1–25 of 156 documents'); return view; }
+async function next(range: string) { fireEvent.click(screen.getByRole('button', { name: 'Next documents' })); await screen.findByText(range); }
+
+describe('Library document browser', () => {
+  it('bounds a 156-document library to 25 visible rows and displays global status counts', async () => {
+    await mount();
+    expect(within(list()).getAllByRole('listitem')).toHaveLength(25);
+    expect(count('Indexed')).toBe('100'); expect(count('Queued')).toBe('40'); expect(count('Processing')).toBe('10'); expect(count('Import failed')).toBe('5'); expect(count('Cancelled')).toBe('1');
+    expect(screen.getByText('Page 1 of 7')).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Previous documents' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(list().tabIndex).toBe(0);
+    expect(listCalls()).toHaveLength(1);
+    expect(listCalls()[0][0]).toBe('/api/v1/library/documents?limit=25&offset=0');
+    expect(request.mock.calls.some(([url]) => url === '/api/v1/library/documents' || url === '/api/v1/runtime/runs')).toBe(false);
+  });
+
+  it('pages to the six-document final page without rendering earlier rows, then moves back', async () => {
+    await mount();
+    for (const range of ['26–50', '51–75', '76–100', '101–125', '126–150', '151–156']) await next(range + ' of 156 documents');
+    expect(within(list()).getAllByRole('listitem')).toHaveLength(6);
+    expect(within(list()).queryByText('Synthetic source 001')).toBeNull();
+    expect(screen.getByText('Page 7 of 7')).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Next documents' }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Previous documents' }));
+    await screen.findByText('126–150 of 156 documents');
+    expect(within(list()).getAllByRole('listitem')).toHaveLength(25);
+    expect(listCalls().map(([url]) => new URL(String(url), 'http://127.0.0.1').searchParams.get('offset'))).toEqual(['0', '25', '50', '75', '100', '125', '150', '125']);
+  });
+
+  it('applies title/source filters locally, resets page offset and keeps whole-library counts', async () => {
+    await mount(); await next('26–50 of 156 documents');
+    fireEvent.change(screen.getByLabelText('Find a document'), { target: { value: 'SYNTHETIC-CKD' } });
+    expect(listCalls()).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: 'Filter documents' }));
+    await screen.findByText('1–25 of 52 matching documents');
+    fireEvent.change(screen.getByLabelText('Import status'), { target: { value: 'queued' } });
+    await screen.findByText('1–13 of 13 matching documents');
+    expect(within(list()).getAllByRole('listitem')).toHaveLength(13);
+    expect(count('Indexed')).toBe('100'); expect(count('Queued')).toBe('40');
+    expect(String(listCalls().at(-1)![0])).toBe('/api/v1/library/documents?limit=25&offset=0&query=SYNTHETIC-CKD&status=queued');
+    expect(JSON.stringify(request.mock.calls)).not.toContain('SYNTHETIC_PRIVATE_SENTINEL');
+    expect(request.mock.calls.some(([url]) => url === '/api/v1/library/retrieve' || url === '/api/v1/retrieval/discover')).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+    await screen.findByText('1–25 of 156 documents');
+    expect((screen.getByLabelText('Find a document') as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText('Import status') as HTMLSelectElement).value).toBe('');
+  });
+
+  it('encodes a literal title with percent/underscore/ampersand rather than a second query argument', async () => {
+    records[0].title = 'Synthetic 100%_ & status=failed';
+    await mount();
+    fireEvent.change(screen.getByLabelText('Find a document'), { target: { value: '100%_ & status=failed' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Filter documents' }));
+    await screen.findByText('1–1 of 1 matching documents');
+    const params = new URL(String(listCalls().at(-1)![0]), 'http://127.0.0.1').searchParams;
+    expect(params.get('query')).toBe('100%_ & status=failed'); expect(params.has('status')).toBe(false);
+    expect(within(list()).getAllByRole('listitem')).toHaveLength(1);
+  });
+
+  it('distinguishes a filter with no matches from an empty library and can clear it', async () => {
+    await mount();
+    fireEvent.change(screen.getByLabelText('Find a document'), { target: { value: 'No synthetic source matches' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Filter documents' }));
+    await screen.findByText('No documents match these filters');
+    expect(screen.getByText('0 matching documents')).toBeTruthy();
+    expect(screen.queryByText('Build a library you can return to')).toBeNull();
+    expect(count('Indexed')).toBe('100');
+    fireEvent.click(screen.getByRole('button', { name: 'Show all documents' }));
+    await screen.findByText('1–25 of 156 documents');
+  });
+
+  it('shows honest zero counts and disabled pagination for an actually empty library', async () => {
+    records = []; render(<LibraryPage />);
+    await screen.findByText('Build a library you can return to');
+    expect(screen.getByText('0 documents')).toBeTruthy();
+    for (const label of ['Indexed', 'Queued', 'Processing', 'Import failed', 'Cancelled']) expect(count(label)).toBe('0');
+    expect(screen.queryByRole('region', { name: 'Library document list' })).toBeNull();
+    expect((screen.getByRole('button', { name: 'Next documents' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('keeps the failed filter/error visible and retries the same request without claiming an empty library', async () => {
+    let fail = true;
+    request.mockImplementation(async (url, options) => String(url).includes('&status=failed') && fail ? json({ error: { code: 'index_unavailable', message: 'Synthetic document page unavailable.', retryable: true } }, 503) : base(url, options));
+    await mount(); fireEvent.change(screen.getByLabelText('Import status'), { target: { value: 'failed' } });
+    await screen.findByText('Synthetic document page unavailable.');
+    expect(screen.queryByText('No documents match these filters')).toBeNull();
+    expect(screen.queryByText('Build a library you can return to')).toBeNull();
+    expect((screen.getByLabelText('Import status') as HTMLSelectElement).value).toBe('failed');
+    expect(count('Queued')).toBe('40');
+    fail = false; fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await screen.findByText('1–5 of 5 matching documents');
+    expect(listCalls().slice(-2).map(([url]) => url)).toEqual(['/api/v1/library/documents?limit=25&offset=0&status=failed', '/api/v1/library/documents?limit=25&offset=0&status=failed']);
+  });
+
+  it('retains a loaded page during refresh failure and labels its status as last loaded', async () => {
+    await mount();
+    request.mockImplementation(async (url, options) => String(url).startsWith('/api/v1/library/documents?') ? json({ error: { code: 'unavailable', message: 'Synthetic refresh unavailable.', retryable: true } }, 503) : base(url, options));
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh documents' }));
+    await screen.findByText('Synthetic refresh unavailable.');
+    expect(screen.getByText('Showing the last loaded page')).toBeTruthy();
+    expect(within(list()).getAllByRole('listitem')).toHaveLength(25);
+  });
+
+  it('rejects incomplete page metadata instead of displaying invented totals', async () => {
+    request.mockImplementation(async (url, options) => String(url).startsWith('/api/v1/library/documents?') ? json({ documents: [] }) : base(url, options));
+    render(<LibraryPage />);
+    await screen.findByText('The library returned an incomplete document page. Try again.');
+    expect(screen.queryByText('0 documents')).toBeNull(); expect(screen.queryByText('Build a library you can return to')).toBeNull();
+  });
+
+  it('discards a delayed old-filter JSON body after a newer filter has loaded', async () => {
+    let release!: (value: unknown) => void;
+    request.mockImplementation(async (url, options) => {
+      if (String(url).includes('&status=queued')) {
+        const response = json({}); response.json = () => new Promise(resolve => { release = resolve; }); return response;
+      }
+      return base(url, options);
+    });
+    await mount(); fireEvent.change(screen.getByLabelText('Import status'), { target: { value: 'queued' } });
+    await waitFor(() => expect(release).toBeTypeOf('function'));
+    fireEvent.change(screen.getByLabelText('Import status'), { target: { value: 'failed' } });
+    await screen.findByText('1–5 of 5 matching documents');
+    await act(async () => release(pageFor('/api/v1/library/documents?limit=25&offset=0&status=queued')));
+    expect(screen.getByText('1–5 of 5 matching documents')).toBeTruthy();
+    expect(within(list()).queryByText('Synthetic source 101')).toBeNull();
+    expect((screen.getByLabelText('Import status') as HTMLSelectElement).value).toBe('failed');
+  });
+
+  it('polls global queued/processing counts when the current failed page contains no pending jobs', async () => {
+    vi.useFakeTimers();
+    await act(async () => { render(<LibraryPage />); });
+    await act(async () => { fireEvent.change(screen.getByLabelText('Import status'), { target: { value: 'failed' } }); });
+    expect(screen.getByText('1–5 of 5 matching documents')).toBeTruthy();
+    const priorCalls = listCalls().length;
+    records[100].status = 'ready';
+    await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+    expect(listCalls().length).toBe(priorCalls + 1);
+    expect(count('Queued')).toBe('39'); expect(count('Indexed')).toBe('101');
+    expect(within(list()).getAllByRole('listitem')).toHaveLength(5);
+    expect(screen.getByText('1–5 of 5 matching documents')).toBeTruthy();
+  });
+
+  it('recovers to the last valid page when a library shrinks beyond the current offset', async () => {
+    await mount();
+    for (const range of ['26–50', '51–75', '76–100', '101–125', '126–150', '151–156']) await next(range + ' of 156 documents');
+    records = records.slice(0, 125);
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh documents' }));
+    await screen.findByText('101–125 of 125 documents');
+    expect(screen.getByText('Page 5 of 5')).toBeTruthy();
+    expect(within(list()).getAllByRole('listitem')).toHaveLength(25);
+    expect(screen.queryByText('No documents match these filters')).toBeNull();
+    expect(String(listCalls().at(-1)![0])).toBe('/api/v1/library/documents?limit=25&offset=100');
+  });
+
+  it('does not let background polling repeatedly abort a slow document page', async () => {
+    vi.useFakeTimers();
+    let release!: (value: Response) => void;
+    request.mockImplementation(async (url, options) => String(url).endsWith('offset=25')
+      ? await new Promise<Response>(resolve => { release = resolve; }) : base(url, options));
+    await act(async () => { render(<LibraryPage />); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Next documents' })); });
+    expect(release).toBeTypeOf('function');
+    const pending = listCalls().at(-1)!;
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+    expect(listCalls()).toHaveLength(2); expect(pending[1]!.signal!.aborted).toBe(false);
+    await act(async () => { release(json(pageFor(String(pending[0])))); });
+    expect(screen.getByText('26–50 of 156 documents')).toBeTruthy();
+    expect(within(list()).getAllByRole('listitem')).toHaveLength(25);
+  });
+
+  it('keeps page navigation usable while a background refresh is pending', async () => {
+    vi.useFakeTimers();
+    let release!: (value: Response) => void, firstRequests = 0;
+    request.mockImplementation(async (url, options) => String(url).endsWith('offset=0') && ++firstRequests === 2
+      ? await new Promise<Response>(resolve => { release = resolve; }) : base(url, options));
+    await act(async () => { render(<LibraryPage />); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+    expect(release).toBeTypeOf('function');
+    expect(screen.getByText('Refreshing…')).toBeTruthy();
+    const refresh = listCalls().at(-1)!;
+    expect((screen.getByRole('button', { name: 'Next documents' }) as HTMLButtonElement).disabled).toBe(false);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Next documents' })); });
+    expect(screen.getByText('26–50 of 156 documents')).toBeTruthy();
+    expect(refresh[1]!.signal!.aborted).toBe(true);
+    await act(async () => { release(json(pageFor(String(refresh[0])))); });
+    expect(screen.getByText('26–50 of 156 documents')).toBeTruthy();
+  });
+
+  it('opens a handed-off source by ID despite a filter/page or collected-sources view', async () => {
+    const view = await mount();
+    fireEvent.change(screen.getByLabelText('Import status'), { target: { value: 'failed' } });
+    await screen.findByText('1–5 of 5 matching documents');
+    fireEvent.click(screen.getByRole('button', { name: 'Collected sources' }));
+    await screen.findByText('This collection has no catalogue records yet');
+    navigation.handoff = { document_id: 'doc_002', document_revision: 'rev_002', page: 4, question: 'SYNTHETIC_PRIVATE_SENTINEL' }; navigation.revision++;
+    view.rerender(<LibraryPage />);
+    const reader = screen.getByRole('complementary', { name: 'Source reader' });
+    await within(reader).findByRole('heading', { name: 'Synthetic source 002' });
+    await within(reader).findByRole('button', { name: 'Open original · page 4' });
+    expect(screen.getByText('1–5 of 5 matching documents')).toBeTruthy();
+    expect(within(list()).queryByText('Synthetic source 002')).toBeNull();
+    expect(request.mock.calls.some(([url]) => url === '/api/v1/library/documents/doc_002')).toBe(true);
+    expect(request.mock.calls.some(([url]) => url === '/api/v1/library/revisions/rev_002/citation?page=4')).toBe(true);
+    expect(JSON.stringify(request.mock.calls)).not.toContain('SYNTHETIC_PRIVATE_SENTINEL');
+  });
+
+  it('preserves canonical Discovery handoffs and does not automatically search when paging', async () => {
+    navigation.handoff = { mode: 'discover', topic_id: 'T21' }; navigation.revision++;
+    await mount();
+    await waitFor(() => expect((screen.getByLabelText('Literature topic') as HTMLSelectElement).value).toBe('T21'));
+    await next('26–50 of 156 documents');
+    expect((screen.getByLabelText('Literature topic') as HTMLSelectElement).value).toBe('T21');
+    expect(request.mock.calls.some(([url]) => url === '/api/v1/retrieval/discover')).toBe(false);
+  });
+
+  it('keeps a confirmed Discovery import Indexed on another page/filter and invalidates it on deletion', async () => {
+    await mount(); await screen.findByLabelText('Literature topic');
+    fireEvent.change(screen.getByLabelText('Literature topic'), { target: { value: 'T21' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Search literature' }));
+    const article = await screen.findByRole('article', { name: 'Synthetic discovered source' });
+    fireEvent.click(within(article).getByRole('button', { name: 'Add eligible text' }));
+    await within(article).findByText('Indexed');
+    expect(within(list()).queryByText('Synthetic source 050')).toBeNull();
+    await next('26–50 of 156 documents'); await next('51–75 of 156 documents');
+    expect(within(article).getByText('Indexed')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Import status'), { target: { value: 'failed' } });
+    await screen.findByText('1–5 of 5 matching documents');
+    expect(within(article).getByText('Indexed')).toBeTruthy();
+    fireEvent.click(within(article).getByRole('button', { name: 'Inspect library source' }));
+    const reader = screen.getByRole('complementary', { name: 'Source reader' });
+    await within(reader).findByRole('heading', { name: 'Synthetic source 050' });
+    await waitFor(() => expect((within(reader).getByRole('button', { name: 'Remove from library' }) as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(within(reader).getByRole('button', { name: 'Remove from library' }));
+    await screen.findByText('Removed from your library. Your external original is preserved.');
+    expect(screen.queryByRole('article', { name: 'Synthetic discovered source' })).toBeNull();
+    expect(records.some(document => document.id === 'doc_050')).toBe(false);
+  });
+
+  it('selects only marked acquired JATS for licence inspection, keeps denied entries blocked and waits honestly for the selected batch', async () => {
+    vi.useFakeTimers();
+    const metadata = { ...documentFor(1).revisions[0].metadata, source_id: 'L02', asset_role: ['fulltext-jats', 'acquired-jats'] };
+    const entry = (id: string, overrides: Partial<CatalogueEntry> = {}): CatalogueEntry => ({ id, title: id, source_id: 'L02', eligibility: 'inspection_required', reserved: false, bytes: 1200, metadata, rights: documentFor(1).revisions[0].rights, document_id: null, job_id: null, processing_status: 'acquired', error_code: null, ...overrides });
+    catalogueEntries = [entry('Synthetic JATS inspection'), entry('Synthetic unavailable payload', { eligibility: 'permission_or_format_unavailable' }),
+      entry('Synthetic unmarked inspection', { metadata: { ...metadata, asset_role: [] } as typeof metadata }),
+      entry('Synthetic reserved JATS', { reserved: true }), entry('Synthetic ready JATS', { processing_status: 'ready' }), entry('Synthetic permitted source', { eligibility: 'eligible' })];
+    let release!: (value: Response) => void;
+    request.mockImplementation(async (url, options) => url === '/api/v1/library/collection/import'
+      ? await new Promise<Response>(resolve => { release = resolve; }) : base(url, options));
+    let view!: ReturnType<typeof render>;
+    await act(async () => { view = render(<LibraryPage />); });
+    fireEvent.click(screen.getByRole('button', { name: 'Collected sources' }));
+    await act(async () => { fireEvent.change(screen.getByLabelText('Source register'), { target: { value: 'L02' } }); });
+    const inspect = screen.getByRole('checkbox', { name: 'Select Synthetic JATS inspection' }) as HTMLInputElement;
+    expect(inspect.disabled).toBe(false);
+    expect((screen.getByRole('checkbox', { name: 'Select Synthetic permitted source' }) as HTMLInputElement).disabled).toBe(false);
+    for (const title of ['Synthetic unavailable payload', 'Synthetic unmarked inspection', 'Synthetic reserved JATS', 'Synthetic ready JATS']) {
+      const denied = screen.getByRole('checkbox', { name: 'Select ' + title }) as HTMLInputElement;
+      expect(denied.disabled).toBe(true); fireEvent.click(denied); expect(denied.checked).toBe(false);
+    }
+    expect(screen.getAllByText('Check licence on import').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/does not establish source currentness/).length).toBeGreaterThan(0);
+    fireEvent.click(inspect);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Queue selected (1)' })); });
+    expect(screen.getByText(/Checking selected files/)).toBeTruthy();
+    const batch = request.mock.calls.find(([url]) => url === '/api/v1/library/collection/import')!;
+    expect(JSON.parse(batch[1]!.body as string)).toEqual({ entry_ids: ['Synthetic JATS inspection'], scope: { kind: 'personal-library' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(31_000); });
+    expect(batch[1]!.signal!.aborted).toBe(false);
+    expect(screen.getByText(/Checking selected files/)).toBeTruthy();
+    await act(async () => { release(json({ queued: 0, results: [{ entry_id: 'Synthetic JATS inspection', status: 'failed', message: 'Synthetic matching licence is restricted.' }] })); });
+    expect(screen.queryByText(/Checking selected files/)).toBeNull();
+    expect(screen.getByText(/0 imports queued. 1 selected entry needs attention. Synthetic matching licence is restricted./)).toBeTruthy();
+    navigation.scope.kind = 'temporary-case'; navigation.revision++;
+    await act(async () => { view.rerender(<LibraryPage />); });
+    fireEvent.click(screen.getByRole('button', { name: 'Collected sources' }));
+    expect((screen.getByRole('checkbox', { name: 'Select Synthetic JATS inspection' }) as HTMLInputElement).disabled).toBe(true);
+  });
+});

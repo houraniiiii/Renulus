@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FileText, Search, Upload } from 'lucide-react';
-import { api, apiResponse } from '../../platform/api';
+import { api, apiResponse, ApiError } from '../../platform/api';
 import { useResource } from '../../platform/useResource';
 import { useNavigation } from '../../shell/navigation';
 import { Badge, Button, EmptyState, ErrorState, Input, LoadingState, Notice, PageHeader, Panel, Select, Textarea } from '../../ui';
@@ -16,6 +16,31 @@ const labels: Record<string, string> = { ready: 'Indexed', queued: 'Queued', pro
 const statusLabel = (value: string) => labels[value] ?? value;
 const statusTone = (value: string): 'default' | 'warning' | 'error' | 'neutral' =>
   value === 'failed' ? 'error' : value === 'ready' ? 'default' : value === 'processing' || value === 'queued' ? 'warning' : 'neutral';
+const documentPageSize = 25;
+const documentStatuses = ['ready', 'queued', 'processing', 'failed', 'cancelled'] as const;
+type DocumentStatus = typeof documentStatuses[number];
+type DocumentCounts = Partial<Record<DocumentStatus, number>>;
+interface DocumentPage { documents: LibraryDocument[]; total: number; counts: DocumentCounts; offset: number; limit: number }
+interface DocumentSnapshot { path: string; page: DocumentPage }
+function requiresLicenceInspection(entry: CatalogueEntry) {
+  const roles = (entry.metadata as CatalogueEntry['metadata'] & { asset_role?: string[] }).asset_role;
+  return entry.source_id === 'L02' && entry.eligibility === 'inspection_required' && Array.isArray(roles) && roles.includes('acquired-jats');
+}
+function selectableEntry(entry: CatalogueEntry, temporary: boolean) {
+  return !temporary && !entry.reserved && entry.processing_status !== 'ready' &&
+    (entry.eligibility === 'eligible' || requiresLicenceInspection(entry));
+}
+
+async function loadDocumentPage(path: string, offset: number, signal: AbortSignal): Promise<DocumentSnapshot> {
+  const page = await api<DocumentPage>(path, { signal });
+  if (!Array.isArray(page.documents) || !Number.isInteger(page.total) || page.total < 0 ||
+      page.limit !== documentPageSize || page.offset !== offset || page.documents.length > documentPageSize ||
+      page.documents.length > page.total || !page.counts || typeof page.counts !== 'object' || Array.isArray(page.counts) || documentStatuses.some(status => page.counts[status] !== undefined &&
+        (!Number.isInteger(page.counts[status]) || page.counts[status]! < 0))) {
+    throw new ApiError('The library returned an incomplete document page. Try again.', 0, 'invalid_document_page', true);
+  }
+  return { path, page };
+}
 
 export default function LibraryPage() {
   const navigation = useNavigation();
@@ -26,6 +51,7 @@ export default function LibraryPage() {
   const [file, setFile] = useState<File | null>(null);
   const [allowed, setAllowed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [batchPending, setBatchPending] = useState(false);
   const [error, setError] = useState<unknown>();
   const [message, setMessage] = useState('');
   const [query, setQuery] = useState('');
@@ -37,11 +63,42 @@ export default function LibraryPage() {
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
   const [sourceId, setSourceId] = useState('E01');
   const [offset, setOffset] = useState(0);
-  const documents = useResource(signal => api<{ documents: LibraryDocument[] }>('/library/documents', { signal }));
+  const [documentQueryInput, setDocumentQueryInput] = useState('');
+  const [documentQuery, setDocumentQuery] = useState('');
+  const [documentStatus, setDocumentStatus] = useState<DocumentStatus | ''>('');
+  const [documentOffset, setDocumentOffset] = useState(0);
+  const [documentSnapshot, setDocumentSnapshot] = useState<DocumentSnapshot>();
+  const [discoveryVersion, setDiscoveryVersion] = useState(0);
+  const listRegion = useRef<HTMLDivElement>(null);
+  const documentParams = new URLSearchParams({ limit: String(documentPageSize), offset: String(documentOffset) });
+  if (documentQuery) documentParams.set('query', documentQuery);
+  if (documentStatus) documentParams.set('status', documentStatus);
+  const documentPath = '/library/documents?' + documentParams;
+  const documentRequestPath = useRef(documentPath);
+  const documents = useResource(signal => loadDocumentPage(documentPath, documentOffset, signal));
   const capabilities = useResource(signal => api<Capabilities>('/library/capabilities', { signal }));
   const catalogue = useResource(signal => api<Catalogue>('/library/collection/catalogue?limit=50&offset=' + offset + (sourceId ? '&source_id=' + encodeURIComponent(sourceId) : ''), { signal }));
   const ready = capabilities.resource.status === 'ready' ? capabilities.resource.data : null;
-  const processing = documents.resource.status === 'ready' && documents.resource.data.documents.some(d => d.status === 'queued' || d.status === 'processing');
+  const loadedPage = documents.resource.status === 'ready' && documents.resource.data.path === documentPath
+    ? documents.resource.data.page : documentSnapshot?.path === documentPath ? documentSnapshot.page : undefined;
+  const documentCounts = documents.resource.status === 'ready' ? documents.resource.data.page.counts : documentSnapshot?.page.counts;
+  const beyondLastPage = !!loadedPage && documentOffset > (loadedPage.total > 0 ? Math.floor((loadedPage.total - 1) / documentPageSize) * documentPageSize : 0);
+  const documentPage = beyondLastPage ? undefined : loadedPage;
+  const processing = !!documentCounts && ((documentCounts.queued ?? 0) + (documentCounts.processing ?? 0) > 0);
+  const filteredDocuments = !!documentQuery || !!documentStatus;
+
+  useEffect(() => {
+    if (documentRequestPath.current === documentPath) return;
+    documentRequestPath.current = documentPath; documents.retry();
+    if (listRegion.current) listRegion.current.scrollTop = 0;
+  }, [documentPath, documents.retry]);
+  useEffect(() => {
+    if (documents.resource.status !== 'ready' || documents.resource.data.path !== documentPath) return;
+    const snapshot = documents.resource.data;
+    setDocumentSnapshot(snapshot);
+    const lastOffset = snapshot.page.total > 0 ? Math.floor((snapshot.page.total - 1) / documentPageSize) * documentPageSize : 0;
+    if (documentOffset > lastOffset) setDocumentOffset(lastOffset);
+  }, [documents.resource, documentPath, documentOffset]);
 
   useEffect(() => { if (temporary) { setText(''); setTitle(''); setFile(null); setMode('browse'); } }, [temporary]);
   useEffect(() => { if (navigation.handoff?.mode === 'discover') setMode('browse'); }, [navigation.revision]);
@@ -50,6 +107,7 @@ export default function LibraryPage() {
     const documentId = navigation.handoff?.document_id;
     const revision = navigation.handoff?.document_revision ?? navigation.handoff?.revision_id;
     if (typeof documentId !== 'string') return;
+    setMode('browse'); setSelectedDocument(null); setOriginal(null); setCitation(null); setError(undefined);
     const controller = new AbortController();
     api<LibraryDocument>('/library/documents/' + encodeURIComponent(documentId), { signal: controller.signal })
       .then(value => { if (!controller.signal.aborted) setSelectedDocument(value); }).catch(value => { if (!controller.signal.aborted) setError(value); });
@@ -59,10 +117,10 @@ export default function LibraryPage() {
     return () => controller.abort();
   }, [navigation.revision]);
   useEffect(() => {
-    if (!processing) return;
+    if (!processing || documents.resource.status === 'loading') return;
     const timer = window.setInterval(() => { documents.retry(); catalogue.retry(); }, 3000);
     return () => window.clearInterval(timer);
-  }, [processing]);
+  }, [processing, documents.resource.status]);
   useEffect(() => () => { if (original?.url) URL.revokeObjectURL(original.url); }, [original?.url]);
 
   async function act(action: () => Promise<void>) {
@@ -111,6 +169,9 @@ export default function LibraryPage() {
     await act(async () => {
       const result = await api<{ cleanup_pending: boolean }>('/library/documents/' + document.id, { method: 'DELETE' });
       setSelectedDocument(null); setCitation(null); setOriginal(null); setHits(null);
+      // Discovery confirms imports by document ID; a filtered page is not a membership list.
+      // Removing a source invalidates its cached discovery confirmation as well.
+      setDiscoveryVersion(value => value + 1);
       setMessage(result.cleanup_pending ? 'Removed from retrieval. Storage cleanup is still pending.' : 'Removed from your library. Your external original is preserved.');
     });
   }
@@ -121,13 +182,24 @@ export default function LibraryPage() {
     });
   }
   async function importSelected() {
+    if (temporary || busy || !selectedEntries.size || selectedEntries.size > 250) return;
     await act(async () => {
-      const result = await api<{ queued: number }>('/library/collection/import', { method: 'POST', body: { entry_ids: [...selectedEntries], scope: libraryScope } });
-      setSelectedEntries(new Set()); setMessage(result.queued + ' imports queued. Processing states appear beside each source.');
+      setBatchPending(true);
+      try {
+        const result = await api<{ queued: number; results?: { status: string; message?: string }[] }>('/library/collection/import', { method: 'POST', timeoutMs: 600_000, body: { entry_ids: [...selectedEntries], scope: libraryScope } });
+        const rejected = result.results?.filter(item => item.status === 'failed' || item.status === 'excluded') ?? [];
+        const reasons = [...new Set(rejected.flatMap(item => item.message ? [item.message] : []))].slice(0, 2).join(' ');
+        setSelectedEntries(new Set());
+        setMessage(result.queued + ' imports queued. ' + (rejected.length ? rejected.length + (rejected.length === 1 ? ' selected entry needs attention. ' : ' selected entries need attention. ') + reasons : 'Processing states appear beside each source.'));
+      } finally { setBatchPending(false); }
     });
   }
   function toggleEntry(entry: CatalogueEntry) {
-    setSelectedEntries(previous => { const next = new Set(previous); if (next.has(entry.id)) next.delete(entry.id); else next.add(entry.id); return next; });
+    if (!selectableEntry(entry, temporary) || busy) return;
+    setSelectedEntries(previous => { const next = new Set(previous); if (next.has(entry.id)) next.delete(entry.id); else if (next.size < 250) next.add(entry.id); return next; });
+  }
+  function clearDocumentFilters() {
+    setDocumentQueryInput(''); setDocumentQuery(''); setDocumentStatus(''); setDocumentOffset(0);
   }
 
   return <>
@@ -138,13 +210,13 @@ export default function LibraryPage() {
     {temporary && <Notice tone="warning"><p>You are in a temporary context. Browse existing sources here; adding a document requires ending that context.</p></Notice>}
     {ready && !ready.text_import && <Notice tone="warning"><p>Document processing is unavailable in this build. You can inspect the collection catalogue while the bundled helpers are completed.</p></Notice>}
     {message && <Notice><p>{message}</p></Notice>}
+    {batchPending && <Notice><p>Checking selected files. This may wait for the current document to finish. Acquired article text is saved only after matching version, file hash and licence checks pass.</p></Notice>}
     {error !== undefined && <ErrorState error={error} title="The library action could not finish" />}
     <div className="library-layout">
       <div className="library-main">
-        {mode === 'browse' && <Discovery blocked={navigation.scope.kind !== 'study' && navigation.scope.kind !== 'personal-library'}
+        {mode === 'browse' && <Discovery key={discoveryVersion} blocked={navigation.scope.kind !== 'study' && navigation.scope.kind !== 'personal-library'}
           requestedTopicId={navigation.handoff?.mode === 'discover' && typeof navigation.handoff.topic_id === 'string' ? navigation.handoff.topic_id : undefined}
           handoffRevision={navigation.revision}
-          libraryDocuments={documents.resource.status === 'ready' ? documents.resource.data.documents : undefined}
           onLibraryChange={documents.retry} onInspect={document => void act(() => inspect(document))} />}
         {(mode === 'text' || mode === 'file') && <Panel><div className="library-mode">
           <Button variant={mode === 'text' ? 'primary' : 'ghost'} onClick={() => setMode('text')}>Study note</Button>
@@ -168,11 +240,11 @@ export default function LibraryPage() {
           <p className="muted">Acquired files appear immediately. Only completed imports enter search. The manual receipt date does not establish an edition.</p>
           {catalogue.resource.status === 'loading' ? <LoadingState label="Loading collected source records" /> : catalogue.resource.status === 'error' ? <ErrorState error={catalogue.resource.error} onRetry={catalogue.retry} /> : <>
             {catalogue.resource.data.entries.length === 0 ? <EmptyState title="This collection has no catalogue records yet"><p>Read the collection metadata to list its acquired files, then select a processing batch.</p></EmptyState> : <>
-              <Button busy={busy} disabled={temporary || selectedEntries.size === 0} onClick={importSelected}>Queue selected ({selectedEntries.size})</Button>
+              <Button busy={busy} disabled={temporary || selectedEntries.size === 0 || selectedEntries.size > 250} onClick={importSelected}>Queue selected ({selectedEntries.size})</Button>
               <ul className="library-list">{catalogue.resource.data.entries.map(entry => <li key={entry.id} className="library-catalogue-row">
-                <label className="library-check"><input type="checkbox" aria-label={'Select ' + entry.title} checked={selectedEntries.has(entry.id)} disabled={temporary || entry.eligibility !== 'eligible' || entry.processing_status === 'ready'} onChange={() => toggleEntry(entry)} /></label>
-                <div><h3>{entry.title}</h3><div className="library-meta"><Badge tone={statusTone(entry.processing_status)}>{statusLabel(entry.processing_status)}</Badge><span>{entry.metadata.collection_section ?? entry.source_id}</span><span>{(entry.bytes / 1024 / 1024).toFixed(1)} MiB</span></div>
-                  {entry.eligibility !== 'eligible' && <p className="muted">{entry.reserved ? 'Reserved assessment material is excluded from learning retrieval.' : 'Processing permission or format needs verification.'}</p>}
+                <label className="library-check"><input type="checkbox" aria-label={'Select ' + entry.title} checked={selectedEntries.has(entry.id)} disabled={busy || !selectableEntry(entry, temporary) || (!selectedEntries.has(entry.id) && selectedEntries.size >= 250)} onChange={() => toggleEntry(entry)} /></label>
+                <div><h3>{entry.title}</h3><div className="library-meta"><Badge tone={statusTone(entry.processing_status)}>{statusLabel(entry.processing_status)}</Badge>{requiresLicenceInspection(entry) && <Badge tone="warning">Check licence on import</Badge>}<span>{entry.metadata.collection_section ?? entry.source_id}</span><span>{(entry.bytes / 1024 / 1024).toFixed(1)} MiB</span></div>
+                  {entry.eligibility !== 'eligible' && <p className="muted">{entry.reserved ? 'Reserved assessment material is excluded from learning retrieval.' : requiresLicenceInspection(entry) ? 'Renulus checks the matching article version, file hash and licence before saving eligible text. This does not establish source currentness.' : 'Processing permission or format needs verification.'}</p>}
                   {entry.error_code && <p className="field-error">Import needs attention: {entry.error_code}</p>}
                 </div></li>)}</ul>
               <div className="library-pagination"><Button variant="secondary" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 50))}>Previous</Button><span className="muted">{offset + 1}–{Math.min(offset + 50, catalogue.resource.data.total)} of {catalogue.resource.data.total}</span><Button variant="secondary" disabled={offset + 50 >= catalogue.resource.data.total} onClick={() => setOffset(offset + 50)}>Next</Button></div>
@@ -187,12 +259,33 @@ export default function LibraryPage() {
           {hits !== null && <section className="section"><div className="library-section-title"><h2>Passages</h2><Button variant="ghost" onClick={() => setHits(null)}>Clear results</Button></div>
             {hits.length === 0 ? <EmptyState title="No eligible passages matched"><p>Try another phrase or check whether the source has finished processing. Current-guidance search excludes sources with unverified currency.</p></EmptyState> : <div className="library-passages">{hits.map(hit => <article className="library-passage" key={hit.id}><h3>{hit.title}</h3><p>{hit.text}</p><div className="library-meta"><span>{hit.source_id}</span><span>{hit.locators.some(l => l.page) ? 'Page ' + [...new Set(hit.locators.filter(l => l.page).map(l => l.page))].join(', ') : 'Original text span'}</span></div><Button disabled={busy} variant="ghost" onClick={() => void act(async () => { const document = await api<LibraryDocument>('/library/documents/' + hit.document_id); await inspect(document, hit); })}>Inspect citation</Button></article>)}</div>}
           </section>}
-          <section className="section"><h2>Documents</h2>
-            {documents.resource.status === 'loading' ? <LoadingState label="Loading library documents" /> : documents.resource.status === 'error' ? <ErrorState error={documents.resource.error} onRetry={documents.retry} /> : documents.resource.data.documents.length === 0 ? <EmptyState title="Build a library you can return to"><p>Add a study note or an authorised document. Once processing finishes, passages keep their link to your original source.</p></EmptyState> : <ul className="library-list">{documents.resource.data.documents.map(document => <li key={document.id} className="library-document">
+          <section className="section library-documents" aria-labelledby="library-documents-title">
+            <div className="library-section-title"><h2 id="library-documents-title">Documents</h2><Button variant="ghost" busy={documents.resource.status === 'loading'} onClick={documents.retry}>Refresh documents</Button></div>
+            {documentCounts && <dl className="library-counts" aria-label="Library processing summary">{documentStatuses.map(status => <div key={status}><dt>{statusLabel(status)}</dt><dd>{documentCounts[status] ?? 0}</dd></div>)}</dl>}
+            <form className="library-document-filters" onSubmit={event => { event.preventDefault(); setDocumentQuery(documentQueryInput.trim()); setDocumentOffset(0); }}>
+              <Input label="Find a document" placeholder="Title or source ID" value={documentQueryInput} maxLength={200} onChange={event => setDocumentQueryInput(event.target.value)} />
+              <Select label="Import status" value={documentStatus} onChange={event => { setDocumentStatus(event.target.value as DocumentStatus | ''); setDocumentOffset(0); }}>
+                <option value="">All documents</option>{documentStatuses.map(status => <option key={status} value={status}>{statusLabel(status)}</option>)}
+              </Select>
+              <Button type="submit" variant="secondary" disabled={documentQueryInput.trim().length > 200}>Filter documents</Button>
+              {(filteredDocuments || documentQueryInput) && <Button variant="ghost" onClick={clearDocumentFilters}>Clear filters</Button>}
+            </form>
+            <p className="field-hint">Status counts cover your whole library. Filters match document titles and source IDs; passage search stays separate.</p>
+            {documents.resource.status === 'error' && <ErrorState title="Documents could not be loaded" error={documents.resource.error} onRetry={documents.retry} />}
+            {!documentPage ? documents.resource.status !== 'error' && <LoadingState label="Loading library documents" /> : <>
+              <div className="library-document-page-heading"><p role="status" aria-live="polite">{documentPage.total ? <>{documentOffset + 1}–{Math.min(documentOffset + documentPageSize, documentPage.total)} of {documentPage.total} {filteredDocuments ? 'matching documents' : 'documents'}</> : '0 ' + (filteredDocuments ? 'matching documents' : 'documents')}</p>
+                {documents.resource.status === 'loading' && <span className="muted">Refreshing…</span>}
+                {documents.resource.status === 'error' && <span className="muted">Showing the last loaded page</span>}
+              </div>
+              {documentPage.documents.length === 0 ? filteredDocuments ? <EmptyState title="No documents match these filters"><p>Try a different title or source ID, or show all import states.</p><Button variant="secondary" onClick={clearDocumentFilters}>Show all documents</Button></EmptyState> : <EmptyState title="Build a library you can return to"><p>Add a study note or an authorised document. Once processing finishes, passages keep their link to your original source.</p></EmptyState> : <div className="library-document-list-region" ref={listRegion} role="region" aria-label="Library document list" tabIndex={0}><ul className="library-list">{documentPage.documents.map(document => <li key={document.id} className="library-document">
               <button disabled={busy} className="library-document-title" onClick={() => void act(() => inspect(document))}>{document.title}</button><div className="library-meta"><Badge tone={statusTone(document.status)}>{statusLabel(document.status)}</Badge><span>{document.source_id}</span>
                 {document.active_revision && document.active_revision !== document.latest_revision && <span>Earlier indexed revision is available</span>}{document.reserved && <span>Reserved</span>}{document.cleanup_pending && <span>Storage cleanup pending</span>}</div>
               {(document.status === 'queued' || document.status === 'processing') && <Button variant="ghost" onClick={() => void act(async () => { const job = await api<ImportResult>('/library/documents/' + document.id + '/import-status'); await api('/library/jobs/' + job.job.id + '/cancel', { method: 'POST' }); })}>Cancel import</Button>}
-            </li>)}</ul>}
+            </li>)}</ul></div>}
+              <nav className="library-pagination" aria-label="Document pages"><Button variant="secondary" disabled={documentOffset === 0} onClick={() => setDocumentOffset(value => Math.max(0, value - documentPageSize))}>Previous documents</Button>
+                <span className="muted">Page {Math.floor(documentOffset / documentPageSize) + 1} of {Math.max(1, Math.ceil(documentPage.total / documentPageSize))}</span>
+                <Button variant="secondary" disabled={documentOffset + documentPageSize >= documentPage.total} onClick={() => setDocumentOffset(value => value + documentPageSize)}>Next documents</Button></nav>
+            </>}
           </section>
         </>}
       </div>
