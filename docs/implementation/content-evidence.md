@@ -58,6 +58,8 @@ correct_option_ids, rationale, explanation, source locators and source_records
 (registered source, edition, URL, check state). It annotates withdrawn, withdrawal
 (reason/replacement_version) and current_version separately from the immutable
 payload. The snapshot carries source metadata after the original pack disappears.
+`list_sources()` and `get_source(source_id)` expose active cited source metadata.
+`list_topics()` also provides `title` and `name` aliases for its canonical label.
 
 HTTP prefix is `/content`; server adds `/api/v1`. GET manifest/topics/cases,
 GET cases/{id}, GET questions (key-free summaries), GET questions/{id}/versions/{v}

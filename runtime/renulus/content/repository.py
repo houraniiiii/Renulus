@@ -173,7 +173,22 @@ class ContentRepository:
             return [json.loads(r[0]) for r in rows]
 
     def list_topics(self) -> list[dict]:
-        return self._active_rows("topics")
+        return [{**topic, "title": topic["label"], "name": topic["label"]}
+                for topic in self._active_rows("topics")]
+
+    def list_sources(self) -> list[dict]:
+        """Active cited source metadata only; no question text or answer keys."""
+        sources = {}
+        for item in [*self._active_rows("cases"), *self._active_rows("questions")]:
+            for source in item["source_records"]:
+                sources[source["id"]] = source
+        return [sources[id] for id in sorted(sources)]
+
+    def get_source(self, source_id: str) -> dict:
+        for source in self.list_sources():
+            if source["id"] == source_id:
+                return source
+        raise ContentUnavailable(f"No active source metadata: {source_id}")
 
     def list_cases(self) -> list[dict]:
         return self._active_rows("cases")

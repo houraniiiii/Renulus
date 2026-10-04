@@ -59,6 +59,14 @@ def create_router(services) -> APIRouter:
     def topics():
         return repository.list_topics()
 
+    @router.get("/sources")
+    def sources():
+        return repository.list_sources()
+
+    @router.get("/sources/{source_id}")
+    def source(source_id: str):
+        return call(repository.get_source, source_id)
+
     @router.get("/cases")
     def cases():
         return [{k: c[k] for k in ("id", "version", "title", "summary", "topic_id",
