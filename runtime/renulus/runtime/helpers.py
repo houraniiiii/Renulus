@@ -1,0 +1,88 @@
+"""Hash-validated CPU helper paths. Runtime never provisions/downloads assets."""
+from __future__ import annotations
+
+import hashlib
+import json
+from pathlib import Path
+
+from renulus.contracts import ApiError
+
+EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
+EMBEDDING_DIMENSIONS = 384
+EMBEDDING_TOKEN_LIMIT = 512
+
+
+class HelperAssets:
+    def __init__(self, paths):
+        self.paths = paths
+
+    def _validate(self, group: str) -> tuple[dict, str]:
+        root = self.paths.helpers.resolve()
+        manifest = root / "manifest.json"
+        if not manifest.is_file():
+            raise ApiError("helper_assets_missing", "The bundled CPU helper assets are not installed.", 503)
+        try:
+            document = json.loads(manifest.read_text(encoding="utf-8"))
+            if document["version"] != 1:
+                raise ValueError("manifest version")
+            metadata = document["groups"][group]
+            if not metadata["source_url"].startswith("https://") or not metadata["revision"]:
+                raise ValueError("source provenance")
+            files = metadata["files"]
+            if not files:
+                raise ValueError("empty group")
+            seen = set()
+            for record in files:
+                relative = Path(record["path"])
+                target = (root / relative).resolve()
+                if relative.is_absolute() or not target.is_relative_to(root) or record["path"] in seen:
+                    raise ValueError("artifact location")
+                seen.add(record["path"])
+                if not target.is_file():
+                    raise ApiError("helper_assets_missing", "A bundled CPU helper artifact is missing.", 503)
+                if target.stat().st_size != record["size"]:
+                    raise ValueError("artifact size")
+                digest = hashlib.sha256()
+                with target.open("rb") as source:
+                    for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                        digest.update(chunk)
+                if digest.hexdigest() != record["sha256"]:
+                    raise ValueError("artifact hash")
+            fingerprint = hashlib.sha256(json.dumps(metadata, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+            return metadata, fingerprint
+        except ApiError:
+            raise
+        except Exception:
+            raise ApiError("helper_assets_invalid", "The bundled CPU helper artifacts failed validation. Repair this installation.", 503) from None
+
+    def embedding_config(self) -> dict:
+        metadata, fingerprint = self._validate("embedding")
+        root = self.paths.helpers / "fastembed" / "bge-small-en-v1.5"
+        declared = {record["path"] for record in metadata["files"]}
+        tokenizer = root / "tokenizer.json"
+        prefix = "fastembed/bge-small-en-v1.5/"
+        if metadata.get("model_id") != EMBEDDING_MODEL or prefix + "tokenizer.json" not in declared or not any(
+            path.startswith(prefix) and path.endswith(".onnx") for path in declared
+        ):
+            raise ApiError("helper_assets_invalid", "The selected embedding model/tokenizer is not bundled.", 503)
+        return {"model_id": EMBEDDING_MODEL, "dimensions": EMBEDDING_DIMENSIONS,
+                "max_tokens": EMBEDDING_TOKEN_LIMIT, "model_path": root,
+                "tokenizer_path": tokenizer, "cache_dir": self.paths.cache / "fastembed",
+                "local_files_only": True, "cpu_threads": 2, "fingerprint": fingerprint}
+
+    def docling_config(self) -> dict:
+        _, document_hash = self._validate("docling")
+        _, ocr_hash = self._validate("ocr")
+        return {"artifacts_path": self.paths.helpers / "docling",
+                "ocr_path": self.paths.helpers / "ocr", "device": "cpu",
+                "fingerprint": hashlib.sha256((document_hash + ocr_hash).encode()).hexdigest()}
+
+    def status(self) -> dict:
+        result = {}
+        for name, operation in (("embedding", self.embedding_config), ("docling", self.docling_config)):
+            try:
+                config = operation()
+                result[name] = {"ready": True, "fingerprint": config["fingerprint"]}
+            except ApiError as error:
+                result[name] = {"ready": False, "code": error.code}
+        return result
