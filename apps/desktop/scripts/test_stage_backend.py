@@ -12,9 +12,27 @@ import unittest
 spec = importlib.util.spec_from_file_location("stage_backend", Path(__file__).with_name("stage-backend.py"))
 stage = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(stage)
+bootstrap_spec = importlib.util.spec_from_file_location("packaged_backend", Path(__file__).with_name("packaged-backend.py"))
+bootstrap = importlib.util.module_from_spec(bootstrap_spec)
+bootstrap_spec.loader.exec_module(bootstrap)
 
 
 class BundleBoundaries(unittest.TestCase):
+    @unittest.skipUnless(os.name == "nt", "Windows atomic helper-copy path")
+    def test_atomic_helper_copy_suffix_crosses_260_without_machine_changes(self):
+        with tempfile.TemporaryDirectory(dir=stage.DESKTOP / "test-results") as temporary:
+            root = Path(temporary)
+            suffix = "/helper.safetensors"
+            destination = root / ("x" * (254 - len(str(root)) - len(suffix) - 1)) / suffix[1:]
+            self.assertEqual(len(str(destination)), 254)
+            staging = destination.with_name(destination.name + ".copying")
+            self.assertEqual(len(str(staging)), 262)
+            extended = bootstrap.windows_io_path(staging)
+            extended.parent.mkdir(parents=True)
+            extended.write_bytes(b"synthetic-public-helper")
+            extended.replace(bootstrap.windows_io_path(destination))
+            self.assertEqual(destination.read_bytes(), b"synthetic-public-helper")
+
     @unittest.skipUnless(os.name == "nt", "Windows junction boundary")
     def test_inventory_rejects_a_junction_before_following_it(self):
         with tempfile.TemporaryDirectory(dir=stage.DESKTOP / "test-results") as temporary:
