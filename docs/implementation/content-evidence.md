@@ -106,14 +106,16 @@ engine index, provider or model route.
   practice or held-out evaluation questions.
 
 M4 pins the full private lookup snapshot and owns answer commitment, scoring,
-exposure and feedback. HTTP question representations omit answer, all rationales
-and correct_option_ids. Held-out evaluation questions are not exposed. There
-are no bank hints or automatic bank-context generation. Historical feedback
-should use pinned source_records; active source metadata can change.
+exposure and feedback. Content's HTTP catalogue contains metadata only. The raw
+question-detail HTTP route was removed on the orchestrator's narrow guard
+request: stems/options must be displayed through M4 after durable family
+exposure. Trusted backend get_question_version is unchanged. There are no bank
+hints or automatic bank-context generation. Historical feedback should use
+pinned source_records; active source metadata can change.
 
 HTTP: GET manifest/topics/cases/sources/questions; GET cases/{id}; GET
-sources/{id} and sources/{id}/references; GET questions/{id}/versions/{v}; POST
-packs/install; POST questions/{id}/versions/{v}/withdraw. Install paths stay
+sources/{id} and sources/{id}/references; POST packs/install; POST
+questions/{id}/versions/{v}/withdraw. Install paths stay
 inside the app pack root. User/temporary-case creation or saving is not an
 operation of this module. No user case is silently converted into a pack.
 
@@ -173,7 +175,14 @@ c615d6a and the original-pack handoff commit containing this report. The shared
 jsonschema dependency is installed and verified; its lockfile is integrator-owned.
 M4 should exercise actual scoring/exposure with this bank; M3 consume staged
 cases; M6 present gaps/unavailable tracks; M7 use source-reference relations.
-These combined UI journeys are not claimed by isolated content tests.
+These combined UI journeys are not claimed by isolated content tests. The
+orchestrator/M4 reported an actual producer preflight selecting, scoring and
+resuming 50 of the 52 items across 27 topics. Its manifest-file SHA-256,
+f2430000aa3f13b4e76fb0a379513469f70f0efc18a832bd131affa4f63e3154,
+was independently matched to the local committed manifest file. That report
+establishes software/producer delivery, not another medical key review. The
+pack bundle hash above identifies the complete canonical bundle; these are
+different hash scopes of the same unchanged published pack.
 
 Package content/packs and the module's source_register_ids.json. The installed
 asset layout may set services.registry['content_pack_root'] before router

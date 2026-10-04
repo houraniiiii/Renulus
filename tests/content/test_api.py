@@ -28,14 +28,21 @@ def test_actual_shared_server_activates_real_original_pack(client, app):
     assert client.get("/api/v1/content/sources/K10-2012").json()["register_id"] == "K10"
 
 
-def test_http_question_never_returns_keys_or_option_explanations(client):
+def test_http_question_catalogue_is_metadata_only(client):
     summaries = client.get("/api/v1/content/questions?topic_id=T21").json()
     assert len(summaries) == 4
-    assert all("answer" not in q and "options" not in q for q in summaries)
-    q = client.get("/api/v1/content/questions/RN-TX-002/versions/1").json()
-    assert "correct_option_ids" not in q and "answer" not in q
-    assert "rationale" not in q and "explanation" not in q
-    assert all(set(o) == {"id", "text"} for o in q["options"])
+    private_fields = {"stem", "answer", "options", "rationale", "explanation", "correct_option_ids"}
+    assert all(not private_fields.intersection(q) for q in summaries)
+
+
+@pytest.mark.parametrize("question_id", ["RN-CKD-001", "RN-TX-002", "RN-K-001"])
+def test_raw_question_http_route_cannot_bypass_exposure_but_private_lookup_survives(client, app, question_id):
+    response = client.get(f"/api/v1/content/questions/{question_id}/versions/1")
+    assert response.status_code == 404
+    private = app.state.services.registry["content"].get_question_version(question_id, 1)
+    assert private["stem"] and private["options"]
+    assert private["correct_option_ids"] == [private["answer"]]
+    assert private["source_records"]
 
 
 def test_routes_reject_unselected_pack_path_and_user_case_save(client, app):

@@ -23,14 +23,6 @@ class WithdrawalRequest(BaseModel):
     replacement_version: int | None = Field(default=None, ge=1)
 
 
-def _public_question(question):
-    return {
-        **{k: v for k, v in question.items()
-           if k not in ("answer", "rationale", "correct_option_ids", "explanation", "options")},
-        "options": [{"id": o["id"], "text": o["text"]} for o in question["options"]],
-    }
-
-
 def create_router(services) -> APIRouter:
     # App-owned pack root can be overridden by the integrator for packaging.
     root = Path(services.registry.get("content_pack_root", Path(__file__).resolve().parents[3] / "content" / "packs"))
@@ -88,13 +80,9 @@ def create_router(services) -> APIRouter:
     def question_summaries(topic_id: str | None = None, domain: str | None = None, track: str | None = None):
         return repository.list_question_summaries(topic_id, domain, track)
 
-    @router.get("/questions/{question_id}/versions/{version}")
-    def question(question_id: str, version: int):
-        result = call(repository.get_question_version, question_id, version)
-        if result["usage"] == "evaluation_reserved":
-            raise ApiError("content_not_found", "No public question at this location", 404)
-        return _public_question(result)
-
+    # Bank display belongs to M4, which commits family exposure before reveal.
+    # There is deliberately no public question-detail endpoint here. The
+    # trusted backend get_question_version remains available for pinned attempts.
     @router.post("/packs/install")
     def install(request: InstallRequest):
         candidate = (root / request.path).resolve()
