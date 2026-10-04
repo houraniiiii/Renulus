@@ -35,7 +35,7 @@ DELETION_NOTICE = (
 def eligible_table(name):
     return isinstance(name, str) and bool(re.fullmatch(r"[a-z][a-z0-9_]*", name)) and (
         name in COMMON_TABLES or name.startswith(SAFE_PREFIXES)) and name != "knowledge_catalogue" and not re.search(
-            r"(?:^|_)(?:credentials?|secrets?|connections?|provider_settings|indexes?)(?:_|$)", name)
+            r"(?:^|_)(?:credentials?|secrets?|connections?|provider_settings|index(?:es)?)(?:_|$)", name)
 
 
 def primary_keys(conn, table):

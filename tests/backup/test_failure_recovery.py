@@ -206,6 +206,9 @@ def test_memory_reindex_seam_receives_only_reconciled_canonical_data_and_no_capt
 def test_missing_offline_helper_blocks_rebuild_without_rolling_back_verified_restore(source, target):
     restore(target, zip_bytes(source[0]))
     before = state(target)
+    # Index bookkeeping is derived: helper failures may update it, never retained records or originals.
+    assert not {"memory_index_state", "memory_index_entries"}.intersection(before[0])
+    assert target.db.fetch_one("SELECT state FROM memory_index_state WHERE singleton=1")["state"] == "dirty"
     class HelpersUnavailable:
         def rebuild_index(self):
             raise ApiError("offline_helpers_missing", "Install the packaged offline helpers and retry", 503, True)
@@ -214,5 +217,7 @@ def test_missing_offline_helper_blocks_rebuild_without_rolling_back_verified_res
     identifier, _, _ = recovery.request_rebuild()
     recovery.rebuild(identifier)
     assert state(target) == before
+    assert target.db.fetch_one("SELECT state FROM memory_index_state WHERE singleton=1")["state"] == "failed"
     assert recovery.status()["rebuild"]["status"] == "blocked"
     assert recovery.status()["rebuild"]["modules"]["knowledge"]["error_code"] == "offline_helpers_missing"
+    assert recovery.status()["rebuild"]["modules"]["memory"]["status"] == "blocked"

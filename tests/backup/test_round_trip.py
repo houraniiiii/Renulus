@@ -60,6 +60,8 @@ def test_newer_local_tombstone_removes_originals_before_rebuild_and_never_promot
     deleted = selected[0]
     target.db.mark_deleted("knowledge-document", deleted["document_id"])
     timeline = []
+    memory_calls = []
+    memory = target.registry["memory"]
     class Seam:
         @contextmanager
         def recovery_guard(self):
@@ -72,7 +74,16 @@ def test_newer_local_tombstone_removes_originals_before_rebuild_and_never_promot
             assert not list((target.paths.library / "knowledge" / deleted["document_id"]).rglob("original.*"))
             assert len(list(target.paths.library.rglob("original.*"))) == 3
             return {"status": "complete", "rebuilt_records": 0}
-    target.registry["knowledge"] = Seam()
+    class Memory:
+        def recovery_guard(self):
+            return memory.recovery_guard()
+        def reindex(self):
+            memory_calls.append("reindex")
+            assert timeline == ["guard", "promoted", "rebuild"]
+            return {"ready": True, "count": 0, "generation": "synthetic-memory-generation"}
+        def process_pending(self, **kwargs):
+            pytest.fail("Recovery must rebuild memory without capturing or calling a provider")
+    target.registry.update(knowledge=Seam(), memory=Memory())
     result = restore(target, archive)
     assert result["excluded_originals"] == 1
     assert result["removed_by_deletion"] == 3
@@ -81,6 +92,7 @@ def test_newer_local_tombstone_removes_originals_before_rebuild_and_never_promot
     assert start
     target.registry["data_recovery"].rebuild(identifier)
     assert timeline == ["guard", "promoted", "rebuild"]
+    assert memory_calls == ["reindex"]
     assert target.registry["data_recovery"].status()["rebuild"]["status"] == "complete"
 
 
@@ -165,18 +177,20 @@ def test_deliberate_date_confirmation_expiry_and_one_use_preview(source, target)
 @pytest.mark.parametrize("cleanup_pending", [False, True])
 def test_parent_rebuild_contracts_persist_passage_counts_and_keep_index_pointer_local(source, target, cleanup_pending):
     services, _ = source
+    source_generation = "index_" + "a" * 32
+    target_generation = "index_" + "b" * 32
     services.db.execute("INSERT INTO preferences VALUES(?,?,?)", (
-        "knowledge.index_generation", "index_source_derived_only", "2026-10-04T21:00:00Z"))
+        "knowledge.index_generation", json.dumps(source_generation), "2026-10-04T21:00:00Z"))
     target.db.execute("INSERT INTO preferences VALUES(?,?,?)", (
-        "knowledge.index_generation", "index_target_derived_only", "2026-10-04T21:00:00Z"))
+        "knowledge.index_generation", json.dumps(target_generation), "2026-10-04T21:00:00Z"))
     restore(target, zip_bytes(services))
-    assert target.db.fetch_one("SELECT value FROM preferences WHERE key='knowledge.index_generation'")["value"] == "index_target_derived_only"
+    assert target.db.fetch_one("SELECT value FROM preferences WHERE key='knowledge.index_generation'")["value"] == json.dumps(target_generation)
     calls = []
     class Knowledge:
         def rebuild_index(self):
             assert len(target.db.fetch_all("SELECT id FROM knowledge_revisions WHERE original_path IS NOT NULL")) == 4
             calls.append("knowledge")
-            return {"status": "ready", "passages": 17, "generation": "index_local",
+            return {"status": "ready", "passages": 17, "generation": "index_" + "c" * 32,
                     "cleanup_pending": cleanup_pending}
     class Memory:
         def reindex(self):
@@ -213,6 +227,10 @@ def test_restore_refuses_uncoordinated_worker_even_when_idle_then_uses_public_gu
     class Worker:
         def status(self):
             return worker_status
+    class GuardlessKnowledge:
+        pass
+    # The parent now supplies a guard; explicitly exercise a legacy adapter without it.
+    target.registry["knowledge"] = GuardlessKnowledge()
     target.registry["knowledge_worker"] = Worker()
     before = state(target)
     with pytest.raises(ApiError) as error:
@@ -240,6 +258,12 @@ def test_real_http_download_raw_preview_restore_and_honest_missing_rebuild_seam(
     assert downloaded.headers["cache-control"] == "no-store"
     assert not list((source_services.paths.cache / "recovery/exports").iterdir())
     app = create_app(tmp_path / "http-target")
+    knowledge = app.state.services.registry["knowledge"]
+    class KnowledgeWithoutRebuild:
+        def recovery_guard(self):
+            return knowledge.recovery_guard()
+    # Keep real recovery coordination while modelling a runtime without the rebuild seam.
+    app.state.services.registry["knowledge"] = KnowledgeWithoutRebuild()
     client = TestClient(app)
     checked = client.post("/api/v1/data/backup/preview", content=downloaded.content,
                           headers={"content-type": "application/zip"})

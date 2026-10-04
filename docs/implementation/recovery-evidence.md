@@ -196,3 +196,94 @@ manifest/canonical records, not authenticity. Process-exit recovery is tested;
 machine power-loss durability is not proved. Acquisition reconstruction,
 credentials/settings recovery, external originals, weights, multipart/large-corpus
 backup and older module-schema migration remain outside this bounded slice.
+
+## Integrated offline engine proof — 2026-10-04
+
+This follow-up used build/recovery-offline-proof in a fresh recovery proof
+worktree based at parent 1da890b2a73a282d285c4cd65689a80033634a15. The integrated
+KnowledgeRepository.recovery_guard()/rebuild_index() and
+MemoryService.recovery_guard()/reindex() ran through the existing recovery API.
+The earlier seam-only limitation is resolved for this synthetic text-library
+and manual learner-note flow.
+
+Two actual UTF-8 files, covering CKD and dialysis learning topics, were imported
+through the durable CPU worker. Docling-core HybridChunker, FastEmbed and native
+LanceDB produced passages, hybrid retrieval and citation character spans. A
+synthetic transplant study preference was stored and retrieved through the
+Hermes OSSBackend adapter using actual Mem0, QdrantLocal and FastEmbed. The
+source's worker remained running during ZIP export. ZIP contained manifest,
+canonical JSON and exactly the two originals, with portable library paths.
+
+Restore into a different synthetic profile verified the archive, confirmed its
+exact date, promoted the originals and completed both actual background rebuild
+seams. Knowledge's reported passage count had to equal the archived canonical
+passage count; memory rebuilt one record. Retrieval and citation locators
+survived, downloaded originals matched the input bytes and canonical hashes/
+sizes, and stored paths belonged to the target library. The target generation
+differed from the source's excluded generation selector. Editing the note
+produced revision 2 and corrected recall. Deleting the note and CKD document,
+then replaying the old ZIP, left both excluded by local tombstones while
+dialysis retrieval survived. Deleted originals stayed unavailable.
+
+The only shared directory was the explicitly selected public helper directory
+under Renulus-wt-integration/.local/runtime/integration/helpers. All profile,
+cache, index, library and bootstrap state was allocated under this test's own
+pytest scratch roots. The fixture checked the trusted helper manifest/hashes
+before and after use, blocked Python writes into shared helpers, and placed
+tripwires on external sockets, provider streaming and Mem0 inference. No
+tripwire fired. No parent profile, keys, external collection or private inputs
+were read or copied; the proof provisions no assets and makes no provider call.
+
+Verified engine environment: Python 3.14.4; Docling 2.133.0; Docling-core 2.99.0;
+FastEmbed 0.8.1; LanceDB 0.39.0; Mem0ai 2.2.1; Qdrant-client 1.19.1;
+ONNXRuntime 1.30.0; pytest 9.1.1. Embedding configuration uses the selected
+BAAI/bge-small-en-v1.5 CPU helper with two threads and local files only.
+
+The actual engine test first exposed that the table filter's singular-index
+token was misspelled: it exported memory_index_state and memory_index_entries.
+The owned one-line storage follow-up matches singular/plural index tokens and
+excludes these derived tables from JSON/ZIP snapshots and restore validation.
+Six regressions prove canonical facts/history/source links remain exported,
+machine-local engine identities stay absent, and forged derived tables in
+either format are refused before canonical records, local index bookkeeping
+or originals change. Discovery catalogue omission and source-status journal
+retention remain unchanged. The narrow fix was coordinated on issue #12,
+comment 5984716973. Pre-fix exports containing derived tables must be regenerated;
+the corrected validator deliberately refuses them.
+
+The seven reported integrated-fixture failures were repaired with explicit
+missing-seam/guardless adapters, a memory rebuild adapter for the deletion-order
+probe, and valid JSON-encoded local knowledge selectors. The missing-helper
+probe still compares retained canonical records and original bytes exactly,
+and now separately verifies the real memory derivative enters failed state.
+Existing deletion, ordering, rollback and deliberate confirmation assertions
+remain intact. No production guard, generation validation or rebuild result
+was weakened.
+
+Commands ran using the integration venv executable and PYTHONPATH=runtime:
+
+    python -B -m pytest tests/backup tests/integration/test_backup.py tests/integration/test_foundation.py -q
+
+Result: 83 passed, 1 skipped in 266.76 seconds. The skip is the actual-engine
+test's explicit helper opt-in. With RENULUS_RECOVERY_HELPERS set to the verified
+directory, the separate command was:
+
+    python -B -m pytest tests/backup/test_offline_engine_round_trip.py -q -o faulthandler_timeout=180
+
+Result: 1 passed in 83.93 seconds. Focused integrated-fixture checks also passed
+7 cases; the six derived-state guards passed separately after all six failed
+against the old filter. These focused checks are included in the broader count.
+There was one existing TestClient deprecation warning. git diff --check passed.
+
+Native path constraint observed: LanceDB failed to persist a generation data
+file at a 264-character Windows path with os error 3; the equivalent source
+path was 254 characters. The same actual-engine proof passed with compact,
+isolated pytest profile roots. Arbitrarily long/custom profile paths remain
+unverified. Parent-owned follow-up should keep the delivery root compact and
+check packaged native long-path support or expose a clear profile-path limit.
+
+This proof covers CPU text chunking, both selected derived index engines and
+HTTP recovery. Actual PDF/OCR execution, the acquired-library delivery profile,
+whole-corpus bounds and a packaged/native UI recovery journey remain separate
+parent checks. Archive encryption/authenticity, machine power-loss durability
+and larger-than-bounded recovery retain the earlier limitations.
