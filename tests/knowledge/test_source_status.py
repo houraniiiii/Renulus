@@ -4,7 +4,7 @@ import pytest
 
 from renulus.contracts import ApiError
 from renulus.knowledge.models import SourceMetadata
-from test_repository import repository, import_note, STUDY
+from test_repository import repository, import_note, STUDY, SyntheticEmbedder, SyntheticExtractor
 
 
 def event(identifier, identity, changes, source_id="L02", scope=None):
@@ -83,3 +83,27 @@ def test_unknown_identity_scope_and_unreviewed_promotions_are_not_published(repo
     with pytest.raises(ApiError):
         repository.update_source_status(bad)
     assert repository.retrieve("kidney", scope=STUDY)["passages"]
+
+
+def test_actual_updates_review_outbox_changes_library_currency_and_survives_retry(tmp_path):
+    from renulus.server import create_app
+    from renulus.storage import utc_now
+    services = create_app(tmp_path).state.services
+    knowledge, updates = services.get("knowledge"), services.get("updates")
+    knowledge.extractor, knowledge.embedder = SyntheticExtractor(), SyntheticEmbedder()
+    url = "https://kdigo.org/synthetic-iga-guideline.pdf"
+    note = import_note(knowledge, "Synthetic glomerular learning source", metadata=SourceMetadata(
+        source_id="K03", canonical_url=url, publication_status="final", latest_final_verified=True, content_reviewed=True))
+    services.db.execute("INSERT INTO update_entries(id,source_id,external_id,title,url,kind,discovered_at,review_state,summary,source_metadata_json) VALUES(?,?,?,?,?,?,?,?,?,?)",
+        ("synthetic-currency", "K03", "synthetic-currency", "Synthetic publisher change", url,
+         "source-change", utc_now(), "pending", "Synthetic unreviewed notice", "{}"))
+    result = updates.review("synthetic-currency", "Synthetic replacement annotation", ["T10"],
+        "assistant", "reviewed", target={"register_id": "K03", "canonical_url": url},
+        changes={"superseded": True}, evidence=event("unused", {}, {})["evidence"])
+    assert result["review"]["library_sync_state"] == "applied"
+    assert knowledge.get_document(note["document_id"])["revisions"][0]["metadata"]["superseded"]
+    assert knowledge.retrieve("glomerular", scope=STUDY)["passages"] == []
+    repeated = updates.reviews.sync_entry("synthetic-currency")
+    assert repeated["changes"][0]["state"] == "applied"
+    assert len(services.db.fetch_all("SELECT * FROM knowledge_source_status_events")) == 1
+    knowledge.index.close()

@@ -85,6 +85,11 @@ def validate_event(payload):
             raise ValueError()
         observed_only = set(changes) <= {"latest_final_verified", "content_reviewed"} and all(value is False for value in changes.values())
         evidence = payload.get("evidence")
+        # Updates retains reviewer/date provenance around the inspected
+        # references. Only that reviewed envelope can assert a status; an
+        # observed digest still only invalidates the previous review.
+        if isinstance(evidence, dict) and evidence.get("kind") == "reviewed-publication":
+            evidence = evidence.get("references")
         if not observed_only and (not isinstance(evidence, list) or not evidence or not all(isinstance(item, dict) and item.get("inspected") is True for item in evidence)):
             raise ValueError()
         canonical(payload)

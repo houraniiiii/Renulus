@@ -1,5 +1,6 @@
 """SQLite authority with staged, cancellable derived revisions."""
 from datetime import datetime, timezone
+from contextlib import contextmanager
 import hashlib
 import json
 from pathlib import Path
@@ -36,6 +37,16 @@ class KnowledgeRepository:
 
     def update_source_status(self, event):
         return self.source_status.update(event)
+
+    @contextmanager
+    def recovery_guard(self):
+        if not self._ingest_lock.acquire(timeout=90):
+            raise ApiError("recovery_busy", "The library is finishing an import. Retry backup or restore after this file completes", 409, True)
+        try:
+            with self._lock:
+                yield
+        finally:
+            self._ingest_lock.release()
 
     def _selected_index_path(self):
         row = self.db.fetch_one("SELECT value FROM preferences WHERE key='knowledge.index_generation'")

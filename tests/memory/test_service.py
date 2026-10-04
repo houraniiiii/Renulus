@@ -74,6 +74,43 @@ def add(memory, text='Synthetic canonical note.', key='controlled-1'):
 
 
 @pytest.mark.asyncio
+async def test_recovery_guard_pauses_new_capture_and_resumes_after_exit(controlled_memory, services):
+    memory, controller = controlled_memory
+    scope = evidence(services)
+    job = memory.enqueue('evidence-1', scope)
+    with memory.recovery_guard():
+        assert await memory.process_pending() == {'processed': 0}
+        with pytest.raises(ApiError) as busy:
+            add(memory, key='during-recovery')
+        assert busy.value.code == 'recovery_busy'
+        assert next(row for row in memory.repository.jobs() if row['id'] == job['id'])['state'] == 'queued'
+        assert memory.repository.list() == []
+    assert (await memory.process_pending())['processed'] == 1
+    assert len(memory.repository.list()) == 1
+    await memory.close()
+
+
+@pytest.mark.asyncio
+async def test_recovery_guard_refuses_active_inference_without_discarding_it(controlled_memory, services):
+    memory, controller = controlled_memory
+    memory.enqueue('evidence-1', evidence(services))
+    controller.pause_extract = True
+    task = asyncio.create_task(memory.process_pending())
+    try:
+        assert await asyncio.to_thread(controller.entered.wait, 3)
+        with pytest.raises(ApiError) as caught:
+            with memory.recovery_guard():
+                raise AssertionError('Recovery entered during capture')
+        assert caught.value.code == 'recovery_busy'
+    finally:
+        controller.release.set()
+    assert (await task)['processed'] == 1
+    with memory.recovery_guard():
+        assert memory.repository.list()
+    await memory.close()
+
+
+@pytest.mark.asyncio
 async def test_cancel_during_extraction_and_commit_winner(controlled_memory, services):
     memory, controller = controlled_memory
     scope = evidence(services)

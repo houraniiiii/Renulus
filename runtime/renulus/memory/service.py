@@ -1,6 +1,6 @@
 """Durable capture/recovery and rebuildable, revision-filtered learner recall."""
 import asyncio
-from contextlib import closing
+from contextlib import closing, contextmanager
 import shutil
 import threading
 from pathlib import Path
@@ -24,6 +24,8 @@ class MemoryService:
         self._wake = asyncio.Event()
         self._worker = self._loop = None
         self._active_runs = set()
+        self._capture_state = threading.RLock()
+        self._recovery_paused = False
         self._stopping = False
         # Reindex on restart; no index file is a record authority. This also
         # reconciles deletion markers from restores before any recall.
@@ -34,9 +36,33 @@ class MemoryService:
             self._loop.call_soon_threadsafe(self._wake.set)
 
     def add(self, request):
-        result = self.repository.add(request)
+        with self._canonical_mutation():
+            result = self.repository.add(request)
         self.notify()
         return result
+
+    @contextmanager
+    def _canonical_mutation(self):
+        with self._capture_state:
+            if self._recovery_paused:
+                raise ApiError('recovery_busy', 'Wait for learner-memory backup or restore to finish', 409, True)
+            yield
+
+    @contextmanager
+    def recovery_guard(self):
+        # Claim/pause bookkeeping is brief. Do not hold a thread lock across
+        # remote inference or block the event loop during a ZIP operation.
+        with self._capture_state:
+            if self._recovery_paused or self._active_runs:
+                raise ApiError('recovery_busy', 'Finish or cancel active learner-memory capture before backup or restore', 409, True)
+            self._recovery_paused = True
+        try:
+            with self._lock:
+                yield
+        finally:
+            with self._capture_state:
+                self._recovery_paused = False
+            self.notify()
 
     def _remove(self, path):
         target, root = Path(path).resolve(), self.root.resolve()
@@ -93,18 +119,24 @@ class MemoryService:
             asyncio.run_coroutine_threadsafe(cancel_runs(), self._loop)
 
     def edit(self, identifier, text, revision):
-        result = self.repository.edit(identifier, text, revision)
+        with self._canonical_mutation():
+            result = self.repository.edit(identifier, text, revision)
         purged = self._purge_result(result)
         return {**self.repository.get(identifier), 'purge_pending': purged['purge_pending']}
 
     def delete(self, identifier, revision):
-        return self._purge_result(self.repository.delete(identifier, revision))
+        with self._canonical_mutation():
+            result = self.repository.delete(identifier, revision)
+        return self._purge_result(result)
 
     def purge_history(self, identifier):
-        return self._purge_result(self.repository.purge_history(identifier))
+        with self._canonical_mutation():
+            result = self.repository.purge_history(identifier)
+        return self._purge_result(result)
 
     def enqueue(self, evidence_id, scope):
-        result = self.repository.enqueue(evidence_id, scope)
+        with self._canonical_mutation():
+            result = self.repository.enqueue(evidence_id, scope)
         self.notify()
         return result
 
@@ -145,18 +177,22 @@ class MemoryService:
         if self._loop is None:
             self._loop = asyncio.get_running_loop()
         async with self._process_lock:
-            if retry:
-                self.repository.retry()
-            self.repository.scan()
+            with self._capture_state:
+                if self._recovery_paused:
+                    return {'processed': 0}
+                if retry:
+                    self.repository.retry()
+                self.repository.scan()
+                queued = self.db.fetch_all("SELECT id FROM memory_jobs WHERE state='queued' ORDER BY created_at LIMIT 100")
             processed = 0
-            queued = self.db.fetch_all("SELECT id FROM memory_jobs WHERE state='queued' ORDER BY created_at LIMIT 100")
             for row in queued:
-                if self._stopping:
-                    break
-                job = self.repository.claim(row['id'])
-                if not job:
-                    continue
-                self._active_runs.add(job['id'])
+                with self._capture_state:
+                    if self._stopping or self._recovery_paused:
+                        break
+                    job = self.repository.claim(row['id'])
+                    if not job:
+                        continue
+                    self._active_runs.add(job['id'])
                 try:
                     if not self.repository.current(job):
                         self.repository.cancel(job['id'])
@@ -181,7 +217,8 @@ class MemoryService:
                     code = error.code if isinstance(error, ApiError) else 'memory_capture_failed'
                     self.repository.fail(job['id'], code)
                 finally:
-                    self._active_runs.discard(job['id'])
+                    with self._capture_state:
+                        self._active_runs.discard(job['id'])
             state = self.db.fetch_one('SELECT state FROM memory_index_state WHERE singleton=1')['state']
             if state in ('dirty', 'empty') or retry:
                 try:
