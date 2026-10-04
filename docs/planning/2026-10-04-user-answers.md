@@ -271,3 +271,31 @@ Recorded later on 2026-10-04 from the owner's acquisition instruction.
   sample or unavailable export must not be reported as a complete dataset.
 - This acquisition instruction does not implement the app, authorise incidental
   billed provider calls or restore unspecified private/archive datasets.
+
+## End-to-end implementation authorisation
+
+Recorded on October 4, 2026 from the subsequent implementation instruction.
+This supersedes the earlier planning-only implementation status.
+
+- The user selected **Flow** from the design exploration. Reuse its artifacts
+  and the agreed Renulus brand in one coherent product design system.
+- Implementation of the complete backend, frontend and connected app is now
+  authorised. Orchestrate bounded subagents in parallel lanes, several waves
+  and isolated worktrees, owning engineering decisions, testing and validation.
+- Keep planning basic and flexible. Actual implementation evidence may change
+  proposed interfaces and sequencing without reopening settled product choices.
+- Use GitHub issues as the dynamic work queue and record decisions and evidence.
+  Start unblocked work in available lanes. Prioritise working product flows and
+  maintained reusable components over redundant infrastructure or trivial tests.
+- Work autonomously over the next eight hours with a heartbeat every 30 minutes.
+  The UI session is `7cc53cdb-4edb-4770-b48e-b1cf925f0021`; source acquisition
+  continues separately in `33c2315f-f369-42d0-bf80-818205301d18`. Preserve their
+  work and integrate available artifacts through explicit ownership boundaries.
+- The owner has added the nephrology manual and wants the app to use the
+  acquired data. Import authorised selected files locally, preserve external
+  originals and acquisition metadata, and keep restricted files out of the
+  public repository. No paid-provider use, training or copied private/native
+  account state is implied by implementation authorisation.
+
+Live execution and delivery evidence belong in GitHub issue #1 and
+`docs/implementation/`, not in an assertion that the old planning gates passed.

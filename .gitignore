@@ -44,3 +44,10 @@
 Thumbs.db
 desktop.ini
 *.tmp
+
+# Parallel development and generated desktop bundles.
+/.claude/worktrees/
+**/dist/
+**/dist-electron/
+**/release/
+**/.ruff_cache/
