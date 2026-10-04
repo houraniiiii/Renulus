@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { extractFile, listPackage } from '@electron/asar';
+import { waitForFlowWindow } from './wait-for-flow-window.mjs';
 
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 await mkdir(path.join(desktop, 'test-results'), { recursive: true });
@@ -54,7 +55,36 @@ if (!attached) { delete env.RENULUS_BACKEND_URL; delete env.RENULUS_SESSION_TOKE
 delete env.ELECTRON_RUN_AS_NODE;
 const applications = [];
 const records = [];
+let startupCancellation = { tested: false };
 function alive(pid) { try { process.kill(pid, 0); return true; } catch (error) { return error.code === 'EPERM'; } }
+async function proveOpeningClose() {
+  const startedAt = Date.now();
+  const profile = path.join(evidence, 'profile-cancel');
+  const application = await electron.launch({ executablePath: packagedExecutable, args: [], cwd: path.dirname(packagedExecutable), env: { ...env, RENULUS_PROFILE: profile }, timeout: 45_000 });
+  applications.push(application);
+  let opening;
+  const deadline = Date.now() + 15_000;
+  while (Date.now() < deadline) {
+    opening = await application.evaluate(({ BrowserWindow }) => {
+      const owner = BrowserWindow.getAllWindows().find(window => window.isVisible() && window.webContents.getURL().startsWith('data:'));
+      if (!owner) return null;
+      const preferences = owner.webContents.getLastWebPreferences();
+      return { mainPid: process.pid, childPids: process._getActiveHandles().filter(handle => handle.constructor.name === 'ChildProcess').map(handle => handle.pid).filter(Boolean), policy: { javascript: preferences.javascript, hasPreload: Boolean(preferences.preload), nodeIntegration: preferences.nodeIntegration, contextIsolation: preferences.contextIsolation, sandbox: preferences.sandbox, persistentSession: owner.webContents.session.isPersistent() } };
+    });
+    if (opening?.childPids.length === 1) break;
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  if (!opening || opening.childPids.length !== 1 || opening.policy.javascript !== false || opening.policy.hasPreload || opening.policy.nodeIntegration || !opening.policy.contextIsolation || !opening.policy.sandbox || opening.policy.persistentSession) throw new Error('The protected opening window and physically owned backend were not observed.');
+  const firstVisibleWindowSeconds = (Date.now() - startedAt) / 1000;
+  const closed = application.waitForEvent('close', { timeout: 45_000 });
+  await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find(window => window.webContents.getURL().startsWith('data:')).close());
+  await closed;
+  applications.pop();
+  const childrenAfterClose = opening.childPids.filter(alive);
+  const otherOwnedBackendsAlive = records.every(record => record.childPids.every(alive));
+  if (childrenAfterClose.length || !otherOwnedBackendsAlive) throw new Error('Closing the opening window failed owned-child cleanup or affected another isolated instance.');
+  return { tested: true, profile, firstVisibleWindowSeconds, ...opening, childrenAfterClose, otherOwnedBackendsAlive };
+}
 try {
   for (const name of ['a', 'b']) {
     const profile = path.join(evidence, 'profile-' + name);
@@ -62,12 +92,13 @@ try {
     console.log(JSON.stringify({ stage: 'native-instance-starting', name }));
     const application = await electron.launch({ executablePath: packagedExecutable ?? path.join(desktop, 'node_modules', 'electron', 'dist', 'electron.exe'), args: packagedExecutable ? [] : ['.'], cwd: packagedExecutable ? path.dirname(packagedExecutable) : desktop, env: { ...env, RENULUS_PROFILE: profile }, timeout: packagedExecutable ? 360_000 : 45_000 });
     applications.push(application);
-    const page = await application.firstWindow({ timeout: packagedExecutable ? 360_000 : 45_000 }); await page.waitForSelector('h1');
-    const info = await application.evaluate(({ app, BrowserWindow }) => {
-      const window = BrowserWindow.getAllWindows()[0];
+    const { page, ...windowTiming } = await waitForFlowWindow(application, { startedAt, timeout: packagedExecutable ? 360_000 : 45_000 });
+    const info = await application.evaluate(({ app, BrowserWindow }, rendererUrl) => {
+      const window = BrowserWindow.getAllWindows().find(window => window.webContents.getURL() === rendererUrl);
       return { pid: process.pid, packaged: app.isPackaged, executable: process.execPath, electronVersion: process.versions.electron, chromeVersion: process.versions.chrome, nodeVersion: process.versions.node, userData: app.getPath('userData'), sessionData: app.getPath('sessionData'), persistentSession: window.webContents.session.isPersistent(), webPreferences: { nodeIntegration: window.webContents.getLastWebPreferences().nodeIntegration, contextIsolation: window.webContents.getLastWebPreferences().contextIsolation, sandbox: window.webContents.getLastWebPreferences().sandbox }, childPids: process._getActiveHandles().filter(handle => handle.constructor.name === 'ChildProcess').map(handle => handle.pid).filter(Boolean) };
-    });
+    }, page.url());
     const meta = await page.evaluate(async () => { const response = await fetch('/api/v1/meta'); return { status: response.status, value: await response.json(), rendererBridgeKeys: Object.keys(window.renulus ?? {}) }; });
+    const backendReadySeconds = (Date.now() - startedAt) / 1000;
     if (info.electronVersion !== expectedVersion || meta.status !== 200 || meta.value.api_version !== 1 || info.persistentSession || info.webPreferences.nodeIntegration || !info.webPreferences.contextIsolation || !info.webPreferences.sandbox || info.childPids.length !== (attached ? 0 : 1)) throw new Error('Native version/process/session boundary failed.');
     if (packagedExecutable && (!info.packaged || path.resolve(info.executable).toLowerCase() !== path.resolve(packagedExecutable).toLowerCase())) throw new Error('This is not the requested packaged executable.');
     if (packagedExecutable && ['runtime', 'content', 'knowledge', 'retrieval', 'learn', 'cases', 'assessment', 'memory', 'study', 'updates'].some(name => meta.value.modules[name]?.status !== 'installed')) throw new Error('A packaged backend module is absent.');
@@ -75,7 +106,7 @@ try {
     const authorizationRejected = await page.evaluate(async () => { try { await window.renulus.openAuthorization('https://untrusted.example/authorize'); return false; } catch { return true; } });
     if (unauthorizedStatus !== 401 || !authorizationRejected) throw new Error('Native API/sign-in boundary failed.');
     const startupSeconds = (Date.now() - startedAt) / 1000;
-    records.push({ name, profile, startupSeconds, ...info, meta, unauthorizedStatus, authorizationRejected });
+    records.push({ name, profile, startupSeconds, ...windowTiming, backendReadySeconds, ...info, meta, unauthorizedStatus, authorizationRejected });
     console.log(JSON.stringify({ stage: 'native-instance-ready', name, startupSeconds }));
     if (name === 'a') {
       await page.setViewportSize({ width: 1440, height: 960 });
@@ -108,6 +139,8 @@ try {
     }
   }
   if (records[0].userData === records[1].userData || records[0].pid === records[1].pid) throw new Error('Two instances were not isolated.');
+  if (process.env.RENULUS_EXPECT_STARTUP_WINDOW === '1' && records.some(record => !record.startupWindowSeen)) throw new Error('The required early opening window was not observed.');
+  if (packagedExecutable && records.some(record => record.startupWindowSeen)) startupCancellation = await proveOpeningClose();
 } finally {
   for (const app of applications.reverse()) await app.close();
 }
@@ -117,5 +150,5 @@ for (const record of records) {
 }
 const attachedBackendAlive = attached ? (await fetch(new URL('/api/v1/meta', env.RENULUS_BACKEND_URL), { headers: { 'x-renulus-token': env.RENULUS_SESSION_TOKEN } })).status === 200 : undefined;
 if (attached && !attachedBackendAlive) throw new Error('Attached backend did not survive app close.');
-await writeFile(path.join(evidence, 'native-evidence.json'), JSON.stringify({ checkedAt: new Date().toISOString(), kind: packagedExecutable ? installed ? 'unsigned-installed-native' : 'unsigned-relocated-directory-native' : attached ? 'attached-development-native' : 'managed-development-native', portableRuntime, packagedSource, records, attachedBackendAlive, limits: [installed ? 'No signed or clean-machine Windows package proof' : 'No installed or signed Windows package proof', 'No provider login or model inference', packagedExecutable ? 'Launch checks do not exercise every integrated feature journey' : 'Feature entries remain integration states in this lane', 'Windows tree-kill does not prove backend shutdown callbacks'] }, null, 2));
+await writeFile(path.join(evidence, 'native-evidence.json'), JSON.stringify({ checkedAt: new Date().toISOString(), kind: packagedExecutable ? installed ? 'unsigned-installed-native' : 'unsigned-relocated-directory-native' : attached ? 'attached-development-native' : 'managed-development-native', portableRuntime, packagedSource, records, startupCancellation, attachedBackendAlive, limits: [installed ? 'No signed or clean-machine Windows package proof' : 'No installed or signed Windows package proof', 'No provider login or model inference', packagedExecutable ? 'Launch checks do not exercise every integrated feature journey' : 'Feature entries remain integration states in this lane', 'Windows tree-kill does not prove backend shutdown callbacks'] }, null, 2));
 console.log(JSON.stringify({ evidence, electronVersion: expectedVersion, instances: records.length, ownedBackendsStopped: !attached, attachedBackendAlive, nativeLaunch: 'passed' }));

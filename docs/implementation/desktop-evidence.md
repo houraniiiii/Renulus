@@ -232,3 +232,29 @@ this narrow regression test; provisioning still executes before server startup.
 The matching e800affc renderer/native checkpoint rebuilt and typechecked after
 the owned startup-budget change, with parent main/profile bytes preserved. Final
 source staging remains held for the parent's completed integration revision.
+
+Actual relocated unsigned native proof passed for the approved e800affc
+checkpoint. `release/renulus-portable/Renulus Development.exe` ran Electron44.5.1
+with two fresh independent synthetic profiles and one managed backend each.
+Observed startup was147.267s and114.422s. Both owned backend PIDs (32124/228)
+were gone after closing their owning apps. Actual embedded3.14.4 remained
+isolated/no-user-site, prefix equalled base_prefix inside the relocated payload,
+and every Python import path stayed inside resources/backend. Python/python3/py/
+uv/Node/npm did not resolve on the child environment's OS-only PATH. All10
+backend modules loaded; helper assets/imports ready; provider state disconnected.
+The proof also passed sandbox/context-isolation, nonpersistent browser session,
+renderer authentication/direct401, rejected untrusted sign-in URL, all8 routes,
+destination search and compact layout. Native screenshots were inspected.
+Evidence: apps/desktop/test-results/native-a33a0374/native-evidence.json.
+
+This checkpoint predates the parent's protected startup window7aa7f080. Native
+scripts now observe the first visible native window separately from the actual
+visible loopback Flow renderer and authenticated backend readiness, ignoring
+transient data URLs for renderer selection. A real Electron44.5.1 synthetic
+two-window regression observed the opening window at0.894s and loopback renderer
+at5.401s; the opening window closed before selection. This tests proof-script
+selection, not the actual parent's lifecycle or installed app. Final native proof
+will require the protected early startup window and close it while its physical
+backend child is starting, checking that child exit leaves the two other
+isolated test backends alive. No parent main/profile/startup-window edit is made
+here. Final matching source staging and installer proof remain pending.

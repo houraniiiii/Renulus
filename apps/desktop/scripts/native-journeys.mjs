@@ -4,6 +4,7 @@ import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { randomUUID, createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { waitForFlowWindow } from './wait-for-flow-window.mjs';
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const executable = process.env.RENULUS_PACKAGED_EXECUTABLE;
 if (!executable || !path.isAbsolute(executable)) throw new Error('An explicit packaged executable is required.');
@@ -36,12 +37,18 @@ const citation = { document_id: document.id, document_revision: revision.id, tit
 let application;
 const result = { checkedAt: new Date().toISOString(), executable, pdfFixture: { sha256: revision.sha256, pages: 2, citationPage: 2 }, limits: ['Library DTO/original requests use declared synthetic fixtures; no parsing/indexing proof', 'No account, provider inference or private original', 'System-browser observation recorded separately'] };
 try {
+  const startedAt = Date.now();
   application = await electron.launch({ executablePath: executable, cwd: path.dirname(executable), env, timeout: 360_000 });
-  const page = await application.firstWindow({ timeout: 360_000 }); await page.waitForSelector('h1');
+  const { page, ...windowTiming } = await waitForFlowWindow(application, { startedAt });
+  result.windowTiming = windowTiming;
+  const meta = await page.evaluate(async () => { const response = await fetch('/api/v1/meta'); return { status: response.status, value: await response.json() }; });
+  if (meta.status !== 200 || meta.value.api_version !== 1) throw new Error('The native renderer did not authenticate its backend.');
+  result.windowTiming.backendReadySeconds = (Date.now() - startedAt) / 1000;
   result.native = await application.evaluate(({ app }) => ({ packaged: app.isPackaged, version: process.versions.electron, executable: process.execPath }));
   if (!result.native.packaged || result.native.version !== expectedVersion) throw new Error('The patched packaged Electron is required.');
   await page.setViewportSize({ width: 1440, height: 960 });
-  await page.route('**/api/v1/library/documents', route => route.fulfill({ json: { documents: [document] } }));
+  await page.route(url => url.pathname === '/api/v1/library/documents', route => route.fulfill({ json: { documents: [document] } }));
+  await page.route(url => url.pathname === '/api/v1/library/documents/native-pdf-document', route => route.fulfill({ json: document }));
   await page.route('**/api/v1/library/revisions/native-pdf-revision/citation*', route => route.fulfill({ json: citation }));
   await page.route('**/api/v1/library/revisions/native-pdf-revision/original', route => route.fulfill({ status: 200, contentType: 'application/pdf', body: pdf }));
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Library', exact: true }).click();
