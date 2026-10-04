@@ -129,9 +129,9 @@ class SourceStatusJournal:
 
     def events(self, source_id, conn=None):
         if conn is not None:
-            rows = conn.execute("SELECT payload_json FROM knowledge_source_status_events WHERE source_id=? ORDER BY rowid", (source_id,)).fetchall()
+            rows = conn.execute("SELECT payload_json FROM knowledge_source_status_events WHERE source_id=? ORDER BY created_at,rowid", (source_id,)).fetchall()
         elif self.db.fetch_one("SELECT 1 FROM sqlite_master WHERE type='table' AND name='knowledge_source_status_events'"):
-            rows = self.db.fetch_all("SELECT payload_json FROM knowledge_source_status_events WHERE source_id=? ORDER BY rowid", (source_id,))
+            rows = self.db.fetch_all("SELECT payload_json FROM knowledge_source_status_events WHERE source_id=? ORDER BY created_at,rowid", (source_id,))
         else:
             rows = []  # Explicit isolated engine fixtures can have only base DDL.
         return [json.loads(row["payload_json"]) for row in rows]

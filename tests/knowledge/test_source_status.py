@@ -68,6 +68,28 @@ def test_observed_byte_change_invalidates_review_without_claiming_a_new_edition(
     assert repository.retrieve("dialysis", scope=STUDY, current_only=True)["passages"] == []
 
 
+def test_restored_older_no_match_event_cannot_override_newer_recorded_review(repository, monkeypatch):
+    from renulus.knowledge import source_status
+    old = event("restored-older", {"doi": "10.1234/restored"}, {"retracted": True})
+    monkeypatch.setattr(source_status, "utc_now", lambda: "2026-10-04T18:00:00+00:00")
+    assert repository.update_source_status(old)["state"] == "no-match"
+    saved = repository.db.fetch_one("SELECT * FROM knowledge_source_status_events WHERE id=?", (old["event_id"],))
+    repository.db.execute("DELETE FROM knowledge_source_status_events WHERE id=?", (old["event_id"],))
+    monkeypatch.setattr(source_status, "utc_now", lambda: "2026-10-04T20:00:00+00:00")
+    new = event("retained-newer", {"doi": "10.1234/restored"},
+                {"retracted": False, "publication_status": "final", "latest_final_verified": True})
+    assert repository.update_source_status(new)["state"] == "no-match"
+    # A canonical backup merge inserts the older event later while retaining
+    # its original recorded time. Physical row order is not review authority.
+    repository.db.execute("INSERT INTO knowledge_source_status_events VALUES(?,?,?,?,?)",
+        tuple(saved[key] for key in ("id", "source_id", "request_hash", "payload_json", "created_at")))
+    note = import_note(repository, "Restored glomerular teaching", metadata=metadata("10.1234/restored"))
+    repository.update_source_status(old)
+    current = repository.get_document(note["document_id"])["revisions"][0]["metadata"]
+    assert not current["retracted"] and current["latest_final_verified"]
+    assert repository.retrieve("glomerular", scope=STUDY)["passages"]
+
+
 def test_unknown_identity_scope_and_unreviewed_promotions_are_not_published(repository):
     import_note(repository, "Kidney teaching", metadata=metadata("10.1234/scope"))
     unresolved = event("unmapped-page", {"doi": "10.1234/scope"},

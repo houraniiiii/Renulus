@@ -31,3 +31,11 @@ ZIP restoration remain separate acceptance checks.
 The owner changed the implementation heartbeat from 30 to 15 minutes. The
 owned background loop was replaced and an immediate GitHub heartbeat was
 recorded at 21:34:03 UTC.
+
+At 22:08 UTC the recorded-time replay regression passed with all six source-status
+checks. A canonical recovery can insert an older journal event after a newer
+local event. Journal replay therefore orders by the original application-recorded
+UTC time, using row order only to break ties. The regression restores an older
+no-match retraction event, imports a later-matching source and retries the older
+event; the retained newer reviewed final annotation and retrieval remain intact.
+This is a storage/replay check, not independent review of a publication.
