@@ -70,6 +70,16 @@ def create_router(services) -> APIRouter:
     def queue_status():
         return worker.status()
 
+    @router.get("/source-versions")
+    def source_versions(source_id: str = Query(pattern=r"^[A-Z]\d{2}$"),
+                        canonical_url: str | None = Query(default=None, max_length=2000),
+                        doi: str | None = Query(default=None, max_length=500),
+                        pmid: str | None = Query(default=None, max_length=12),
+                        pmcid: str | None = Query(default=None, max_length=15)):
+        identity = {key: value for key, value in {"canonical_url": canonical_url,
+            "doi": doi, "pmid": pmid, "pmcid": pmcid}.items() if value}
+        return repository.source_status.version_targets(source_id, identity)
+
     @router.get("/documents")
     def documents(limit: int | None = Query(default=None, ge=1, le=100),
                   offset: int = Query(default=0, ge=0),

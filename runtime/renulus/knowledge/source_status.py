@@ -186,6 +186,40 @@ class SourceStatusJournal:
     def __init__(self, repository):
         self.repository, self.db = repository, repository.db
 
+    def version_targets(self, source_id, identity):
+        """Expose bounded imported file identities without document bodies."""
+        event = validate_event({"contract_version": 1, "event_id": "version-targets",
+            "source_id": source_id, "identity": identity,
+            "changes": {"content_reviewed": False}})
+        wanted = {**url_ids(identity.get("canonical_url")), **article_ids(identity)}
+        clauses, arguments = [], [source_id]
+        for key, value in wanted.items():
+            expression = "json_extract(r.metadata_json, '$." + key + "')"
+            clauses.append(("lower(" + expression + ")" if key == "doi" else expression) + "=?")
+            arguments.append(value)
+        if identity.get("canonical_url"):
+            clauses.append("json_extract(r.metadata_json, '$.canonical_url')=?")
+            arguments.append(urldefrag(identity["canonical_url"])[0])
+        if not clauses:
+            raise ApiError("source_identity_required", "Identify the exact publication to choose an acquired version", 422)
+        rows = self.db.fetch_all(
+            "SELECT r.id AS revision_id,r.document_id,r.status,r.metadata_json,d.title "
+            "FROM knowledge_revisions r JOIN knowledge_documents d ON d.id=r.document_id "
+            "WHERE d.source_id=? AND d.deleted_at IS NULL AND d.reserved=0 "
+            "AND d.scope_kind='personal-library' "
+            "AND (r.id=d.active_revision OR r.id=d.latest_revision) "
+            "AND EXISTS(SELECT 1 FROM json_each(r.metadata_json, '$.asset_role') WHERE value='acquired-jats') "
+            "AND (" + " OR ".join(clauses) + ") ORDER BY r.created_at DESC,r.id LIMIT 101", arguments)
+        versions = []
+        for row in rows[:100]:
+            metadata = json.loads(row.pop("metadata_json"))
+            edition, digest = acquired_binding(metadata)
+            if not publication_matches(metadata, event) or not edition or not digest:
+                continue
+            versions.append({**row, "edition": edition, "original_sha256": digest,
+                **{key: metadata.get(key) for key in ("canonical_url", "doi", "pmid", "pmcid")}})
+        return {"versions": versions, "limit": 100, "truncated": len(rows) > 100}
+
     def events(self, source_id, conn=None):
         if conn is not None:
             rows = conn.execute("SELECT payload_json FROM knowledge_source_status_events WHERE source_id=? ORDER BY created_at,rowid", (source_id,)).fetchall()

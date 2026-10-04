@@ -30,3 +30,11 @@ legacy provenance, partial bindings, publication restrictions, exact clearing,
 older event retry and restore order. This establishes application rules rather
 than a medical currency review. The Updates target/outbox/UI and acquired
 importer consume this prerequisite in their separately owned lanes.
+
+The bounded metadata-only GET /library/source-versions route accepts a source
+register ID plus an exact publication identity. It returns at most 100 active or
+latest acquired revisions with title, edition, original hash and public article
+identifiers. Deleted, reserved, unrelated and unbound files are excluded. Bodies,
+local paths and provenance notes are absent. The review UI can select a file
+instead of asking a learner to copy its hash. Three additional checks passed,
+including the production route and its strict identity validation.
