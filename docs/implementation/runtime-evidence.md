@@ -183,6 +183,114 @@ package/model notices, including OCR artifact terms, remain a distribution step.
 
 ## Primary evidence and remaining integration
 
+### Controlled context, image input and helper startup follow-up
+
+The additive implementation keeps the exact shared Provider.stream signature,
+including scope, run_id, model, system and purpose. Typed message content accepts
+ordinary text or parts of the following form; image bytes stay in memory:
+
+~~~json
+{
+  "role": "user",
+  "content": [
+    {"type": "text", "text": "Explain this synthetic teaching image."},
+    {"type": "image", "media_type": "image/png", "data": "<base64>", "detail": "auto"}
+  ]
+}
+~~~
+
+Pillow 12.3.0 verifies inline PNG/JPEG/WebP without file or URL loading: single
+frame, user role only, four images maximum, 8 MiB each, 16 MiB total and 16 million
+pixels per image. Hermes converts those parts to actual Codex input_image or Go
+image_url requests. The runtime does not fetch remote images or save bytes.
+The dependency proposal adds Pillow, already present in the selected helper
+stack; no root manifest/lock was edited.
+
+Every model reports text_input and image_input as unknown, supported or
+account_unsupported with evidence. A catalogue listing supplies account
+availability only. A completed request records accepted input, while
+image_interpretation_verified remains false: semantic image interpretation still
+needs explicit real account evidence. Machine-code image/model rejection blocks
+replay without selecting another model/subscription. Quota failures do not
+establish input incompatibility. Authentication failure invalidates stale
+catalogue state. Refresh/new connection clears the observations. Codex accepts
+the documented models[].slug/visibility:list catalogue and legacy data[].id.
+
+services.registry['context'] is a HermesContextAdapter. It reuses the actual
+ContextCompressor, rough estimator, protected head/tail, media handling and
+assembly. A fresh compressor serves each operation. The conservative application
+budget is 32,768 tokens with a 4,096-token output reservation and 24,000-token
+trigger; this is not a claim about verified model context windows. The summary
+hook uses the same ProviderManager.stream with purpose='compaction', the exact
+selected model and original scope. Native auxiliary resolution, retry, fallback,
+tool execution and persistent Hermes sessions are disabled. Failed, empty,
+oversized or ineffective summaries preserve the caller input and fail clearly.
+Automatic compaction emits ordered progress events; parent cancellation closes
+the summary child. Explicit provider.compact and
+POST /api/v1/runtime/context/compact return volatile messages, estimates,
+provider/model/scope, engine and persisted:false.
+
+The stricter filesystem guard exposed two upstream side effects, now recorded
+with original/patched SHA-256 values in hermes-source.json:
+
+- R002 relocates nine unchanged recovery markers to conversation_markers.py.
+  The general conversation loop re-exports them; compressor classification no
+  longer imports general-agent Windows file logging. AST comparison against the
+  acquired baseline established identical literal values, including a recorded
+  canonical marker digest.
+- R003 adds a context-local opt-out for optional heap trimming before the
+  Hermes config/home loader runs. Controlled Renulus calls disable it; upstream
+  defaults and other contexts remain unchanged. This removes the native state
+  directory creation discovered by the strengthened compaction test.
+
+Helper readiness now compares the writable profile manifest with the reviewed
+source contract at services.paths.source_root/packaging/runtime/helper-assets.json
+before checking file hashes. Desktop must bundle that trusted JSON read-only in
+the source root alongside the public 19-file helper inventory. Rewriting both
+profile assets and their self-declared hashes cannot pass readiness.
+
+HelperAssets.startup is a HelperStartup object, registered on Services.on_startup.
+Its status() returns configured, imports with per-group readiness/fingerprint or
+error code, cpu_threads:2, downloads:false, model_instances_created:false and
+temporary_extraction_verified:false. The startup hook configures
+cache/import-temp through TMPDIR/TEMP/TMP and tempfile.tempdir, profile-owned
+Hugging Face/Torch/FastEmbed caches, offline/telemetry flags, bytecode suppression
+and two-thread helper environment settings before dependency warm imports. It
+warms selected modules only when reviewed assets validate and does not construct
+models, converters, indexes or perform conversion. Missing assets skip imports;
+import failures report helper_import_failed without dependency details. Settings
+remain controlled until provider/module shutdown completes, then are restored.
+One owned backend/profile per process is the production lifecycle.
+
+The real cold huggingface_hub.file_download/filelock import creates its symlink
+probe only under cache/import-temp. A fresh-interpreter audit proved every
+startup write stayed there, then prohibited writes during repeated imports.
+This resolves the observed cold import probe, not all Docling conversion
+side effects. Temporary extraction stays disabled until the library lane proves
+its actual DocumentStream(BytesIO) conversion/chunking under a complete no-write
+guard. No new heavy Docling proof was run in this follow-up.
+
+RapidOCR 3.9.2 docling_config now supplies cpu_threads:2 and the dotted parameters
+EngineConfig.onnxruntime.intra_op_num_threads=2 and inter_op_num_threads=2. Its
+actual installed ParseParams.update_batch accepted them with the app-owned OCR
+root; no OCR session or model inference was constructed in that check.
+
+Final focused Windows x64 CPython 3.14.4 check:
+
+~~~powershell
+packaging/runtime/.verification/.venv/Scripts/python.exe -m pytest tests/runtime/test_provider.py tests/runtime/test_codex_stream.py tests/runtime/test_auth_api.py tests/runtime/test_protected_helpers.py tests/runtime/test_images_context.py tests/runtime/test_helper_startup.py tests/runtime/test_hermes_provenance.py tests/integration/test_foundation.py -q --basetemp packaging/runtime/.verification/f0-context-image-startup-final
+~~~
+
+**54 tests passed in 12.77 seconds**, with one shared Starlette TestClient/httpx
+deprecation warning. The suite uses synthetic inputs and actual Hermes/SDK
+transports against synthetic HTTP, verifies all five image mappings, explicit
+rejections, same-subscription compaction, API scope retention, one terminal
+event/cancellation, original input preservation and trusted helper provenance.
+Cold Hermes compression with an injected synthetic test summary produced zero
+filesystem mutations, including OS mkdir/link/open/rename/remove, and did not
+load the general conversation loop or Hermes file logging. This is runtime seam
+evidence, not live model or installer proof.
+
 Official source inspected on October 4:
 
 - https://github.com/NousResearch/hermes-agent at the recorded immutable pin.
@@ -194,9 +302,10 @@ Official source inspected on October 4:
   acquisition manifest's pinned Hugging Face/Modelscope artifacts.
 
 Required remaining proof: real user-entered app-owned account login/catalogue/
-model response, image capability, native desktop process/installer, release
-notices, controlled Hermes context
-management and M5 Mem0 capture/deletion integration. The present source/transport
+model response, semantic image capability, combined native packaging/installer,
+release notices, actual no-write temporary Docling conversion and M5 Mem0
+capture/deletion integration. Desktop native launch evidence is tracked by its
+own lane; no native installer was verified by F0. The present source/transport
 slice does not claim the full S0 acceptance gate or a complete installed product.
 No paid-provider inference, copied credential, patient input or main mutation
 was performed. Tracking: houraniiiii/Renulus issue #2, parent #1.

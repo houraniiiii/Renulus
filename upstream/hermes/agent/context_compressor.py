@@ -4434,8 +4434,8 @@ Write only the summary body. Do not include any preamble or prefix."""
         if cls._is_context_summary_message(message):
             return True
         text = _content_text_for_contains(message.get("content")).strip()
-        # Recovery nudges are scaffolding, not human turns; lazy import avoids an import cycle.
-        from agent.conversation_loop import (
+        # R002: classify unchanged markers without loading the general agent/logging.
+        from agent.conversation_markers import (
             _CODEX_ACK_CONTINUATION_NUDGE, _CODEX_INCOMPLETE_NUDGE, _DEGENERATE_FINAL_NUDGE,
             _DROPPED_TOOLCALL_NUDGE_CONTENT, _EMPTY_TOOL_RESPONSE_NUDGE, _LENGTH_CONTINUATION_DROPPED_TOOLS_PREFIX,
             _LEGACY_LENGTH_CONTINUATION_NETWORK_STUB, _LENGTH_CONTINUATION_NETWORK_STUB,

@@ -11,6 +11,7 @@ import httpx
 from openai import AsyncOpenAI
 
 from renulus.contracts import ApiError
+from .inputs import to_hermes_messages
 from .policy import ALLOWED_MODELS, BASE_URLS, INSTRUCTIONS, require_provider
 
 
@@ -36,11 +37,14 @@ class HermesSubscriptionTransport:
     def controlled(self):
         import hermes_constants
         import providers
+        from hermes_cli import mem_trim
         home_token = hermes_constants.set_hermes_home_override(self.profile / "state" / "hermes")
         guard_token = providers.set_provider_discovery_disabled()
+        trim_token = mem_trim.set_memory_trim_disabled()
         try:
             yield
         finally:
+            mem_trim.reset_memory_trim_disabled(trim_token)
             providers.reset_provider_discovery_disabled(guard_token)
             hermes_constants.reset_hermes_home_override(home_token)
 
@@ -48,11 +52,14 @@ class HermesSubscriptionTransport:
         require_provider(provider)
         if model not in ALLOWED_MODELS[provider]:
             raise ApiError("model_not_allowed", "The transport refused an unapproved model.")
+        messages = to_hermes_messages(messages)
         with self.controlled():
             if provider == "codex":
                 from agent.transports.codex import ResponsesApiTransport
                 instructions = INSTRUCTIONS + "\n\n" + "\n\n".join(
-                    message["content"] for message in messages if message["role"] == "system")
+                    message["content"] if isinstance(message["content"], str) else
+                    "\n".join(part["text"] for part in message["content"])
+                    for message in messages if message["role"] == "system")
                 payload = [message for message in messages if message["role"] != "system"]
                 kwargs = ResponsesApiTransport().build_kwargs(
                     model, payload, tools=None, provider="codex",

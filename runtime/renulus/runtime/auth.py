@@ -188,6 +188,8 @@ class CodexLogin:
             catalog = await self.manager._fetch_catalog("codex", tokens["access_token"])
             if attempt.status != "exchanging":
                 raise ApiError("login_cancelled", "The login was cancelled.", 409)
+            self.manager._stop_provider_runs("codex")
+            self.manager._clear_capabilities("codex")
             self.manager._settings["connections"]["codex"] = {
                 "client_id": issued, "subject": claims["sub"], "issuer": ISSUER,
                 "access_token": tokens["access_token"], "refresh_token": tokens.get("refresh_token"),
@@ -197,6 +199,9 @@ class CodexLogin:
             self.manager._catalogs["codex"] = catalog
             self.manager._catalog_errors.pop("codex", None)
             if attempt.select:
+                previous = self.manager._settings["selected_provider"]
+                if previous and previous != "codex":
+                    self.manager._stop_provider_runs(previous)
                 self.manager._settings["selected_provider"] = "codex"
             self.manager._save()
             attempt.status = "connected"

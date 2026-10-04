@@ -15,6 +15,7 @@ import sys
 import threading
 import time
 from collections.abc import Callable
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +34,18 @@ _last_trim_monotonic = 0.0
 _probe_done = False
 _malloc_trim: Callable[[int], int] | None = None
 _trim_call_count = 0
+
+# R003: controlled downstream turns must not initialize a Hermes config/home
+# merely to perform optional allocator housekeeping. Upstream defaults remain.
+_TRIM_DISABLED: ContextVar[bool] = ContextVar("_hermes_memory_trim_disabled", default=False)
+
+
+def set_memory_trim_disabled(disabled: bool = True):
+    return _TRIM_DISABLED.set(disabled)
+
+
+def reset_memory_trim_disabled(token) -> None:
+    _TRIM_DISABLED.reset(token)
 
 
 def _config_settings() -> tuple[bool, float, int, float]:
@@ -147,6 +160,8 @@ def trim_memory(
     the config kill switch, cooldown suppression, and all runtime errors return ``False`` without
     affecting the caller.
     """
+    if _TRIM_DISABLED.get():
+        return False
     enabled, configured_cooldown, log_every_n, info_log_min_delta_mb = _config_settings()
     if not enabled:
         return False

@@ -9,9 +9,11 @@ from typing import TYPE_CHECKING, AsyncIterator
 
 import httpx
 
-from renulus.contracts import ApiError, ContextScope, Event
+from renulus.contracts import ApiError, ContextScope, Event, durable_id
+from .context import CONTEXT_BUDGET, OUTPUT_RESERVATION, SUMMARY_MAX_CHARS, HermesContextAdapter
 from .hermes import HermesSubscriptionTransport
-from .policy import ALLOWED_MODELS, BASE_URLS, require_provider, require_run_id, safe_error, validate_messages
+from .inputs import has_images
+from .policy import ALLOWED_MODELS, BASE_URLS, rejection_kind, require_provider, require_run_id, safe_error, validate_messages
 from .protected import ConnectionStore
 
 if TYPE_CHECKING:
@@ -22,6 +24,7 @@ if TYPE_CHECKING:
 class _Run:
     stopped: asyncio.Event = field(default_factory=asyncio.Event)
     pending: asyncio.Task | None = None
+    provider: str | None = None
 
 
 class ProviderManager:
@@ -34,8 +37,12 @@ class ProviderManager:
         self._runs: dict[str, _Run] = {}
         self._catalogs: dict[str, set[str]] = {}
         self._catalog_errors: dict[str, str] = {}
+        self._capabilities: dict[tuple[str, str], dict] = {}
+        self._unsupported_models: set[tuple[str, str]] = set()
+        self._completed_requests = 0
         self._credential_locks = {name: asyncio.Lock() for name in ALLOWED_MODELS}
         self._auth = None
+        self._context = None
 
     def _client(self) -> httpx.AsyncClient:
         return httpx.AsyncClient(transport=self._http_transport, trust_env=False,
@@ -56,23 +63,65 @@ class ProviderManager:
                 status = self._catalog_errors[provider]
             rows.append({"provider": provider, "status": status,
                          "allowed_models": list(allowed),
-                         "models": [{"id": model,
-                                     "availability": "unknown" if catalog is None else
-                                     "available" if model in catalog else "unavailable",
-                                     "image_input": "unverified"} for model in allowed]})
+                         "models": [self._model_status(provider, model, catalog) for model in allowed]})
         return {"selected_provider": self._settings["selected_provider"], "connections": rows}
+
+    def _model_status(self, provider: str, model: str, catalog: set[str] | None) -> dict:
+        unavailable = (provider, model) in self._unsupported_models
+        missing = catalog is not None and model not in catalog
+        observed = self._capabilities.get((provider, model), {})
+        fallback = "account_unsupported" if unavailable or missing else "unknown"
+        return {"id": model,
+                "availability": "account_unsupported" if unavailable else
+                "unknown" if catalog is None else "unavailable" if missing else "available",
+                "text_input": fallback if unavailable or missing else observed.get("text", "unknown"),
+                "image_input": fallback if unavailable or missing else observed.get("image", "unknown"),
+                "capability_evidence": {"text": observed.get("text_evidence", "model_not_in_catalogue" if missing else "none"),
+                                        "image": observed.get("image_evidence", "model_not_in_catalogue" if missing else "none")},
+                "image_interpretation_verified": False}
+
+    def _clear_capabilities(self, provider: str) -> None:
+        self._capabilities = {key: value for key, value in self._capabilities.items() if key[0] != provider}
+        self._unsupported_models = {key for key in self._unsupported_models if key[0] != provider}
+
+    def _observe_completion(self, provider: str, model: str, *, images: bool) -> None:
+        observed = self._capabilities.setdefault((provider, model), {})
+        observed.update(text="supported", text_evidence="completed_request")
+        if images:
+            observed.update(image="supported", image_evidence="completed_request")
+        self._completed_requests += 1
 
     def status(self) -> dict:
         return {**self.connections(), "active_runs": list(self._runs),
                 "runtime": "hermes-provider-transports",
                 "general_automation": False, "auxiliary_model_calls": False,
                 "hermes_persistence": False, "temporary_scope": "volatile",
-                "live_provider_verified": False}
+                "image_route": "typed-inline-input",
+                "input_limits": {"images": 4, "per_image_bytes": 8 * 1024 * 1024,
+                                 "total_image_bytes": 16 * 1024 * 1024, "image_pixels": 16_000_000},
+                "live_provider_verified": self._completed_requests > 0 and self._http_transport is None
+                    and isinstance(self._transport, HermesSubscriptionTransport)}
+
+    @property
+    def context(self) -> HermesContextAdapter:
+        if self._context is None:
+            self._context = HermesContextAdapter(HermesSubscriptionTransport(self.paths.source_root, self.paths.root))
+        return self._context
+
+    def _stop_provider_runs(self, provider: str) -> None:
+        for run in self._runs.values():
+            if run.provider == provider:
+                run.stopped.set()
+                if run.pending and not run.pending.done():
+                    run.pending.cancel()
 
     def select(self, provider: str) -> dict:
         require_provider(provider)
         if provider not in self._settings["connections"]:
             raise ApiError("connection_required", "Connect this subscription before selecting it.", 409)
+        previous = self._settings["selected_provider"]
+        if previous and previous != provider:
+            self._stop_provider_runs(previous)
         self._settings["selected_provider"] = provider
         self._save()
         return self.connections()
@@ -83,10 +132,15 @@ class ProviderManager:
         async with self._credential_locks["opencode-go"]:
             # Discovery tests the explicitly entered credential without inference.
             catalog = await self._fetch_catalog("opencode-go", api_key.strip())
+            self._stop_provider_runs("opencode-go")
             self._settings["connections"]["opencode-go"] = {"access_token": api_key.strip()}
+            self._clear_capabilities("opencode-go")
             self._catalogs["opencode-go"] = catalog
             self._catalog_errors.pop("opencode-go", None)
             if select:
+                previous = self._settings["selected_provider"]
+                if previous and previous != "opencode-go":
+                    self._stop_provider_runs(previous)
                 self._settings["selected_provider"] = "opencode-go"
             self._save()
         return self.connections()
@@ -98,7 +152,14 @@ class ProviderManager:
                                           headers={"Authorization": "Bearer " + token})
                 result.raise_for_status()
                 data = result.json()
-            ids = {row["id"] for row in data.get("data", []) if isinstance(row, dict) and isinstance(row.get("id"), str)}
+            # ChatGPT plan access has models[].slug/visibility; compatible APIs
+            # expose data[].id. Neither listing establishes image capability.
+            rows = data.get("models", data.get("data", [])) if provider == "codex" else data.get("data", [])
+            if not isinstance(rows, list):
+                raise ApiError("provider_catalogue_invalid", "The selected subscription returned an invalid model catalogue.", 503, True)
+            ids = {row.get("slug", row.get("id")) for row in rows if isinstance(row, dict)
+                   and row.get("visibility", "list") == "list"
+                   and isinstance(row.get("slug", row.get("id")), str)}
             return ids.intersection(ALLOWED_MODELS[provider])
         except Exception as error:
             raise safe_error(error) from None
@@ -140,6 +201,8 @@ class ProviderManager:
         try:
             token = await self._access_token(provider)
             self._catalogs[provider] = await self._fetch_catalog(provider, token)
+            # Explicit refresh permits retry after an account-specific rejection.
+            self._clear_capabilities(provider)
             self._catalog_errors.pop(provider, None)
         except Exception as error:
             public = safe_error(error)
@@ -158,6 +221,7 @@ class ProviderManager:
         record = self._settings["connections"].pop(provider, None)
         self._catalogs.pop(provider, None)
         self._catalog_errors.pop(provider, None)
+        self._clear_capabilities(provider)
         if self._settings["selected_provider"] == provider:
             self._settings["selected_provider"] = None
         self._save()
@@ -190,6 +254,67 @@ class ProviderManager:
             run.pending.cancel()
         return True
 
+    def _route(self, model: str | None) -> tuple[str, str]:
+        provider = self._settings["selected_provider"]
+        if provider is None:
+            raise ApiError("connection_required", "Select an app-owned subscription connection.", 409)
+        require_provider(provider)
+        if model is not None and model not in ALLOWED_MODELS[provider]:
+            raise ApiError("model_not_allowed", "Choose an allowed model in the selected subscription.")
+        catalog = self._catalogs.get(provider)
+        if catalog is None:
+            raise ApiError("capabilities_unverified", "Refresh the selected connection before generation.", 409, True)
+        chosen = model or next((item for item in ALLOWED_MODELS[provider] if item in catalog), None)
+        if not chosen or chosen not in catalog:
+            raise ApiError("model_unavailable", "No requested allowed model is available in the selected subscription.", 409, True)
+        if (provider, chosen) in self._unsupported_models:
+            raise ApiError("account_model_unsupported", "The selected account cannot use this model. Refresh the connection to retry.", 409)
+        return provider, chosen
+
+    async def compact(self, messages: list[dict], *, scope: ContextScope, run_id: str,
+                      model: str | None = None, system: str | None = None, force: bool = True) -> dict:
+        """Explicit bounded compaction; summaries use the shared stream seam."""
+        require_run_id(run_id)
+        if run_id in self._runs:
+            raise ApiError("run_already_active", "This run is already active.", 409)
+        if not isinstance(scope, ContextScope):
+            try:
+                scope = ContextScope.model_validate(scope)
+            except Exception:
+                raise ApiError("invalid_scope", "Choose an explicit context scope before compaction.") from None
+        prepared = validate_messages(messages)
+        if system is not None:
+            if not isinstance(system, str) or len(system) > 100_000:
+                raise ApiError("invalid_system", "Supply a bounded teaching instruction.")
+            prepared.insert(0, {"role": "system", "content": system})
+        provider, chosen = self._route(model)
+        plan = self.context.plan(prepared, provider=provider, model=chosen, force=force)
+        result = await self._finish_context(plan, scope=scope, run_id=run_id, provider=provider, model=chosen)
+        return {**result, "provider": provider, "model": chosen, "scope": scope.model_dump(mode="json"),
+                "engine": "hermes-context-compressor", "persisted": False}
+
+    async def _finish_context(self, plan, *, scope: ContextScope, run_id: str, provider: str, model: str) -> dict:
+        if plan.turns is None:
+            return self.context.finish(plan)
+        if self._settings["selected_provider"] != provider:
+            raise ApiError("connection_changed", "The selected connection changed before compaction. Retry the request.", 409, True)
+        identity = self._settings["connections"].get(provider)
+        summary = []
+        size = 0
+        try:
+            async with aclosing(self.stream(self.context.summary_messages(plan), scope=scope,
+                run_id=run_id, model=model, purpose="compaction")) as stream:
+                async for delta in stream:
+                    size += len(delta)
+                    if size > SUMMARY_MAX_CHARS:
+                        raise ApiError("compaction_failed", "The approved summary exceeded the context budget. Input was preserved.", 409)
+                    summary.append(delta)
+            if self._settings["selected_provider"] != provider or self._settings["connections"].get(provider) is not identity:
+                raise ApiError("connection_changed", "The selected account changed during compaction. Input was preserved.", 409, True)
+            return self.context.finish(plan, "".join(summary))
+        finally:
+            summary.clear()
+
     async def stream(self, messages: list[dict], *, scope: ContextScope, run_id: str,
                      model: str | None = None, system: str | None = None,
                      purpose: str = "explain") -> AsyncIterator[str]:
@@ -200,7 +325,7 @@ class ProviderManager:
                     yield item.payload["text"]
                 elif item.type == "error":
                     raise ApiError(item.payload["code"], item.payload["message"],
-                                   503, item.payload["retryable"])
+                                   item.payload.get("status", 503), item.payload["retryable"])
                 elif item.type == "cancelled":
                     raise asyncio.CancelledError()
 
@@ -231,19 +356,15 @@ class ProviderManager:
             return Event(run_id=run_id, sequence=sequence, type=kind, payload=payload)
 
         iterator = None
+        provider = chosen = None
+        images = has_images(messages)
         try:
-            provider = self._settings["selected_provider"]
-            if provider is None:
-                raise ApiError("connection_required", "Select an app-owned subscription connection.", 409)
-            require_provider(provider)
-            if model is not None and model not in ALLOWED_MODELS[provider]:
-                raise ApiError("model_not_allowed", "Choose an allowed model in the selected subscription.")
+            provider, chosen = self._route(model)
+            run.provider = provider
             catalog = self._catalogs.get(provider)
-            if catalog is None:
-                raise ApiError("capabilities_unverified", "Refresh the selected connection before generation.", 409, True)
-            chosen = model or next((m for m in ALLOWED_MODELS[provider] if m in catalog), None)
-            if not chosen or chosen not in catalog:
-                raise ApiError("model_unavailable", "No requested allowed model is available in the selected subscription.", 409, True)
+            capability = self._model_status(provider, chosen, catalog)
+            if images and capability["image_input"] == "account_unsupported":
+                raise ApiError("image_input_unsupported", "This account rejected image input for the selected model. Choose an explicitly available image route.", 409)
             token = await self._access_token(provider)
             if run.stopped.is_set():
                 yield event("cancelled")
@@ -253,7 +374,40 @@ class ProviderManager:
                 transport = HermesSubscriptionTransport(self.paths.source_root, self.paths.root,
                                                          http_transport=self._http_transport)
                 self._transport = transport
-            yield event("started", provider=provider, model=chosen, scope=scope.kind.value)
+            yield event("started", provider=provider, model=chosen, scope=scope.kind.value,
+                        purpose=purpose, input_capability="image" if images else "text",
+                        capability_status=capability["image_input" if images else "text_input"])
+            if purpose != "compaction":
+                plan = self.context.plan(messages, provider=provider, model=chosen)
+                if plan.turns is not None:
+                    identity = self._settings["connections"].get(provider)
+                    yield event("progress", stage="compaction", status="started",
+                                estimated_tokens=plan.before, provider=provider, model=chosen)
+                    run.pending = asyncio.create_task(self._finish_context(plan, scope=scope,
+                        run_id=durable_id("compact"), provider=provider, model=chosen))
+                    try:
+                        result = await run.pending
+                    except asyncio.CancelledError:
+                        if not run.stopped.is_set():
+                            raise
+                        yield event("cancelled")
+                        return
+                    finally:
+                        run.pending = None
+                    if run.stopped.is_set():
+                        yield event("cancelled")
+                        return
+                    if self._settings["selected_provider"] != provider or self._settings["connections"].get(provider) is not identity:
+                        raise ApiError("connection_changed", "The selected account changed during compaction. Retry the request.", 409, True)
+                    messages = result["messages"]
+                    yield event("progress", stage="compaction", status="completed",
+                                estimated_tokens_before=result["estimated_tokens_before"],
+                                estimated_tokens_after=result["estimated_tokens_after"], persisted=False)
+            elif self.context.estimate(messages) > CONTEXT_BUDGET - OUTPUT_RESERVATION:
+                raise ApiError("context_limit", "The compaction request exceeds the approved context budget. Input was preserved.", 409)
+            if run.stopped.is_set():
+                yield event("cancelled")
+                return
             iterator = transport.stream(provider, chosen, token, messages).__aiter__()
             while not run.stopped.is_set():
                 run.pending = asyncio.create_task(anext(iterator))
@@ -270,6 +424,7 @@ class ProviderManager:
                 if run.stopped.is_set():
                     break
                 if item["type"] == "completed":
+                    self._observe_completion(provider, chosen, images=images)
                     yield event("completed", provider=provider, model=chosen)
                     return
                 if item["type"] != "delta" or not isinstance(item.get("text"), str):
@@ -280,8 +435,23 @@ class ProviderManager:
             run.stopped.set()
             raise
         except Exception as error:
-            public = safe_error(error)
-            yield event("error", code=public.code, message=public.message, retryable=public.retryable)
+            rejected = rejection_kind(error, images=images)
+            if provider and chosen and rejected == "image":
+                self._capabilities.setdefault((provider, chosen), {}).update(
+                    image="account_unsupported", image_evidence="provider_rejection")
+                public = ApiError("image_input_unsupported", "The selected account rejected image input for this model. No other model or subscription was tried.", 409)
+            elif provider and chosen and rejected == "model":
+                self._unsupported_models.add((provider, chosen))
+                observed = self._capabilities.setdefault((provider, chosen), {})
+                observed.update(text_evidence="provider_rejection", image_evidence="provider_rejection")
+                public = ApiError("account_model_unsupported", "The selected account cannot use this model. Refresh its capabilities.", 409, True)
+            else:
+                public = safe_error(error)
+            if provider and public.code == "authentication_required":
+                self._catalogs.pop(provider, None)
+                self._catalog_errors[provider] = public.code
+                self._clear_capabilities(provider)
+            yield event("error", code=public.code, message=public.message, retryable=public.retryable, status=public.status)
         finally:
             if run.pending:
                 run.pending.cancel()

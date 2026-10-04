@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import copy
 from pathlib import Path
 
 from renulus.contracts import ApiError
+from .startup import HelperStartup
 
 EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
 EMBEDDING_DIMENSIONS = 384
@@ -13,8 +15,23 @@ EMBEDDING_TOKEN_LIMIT = 512
 
 
 class HelperAssets:
-    def __init__(self, paths):
+    def __init__(self, paths, *, expected_manifest: dict | None = None):
         self.paths = paths
+        # Production readiness is anchored to the reviewed source/bundle contract,
+        # not to hashes which an editable profile manifest could rewrite itself.
+        # Explicit injection is for synthetic validator tests/developer packaging.
+        self._expected_manifest = copy.deepcopy(expected_manifest)
+        self.startup = HelperStartup(paths, self)
+
+    def _expected_group(self, group: str) -> dict:
+        if self._expected_manifest is None:
+            contract = self.paths.source_root / "packaging" / "runtime" / "helper-assets.json"
+            if not contract.is_file():
+                raise ApiError("helper_contract_missing", "The reviewed CPU helper manifest is missing from this installation.", 503)
+            self._expected_manifest = json.loads(contract.read_text(encoding="utf-8"))
+        if self._expected_manifest["version"] != 1:
+            raise ValueError("trusted manifest version")
+        return self._expected_manifest["groups"][group]
 
     def _validate(self, group: str) -> tuple[dict, str]:
         root = self.paths.helpers.resolve()
@@ -26,6 +43,8 @@ class HelperAssets:
             if document["version"] != 1:
                 raise ValueError("manifest version")
             metadata = document["groups"][group]
+            if metadata != self._expected_group(group):
+                raise ValueError("unapproved asset provenance")
             if not metadata["source_url"].startswith("https://") or not metadata["revision"]:
                 raise ValueError("source provenance")
             files = metadata["files"]
@@ -83,7 +102,10 @@ class HelperAssets:
             raise ApiError("helper_assets_invalid", "The selected document/OCR artifacts are not fully bundled.", 503)
         return {"artifacts_path": self.paths.helpers / "docling",
                 "ocr_path": self.paths.helpers / "ocr", "device": "cpu",
-                "rapidocr_params": {"Global.model_root_dir": str(self.paths.helpers / "ocr")},
+                "cpu_threads": 2,
+                "rapidocr_params": {"Global.model_root_dir": str(self.paths.helpers / "ocr"),
+                    "EngineConfig.onnxruntime.intra_op_num_threads": 2,
+                    "EngineConfig.onnxruntime.inter_op_num_threads": 2},
                 "fingerprint": hashlib.sha256((document_hash + ocr_hash).encode()).hexdigest()}
 
     def status(self) -> dict:

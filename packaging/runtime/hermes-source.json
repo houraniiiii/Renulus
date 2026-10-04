@@ -26,6 +26,36 @@
       "original_sha256": "b304c7d8762e8d3fe3729abcdb2668d3ca09f71ccc2612252c49376b6b23e5ac",
       "patched_sha256": "8494e4cbc61e566b819639b2789f740b15d60dd725f5fb143d7f9c0e70f226d1",
       "reason": "Context-local provider discovery opt-out for controlled Renulus transport calls; upstream defaults unchanged"
+    },
+    {
+      "id": "R002",
+      "paths": [
+        {
+          "path": "upstream/hermes/agent/context_compressor.py",
+          "patched_sha256": "6ec18ec6db72153c4a72657ad950c7005cd1fa4b0850c640c55d98fcf2120c23",
+          "original_sha256": "fd1ce1d5173066b20d478c2a36d132c0ae6060d5fe88818e8b88f5ff7d7a93bc"
+        },
+        {
+          "path": "upstream/hermes/agent/conversation_loop.py",
+          "patched_sha256": "1fca617b136d9f1acf1bf75975bf9dac2f523e5f89911f11ebe50f3393b87aa3",
+          "original_sha256": "8b8768c965579121d836d736134661433b1e672f352971fe72b950986d9baca7"
+        },
+        {
+          "path": "upstream/hermes/agent/conversation_markers.py",
+          "patched_sha256": "78d5bea469155fcfe0bcda453969dc027e6404ea326fbf6084ea7033491e5c59",
+          "new_file": true
+        }
+      ],
+      "unchanged_marker_count": 9,
+      "marker_values_sha256": "d851d9c3746d2520ff308df8d20b3caf2101b2f7da7d898311b0772c20638af6",
+      "reason": "Relocate unchanged recovery markers into a pure module so controlled context compression avoids general-agent Windows file logging; conversation loop re-exports existing names"
+    },
+    {
+      "id": "R003",
+      "path": "upstream/hermes/hermes_cli/mem_trim.py",
+      "original_sha256": "b7505aea94022489dae4eaa11bc02e715af0276945b694ff40a913e344c07e4e",
+      "patched_sha256": "10d0565a097a5eaad1e397b3f78f70e7bb72379f49fedae7d5d32fa01b781933",
+      "reason": "Context-local opt-out for optional heap trimming before native config/home initialization; controlled Renulus context uses it, upstream default remains enabled"
     }
   ],
   "distribution": "Only downstream controlled app is built; source snapshot is attribution/update baseline, not a second app"

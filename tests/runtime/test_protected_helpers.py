@@ -36,12 +36,28 @@ def test_helpers_fail_closed_until_complete_hash_manifest_is_valid(app_paths):
     manifest = {"version": 1, "groups": {"embedding": {"model_id": "BAAI/bge-small-en-v1.5",
         "source_url": "https://huggingface.co/qdrant/bge-small-en-v1.5-onnx-q", "revision": "synthetic-test", "files": files}}}
     (app_paths.helpers / "manifest.json").write_text(json.dumps(manifest))
+    helpers = HelperAssets(app_paths, expected_manifest=manifest)
     config = helpers.embedding_config()
     assert config["dimensions"] == 384 and config["max_tokens"] == 512
     assert config["local_files_only"] is True
     (model / "model_optimized.onnx").write_bytes(b"tampered-model!")
     with pytest.raises(ApiError) as error:
         helpers.embedding_config()
+    assert error.value.code == "helper_assets_invalid"
+
+
+def test_profile_cannot_rewrite_both_assets_and_manifest_to_pass_readiness(app_paths):
+    payload = b"synthetic-replacement-model"
+    model = app_paths.helpers / "fastembed" / "bge-small-en-v1.5"
+    model.mkdir(parents=True)
+    (model / "model_optimized.onnx").write_bytes(payload)
+    manifest = {"version": 1, "groups": {"embedding": {"model_id": "BAAI/bge-small-en-v1.5",
+        "source_url": "https://huggingface.co/Qdrant/bge-small-en-v1.5-onnx-Q", "revision": "unreviewed",
+        "files": [{"path": "fastembed/bge-small-en-v1.5/model_optimized.onnx", "size": len(payload),
+                   "sha256": hashlib.sha256(payload).hexdigest()}]}}}
+    (app_paths.helpers / "manifest.json").write_text(json.dumps(manifest))
+    with pytest.raises(ApiError) as error:
+        HelperAssets(app_paths).embedding_config()
     assert error.value.code == "helper_assets_invalid"
 
 

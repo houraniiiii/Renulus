@@ -5,6 +5,7 @@ import re
 from typing import Any
 
 from renulus.contracts import ApiError
+from .inputs import validate_inputs
 
 ALLOWED_MODELS = {
     "codex": ("gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna"),
@@ -34,24 +35,24 @@ def require_run_id(run_id: str) -> str:
     return run_id
 
 
-def validate_messages(messages: list[dict[str, Any]]) -> list[dict[str, str]]:
-    # Exclude tools, model-generated instructions and hidden replay fields.
-    if not isinstance(messages, list) or not 1 <= len(messages) <= 200:
-        raise ApiError("invalid_messages", "Supply between 1 and 200 text messages.")
-    result = []
-    size = 0
-    for message in messages:
-        if not isinstance(message, dict) or set(message) != {"role", "content"}:
-            raise ApiError("invalid_messages", "Messages contain only role and text content.")
-        if message["role"] not in ("system", "user", "assistant"):
-            raise ApiError("tools_disabled", "Automation and tool messages are disabled.")
-        if not isinstance(message["content"], str):
-            raise ApiError("input_capability_unverified", "This connection currently accepts text only.")
-        size += len(message["content"])
-        result.append(dict(message))
-    if size > 1_000_000:
-        raise ApiError("context_limit", "Shorten the conversation before trying again.")
-    return result
+def validate_messages(messages: list[dict[str, Any]]) -> list[dict]:
+    return validate_inputs(messages)
+
+
+def rejection_kind(error: Exception, *, images: bool) -> str | None:
+    """Read only explicit machine codes, never provider body text."""
+    code = getattr(error, "code", None)
+    body = getattr(error, "body", None)
+    if isinstance(body, dict):
+        structured = body.get("error", body)
+        if isinstance(structured, dict):
+            code = structured.get("code", code)
+    if images and code in {"unsupported_image_input", "image_input_not_supported",
+                          "unsupported_input_modality", "unsupported_modality"}:
+        return "image"
+    if code in {"model_not_found", "model_access_denied", "account_model_unsupported"}:
+        return "model"
+    return None
 
 
 def safe_error(error: Exception) -> ApiError:
