@@ -173,8 +173,9 @@ def create_router(services) -> APIRouter:
         return repository.delete_document(document_id)
 
     @router.get("/revisions/{revision_id}/citation")
-    def citation(revision_id: str, page: int | None = None):
-        return repository.citation(revision_id, page)
+    def citation(revision_id: str, page: int | None = None,
+                 passage_id: str | None = Query(default=None, pattern=r"^passage_[0-9a-f]{32}$")):
+        return repository.citation(revision_id, page, passage_id=passage_id)
 
     @router.get("/revisions/{revision_id}/original")
     def original(revision_id: str):

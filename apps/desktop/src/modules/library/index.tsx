@@ -79,7 +79,7 @@ export default function LibraryPage() {
   const [currentOnly, setCurrentOnly] = useState(false);
   const [hits, setHits] = useState<Passage[] | null>(null);
   const [selectedDocument, setSelectedDocument] = useState<LibraryDocument | null>(null);
-  const [sourceLocation, setSourceLocation] = useState<SourceLocation>({ revisionId: null, page: null });
+  const [sourceLocation, setSourceLocation] = useState<SourceLocation>({ revisionId: null, page: null, passageId: null });
   const sourceSelection = useRef(0);
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
   const [sourceId, setSourceId] = useState('E01');
@@ -151,13 +151,18 @@ export default function LibraryPage() {
   useEffect(() => {
     const documentId = navigation.handoff?.document_id;
     const revision = navigation.handoff?.document_revision ?? navigation.handoff?.revision_id;
+    const passageId = navigation.handoff?.passage_id;
     if (typeof documentId !== 'string') return;
     const selection = ++sourceSelection.current;
     setMode('browse'); setSelectedDocument(null); setError(undefined);
+    if (passageId != null && typeof passageId !== 'string') {
+      setError(new ApiError('The cited passage identifier is invalid. Return to the source and try again.', 422, 'invalid_passage_id'));
+      return;
+    }
     const controller = new AbortController();
     api<LibraryDocument>('/library/documents/' + encodeURIComponent(documentId), { signal: controller.signal })
       .then(value => { if (!controller.signal.aborted && selection === sourceSelection.current) {
-        setSourceLocation({ revisionId: typeof revision === 'string' ? revision : value.active_revision, page: isPhysicalPage(navigation.handoff?.page) ? navigation.handoff.page : null });
+        setSourceLocation({ revisionId: typeof revision === 'string' ? revision : value.active_revision, page: isPhysicalPage(navigation.handoff?.page) ? navigation.handoff.page : null, passageId: passageId ?? null });
         setSelectedDocument(value);
       } }).catch(value => { if (!controller.signal.aborted && selection === sourceSelection.current) setError(value); });
     return () => controller.abort();
@@ -197,7 +202,7 @@ export default function LibraryPage() {
   async function inspect(document: LibraryDocument, passage?: Passage) {
     ++sourceSelection.current;
     const revision = passage?.document_revision ?? document.active_revision;
-    setSourceLocation({ revisionId: revision, page: passage?.locators.find(locator => isPhysicalPage(locator.page))?.page ?? null });
+    setSourceLocation({ revisionId: revision, page: passage?.locators.find(locator => isPhysicalPage(locator.page))?.page ?? null, passageId: passage?.id ?? null });
     setSelectedDocument(document);
   }
   async function remove(document: LibraryDocument) {
@@ -347,7 +352,7 @@ export default function LibraryPage() {
       </div>
       <aside className="library-reader" aria-label="Source reader">{selectedDocument ? <>
         <h2>{selectedDocument.title}</h2><div className="library-meta"><Badge tone={statusTone(selectedDocument.status)}>{statusLabel(selectedDocument.status)}</Badge><span>{selectedDocument.source_id}</span></div>
-        <SourceInspector key={selectedDocument.id + ':' + sourceLocation.revisionId + ':' + sourceLocation.page} document={selectedDocument} location={sourceLocation} />
+        <SourceInspector key={selectedDocument.id + ':' + sourceLocation.revisionId + ':' + sourceLocation.page + ':' + sourceLocation.passageId} document={selectedDocument} location={sourceLocation} />
         <Button variant="danger" busy={busy} onClick={() => void remove(selectedDocument)}>Remove from library</Button>
       </> : <><FileText size={26} aria-hidden="true" /><h2>Keep the source in view</h2><p>Select a document or a passage to inspect its edition, permissions and original location.</p></>}</aside>
     </div>

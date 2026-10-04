@@ -4,7 +4,7 @@ import { ErrorState, LoadingState, Notice } from '../../ui';
 import OriginalViewer from './OriginalViewer';
 import type { Citation, LibraryDocument } from './types';
 
-export interface SourceLocation { revisionId: string | null; page: number | null }
+export interface SourceLocation { revisionId: string | null; page: number | null; passageId: string | null }
 export function isPhysicalPage(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
 }
@@ -12,23 +12,30 @@ export function isPhysicalPage(value: unknown): value is number {
 async function loadCitation(documentId: string, location: SourceLocation, signal: AbortSignal) {
   if (!location.revisionId) return { citation: null, pageMissing: false };
   const path = '/library/revisions/' + encodeURIComponent(location.revisionId);
+  function citationPath(page: number | null) {
+    const params = new URLSearchParams();
+    if (page !== null) params.set('page', String(page));
+    if (location.passageId !== null) params.set('passage_id', location.passageId);
+    return path + '/citation' + (params.size ? '?' + params : '');
+  }
   function validate(value: Citation, requestedPage: number | null) {
     if (value.document_id !== documentId || value.document_revision !== location.revisionId ||
+        location.passageId !== null && value.passage_id !== location.passageId ||
         !Array.isArray(value.locators) || value.page !== null && !isPhysicalPage(value.page) ||
         requestedPage !== null && (value.page !== requestedPage || !value.locators.some(locator => locator.page === requestedPage)) ||
         apiPath(value.original_url) !== apiPath(path + '/original')) {
-      throw new ApiError('The citation does not match this source revision and page. Try again.', 0, 'invalid_citation', true);
+      throw new ApiError('The citation does not match this source revision, passage and page. Try again.', 0, 'invalid_citation', true);
     }
     return value;
   }
   try {
-    const citation = validate(await api<Citation>(path + '/citation' + (location.page !== null ? '?page=' + location.page : ''), { signal }), location.page);
+    const citation = validate(await api<Citation>(citationPath(location.page), { signal }), location.page);
     return { citation, pageMissing: false };
   } catch (error) {
     // A missing extracted page does not make a different revision authoritative.
     // Only this known page error permits opening the same revision as a whole.
     if (!(error instanceof ApiError) || error.status !== 404 || error.code !== 'page_missing' || location.page === null) throw error;
-    const citation = validate(await api<Citation>(path + '/citation', { signal }), null);
+    const citation = validate(await api<Citation>(citationPath(null), { signal }), null);
     return { citation: { ...citation, page: null }, pageMissing: true };
   }
 }
@@ -52,7 +59,7 @@ export default function SourceInspector({ document, location }: { document: Libr
               result.citation.page === null ? <p className="muted">Physical page is unknown. The original opens without a page jump.</p> :
                 <p className="muted">Physical page {result.citation.page} · counted from the start of the original, not its printed page label.</p>}
             <OriginalViewer key={result.citation.document_revision + ':' + result.citation.page} citation={result.citation} wholeOriginal={result.pageMissing} />
-            <p className="muted">{result.citation.locators.length} extracted source location{result.citation.locators.length === 1 ? '' : 's'} {result.citation.page === null ? 'in this revision' : 'on this page'}. Exact passage highlighting is unavailable.</p>
+            <p className="muted">{result.citation.locators.length} extracted source location{result.citation.locators.length === 1 ? '' : 's'} {location.passageId !== null ? 'for this passage' : result.citation.page === null ? 'in this revision' : 'on this page'}. Exact passage highlighting is unavailable.</p>
           </>}
   </>;
 }

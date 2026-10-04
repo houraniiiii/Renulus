@@ -29,7 +29,7 @@ export interface Passage {
   title: string; source_id: string; locators: Locator[]; metadata: SourceMetadata; rights: Rights; original_url: string;
 }
 export interface Citation {
-  document_id: string; document_revision: string; title: string; page: number | null; locators: Locator[]; original_url: string;
+  document_id: string; document_revision: string; passage_id?: string; title: string; page: number | null; locators: Locator[]; original_url: string;
 }
 export interface CatalogueEntry {
   id: string; title: string; source_id: string; eligibility: string; reserved: boolean; bytes: number;

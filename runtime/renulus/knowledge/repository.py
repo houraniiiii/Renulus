@@ -501,18 +501,42 @@ class KnowledgeRepository:
                     break
             return {"passages": passages, "status": "ready", "current_only": current_only}
 
-    def citation(self, document_revision, page=None):
-        revision = self.db.fetch_one("SELECT r.*,d.title,d.source_id,d.deleted_at FROM knowledge_revisions r JOIN knowledge_documents d ON d.id=r.document_id WHERE r.id=?", (document_revision,))
-        if not revision or revision["deleted_at"] or revision["status"] != "ready":
-            raise ApiError("citation_missing", "The cited document revision is unavailable", 404)
-        locators = [locator for row in self.db.fetch_all("SELECT locators_json FROM knowledge_passages WHERE revision_id=?", (document_revision,)) for locator in json.loads(row["locators_json"]) if page is None or locator.get("page") == page]
-        if page is not None and not locators:
-            raise ApiError("page_missing", "That page has no extracted citation location", 404)
-        return {"document_id": revision["document_id"], "document_revision": document_revision,
-                "title": revision["title"], "source_id": revision["source_id"], "page": page,
-                "locators": locators, "metadata": json.loads(revision["metadata_json"]),
-                "original_url": f"/api/v1/library/revisions/{document_revision}/original",
-                "viewer_url": f"/library/{revision['document_id']}?revision={document_revision}" + (f"&page={page}" if page else "")}
+    def citation(self, document_revision, page=None, *, passage_id=None):
+        if passage_id is not None and (not isinstance(passage_id, str) or
+                not re.fullmatch(r"passage_[0-9a-f]{32}", passage_id)):
+            raise ApiError("invalid_passage_id", "Choose a valid cited passage identifier", 422)
+        with self._lock:
+            revision = self.db.fetch_one("SELECT r.*,d.title,d.source_id,d.deleted_at,d.reserved,d.scope_kind FROM knowledge_revisions r JOIN knowledge_documents d ON d.id=r.document_id WHERE r.id=?", (document_revision,))
+            if not revision or revision["deleted_at"] or revision["status"] != "ready":
+                raise ApiError("citation_missing", "The cited document revision is unavailable", 404)
+            if passage_id is None:
+                rows = self.db.fetch_all("SELECT locators_json FROM knowledge_passages WHERE revision_id=?", (document_revision,))
+            else:
+                passage = self.db.fetch_one("SELECT locators_json FROM knowledge_passages WHERE id=? AND revision_id=?", (passage_id, document_revision))
+                if not passage:
+                    raise ApiError("passage_missing", "The cited passage is unavailable", 404)
+                metadata, rights = json.loads(revision["metadata_json"]), json.loads(revision["rights_json"])
+                passage_locators = json.loads(passage["locators_json"])
+                # Historical ready revisions remain inspectable. Eligibility
+                # applies to the whole passage before any page filter/recovery.
+                if (revision["reserved"] or revision["scope_kind"] != Scope.LIBRARY.value or
+                        not rights.get("display") or metadata.get("repository_removed") or
+                        not self._eligible(metadata, rights, None, False) or
+                        any(locator.get("page") in metadata.get("excluded_pages", []) for locator in passage_locators)):
+                    raise ApiError("passage_missing", "The cited passage is unavailable or no longer eligible", 404)
+                rows = [passage]
+            locators = [locator for row in rows for locator in json.loads(row["locators_json"]) if page is None or locator.get("page") == page]
+            if page is not None and not locators:
+                raise ApiError("page_missing", "That page has no extracted citation location", 404)
+            result = {"document_id": revision["document_id"], "document_revision": document_revision,
+                    "title": revision["title"], "source_id": revision["source_id"], "page": page,
+                    "locators": locators, "metadata": json.loads(revision["metadata_json"]),
+                    "original_url": f"/api/v1/library/revisions/{document_revision}/original",
+                    "viewer_url": f"/library/{revision['document_id']}?revision={document_revision}" + (f"&page={page}" if page else "")}
+            if passage_id is not None:
+                result["passage_id"] = passage_id
+                result["viewer_url"] += f"&passage_id={passage_id}"
+            return result
 
     def original(self, revision_id):
         row = self.db.fetch_one("SELECT r.*,d.deleted_at FROM knowledge_revisions r JOIN knowledge_documents d ON d.id=r.document_id WHERE r.id=?", (revision_id,))
