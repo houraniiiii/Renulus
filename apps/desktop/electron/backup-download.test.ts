@@ -30,7 +30,7 @@ it('streams a large backup with backpressure through only the owned route and se
   });
   const result = await downloadBackup(target);
   expect(result).toEqual({ fileName: 'study.zip', bytes: block.length * count });
-  expect(route).toBe('/api/v1/data/backup'); expect(session).toBe('synthetic-session'); expect(authorization).toBeUndefined();
+  expect(route).toBe('/api/v1/data/backup?format_version=2'); expect(session).toBe('synthetic-session'); expect(authorization).toBeUndefined();
   expect(await readdir(target.directory)).toEqual(['study.zip']);
   expect((await readFile(target.destination)).subarray(-5).toString()).toBe('AAAAA');
 });

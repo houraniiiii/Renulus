@@ -22,7 +22,7 @@ export function validBackupOperation(value: unknown): value is string {
 function response(port: number, token: string, kind: BackupKind, signal: AbortSignal): Promise<IncomingMessage> {
   return new Promise((resolve, reject) => {
     const pending = request({ host: '127.0.0.1', port, method: 'GET',
-      path: kind === 'zip' ? '/api/v1/data/backup' : '/api/v1/data/export', signal,
+      path: kind === 'zip' ? '/api/v1/data/backup?format_version=2' : '/api/v1/data/export', signal,
       headers: { Accept: kind === 'zip' ? 'application/zip' : 'application/json', 'x-renulus-token': token },
     }, resolve);
     pending.on('error', reject); pending.end();
