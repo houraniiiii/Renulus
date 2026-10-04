@@ -1,9 +1,10 @@
 import asyncio
+from contextlib import asynccontextmanager
 import json
 from pathlib import Path
 from urllib.parse import unquote
 
-from fastapi import APIRouter, BackgroundTasks, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -12,6 +13,7 @@ from .collection import CollectionCatalogue
 from .engines import MAX_BYTES
 from .models import Rights, SourceMetadata, own_text_rights
 from .repository import KnowledgeRepository, MEDIA, TERMINAL
+from .worker import IngestionWorker
 
 
 class TextImport(BaseModel):
@@ -46,12 +48,26 @@ def create_router(services) -> APIRouter:
     services.registry["knowledge"] = repository
     collection = CollectionCatalogue(repository)
     services.registry["knowledge_catalogue"] = collection
-    repository.recover()
-    router = APIRouter(prefix="/library", tags=["library"])
+    worker = IngestionWorker(repository)
+    services.registry["knowledge_worker"] = worker
+
+    @asynccontextmanager
+    async def lifespan(app):
+        await asyncio.to_thread(worker.start)
+        try:
+            yield
+        finally:
+            await asyncio.to_thread(worker.stop)
+
+    router = APIRouter(prefix="/library", tags=["library"], lifespan=lifespan)
 
     @router.get("/capabilities")
     def capabilities():
-        return repository.capabilities()
+        return {**repository.capabilities(), "ingestion_worker": worker.status()}
+
+    @router.get("/queue")
+    def queue_status():
+        return worker.status()
 
     @router.get("/documents")
     def documents():
@@ -70,14 +86,14 @@ def create_router(services) -> APIRouter:
         return repository._result(job["id"])
 
     @router.post("/import/text", status_code=202)
-    def import_text(body: TextImport, tasks: BackgroundTasks):
+    def import_text(body: TextImport):
         result = repository.import_text(**body.model_dump(), process=False)
         if result["status"] == "queued":
-            tasks.add_task(repository.run_job, result["job"]["id"])
+            worker.wake()
         return result
 
     @router.post("/import/file", status_code=202)
-    async def import_file(request: Request, tasks: BackgroundTasks):
+    async def import_file(request: Request):
         # Validate scope BEFORE consuming the body. Stock multipart UploadFile
         # can spool to disk before endpoint validation, which is unsafe for
         # temporary cases. This route accepts a bounded raw file body only.
@@ -102,7 +118,7 @@ def create_router(services) -> APIRouter:
         result = repository._import(data, suffix, body.title, body.metadata, body.rights,
             scope, body.idempotency_key, body.document_id, body.reserved, False)
         if result["status"] == "queued":
-            tasks.add_task(repository.run_job, result["job"]["id"])
+            worker.wake()
         return result
 
     @router.post("/retrieve")
@@ -166,12 +182,11 @@ def create_router(services) -> APIRouter:
         return collection.list(source_id=source_id, limit=max(1, limit), offset=max(0, offset))
 
     @router.post("/collection/import", status_code=202)
-    def import_selected(body: SelectedBatch, tasks: BackgroundTasks):
+    def import_selected(body: SelectedBatch):
         repository._import_scope(body.scope)
         result = collection.import_selected(body.entry_ids)
-        for item in result["results"]:
-            if item["status"] == "queued":
-                tasks.add_task(repository.run_job, item["job"]["id"])
+        if result["queued"]:
+            worker.wake()
         return result
 
     @router.post("/cleanup")

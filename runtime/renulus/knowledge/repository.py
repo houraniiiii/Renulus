@@ -29,6 +29,7 @@ class KnowledgeRepository:
         self.embedder = embedder or FastEmbedEngine(self.assets)
         self.index = index or LanceIndex(self.paths.indexes / "knowledge")
         self._lock = RLock()
+        self._ingest_lock = RLock()
 
     def capabilities(self):
         return self.assets.capabilities()
@@ -158,6 +159,12 @@ class KnowledgeRepository:
             return True
 
     def run_job(self, job_id):
+        # Keep CPU conversion/model state serial while allowing cancellation,
+        # replacement and deletion to change canonical state during extraction.
+        with self._ingest_lock:
+            return self._run_job(job_id)
+
+    def _run_job(self, job_id):
         with self._lock, self.db.transaction() as conn:
             job = conn.execute("SELECT * FROM knowledge_jobs WHERE id=?", (job_id,)).fetchone()
             if not job:
@@ -243,13 +250,26 @@ class KnowledgeRepository:
             return self.db.fetch_all("SELECT revision_id,error_code FROM knowledge_cleanup")
 
     def recover(self):
-        """A crashed worker never claims its partial revision ready. Queue remains explicit."""
+        """Resume durable jobs, discard partial index rows and retain stored originals."""
         with self._lock, self.db.transaction() as conn:
-            for job in conn.execute("SELECT id,revision_id FROM knowledge_jobs WHERE state='processing'").fetchall():
-                conn.execute("UPDATE knowledge_jobs SET state='failed',phase='interrupted',error_code='ingestion_interrupted',error_message='Import was interrupted; submit a new revision',finished_at=? WHERE id=?", (utc_now(), job["id"]))
-                conn.execute("UPDATE knowledge_revisions SET status='failed' WHERE id=?", (job["revision_id"],))
-                self._schedule_cleanup(conn, job["revision_id"], True)
+            jobs = conn.execute("SELECT j.id,j.revision_id,j.state,r.original_path,d.latest_revision,d.deleted_at,d.scope_kind FROM knowledge_jobs j JOIN knowledge_revisions r ON r.id=j.revision_id JOIN knowledge_documents d ON d.id=r.document_id WHERE j.state IN ('queued','processing')").fetchall()
+            for job in jobs:
+                if job["deleted_at"] or job["latest_revision"] != job["revision_id"] or job["scope_kind"] != Scope.LIBRARY.value:
+                    self._cancel_in(conn, job["id"], job["revision_id"], "obsolete")
+                elif not job["original_path"] or not Path(job["original_path"]).is_file():
+                    conn.execute("UPDATE knowledge_jobs SET state='failed',phase='failed',error_code='original_missing',error_message='Stored input is missing; import the original again',finished_at=? WHERE id=?", (utc_now(), job["id"]))
+                    conn.execute("UPDATE knowledge_revisions SET status='failed' WHERE id=?", (job["revision_id"],))
+                    self._schedule_cleanup(conn, job["revision_id"], True)
+                elif job["state"] == "processing":
+                    conn.execute("UPDATE knowledge_jobs SET state='queued',phase='resuming',error_code=NULL,error_message=NULL,finished_at=NULL WHERE id=?", (job["id"],))
+                    conn.execute("UPDATE knowledge_revisions SET status='queued',extraction_json=NULL WHERE id=?", (job["revision_id"],))
+                    conn.execute("DELETE FROM knowledge_passages WHERE revision_id=?", (job["revision_id"],))
+                    self._schedule_cleanup(conn, job["revision_id"], False)
         return self.cleanup()
+
+    def next_queued_job(self):
+        # Work is durable in SQLite, not held in a request or an in-memory list.
+        return self.db.fetch_one("SELECT id FROM knowledge_jobs WHERE state='queued' ORDER BY created_at,id LIMIT 1")
 
     def list_documents(self, *, include_deleted=False):
         sql = "SELECT id FROM knowledge_documents"

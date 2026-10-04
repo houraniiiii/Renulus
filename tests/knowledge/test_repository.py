@@ -143,10 +143,45 @@ def test_replacement_topic_scope_and_overdue_currency(repository):
     assert repository.retrieve("anemia", topic_id="anemia", scope=STUDY, current_only=True)["passages"] == []
 
 
-def test_restart_marks_interrupted_job_failed_and_retains_previous_revision(repository):
+def test_restart_requeues_interrupted_job_and_retains_original_and_previous_revision(repository):
     initial = import_note(repository, "Chronic kidney disease note")
     queued = import_note(repository, "Replacement CKD note", document_id=initial["document_id"], process=False)
     repository.db.execute("UPDATE knowledge_jobs SET state='processing' WHERE id=?", (queued["job"]["id"],))
+    original = repository.db.fetch_one("SELECT original_path FROM knowledge_revisions WHERE id=?", (queued["revision_id"],))["original_path"]
+    repository.index.stage([{
+        "passage_id": "partial", "revision_id": queued["revision_id"], "document_id": initial["document_id"],
+        "text": "Unactivated partial extraction", "vector": [1.0] + [0.0] * 383,
+    }])
     repository.recover()
-    assert repository.get_job(queued["job"]["id"])["error_code"] == "ingestion_interrupted"
+    assert repository.get_job(queued["job"]["id"])["state"] == "queued"
+    assert Path(original).read_text() == "Replacement CKD note"
+    assert repository.index._open().count_rows() == 1
     assert repository.get_document(initial["document_id"])["active_revision"] == initial["revision_id"]
+    assert repository.run_job(queued["job"]["id"])["state"] == "ready"
+    assert repository.get_document(initial["document_id"])["active_revision"] == queued["revision_id"]
+
+
+def test_cpu_jobs_are_serial_and_waiting_job_can_be_cancelled(repository):
+    started, release = Event(), Event()
+    base = repository.extractor
+    calls = []
+    class Blocked:
+        def extract_file(self, path, title):
+            calls.append(title)
+            output = base.extract_file(path, title)
+            started.set()
+            assert release.wait(10)
+            return output
+    repository.extractor = Blocked()
+    first = import_note(repository, "Serial dialysis note", title="First", process=False)
+    second = import_note(repository, "Serial transplant note", title="Second", process=False)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        active = pool.submit(repository.run_job, first["job"]["id"])
+        assert started.wait(10)
+        waiting = pool.submit(repository.run_job, second["job"]["id"])
+        assert repository.get_job(second["job"]["id"])["state"] == "queued"
+        assert repository.cancel_job(second["job"]["id"])["state"] == "cancelled"
+        release.set()
+        assert active.result(timeout=10)["state"] == "ready"
+        assert waiting.result(timeout=10)["state"] == "cancelled"
+    assert calls == ["First"]

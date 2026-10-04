@@ -1,6 +1,7 @@
 import hashlib
 import json
 from pathlib import Path
+import time
 
 from fastapi.testclient import TestClient
 import pytest
@@ -17,7 +18,8 @@ def client(tmp_path):
     app = create_app(tmp_path / "profile")
     repository = app.state.services.registry["knowledge"]
     repository.extractor, repository.embedder = SyntheticExtractor(), SyntheticEmbedder()
-    return TestClient(app), repository
+    with TestClient(app) as api:
+        yield api, repository
 
 
 def test_api_text_original_retrieve_and_single_terminal_sse(client):
@@ -27,10 +29,11 @@ def test_api_text_original_retrieve_and_single_terminal_sse(client):
         "idempotency_key": "api-import"})
     assert result.status_code == 202
     result = result.json()
-    assert api.get("/api/v1/library/jobs/" + result["job"]["id"]).json()["state"] == "ready"
     event_response = api.get("/api/v1/library/jobs/" + result["job"]["id"] + "/events")
     events = [json.loads(x[6:]) for x in event_response.text.splitlines() if x.startswith("data: ")]
-    assert len(events) == 1 and events[0]["type"] == "ready" and events[0]["sequence"] == 1
+    assert events[-1]["type"] == "ready"
+    assert sum(event["type"] in ("ready", "failed", "cancelled") for event in events) == 1
+    assert [event["sequence"] for event in events] == list(range(1, len(events) + 1))
     hit = api.post("/api/v1/library/retrieve", json={"query": "rejection", "scope": {"kind": "study"}}).json()["passages"][0]
     assert hit["document_revision"] == result["revision_id"]
     original = api.get(hit["original_url"])
@@ -71,6 +74,7 @@ def test_raw_file_upload_and_malformed_size_format_errors(client, tmp_path):
 
 def test_explicit_catalogue_selection_hashes_rights_errors_and_reserved_exclusion(client, tmp_path):
     api, repository = client
+    repository.services.registry["knowledge_worker"].stop()
     root = tmp_path / "collection"
     root.mkdir()
     source = root / "raw/R01/synthetic.txt"
@@ -122,4 +126,27 @@ def test_manual_catalogue_is_not_current_or_indexed_and_uses_verification(client
     assert entry["metadata"]["publication_date"] is None
     assert entry["metadata"]["collection_section"] == "Physiology"
     assert entry["rights"]["redistribution"] is False
+    assert repository.list_documents()["documents"] == []
+
+
+def test_manifest_permission_strings_remain_visible_without_processing_permission(client, tmp_path):
+    _, repository = client
+    root = tmp_path / "collection"
+    root.mkdir()
+    source = root / "synthetic.txt"
+    source.write_text("Acquired source with unverified processing rights")
+    manifest = root / MANIFEST
+    manifest.parent.mkdir(parents=True)
+    rows = [
+        {"source_id": "R01", "local_path": str(source), "processing_scope": "human reading only", "licence": "unverified"},
+        {"source_id": "R02", "local_path": str(source), "processing_scope": None, "licence": None},
+    ]
+    manifest.write_text("\n".join(json.dumps(row) for row in rows))
+    collection = CollectionCatalogue(repository, root)
+    result = collection.register()
+    assert result["catalogued"] == 2 and not result["errors"]
+    entries = collection.list()["entries"]
+    assert all(entry["eligibility"] == "permission_or_format_unavailable" for entry in entries)
+    assert all(not entry["rights"]["index"] and not entry["rights"]["embedding"] for entry in entries)
+    assert collection.import_selected([entry["id"] for entry in entries])["queued"] == 0
     assert repository.list_documents()["documents"] == []

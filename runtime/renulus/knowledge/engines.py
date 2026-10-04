@@ -71,7 +71,6 @@ class FastEmbedEngine:
 
     def __init__(self, assets: OfflineAssets):
         self.assets = assets
-        self._converter = None
         self._model = None
 
     def _load(self):
@@ -155,6 +154,22 @@ class DoclingExtractor:
             if len(passages) > MAX_PASSAGES:
                 raise ApiError("document_limit", "The document contains too many passages", 413)
         if not passages:
+            from docling_core.types.doc import DocItemLabel, TextItem
+            # A short scanned slide can consist entirely of a title/header.
+            # HybridChunker uses headings as context and emits no body chunk
+            # for it. Reclassify only the chunking copy, retaining the actual
+            # Docling extraction and all OCR provenance in canonical storage.
+            body = document.model_copy(deep=True)
+            changed = False
+            for position, item in enumerate(body.texts):
+                if item.text.strip() and item.label in (DocItemLabel.TITLE, DocItemLabel.SECTION_HEADER):
+                    payload = {key: value for key, value in item.model_dump().items() if key in TextItem.model_fields}
+                    payload["label"] = DocItemLabel.PARAGRAPH
+                    body.texts[position] = TextItem.model_validate(payload)
+                    changed = True
+            if changed:
+                fallback = self._chunk(body, text_offsets)
+                return Extracted(fallback.passages, document.export_to_dict())
             raise ApiError("empty_extraction", "No readable document text was extracted", 422)
         return Extracted(passages, document.export_to_dict())
 
@@ -185,9 +200,17 @@ class DoclingExtractor:
             if path.suffix.lower() != ".pdf":
                 from PIL import Image
                 with Image.open(path) as image:
-                    if image.width * image.height > 40_000_000:
+                    frames = getattr(image, "n_frames", 1)
+                    if frames > MAX_PAGES:
+                        raise ApiError("document_limit", "The image contains too many pages", 413)
+                    pixels = 0
+                    for frame in range(frames):
+                        image.seek(frame)
+                        pixels += image.width * image.height
+                    if pixels > 40_000_000:
                         raise ApiError("document_limit", "The image exceeds the 40 megapixel extraction limit", 413)
-                    image.verify()
+                    if frames == 1:
+                        image.verify()
             from docling.datamodel.base_models import ConversionStatus, InputFormat
             from docling.datamodel.pipeline_options import PdfPipelineOptions, RapidOcrOptions, OcrMode
             from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
