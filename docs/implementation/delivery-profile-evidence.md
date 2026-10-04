@@ -190,9 +190,25 @@ report API, then passed. The final three-test run includes the complete discover
 and corruption guards. `git diff --check` passed. This lane made no production
 storage change.
 
-The parent prerequisite `d38b7a04` was read/reviewed after that test run; a separate
-post-handoff proof should run this focused slice with that prerequisite integrated.
+The parent prerequisite `d38b7a04` was read/reviewed after that test run; the
+post-handoff proof below runs this focused slice with that prerequisite integrated.
 Its additive omission metadata is passed through by the script, while the app
 runtime at `--source-root` owns producer/validator compatibility. Actual live
 delivery, full manual/PDF/JATS/OCR corpus capacity, final native packaging and
 Windows power-loss durability remain parent/follow-up checks.
+
+## Post-handoff extraction-omission compatibility
+
+After handing off implementation `e35759507ec17af7e65525cd6f64b973ec94d4e5`,
+the parent prerequisite `d38b7a04a7452e180c5770d3475e07be52417c89` was applied in
+the isolated worktree as `05ba684fd52d0669d140ad06e56bdcb6284e6621`. It is the
+same parent-owned storage change, not an additional delivery-tool patch.
+
+The same focused command, verified public helpers and a new compact synthetic
+scratch passed **3 tests in 38.10 seconds**. No script or fixture correction was
+needed. Additive omission metadata survives trimming/manifest regeneration;
+original-byte, passage retrieval, physical citation locator, durable-queue,
+source preservation and target exclusion proofs remain intact without structured
+extraction in the snapshot. The existing TestClient warning remains. The CLI help
+and `git diff --check` also passed. No actual live ZIP export/preparation was run;
+live/backend/final corpus capacity gates remain as described above.
