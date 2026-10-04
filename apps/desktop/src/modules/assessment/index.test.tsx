@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { spawn, type ChildProcess } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -11,6 +11,8 @@ import AssessmentPage from './index';
 import { NavigationProvider, useNavigation } from '../../shell/navigation';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../..');
+const projectPython = join(repositoryRoot, '.venv', process.platform === 'win32' ? 'Scripts' : 'bin', process.platform === 'win32' ? 'python.exe' : 'python');
+const fixturePython = process.env.RENULUS_TEST_PYTHON || (existsSync(projectPython) ? projectPython : 'python');
 const testProfile = mkdtempSync(join(tmpdir(), 'renulus-assessment-ui-'));
 let origin = '';
 const originalFetch = globalThis.fetch;
@@ -28,9 +30,12 @@ beforeAll(async () => {
   const port = address.port;
   await new Promise<void>((resolve, reject) => reservation.close(error => error ? reject(error) : resolve()));
   origin = 'http://127.0.0.1:' + port;
-  backend = spawn('python', [join(repositoryRoot, 'tests/assessment/serve_fixture.py'),
+  let startupError = '';
+  backend = spawn(fixturePython, [join(repositoryRoot, 'tests/assessment/serve_fixture.py'),
     '--profile', testProfile, '--port', String(port), '--generated-provider'], { cwd: repositoryRoot, windowsHide: true,
-      stdio: 'ignore', env: { ...process.env, PYTHONPATH: join(repositoryRoot, 'runtime') } });
+      stdio: ['ignore', 'ignore', 'pipe'], env: { ...process.env, PYTHONPATH: join(repositoryRoot, 'runtime') } });
+  backend.stderr?.on('data', chunk => { startupError = (startupError + String(chunk)).slice(-2000); });
+  backend.on('error', error => { startupError = error.message; });
   let ready = false;
   for (let attempt = 0; attempt < 100; attempt++) {
     try { ready = (await originalFetch(origin + '/api/v1/health')).ok; } catch { /* Await bounded startup. */ }
@@ -38,7 +43,7 @@ beforeAll(async () => {
     if (backend.exitCode !== null) break;
     await new Promise(resolve => setTimeout(resolve, 100));
   }
-  if (!ready) throw new Error('The isolated assessment test backend did not start.');
+  if (!ready) throw new Error('The isolated assessment test backend did not start. ' + startupError);
   vi.stubGlobal('fetch', async (input: string | URL | Request, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
     const headers = new Headers(init?.headers); headers.set('x-renulus-token', 'assessment-fixture-session');

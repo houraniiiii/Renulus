@@ -21,3 +21,24 @@ replacement/deletion and literal search maintain counts; the registered HTTP
 route enforces bounds and filter values. These checks use synthetic canonical
 records and do not claim actual extraction or medical source review. The renderer
 lane owns the corresponding pagination and filtering interface.
+
+The Flow renderer now requests 25-document pages, validates the total/counts
+envelope, and presents title/source and latest-import filters. A selected source
+is loaded deliberately even when it lies on a different page. Collection filters
+are applied in SQL before paging, including inspection-required JATS candidates.
+Candidates remain distinct from inspected eligible material and indexed passages.
+
+The integrated Library and Discovery renderer pair passed all 60 checks. Mounted
+discovery guards continue proving that case/question details do not leave their
+context. Their fixture was updated to the actual paginated response; product
+guards were not relaxed. The desktop production build passed.
+
+The actual long Library view also exposed a navigation problem: the rail grew
+with the page, leaving its routes above the viewport and runtime status far
+below. It now stays at the viewport edge and scrolls its own contents on a short
+window. The existing Flow teal palette, Source Sans typography, spacing, controls
+and source-inspection hierarchy are retained; narrow-window navigation retains
+its existing expanding layout. At document scrollY 766 on the collaborative
+desktop preview, the rail stayed at approximately y=0 with all eight route links
+visible between y=99 and y=493. This is actual scrolling evidence, independent
+of native Windows sizing and source extraction checks.
