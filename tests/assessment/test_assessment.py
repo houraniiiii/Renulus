@@ -1,11 +1,9 @@
 from concurrent.futures import ThreadPoolExecutor
 import json
-import sqlite3
 
 from fastapi.testclient import TestClient
-import pytest
 
-from renulus.assessment.contracts import AnswerRequest, HelpRequest
+from renulus.assessment.contracts import AnswerRequest, Command, HelpRequest
 from renulus.contracts import ApiError
 from renulus.server import create_app
 
@@ -44,6 +42,7 @@ def test_chooser_spans_domains_reports_shortfall_and_never_leaks_keys(client, ap
 
 
 def test_filter_and_track_do_not_invent_coverage(client):
+    assert client.get(BASE + "/catalog", params={"track": ""}).status_code == 422
     session = start(client, topic_ids=["transplant", "missing"], count=2)
     assert session["current_item"]["topic_id"] == "transplant"
     assert session["coverage"]["missing_topic_ids"] == ["missing"]
@@ -100,8 +99,11 @@ def test_evidence_failure_rolls_back_score_answer_exposure_and_retry(app, client
     db = app.state.services.db
     db.execute("CREATE TRIGGER fail_evidence BEFORE INSERT ON learning_evidence "
                "BEGIN SELECT RAISE(ABORT, 'synthetic crash'); END")
-    with pytest.raises(sqlite3.IntegrityError, match="synthetic crash"):
-        answer(client, session)
+    failed = answer(client, session)
+    assert failed.status_code == 503
+    assert failed.json()["error"]["code"] == "assessment_storage_failed"
+    assert failed.json()["error"]["retryable"] is True
+    assert "synthetic crash" not in failed.text
     assert db.fetch_all("SELECT * FROM assessment_attempts") == []
     assert db.fetch_all("SELECT * FROM learning_evidence") == []
     assert db.fetch_all("SELECT * FROM assessment_exposure WHERE kind IN ('answered','reviewed')") == []
@@ -273,3 +275,27 @@ def test_invalid_answers_and_scope_payloads_do_not_write(client, app):
                            "scope": {"kind": "temporary-case"}, "count": 1})
     assert response.status_code == 422
     assert app.state.services.db.fetch_all("SELECT * FROM assessment_attempts") == []
+
+
+def test_end_answer_race_retains_one_atomic_outcome(client, app):
+    session = start(client)
+    repository = app.state.services.registry["assessment"]
+    operations = [lambda: repository.transition(session["id"], "end", Command(idempotency_key="end-race")),
+                  lambda: repository.answer(session["id"], AnswerRequest(
+                      idempotency_key="answer-end-race", item_id=session["current_item"]["id"], option_ids=["a"]))]
+    def run(operation):
+        try:
+            return operation()
+        except ApiError as error:
+            return error.code
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        ended, answered = list(pool.map(run, operations))
+    assert ended["status"] == "ended"
+    attempts = app.state.services.db.fetch_all("SELECT * FROM assessment_attempts")
+    evidence = app.state.services.db.fetch_all("SELECT * FROM learning_evidence")
+    if answered == "session_not_active":
+        assert attempts == evidence == []
+    else:
+        assert answered["feedback"]["correct"] is True
+        assert len(attempts) == len(evidence) == 1
+    assert repository.session(session["id"])["answered_count"] == len(attempts)
