@@ -329,3 +329,11 @@ cancellation seam, not completed login, available account models or inference.
 Later selected-engine and cross-module evidence is tracked in the Library,
 Cases, Memory, recovery and desktop records beside this file; the original F0
 remaining-proof list above describes that earlier isolated slice.
+
+The integrated Connections UI subsequently passed an actual browser start/cancel
+journey against the owned development backend. It displayed the pending sign-in
+and its cancellation control, then the cancelled notice. A fresh public status
+request confirmed both providers disconnected and no subscription selected.
+The browser did not open the authorization link; no URL/state/nonce, token
+exchange or learning prompt was published or sent. This extends the earlier API
+seam proof to the updated renderer, with the live account gate unchanged.
