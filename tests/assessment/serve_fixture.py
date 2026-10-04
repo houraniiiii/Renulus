@@ -3,6 +3,7 @@ import argparse
 from pathlib import Path
 
 from conftest import SyntheticContentRepository
+import renulus.server as server
 from renulus.server import create_app
 import uvicorn
 import json
@@ -17,6 +18,7 @@ if __name__ == "__main__":
     parser.add_argument("--generated-provider", action="store_true")
     args = parser.parse_args()
     profile = Path(args.profile).resolve()
+    server.MODULE_ORDER = ("content", "updates", "assessment")
     app = create_app(profile, token=args.token)
     app.state.services.registry["content"] = SyntheticContentRepository()
     if args.generated_provider:

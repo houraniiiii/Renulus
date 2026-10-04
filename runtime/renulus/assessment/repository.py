@@ -7,6 +7,7 @@ from renulus.storage.database import utc_now
 
 from .content import ContentGateway
 from .contracts import Selector
+from .currency import SourceCurrency, without_currency
 
 
 def encode(value):
@@ -18,6 +19,7 @@ class AssessmentRepository:
         self.services = services
         self.db = services.db
         self.content = ContentGateway(services)
+        self.currency = SourceCurrency(services)
 
     @staticmethod
     def _one(conn, sql, parameters=()):
@@ -52,12 +54,12 @@ class AssessmentRepository:
                 or previous["request_json"] != encode(request)):
             raise ApiError("idempotency_conflict",
                            "This request key was already used for a different action", 409)
-        return json.loads(previous["result_json"])
+        return self.currency.replay(conn, json.loads(previous["result_json"]))
 
     @staticmethod
     def _record(conn, key, operation, target, request, result):
         conn.execute("INSERT INTO assessment_commands VALUES(?,?,?,?,?,?)",
-                     (key, operation, target, encode(request), encode(result), utc_now()))
+                     (key, operation, target, encode(request), encode(without_currency(result)), utc_now()))
 
     def _repeat(self, conn, item):
         return self._one(conn,
@@ -101,7 +103,7 @@ class AssessmentRepository:
         return {"reviewed": scores, "generated": {"available": self.services.registry.get("provider") is not None, "answered": generated_count},
                 "bucket_policy": "assisted takes precedence over repeat; both attempt flags are retained"}
 
-    def _view(self, conn, session_id, present=False):
+    def _view(self, conn, session_id, present=False, currency_cache=None):
         session = self._session(conn, session_id)
         counts = conn.execute(
             "SELECT COUNT(*) AS total,COUNT(a.id) AS answered FROM assessment_items i "
@@ -127,7 +129,7 @@ class AssessmentRepository:
                 result["current_item"] = {**self._public_item(item),
                                           "repeat": self._repeat(conn, item),
                                           "content_status": self.content.annotation(item)}
-        return result
+        return self.currency.session(conn, result, currency_cache)
 
     def catalog(self, selector=None):
         selector = selector or Selector()
@@ -219,7 +221,8 @@ class AssessmentRepository:
     def sessions(self):
         with self.db.transaction() as conn:
             rows = conn.execute("SELECT id FROM assessment_sessions ORDER BY updated_at DESC LIMIT 100")
-            return {"sessions": [self._view(conn, row["id"]) for row in rows]}
+            cache = {}
+            return {"sessions": [self._view(conn, row["id"], currency_cache=cache) for row in rows]}
 
     def _feedback(self, conn, item, attempt):
         question = json.loads(item["snapshot_json"])
@@ -234,6 +237,7 @@ class AssessmentRepository:
                 "options": [{"id": o["id"], "text": o["text"],
                              "rationale": o.get("rationale")} for o in question["options"]],
                 "sources": question["sources"], "review": question["review"],
+                "source_currency": self.currency.for_item(item),
                 "content_status": self.content.annotation(item)}
 
     def answer(self, session_id, request):
@@ -386,5 +390,6 @@ class AssessmentRepository:
                                "repeat": bool(attempt["repeat"]),
                                "score_bucket": attempt["score_bucket"],
                                "committed_at": attempt["committed_at"],
+                               "source_currency": self.currency.for_item(item),
                                "content_status": self.content.annotation(item)})
             return result

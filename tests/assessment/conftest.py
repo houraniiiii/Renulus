@@ -8,6 +8,13 @@ from fastapi.testclient import TestClient
 from renulus.server import create_app
 
 
+@pytest.fixture(autouse=True)
+def assessment_modules(monkeypatch):
+    # Assessment tests exercise the real pack/Updates seams and explicit
+    # synthetic provider adapters without starting unrelated helper engines.
+    monkeypatch.setattr("renulus.server.MODULE_ORDER", ("content", "updates", "assessment"))
+
+
 class SyntheticContentRepository:
     """M8 contract adapter with original local fixtures, never a prod bank."""
     def __init__(self):

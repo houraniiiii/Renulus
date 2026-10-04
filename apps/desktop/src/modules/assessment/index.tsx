@@ -6,6 +6,7 @@ import { useNavigation } from '../../shell/navigation';
 import { Badge, Button, EmptyState, ErrorState, Input, LoadingState, Notice, PageHeader, Select } from '../../ui';
 import type { AnswerResult, Catalog, Citation, Feedback, HelpResult, ReviewResult, Scores, Session } from './types';
 import GeneratedPractice from './GeneratedPractice';
+import SourceCurrencyNotice, { currencySummary, SessionCurrencyNotice } from './SourceCurrencyNotice';
 import './assessment.css';
 
 const base = '/assessment';
@@ -51,6 +52,7 @@ function FeedbackView({ feedback, focus = false }: { feedback: Feedback; focus?:
       <p>{feedback.content_status.message}</p>
       {feedback.content_status.withdrawal && <p>{feedback.content_status.withdrawal.reason}</p>}
     </Notice>}
+    <SourceCurrencyNotice currency={feedback.source_currency} item={feedback.item} committed />
     <div className="prose"><h3>Why this answer</h3><p>{feedback.explanation}</p></div>
     <details className="assessment-rationales"><summary>Reasoning for each option</summary>
       <dl>{feedback.options.map(option => <div key={option.id}><dt>{option.text}</dt>
@@ -191,6 +193,7 @@ function AssessmentStudyPage() {
     <PageHeader title="Test" description="Commit an answer, then work through its reasoning and sources."
       actions={session && <Button variant="ghost" disabled={locked} onClick={() => {
         setSession(null); setFeedback(null); setReview(null); setHelp(null);
+        overview.retry();
       }}>Back to quizzes</Button>} />
     {actionError !== undefined && <div className="section"><ErrorState error={actionError} title="Your action needs attention"
       onRetry={actionError instanceof ApiError && actionError.retryable ? () => void execute() : undefined} />
@@ -227,7 +230,9 @@ function AssessmentStudyPage() {
               : <ul className="assessment-history">{data.history.map(previous => <li key={previous.id}>
                 <div><strong>{previous.status === 'ended' ? 'Ended session' : 'Reviewed quiz'}</strong>
                   <span>{previous.answered_count} / {previous.item_count} answered · {previous.status}</span>
-                  <span className="muted">{new Date(previous.created_at).toLocaleString()}</span></div>
+                  <span className="muted">{new Date(previous.created_at).toLocaleString()}</span>
+                  {currencySummary(previous.source_currency) && <span className="assessment-currency-summary">
+                    {currencySummary(previous.source_currency)}</span>}</div>
                 <Button variant="secondary" disabled={locked} onClick={() => {
                   perform(() => api<Session>(path(previous.id)), adopt);
                 }}>{previous.status === 'ended' ? 'Open review' : 'Open session'}<Play size={16} /></Button>
@@ -251,7 +256,9 @@ function AssessmentStudyPage() {
           <p>{session.answered_count} committed answers are retained. Resume when you are ready.</p></EmptyState>}
         {session.status === 'ended' && <Notice><p>This session ended with {session.answered_count} committed answers.
           Review below includes those answers only.</p></Notice>}
+        {!session.current_item && !feedback && <SessionCurrencyNotice currency={session.source_currency} />}
         {session.current_item && !feedback && <form className="assessment-question" onSubmit={event => { event.preventDefault(); commit(); }}>
+          <SourceCurrencyNotice currency={session.current_item.source_currency} item={session.current_item} />
           <fieldset disabled={locked || session.current_item.content_status?.status !== 'current'}>
             <legend ref={questionHeading} tabIndex={-1}><span className="assessment-question-number">Question {session.current_item.ordinal}</span>
               <span className="assessment-stem">{session.current_item.stem}</span></legend>
@@ -277,7 +284,10 @@ function AssessmentStudyPage() {
           action={<Button disabled={locked} onClick={() => transition('end')}>Finish quiz</Button>}>
           <p>You can review their reasoning and sources below.</p></EmptyState>}
         <div className="actions assessment-separated"><Button variant="secondary" disabled={locked} onClick={() =>
-          perform(() => api<ReviewResult>(path(session.id, '/review')), setReview)}>
+          perform(() => api<ReviewResult>(path(session.id, '/review')), result => {
+            setReview(result);
+            setFeedback(current => current ? result.feedback.find(entry => entry.attempt_id === current.attempt_id) ?? current : null);
+          })}>
           Review committed answers<RotateCcw size={16} /></Button>
           {session.status === 'active' && <Button variant="ghost" disabled={locked} onClick={() => transition('pause')}>Pause<Pause size={16} /></Button>}
           {session.status !== 'ended' && <Button variant="ghost" disabled={locked} onClick={() => transition('end')}>End session</Button>}
