@@ -8,7 +8,7 @@ VERSION = {"type": "integer", "minimum": 1}
 
 
 def array(items, minimum=0):
-    return {"type": "array", "items": items, "minItems": minimum}
+    return {"type": "array", "items": items, "minItems": minimum, "uniqueItems": True}
 
 
 def obj(properties, optional=()):

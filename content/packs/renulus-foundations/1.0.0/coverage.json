@@ -1,0 +1,690 @@
+{
+  "taxonomy_version": 1,
+  "target_topics": [
+    "T03",
+    "T04",
+    "T06",
+    "T08",
+    "T10",
+    "T20",
+    "T21"
+  ],
+  "minimum_questions": 40,
+  "topics": [
+    {
+      "topic_id": "T01",
+      "objective_ids": [
+        "T01.O01",
+        "T01.O02"
+      ],
+      "case_ids": [],
+      "question_ids": [
+        "RN-CKD-004"
+      ],
+      "covered_objective_ids": [],
+      "gap_objective_ids": [
+        "T01.O01",
+        "T01.O02"
+      ],
+      "review_counts": {
+        "assistant_reviewed": 1,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T02",
+      "objective_ids": [
+        "T02.O01",
+        "T02.O02"
+      ],
+      "case_ids": [
+        "RN-CASE-CKD",
+        "RN-CASE-NEPHROTIC"
+      ],
+      "question_ids": [
+        "RN-CKD-001",
+        "RN-CKD-003",
+        "RN-CKD-004"
+      ],
+      "covered_objective_ids": [
+        "T02.O01"
+      ],
+      "gap_objective_ids": [
+        "T02.O02"
+      ],
+      "review_counts": {
+        "assistant_reviewed": 5,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T03",
+      "objective_ids": [
+        "T03.O01",
+        "T03.O02"
+      ],
+      "case_ids": [
+        "RN-CASE-AKI",
+        "RN-CASE-HYPONA"
+      ],
+      "question_ids": [
+        "RN-NA-001",
+        "RN-NA-002",
+        "RN-NA-003"
+      ],
+      "covered_objective_ids": [
+        "T03.O01",
+        "T03.O02"
+      ],
+      "gap_objective_ids": [],
+      "review_counts": {
+        "assistant_reviewed": 5,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T04",
+      "objective_ids": [
+        "T04.O01",
+        "T04.O02"
+      ],
+      "case_ids": [
+        "RN-CASE-ACIDOSIS",
+        "RN-CASE-HYPERK"
+      ],
+      "question_ids": [
+        "RN-AB-001",
+        "RN-AB-002",
+        "RN-DIAL-004",
+        "RN-K-001",
+        "RN-K-002",
+        "RN-K-003",
+        "RN-K-004"
+      ],
+      "covered_objective_ids": [
+        "T04.O01",
+        "T04.O02"
+      ],
+      "gap_objective_ids": [],
+      "review_counts": {
+        "assistant_reviewed": 9,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T05",
+      "objective_ids": [
+        "T05.O01",
+        "T05.O02"
+      ],
+      "case_ids": [
+        "RN-CASE-MBD"
+      ],
+      "question_ids": [
+        "RN-MBD-001",
+        "RN-MBD-002",
+        "RN-MBD-003"
+      ],
+      "covered_objective_ids": [
+        "T05.O01",
+        "T05.O02"
+      ],
+      "gap_objective_ids": [],
+      "review_counts": {
+        "assistant_reviewed": 4,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T06",
+      "objective_ids": [
+        "T06.O01",
+        "T06.O02"
+      ],
+      "case_ids": [
+        "RN-CASE-ADPKD",
+        "RN-CASE-AKI",
+        "RN-CASE-VASCULITIS"
+      ],
+      "question_ids": [
+        "RN-AAV-001",
+        "RN-AKI-001",
+        "RN-AKI-002",
+        "RN-AKI-003",
+        "RN-AKI-004",
+        "RN-AKI-005",
+        "RN-AKI-006",
+        "RN-DRUG-002",
+        "RN-PKD-002"
+      ],
+      "covered_objective_ids": [
+        "T06.O01",
+        "T06.O02"
+      ],
+      "gap_objective_ids": [],
+      "review_counts": {
+        "assistant_reviewed": 12,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T07",
+      "objective_ids": [
+        "T07.O01",
+        "T07.O02"
+      ],
+      "case_ids": [
+        "RN-CASE-HYPERK",
+        "RN-CASE-HYPONA"
+      ],
+      "question_ids": [
+        "RN-AKI-003",
+        "RN-AKI-005",
+        "RN-DIAL-004",
+        "RN-K-001",
+        "RN-K-004",
+        "RN-NA-003"
+      ],
+      "covered_objective_ids": [
+        "T07.O01"
+      ],
+      "gap_objective_ids": [
+        "T07.O02"
+      ],
+      "review_counts": {
+        "assistant_reviewed": 8,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T08",
+      "objective_ids": [
+        "T08.O01",
+        "T08.O02",
+        "T08.O03",
+        "T08.O04"
+      ],
+      "case_ids": [
+        "RN-CASE-ACIDOSIS",
+        "RN-CASE-AKI",
+        "RN-CASE-CKD",
+        "RN-CASE-DIABETES",
+        "RN-CASE-DIALYSIS",
+        "RN-CASE-MBD"
+      ],
+      "question_ids": [
+        "RN-AB-001",
+        "RN-AB-002",
+        "RN-AKI-006",
+        "RN-ANEMIA-001",
+        "RN-ANEMIA-002",
+        "RN-CKD-001",
+        "RN-CKD-002",
+        "RN-CKD-003",
+        "RN-CKD-004",
+        "RN-CKD-005",
+        "RN-CKD-006",
+        "RN-DIAL-001",
+        "RN-DRUG-001",
+        "RN-NUTR-001"
+      ],
+      "covered_objective_ids": [
+        "T08.O01",
+        "T08.O02",
+        "T08.O03",
+        "T08.O04"
+      ],
+      "gap_objective_ids": [],
+      "review_counts": {
+        "assistant_reviewed": 20,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T09",
+      "objective_ids": [
+        "T09.O01",
+        "T09.O02"
+      ],
+      "case_ids": [
+        "RN-CASE-CKD",
+        "RN-CASE-DIABETES"
+      ],
+      "question_ids": [
+        "RN-BP-001",
+        "RN-BP-002"
+      ],
+      "covered_objective_ids": [
+        "T09.O01",
+        "T09.O02"
+      ],
+      "gap_objective_ids": [],
+      "review_counts": {
+        "assistant_reviewed": 4,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T10",
+      "objective_ids": [
+        "T10.O01",
+        "T10.O02"
+      ],
+      "case_ids": [
+        "RN-CASE-LUPUS",
+        "RN-CASE-NEPHROTIC",
+        "RN-CASE-VASCULITIS"
+      ],
+      "question_ids": [
+        "RN-AAV-001",
+        "RN-GN-001",
+        "RN-GN-002",
+        "RN-GN-003",
+        "RN-GN-004",
+        "RN-LN-001"
+      ],
+      "covered_objective_ids": [
+        "T10.O01",
+        "T10.O02"
+      ],
+      "gap_objective_ids": [],
+      "review_counts": {
+        "assistant_reviewed": 9,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T11",
+      "objective_ids": [
+        "T11.O01",
+        "T11.O02"
+      ],
+      "case_ids": [],
+      "question_ids": [],
+      "covered_objective_ids": [],
+      "gap_objective_ids": [
+        "T11.O01",
+        "T11.O02"
+      ],
+      "review_counts": {
+        "assistant_reviewed": 0,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T12",
+      "objective_ids": [
+        "T12.O01",
+        "T12.O02"
+      ],
+      "case_ids": [
+        "RN-CASE-ADPKD"
+      ],
+      "question_ids": [
+        "RN-PKD-001",
+        "RN-PKD-002"
+      ],
+      "covered_objective_ids": [
+        "T12.O01",
+        "T12.O02"
+      ],
+      "gap_objective_ids": [],
+      "review_counts": {
+        "assistant_reviewed": 3,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T13",
+      "objective_ids": [
+        "T13.O01",
+        "T13.O02"
+      ],
+      "case_ids": [],
+      "question_ids": [],
+      "covered_objective_ids": [],
+      "gap_objective_ids": [
+        "T13.O01",
+        "T13.O02"
+      ],
+      "review_counts": {
+        "assistant_reviewed": 0,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T14",
+      "objective_ids": [
+        "T14.O01",
+        "T14.O02"
+      ],
+      "case_ids": [
+        "RN-CASE-DIABETES"
+      ],
+      "question_ids": [
+        "RN-DM-001",
+        "RN-DM-002",
+        "RN-DM-003"
+      ],
+      "covered_objective_ids": [
+        "T14.O01",
+        "T14.O02"
+      ],
+      "gap_objective_ids": [],
+      "review_counts": {
+        "assistant_reviewed": 4,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T15",
+      "objective_ids": [
+        "T15.O01",
+        "T15.O02"
+      ],
+      "case_ids": [],
+      "question_ids": [],
+      "covered_objective_ids": [],
+      "gap_objective_ids": [
+        "T15.O01",
+        "T15.O02"
+      ],
+      "review_counts": {
+        "assistant_reviewed": 0,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T16",
+      "objective_ids": [
+        "T16.O01",
+        "T16.O02"
+      ],
+      "case_ids": [
+        "RN-CASE-LUPUS",
+        "RN-CASE-VASCULITIS"
+      ],
+      "question_ids": [
+        "RN-AAV-001",
+        "RN-LN-001"
+      ],
+      "covered_objective_ids": [
+        "T16.O01",
+        "T16.O02"
+      ],
+      "gap_objective_ids": [],
+      "review_counts": {
+        "assistant_reviewed": 4,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T17",
+      "objective_ids": [
+        "T17.O01",
+        "T17.O02"
+      ],
+      "case_ids": [
+        "RN-CASE-TRANSPLANT"
+      ],
+      "question_ids": [
+        "RN-TX-004"
+      ],
+      "covered_objective_ids": [
+        "T17.O01"
+      ],
+      "gap_objective_ids": [
+        "T17.O02"
+      ],
+      "review_counts": {
+        "assistant_reviewed": 2,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T18",
+      "objective_ids": [
+        "T18.O01",
+        "T18.O02"
+      ],
+      "case_ids": [],
+      "question_ids": [],
+      "covered_objective_ids": [],
+      "gap_objective_ids": [
+        "T18.O01",
+        "T18.O02"
+      ],
+      "review_counts": {
+        "assistant_reviewed": 0,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T19",
+      "objective_ids": [
+        "T19.O01",
+        "T19.O02"
+      ],
+      "case_ids": [
+        "RN-CASE-ACIDOSIS",
+        "RN-CASE-ADPKD",
+        "RN-CASE-AKI",
+        "RN-CASE-DIABETES",
+        "RN-CASE-HYPERK",
+        "RN-CASE-MBD"
+      ],
+      "question_ids": [
+        "RN-AB-002",
+        "RN-DM-001",
+        "RN-DM-002",
+        "RN-DM-003",
+        "RN-DRUG-001",
+        "RN-DRUG-002",
+        "RN-K-003",
+        "RN-PKD-002"
+      ],
+      "covered_objective_ids": [
+        "T19.O01",
+        "T19.O02"
+      ],
+      "gap_objective_ids": [],
+      "review_counts": {
+        "assistant_reviewed": 14,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T20",
+      "objective_ids": [
+        "T20.O01",
+        "T20.O02"
+      ],
+      "case_ids": [
+        "RN-CASE-DIALYSIS",
+        "RN-CASE-HYPERK",
+        "RN-CASE-SUPPORTIVE",
+        "RN-CASE-TRANSPLANT"
+      ],
+      "question_ids": [
+        "RN-CARE-001",
+        "RN-DIAL-001",
+        "RN-DIAL-002",
+        "RN-DIAL-003",
+        "RN-DIAL-004"
+      ],
+      "covered_objective_ids": [
+        "T20.O01",
+        "T20.O02"
+      ],
+      "gap_objective_ids": [],
+      "review_counts": {
+        "assistant_reviewed": 9,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T21",
+      "objective_ids": [
+        "T21.O01",
+        "T21.O02"
+      ],
+      "case_ids": [
+        "RN-CASE-DIALYSIS",
+        "RN-CASE-TRANSPLANT"
+      ],
+      "question_ids": [
+        "RN-DIAL-003",
+        "RN-TX-001",
+        "RN-TX-002",
+        "RN-TX-003",
+        "RN-TX-004"
+      ],
+      "covered_objective_ids": [
+        "T21.O01",
+        "T21.O02"
+      ],
+      "gap_objective_ids": [],
+      "review_counts": {
+        "assistant_reviewed": 7,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T22",
+      "objective_ids": [
+        "T22.O01",
+        "T22.O02"
+      ],
+      "case_ids": [
+        "RN-CASE-LUPUS",
+        "RN-CASE-NEPHROTIC",
+        "RN-CASE-VASCULITIS"
+      ],
+      "question_ids": [
+        "RN-GN-001",
+        "RN-GN-004",
+        "RN-LN-001"
+      ],
+      "covered_objective_ids": [
+        "T22.O01"
+      ],
+      "gap_objective_ids": [
+        "T22.O02"
+      ],
+      "review_counts": {
+        "assistant_reviewed": 6,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T23",
+      "objective_ids": [
+        "T23.O01",
+        "T23.O02"
+      ],
+      "case_ids": [],
+      "question_ids": [],
+      "covered_objective_ids": [],
+      "gap_objective_ids": [
+        "T23.O01",
+        "T23.O02"
+      ],
+      "review_counts": {
+        "assistant_reviewed": 0,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T24",
+      "objective_ids": [
+        "T24.O01",
+        "T24.O02"
+      ],
+      "case_ids": [
+        "RN-CASE-SUPPORTIVE"
+      ],
+      "question_ids": [
+        "RN-CARE-001"
+      ],
+      "covered_objective_ids": [
+        "T24.O01"
+      ],
+      "gap_objective_ids": [
+        "T24.O02"
+      ],
+      "review_counts": {
+        "assistant_reviewed": 2,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T25",
+      "objective_ids": [
+        "T25.O01",
+        "T25.O02"
+      ],
+      "case_ids": [
+        "RN-CASE-SUPPORTIVE"
+      ],
+      "question_ids": [
+        "RN-NUTR-001"
+      ],
+      "covered_objective_ids": [
+        "T25.O01",
+        "T25.O02"
+      ],
+      "gap_objective_ids": [],
+      "review_counts": {
+        "assistant_reviewed": 2,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T26",
+      "objective_ids": [
+        "T26.O01",
+        "T26.O02"
+      ],
+      "case_ids": [
+        "RN-CASE-SUPPORTIVE"
+      ],
+      "question_ids": [
+        "RN-CARE-001",
+        "RN-EVID-001"
+      ],
+      "covered_objective_ids": [
+        "T26.O01",
+        "T26.O02"
+      ],
+      "gap_objective_ids": [],
+      "review_counts": {
+        "assistant_reviewed": 3,
+        "human_reviewed": 0
+      }
+    },
+    {
+      "topic_id": "T27",
+      "objective_ids": [
+        "T27.O01",
+        "T27.O02"
+      ],
+      "case_ids": [
+        "RN-CASE-ACIDOSIS",
+        "RN-CASE-DIALYSIS",
+        "RN-CASE-HYPONA"
+      ],
+      "question_ids": [
+        "RN-DIAL-002"
+      ],
+      "covered_objective_ids": [],
+      "gap_objective_ids": [
+        "T27.O01",
+        "T27.O02"
+      ],
+      "review_counts": {
+        "assistant_reviewed": 4,
+        "human_reviewed": 0
+      }
+    }
+  ]
+}

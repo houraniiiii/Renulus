@@ -54,10 +54,17 @@ class ContentRepository:
             return
         if family:
             previous = conn.execute(
-                "SELECT family_id FROM content_question_versions WHERE question_id=? LIMIT 1",
+                "SELECT family_id,body_json,version FROM content_question_versions WHERE question_id=? "
+                "ORDER BY version DESC LIMIT 1",
                 (item["id"],)).fetchone()
             if previous and previous[0] != item["family_id"]:
                 raise ContentConflict(f"Question family cannot change: {item['id']}")
+            if previous:
+                old = json.loads(previous[1])
+                if item["version"] <= previous[2]:
+                    raise ContentConflict("A newly published question must advance its version")
+                if (old["answer"] != item["answer"] or old["options"] != item["options"]) and "correction" not in item:
+                    raise ContentConflict("Changing a published key or choices requires a correction and withdrawal")
             conn.execute(f"INSERT INTO {table} ({id_column},version,family_id,body_json,sha256) "
                          "VALUES(?,?,?,?,?)", (item["id"], item["version"], item["family_id"],
                          canonical_json(item), body_hash))
@@ -189,6 +196,28 @@ class ContentRepository:
             if source["id"] == source_id:
                 return source
         raise ContentUnavailable(f"No active source metadata: {source_id}")
+
+    def references_for_source(self, source_id: str, *, include_historical=False) -> list[dict]:
+        """Update impact: exact citation ID or SOURCES register family ID, no keys."""
+        if include_historical:
+            with closing(self.db.connect()) as conn:
+                cases = [json.loads(r[0]) for r in conn.execute("SELECT body_json FROM content_case_versions")]
+                questions = [json.loads(r[0]) for r in conn.execute("SELECT body_json FROM content_question_versions")]
+        else:
+            cases, questions = self._active_rows("cases"), self._active_rows("questions")
+        result = []
+        for kind, items in (("case", cases), ("question", questions)):
+            for item in items:
+                matching = {s["id"]: s for s in item["source_records"]
+                            if source_id in (s["id"], s["register_id"])}
+                for cited_id, source in matching.items():
+                    result.append({"kind": kind, "id": item["id"], "version": item["version"],
+                                   "topic_id": item["topic_id"], "source_id": cited_id,
+                                   "register_id": source["register_id"],
+                                   "locators": sorted({s["locator"] for s in item["sources"]
+                                                       if s["source_id"] == cited_id}),
+                                   "review_status": item["review"]["status"]})
+        return sorted(result, key=lambda r: (r["kind"], r["id"], r["version"], r["source_id"]))
 
     def list_cases(self) -> list[dict]:
         return self._active_rows("cases")

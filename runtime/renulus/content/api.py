@@ -37,7 +37,10 @@ def create_router(services) -> APIRouter:
     repository = ContentRepository(services.db, root)
     services.registry["content"] = repository
     default_pack = root / "renulus-foundations" / "1.0.0"
-    if repository.active_manifest() is None and default_pack.is_dir():
+    already_installed = services.db.fetch_one(
+        "SELECT 1 FROM content_packs WHERE pack_id=? AND version=?",
+        ("renulus-foundations", "1.0.0"))
+    if repository.active_manifest() is None and default_pack.is_dir() and not already_installed:
         repository.install_pack(default_pack)
     router = APIRouter(prefix="/content", tags=["content"])
 
@@ -67,6 +70,10 @@ def create_router(services) -> APIRouter:
     def source(source_id: str):
         return call(repository.get_source, source_id)
 
+    @router.get("/sources/{source_id}/references")
+    def source_references(source_id: str, include_historical: bool = False):
+        return repository.references_for_source(source_id, include_historical=include_historical)
+
     @router.get("/cases")
     def cases():
         return [{k: c[k] for k in ("id", "version", "title", "summary", "topic_id",
@@ -83,7 +90,10 @@ def create_router(services) -> APIRouter:
 
     @router.get("/questions/{question_id}/versions/{version}")
     def question(question_id: str, version: int):
-        return _public_question(call(repository.get_question_version, question_id, version))
+        result = call(repository.get_question_version, question_id, version)
+        if result["usage"] == "evaluation_reserved":
+            raise ApiError("content_not_found", "No public question at this location", 404)
+        return _public_question(result)
 
     @router.post("/packs/install")
     def install(request: InstallRequest):

@@ -62,6 +62,8 @@ def _by_id(rows, kind):
 
 
 def coverage_for(topics, cases, questions, target_topics, minimum_questions):
+    # Held-out evaluation does not inflate public teaching/assessment coverage.
+    questions = [q for q in questions if q["usage"] != "evaluation_reserved"]
     rows = []
     for topic in topics:
         items = [i for i in (*cases, *questions)
@@ -92,6 +94,11 @@ class ValidatedPack:
 
 
 def validate_pack(path: str | Path, *, known_register_ids: Iterable[str] | None = None) -> ValidatedPack:
+    if known_register_ids is None:
+        # IDs only, derived from the single SOURCES register. This is not a
+        # competing source/acquisition catalogue or a permission grant.
+        registry = json.loads(Path(__file__).with_name("source_register_ids.json").read_text(encoding="utf-8"))
+        known_register_ids = registry["ids"]
     root = Path(path).resolve()
     manifest, _ = _read_json(root / "manifest.json")
     # Validate the manifest first: do not follow attacker-controlled file paths.
@@ -130,9 +137,9 @@ def validate_pack(path: str | Path, *, known_register_ids: Iterable[str] | None 
             if objective["id"] in objectives:
                 raise PackValidationError(f"Duplicate objective: {objective['id']}")
             objectives[objective["id"]] = topic["id"]
-    known = set(known_register_ids) if known_register_ids is not None else None
+    known = set(known_register_ids)
     for source in sources.values():
-        if known is not None and source["register_id"] not in known:
+        if source["register_id"] not in known:
             raise PackValidationError(f"Unknown SOURCES register ID: {source['register_id']}")
         if source["check_status"] != "locator_checked":
             raise PackValidationError(f"Unverified source cannot support publication: {source['id']}")
@@ -188,10 +195,11 @@ def validate_pack(path: str | Path, *, known_register_ids: Iterable[str] | None 
                             coverage["target_topics"], coverage["minimum_questions"])
     if coverage != expected:
         raise PackValidationError("Coverage does not match actual item/objective/review links")
-    if len(bundle["questions"]) < coverage["minimum_questions"]:
+    assessed = [q for q in bundle["questions"] if q["usage"] == "assessment_reserved"]
+    if len(assessed) < coverage["minimum_questions"]:
         raise PackValidationError("Question coverage below declared target")
     for target in coverage["target_topics"]:
-        if target not in topics or not any(q["topic_id"] == target for q in bundle["questions"]) or not any(
+        if target not in topics or not any(q["topic_id"] == target for q in assessed) or not any(
                 target in [c["topic_id"], *c["secondary_topic_ids"]] for c in bundle["cases"]):
             raise PackValidationError(f"Required domain lacks cases/questions: {target}")
     return ValidatedPack(bundle=bundle, sha256=digest(bundle))
