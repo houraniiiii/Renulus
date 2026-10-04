@@ -2,11 +2,20 @@ import { useCallback, useEffect, useId, useRef, useState, type ChangeEvent } fro
 import { Download, RefreshCw } from 'lucide-react';
 import { Badge, Button, ErrorState, Input, LoadingState, Notice } from '../ui';
 import { api, apiResponse, ApiError, isCancelled } from './api';
+import type { BackupSaveResult } from './desktop';
 import './DataManagement.css';
 
 const MiB = 1024 * 1024;
+const recoveryOperationMs = 30 * 60 * 1000;
 const defaultLimits = { archive_bytes: 288 * MiB, json_bytes: 16 * MiB, original_bytes: 64 * MiB, total_original_bytes: 256 * MiB, originals: 1000 };
 type Limits = typeof defaultLimits;
+const segmentedCaps = { archive_bytes: 8 * 1024 * MiB, canonical_bytes: 2 * 1024 * MiB, records: 1_000_000, segments: 4096, row_bytes: 16 * MiB, segment_bytes: 32 * MiB };
+type SegmentedLimits = Limits & Omit<typeof segmentedCaps, 'archive_bytes'>;
+interface BackupFormats { '1'?: Limits; '2'?: SegmentedLimits }
+type BackupKind = 'zip' | 'json';
+type DownloadRequest =
+  | { transport: 'native'; id: string; cancelling: boolean; save: (kind: BackupKind, id: string) => Promise<BackupSaveResult>; cancel: (id: string) => Promise<void> }
+  | { transport: 'browser'; controller: AbortController; timedOut: boolean; timer?: ReturnType<typeof setTimeout> };
 interface Omissions { knowledge_catalogue: { records: number; reason: string } }
 const catalogueReason = 'Acquisition catalogue input metadata is excluded. Retained library document metadata and provenance remain included.';
 const deletionNotice = 'Restoring merges with this installation and preserves its newer deletion markers. An older backup on its own cannot know about later deletions, including on another installation.';
@@ -18,7 +27,7 @@ interface RestoreResult {
   restored_records: number; restored_originals?: number; excluded_by_deletion: number; removed_by_deletion: number;
   excluded_originals?: number; exported_at: string; indexes: 'rebuild-required'; recovery_id: string; rebuild: Rebuild; data_kind?: 'full-backup' | 'records-only';
 }
-interface Recovery { last_restore: Partial<RestoreResult> | null; rebuild: Rebuild; limits?: Limits; omissions?: Omissions; backup_scope?: string }
+interface Recovery { last_restore: Partial<RestoreResult> | null; rebuild: Rebuild; limits?: Limits; backup_formats?: BackupFormats; omissions?: Omissions; backup_scope?: string }
 interface RecordsBundle { format: 'renulus-canonical-export'; exported_at: string; records: Record<string, Record<string, unknown>[]>; limits?: string; omissions?: Omissions }
 interface PreviewBase { fileName: string; exportedAt: string; recordCount: number; notice: string; omissions?: Omissions }
 type Preview =
@@ -56,13 +65,29 @@ function readRebuild(value: unknown): Rebuild {
   return value as unknown as Rebuild;
 }
 function readRecovery(value: unknown): Recovery {
-  if (!object(value) || !object(value.limits) || !Object.keys(defaultLimits).every(key => count((value.limits as Record<string, unknown>)[key])) ||
+  if (!object(value) || !validLimits(value.limits) ||
     (value.last_restore !== null && !object(value.last_restore))) throw invalid('Recovery status is incomplete. Refresh status to check the local limits and indexes.');
   if (value.backup_scope !== undefined && typeof value.backup_scope !== 'string') throw invalid('The local runtime did not report a valid backup scope. Refresh recovery status.');
-  return { last_restore: value.last_restore as Recovery['last_restore'], rebuild: readRebuild(value.rebuild), limits: value.limits as Limits, omissions: readOmissions(value.omissions), backup_scope: value.backup_scope };
+  if (value.backup_formats !== undefined && (!object(value.backup_formats) ||
+    (value.backup_formats['1'] !== undefined && !validLimits(value.backup_formats['1'])) ||
+    (value.backup_formats['2'] !== undefined && !validSegmentedLimits(value.backup_formats['2'])))) {
+    throw invalid('The local runtime reported unsupported full-backup limits. Refresh recovery status before choosing a larger ZIP.');
+  }
+  return { last_restore: value.last_restore as Recovery['last_restore'], rebuild: readRebuild(value.rebuild), limits: value.limits,
+    backup_formats: value.backup_formats as BackupFormats | undefined, omissions: readOmissions(value.omissions), backup_scope: value.backup_scope };
 }
+function validLimits(value: unknown): value is Limits { return object(value) && Object.keys(defaultLimits).every(key => count(value[key])); }
+function validSegmentedLimits(value: unknown): value is SegmentedLimits {
+  return validLimits(value) && Object.entries(segmentedCaps).every(([key, cap]) => {
+    const limit = (value as unknown as Record<string, unknown>)[key];
+    return count(limit) && limit > 0 && limit <= cap;
+  });
+}
+function fullBackupLimits(recovery?: Recovery): Limits { return recovery?.backup_formats?.['2'] ?? recovery?.limits ?? defaultLimits; }
+function fullBackupPath(path: string, recovery?: Recovery) { return path + (recovery?.backup_formats?.['2'] ? '?format_version=2' : ''); }
 function readZipPreview(value: unknown, fileName: string): Preview {
   if (!object(value) || value.format !== 'renulus-full-backup' || typeof value.preview_token !== 'string' || !value.preview_token.trim() ||
+    (value.format_version !== undefined && value.format_version !== 1 && value.format_version !== 2) ||
     !dated(value.exported_at) || !dated(value.expires_at) || !count(value.record_count) || !count(value.original_count) || !count(value.original_bytes) ||
     typeof value.deletion_notice !== 'string' || !value.deletion_notice.trim()) throw invalid('The ZIP preview is incomplete. Choose the backup again to validate it before restoring.');
   if (Date.parse(value.expires_at) <= Date.now()) throw invalid('This ZIP preview has expired. Choose the backup again to validate it.');
@@ -104,6 +129,52 @@ function readRestore(value: unknown, kind: Preview['kind']): RestoreResult {
   }
   return { ...value, rebuild: readRebuild(value.rebuild) } as unknown as RestoreResult;
 }
+function readBackupSave(value: unknown, kind: BackupKind): BackupSaveResult {
+  if (object(value)) {
+    if (value.status === 'cancelled') return { status: 'cancelled' };
+    if (value.status === 'saved' && typeof value.fileName === 'string' && value.fileName.trim() && value.fileName.length <= 255 &&
+      !/[<>:"/\\|?*\u0000-\u001f\u007f]/.test(value.fileName) && value.fileName.toLowerCase().endsWith('.' + kind) && count(value.bytes) && value.bytes > 0) {
+      return { status: 'saved', fileName: value.fileName, bytes: value.bytes };
+    }
+    if (value.status === 'error' && typeof value.code === 'string' && /^[a-z0-9_]{1,80}$/.test(value.code) &&
+      typeof value.message === 'string' && value.message.trim() && value.message.length <= 1024) {
+      return { status: 'error', code: value.code, message: value.message };
+    }
+  }
+  throw new ApiError('Renulus could not confirm whether the file was saved. Check the selected folder before trying again.', 0, 'invalid_backup_result');
+}
+/** The browser fallback stays bounded even if the runtime supports larger native backups. */
+async function readDownload(response: Response, mime: string, limit: number, signal: AbortSignal): Promise<Blob> {
+  const reader = response.body?.getReader();
+  if (!reader) throw invalid('The download has no readable content. Try again.');
+  const abort = () => { void reader.cancel().catch(() => {}); };
+  signal.addEventListener('abort', abort, { once: true });
+  const parts: ArrayBuffer[] = [];
+  let size = 0; let complete = false;
+  try {
+    signal.throwIfAborted();
+    if (response.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase() !== mime) throw invalid('The local runtime returned the wrong download format. Try the download again.');
+    const length = response.headers.get('Content-Length');
+    const declared = length !== null && /^\d{1,16}$/.test(length) ? Number(length) : undefined;
+    if (length !== null && (declared === undefined || !count(declared))) throw invalid('The download size could not be checked. Try again.');
+    if (declared !== undefined && declared > limit) throw new ApiError('This backup exceeds the browser download limit of ' + bytes(limit) + '. Use the Renulus desktop app to save larger backups.', 0, 'browser_backup_limit');
+    while (true) {
+      const next = await reader.read();
+      signal.throwIfAborted();
+      if (next.done) break;
+      size += next.value.byteLength;
+      if (size > limit) throw new ApiError('This backup exceeds the browser download limit of ' + bytes(limit) + '. Use the Renulus desktop app to save larger backups.', 0, 'browser_backup_limit');
+      parts.push(next.value.slice().buffer);
+    }
+    if (size === 0 || (declared !== undefined && declared !== size)) throw invalid('The backup transfer did not finish. Try the download again.');
+    complete = true;
+    return new Blob(parts, { type: mime });
+  } finally {
+    signal.removeEventListener('abort', abort);
+    if (!complete) await reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+}
 const statusLabels: Record<RebuildStatus, string> = { idle: 'Not rebuilding', required: 'Rebuild needed', running: 'Rebuilding', complete: 'Complete', blocked: 'Blocked', partial: 'Partial', failed: 'Failed' };
 const statusMessages: Record<RebuildStatus, string> = {
   idle: 'A restore schedules a local rebuild after deletion checks.',
@@ -137,14 +208,15 @@ export function DataManagement() {
   const [cleanupError, setCleanupError] = useState<unknown>();
   const [downloadError, setDownloadError] = useState<unknown>();
   const [downloadNotice, setDownloadNotice] = useState<string>();
-  const [downloading, setDownloading] = useState<'zip' | 'json'>();
+  const [downloading, setDownloading] = useState<BackupKind>();
+  const [cancellingDownload, setCancellingDownload] = useState(false);
   const [busy, setBusy] = useState<'restore' | 'rebuild'>();
   const mounted = useRef(false);
   const fileInput = useRef<HTMLInputElement | null>(null);
   const stagedToken = useRef<string | undefined>(undefined);
   const selectionVersion = useRef(0);
   const selectionRequest = useRef<AbortController | null>(null);
-  const downloadRequest = useRef<AbortController | null>(null);
+  const downloadRequest = useRef<DownloadRequest | null>(null);
   const mutationRequest = useRef<AbortController | null>(null);
   const recoveryRequest = useRef<AbortController | null>(null);
   const recoveryVersion = useRef(0);
@@ -185,7 +257,10 @@ export function DataManagement() {
   useEffect(() => {
     mounted.current = true; void refreshRecovery();
     return () => {
-      mounted.current = false; ++selectionVersion.current; selectionRequest.current?.abort(); downloadRequest.current?.abort(); mutationRequest.current?.abort(); stopRecoveryRead();
+      mounted.current = false; ++selectionVersion.current; selectionRequest.current?.abort(); mutationRequest.current?.abort(); stopRecoveryRead();
+      const pending = downloadRequest.current; downloadRequest.current = null;
+      if (pending?.transport === 'browser') { clearTimeout(pending.timer); pending.controller.abort(); }
+      if (pending?.transport === 'native' && !pending.cancelling) { pending.cancelling = true; void pending.cancel(pending.id).catch(() => {}); }
       const token = stagedToken.current; stagedToken.current = undefined; if (token) void discard(token);
       objectUrls.current.forEach(url => URL.revokeObjectURL(url)); objectUrls.current.clear();
     };
@@ -210,16 +285,17 @@ export function DataManagement() {
     const controller = new AbortController(); selectionRequest.current = controller;
     const current = () => mounted.current && !controller.signal.aborted && version === selectionVersion.current;
     setFileName(file.name); setChecking(true);
-    const limits = lastRecovery.current?.limits ?? defaultLimits;
+    const knownRecovery = lastRecovery.current;
+    const limits = knownRecovery?.limits ?? defaultLimits;
     let token: string | undefined;
     try {
       const extension = file.name.toLowerCase().split('.').pop();
       if (extension !== 'zip' && extension !== 'json') throw new ApiError('Choose a Renulus ZIP backup or a records-only JSON export.', 0, 'unsupported_backup');
-      const limit = extension === 'zip' ? limits.archive_bytes : limits.json_bytes;
+      const limit = extension === 'zip' ? fullBackupLimits(knownRecovery).archive_bytes : limits.json_bytes;
       if (file.size > limit) throw new ApiError('This file exceeds the local ' + (extension === 'zip' ? 'ZIP' : 'JSON') + ' limit of ' + bytes(limit) + '. Choose a smaller export.', 0, 'backup_too_large');
       let result: Preview;
       if (extension === 'zip') {
-        const response = await api<unknown>('/data/backup/preview', { method: 'POST', body: file, headers: { 'Content-Type': 'application/zip' }, signal: controller.signal, timeoutMs: 120_000 });
+        const response = await api<unknown>(fullBackupPath('/data/backup/preview', knownRecovery), { method: 'POST', body: file, headers: { 'Content-Type': 'application/zip' }, signal: controller.signal, timeoutMs: recoveryOperationMs });
         if (object(response) && typeof response.preview_token === 'string' && response.preview_token.trim()) token = response.preview_token;
         if (!current()) { if (token) void discard(token); return; }
         result = readZipPreview(response, file.name);
@@ -235,16 +311,58 @@ export function DataManagement() {
       if (current() && !isCancelled(error)) setRestoreError(error);
     } finally { if (current()) { setChecking(false); selectionRequest.current = null; } }
   }
-  async function download(kind: 'zip' | 'json') {
+  async function cancelDownload() {
+    const pending = downloadRequest.current;
+    if (!pending || (pending.transport === 'native' && pending.cancelling)) return;
+    setDownloadError(undefined);
+    if (pending.transport === 'browser') {
+      clearTimeout(pending.timer); pending.controller.abort(); downloadRequest.current = null;
+      setDownloading(undefined); setDownloadNotice('Download cancelled. You can start another download.');
+      return;
+    }
+    pending.cancelling = true; setCancellingDownload(true);
+    try { await pending.cancel(pending.id); }
+    catch {
+      if (mounted.current && downloadRequest.current === pending) {
+        pending.cancelling = false; setCancellingDownload(false);
+        setDownloadError(new ApiError('Renulus could not request cancellation. Try Cancel download again, or close the save dialog.', 0, 'backup_cancel_failed'));
+      }
+    }
+  }
+  async function download(kind: BackupKind) {
     if (downloadRequest.current) return;
-    const controller = new AbortController(); downloadRequest.current = controller;
-    setDownloading(kind); setDownloadError(undefined); setDownloadNotice(undefined);
+    setDownloadError(undefined); setDownloadNotice(undefined);
+    const native = window.renulus;
+    let pending: DownloadRequest;
     try {
+      if (native?.saveBackup) {
+        if (!native.cancelBackup) throw new ApiError('Native backup cancellation is unavailable. Restart Renulus before saving a backup.', 0, 'backup_bridge_incomplete');
+        pending = { transport: 'native', id: crypto.randomUUID(), cancelling: false, save: native.saveBackup.bind(native), cancel: native.cancelBackup.bind(native) };
+      } else pending = { transport: 'browser', controller: new AbortController(), timedOut: false };
+    } catch (error) { setDownloadError(error instanceof ApiError ? error : new ApiError('Native backup saving is unavailable. Restart Renulus and try again.', 0, 'backup_bridge_unavailable')); return; }
+    downloadRequest.current = pending; setDownloading(kind); setCancellingDownload(false);
+    const current = () => mounted.current && downloadRequest.current === pending;
+    try {
+      if (pending.transport === 'native') {
+        const result = readBackupSave(await pending.save(kind, pending.id), kind);
+        if (!current()) return;
+        setDownloadError(undefined);
+        if (result.status === 'error') throw new ApiError(result.message, 0, result.code);
+        setDownloadNotice(result.status === 'cancelled' ? 'Backup save cancelled.' :
+          (kind === 'zip' ? 'Full backup saved: ' : 'Records-only JSON saved: ') + result.fileName + ' (' + bytes(result.bytes) + '). ' +
+          (kind === 'zip' ? 'Keep the ZIP in a safe location.' : 'Library originals are not included.'));
+        return;
+      }
+      const controller = pending.controller;
+      const operation = pending;
+      pending.timer = setTimeout(() => { operation.timedOut = true; controller.abort(); }, recoveryOperationMs);
       const mime = kind === 'zip' ? 'application/zip' : 'application/json';
-      const response = await apiResponse(kind === 'zip' ? '/data/backup' : '/data/export', { headers: { Accept: mime }, signal: controller.signal, timeoutMs: 120_000 });
-      if (response.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase() !== mime) throw invalid('The local runtime returned the wrong download format. Try the download again.');
-      const blob = await response.blob();
-      if (controller.signal.aborted || !mounted.current) return;
+      const knownRecovery = lastRecovery.current;
+      const response = await apiResponse(kind === 'zip' ? fullBackupPath('/data/backup', knownRecovery) : '/data/export', { headers: { Accept: mime }, signal: controller.signal, timeoutMs: 0 });
+      const limits = kind === 'zip' ? fullBackupLimits(knownRecovery) : knownRecovery?.limits ?? defaultLimits;
+      const key = kind === 'zip' ? 'archive_bytes' : 'json_bytes';
+      const blob = await readDownload(response, mime, Math.min(limits[key], defaultLimits[key]), controller.signal);
+      if (controller.signal.aborted || !current()) return;
       const url = URL.createObjectURL(blob); objectUrls.current.add(url);
       const anchor = document.createElement('a'); anchor.href = url;
       const suggested = response.headers.get('Content-Disposition')?.match(/filename="?([^";]+)"?/i)?.[1];
@@ -253,11 +371,19 @@ export function DataManagement() {
       document.body.append(anchor); anchor.click(); anchor.remove();
       setTimeout(() => { if (objectUrls.current.delete(url)) URL.revokeObjectURL(url); }, 1000);
       setDownloadNotice(kind === 'zip' ? 'Full backup download started. Keep the ZIP in a safe location.' : 'Records-only JSON download started. Library originals are not included.');
-    } catch (error) { if (!controller.signal.aborted && mounted.current && !isCancelled(error)) setDownloadError(error); }
-    finally { if (mounted.current && downloadRequest.current === controller) { downloadRequest.current = null; setDownloading(undefined); } }
+    } catch (error) {
+      if (current()) {
+        if (pending.transport === 'browser' && pending.timedOut) setDownloadError(new ApiError('The backup download took longer than 30 minutes and was stopped. Try again.', 0, 'backup_download_timeout', true));
+        else if (pending.transport === 'native' || !isCancelled(error)) setDownloadError(error instanceof ApiError || pending.transport === 'browser' ? error :
+          new ApiError('The backup save could not be confirmed. Check the selected folder before trying again.', 0, 'backup_save_failed'));
+      }
+    } finally {
+      if (pending.transport === 'browser') clearTimeout(pending.timer);
+      if (current()) { downloadRequest.current = null; setDownloading(undefined); setCancellingDownload(false); }
+    }
   }
   function reportRebuild(rebuild: Rebuild, restored?: RestoreResult) {
-    const result: Recovery = { last_restore: restored ?? lastRecovery.current?.last_restore ?? null, rebuild, limits: lastRecovery.current?.limits, omissions: lastRecovery.current?.omissions, backup_scope: lastRecovery.current?.backup_scope };
+    const result: Recovery = { last_restore: restored ?? lastRecovery.current?.last_restore ?? null, rebuild, limits: lastRecovery.current?.limits, backup_formats: lastRecovery.current?.backup_formats, omissions: lastRecovery.current?.omissions, backup_scope: lastRecovery.current?.backup_scope };
     lastRecovery.current = result; setRecovery(result); setRecoveryError(undefined);
   }
   async function restore() {
@@ -269,7 +395,7 @@ export function DataManagement() {
     setBusy('restore'); setRestoreError(undefined); setReviewedDate(false); setAcknowledgedLimits(false);
     try {
       const value = await api<unknown>(preview.kind === 'zip' ? '/data/backup/restore' : '/data/restore', {
-        method: 'POST', signal: controller.signal, timeoutMs: 120_000,
+        method: 'POST', signal: controller.signal, timeoutMs: recoveryOperationMs,
         body: preview.kind === 'zip'
           ? { preview_token: preview.token, confirmed_exported_at: preview.exportedAt, acknowledge_deletion_limits: true }
           : { bundle: preview.bundle, confirm_backup_date: true, confirmed_exported_at: preview.exportedAt },
@@ -299,7 +425,8 @@ export function DataManagement() {
     }
   }
 
-  const limits = recovery?.limits ?? defaultLimits;
+  const limits = fullBackupLimits(recovery);
+  const jsonLimit = recovery?.limits?.json_bytes ?? defaultLimits.json_bytes;
   const canRestore = !!preview && reviewedDate && acknowledgedLimits && !busy && !checking;
   const lastRestore = recovery?.last_restore;
   return <section className="data-management" aria-labelledby={id + '-title'}>
@@ -309,13 +436,14 @@ export function DataManagement() {
     </div>
     <CatalogueOmission omissions={recovery?.omissions} />
     <div className="data-records-export"><Button variant="ghost" onClick={() => void download('json')} busy={downloading === 'json'} disabled={!!downloading || !!busy}>{downloading === 'json' ? 'Preparing records export…' : 'Export records only (JSON)'}</Button><p className="muted">Records only, without attachment bytes or indexes. This is not a full backup.</p></div>
+    {downloading && <Notice><div className="data-copy"><p role="status">{cancellingDownload ? 'Cancelling download… If a save dialog is still open, close it to finish cancelling.' : downloadRequest.current?.transport === 'native' ? 'Choose a location in the save dialog. Renulus will confirm when the file is saved.' : 'Preparing the download. You can cancel while it is pending.'}</p><div className="actions"><Button variant="secondary" disabled={cancellingDownload} busy={cancellingDownload} onClick={() => void cancelDownload()}>{cancellingDownload ? 'Cancelling download…' : 'Cancel download'}</Button></div></div></Notice>}
     {!!downloadError && <ErrorState title="Download could not be prepared" error={downloadError} />}
     {downloadNotice && <Notice><p>{downloadNotice}</p></Notice>}
     {!!cleanupError && <Notice tone="warning"><p>{cleanupError instanceof ApiError ? cleanupError.message : 'The staged preview could not be discarded; it will expire automatically.'}</p></Notice>}
     <div className="data-recovery-columns">
       <section className="data-restore" aria-labelledby={id + '-restore'}>
         <div className="data-copy"><h3 id={id + '-restore'}>Restore from a copy</h3><p>Choose a file, review its date and contents, then confirm the restore.</p></div>
-        <Input id={id + '-file'} label="Choose ZIP backup or JSON export" type="file" accept=".zip,application/zip,.json,application/json" disabled={!!busy} onChange={event => { fileInput.current = event.currentTarget; void selectFile(event); }} hint={'ZIP up to ' + bytes(limits.archive_bytes) + '; records-only JSON up to ' + bytes(limits.json_bytes) + '.'} />
+        <Input id={id + '-file'} label="Choose ZIP backup or JSON export" type="file" accept=".zip,application/zip,.json,application/json" disabled={!!busy} onChange={event => { fileInput.current = event.currentTarget; void selectFile(event); }} hint={'ZIP up to ' + bytes(limits.archive_bytes) + '; records-only JSON up to ' + bytes(jsonLimit) + '.'} />
         {fileName && <p className="data-file-name">Selected: <strong>{fileName}</strong></p>}
         {checking && <LoadingState label="Validating your selected file" />}
         {!!restoreError && <ErrorState title="Restore is not ready" error={restoreError} />}
@@ -352,7 +480,7 @@ export function DataManagement() {
         </div>}
         <div className="actions"><Button variant="secondary" disabled={!recovery || !!busy || recovery.rebuild.status === 'running' || (recovery.rebuild.status === 'idle' && !lastRestore)} busy={busy === 'rebuild'} onClick={() => void rebuild()}>{busy === 'rebuild' ? 'Starting rebuild…' : recovery && ['blocked', 'partial', 'failed'].includes(recovery.rebuild.status) ? 'Retry local rebuild' : 'Rebuild local indexes'}</Button><Button variant="ghost" disabled={refreshing || !!busy} onClick={() => void refreshRecovery()}><RefreshCw size={16} aria-hidden="true" />Refresh recovery status</Button></div>
         <CatalogueOmission omissions={recovery?.omissions} />
-        <details className="data-limits"><summary>{recovery?.limits ? 'Local recovery limits and backup scope' : 'Recovery limits (engineering defaults)'}</summary><dl><div><dt>ZIP upload</dt><dd>{bytes(limits.archive_bytes)}</dd></div><div><dt>JSON upload</dt><dd>{bytes(limits.json_bytes)}</dd></div><div><dt>Each archive member</dt><dd>{bytes(limits.original_bytes)}</dd></div><div><dt>Expanded originals</dt><dd>{bytes(limits.total_original_bytes)}</dd></div><div><dt>Original files</dt><dd>{limits.originals.toLocaleString('en-GB')}</dd></div></dl></details>
+        <details className="data-limits"><summary>{recovery?.limits ? 'Local recovery limits and backup scope' : 'Recovery limits (engineering defaults)'}</summary><dl><div><dt>ZIP upload</dt><dd>{bytes(limits.archive_bytes)}</dd></div><div><dt>JSON upload</dt><dd>{bytes(jsonLimit)}</dd></div><div><dt>Each library original</dt><dd>{bytes(limits.original_bytes)}</dd></div><div><dt>Expanded originals</dt><dd>{bytes(limits.total_original_bytes)}</dd></div><div><dt>Original files</dt><dd>{limits.originals.toLocaleString('en-GB')}</dd></div></dl></details>
       </section>
     </div>
   </section>;
