@@ -250,6 +250,49 @@ candidate articles are eligible/current/indexed.
 
 ## Remaining throughput and integration limits
 
+The separate catalogue usability follow-up adds optional eligibility and query
+arguments to CollectionCatalogue.list. Eligibility accepts eligible,
+inspection_required, reserved or unavailable; unavailable includes every other
+stored eligibility reason. Source, eligibility and literal title substring
+filters combine before SQLite counts and pages the result. query defaults to an
+empty string and accepts at most 200 characters. Percent, underscore and
+backslash are escaped as literal characters, and whitespace is retained.
+Unsupported eligibility or invalid query values return invalid_collection_filter
+(422). A doctor-facing route can select pending candidates with
+list(source_id="L02", eligibility="inspection_required", query="dialysis",
+limit=250, offset=0).
+
+The result retains entries, total and offset, with total counting all filtered
+matches before pagination. No additional global-count field is introduced. Both
+filtered and unfiltered pages use the stable order c.source_id,c.title,c.id and
+the existing 1,000-row page cap. Jobs/rights/metadata keep their existing shape.
+Listing uses already registered SQLite receipts; it neither re-registers the
+manifest nor opens collection files. API parameters remain a parent-owned
+knowledge/api.py follow-up. No schema/index/shared-lock change is made here;
+filtered counts, substring matching and large offsets still require SQLite
+scans/sorting and are not a corpus throughput improvement.
+
+Catalogue follow-up verification on October 4, 2026 UTC (October 5 Warsaw):
+111 checks passed in 59.53 seconds, with the existing TestClient deprecation
+warning, using the integration CPython 3.14.4 venv:
+
+```
+python -m pytest tests/knowledge/test_acquired_catalogue.py tests/knowledge/test_acquired.py tests/knowledge/test_acquired_binding.py tests/knowledge/test_acquired_api.py tests/knowledge/test_api_collection.py -q
+```
+
+The new catalogue file contributes 21 checks. Its real SQLite proof seeds
+178,558 synthetic rows, finds 35,712 inspection_required and 71,423 unavailable
+entries, and checks adjacent 75-row pages at offset 12,345, the last partial
+page, an empty page and the 1,000-row cap. Collection register/preview and file
+opens are forbidden during listing. Smaller checks cover all four eligibility
+classes, source/query intersection, literal percent/underscore/backslash,
+quoted input, whitespace, the 200-character query boundary, invalid filters,
+title ties, unchanged response fields and persisted queued state after selected
+import. The earlier failure-note assertion now identifies the selected JATS by
+ID rather than assuming the first tied title is its receipt. Workspace check
+passed with 17,845 public files and 226 local links; git diff --check passed.
+These are synthetic pagination proofs, with no actual collection scan/import.
+
 The application API retains its 250-entry deliberate batch limit and one serial
 CPU worker. The adapter reads a complete manifest metadata stream per selected
 batch, but opens only selected matched artifacts. XML is bounded to 64 MiB,
@@ -264,8 +307,9 @@ Continuing toward all authorised eligible data requires deliberate batches of
 remaining inspection_required JATS candidates and draining the same durable
 queue. Selection failures remain explained and unavailable. No blanket rights
 promotion, background import of unselected originals or corpus-completion claim
-is made. Parent-owned eligibility filters/pagination and version-specific review
-can improve scheduling and currentness without weakening this permission gate.
+is made. Parent-owned API/UI filter wiring can improve deliberate scheduling;
+inspected version-specific review supplies currentness independently of this
+permission gate.
 
 Renderer prerequisite outside this lease: the base Library checkbox at
 apps/desktop/src/modules/library/index.tsx:166 disables any entry whose

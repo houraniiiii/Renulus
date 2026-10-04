@@ -157,7 +157,8 @@ def test_exact_version_metadata_required(repository, case, patch, code):
     result = collection.import_selected(case.selected)["results"][0]
     assert result["code"] == code
     assert repository.list_documents()["documents"] == []
-    assert code in collection.list()["entries"][0]["metadata"]["notes"][-1]
+    inspected = next(entry for entry in collection.list()["entries"] if entry["id"] == case.selected[0])
+    assert code in inspected["metadata"]["notes"][-1]
 
 
 @pytest.mark.parametrize("change,code", [("jats_hash", "source_hash_changed"), ("metadata_hash", "source_hash_changed"),

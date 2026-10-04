@@ -167,10 +167,29 @@ class CollectionCatalogue:
                     (entry["id"], entry["collection_path"], entry["source_id"], entry["title"], entry["expected_sha256"], entry["bytes"], int(entry["reserved"]), entry["eligibility"], json.dumps(entry["metadata"]), json.dumps(entry["rights"]), preview["checked_at"]))
         return {"catalogued": len(preview["entries"]), "errors": preview["errors"], "status": "catalogued", "indexed": False}
 
-    def list(self, *, source_id=None, limit=250, offset=0):
-        where, args = (" WHERE c.source_id=?", [source_id]) if source_id else ("", [])
+    def list(self, *, source_id=None, limit=250, offset=0, eligibility=None, query=""):
+        """Page registered metadata without recataloguing or inspecting bodies."""
+        if eligibility not in (None, "eligible", "inspection_required", "reserved", "unavailable"):
+            raise ApiError("invalid_collection_filter", "Choose a supported collection eligibility filter", 422)
+        if not isinstance(query, str) or len(query) > 200:
+            raise ApiError("invalid_collection_filter", "Use a literal title query of at most 200 characters", 422)
+        clauses, args = [], []
+        if source_id:
+            clauses.append("c.source_id=?")
+            args.append(source_id)
+        if eligibility == "unavailable":
+            clauses.append("c.eligibility NOT IN ('eligible','inspection_required','reserved')")
+        elif eligibility is not None:
+            clauses.append("c.eligibility=?")
+            args.append(eligibility)
+        if query:
+            # A title substring, not a LIKE pattern; keep literal whitespace too.
+            term = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            clauses.append("c.title LIKE ? ESCAPE '\\'")
+            args.append("%" + term + "%")
+        where = " WHERE " + " AND ".join(clauses) if clauses else ""
         count = self.db.fetch_one("SELECT COUNT(*) AS n FROM knowledge_catalogue c" + where, args)["n"]
-        entries = self.db.fetch_all("SELECT c.*,j.state AS processing_status,j.error_code FROM knowledge_catalogue c LEFT JOIN knowledge_jobs j ON j.id=c.job_id" + where + " ORDER BY c.source_id,c.title LIMIT ? OFFSET ?", [*args, min(limit, 1000), offset])
+        entries = self.db.fetch_all("SELECT c.*,j.state AS processing_status,j.error_code FROM knowledge_catalogue c LEFT JOIN knowledge_jobs j ON j.id=c.job_id" + where + " ORDER BY c.source_id,c.title,c.id LIMIT ? OFFSET ?", [*args, min(limit, 1000), offset])
         for entry in entries:
             entry["metadata"] = json.loads(entry.pop("metadata_json"))
             entry["rights"] = json.loads(entry.pop("rights_json"))
