@@ -19,6 +19,7 @@ interface Login { login_id: string; status: 'pending' | 'connected' | 'error' | 
 const names: Record<Provider, string> = { codex: 'Codex', 'opencode-go': 'OpenCode Go' };
 
 export function ConnectionsPage() {
+  const [section, setSection] = useState<'subscriptions' | 'sources' | 'data'>('subscriptions');
   const { resource, retry } = useResource(async signal => {
     const [health, connections] = await Promise.all([
       api<Health>('/health', { signal }), api<Connections>('/connections', { signal }),
@@ -96,7 +97,12 @@ export function ConnectionsPage() {
 
   return <>
     <PageHeader title="Connections" description="Choose the subscription Renulus uses for your learning." actions={<Button variant="secondary" disabled={!!busy} onClick={retry}><RefreshCw size={16} />Refresh status</Button>} />
-    {error && <div className="section"><ErrorState error={error} title="The connection could not be updated" onRetry={() => { setError(undefined); retry(); }} /></div>}
+    <nav className="actions connection-settings" aria-label="Connection settings">
+      {([{ id: 'subscriptions', label: 'Learning subscriptions' }, { id: 'sources', label: 'Sources and retrieval' }, { id: 'data', label: 'Your study data' }] as const).map(item =>
+        <Button key={item.id} variant={section === item.id ? 'secondary' : 'ghost'} aria-pressed={section === item.id} disabled={!!busy || login?.status === 'pending'} onClick={() => setSection(item.id)}>{item.label}</Button>)}
+    </nav>
+    <div hidden={section !== 'subscriptions'}>
+    {error != null && <div className="section"><ErrorState error={error} title="The connection could not be updated" onRetry={() => { setError(undefined); retry(); }} /></div>}
     {notice && <div className="section"><Notice><p>{notice}</p></Notice></div>}
     {resource.status === 'loading' ? <LoadingState label="Checking your learning connections" /> : resource.status === 'error' ? <ErrorState error={resource.error} title="Connections could not be loaded" onRetry={retry} /> : <div className="connection-columns">
       <section className="connection-list" aria-label="Learning subscriptions">
@@ -113,9 +119,10 @@ export function ConnectionsPage() {
           {connection.provider === 'codex' && login?.status === 'pending' && <Notice><div className="section"><p>Finish sign-in in your browser. Renulus is waiting for your account to connect.</p><div className="actions">{!window.renulus && login.authorization_url && <a href={login.authorization_url} target="_blank" rel="noreferrer">Open sign-in in your browser</a>}<Button variant="ghost" disabled={!!busy} onClick={() => operation('cancel-login', async signal => { await api('/connections/codex/login/' + encodeURIComponent(login.login_id), { method: 'DELETE', signal }); pendingLogin.current = undefined; setLogin(undefined); })}>Cancel sign-in</Button></div></div></Notice>}
         </section>)}
       </section>
-      <aside className="section"><section className="section"><h2>Your local runtime</h2><p>Runtime {resource.data.health.version} · API {resource.data.health.api_version}</p><p>Subscription and model availability are reported by the backend. Image input remains unverified until a live check.</p></section><Notice><p>Renulus uses your selected subscription. It does not silently switch subscriptions or add a paid API fallback.</p></Notice><p className="muted">Connecting and checking models do not send a learning prompt. Ask and other model-dependent flows need separate working integration evidence.</p></aside>
+      <aside className="section"><section className="section"><h2>Your learning connection</h2><p>Sign in and select a subscription to start explanations and generated practice.</p><p>Check models after connecting to see what your account can use. Image interpretation is currently unverified.</p></section><Notice><p>Reviewed tests and your saved study material are available without a model connection.</p></Notice><p className="muted">Renulus {resource.data.health.version} · Connecting and checking models do not send a learning prompt.</p></aside>
     </div>}
-    <RetrievalConnections />
-    <DataManagement />
+    </div>
+    <div hidden={section !== 'sources'}><RetrievalConnections openSource={window.renulus?.openSource} /></div>
+    <div hidden={section !== 'data'}><DataManagement /></div>
   </>;
 }

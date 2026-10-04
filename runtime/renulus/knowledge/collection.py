@@ -9,7 +9,7 @@ from ..storage.database import utc_now
 from .models import Rights, SourceMetadata
 from .repository import MEDIA
 
-COLLECTION = Path("C:/Users/karol/Documents/Renulus-data")
+COLLECTION = Path.home() / "Documents" / "Renulus-data"
 MANIFEST = "metadata/acquisition-2026-10-04/acquisition-manifest.jsonl"
 CATALOGUE = "metadata/era-neph-manual-2026-10-04-catalogue.json"
 VERIFICATION = "metadata/era-neph-manual-2026-10-04-file-verification.json"

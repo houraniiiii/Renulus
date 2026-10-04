@@ -58,6 +58,10 @@ ipcMain.handle('renulus:open-authorization', async (event, url: unknown) => {
   if (event.sender !== window?.webContents || typeof url !== 'string' || !allowedAuthorizationUrl(url)) throw new Error('The sign-in URL is not permitted.');
   await shell.openExternal(url);
 });
+ipcMain.handle('renulus:open-source', async (event, url: unknown) => {
+  if (event.sender !== window?.webContents || typeof url !== 'string' || !allowedSourceUrl(url)) throw new Error('The source URL is not permitted.');
+  await shell.openExternal(url);
+});
 app.on('second-instance', () => ensureMainWindow(window, { isReady: app.isReady(), createWindow, focusWindow: activateWindow }));
 app.on('activate', () => ensureMainWindow(window, { isReady: app.isReady(), createWindow, focusWindow: activateWindow }));
 app.on('window-all-closed', () => app.quit());

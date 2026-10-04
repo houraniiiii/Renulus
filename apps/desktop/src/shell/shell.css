@@ -48,6 +48,7 @@ kbd { display: inline-block; padding: 1px 5px; background: var(--rail); border: 
 .destination-results button { display: flex; justify-content: space-between; align-items: center; padding: 12px; text-align: left; border-radius: var(--radius-control); min-height: 44px; }
 .destination-results button:hover { background: var(--renal-teal-soft); color: var(--renal-teal); }
 .connection-columns { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(220px, 1fr); gap: 40px; }
+.connection-settings { margin-bottom: var(--space-32); }
 .connection-list { display: grid; gap: 32px; }
 .connection-row { padding-bottom: 32px; border-bottom: 1px solid var(--line); display: grid; gap: 16px; }
 .connection-heading { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
