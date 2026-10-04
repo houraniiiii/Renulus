@@ -212,3 +212,23 @@ viewer and a real Updates publisher link; it is not extraction/indexing proof.
 Actual final native/installer results and artifact hashes will be added after
 those checks run. No live model/authentication or signed/clean-machine proof
 is claimed by these staging results.
+
+Controlled embedded startup subsequently authenticated in154.936seconds with an
+OS-only PATH. All10 backend modules were installed; both helper groups and their
+dependency imports were ready. Providers stayed disconnected, capabilities
+unknown, CPU2 controls active, and warmup reported no downloads or model
+instances. The trace showed progressing cold SDK/Docling/Transformers imports,
+not a startup exception. This is backend readiness evidence, not native launch.
+The owned native startup budget is now300seconds so it covers that measured
+startup; it remains bounded and cancellable. Slow cold startup remains a known
+delivery limitation. Native evidence uses compact independent synthetic profile
+paths and records each actual startup duration.
+
+Nine synthetic packaging tests now pass in7.682seconds on embedded3.14.4. The
+added Windows regression actually writes and atomically renames a262-character
+temporary helper path to its254-character final path using extended filesystem
+paths. No machine registry change is required. Bootstrap imports are safe for
+this narrow regression test; provisioning still executes before server startup.
+The matching e800affc renderer/native checkpoint rebuilt and typechecked after
+the owned startup-budget change, with parent main/profile bytes preserved. Final
+source staging remains held for the parent's completed integration revision.

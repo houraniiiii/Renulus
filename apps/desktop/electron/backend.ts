@@ -54,8 +54,9 @@ export async function startBackend(options: { profile: DesktopProfile; token: st
   const onAbort = () => { void stop().catch(() => {}); };
   signal.addEventListener('abort', onAbort, { once: true });
   try {
-    // First packaged startup provisions and verifies the public helper payload.
-    const deadline = Date.now() + (packaged ? 120_000 : 30_000);
+    // First packaged startup provisions and verifies helpers, then warms the
+    // selected CPU frameworks. Measured isolated Windows startup exceeds 120s.
+    const deadline = Date.now() + (packaged ? 300_000 : 30_000);
     while (Date.now() < deadline) {
       signal.throwIfAborted();
       if (failed || child.exitCode !== null || child.signalCode !== null) throw new Error('The local backend exited during startup.');

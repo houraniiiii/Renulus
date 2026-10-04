@@ -8,8 +8,9 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { extractFile, listPackage } from '@electron/asar';
 
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const evidence = path.join(desktop, 'test-results', 'native-' + randomUUID());
-await mkdir(evidence, { recursive: true });
+await mkdir(path.join(desktop, 'test-results'), { recursive: true });
+const evidence = path.join(desktop, 'test-results', 'native-' + randomUUID().slice(0, 8));
+await mkdir(evidence);
 const expectedVersion = JSON.parse(await readFile(path.join(desktop, 'package.json'), 'utf8')).devDependencies.electron;
 const attached = process.env.RENULUS_TEST_ATTACH === '1';
 const packagedExecutable = process.env.RENULUS_PACKAGED_EXECUTABLE;
@@ -57,9 +58,11 @@ function alive(pid) { try { process.kill(pid, 0); return true; } catch (error) {
 try {
   for (const name of ['a', 'b']) {
     const profile = path.join(evidence, 'profile-' + name);
-    const application = await electron.launch({ executablePath: packagedExecutable ?? path.join(desktop, 'node_modules', 'electron', 'dist', 'electron.exe'), args: packagedExecutable ? [] : ['.'], cwd: packagedExecutable ? path.dirname(packagedExecutable) : desktop, env: { ...env, RENULUS_PROFILE: profile }, timeout: packagedExecutable ? 150_000 : 45_000 });
+    const startedAt = Date.now();
+    console.log(JSON.stringify({ stage: 'native-instance-starting', name }));
+    const application = await electron.launch({ executablePath: packagedExecutable ?? path.join(desktop, 'node_modules', 'electron', 'dist', 'electron.exe'), args: packagedExecutable ? [] : ['.'], cwd: packagedExecutable ? path.dirname(packagedExecutable) : desktop, env: { ...env, RENULUS_PROFILE: profile }, timeout: packagedExecutable ? 360_000 : 45_000 });
     applications.push(application);
-    const page = await application.firstWindow({ timeout: packagedExecutable ? 150_000 : 45_000 }); await page.waitForSelector('h1');
+    const page = await application.firstWindow({ timeout: packagedExecutable ? 360_000 : 45_000 }); await page.waitForSelector('h1');
     const info = await application.evaluate(({ app, BrowserWindow }) => {
       const window = BrowserWindow.getAllWindows()[0];
       return { pid: process.pid, packaged: app.isPackaged, executable: process.execPath, electronVersion: process.versions.electron, chromeVersion: process.versions.chrome, nodeVersion: process.versions.node, userData: app.getPath('userData'), sessionData: app.getPath('sessionData'), persistentSession: window.webContents.session.isPersistent(), webPreferences: { nodeIntegration: window.webContents.getLastWebPreferences().nodeIntegration, contextIsolation: window.webContents.getLastWebPreferences().contextIsolation, sandbox: window.webContents.getLastWebPreferences().sandbox }, childPids: process._getActiveHandles().filter(handle => handle.constructor.name === 'ChildProcess').map(handle => handle.pid).filter(Boolean) };
@@ -67,11 +70,13 @@ try {
     const meta = await page.evaluate(async () => { const response = await fetch('/api/v1/meta'); return { status: response.status, value: await response.json(), rendererBridgeKeys: Object.keys(window.renulus ?? {}) }; });
     if (info.electronVersion !== expectedVersion || meta.status !== 200 || meta.value.api_version !== 1 || info.persistentSession || info.webPreferences.nodeIntegration || !info.webPreferences.contextIsolation || !info.webPreferences.sandbox || info.childPids.length !== (attached ? 0 : 1)) throw new Error('Native version/process/session boundary failed.');
     if (packagedExecutable && (!info.packaged || path.resolve(info.executable).toLowerCase() !== path.resolve(packagedExecutable).toLowerCase())) throw new Error('This is not the requested packaged executable.');
-    if (packagedExecutable && ['runtime', 'content', 'knowledge', 'learn', 'cases', 'assessment', 'memory', 'study', 'updates'].some(name => meta.value.modules[name]?.status !== 'installed')) throw new Error('A packaged backend module is absent.');
+    if (packagedExecutable && ['runtime', 'content', 'knowledge', 'retrieval', 'learn', 'cases', 'assessment', 'memory', 'study', 'updates'].some(name => meta.value.modules[name]?.status !== 'installed')) throw new Error('A packaged backend module is absent.');
     const unauthorizedStatus = (await fetch(new URL('/api/v1/meta', page.url()))).status;
     const authorizationRejected = await page.evaluate(async () => { try { await window.renulus.openAuthorization('https://untrusted.example/authorize'); return false; } catch { return true; } });
     if (unauthorizedStatus !== 401 || !authorizationRejected) throw new Error('Native API/sign-in boundary failed.');
-    records.push({ name, profile, ...info, meta, unauthorizedStatus, authorizationRejected });
+    const startupSeconds = (Date.now() - startedAt) / 1000;
+    records.push({ name, profile, startupSeconds, ...info, meta, unauthorizedStatus, authorizationRejected });
+    console.log(JSON.stringify({ stage: 'native-instance-ready', name, startupSeconds }));
     if (name === 'a') {
       await page.setViewportSize({ width: 1440, height: 960 });
       await page.evaluate(() => document.fonts.ready);

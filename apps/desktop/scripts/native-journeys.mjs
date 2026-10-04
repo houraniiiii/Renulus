@@ -7,8 +7,9 @@ import { fileURLToPath } from 'node:url';
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const executable = process.env.RENULUS_PACKAGED_EXECUTABLE;
 if (!executable || !path.isAbsolute(executable)) throw new Error('An explicit packaged executable is required.');
-const evidence = path.join(desktop, 'test-results', 'journeys-' + randomUUID());
-await mkdir(evidence, { recursive: true });
+await mkdir(path.join(desktop, 'test-results'), { recursive: true });
+const evidence = path.join(desktop, 'test-results', 'journeys-' + randomUUID().slice(0, 8));
+await mkdir(evidence);
 const expectedVersion = JSON.parse(await readFile(path.join(desktop, 'package.json'), 'utf8')).devDependencies.electron;
 const env = {};
 for (const name of ['SystemRoot','SYSTEMROOT','WINDIR','COMSPEC','PATHEXT','TEMP','TMP','USERPROFILE','LOCALAPPDATA','APPDATA']) if (process.env[name]) env[name] = process.env[name];
@@ -26,6 +27,7 @@ function syntheticPdf() {
 }
 const pdf = syntheticPdf();
 await writeFile(path.join(evidence, 'synthetic-two-page.pdf'), pdf);
+if (process.env.RENULUS_PDF_FIXTURE_ONLY === '1') { console.log(JSON.stringify({ fixture: path.join(evidence, 'synthetic-two-page.pdf') })); process.exit(0); }
 const metadata = { source_id: 'native-viewer-fixture', source_owner: 'Renulus synthetic test', canonical_url: null, edition: 'Viewer fixture', publication_date: null, received_at: null, checked_at: null, publication_status: 'unverified', latest_final_verified: false, content_reviewed: false, collection_section: null, collection_chapter: null, notes: [] };
 const rights = { display: true, cache: true, index: false, embedding: false, model_input: false, derivation: false, evaluation: false, redistribution: true, licence: 'Renulus synthetic test', permission_reference: 'Explicit test fixture', attribution: 'Renulus' };
 const revision = { id: 'native-pdf-revision', document_id: 'native-pdf-document', ordinal: 1, status: 'ready', sha256: createHash('sha256').update(pdf).digest('hex'), media_type: 'application/pdf', bytes: pdf.length, passage_count: 0, metadata, rights };
@@ -34,8 +36,8 @@ const citation = { document_id: document.id, document_revision: revision.id, tit
 let application;
 const result = { checkedAt: new Date().toISOString(), executable, pdfFixture: { sha256: revision.sha256, pages: 2, citationPage: 2 }, limits: ['Library DTO/original requests use declared synthetic fixtures; no parsing/indexing proof', 'No account, provider inference or private original', 'System-browser observation recorded separately'] };
 try {
-  application = await electron.launch({ executablePath: executable, cwd: path.dirname(executable), env, timeout: 150_000 });
-  const page = await application.firstWindow({ timeout: 150_000 }); await page.waitForSelector('h1');
+  application = await electron.launch({ executablePath: executable, cwd: path.dirname(executable), env, timeout: 360_000 });
+  const page = await application.firstWindow({ timeout: 360_000 }); await page.waitForSelector('h1');
   result.native = await application.evaluate(({ app }) => ({ packaged: app.isPackaged, version: process.versions.electron, executable: process.execPath }));
   if (!result.native.packaged || result.native.version !== expectedVersion) throw new Error('The patched packaged Electron is required.');
   await page.setViewportSize({ width: 1440, height: 960 });
