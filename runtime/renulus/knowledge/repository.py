@@ -11,6 +11,7 @@ from ..contracts import ApiError, ContextScope, Scope, durable_id
 from ..storage.database import utc_now
 from .engines import DoclingExtractor, FastEmbedEngine, LanceIndex, MAX_BYTES, OfflineAssets
 from .models import Rights, SourceMetadata, own_text_rights
+from .source_status import SourceStatusJournal
 
 TERMINAL = {"ready", "failed", "cancelled"}
 MEDIA = {".pdf": "application/pdf", ".png": "image/png", ".jpg": "image/jpeg",
@@ -31,6 +32,10 @@ class KnowledgeRepository:
         self.index = index or LanceIndex(self._selected_index_path())
         self._lock = RLock()
         self._ingest_lock = RLock()
+        self.source_status = SourceStatusJournal(self)
+
+    def update_source_status(self, event):
+        return self.source_status.update(event)
 
     def _selected_index_path(self):
         row = self.db.fetch_one("SELECT value FROM preferences WHERE key='knowledge.index_generation'")
@@ -185,6 +190,9 @@ class KnowledgeRepository:
                 if old_job["request_hash"] != request_hash:
                     raise ApiError("idempotency_conflict", "That import key belongs to a different request", 409)
                 return self._result(old_job["id"])
+            # Replay reviewed source state for a later import while keeping its
+            # idempotency hash tied to the caller's original import request.
+            metadata = self.source_status.effective(metadata)
             now = utc_now()
             revision_id, job_id = durable_id("rev"), durable_id("ingest")
             existing = self.get_document(document_id) if document_id else None

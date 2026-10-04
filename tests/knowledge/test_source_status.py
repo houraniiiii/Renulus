@@ -1,0 +1,85 @@
+import copy
+
+import pytest
+
+from renulus.contracts import ApiError
+from renulus.knowledge.models import SourceMetadata
+from test_repository import repository, import_note, STUDY
+
+
+def event(identifier, identity, changes, source_id="L02", scope=None):
+    return {"contract_version": 1, "event_id": identifier, "source_id": source_id,
+            "identity": identity, "changes": changes, "scope": scope or {},
+            "evidence": [{"url": "https://example.org/notice", "locator": "Synthetic notice",
+                          "finding": "Synthetic source-status check", "checked_on": "2026-10-04", "inspected": True}],
+            "reason": "Synthetic application check; no scientific currency claim"}
+
+
+def metadata(doi, **kwargs):
+    return SourceMetadata(source_id="L02", doi=doi, canonical_url="https://doi.org/" + doi,
+                          publication_status="final", latest_final_verified=True, content_reviewed=True, **kwargs)
+
+
+def test_exact_article_status_is_idempotent_and_does_not_retract_a_family(repository):
+    affected = import_note(repository, "Affected glomerular teaching", metadata=metadata("10.1234/original"))
+    other = import_note(repository, "Other glomerular teaching", metadata=metadata("10.1234/other"))
+    notice = event("notice-one", {"doi": "10.1234/original"}, {"retracted": True})
+    assert repository.update_source_status(notice)["revisions"] == 1
+    assert repository.update_source_status(notice)["state"] == "applied"
+    assert len(repository.db.fetch_all("SELECT * FROM knowledge_source_status_events")) == 1
+    hits = repository.retrieve("glomerular", scope=STUDY)["passages"]
+    assert {hit["document_id"] for hit in hits} == {other["document_id"]}
+    changed = repository.get_document(affected["document_id"])["revisions"][0]["metadata"]
+    assert changed["retracted"] and not changed["latest_final_verified"]
+    conflicting = copy.deepcopy(notice)
+    conflicting["changes"] = {"retracted": False}
+    with pytest.raises(ApiError) as caught:
+        repository.update_source_status(conflicting)
+    assert caught.value.code == "source_status_conflict"
+
+
+def test_status_before_import_replays_and_older_retry_cannot_override_later_review(repository):
+    old = event("older", {"doi": "10.1234/later"}, {"retracted": True})
+    assert repository.update_source_status(old)["state"] == "no-match"
+    body = dict(metadata=metadata("10.1234/later"), idempotency_key="source-note")
+    note = import_note(repository, "Later transplant teaching", **body)
+    assert repository.get_document(note["document_id"])["revisions"][0]["metadata"]["retracted"]
+    current = event("newer", {"doi": "10.1234/later"}, {"retracted": False,
+                    "publication_status": "final", "latest_final_verified": True})
+    repository.update_source_status(current)
+    repository.update_source_status(old)
+    assert import_note(repository, "Later transplant teaching", **body)["revision_id"] == note["revision_id"]
+    changed = repository.get_document(note["document_id"])["revisions"][0]["metadata"]
+    assert not changed["retracted"] and changed["latest_final_verified"]
+    assert repository.retrieve("transplant", scope=STUDY)["passages"]
+
+
+def test_observed_byte_change_invalidates_review_without_claiming_a_new_edition(repository):
+    note = import_note(repository, "Dialysis guidance", metadata=SourceMetadata(
+        source_id="K01", canonical_url="https://example.org/guide.pdf", edition="Recorded edition",
+        publication_status="final", latest_final_verified=True, content_reviewed=True))
+    change = event("bytes-changed", {"canonical_url": "https://example.org/guide.pdf"},
+                   {"latest_final_verified": False, "content_reviewed": False}, source_id="K01")
+    change["evidence"] = {"kind": "publication-digest", "previous_sha256": "a" * 64}
+    assert repository.update_source_status(change)["state"] == "applied"
+    changed = repository.get_document(note["document_id"])["revisions"][0]["metadata"]
+    assert changed["edition"] == "Recorded edition" and changed["publication_status"] == "final"
+    assert not changed["latest_final_verified"] and not changed["content_reviewed"]
+    assert repository.retrieve("dialysis", scope=STUDY, current_only=True)["passages"] == []
+
+
+def test_unknown_identity_scope_and_unreviewed_promotions_are_not_published(repository):
+    import_note(repository, "Kidney teaching", metadata=metadata("10.1234/scope"))
+    unresolved = event("unmapped-page", {"doi": "10.1234/scope"},
+                       {"excluded_pages": [2]}, scope={"locators": ["Unmapped chapter"]})
+    assert repository.update_source_status(unresolved)["state"] == "no-match"
+    pinned = event("pack-only", {"pinned_source_id": "source-item"}, {"superseded": True})
+    assert repository.update_source_status(pinned)["state"] == "no-match"
+    bad = event("promotion", {"doi": "10.1234/scope"}, {"content_reviewed": True})
+    bad["evidence"] = []
+    with pytest.raises(ApiError):
+        repository.update_source_status(bad)
+    bad = event("conflict", {"doi": "10.1234/scope", "canonical_url": "https://doi.org/10.1234/wrong"}, {"retracted": True})
+    with pytest.raises(ApiError):
+        repository.update_source_status(bad)
+    assert repository.retrieve("kidney", scope=STUDY)["passages"]

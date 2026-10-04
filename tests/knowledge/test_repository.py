@@ -37,6 +37,8 @@ def repository(tmp_path):
     db = Database(paths.database)
     schema = Path(__file__).parents[2] / "runtime/renulus/knowledge/schema.sql"
     db.apply_migration("knowledge-001", schema.read_text())
+    for migration in sorted((schema.parent / "migrations").glob("*.sql")):
+        db.apply_migration("knowledge-" + migration.stem, migration.read_text())
     services = Services(paths, db)
     return KnowledgeRepository(services, extractor=SyntheticExtractor(), embedder=SyntheticEmbedder())
 

@@ -98,6 +98,16 @@ dependency or exact-region overlay is claimed. The edition/currentness of
 third-party acquisitions is not inferred from receipt or successful OCR.
 # Integrated rebuild and volatile-input proof — October 4, 2026
 
+The local `update_source_status(event)` seam now journals ordered source-status
+evidence and matches exact publication URLs or DOI/PMID/PMCID identities within a
+source register ID. It applies a narrow metadata patch, preserves access/rights
+records, and replays the current ordered status on later imports. Import retry
+hashes stay tied to the original request. Conflicting IDs, unreviewed promotions,
+pack-only identities and unmapped locator scopes cannot broaden into family-wide
+changes. An observed byte change invalidates previous review without asserting
+a new edition or retraction. Source-status and repository checks passed 18 tests.
+
+
 `KnowledgeRepository.rebuild_index()` now serializes with ingestion and mutations,
 reconciles deletion markers, stages canonical eligible passages in a new owned
 generation, and validates exact passage/revision/document identities before an
