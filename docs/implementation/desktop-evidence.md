@@ -356,3 +356,21 @@ without junctions/symlinks; no existing profile or folder is replaced. Three PDF
 detector regressions and syntax checks passed. The installer and native source
 proofs above exercise these tools on actual Windows; no extra model, OCR
 conversion or provider inference was run.
+
+The user assigned the native lane the previously requested PDF policy
+prerequisite at 23:34 UTC. The narrow product patch adds `frame-src 'self' blob:`
+to both CSPs and permits only Chromium's built-in PDF extension origin and
+`chrome://resources` in the existing session filter. Other extension/internal
+origins, external HTTP(S), credentials and ports remain outside that exception.
+It keeps `object-src 'none'`, existing navigation restrictions and window
+sandbox/context isolation; no plugin or viewer-library change is needed. The
+patch only changes main.ts at an import and the existing request predicate,
+preserving parent startup/source-link integration when cherry-picked.
+
+Sixteen actual Vitest 4.1.11 checks passed in 1.40 s for the public-resource
+boundary, both real HTTP/header and index meta CSPs, and the existing
+authenticated streaming proxy. The TypeScript, Vite and Electron production
+build passed. The prior pinned Electron seven-variant fixture establishes the
+physical-page remedy; final matching packaged renderer verification remains
+pending. Parent may take main/preload/desktop types for the recovery download
+seam after this policy commit; this lane continues only proof/packaging paths.
