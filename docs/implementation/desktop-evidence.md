@@ -255,9 +255,10 @@ two-window regression observed the opening window at0.894s and loopback renderer
 at5.401s; the opening window closed before selection. This tests proof-script
 selection, not the actual parent's lifecycle or installed app. Final native proof
 will require the protected early startup window and close it while its physical
-backend child is starting, checking that child exit leaves the two other
-isolated test backends alive. No parent main/profile/startup-window edit is made
-here. Final matching source staging and installer proof remain pending.
+backend child is starting. Serial mode checks each attributed child exit before
+starting another instance; concurrent mode separately checks other attributed
+instances survive. No parent main/profile/startup-window edit is made here.
+Final matching source staging and installer proof remain pending.
 
 The first real relocated Library viewer journey did not pass. Its valid original
 two-page synthetic PDF opened a blob URL with #page=2, but the screenshot was
@@ -290,3 +291,68 @@ local Updates route. Read-only observation of that existing Chrome tab confirmed
 the title Guidelines - KDIGO, matching public URL and visible Guidelines heading.
 No browser navigation was used to manufacture that observation, and no account
 or provider call occurred. No final source revision or installer proof is implied.
+
+An unchanged committed parent-native source proof passed for protected opening
+window revision 7aa7f08024bc7667d526ce7b867cc85cf918cefa. The script snapshots
+the committed Electron source into this lane, records source hashes and compiles
+it without a main/profile/backend substitution. Actual Electron 44.5.1 displayed
+the static opening surface in 2.356 s. Its policy had JavaScript disabled, no
+preload, sandbox/context isolation enabled, no node integration and a
+nonpersistent session. Closing it before backend readiness stopped its physically
+owned embedded Python child 34448 in 13.464 s; no Flow-origin window existed yet.
+The independent shared backend PID 22620 remained alive. Evidence:
+test-results/opening-1eb1265c/opening-evidence.json and the inspected
+protected-opening-window.png. This is a nonpackaged early-close source proof,
+not final renderer handoff, helper readiness or backend shutdown-callback proof.
+
+The approved e800affc checkpoint also built a real unsigned NSIS installer.
+Renulus-Development-0.1.0-windows-x64-setup.exe is 965,788,144 bytes with SHA256
+69703a8a6bb61640f25b6b827dec24f20b117c769e65b77d5489f0da75008722 and
+Authenticode NotSigned. Its actual silent installation into a fresh owned
+release/i-e800 directory exited 0 in 578.547 s. Installed source/runtime contracts
+matched e800affc and embedded CPython 3.14.4. Installed executable SHA256:
+65f50ff38c5a51b19e6aed0c49cfeb1ce1d0a99f9a4696cfafb4b590dc8a652b;
+app.asar SHA256:
+2946c6894603bfa652d2728900732aad4f8bc1c0372d02f79ddc9ecc93102523.
+Evidence: test-results/installer-d64909c8/installer-evidence.json. That report
+correctly records extraction only; native launch was held during shared resource
+coordination and proved separately after the parent released the heavy process.
+No signed, clean-VM, uninstaller or original-profile claim follows from it.
+
+Actual installed native launch subsequently passed on October 4, 2026 at
+23:30:34 UTC. release/i-e800/Renulus Development.exe used Electron 44.5.1 and
+its physically relocated embedded CPython 3.14.4 with only Windows
+System32/Wbem on PATH. Python/python3/py/uv/Node/npm did not resolve;
+isolated/no-user-site flags were 1,
+prefix equalled base_prefix, and all import paths stayed inside the installed
+resources/backend tree. Fresh profile A authenticated in 139.971 s (full startup
+checks 140.032 s); fresh profile B authenticated in 42.102 s (checks 42.123 s). The
+profiles ran serially, with one owned Python child each, and both children
+32636/17924 were gone after closing their owning apps. All 10 modules and
+controlled CPU helper assets/imports were ready; providers remained disconnected.
+Sandbox, nonpersistent session, renderer authentication/direct 401, rejected
+untrusted sign-in URL, all 8 destinations, search and compact layout passed.
+The new installed screenshots were opened and inspected. Evidence:
+test-results/native-9e788d63/native-evidence.json.
+
+The same installed executable then restarted the previously provisioned profile A
+after both fresh instances had closed. The real renderer appeared in 31.629 s,
+renderer readiness was 31.971 s, and authenticated backend/status checks completed
+in 34.787 s. The new main PID 32416 retained the original profile and one new
+owned backend child 25560; that child was gone after close. This is a measured
+same-profile restart with provisioned helpers; OS caches are uncontrolled. It
+must not be inferred from the two different fresh-profile timings. This older
+checkpoint has no protected opening window, and its PDF policy remains the
+previously reported blocker. Final matching source staging remains held for the
+parent complete revision, protected opening handoff, PDF policy adaptation,
+source bridge and late module/recovery handoffs.
+
+Owned proof tooling now supports serial native instances, a separate opt-in
+same-profile restart, actual guarded NSIS installation and a required optional
+public-source IPC bridge journey. The Library fixture uses the full paginated
+list envelope while preserving its exact document route and synthetic PDF.
+Installer targets must be fresh absolute paths inside this lane release tree
+without junctions/symlinks; no existing profile or folder is replaced. Three PDF
+detector regressions and syntax checks passed. The installer and native source
+proofs above exercise these tools on actual Windows; no extra model, OCR
+conversion or provider inference was run.
