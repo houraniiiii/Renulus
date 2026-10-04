@@ -81,10 +81,10 @@ class KnowledgeRepository:
             raise ApiError("document_limit", "The maximum file size is 64 MiB", 413)
         metadata = metadata if isinstance(metadata, SourceMetadata) else SourceMetadata.model_validate(metadata or {})
         rights = rights if isinstance(rights, Rights) else Rights.model_validate(rights)
-        if not rights.cache or not rights.display or (not reserved and (not rights.index or not rights.embedding)):
-            raise ApiError("source_permission_required", "Confirm display, local caching, indexing and embedding permission for this source", 403)
         if metadata.source_id == "E02":
             reserved = True
+        if not rights.cache or not rights.display or (not reserved and (not rights.index or not rights.embedding)):
+            raise ApiError("source_permission_required", "Confirm display, local caching, indexing and embedding permission for this source", 403)
         digest = hashlib.sha256(data).hexdigest()
         request_hash = hashlib.sha256(dumps([digest, title, metadata.model_dump(), rights.model_dump(),
                                              scope.model_dump(), document_id, reserved]).encode()).hexdigest()
@@ -281,11 +281,14 @@ class KnowledgeRepository:
             return False
         if metadata.get("retracted") or metadata.get("superseded") or metadata.get("access_changed"):
             return False
+        if metadata.get("publication_status") in ("draft", "preprint"):
+            return False
         if topic_id and (topic_id in metadata.get("replaced_topics", []) or (metadata.get("topic_ids") and topic_id not in metadata["topic_ids"])):
             return False
-        # Topic replacements can affect text in summaries/tables outside chapter
-        # boundaries. Unscoped requests must exclude the whole affected source.
-        if metadata.get("replaced_topics") and not topic_id:
+        # Replaced guidance also occurs in summaries/tables outside chapter
+        # boundaries. Until reviewed passage-level replacement masks exist,
+        # suppress the affected source rather than leak a mixed-topic chunk.
+        if metadata.get("replaced_topics"):
             return False
         if current_only:
             if metadata.get("publication_status") != "final" or not metadata.get("latest_final_verified") or not metadata.get("content_reviewed") or metadata.get("repository_removed"):

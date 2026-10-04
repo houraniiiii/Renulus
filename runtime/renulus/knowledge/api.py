@@ -61,6 +61,14 @@ def create_router(services) -> APIRouter:
     def document(document_id: str):
         return repository.get_document(document_id)
 
+    @router.get("/documents/{document_id}/import-status")
+    def import_status(document_id: str):
+        document = repository.get_document(document_id)
+        job = services.db.fetch_one("SELECT id FROM knowledge_jobs WHERE revision_id=?", (document["latest_revision"],))
+        if not job:
+            raise ApiError("job_missing", "This document has no import job", 404)
+        return repository._result(job["id"])
+
     @router.post("/import/text", status_code=202)
     def import_text(body: TextImport, tasks: BackgroundTasks):
         result = repository.import_text(**body.model_dump(), process=False)

@@ -49,6 +49,9 @@ class SourceMetadata(BaseModel):
     pmid: str | None = None
     pmcid: str | None = None
     jurisdiction: str | None = None
+    collection_section: str | None = None
+    collection_chapter: str | None = None
+    asset_role: list[str] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
 
 

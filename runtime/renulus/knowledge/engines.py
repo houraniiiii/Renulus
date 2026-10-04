@@ -71,6 +71,7 @@ class FastEmbedEngine:
 
     def __init__(self, assets: OfflineAssets):
         self.assets = assets
+        self._converter = None
         self._model = None
 
     def _load(self):
@@ -98,6 +99,7 @@ class FastEmbedEngine:
 class DoclingExtractor:
     def __init__(self, assets: OfflineAssets):
         self.assets = assets
+        self._converter = None
 
     def _chunk(self, document, text_offsets=None) -> Extracted:
         try:
@@ -124,7 +126,10 @@ class DoclingExtractor:
                 return CHUNK_TOKENS
 
             def get_tokenizer(self):
-                return self.backend
+                # semchunk accepts a token-count callable. Rust Tokenizer.encode
+                # returns Encoding rather than the list expected by its generic
+                # encode adapter, so supply the untruncated shared counter.
+                return self.count_tokens
 
         local = LocalTokenizer(backend=tokenizer)
         chunker = HybridChunker(tokenizer=local, merge_peers=True, repeat_table_header=True)
@@ -175,9 +180,16 @@ class DoclingExtractor:
                 raise ApiError("invalid_text_encoding", "Use a UTF-8 text file", 422) from None
         artifacts = self.assets.validate("docling")
         ocr_root = self.assets.validate("ocr")
+        helper_config = self.assets.config("docling")
         try:
+            if path.suffix.lower() != ".pdf":
+                from PIL import Image
+                with Image.open(path) as image:
+                    if image.width * image.height > 40_000_000:
+                        raise ApiError("document_limit", "The image exceeds the 40 megapixel extraction limit", 413)
+                    image.verify()
             from docling.datamodel.base_models import ConversionStatus, InputFormat
-            from docling.datamodel.pipeline_options import PdfPipelineOptions, RapidOcrOptions
+            from docling.datamodel.pipeline_options import PdfPipelineOptions, RapidOcrOptions, OcrMode
             from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
             from docling.document_converter import DocumentConverter, PdfFormatOption, ImageFormatOption
             from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
@@ -190,11 +202,15 @@ class DoclingExtractor:
                 ocr_options=RapidOcrOptions(backend="onnxruntime", lang=["en"],
                     det_model_path=str(ocr_root / "det.onnx"),
                     rec_model_path=str(ocr_root / "rec.onnx"),
-                    cls_model_path=str(ocr_root / "cls.onnx")))
-            converter = DocumentConverter(allowed_formats=[InputFormat.PDF, InputFormat.IMAGE],
-                format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=options),
-                    InputFormat.IMAGE: ImageFormatOption(pipeline_cls=StandardPdfPipeline, pipeline_options=options)})
-            result = converter.convert(path, max_num_pages=MAX_PAGES, max_file_size=MAX_BYTES, raises_on_error=False)
+                    cls_model_path=str(ocr_root / "cls.onnx"),
+                    rapidocr_params=helper_config.get("rapidocr_params", {"Global.model_root_dir": str(ocr_root)})))
+            image_options = options.model_copy(deep=True)
+            image_options.ocr_options.mode = OcrMode.FULL_PAGE
+            if self._converter is None:
+                self._converter = DocumentConverter(allowed_formats=[InputFormat.PDF, InputFormat.IMAGE],
+                    format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=options),
+                        InputFormat.IMAGE: ImageFormatOption(pipeline_cls=StandardPdfPipeline, pipeline_options=image_options)})
+            result = self._converter.convert(path, max_num_pages=MAX_PAGES, max_file_size=MAX_BYTES, raises_on_error=False)
             if result.status != ConversionStatus.SUCCESS:
                 raise ApiError("extraction_failed", "Docling could not completely extract this document; it may be malformed, encrypted or over the page limit", 422)
             return self._chunk(result.document)

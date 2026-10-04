@@ -1,4 +1,5 @@
 """Read-only acquisition metadata and explicit, selected import batches."""
+from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
@@ -38,7 +39,7 @@ class CollectionCatalogue:
                 "eligibility": "eligible" if eligible else ("reserved" if reserved else "permission_or_format_unavailable"),
                 "metadata": metadata.model_dump(), "rights": rights.model_dump()}
 
-    def preview(self, *, source_id=None, limit=250, offset=0):
+    def preview(self, *, source_id=None, limit=250, offset=0, _all=False):
         entries, errors, seen = [], [], set()
         catalogue_path = self.root / CATALOGUE
         if catalogue_path.is_file() and source_id in (None, "E01"):
@@ -62,7 +63,8 @@ class CollectionCatalogue:
                     metadata = SourceMetadata(source_id="E01", source_owner=catalogue.get("source_owner", "ERA"),
                         canonical_url=item.get("source_url") or chapter.get("source_url"), access_class="authorised-user-download",
                         received_at=catalogue.get("receipt_date"), edition=catalogue.get("edition"),
-                        topic_ids=[f"era-section-{section['id']}"] if section else [], notes=notes)
+                        collection_section=section.get("title"), collection_chapter=chapter.get("title"),
+                        asset_role=categories, notes=notes)
                     rights = Rights(display=True, cache=True, index=True, embedding=True, model_input=True,
                         licence="ERA user-owned access; original terms retained",
                         permission_reference="Owner authorised this manual for local Renulus processing on 2026-10-04; no redistribution inferred",
@@ -109,7 +111,7 @@ class CollectionCatalogue:
         # Manifest-wide totals are observed on this read, never assumed from a
         # previous acquisition summary. Page the large collection metadata.
         eligible = sum(x["eligibility"] == "eligible" for x in entries)
-        return {"entries": entries[offset:offset + min(limit, 1000)], "total": len(entries),
+        return {"entries": entries if _all else entries[offset:offset + min(limit, 1000)], "total": len(entries),
                 "eligible": eligible, "offset": offset, "errors": errors,
                 "checked_at": utc_now(), "indexed": False}
 
@@ -143,19 +145,12 @@ class CollectionCatalogue:
             attribution=json.dumps(licence.get("attribution", {}), ensure_ascii=False))
 
     def register(self, *, source_id=None):
-        offset, count, errors = 0, 0, []
-        while True:
-            preview = self.preview(source_id=source_id, limit=1000, offset=offset)
-            with self.db.transaction() as conn:
-                for entry in preview["entries"]:
-                    conn.execute("INSERT INTO knowledge_catalogue(id,collection_path,source_id,title,expected_sha256,bytes,reserved,eligibility,metadata_json,rights_json,checked_at) VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title,expected_sha256=excluded.expected_sha256,bytes=excluded.bytes,eligibility=excluded.eligibility,metadata_json=excluded.metadata_json,rights_json=excluded.rights_json,checked_at=excluded.checked_at",
-                        (entry["id"], entry["collection_path"], entry["source_id"], entry["title"], entry["expected_sha256"], entry["bytes"], int(entry["reserved"]), entry["eligibility"], json.dumps(entry["metadata"]), json.dumps(entry["rights"]), preview["checked_at"]))
-            count += len(preview["entries"])
-            errors = preview["errors"]
-            offset += 1000
-            if offset >= preview["total"]:
-                break
-        return {"catalogued": count, "errors": errors, "status": "catalogued", "indexed": False}
+        preview = self.preview(source_id=source_id, _all=True)
+        with self.db.transaction() as conn:
+            for entry in preview["entries"]:
+                conn.execute("INSERT INTO knowledge_catalogue(id,collection_path,source_id,title,expected_sha256,bytes,reserved,eligibility,metadata_json,rights_json,checked_at) VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title,expected_sha256=excluded.expected_sha256,bytes=excluded.bytes,eligibility=excluded.eligibility,metadata_json=excluded.metadata_json,rights_json=excluded.rights_json,checked_at=excluded.checked_at",
+                    (entry["id"], entry["collection_path"], entry["source_id"], entry["title"], entry["expected_sha256"], entry["bytes"], int(entry["reserved"]), entry["eligibility"], json.dumps(entry["metadata"]), json.dumps(entry["rights"]), preview["checked_at"]))
+        return {"catalogued": len(preview["entries"]), "errors": preview["errors"], "status": "catalogued", "indexed": False}
 
     def list(self, *, source_id=None, limit=250, offset=0):
         where, args = (" WHERE c.source_id=?", [source_id]) if source_id else ("", [])

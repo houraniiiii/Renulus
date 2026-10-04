@@ -136,7 +136,7 @@ def test_replacement_topic_scope_and_overdue_currency(repository):
         topic_ids=["glomerular", "lupus"], replaced_topics=["lupus"]))
     assert repository.retrieve("lupus", scope=STUDY)["passages"] == []
     assert repository.retrieve("lupus", topic_id="lupus", scope=STUDY)["passages"] == []
-    assert repository.retrieve("glomerular", topic_id="glomerular", scope=STUDY)["passages"]
+    assert repository.retrieve("glomerular", topic_id="glomerular", scope=STUDY)["passages"] == []
     import_note(repository, "Current anemia guideline", metadata=SourceMetadata(
         topic_ids=["anemia"], publication_status="final", latest_final_verified=True,
         content_reviewed=True, review_due="2020-01-01"))
