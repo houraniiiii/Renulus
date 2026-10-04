@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { FileText, Search, Upload } from 'lucide-react';
-import { api, apiResponse, ApiError } from '../../platform/api';
+import { api, ApiError } from '../../platform/api';
 import { useResource } from '../../platform/useResource';
 import { useNavigation } from '../../shell/navigation';
 import { Badge, Button, EmptyState, ErrorState, Input, LoadingState, Notice, PageHeader, Panel, Select, Textarea } from '../../ui';
-import type { Capabilities, Catalogue, CatalogueEntry, Citation, ImportResult, LibraryDocument, Passage, Rights } from './types';
+import type { Capabilities, Catalogue, CatalogueEntry, ImportResult, LibraryDocument, Passage, Rights } from './types';
 import { Discovery } from './Discovery';
+import SourceInspector, { isPhysicalPage, type SourceLocation } from './SourceInspector';
 import './library.css';
 
 const libraryScope = { kind: 'personal-library' as const };
@@ -78,8 +79,8 @@ export default function LibraryPage() {
   const [currentOnly, setCurrentOnly] = useState(false);
   const [hits, setHits] = useState<Passage[] | null>(null);
   const [selectedDocument, setSelectedDocument] = useState<LibraryDocument | null>(null);
-  const [citation, setCitation] = useState<Citation | null>(null);
-  const [original, setOriginal] = useState<{ url: string; type: string; text?: string } | null>(null);
+  const [sourceLocation, setSourceLocation] = useState<SourceLocation>({ revisionId: null, page: null });
+  const sourceSelection = useRef(0);
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
   const [sourceId, setSourceId] = useState('E01');
   const [offset, setOffset] = useState(0);
@@ -151,13 +152,14 @@ export default function LibraryPage() {
     const documentId = navigation.handoff?.document_id;
     const revision = navigation.handoff?.document_revision ?? navigation.handoff?.revision_id;
     if (typeof documentId !== 'string') return;
-    setMode('browse'); setSelectedDocument(null); setOriginal(null); setCitation(null); setError(undefined);
+    const selection = ++sourceSelection.current;
+    setMode('browse'); setSelectedDocument(null); setError(undefined);
     const controller = new AbortController();
     api<LibraryDocument>('/library/documents/' + encodeURIComponent(documentId), { signal: controller.signal })
-      .then(value => { if (!controller.signal.aborted) setSelectedDocument(value); }).catch(value => { if (!controller.signal.aborted) setError(value); });
-    const page = navigation.handoff?.page;
-    if (typeof revision === 'string') api<Citation>('/library/revisions/' + encodeURIComponent(revision) + '/citation' + (typeof page === 'number' && Number.isInteger(page) && page > 0 ? '?page=' + page : ''), { signal: controller.signal })
-      .then(value => { if (!controller.signal.aborted) setCitation(value); }).catch(() => {});
+      .then(value => { if (!controller.signal.aborted && selection === sourceSelection.current) {
+        setSourceLocation({ revisionId: typeof revision === 'string' ? revision : value.active_revision, page: isPhysicalPage(navigation.handoff?.page) ? navigation.handoff.page : null });
+        setSelectedDocument(value);
+      } }).catch(value => { if (!controller.signal.aborted && selection === sourceSelection.current) setError(value); });
     return () => controller.abort();
   }, [navigation.revision]);
   useEffect(() => {
@@ -165,7 +167,6 @@ export default function LibraryPage() {
     const timer = window.setInterval(() => { documents.retry(); if (catalogue.resource.status !== 'loading') catalogue.retry(); }, 3000);
     return () => window.clearInterval(timer);
   }, [processing, documents.resource.status, catalogue.resource.status]);
-  useEffect(() => () => { if (original?.url) URL.revokeObjectURL(original.url); }, [original?.url]);
 
   async function act(action: () => Promise<void>) {
     setBusy(true); setError(undefined); setMessage('');
@@ -194,25 +195,15 @@ export default function LibraryPage() {
     });
   }
   async function inspect(document: LibraryDocument, passage?: Passage) {
-    setSelectedDocument(document); setOriginal(null); setCitation(null);
+    ++sourceSelection.current;
     const revision = passage?.document_revision ?? document.active_revision;
-    if (!revision) return;
-    const page = passage?.locators.find(p => p.page)?.page;
-    const value = await api<Citation>('/library/revisions/' + revision + '/citation' + (page ? '?page=' + page : ''));
-    setCitation(value);
-  }
-  async function openOriginal() {
-    if (!citation) return;
-    await act(async () => {
-      const response = await apiResponse(citation.original_url);
-      const blob = await response.blob();
-      setOriginal({ url: URL.createObjectURL(blob), type: blob.type, text: blob.type.startsWith('text/') ? await blob.text() : undefined });
-    });
+    setSourceLocation({ revisionId: revision, page: passage?.locators.find(locator => isPhysicalPage(locator.page))?.page ?? null });
+    setSelectedDocument(document);
   }
   async function remove(document: LibraryDocument) {
     await act(async () => {
       const result = await api<{ cleanup_pending: boolean }>('/library/documents/' + document.id, { method: 'DELETE' });
-      setSelectedDocument(null); setCitation(null); setOriginal(null); setHits(null);
+      ++sourceSelection.current; setSelectedDocument(null); setHits(null);
       // Discovery confirms imports by document ID; a filtered page is not a membership list.
       // Removing a source invalidates its cached discovery confirmation as well.
       setDiscoveryVersion(value => value + 1);
@@ -356,14 +347,7 @@ export default function LibraryPage() {
       </div>
       <aside className="library-reader" aria-label="Source reader">{selectedDocument ? <>
         <h2>{selectedDocument.title}</h2><div className="library-meta"><Badge tone={statusTone(selectedDocument.status)}>{statusLabel(selectedDocument.status)}</Badge><span>{selectedDocument.source_id}</span></div>
-        {(() => { const revision = selectedDocument.revisions.find(r => r.id === (citation?.document_revision ?? selectedDocument.active_revision)) ?? selectedDocument.revisions[0]; if (!revision) return null; return <dl>
-          <div><dt>Edition and publication</dt><dd>{revision.metadata.edition ?? 'Edition unverified'}{revision.metadata.publication_date ? ' · ' + revision.metadata.publication_date : ''}</dd></div>
-          <div><dt>Source currentness</dt><dd>{revision.metadata.latest_final_verified && revision.metadata.content_reviewed ? 'Latest final verified and content reviewed' : 'Not verified as current guidance'}</dd></div>
-          <div><dt>Original terms</dt><dd>{revision.rights.licence}</dd></div>
-          <div><dt>Extracted passages</dt><dd>{revision.passage_count}</dd></div>
-        </dl>; })()}
-        {citation && <><div className="actions"><Button variant="secondary" busy={busy} onClick={openOriginal}>Open original{citation.page ? ' · page ' + citation.page : ''}</Button></div><p className="muted">{citation.locators.length} original source locations preserved.</p></>}
-        {original && (original.type.startsWith('image/') ? <img className="library-original-image" src={original.url} alt="Original imported document" /> : original.text !== undefined ? <pre className="library-original-text">{original.text}</pre> : <iframe className="library-original" title="Original document viewer" src={original.url + (citation?.page ? '#page=' + citation.page : '')} />)}
+        <SourceInspector key={selectedDocument.id + ':' + sourceLocation.revisionId + ':' + sourceLocation.page} document={selectedDocument} location={sourceLocation} />
         <Button variant="danger" busy={busy} onClick={() => void remove(selectedDocument)}>Remove from library</Button>
       </> : <><FileText size={26} aria-hidden="true" /><h2>Keep the source in view</h2><p>Select a document or a passage to inspect its edition, permissions and original location.</p></>}</aside>
     </div>
