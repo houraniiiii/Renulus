@@ -384,3 +384,32 @@ build passed. The prior pinned Electron seven-variant fixture establishes the
 physical-page remedy; final matching packaged renderer verification remains
 pending. Parent may take main/preload/desktop types for the recovery download
 seam after this policy commit; this lane continues only proof/packaging paths.
+
+The actual production-policy native fixture then passed on Electron 44.5.1.
+It compiles the real frontend proxy and exact PDF resource helper, uses the
+unchanged index meta CSP, and records their source hashes at commit 81d14dbb.
+The built-in viewer rendered the synthetic blob PDF at physical page 2 with no
+failed requests; the new screenshot was inspected. Evidence:
+test-results/native-platform-ffdb0418/native-platform-evidence.json and
+production-policy-page-two.png. This verifies production policy functions with
+a synthetic window/backend; final matching product packaging remains separate.
+
+That same lightweight native instance streamed 33,554,432 synthetic bytes
+through the existing frontend proxy using webContents.downloadURL. The owning
+webContents ID remained 1 in onBeforeSendHeaders and will-download; the existing
+main session hook injected authentication without renderer token exposure. The
+completed disk file SHA256 was
+371036ccdfc733fa30542a26a4f276536147c906d1570f0becc1d6f8b868c311.
+A second DownloadItem was cancelled after 2,359,296 received bytes, closing
+the upstream response without finishing the transfer. The proxy drops total
+length/disposition, so totalBytes was honestly 0 (unknown), while received-byte
+updates worked. Official v44.5.1 web-contents/download-item docs were read for
+these APIs. Save-dialog options were set but an owned automated path was used;
+this is not user-dialog interaction, a valid recovery ZIP, multi-GiB capacity,
+or the parent sibling-partial/fsync/rename implementation proof.
+
+Main/preload/desktop types were explicitly released to parent after 81d14dbb.
+The pending integration chain after already adopted 1fbe78d1 is 06347499,
+bf1c6835, then 81d14dbb. This final proof follow-up changes only its standalone
+script and this evidence document. Parent owns the backup-download helper and
+actual save/cancel IPC wiring; no concurrent native entry edit occurs here.
