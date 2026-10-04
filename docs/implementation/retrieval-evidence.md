@@ -605,3 +605,19 @@ queued original and an empty cleanup ledger after deletion. Production Journal,
 generation cleanup and replay guards are unchanged. All **22 focused import
 checks passed in 6.60 s** against the parent's current integration runtime,
 with PYTHONDONTWRITEBYTECODE and an isolated owned test profile.
+# Integrated registrar verification — October 4, 22:15 UTC
+
+The full app now registers Retrieval before Learn. An older HTTP fixture had
+registered a second router after construction, leaving the first route bound
+to its original service. The fixture injects the synthetic HTTP transport before
+production module registration, so the real registration and validation boundary
+are exercised without a duplicate route. All 20 HTTP boundary checks passed.
+The preceding combined retrieval/source-status/Learn run passed 88 checks and
+failed only this fixture; its first run made a key-free public topic lookup,
+without transmitting the rejected synthetic case fields or protected keys.
+
+Integrated desktop: Library Discovery/RetrievalConnections 43 passed; Learn
+discovery/memory 29 passed. TypeScript, Vite and Electron compilation passed on
+the lockfile-pinned Electron 44.5.1 and Vitest 4.1.11 installation. These are
+application checks; keyed vendor billing and live generative connections are
+not established by them.

@@ -8,7 +8,6 @@ import httpx
 import pytest
 
 from renulus.contracts import ApiError
-from renulus.retrieval.api import create_router
 from renulus.retrieval.connections import RetrievalConnections
 from renulus.retrieval.http import OfficialHTTP, public_link
 from renulus.retrieval.service import RetrievalService
@@ -96,17 +95,19 @@ def test_slow_source_has_total_deadline_and_cancellation(monkeypatch):
     assert error.value.code == "retrieval_unavailable" and error.value.retryable is True and completed == []
 
 
-def test_actual_core_router_validation_redacts_extra_case_payloads_and_secrets(services):
-    app = create_app(services.paths.root, token="SYNTHETIC_SESSION", source_root=ROOT)
-    actual = app.state.services
+def test_actual_core_router_validation_redacts_extra_case_payloads_and_secrets(services, monkeypatch):
+    from renulus.retrieval import api as retrieval_api
     calls = []
     def handler(request):
         calls.append(request)
         return httpx.Response(200, json=europe())
-    service = RetrievalService(actual, transport=httpx.MockTransport(handler), protector=SyntheticProtector())
-    actual.registry["retrieval"] = service
-    actual.db.apply_migration("retrieval-001", (ROOT / "runtime/renulus/retrieval/schema.sql").read_text(encoding="utf-8"))
-    app.include_router(create_router(actual), prefix="/api/v1")
+    # Inject before the production module registrar captures its service. Adding
+    # a duplicate router after create_app leaves the original route first.
+    monkeypatch.setattr(retrieval_api, "RetrievalService", lambda actual: RetrievalService(
+        actual, transport=httpx.MockTransport(handler), protector=SyntheticProtector()))
+    app = create_app(services.paths.root, token="SYNTHETIC_SESSION", source_root=ROOT)
+    actual = app.state.services
+    service = actual.registry["retrieval"]
     client = TestClient(app, headers={"x-renulus-token": "SYNTHETIC_SESSION"})
     for field in ("query", "question", "case_text", "url"):
         response = client.post("/api/v1/retrieval/discover", json={"topic_id": "T21", "scope": {"kind": "study"}, field: "PRIVATE_SYNTHETIC_SENTINEL"})
