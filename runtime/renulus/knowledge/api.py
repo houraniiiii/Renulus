@@ -192,8 +192,13 @@ def create_router(services) -> APIRouter:
         return collection.register(source_id=source_id)
 
     @router.get("/collection/catalogue")
-    def catalogue_entries(source_id: str | None = None, limit: int = 250, offset: int = 0):
-        return collection.list(source_id=source_id, limit=max(1, limit), offset=max(0, offset))
+    def catalogue_entries(source_id: str | None = None,
+                          limit: int = Query(default=250, ge=1, le=1000),
+                          offset: int = Query(default=0, ge=0),
+                          eligibility: Literal["eligible", "inspection_required", "reserved", "unavailable"] | None = None,
+                          query: str = Query(default="", max_length=200)):
+        return collection.list(source_id=source_id, limit=limit, offset=offset,
+                               eligibility=eligibility, query=query)
 
     @router.post("/collection/import", status_code=202)
     def import_selected(body: SelectedBatch):
