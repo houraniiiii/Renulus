@@ -258,3 +258,35 @@ will require the protected early startup window and close it while its physical
 backend child is starting, checking that child exit leaves the two other
 isolated test backends alive. No parent main/profile/startup-window edit is made
 here. Final matching source staging and installer proof remain pending.
+
+The first real relocated Library viewer journey did not pass. Its valid original
+two-page synthetic PDF opened a blob URL with #page=2, but the screenshot was
+blank and the child frame was chrome-error://chromewebdata/. The previous
+body-text-only detector missed that empty error frame; the screenshot review
+caught it. Evidence: test-results/journeys-3d881a35. This is retained as negative
+evidence, not a PDF pass. The owned detector now treats Chromium error frames,
+absent viewer content and wrong physical-page selection as failures, captures
+console/failed requests, and returns a nonzero result after the independent
+publisher-link check. Three regression checks pass, including the exact blank
+error-frame shape. The synthetic fixture bytes remain unchanged.
+
+Actual pinned Electron44.5.1 policy diagnosis isolated two independent blockers:
+default-src self rejects blob framing; after explicit frame-src self blob, the
+session filter rejects Chromium's PDF extension CSS/index and then its chrome
+resources. The smallest tested working variant adds frame-src self blob to both
+document/header CSP and admits only the exact built-in PDF extension host
+mhjfbmdgcfjbbpaeojofohoefgiehjai plus chrome://resources/ in the session request
+filter. It keeps object-src none, sandbox/context-isolation/web-security and
+plugins false. The native viewer's pageSelector was2; a viewed screenshot shows
+RENULUS - PAGE TWO and the large2. No request failures remained. Evidence:
+test-results/pdf-policy-25fa42bb/pdf-policy-evidence.json and
+exact-builtin-frame-only.png. This establishes a policy-fixture remedy, not a
+fixed packaged product. Parent owns main.ts/index.html/frontend.ts integration;
+the desktop lane has requested the scoped shared change before final staging.
+
+The real relocated Updates publisher action separately completed shell.openExternal
+for https://kdigo.org/guidelines/, with one renderer window remaining at the
+local Updates route. Read-only observation of that existing Chrome tab confirmed
+the title Guidelines - KDIGO, matching public URL and visible Guidelines heading.
+No browser navigation was used to manufacture that observation, and no account
+or provider call occurred. No final source revision or installer proof is implied.
