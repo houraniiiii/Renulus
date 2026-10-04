@@ -74,6 +74,37 @@ def restore_records(services, bundle, *, confirm_older=False):
         deleted_ids = {identifier for _, identifier in deletions}
         # Deferred FK validation permits snapshots without dependence on alphabetical table ordering.
         conn.execute("PRAGMA defer_foreign_keys=ON")
+        # Include indirect descendants: document -> revision -> passage/job,
+        # thread -> run/message, and memory fact -> history/index work.
+        current = {name: [dict(row) for row in conn.execute(f'SELECT * FROM "{name}"')]
+                   for name in available if eligible_table(name) and name != "deletion_ledger"}
+        blocked = set(deleted_ids)
+        expanded = True
+        while expanded:
+            expanded = False
+            for name in set(current) | set(records):
+                if name == "deletion_ledger":
+                    continue
+                keys = primary_keys(conn, name)
+                for row in [*current.get(name, []), *records.get(name, [])]:
+                    references = [value for key, value in row.items()
+                                  if (key == "id" or key.endswith("_id")) and isinstance(value, str)]
+                    if any(value in blocked for value in references):
+                        for key in keys:
+                            value = row.get(key)
+                            if isinstance(value, str) and value not in blocked:
+                                blocked.add(value)
+                                expanded = True
+        removed = 0
+        for name, rows in current.items():
+            keys = primary_keys(conn, name)
+            for row in rows:
+                references = [value for key, value in row.items()
+                              if (key == "id" or key.endswith("_id")) and isinstance(value, str)]
+                if keys and any(value in blocked for value in references):
+                    where = " AND ".join(f'"{key}"=?' for key in keys)
+                    removed += conn.execute(f'DELETE FROM "{name}" WHERE {where}',
+                                            tuple(row[key] for key in keys)).rowcount
         inserted, excluded = 0, 0
         for name, rows in records.items():
             if name == "deletion_ledger":
@@ -83,9 +114,16 @@ def restore_records(services, bundle, *, confirm_older=False):
                     raise ApiError("backup_preference", "Connection settings and credentials cannot be restored from learning exports")
                 # IDs are globally prefixed; references to deleted entities suppress all derivatives.
                 identifiers = [value for key, value in row.items() if (key == "id" or key.endswith("_id")) and isinstance(value, str)]
-                if any(value in deleted_ids for value in identifiers):
+                if any(value in blocked for value in identifiers):
                     excluded += 1
                     continue
+                if name.startswith("content_") and "sha256" in row:
+                    keys = primary_keys(conn, name)
+                    where = " AND ".join(f'"{key}"=?' for key in keys)
+                    existing = conn.execute(f'SELECT sha256 FROM "{name}" WHERE {where}',
+                                            tuple(row[key] for key in keys)).fetchone()
+                    if existing and existing["sha256"] != row["sha256"]:
+                        raise ApiError("backup_content_conflict", "A published content version differs from this installation; no records were restored")
                 names = list(row)
                 columns_sql = ",".join(f'"{column}"' for column in names)
                 placeholders = ",".join("?" for _ in names)
@@ -96,5 +134,11 @@ def restore_records(services, bundle, *, confirm_older=False):
         if failures:
             raise ApiError("backup_references", "The export has incomplete linked records; no records were restored")
     # Never recreate indexes over stale/deleted rows as part of the restore transaction.
+    conn = services.db.connect()
+    try:
+        purge_pending = bool(conn.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()[0])
+    finally:
+        conn.close()
     return {"restored_records": inserted, "excluded_by_deletion": excluded,
+            "removed_by_deletion": removed, "purge_pending": purge_pending,
             "exported_at": bundle.get("exported_at"), "indexes": "rebuild-required"}

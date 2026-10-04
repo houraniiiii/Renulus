@@ -1,5 +1,5 @@
 """Canonical SQLite authority, with explicit atomic writes and checked migrations."""
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from datetime import datetime, timezone
 import hashlib
 from pathlib import Path
@@ -17,7 +17,7 @@ class Database:
     def __init__(self, path: str | Path):
         self.path = Path(path).resolve()
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self.connect() as conn:
+        with closing(self.connect()) as conn:
             conn.execute("PRAGMA journal_mode=WAL")
             version = conn.execute("PRAGMA user_version").fetchone()[0]
             if version > SUPPORTED_SCHEMA:
@@ -87,12 +87,15 @@ class Database:
                 return
             # executescript commits implicitly; split complete SQLite statements to keep atomicity.
             statement = ""
-            for line in script.splitlines(keepends=True):
-                statement += line
-                if sqlite3.complete_statement(statement):
+            for character in script:
+                statement += character
+                if character == ";" and sqlite3.complete_statement(statement):
                     conn.execute(statement)
                     statement = ""
-            if statement.strip():
+            # A trailing SQL comment has no executable statement.
+            import re
+            remainder = re.sub(r"/\*.*?\*/|--[^\n]*", "", statement, flags=re.S)
+            if remainder.strip():
                 raise RuntimeError(f"Incomplete migration: {name}")
             conn.execute("INSERT INTO migration_ledger VALUES(?,?,?)", (name, checksum, utc_now()))
 

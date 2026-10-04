@@ -95,6 +95,12 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
         schema = module_path / "schema.sql"
         if schema.exists():
             services.db.apply_migration(f"{name}-001", schema.read_text(encoding="utf-8"))
+        migrations = module_path / "migrations"
+        if migrations.is_dir():
+            for migration in sorted(migrations.glob("*.sql")):
+                if not migration.stem[:3].isdigit() or migration.stem[:3] == "001":
+                    raise RuntimeError(f"Use a numbered additive migration after 001: {migration.name}")
+                services.db.apply_migration(f"{name}-{migration.stem}", migration.read_text(encoding="utf-8"))
         module = importlib.import_module(f"renulus.{name}.api")
         router = module.create_router(services)
         app.include_router(router, prefix="/api/v1")

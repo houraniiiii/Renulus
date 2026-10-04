@@ -31,7 +31,8 @@ export function routeFromHash(hash: string): RouteId {
 }
 export function nextScope(current: ContextScope, route: RouteId, options: NavigationOptions = {}): ContextScope {
   if (options.freshStudy) return { kind: 'study' };
-  if (current.kind === 'temporary-case' || current.kind === 'unclassified') return current;
+  if (current.kind === 'temporary-case') return options.scope?.kind === 'temporary-case' ? options.scope : current;
+  if (current.kind === 'unclassified') return current;
   if (route === 'cases' && !options.scope) return { kind: 'temporary-case' };
   return options.scope ?? current;
 }

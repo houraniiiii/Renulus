@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { ArrowUp, BookOpen, Plus, Square, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowUp, BookOpen, Plus, Square, Trash2 } from 'lucide-react';
 import { api, ApiError, isCancelled } from '../../platform/api';
 import { stream } from '../../platform/stream';
 import { useResource } from '../../platform/useResource';
@@ -9,7 +9,7 @@ import './learn.css';
 
 // Flow: the question leads, the reading area stays open, history supports continuation.
 // Shared Source Sans, teal, paper, quiet borders and 4px rhythm govern every state.
-interface Citation { id?: string; passage_id?: string; document_id?: string; revision_id?: string; title?: string; page?: number; page_number?: number; source_id?: string; section?: string }
+interface Citation { id?: string; passage_id?: string; document_id?: string; revision_id?: string; document_revision?: string; title?: string; page?: number; page_number?: number; source_id?: string; section?: string; locators?: { page?: number | null }[] }
 interface Message { id: string; role: 'user' | 'assistant'; content: string; citations?: Citation[] }
 interface Thread { id: string; title: string; topic_id?: string; teaching_style: 'direct' | 'guided'; messages: Message[]; updated_at: string }
 interface Topic { id: string; title: string }
@@ -18,6 +18,7 @@ interface RunEvent { run_id: string; sequence: number; type: string; payload: { 
 export default function Learn() {
   const { scope, handoff, navigate } = useNavigation();
   const temporary = scope.kind === 'temporary-case' || scope.kind === 'unclassified' || scope.kind === 'saved-case';
+  const caseId = typeof handoff?.case_id === 'string' ? handoff.case_id : temporary ? scope.entity_id : undefined;
   const [question, setQuestion] = useState(String(handoff?.question ?? handoff?.case_text ?? ''));
   const [topic, setTopic] = useState(String(handoff?.topic_id ?? ''));
   const [style, setStyle] = useState<'direct' | 'guided'>('direct');
@@ -29,12 +30,13 @@ export default function Learn() {
   const [status, setStatus] = useState('');
   const abort = useRef<AbortController | null>(null);
   const runId = useRef<string | null>(null);
+  const ticketId = useRef(typeof handoff?.case_handoff_id === 'string' ? handoff.case_handoff_id : undefined);
   const { resource: history, retry: reloadHistory } = useResource(signal => api<{ threads: Thread[] }>('/learn/threads', { signal }));
   const { resource: topics } = useResource(signal => api<Topic[]>('/content/topics', { signal }));
 
   useEffect(() => {
     if (typeof handoff?.thread_id === 'string' && !temporary) void resume(handoff.thread_id);
-    return () => { abort.current?.abort(); if (runId.current) void api('/learn/runs/' + runId.current + '/cancel', { method: 'POST' }).catch(() => {}); };
+    return () => { abort.current?.abort(); if (runId.current) void api('/learn/runs/' + runId.current + '/cancel', { method: 'POST' }).catch(() => {}); if (ticketId.current) void api('/cases/handoffs/' + ticketId.current, { method: 'DELETE' }).catch(() => {}); };
   }, []);
   async function resume(id: string) {
     if (temporary || busy) return;
@@ -54,7 +56,15 @@ export default function Learn() {
     setMessages(previous => [...previous, { id: crypto.randomUUID(), role: 'user', content: text }]);
     let output = '', sequence = 0, threadId = thread?.id; let references: Citation[] = [];
     try {
-      for await (const item of stream<RunEvent>('/learn/ask', { method: 'POST', signal: controller.signal, headers: { 'Idempotency-Key': crypto.randomUUID() }, body: { question: text, scope: temporary ? { kind: 'temporary-case', entity_id: scope.entity_id } : { kind: 'study' }, thread_id: temporary ? null : thread?.id, topic_id: topic || null, teaching_style: style } })) {
+      let caseHandoffId: string | undefined;
+      if (temporary && caseId) {
+        if (ticketId.current) await api('/cases/handoffs/' + ticketId.current, { method: 'DELETE', signal: controller.signal });
+        ticketId.current = undefined;
+        const currentCase = await api<{ revision: number }>('/cases/sessions/' + encodeURIComponent(caseId), { signal: controller.signal });
+        const ticket = await api<{ id: string }>('/cases/sessions/' + encodeURIComponent(caseId) + '/handoff', { method: 'POST', signal: controller.signal, body: { revision: currentCase.revision, target: 'explain', question: text } });
+        caseHandoffId = ticket.id; ticketId.current = ticket.id;
+      }
+      for await (const item of stream<RunEvent>('/learn/ask', { method: 'POST', signal: controller.signal, headers: { 'Idempotency-Key': crypto.randomUUID() }, body: { question: text, scope: temporary ? { kind: 'temporary-case', entity_id: caseId ?? scope.entity_id } : { kind: 'study' }, thread_id: temporary ? null : thread?.id, topic_id: topic || null, teaching_style: style, case_handoff_id: caseHandoffId } })) {
         if (controller.signal.aborted || item.data.sequence <= sequence) continue;
         const data = item.data; sequence = data.sequence; runId.current = data.run_id;
         if (data.type === 'started') threadId = data.payload.thread_id ?? threadId;
@@ -73,10 +83,10 @@ export default function Learn() {
     if (runId.current) { try { const result = await api<{ state: string }>('/learn/runs/' + runId.current + '/cancel', { method: 'POST' }); setStatus(result.state === 'completed' ? 'Complete' : 'Stopped · partial explanation not saved'); } catch (caught) { setError(caught); } }
     abort.current?.abort();
   }
-  function citation(value: Citation) { navigate('library', { payload: { document_id: value.document_id, passage_id: value.passage_id ?? value.id, revision_id: value.revision_id, page: value.page ?? value.page_number } }); }
+  function citation(value: Citation) { navigate('library', { payload: { document_id: value.document_id, passage_id: value.passage_id ?? value.id, revision_id: value.revision_id ?? value.document_revision, page: value.page ?? value.page_number ?? value.locators?.find(location => location.page)?.page } }); }
 
   return <>
-    <PageHeader title={temporary ? 'Explore your case question' : 'What would you like to understand?'} description={temporary ? 'This explanation shares your temporary case context.' : 'Ask freely across nephrology, then explore the explanation and its evidence.'} actions={!temporary && <Button variant="secondary" disabled={busy} onClick={fresh}><Plus size={17} />New study</Button>} />
+    <PageHeader title={temporary ? 'Explore your case question' : 'What would you like to understand?'} description={temporary ? 'This explanation shares your temporary case context.' : 'Ask freely across nephrology, then explore the explanation and its evidence.'} actions={temporary && caseId ? <Button variant="secondary" disabled={busy} onClick={() => navigate('cases', { scope: { kind: 'temporary-case', entity_id: caseId }, payload: { case_id: caseId } })}><ArrowLeft size={17} />Return to case</Button> : !temporary && <Button variant="secondary" disabled={busy} onClick={fresh}><Plus size={17} />New study</Button>} />
     <div className="learn-layout"><section className="learn-main">
       {!messages.length && <div className="learning-invitation"><p>Start with a question, a mechanism or a decision you would like to reason through.</p><div className="question-starters">{['How should I reason through AKI?', 'Explain kidney transplant rejection.', 'How do dialysis modalities differ?'].map(value => <button key={value} onClick={() => setQuestion(value)}>{value}</button>)}</div></div>}
       <div className="conversation" aria-label="Learning discussion">{messages.map(message => <article key={message.id} className={'learning-message message-' + message.role}><strong className="message-author">{message.role === 'user' ? 'Your question' : 'Renulus'}</strong><div className="prose learning-answer">{message.content}</div>{message.citations?.length ? <div className="citation-row">{message.citations.map((value, index) => <button key={value.id ?? index} onClick={() => citation(value)}><BookOpen size={14} />Source {index + 1}{value.page ?? value.page_number ? ' · p. ' + (value.page ?? value.page_number) : ''}</button>)}</div> : null}</article>)}{partial && <article className="learning-message"><strong className="message-author">Renulus <Badge tone="neutral">{busy ? 'Explaining' : 'Partial'}</Badge></strong><div className="prose learning-answer">{partial}</div></article>}</div>

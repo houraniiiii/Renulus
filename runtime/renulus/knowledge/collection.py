@@ -118,9 +118,15 @@ class CollectionCatalogue:
         # Accept explicit operation booleans or separately recorded permissions.
         # Unknown language is deliberately not promoted to permission.
         scope = item.get("processing_scope", {})
+        if not isinstance(scope, dict):
+            # Acquisition notes are often prose. Retain the catalogue record,
+            # but do not infer operation permissions from an unstructured note.
+            scope = {}
         licence = item.get("licence", {})
         if isinstance(licence, str):
             licence = {"identifier": licence}
+        if not isinstance(licence, dict):
+            licence = {}
         identifier = licence.get("identifier", "unverified")
         open_licence = identifier.upper().replace(" " , "-") in {"CC-BY-4.0", "CC-BY-3.0", "CC0-1.0", "CC0"}
         def allowed(name, *aliases):

@@ -24,6 +24,7 @@ class Ask(BaseModel):
     topic_id: str | None = None
     teaching_style: Literal["direct", "guided"] = "direct"
     model: str | None = None
+    case_handoff_id: str | None = Field(default=None, max_length=120)
 
 
 def create_router(services):
@@ -50,7 +51,8 @@ def create_router(services):
     @router.post("/ask")
     async def ask(body: Ask, idempotency_key: str | None = Header(default=None)):
         replay, run = service.prepare(body.question, body.scope, body.thread_id, body.topic_id,
-                                     body.teaching_style, idempotency_key or durable_id("request"))
+                                     body.teaching_style, idempotency_key or durable_id("request"),
+                                     case_handoff_id=body.case_handoff_id)
         async def events():
             if replay:
                 assistant = service.db.fetch_one(

@@ -30,6 +30,8 @@ def test_migration_is_atomic_resumable_and_cannot_drift(tmp_path):
         db.apply_migration("broken-001", "CREATE TABLE partial(id TEXT);\nNOT SQL;\n")
     assert db.fetch_one("SELECT name FROM sqlite_master WHERE name='partial'") is None
     assert db.fetch_one("SELECT 1 FROM migration_ledger WHERE name='broken-001'") is None
+    db.apply_migration("example-002", "CREATE TABLE second(id TEXT); CREATE TABLE third(id TEXT); -- trailing comment\n")
+    assert db.fetch_one("SELECT name FROM sqlite_master WHERE name='third'")
 
 
 def test_downgrade_refuses_to_open_newer_schema(tmp_path):
