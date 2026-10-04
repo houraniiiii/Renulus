@@ -1,0 +1,13 @@
+{
+  "notice": "Original synthetic workflow fixtures, CC BY 4.0. Never installed as a production bank. No clinical facts or external material.",
+  "topics": [
+    {"id": "dialysis", "label": "Dialysis workflow fixture"},
+    {"id": "glomerular", "label": "Glomerular workflow fixture"},
+    {"id": "transplant", "label": "Transplant workflow fixture"}
+  ],
+  "questions": [
+    {"id": "synthetic-dialysis", "topic_id": "dialysis", "family_id": "family-dialysis", "stem": "Synthetic dialysis workflow: select the marked token."},
+    {"id": "synthetic-glomerular", "topic_id": "glomerular", "family_id": "family-glomerular", "stem": "Synthetic glomerular workflow: select the marked token."},
+    {"id": "synthetic-transplant", "topic_id": "transplant", "family_id": "family-transplant", "stem": "Synthetic transplant workflow: select the marked token."}
+  ]
+}
