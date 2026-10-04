@@ -287,3 +287,53 @@ HTTP recovery. Actual PDF/OCR execution, the acquired-library delivery profile,
 whole-corpus bounds and a packaged/native UI recovery journey remain separate
 parent checks. Archive encryption/authenticity, machine power-loss durability
 and larger-than-bounded recovery retain the earlier limitations.
+
+## Published content 1.0.0 → 1.1.0 recovery compatibility — 2026-10-04 UTC
+
+The compatibility follow-up uses build/recovery-content-compatibility, based at
+parent 620c4202c4939ebbf91c89d0e1b1656af1ac458f, with the recovery proof commit
+434cb398141f08c9da105a00acf75cf5a216e018 applied as 119988e5. The two IDs are
+equivalent copies of the prerequisite; integrate only one copy.
+
+Both real HTTP routes were tested: records-only JSON and verified ZIP with exact
+backup-date confirmation. The source installs only the actual published 1.0.0
+pack through the supported bootstrap selection. Its export is checked for that
+sole pack and its 1.0.0 active slot. A fresh current target bootstraps 1.1.0 with
+160 questions and 26 teaching cases, then receives its own synthetic learner
+records before restore.
+
+Each profile contributes a study thread, manual learner preference, reviewed
+assessment with one answered and one pending item, and a saved teaching case
+with two revealed stages. Restore preserves both profiles' records, exact
+review feedback and idempotent answer replay. Every source historical question/
+key snapshot and every current target question/key snapshot is compared through
+the content repository. Saved stage contents and progress remain unchanged.
+Replaying the backup inserts zero records. After reopening the target, its bank
+is still 1.1.0 and the pending legacy assessment resumes with its preserved
+question/key versions, rationale and correct score.
+
+No production compatibility defect reproduced. The existing merge policy keeps
+target rows when their primary keys already exist: the target's singleton
+content_active_pack slot is retained while missing historical pack and learner
+records are added. Published versions with different immutable content remain
+conflicts. This regression makes the active-slot policy explicit without
+changing canonical merge or weakening content validation.
+
+Using the integration venv executable with PYTHONPATH=runtime:
+
+    python -B -m pytest tests/backup/test_content_release_compatibility.py -q
+
+Result: 2 passed in 17.83 seconds. The adjacent integration command was:
+
+    python -B -m pytest tests/content/test_bootstrap.py tests/content/test_release_110.py tests/content/test_repository.py tests/assessment/test_content_repository.py tests/integration/test_backup.py tests/backup/test_derived_state_exclusion.py tests/backup/test_content_release_compatibility.py -q
+
+Result: 59 passed in 111.20 seconds, including the two compatibility variants.
+There was one existing TestClient deprecation warning. Provider and external
+socket tripwires did not fire; all profiles were synthetic and isolated.
+
+This verifies the two published content releases with the current recovery
+format/runtime. Older runtime/database schema migration is not established.
+The actual CPU engine proof above remains the evidence for rebuild/retrieval;
+this compatibility follow-up does not require shared helper assets or claim a
+new packaged UI, acquired-library or whole-corpus recovery check. The parent
+owns the separate source-status recorded-time journal fix.
