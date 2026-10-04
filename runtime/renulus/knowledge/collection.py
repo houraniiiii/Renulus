@@ -9,7 +9,7 @@ from ..storage.database import utc_now
 from .models import Rights, SourceMetadata
 from .repository import MEDIA
 from .acquired import (AcquiredLiterature, MARKER, catalogue_policy, collection_path,
-                       version_identity, version_name)
+                       version_identity, version_name, acquisition_topic_ids)
 
 COLLECTION = Path.home() / "Documents" / "Renulus-data"
 MANIFEST = "metadata/acquisition-2026-10-04/acquisition-manifest.jsonl"
@@ -100,6 +100,8 @@ class CollectionCatalogue:
                             retracted=item.get("retracted") is True, superseded=item.get("superseded") is True,
                             doi=item.get("doi"), pmid=str(item["pmid"]) if item.get("pmid") else None,
                             pmcid=item.get("pmcid"), notes=["Acquisition does not establish currentness or clinical review"])
+                        if sid == "L02":
+                            metadata.topic_ids = acquisition_topic_ids(item)
                         entry = self._entry(path, sid, item.get("title") or path.stem, item.get("sha256"), item.get("bytes"), metadata, rights, reserved)
                         policy = catalogue_policy(item)
                         if policy:

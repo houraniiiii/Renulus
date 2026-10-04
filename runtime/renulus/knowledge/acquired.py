@@ -86,6 +86,12 @@ def version_name(identity) -> str:
     return identity[0] + "." + str(identity[1])
 
 
+def acquisition_topic_ids(item) -> list[str]:
+    """Retain query tags as observations, without inferring content review."""
+    topics = item.get("topics", [])
+    return sorted({t["topic_id"] for t in topics if isinstance(t, dict) and isinstance(t.get("topic_id"), str)}) if isinstance(topics, list) else []
+
+
 def licence_family(value) -> str | None:
     if isinstance(value, dict):
         value = value.get("identifier")
@@ -217,7 +223,7 @@ class AcquiredLiterature:
         with path.open(encoding="utf-8-sig") as stream:
             for line in stream:
                 try:
-                    item = json.loads(line, object_pairs_hook=unique_object)
+                    item = json.loads(line)
                     if not isinstance(item, dict) or item.get("source_id") != "L02":
                         continue
                     role = item.get("artifact_type")
@@ -226,6 +232,9 @@ class AcquiredLiterature:
                     identity = version_identity(item)
                     if identity not in identities:
                         continue
+                    # Strict parsing is needed only for matched evidence, not
+                    # every unrelated media/metadata receipt in the manifest.
+                    item = json.loads(line, object_pairs_hook=unique_object)
                     relative = collection_path(self.root, item.get("local_path") or item.get("path"), must_exist=False).relative_to(self.root).as_posix()
                     identifier = asset_id("L02", relative)
                     if role == "fulltext-jats" and identifier in wanted:
@@ -302,15 +311,13 @@ class AcquiredLiterature:
             "https://pmc.ncbi.nlm.nih.gov/articles/" + identity[0] + "/", article["licence"], article["licence_url"], EXCLUSIONS]))
         rights = Rights(display=True, cache=True, index=True, embedding=True, model_input=True, derivation=True,
             licence=article["licence"], permission_reference=article["licence_url"] + " Inspected JATS and hash-validated version metadata: " + name, attribution=credit)
-        topics = item.get("topics", [])
-        topic_ids = sorted({t["topic_id"] for t in topics if isinstance(t, dict) and isinstance(t.get("topic_id"), str)}) if isinstance(topics, list) else []
         metadata = SourceMetadata(source_id="L02", source_owner=article["publisher"],
             canonical_url="https://pmc.ncbi.nlm.nih.gov/articles/" + identity[0] + "/",
             access_class="open-licence-inspected", edition=name, publication_date=article["publication_date"],
             original_sha256=item["sha256"],
             retrieved_at=item.get("retrieved_utc"), doi=article["doi"] or record.get("doi"),
             pmid=article["pmid"] or (str(record["pmid"]) if record.get("pmid") else None), pmcid=identity[0],
-            topic_ids=topic_ids, asset_role=[MARKER, "extracted-article-text"],
+            topic_ids=acquisition_topic_ids(item), asset_role=[MARKER, "extracted-article-text"],
             notes=["Acquired nonretraction is a dated metadata observation; currentness and clinical review remain unknown",
                    EXCLUSIONS, EVIDENCE_PREFIX + json.dumps(evidence, ensure_ascii=False, sort_keys=True)])
         return InspectedArticle(article["text"], article["title"], metadata, rights, evidence)

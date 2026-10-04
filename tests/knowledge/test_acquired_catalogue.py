@@ -135,9 +135,13 @@ def test_large_catalogue_filters_and_pages_without_registration_or_file_reads(re
 
 def test_filtered_listing_after_import_uses_persisted_state_and_never_recatalogues(repository, tmp_path, monkeypatch):
     case = Case(tmp_path / "collection")
+    for item in case.items:
+        item["topics"] = [{"topic_id": "T21", "topic": "Kidney transplantation"}]
     collection = case.register(repository)
     pending = collection.list(eligibility="inspection_required", query="Synthetic")
     assert pending["total"] == 1 and pending["entries"][0]["id"] == case.selected[0]
+    assert pending["entries"][0]["metadata"]["topic_ids"] == ["T21"]
+    assert not pending["entries"][0]["metadata"]["content_reviewed"]
     imported = collection.import_selected(case.selected)["results"][0]
     assert imported["status"] == "queued"
     def unexpected(*args, **kwargs):
@@ -150,4 +154,5 @@ def test_filtered_listing_after_import_uses_persisted_state_and_never_recatalogu
     assert ready["total"] == 1 and ready["entries"][0]["processing_status"] == "queued"
     assert ready["entries"][0]["job_id"] == imported["job"]["id"]
     assert ready["entries"][0]["metadata"]["original_sha256"] == case.items[0]["sha256"]
+    assert ready["entries"][0]["metadata"]["topic_ids"] == ["T21"]
     assert collection.list(eligibility="unavailable")["total"] == 1

@@ -18,7 +18,7 @@ Owned paths are runtime/renulus/knowledge/collection.py, new
 runtime/renulus/knowledge/acquired.py, tests/knowledge/test_acquired.py,
 test_acquired_api.py, test_acquired_offline.py and this document. Repository,
 API, schema, migrations, shared locks and dependency manifests are unchanged.
-The existing repository ingestion/mutation guards serialize canonical binding;
+The existing repository mutation guard serializes canonical binding;
 SQLite, its durable CPU worker, Docling-core/HybridChunker, FastEmbed and LanceDB
 remain the producer. The existing retrieval.literature.licensed_article route
 provides safe XML parsing, exact licence URLs, attribution and text exclusions.
@@ -267,8 +267,9 @@ matches before pagination. No additional global-count field is introduced. Both
 filtered and unfiltered pages use the stable order c.source_id,c.title,c.id and
 the existing 1,000-row page cap. Jobs/rights/metadata keep their existing shape.
 Listing uses already registered SQLite receipts; it neither re-registers the
-manifest nor opens collection files. API parameters remain a parent-owned
-knowledge/api.py follow-up. No schema/index/shared-lock change is made here;
+manifest nor opens collection files. Parent cf9674f0 wires these filters into
+knowledge/api.py; parent 1a29f8d3 adds the Library filter and selection flow.
+No schema/index/shared-lock change is made here;
 filtered counts, substring matching and large offsets still require SQLite
 scans/sorting and are not a corpus throughput improvement.
 
@@ -307,17 +308,13 @@ Continuing toward all authorised eligible data requires deliberate batches of
 remaining inspection_required JATS candidates and draining the same durable
 queue. Selection failures remain explained and unavailable. No blanket rights
 promotion, background import of unselected originals or corpus-completion claim
-is made. Parent-owned API/UI filter wiring can improve deliberate scheduling;
+is made. The parent-owned API/UI filters now support deliberate scheduling;
 inspected version-specific review supplies currentness independently of this
 permission gate.
 
-Renderer prerequisite outside this lease: the base Library checkbox at
-apps/desktop/src/modules/library/index.tsx:166 disables any entry whose
-eligibility is not eligible. The parent/renderer owner must allow deliberate
-selection of inspection_required acquired candidates, keep temporary/reserved/
-ready restrictions, and display the inspection explanation. The existing API
-route is complete and proven; a renderer click-through for this new state is
-not claimed before that parent-owned change.
+The earlier renderer selection prerequisite is supplied by parent 1a29f8d3.
+The acquired tests exercise the local API; this lease does not claim a new
+renderer click-through proof or edit the parent-owned desktop/API paths.
 
 Parent 509bad0d fixes the pre-existing retrieval-test index-cleanup fixture
 mismatch found when testing the older base. No off-lease fixture/runtime fix was
@@ -359,3 +356,101 @@ supersession. The prior stale test failure on d38b7a04 is corrected in the
 1a29f8d3 baseline. No actual profile mutation, registration, body download or
 large import was performed for this fix; the 178k-row catalogue fixture was not
 rerun. Already recorded canonical source topic tags are unchanged.
+
+## L02 title/topic observations and selected parsing — October 4, 2026 UTC
+
+This sidecar starts from parent 1a29f8d3 in branch
+build/acquired-discoverability, using the existing isolated
+Renulus-wt-acquired-binding worktree. The read-only audit opened the authorised
+acquisition manifest and three explicitly matched version JSON objects. It
+opened no JATS bodies, live profile or unrelated collection files. The manifest
+SHA-256 is 0daf13d62ef9793aa5d189bd1200acefa271b8a295db00d81506fcee3ed50e9c.
+There were 183,769 lines, no malformed JSON, 178,558 L02 receipts and 20,499 JATS
+receipts. Raw receipt policy classified 13,085 JATS as inspection_required and
+7,414 as permission-unavailable. These are manifest observations, independent
+of registration, later inspection outcomes and the changing live queue.
+
+All 20,499 JATS receipts have nonidentity titles. The three selected version
+metadata titles match their manifest titles exactly, so a title replacement is
+not justified. Their receipt size/SHA checks passed:
+
+| Version metadata | SHA-256 |
+| --- | --- |
+| PMC13626926.1 | bbf297ba1d95721b625eb4a4df327a39760eff8ff452310a29eb0fce9c325ea7 |
+| PMC13629947.1 | b3a76632d8c5a074341a5253cdd6d7907fcebe0ce4ab6cc4f3b804ca9e4832f3 |
+| PMC13627300.1 | 6ecfbf97d867ab661ed2909797c10c797bdebc05d2541c5cd865c294a2f076cb |
+
+All 52,693 recorded JATS topic entries use T01–T27 IDs from the installed
+renulus-foundations 1.1.0 taxonomy. No ckd/transplant slug mismatch was observed.
+Fifty-five receipts have no topic tags; tagged receipts have up to twelve.
+These are overlapping, unreviewed acquisition discovery observations, not
+curriculum relevance or clinical review evidence. Example counts across all
+JATS receipts, regardless of permission, preserve varied domains:
+
+| Canonical topic | Recorded receipt count |
+| --- | ---: |
+| T06 AKI | 2,618 |
+| T08 CKD | 4,776 |
+| T10 glomerular disease | 1,277 |
+| T12 cystic/inherited disease | 352 |
+| T20 dialysis | 3,681 |
+| T21 transplantation | 1,895 |
+| T27 adjacent knowledge | 6,055 |
+
+The primary version JSON objects do not contain topic tags; tags belong to the
+acquisition manifest. Adoption retains the existing sorted unique IDs unchanged.
+Catalogue preview now retains the same topic observations instead of dropping
+them before inspection. A shared extraction helper keeps the catalogue and
+adoption representations consistent. No speculative alias mapping or new topic
+access grant is added. The existing real-API test now proves T21 survives
+catalogue/selection/import, retrieves through actual SQLite/LanceDB under T21,
+and is excluded under unrelated T08 and current_only. Extraction/embeddings are
+synthetic; this is an application policy proof, not a new model-engine proof.
+
+Already registered catalogue rows are not automatically backfilled. If their
+pre-inspection topic observations are needed, the parent can perform a bounded
+topic-only metadata update from matching receipts, preserving existing
+eligibility, rights and job/document bindings. Re-registering the entire
+collection to add topics resets inspection state and should not be repeated
+between batches. Canonical imported topics were already correct; no imported
+article migration is needed for the observed L02 manifest.
+
+Selection now uses plain JSON parsing to prefilter source, artifact role and
+selected article/version, then repeats strict duplicate-field parsing for every
+matched evidence object before using paths or receipts. Matched source/version
+metadata and selected JATS still receive the same integrity, provenance,
+permission and identity checks. The extended ambiguous-metadata test confirms
+that even an identical duplicate PMCID field in a selected manifest receipt
+cannot become permission evidence.
+
+Measured locally against unchanged base 1a29f8d3:
+
+| Selected versions | Before | After |
+| ---: | ---: | ---: |
+| 1 | 13.860 s | 6.557 s |
+| 250 | 12.363 s | 6.323 s |
+
+The selected and matched receipt results were identical before/after. The audit
+asserted both the manifest hash and these serialized selection SHA-256 values:
+
+- One version: d220e2648443f68c3b86bfac4352e4a48ba3885065636cd35ecd8677ea6a6f98.
+- 250 versions: 2f1ef2042fe67f1b462690b1810f365ce2dd23d091aa377030fb35a6a64ae726.
+
+This reduces receipt-selection parsing cost, not body-indexing time. There is
+still one complete manifest metadata scan per deliberate batch, selected body
+inspection and one serial CPU worker. No cache/index or new lock is added.
+
+The existing baseline and parser/topic-retention checks passed as 121 checks
+before the later memory constraint. After the enqueue fix, 100 acquired/source
+checks passed as recorded above. The updated API and small catalogue checks
+then passed separately: 21 passed, one large fixture deselected, in 10.91
+seconds, with the existing TestClient deprecation warning:
+
+```
+python -m pytest tests/knowledge/test_acquired_api.py tests/knowledge/test_acquired_catalogue.py -k "not test_large_catalogue_filters_and_pages_without_registration_or_file_reads" -q
+```
+
+The 178k-row fixture was not repeated after the memory constraint. Public
+evidence records counts and hashes, without source passages. No actual
+registration, import, downloads, providers or live profile mutation occurred
+in this sidecar.

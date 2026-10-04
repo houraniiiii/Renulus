@@ -7,6 +7,9 @@ from test_repository import SyntheticExtractor, SyntheticEmbedder
 
 def test_existing_api_inspects_deliberate_selection_and_preserves_scope_and_batch_limits(tmp_path):
     case = Case(tmp_path / "collection")
+    for item in case.items:
+        item["topics"] = [{"topic_id": "T21", "topic": "Kidney transplantation"}]
+    case.write()
     app = create_app(tmp_path / "profile")
     repository = app.state.services.registry["knowledge"]
     repository.extractor, repository.embedder = SyntheticExtractor(), SyntheticEmbedder()
@@ -19,6 +22,7 @@ def test_existing_api_inspects_deliberate_selection_and_preserves_scope_and_batc
         entries = api.get("/api/v1/library/collection/catalogue?source_id=L02").json()["entries"]
         entry = next(e for e in entries if e["eligibility"] == "inspection_required")
         assert not entry["rights"]["embedding"]
+        assert entry["metadata"]["topic_ids"] == ["T21"]
         body = {"entry_ids": [entry["id"]], "scope": {"kind": "temporary-case"}}
         rejected = api.post("/api/v1/library/collection/import", json=body)
         assert rejected.status_code == 409 and not repository.list_documents()["documents"]
@@ -34,3 +38,12 @@ def test_existing_api_inspects_deliberate_selection_and_preserves_scope_and_batc
         assert inspected["eligibility"] == "eligible" and inspected["rights"]["embedding"]
         assert inspected["processing_status"] == "queued" and not inspected["metadata"]["latest_final_verified"]
         assert inspected["metadata"]["original_sha256"] == case.items[0]["sha256"]
+        assert inspected["metadata"]["topic_ids"] == ["T21"]
+        repository.run_job(first["job"]["id"])
+        assert repository.get_job(first["job"]["id"])["state"] == "ready"
+        query = {"query": "transplant rejection", "scope": {"kind": "study"}, "topic_id": "T21"}
+        retrieved = api.post("/api/v1/library/retrieve", json=query)
+        assert retrieved.status_code == 200
+        assert {passage["document_id"] for passage in retrieved.json()["passages"]} == {first["document_id"]}
+        assert api.post("/api/v1/library/retrieve", json={**query, "topic_id": "T08"}).json()["passages"] == []
+        assert api.post("/api/v1/library/retrieve", json={**query, "current_only": True}).json()["passages"] == []

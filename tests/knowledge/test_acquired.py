@@ -9,7 +9,7 @@ import time
 import pytest
 
 from renulus.contracts import ApiError, ContextScope, Scope
-from renulus.knowledge.acquired import EVIDENCE_PREFIX, collection_path
+from renulus.knowledge.acquired import AcquiredLiterature, EVIDENCE_PREFIX, collection_path
 from renulus.knowledge.collection import CollectionCatalogue, MANIFEST
 from renulus.knowledge.worker import IngestionWorker
 from test_repository import repository, SyntheticExtractor
@@ -270,6 +270,14 @@ def test_ambiguous_duplicate_metadata_fields_are_unavailable(repository, case):
     case.items[1] = case.receipt(case.meta, "article-version-metadata", 1)
     collection = case.register(repository)
     assert collection.import_selected(case.selected)["results"][0]["code"] == "article_metadata_invalid"
+    # A fast manifest prefilter must still reject duplicate fields in the
+    # selected receipt before that receipt can become permission evidence.
+    manifest = case.root / MANIFEST
+    raw = manifest.read_text().replace('"pmcid": "PMC90001"', '"pmcid": "PMC90001", "pmcid": "PMC90001"', 1)
+    manifest.write_text(raw, encoding="utf-8")
+    entry = repository.db.fetch_one("SELECT * FROM knowledge_catalogue WHERE id=?", (case.selected[0],))
+    selected, matched = AcquiredLiterature(case.root).selections([entry])
+    assert selected == {} and len(matched) == 1
 
 
 @pytest.mark.parametrize("changes,code", [
