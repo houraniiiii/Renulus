@@ -4,6 +4,7 @@
 These checks verify evidence consistency and immutable ancestry. They do not
 replace the assistant's medical reading or the canonical transactional loader.
 """
+from collections import Counter
 import json
 from pathlib import Path
 
@@ -105,6 +106,21 @@ def validate_review_evidence(pack, path, predecessors=()):
             answer = next(o["text"] for o in item["options"] if o["id"] == item["answer"])
             if e.get("key_text") != answer or e.get("kind") != "question":
                 raise PackValidationError(f"Review evidence key mismatch: {key}")
+            if e.get("skill") not in {"mechanism", "interpretation", "common_reasoning"}:
+                raise PackValidationError(f"Review evidence skill mismatch: {key}")
         elif e.get("kind") != "case" or e.get("key_text") is not None:
             raise PackValidationError(f"Case evidence must not invent a deterministic key: {key}")
+        elif e.get("skill") != "mixed_domain_reasoning":
+            raise PackValidationError(f"Case review evidence skill mismatch: {key}")
+    if "question_skill_coverage" in evidence:
+        question_rows = [e for e in rows if e["kind"] == "question"]
+        summary = {
+            "scope": "question_review_rows",
+            "counts": dict(Counter(e["skill"] for e in question_rows)),
+            "by_topic": {t["id"]: dict(Counter(e["skill"] for e in question_rows
+                         if selected[(e["id"], e["version"])]["topic_id"] == t["id"]))
+                         for t in pack.bundle["topics"]},
+        }
+        if evidence["question_skill_coverage"] != summary:
+            raise PackValidationError("Question skill coverage differs from reviewed item evidence")
     return len(rows)

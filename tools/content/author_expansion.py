@@ -8,6 +8,7 @@ No manual, examination-bank item or primary-source prose is reproduced.
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 from copy import deepcopy
 import hashlib
 import json
@@ -536,6 +537,391 @@ q("T27", 2, 1, CKD, "Section 1.2.2, sources of error in eGFRcr-cys, printed S151
   "Both markers have non-GFR determinants. Integrate muscle mass, inflammation and medications; use combined or measured approaches as appropriate to the decision rather than treating either marker as universally definitive.", secondary=("T01", "T19"), skill="mechanism")
 
 
+# Final additive breadth: two further distinct questions for every topic.
+q("T01", 3, 1, CKD, "Practice Point 4.2.5: filtration estimates outside steady state",
+  "During evolving AKI, creatinine rises from 80 to 180 micromol/L in 36 hours. The laboratory reports eGFR 35. What limits using that number as today's drug-clearance measurement?",
+  "The creatinine concentration is not at steady state, so the estimate can lag changing filtration.",
+  [("Indexing to 1.73 m2 converts the result into measured clearance.", "Body-size indexing does not correct the changing marker concentration."),
+   ("A single cystatin-C result would remove all uncertainty during critical illness.", "Alternative markers also have kinetics and non-GFR determinants."),
+   ("The laboratory number establishes the same GFR for the preceding 36 hours.", "A changing concentration does not describe a constant clearance.")],
+  "An equation fitted to stable marker concentrations does not instantaneously track a rapid filtration change. Review trajectory, urine output, the medicine and required precision; use an appropriate monitoring/dosing plan.", secondary=("T06", "T19"), skill="mechanism")
+q("T01", 4, 2, CKD, "Section 1.2.2; printed S151: reduced muscle mass as a non-GFR determinant",
+  "After a prolonged catabolic illness, an adult's creatinine-based eGFR rises as muscle mass falls. Which interpretation best fits these data?",
+  "Reduced creatinine generation can mimic improved filtration.",
+  [("The change quantifies structural recovery of the kidney.", "Creatinine production has changed, so that conclusion is unsupported."),
+   ("Muscle loss should increase creatinine generation and lower eGFR.", "Loss of muscle generally reduces creatinine generation."),
+   ("The eGFR trend can replace assessment of functional and nutritional recovery.", "Filtration estimates and physical recovery measure different things.")],
+  "A lower creatinine can reflect less production rather than better clearance. Compare the clinical course and other appropriate filtration information, especially before interpreting the change as recovery or increasing a narrow-range drug dose.", secondary=("T25", "T19"), skill="mechanism")
+q("T02", 3, 1, CKD, "Practice Points 1.3.1.2-1.3.1.3; Table 16, printed S154: urine measurement variability",
+  "An adult's first elevated ACR was sampled just after strenuous exercise during a urinary infection. What is the best next interpretation step?",
+  "Confirm quantitative albuminuria under suitable conditions, preferably with a first-morning sample.",
+  [("Assign a chronic albuminuria category from this result alone.", "Temporary influences and chronicity require assessment."),
+   ("Replace the quantitative ACR with a visual dipstick estimate.", "That loses measurement precision rather than confirming the result."),
+   ("Ignore all future urine testing because both confounders are present.", "Confounding prompts confirmation, not abandonment of evaluation.")],
+  "Exercise and symptomatic urinary infection can raise urinary protein/albumin. Repeat appropriate measurement after evaluating transient factors, and interpret persistence with the clinical phenotype.", secondary=("T08", "T17"), skill="common_reasoning")
+q("T02", 4, 1, CKD, "Table 16, printed S154: low urinary creatinine excretion and ACR/PCR",
+  "Two adults excrete the same daily urine albumin, but one has much lower creatinine excretion from low muscle mass. How can their spot ACRs differ?",
+  "The adult with lower creatinine excretion can have a higher ACR for the same albumin loss.",
+  [("The creatinine denominator cannot affect a ratio.", "The ratio changes when its denominator changes."),
+   ("The higher ACR must establish a different glomerular lesion.", "A denominator effect does not identify histology."),
+   ("A lower creatinine denominator necessarily lowers ACR.", "It raises the ratio for a given albumin amount.")],
+  "ACR helps account for urine concentration, but creatinine excretion varies with body composition and other factors. If the discrepancy matters, assess sample/collection quality and the need for timed excretion rather than equating the ratio with a histologic diagnosis.", secondary=("T01", "T25"), skill="mechanism")
+q("T03", 3, 1, NA, "Section 6.3: urine sodium and effective arterial volume in hypotonic hyponatremia",
+  "A patient with edema has hypotonic hyponatremia, urine osmolality 520 mOsm/kg and urine sodium 12 mmol/L without recent diuretics. Which explanation is compatible with the pattern?",
+  "Low effective arterial volume can sustain antidiuresis despite expanded total extracellular fluid.",
+  [("Edema establishes maximally dilute urine.", "The measured urine is concentrated."),
+   ("A low urine sodium proves that the patient has no excess extracellular fluid.", "Effective arterial volume and total extracellular volume are different."),
+   ("The results alone distinguish heart failure from cirrhosis.", "Both can produce this physiologic pattern.")],
+  "A low urine sodium can reflect sodium retention in low effective arterial volume. Edematous states can therefore coexist with antidiuresis and hypotonic hyponatremia; establish the cause from the whole assessment.", secondary=("T27",), skill="mechanism")
+q("T03", 4, 1, NA, "Section 6.2: exclude nonhypotonic hyponatremia; glucose as an effective osmole",
+  "Sodium is 128 mmol/L during marked hyperglycemia, and measured serum osmolality is elevated. Which reasoning should precede a hypotonic-hyponatremia algorithm?",
+  "Assess effective osmolality and glucose-related water shifts; low sodium does not by itself establish hypotonicity.",
+  [("A low sodium concentration establishes low serum osmolality.", "The measured osmolality contradicts that assumption."),
+   ("Hyperglycemia can lower sodium only through laboratory assay interference.", "It can also shift water between compartments."),
+   ("Urine sodium alone determines the serum tonicity.", "Serum effective osmoles must be assessed first.")],
+  "Extracellular glucose can draw water out of cells and lower the measured sodium concentration while increasing tonicity. Distinguish this from true hypotonic and analytical pseudohyponatremia before applying a diagnostic pathway.", secondary=("T14",), skill="common_reasoning")
+q("T04", 3, 1, K, "Section II: insulin-glucose redistribution and serial potassium/glucose monitoring",
+  "Potassium falls after insulin-glucose treatment, but little potassium has yet left the body. What explains the need for continued monitoring and an elimination plan?",
+  "Redistribution can wear off, while insulin can also cause delayed hypoglycemia.",
+  [("The measured fall quantifies potassium removed in the urine.", "Insulin primarily shifts potassium into cells."),
+   ("Normal potassium immediately after treatment excludes later recurrence.", "Rebound can follow redistribution without adequate removal."),
+   ("Glucose monitoring ends as soon as potassium first improves.", "Glycemic risk can persist beyond the initial response.")],
+  "Shifting and removal are different treatment mechanisms. Reassess potassium and glucose over the treatment window, address contributors and select appropriate potassium removal according to the clinical situation.", secondary=("T07", "T14"), skill="mechanism")
+q("T04", 4, 2, RTA, "Diagnostic/pathophysiology sections: normal-anion-gap acidosis versus additional unmeasured anions",
+  "An adult has sodium 140, chloride 104 and bicarbonate 12 mmol/L, with albumin 4.0 g/dL. Using an anion gap that excludes potassium, which finding argues against isolated normal-gap RTA?",
+  "The calculated anion gap is 24 mmol/L, suggesting additional unmeasured anions.",
+  [("The calculated gap is 12 mmol/L because it equals bicarbonate.", "The gap is sodium minus chloride and bicarbonate."),
+   ("The calculated gap is 8 mmol/L, proving isolated chloride accumulation.", "Those numbers do not produce a gap of 8."),
+   ("The gap is 128 mmol/L, obtained by subtracting bicarbonate alone.", "Chloride must also be subtracted.")],
+  "For these synthetic results, 140 - 104 - 12 = 24 mmol/L. A raised gap prompts assessment for an additional process rather than attributing all acidosis to a normal-gap tubular disorder; local reference intervals and albumin matter.", secondary=("T11", "T06"), calculation={"expression": "140 - 104 - 12", "result": 24, "unit": "mmol/L"})
+q("T05", 3, 1, MBD, "Recommendation 3.2.3, printed p15: extremes of PTH and bone-specific alkaline phosphatase",
+  "A dialysis patient's PTH and bone-specific alkaline phosphatase are both markedly low. Which interpretation is best supported?",
+  "Low bone turnover is a concern, but these markers do not provide a complete histologic diagnosis.",
+  [("The results establish high-turnover bone disease.", "The direction of both markers argues against that interpretation."),
+   ("Normal phosphate would exclude every bone disorder.", "Phosphate is not a complete measure of turnover."),
+   ("A low PTH proves osteoporosis is absent.", "Turnover and fracture/osteoporosis assessment are different questions.")],
+  "Markedly high or low PTH or bone-specific alkaline phosphatase can help predict turnover. Interpret the pattern with trends, treatment and fracture concerns; tissue can be considered when its result would change management.", secondary=("T20", "T22"))
+q("T05", 4, 2, MBD, "Recommendations 3.1.4 and 4.1.5, printed p16: serial assessment and phosphate-lowering decisions",
+  "An adult with CKD G3b has repeatedly normal phosphate. A binder is proposed solely to prevent a future rise. What does the dated 2017 guideline emphasize?",
+  "Phosphate-lowering decisions should follow progressively or persistently elevated phosphate and the overall biochemical picture.",
+  [("Every reduction of normal phosphate has demonstrated outcome benefit.", "Preventive lowering in this setting is not established."),
+   ("A single PTH result makes phosphate trends irrelevant.", "CKD-MBD parameters should be interpreted together over time."),
+   ("A calcium-based binder cannot contribute to calcium loading.", "Calcium exposure is part of the treatment balance.")],
+  "Avoid transferring the management of overt hyperphosphatemia to a normal value without evidence of benefit. Review serial phosphate, calcium, PTH, diet and potential treatment harms together.", secondary=("T08", "T19"), skill="common_reasoning")
+q("T06", 3, 1, AKI, "Sections 2.1-2.3: baseline, chronology and evaluation of AKI",
+  "Creatinine is 240 micromol/L on admission, with no prior result available. Which conclusion is justified by this value alone?",
+  "Kidney dysfunction is present, but the value alone cannot distinguish acute from chronic dysfunction or assign a creatinine-ratio AKI stage.",
+  [("The value establishes CKD G4 lasting at least three months.", "Duration is unknown and the concentration does not establish chronicity."),
+   ("Stage 3 AKI is established by comparison with an assumed normal baseline.", "An unsupported baseline can misclassify the episode."),
+   ("A lack of previous tests rules out AKI.", "It creates uncertainty rather than excluding acute dysfunction.")],
+  "Seek prior information, chronology, urine output, urine findings and reversible causes. A single abnormal concentration can be clinically urgent without establishing its duration or a baseline-relative stage.", secondary=("T08", "T01"), skill="common_reasoning")
+q("T06", 4, 2, AKI, "Recommendation 3.4.2 and Section 3.4 rationale: diuretics and AKI outcomes",
+  "A loop diuretic increases urine output in volume-overloaded AKI, while creatinine and metabolic abnormalities continue to worsen. What does the urine response establish?",
+  "Fluid removal may improve, but the response does not prove recovery of filtration or elimination of a KRT indication.",
+  [("More urine necessarily means that GFR has normalized.", "Diuresis and solute clearance are different outcomes."),
+   ("The response demonstrates that diuretics reverse the underlying kidney injury.", "A urine-volume response does not establish injury reversal."),
+   ("All further biochemical monitoring can be replaced by urine volume.", "Electrolyte, acid-base and clearance needs still matter.")],
+  "Diuretics can be useful for overload, but urine output after a drug challenge is not synonymous with recovered kidney function. Reassess the whole physiologic need for support and the cause of AKI.", secondary=("T07", "T19"), skill="mechanism")
+q("T07", 3, 1, AKI, "Recommendation 5.8.4: delivered effluent rate in CRRT",
+  "For an explicitly selected dosing weight of 80 kg, what delivered effluent rate corresponds to 25 mL/kg/h before accounting for interruptions?",
+  "2,000 mL/h.",
+  [("320 mL/h.", "Weight is multiplied by the dose per kilogram, not divided into it."),
+   ("25 mL/h.", "The per-kilogram rate has not been scaled to weight."),
+   ("48,000 mL/h.", "That is the 24-hour volume at 2,000 mL/h, not the hourly rate.")],
+  "The dimensional calculation is 80 kg x 25 mL/kg/h = 2,000 mL/h. Dosing-weight choice, circuit delivery and interruptions still need assessment; an arithmetic prescription is not proof of adequate delivered treatment.", secondary=("T23",), calculation={"expression": "80 * 25", "result": 2000, "unit": "mL/h"})
+q("T07", 4, 2, AKI, "Recommendation 5.2.1: stopping kidney replacement therapy",
+  "After improving AKI, a team considers stopping KRT. Which assessment most directly answers whether support is still needed?",
+  "Whether intrinsic kidney function can meet current solute, electrolyte and fluid needs, consistent with the goals of care.",
+  [("Whether creatinine has reached the laboratory reference interval.", "Support can become unnecessary before complete normalization."),
+   ("Whether the patient has received a fixed number of treatments.", "Recovery and physiologic needs vary."),
+   ("Whether one urine collection exceeds a numerical volume without other data.", "Urine volume alone does not establish adequate clearance and balance.")],
+  "A monitored trial off support is based on recovered capacity and present needs, not a universal creatinine or treatment-count rule. Plan reassessment for recurrent fluid or metabolic problems.", secondary=("T26",), skill="common_reasoning")
+q("T08", 3, 2, CKD, "Practice Point 2.1.3, printed S155: change in eGFR beyond expected variability",
+  "A stable CKD patient's eGFR falls from 60 to 44 mL/min/1.73 m2 on follow-up. Which interpretation best follows the 2024 monitoring practice point?",
+  "The fall exceeds 20% and warrants evaluation rather than being dismissed as ordinary variability.",
+  [("The decline proves irreversible progression without checking context.", "The cause of a meaningful change still needs evaluation."),
+   ("Only a fall of more than 50% merits investigation.", "The practice point uses a lower monitoring threshold."),
+   ("The change is 16%, obtained by treating the absolute difference as a percentage.", "The baseline-relative fall is 16/60, about 27%.")],
+  "The synthetic decrease is about 26.7%. Evaluate timing, illness, medicines, measurement and progression; a monitoring trigger identifies a need to investigate, not an automatic cause.", secondary=("T19", "T06"), calculation={"expression": "(60 - 44) / 60 * 100", "result": 26.666666666666668, "unit": "percent"})
+q("T08", 4, 1, CKD, "Practice Point 2.1.5, printed S155: doubling of ACR",
+  "ACR increases from 100 to 220 mg/g during CKD monitoring. Which response best fits the guideline's variability principle?",
+  "Evaluate the more-than-doubling and its clinical/sample context, even though both results remain in A2.",
+  [("Remaining in the same category makes the change uninformative.", "A meaningful within-category change can still warrant evaluation."),
+   ("The result alone establishes a new biopsy diagnosis.", "Albuminuria change does not specify histology."),
+   ("The ACR is now a filtration measurement.", "Albumin excretion and filtration remain distinct features.")],
+  "Category boundaries do not capture every meaningful trend. A doubling exceeds expected laboratory variability according to the practice point; assess persistence, confounders and the underlying process.", secondary=("T02",), skill="common_reasoning")
+q("T09", 3, 2, BP, "Practice Point 3.1.2: less intensive treatment with symptomatic postural hypotension",
+  "An adult with CKD has standardized seated systolic BP 128 mmHg but recurrent symptomatic standing hypotension and falls. What should guide further treatment intensity?",
+  "Individualize the target and review tolerability, medicines and the postural pattern.",
+  [("The seated value alone requires intensification until it is below 120.", "The recommended target is conditional on tolerability."),
+   ("The standing symptoms are irrelevant if seated technique is standardized.", "Standardization does not remove a tolerability problem."),
+   ("All kidney-protective treatment should be permanently abandoned without review.", "The problem requires a specific assessment and balanced plan.")],
+  "A population BP target is not an instruction to ignore symptomatic hypotension. Review reversible contributors, treatment burden and the patient's priorities when deciding a tolerable intensity.", secondary=("T19", "T24"), skill="common_reasoning")
+q("T09", 4, 1, BP, "Recommendation 1.2 and rationale: out-of-office BP and masked hypertension",
+  "Standardized clinic BP is acceptable, but repeated validated home readings are high. What does this discrepancy warrant?",
+  "Confirmation of technique and the out-of-office pattern, including possible masked hypertension.",
+  [("The clinic result automatically invalidates every home result.", "Out-of-office measurements provide complementary information."),
+   ("White-coat hypertension is established by higher readings at home.", "That term describes the opposite directional pattern."),
+   ("A new drug should be chosen before reviewing measurement validity.", "Confirming the pattern helps avoid treating measurement error.")],
+  "Valid home or ambulatory readings can uncover hypertension absent from the clinic visit. Establish the reproducible pattern and its context before selecting an individualized management plan.", secondary=("T08",), skill="interpretation")
+
+
+q("T10", 3, 2, GD, "Figure 30 caption, printed S130; Practice Point 3.3.4, S133: immunologic response can precede clinical remission",
+  "During treatment of PLA2R-associated membranous nephropathy, antibodies become undetectable but proteinuria persists early in follow-up. What is the best interpretation?",
+  "Immunologic improvement can precede the clinical proteinuria response; assess the longitudinal pattern before declaring failure.",
+  [("Persistent proteinuria proves that antibody production is unchanged.", "The antibody measurement shows a different trend."),
+   ("Undetectable antibodies establish complete structural recovery immediately.", "A serologic response is not instant repair of the filtration barrier."),
+   ("The antibody result makes kidney function and proteinuria follow-up unnecessary.", "Clinical response and complications still require monitoring.")],
+  "Serologic activity and clinical recovery have different time courses. Integrate serial antibodies, proteinuria, albumin, filtration and treatment exposure rather than treating one early discordant measurement as a definitive outcome.", secondary=("T02", "T26"), skill="mechanism")
+q("T10", 4, 1, GD, "Practice Point 7.1.2.1 and Figure 57, printed S173-S174: bacterial infection-related glomerulonephritis",
+  "An adult with active bacterial endocarditis develops AKI and a nephritic urine pattern. Which reasoning should guide the glomerular evaluation?",
+  "Infection-related injury belongs in the differential, and infection control is central to the assessment.",
+  [("Nephritic urine findings exclude infection as a kidney mechanism.", "Infection can cause immune-mediated glomerular injury."),
+   ("The kidney findings establish a primary sterile immune disease before other data.", "The active infection changes the differential and treatment risks."),
+   ("An active infection can be left untreated until the urine sediment normalizes.", "The infection itself requires timely management.")],
+  "Glomerular inflammation does not imply an infection-independent disease. Establish the infectious and renal phenotype, consider tissue when useful, and coordinate infection treatment rather than reflexively treating every nephritic presentation identically.", secondary=("T17", "T06"), skill="common_reasoning")
+q("T11", 3, 1, DM, "Section 1.3: SGLT2 inhibition and proximal glucose reabsorption",
+  "A patient taking an SGLT2 inhibitor has glycosuria with normal current plasma glucose, but no phosphate, bicarbonate or other inappropriate solute losses. What is the most direct explanation to consider?",
+  "The medicine's intended inhibition of proximal glucose reabsorption.",
+  [("Glycosuria alone establishes generalized Fanconi syndrome.", "Other proximal losses and the medication context matter."),
+   ("A distal acidification defect directly prevents glucose reabsorption.", "Glucose reabsorption occurs upstream in the proximal tubule."),
+   ("Normal current glucose excludes drug-mediated glycosuria.", "The drug alters the renal glucose threshold.")],
+  "An isolated finding can reflect a selected transporter effect rather than generalized tubular dysfunction. Interpret urine glucose with medicines, blood glucose and the other solute-handling features.", secondary=("T14", "T19"), skill="mechanism")
+q("T11", 4, 2, RTA, "Clinical diagnosis, printed p1586; Urine pH, p1588: systemic acid-base context and inappropriate acidification",
+  "A urine pH of 6.6 is found on one spot sample. Serum bicarbonate is normal. Which interpretation of distal RTA is justified?",
+  "The spot pH alone is insufficient; interpret acidification in the systemic acid-base and clinical context.",
+  [("Any urine pH above 6 establishes distal RTA.", "One urine pH lacks the acid-base and clinical context needed for diagnosis."),
+   ("A urine pH result identifies the patient's serum anion gap.", "The serum gap requires separate blood measurements."),
+   ("One urine pH measurement proves a proximal glucose-reabsorption defect.", "Urine acidity does not establish inappropriate proximal glucose loss.")],
+  "The classic dRTA pattern involves normal-gap metabolic acidosis with inappropriate urine acidification. One alkaline result without that context is not diagnostic; persistent stone or tubular features warrant appropriate further assessment. Normal bicarbonate alone is not used here to exclude every acidification defect.", secondary=("T04", "T13"), skill="common_reasoning")
+q("T12", 3, 2, PKD, "Practice Points 4.1.4.2-4.1.4.4, printed S121: aquaresis, hydration and temporary interruption",
+  "An adult with ADPKD taking tolvaptan develops vomiting and cannot maintain oral fluid intake. Which treatment mechanism makes the interruption plan relevant?",
+  "Continued aquaresis can worsen water loss when replacement intake is inadequate.",
+  [("Tolvaptan directly replaces the fluid lost through vomiting.", "It increases free-water excretion rather than replacing water."),
+   ("A normal previous sodium result excludes later dehydration risk.", "Risk changes when intake and losses change."),
+   ("A temporary interruption necessarily ends all future disease-modifying treatment.", "Recovery and safe resumption can be assessed under an explicit plan.")],
+  "An aquaretic treatment requires access to and adequate intake of water. Follow the patient-specific sick-day/interruption instructions and reassess hydration and resumption; do not infer safety from a prior normal laboratory value.", secondary=("T03", "T19"), skill="mechanism")
+q("T12", 4, 1, PKD, "Recommendation 6.1.2 and Practice Point 6.1.8, printed S150: ICA screening risk and informed choice",
+  "An adult with ADPKD reports a first-degree relative with subarachnoid hemorrhage. What does this history change?",
+  "It strengthens the indication for a guideline-informed aneurysm-screening discussion and risk assessment.",
+  [("Preserved eGFR removes aneurysm risk from consideration.", "The extrarenal risk is not determined by filtration alone."),
+   ("The family event proves that the patient has an aneurysm.", "It is a risk feature, not the patient's imaging diagnosis."),
+   ("Every person with ADPKD requires immediate invasive angiography.", "Screening eligibility, modality and preferences require assessment.")],
+  "Personal/family vascular history changes screening decisions. Discuss benefits, limitations and consequences, including treatment eligibility and life expectancy, with the relevant team; a risk feature is not a positive test.", secondary=("T24", "T26"), skill="common_reasoning")
+q("T13", 3, 2, STONE, "Index patient: uric acid stones; low urine pH and solubility",
+  "A recurrent uric acid stone former has persistently acidic urine without marked hyperuricemia. Which mechanism is still relevant to recurrence?",
+  "Low urine pH reduces uric acid solubility, so a normal serum urate does not exclude the stone mechanism.",
+  [("Serum urate alone fully determines urinary uric acid solubility.", "Urine pH and concentration also matter."),
+   ("Uric acid is most soluble in strongly acidic urine.", "Acidity favors the less soluble protonated form."),
+   ("Stone composition can be inferred from serum urate without examining the stone.", "Serum chemistry does not replace composition analysis.")],
+  "Low pH can be a major determinant of uric acid stones. Use composition and urine evaluation to guide an individualized prevention plan rather than requiring marked hyperuricemia before considering the mechanism.", secondary=("T04", "T14"), skill="mechanism")
+q("T13", 4, 2, STONE, "Dietary sodium section: sodium intake and urinary calcium",
+  "A calcium stone former has high urinary sodium and calcium on a suitable metabolic collection. Why is sodium intake relevant to prevention?",
+  "Higher sodium intake can increase urinary calcium loss.",
+  [("Dietary sodium affects only blood pressure, never calcium handling.", "Sodium intake and calciuria are linked."),
+   ("The finding means dietary calcium must be eliminated.", "Normal dietary calcium remains part of balanced prevention."),
+   ("A high urinary calcium concentration by itself identifies a parathyroid adenoma.", "Several dietary and metabolic mechanisms can produce it.")],
+  "Review sodium intake alongside urine volume, calcium, oxalate and other risk factors. Addressing high sodium can help reduce calciuria without indiscriminate calcium restriction or assuming a single endocrine cause.", secondary=("T09", "T25"), skill="mechanism")
+q("T14", 3, 2, DM, "Recommendation 4.1.1; Figure 27: metformin eligibility and eGFR-based adjustment",
+  "An adult with type 2 diabetes has persistently stable eGFR 27 mL/min/1.73 m2 while still taking metformin. Which action fits the 2022 kidney-diabetes guidance?",
+  "Discontinue metformin and review suitable alternatives because eGFR is persistently below 30.",
+  [("Continue an unchanged dose because serum glucose is controlled.", "Glycemic efficacy does not resolve reduced-clearance safety."),
+   ("Increase the dose to compensate for the lower GFR.", "Reduced clearance does not justify that adjustment."),
+   ("Use the glucose level alone to determine eligibility.", "Kidney function is part of the eligibility/dosing assessment.")],
+  "The guideline's metformin recommendation starts at eGFR 30, with dose adjustment and monitoring above that threshold. Below 30, use an alternative plan; distinguish a persistent state from an acute evolving illness requiring its own review.", secondary=("T19", "T08"))
+q("T14", 4, 1, DM, "Practice Point 1.3.3: SGLT2 inhibitors during fasting, surgery or critical illness",
+  "An adult taking an SGLT2 inhibitor is preparing for surgery with prolonged fasting. Why does a planned temporary hold matter even if glucose is not markedly high?",
+  "Fasting and illness can increase ketosis risk during SGLT2 inhibition.",
+  [("Only severe hyperglycemia makes ketosis possible in this setting.", "Ketosis can occur without marked glucose elevation."),
+   ("The hold is intended to reverse all established CKD benefit permanently.", "It addresses an acute treatment-specific risk."),
+   ("A hold needs no documented resumption plan.", "Failure to reassess resumption can cause unintended long-term discontinuation.")],
+  "Surgery/fasting changes treatment safety. Coordinate the treatment-specific interruption and restart plan rather than applying routine outpatient continuation to an acute risk period.", secondary=("T19", "T27"), skill="mechanism", extra_sources=((CKD, "Practice Point 4.3.2: restart communication"),))
+q("T15", 3, 1, LN, "Practice Point 10.3.1.1 and rationale, printed S47-S48: TMA etiologic assessment",
+  "A lupus kidney biopsy shows thrombotic microangiopathy. What does that histologic pattern establish about the cause?",
+  "It establishes a pattern of microvascular injury, but not a single mechanism such as complement-mediated disease.",
+  [("It independently proves severe ADAMTS13 deficiency.", "That requires the appropriate diagnostic measurement."),
+   ("It rules out antiphospholipid or other secondary mechanisms.", "Different pathways can produce the pattern."),
+   ("All patients with the pattern have the same treatment indication.", "Etiologic evaluation affects the disease-directed plan.")],
+  "A TMA lesion needs clinical/laboratory mechanism assessment. Lupus-associated presentations can involve different pathways; tissue morphology alone does not select a universal plasma/complement treatment.", secondary=("T16", "T22"), skill="common_reasoning")
+q("T15", 4, 2, TTP, "Introduction and Recommendation 1: severe ADAMTS13 deficiency and inhibitor assessment",
+  "In a compatible TMA syndrome, pretreatment ADAMTS13 activity is 4% with an inhibitor detected. Which diagnosis does the result most strongly support?",
+  "Immune-mediated TTP.",
+  [("Routine erythropoietin-deficiency anemia of CKD.", "It does not explain severe enzyme deficiency with an inhibitor."),
+   ("A complement mechanism is established solely by the presence of AKI.", "AKI does not override the disease-specific ADAMTS13 evidence."),
+   ("The TMA is excluded because the kidney is involved.", "Kidney involvement does not exclude TTP.")],
+  "Severe pretreatment ADAMTS13 deficiency, conventionally below 10%, is central to TTP assessment. An inhibitor supports an immune mechanism in the appropriate phenotype; interpret it through the urgent specialist pathway.", secondary=("T23", "T06"))
+q("T16", 3, 2, AAV, "Practice Point 9.2.3.1 and accompanying explanation, printed S93: ANCA monitoring limitations",
+  "An adult with treated AAV remains clinically well, but ANCA stays positive. Which response best fits the biomarker's limitations?",
+  "Use clinical and organ-specific monitoring; persistence alone is not a sufficient reason to escalate immunosuppression.",
+  [("The positive result establishes an organ-threatening relapse today.", "A biomarker association is not the same as active organ disease."),
+   ("Normal symptoms make future kidney/urine monitoring unnecessary.", "Silent or evolving organ findings still warrant surveillance."),
+   ("Every change in titer identifies the exact histologic lesion.", "Serology does not supply tissue-level information.")],
+  "ANCA can inform relapse risk but is insufficient by itself to direct an individual's treatment escalation. Review symptoms, kidney trend, urine findings and the broader assessment while preserving appropriate follow-up.", secondary=("T02", "T26"), skill="common_reasoning")
+q("T16", 4, 1, LN, "Practice Point 10.2.5.2.1, Figure 12 and Section 10.2.5.3, printed S46-S47: unsatisfactory response",
+  "After lupus nephritis treatment, proteinuria persists and it is unclear whether inflammation remains active. What can a targeted repeat-biopsy discussion help resolve?",
+  "Whether residual activity, chronic damage or another lesion better explains the incomplete response.",
+  [("Proteinuria alone quantifies current histologic activity.", "Residual protein loss can have more than one explanation."),
+   ("A repeat biopsy guarantees that more immunosuppression will help.", "Its findings may support a different conclusion."),
+   ("A prior class label makes subsequent tissue information irrelevant.", "The lesion and balance of activity/chronicity can evolve.")],
+  "First review treatment exposure, adherence and the clinical course. When the active-versus-damage distinction would change management, tissue reassessment can add information; do not equate persistent proteinuria with a fixed amount of treatable inflammation.", secondary=("T10", "T22"), skill="common_reasoning")
+q("T17", 3, 2, TX, "Recommendation 10.7.2.1, printed S61: live vaccination interval before transplantation",
+  "A transplant candidate received a live vaccine five days before a proposed elective transplant. Which timing issue should be coordinated with the transplant team?",
+  "The guideline recommends completing live vaccination at least four weeks before transplantation.",
+  [("Live vaccination and nonlive vaccination have identical timing constraints.", "The infection risk under immunosuppression differs."),
+   ("A live vaccine is equivalent to an active serious infection in every recipient.", "The issue is a timing/risk assessment, not that diagnosis."),
+   ("A listing decision makes vaccination timing irrelevant.", "Planned immunosuppression changes the safety context.")],
+  "Review vaccine type, dates and the anticipated immunosuppression interval. The candidate guideline uses a minimum four-week interval for live vaccines; condition-specific specialist planning remains necessary.", secondary=("T21", "T19"))
+q("T17", 4, 1, TX, "Recommendations 11.2.2, 11.2.3.2 and 11.2.4, printed S63-S64: cancer and candidate timing",
+  "A transplant candidate previously completed cancer treatment and is in remission. Which reasoning best fits candidate assessment?",
+  "Assess cancer type/stage, remission course and transplant-related recurrence risk with the relevant teams.",
+  [("Any previous cancer creates automatic permanent exclusion.", "History and active disease are not interchangeable."),
+   ("The kidney-failure diagnosis makes recurrence risk irrelevant.", "Immunosuppression and competing outcomes must be considered."),
+   ("A single universal waiting interval applies to every treated malignancy.", "Tumor-specific prognosis and circumstances differ.")],
+  "Candidate decisions are individualized and multidisciplinary. Distinguish active malignancy from treated disease and balance recurrence, waiting and kidney-failure risks rather than using one historical label as the entire decision.", secondary=("T18", "T21", "T26"), skill="common_reasoning")
+q("T18", 3, 2, MGRS, "Monoclonal immunoglobulin testing: kidney clearance and free light-chain interpretation",
+  "In advanced CKD, both serum free light-chain concentrations are raised with only a modest ratio shift. What should precede declaring a clonal disorder?",
+  "Interpret the assay, kidney function and appropriate reference context alongside electrophoresis/immunofixation and the clinical picture.",
+  [("Any elevation of both chains proves monoclonality.", "Reduced clearance can raise polyclonal light-chain concentrations."),
+   ("Free light-chain interpretation is independent of kidney clearance.", "Kidney dysfunction affects these measurements."),
+   ("A mildly abnormal ratio establishes the renal biopsy lesion.", "Blood tests do not identify the tissue pattern or causality.")],
+  "Reduced kidney clearance complicates free light-chain interpretation, and assays/reference contexts differ. Use the whole monoclonal and renal evaluation rather than inferring a pathogenic clone from one modestly shifted result.", secondary=("T08", "T22"), skill="mechanism")
+q("T18", 4, 1, MGRS, "Renal biopsy evaluation: amyloid typing and limits of coincident monoclonal gammopathy",
+  "Kidney tissue contains amyloid, and a small monoclonal component is also found in blood. What is needed before attributing the amyloid to that clone?",
+  "Appropriate tissue amyloid typing and correlation with the clonal findings.",
+  [("The serum component alone establishes AL amyloidosis.", "A monoclonal component can coexist with another amyloid type."),
+   ("Congo red identifies the precursor protein without further assessment.", "It identifies an amyloid pattern, not every protein type."),
+   ("The size of the monoclonal component directly determines the tissue protein identity.", "Concentration does not establish deposit composition.")],
+  "The precursor protein matters to mechanism and treatment. Use appropriate pathology typing, with specialized methods where needed, rather than equating coincident monoclonal gammopathy with proven AL renal amyloidosis.", secondary=("T22", "T02"), skill="common_reasoning")
+
+
+q("T19", 3, 1, CKD, "Section 4.2; Practice Points 4.2.2-4.2.4: dosing metric, precision and body-size indexing",
+  "A medicine's dosing instructions specify an absolute clearance in mL/min, while the laboratory reports eGFR in mL/min/1.73 m2. What needs checking before copying the number into the dose table?",
+  "The requested clearance metric, body-size indexing and precision appropriate to that medicine.",
+  [("The two units describe identical quantities at every body size.", "One is normalized to a standard body surface area."),
+   ("Every creatinine-clearance estimate is numerically identical to any eGFR equation.", "The metrics and estimation methods can differ."),
+   ("A dose table removes the need to assess changing kidney function.", "A stable estimate may not represent an evolving acute illness.")],
+  "Match the drug's specified metric and units rather than treating all kidney estimates as interchangeable. Account for body size and estimation uncertainty, with a more accurate approach when the therapeutic decision requires it.", secondary=("T01",), skill="common_reasoning")
+q("T19", 4, 2, CKD, "Practice Point 4.3.1; Table 31: complete medication review and kidney-risk contributors",
+  "A CKD patient reports no new prescriptions, but a transition-of-care review finds an OTC NSAID and a potassium-containing salt substitute. What does this illustrate?",
+  "A prescription-only list can miss clinically relevant kidney and potassium exposures.",
+  [("Nonprescription products cannot interact with kidney treatment.", "Their biological effects do not depend on prescription status."),
+   ("The word natural establishes the absence of adverse effects.", "Marketing labels do not define kidney safety."),
+   ("The two exposures establish the sole cause of every laboratory change.", "They are contributors to evaluate, not automatic exclusive causality.")],
+  "Review OTC products, supplements and diet-related exposures alongside prescriptions. Reconcile the complete list with kidney function, potassium and the clinical course, especially when several clinicians are involved.", secondary=("T04", "T25"), skill="common_reasoning", extra_sources=((BP, "Practice Point 2.1.2: potassium-rich salt substitutes"),))
+q("T20", 3, 1, HD, "Appendix 1, printed p26: urea reduction ratio definition",
+  "Correctly sampled pre- and post-hemodialysis urea concentrations are 20 and 6 mmol/L. What is the unadjusted urea reduction ratio?",
+  "70%.",
+  [("30%.", "That is the fraction remaining, not the reduction."),
+   ("14%.", "The absolute concentration difference must be divided by the predialysis concentration."),
+   ("233%.", "Dividing the fall by the postdialysis value uses the wrong denominator.")],
+  "URR = (20 - 6) / 20 x 100 = 70%. This arithmetic depends on valid sampling and is not a complete measure of adequacy, fluid balance, residual function or nutrition.", secondary=("T23", "T26"), calculation={"expression": "(20 - 6) / 20 * 100", "result": 70, "unit": "percent"})
+q("T20", 4, 2, PD, "Section 3, Guidelines 3.1 and 3.2.1, printed p9: urinary/peritoneal and total small-solute clearance",
+  "A PD prescription and measured peritoneal clearance are unchanged, but residual kidney clearance falls. What can happen to total small-solute clearance?",
+  "It can fall because the kidney contribution has decreased.",
+  [("It must remain fixed because the peritoneal prescription is fixed.", "Total clearance includes more than the peritoneal contribution."),
+   ("The peritoneal component necessarily doubles to compensate automatically.", "Compensation is not guaranteed."),
+   ("The lost contribution affects water only, never solute clearance.", "Residual kidney function contributes to both.")],
+  "A fixed prescription is not a fixed total delivered treatment when residual function changes. Reassess clinical response and both clearance components rather than interpreting the bag regimen in isolation.", secondary=("T23",), skill="mechanism")
+q("T21", 3, 1, DONOR, "Recommendations 6.1-6.6, printed S42: donor albuminuria measurement and selection",
+  "A potential living donor has confirmed albumin excretion 55 mg/day and otherwise favorable initial results. What does the donor guideline advise for this albuminuria range?",
+  "Individualize eligibility using the full risk profile and the program's acceptable-risk threshold.",
+  [("Accept automatically because the GFR is normal.", "Albuminuria contributes information beyond GFR."),
+   ("Exclude automatically using the guideline's greater-than-100 mg/day category.", "55 mg/day is in the intermediate 30-100 range."),
+   ("Use total urine protein as an interchangeable donor albumin measurement.", "The guideline specifies albumin and appropriate confirmation.")],
+  "The dated donor guidance treats AER 30-100 mg/day as an individualized decision, not automatic acceptance or rejection. Confirm the measurement and consider the candidate's overall future risk and program criteria.", secondary=("T02", "T08"))
+q("T21", 4, 2, DONOR, "Recommendations 2.1-2.8, printed S27: voluntary consent and confidential withdrawal",
+  "A medically suitable donor privately says family pressure is making consent difficult and asks to withdraw. What principle should guide the team?",
+  "Protect voluntary choice and confidential withdrawal, with support for communicating the decision.",
+  [("Medical suitability makes consent concerns secondary to the recipient's need.", "Suitability does not replace a voluntary decision."),
+   ("The earlier evaluation commits the donor to completing the operation.", "A donor may reconsider and withdraw."),
+   ("The family should receive every private reason before withdrawal is accepted.", "The guidance protects confidentiality.")],
+  "Living donation requires informed, capable and voluntary choice. A favorable medical evaluation is not authorization to override a donor's decision; privacy and a supported exit are part of the process.", secondary=("T26",), skill="common_reasoning")
+q("T22", 3, 1, GD, "Section 1.1, printed S89; Chapter 6.1, S162: biopsy sampling and the focal nature of FSGS",
+  "Only three glomeruli are represented in a small biopsy, and none shows segmental sclerosis. What limits the conclusion that FSGS is excluded?",
+  "A focal lesion can be missed by limited sampling.",
+  [("Focal means every glomerulus must contain the lesion.", "That is the opposite of focal involvement."),
+   ("A normal ultrasound proves that the biopsy sample is representative.", "Imaging does not establish microscopic sampling adequacy."),
+   ("The absence of the lesion in a small sample specifies another diagnosis.", "A negative limited sample does not identify an alternative cause.")],
+  "Sampling adequacy and clinicopathologic correlation matter when lesions affect only some glomeruli. Interpret the whole specimen, ultrastructure and phenotype with renal pathology rather than turning a limited negative sample into absolute exclusion.", secondary=("T10",), skill="common_reasoning")
+q("T22", 4, 2, MGRS, "Renal biopsy evaluation: electron microscopy and additional methods when routine immunofluorescence is unrevealing",
+  "Routine immunofluorescence is unrevealing, but tissue/clinical findings still suggest a deposition process. Which contribution can a renal-pathology review add?",
+  "Ultrastructural assessment and selected additional testing can clarify deposits or a masked pattern.",
+  [("Negative routine immunofluorescence excludes every deposition disorder.", "Some relevant lesions need additional methods."),
+   ("A blood monoclonal result makes further tissue characterization unnecessary.", "The renal lesion and the circulating protein still need correlation."),
+   ("Electron microscopy establishes the whole hematologic clone independently.", "It describes tissue structure, not every aspect of clonal evaluation.")],
+  "Complementary pathology methods answer different questions. If the pattern and routine tests disagree, review specimen adequacy, ultrastructure and appropriate specialized techniques with the pathologist rather than treating one method as exhaustive.", secondary=("T18", "T02"))
+q("T23", 3, 1, HD, "Membrane flux and haemodiafiltration, convective-clearance rationale, printed p12: membrane permeability and solute size",
+  "Two dialysis treatments achieve similar urea dose metrics but use membranes with different larger-solute permeability. What can be inferred about all solute removal?",
+  "Similar urea metrics do not establish identical clearance of larger molecules.",
+  [("Urea is a complete proxy for every molecular size.", "Different molecules interact differently with membrane and flow properties."),
+   ("Membrane permeability affects water only, never solutes.", "It influences which solutes can cross the membrane."),
+   ("A larger molecule must always diffuse faster than urea.", "Size can limit diffusive transport.")],
+  "A small-solute dose metric does not characterize the entire clearance spectrum. Molecular size, membrane properties, treatment mechanism and delivery influence removal; assess the outcome relevant to the clinical question.", secondary=("T20",), skill="interpretation")
+q("T23", 4, 2, AKI, "Section 5.3.2 and citrate-anticoagulation rationale: calcium chelation",
+  "What mechanism chiefly produces regional anticoagulation when citrate is used in an extracorporeal kidney-support circuit?",
+  "Chelation lowers ionized calcium in the circuit, impairing calcium-dependent coagulation.",
+  [("Citrate supplies a higher circuit ionized calcium concentration.", "Its anticoagulant effect involves the opposite change."),
+   ("Citrate removes all platelets by diffusion across the filter.", "That is not the regional anticoagulation mechanism."),
+   ("Citrate acts only by cooling the circuit.", "Its principal effect is biochemical rather than temperature-mediated.")],
+  "Circuit calcium and systemic calcium are separate monitoring concerns. The mechanism does not remove the need for an appropriate protocol, calcium support and review of metabolic handling; no patient-specific prescription is established by this question.", secondary=("T07", "T05"), skill="mechanism")
+q("T24", 3, 1, DONOR, "Recommendations 15.4 and 15.9, printed S78: future pregnancy and donor counseling",
+  "A potential living donor hopes to become pregnant after recovery. Which counseling approach matches the 2017 donor guidance?",
+  "Future pregnancy alone does not exclude donation, but discuss the increased likelihood of gestational hypertension or preeclampsia.",
+  [("Future conception is an automatic lifelong exclusion criterion.", "The guideline does not support exclusion solely for that intention."),
+   ("Donation has no pregnancy-related risk information worth discussing.", "The guideline recommends specific counseling."),
+   ("A normal predonation BP guarantees no later hypertensive pregnancy disorder.", "Baseline findings cannot eliminate all future risk.")],
+  "Separate eligibility from informed risk counseling. Review prior pregnancy/vascular history, plans and timing with the donor and appropriate teams; provide information for a voluntary decision rather than guaranteeing an outcome.", secondary=("T21", "T09"), skill="common_reasoning")
+q("T24", 4, 2, CKD, "Practice Points 5.4.1 and 5.5.1: composite assessment and supportive-care decisions",
+  "An older adult with advanced CKD and frailty asks whether a risk-equation output alone determines that dialysis is the best option. What is the best response?",
+  "It informs planning, while symptoms, function, competing risks, expected burdens and the person's goals inform the treatment decision.",
+  [("A numerical risk output establishes the person's treatment preference.", "Preferences require discussion rather than prediction."),
+   ("Chronological age alone determines that supportive care is compulsory.", "Decisions are individualized."),
+   ("The equation predicts the individual's dialysis benefit without further assessment.", "Kidney-failure risk is not the same as treatment benefit.")],
+  "Prediction supports preparation but cannot replace a composite clinical and preference assessment. Offer the applicable dialysis and comprehensive conservative-care options with revisable shared planning.", secondary=("T08", "T20", "T26"), skill="common_reasoning")
+q("T25", 3, 1, BP, "Practice Point 2.1.2: potassium-rich salt substitutes in impaired potassium excretion",
+  "An adult with advanced CKD replaces table salt with a potassium-rich substitute to lower sodium intake. Which tradeoff should the kidney/dietetic review address?",
+  "Lower sodium exposure can be accompanied by an unsafe potassium load when excretion is impaired.",
+  [("A sodium-reduction label establishes kidney safety regardless of ingredients.", "The replacement ingredient has its own biological effects."),
+   ("Salt substitutes contain no electrolytes.", "Some contain substantial potassium salts."),
+   ("The choice eliminates the need to review other potassium contributors.", "Medicines, supplements and the overall diet still matter.")],
+  "A useful dietary substitution must fit the person's kidney function and potassium-handling capacity. Examine ingredients and the whole intake/medicine pattern rather than treating one nutrient goal as the entire plan.", secondary=("T04", "T09", "T19"), skill="mechanism")
+q("T25", 4, 2, CKD, "Practice Point 3.3.1.4, printed S157: protein intake in children with CKD",
+  "A 14-year-old with CKD and poor growth is given the adult protein-restriction plan without pediatric dietetic assessment. Which guideline principle has been missed?",
+  "Protein should not be restricted in children with CKD because of the risk of growth impairment.",
+  [("Adult dietary targets apply unchanged throughout growth.", "Developmental needs alter the nutritional balance."),
+   ("Impaired kidney function makes linear growth unimportant.", "Growth remains a key pediatric outcome."),
+   ("A lower intake is always safer if a diet is called kidney-protective.", "Restriction can cause developmental and nutritional harm.")],
+  "The CKD guideline distinguishes pediatric growth needs from adult restriction strategies. Obtain age-appropriate nutritional assessment and support rather than automatically transferring an adult target.", secondary=("T24",), skill="common_reasoning")
+q("T26", 3, 2, CKD, "Guideline grading key: strength 2 and certainty C",
+  "A guideline statement is graded 2C. Which interpretation is appropriate?",
+  "It is a conditional recommendation supported by low-certainty evidence, requiring attention to individual circumstances and preferences.",
+  [("It is a strong recommendation with high-certainty evidence.", "That describes a different strength/certainty combination."),
+   ("The label means 2% of patients benefit and 3% experience harm.", "The grade is not an effect-size estimate."),
+   ("It removes the need to discuss differing reasonable choices.", "Conditional recommendations make individual variation especially relevant.")],
+  "Recommendation strength and certainty are separate dimensions. A grade does not state the magnitude of benefit or substitute for assessing applicability, alternatives and values.", secondary=("T24",), skill="interpretation")
+q("T26", 4, 2, CKD, "Methods: outcome selection, evidence profiles and certainty; synthetic outcome-interpretation exercise",
+  "An explicitly synthetic eight-week dietary trial lowers serum urea but does not measure kidney-failure events, symptoms or nutritional harms. Which conclusion is directly supported?",
+  "The measured urea outcome changed; the trial does not establish long-term clinical benefit or its benefit-harm balance.",
+  [("Kidney-failure prevention is proven by the urea change alone.", "That outcome was not measured."),
+   ("A favorable biomarker change excludes nutritional harm.", "Potential harms need measurement and assessment."),
+   ("The eight-week result establishes the same effect over every follow-up period.", "Time horizon and outcome relevance matter.")],
+  "Distinguish an observed surrogate result from unmeasured patient-important outcomes. This synthetic exercise asserts no real trial result; it illustrates why outcome choice, duration and harms affect evidence interpretation.", secondary=("T25",), skill="common_reasoning")
+q("T27", 3, 1, CKD, "Chapter 3.14 and relative/absolute risk overview: albuminuria and cardiovascular risk",
+  "An adult has preserved eGFR but persistent severely increased albuminuria. Why should cardiovascular assessment remain part of kidney care?",
+  "Albuminuria contributes risk information that preserved filtration does not erase.",
+  [("An eGFR above 60 guarantees negligible cardiovascular risk.", "Filtration is only one part of the risk assessment."),
+   ("Albuminuria is relevant only after dialysis begins.", "It informs risk before kidney failure."),
+   ("The albuminuria category alone establishes which cardiac diagnosis is present.", "A risk marker is not a specific cardiac diagnosis.")],
+  "Kidney and cardiovascular risk assessment uses more than one marker and the whole clinical profile. Preserved eGFR should not lead to dismissal of persistent albuminuria or associated preventive-care needs.", secondary=("T02", "T09", "T14"), skill="common_reasoning")
+q("T27", 4, 2, GD, "Practice Point 1.7.1: thromboprophylaxis and individual bleeding risk in nephrotic syndrome",
+  "An adult with nephrotic membranous disease has substantial thrombosis risk but also a recent serious gastrointestinal bleed. Which principle governs prophylactic anticoagulation assessment?",
+  "Weigh thromboembolism risk against the person's serious-bleeding risk rather than using proteinuria or albumin alone.",
+  [("All nephrotic patients need the same prophylaxis regardless of bleeding history.", "Patient-specific bleeding risk changes the balance."),
+   ("A high thrombosis risk makes anticoagulation-related bleeding impossible.", "Both risks can be present."),
+   ("Prophylaxis and treatment of an established thromboembolic event are identical decisions.", "They have different clinical contexts and indications.")],
+  "The remaining glomerular guidance bases prophylaxis on thrombotic risk exceeding estimated serious-bleeding risk. Assess the competing risks and clinical circumstances; this scenario does not supply a patient-specific drug or dose.", secondary=("T10", "T19", "T26"), skill="common_reasoning")
+
+
 def case(identity, topic, secondary, objectives, title, summary, stages, take_home):
     base.case(identity, topic, list(secondary), list(objectives), title, summary, stages, take_home, items=_CASE_POOL)
     item = _CASE_POOL[-1]
@@ -686,6 +1072,139 @@ case("RN11-CASE-PREGNANCY", "T24", ("T01", "T08", "T09", "T22", "T27"),
     "A prior CKD diagnosis does not explain every later maternal abnormality."])
 
 
+case("RN11-CASE-CARDIORENAL", "T27", ("T14", "T19", "T08", "T04", "T01"),
+     ("T27.O01", "T27.O02", "T14.O01", "T19.O02", "T01.O01"),
+     "A changing kidney estimate during heart and diabetes treatment",
+     "Separate expected hemodynamics from intercurrent illness and make a coordinated medication plan.", [
+    stage("A synthetic adult with diabetic CKD and heart failure starts an SGLT2 inhibitor. At early review the creatinine has risen slightly, symptoms are stable and the patient has no postural dizziness.",
+          ["Which treatment effect belongs in the interpretation?", "What would make the same laboratory change more concerning?"],
+          ["A modest reversible hemodynamic filtration change can follow SGLT2 inhibition; the laboratory trend needs its clinical context.",
+           "Volume loss, hypotension, new illness or a disproportionate decline changes the assessment. A recognizable early effect does not exclude another problem."],
+          DM, "Practice Points 1.3.4-1.3.5: volume assessment and reversible eGFR dip"),
+    stage("Weeks later, vomiting and poor intake occur. Creatinine is now rising rapidly, and several medicines still have doses selected from the earlier stable eGFR.",
+          ["Why is the printed eGFR less secure for current dosing?", "How should the team approach the medicine list?"],
+          ["A changing marker concentration can lag the evolving filtration state; the number is not a measured instantaneous clearance.",
+           "Review the acute physiology, each medicine's indication/clearance and interacting exposures. Use appropriate monitoring rather than copying the old outpatient doses."],
+          CKD, "Practice Points 4.2.5 and 4.3.1: nonsteady-state dosing and medication review"),
+    stage("After recovery, discharge planning involves kidney, diabetes and heart teams. Some treatments were held and potassium needs reassessment.",
+          ["Which details prevent an accidental permanent discontinuation?", "What makes the cross-specialty plan coherent?"],
+          ["Record why each hold occurred, what recovery/monitoring is required, and who will decide and communicate resumption.",
+           "Balance continuing indications with potassium, BP, volume and kidney trends in one reconciled plan that the patient can follow."],
+          CKD, "Practice Points 3.6.3 and 4.3.2: potassium review and restart communication"),
+], ["A filtration estimate is interpreted with its kinetics and clinical setting.",
+    "A temporary hold needs a visible reassessment and resumption plan across teams."])
+
+case("RN11-CASE-NEPHROTIC-RISK", "T10", ("T02", "T22", "T26", "T27", "T19"),
+     ("T10.O02", "T02.O01", "T26.O02", "T27.O02", "T19.O02"),
+     "Different signals during nephrotic recovery",
+     "Integrate serologic response, protein loss and competing thrombosis/bleeding risks without equating one marker with the whole outcome.", [
+    stage("A synthetic adult with PLA2R-associated membranous disease has falling antibody levels after treatment, while urine protein remains substantial at the next early visit.",
+          ["Are immunologic and clinical response the same event?", "Which trends belong together at review?"],
+          ["Immunologic improvement can precede recovery of the protein-leak phenotype.",
+           "Follow antibodies, proteinuria, serum albumin, filtration and complications with treatment exposure rather than labeling one early mismatch as definitive failure."],
+          GD, "Figure 30 caption, printed S130; Practice Point 3.3.4, S133: immunologic monitoring and clinical-response lag"),
+    stage("The patient has marked hypoalbuminemia but also a recently treated serious gastrointestinal bleed. Preventive anticoagulation is raised at the multidisciplinary review.",
+          ["Which competing risks determine the prophylaxis discussion?", "Why is an albumin threshold alone insufficient?"],
+          ["Estimate thromboembolism risk against serious-bleeding risk in this individual.",
+           "A nephrotic risk marker does not remove the importance of recent bleeding, the clinical course or a distinction between prevention and treatment of a confirmed event."],
+          GD, "Practice Point 1.7.1, printed S101; Practice Point 3.4.5, S138: individualized thromboprophylaxis balance"),
+    stage("At follow-up, the patient asks whether improved antibodies mean all kidney and general follow-up can stop.",
+          ["Which outcomes still need observation?", "How can uncertainty be explained without inventing a predicted recovery date?"],
+          ["Clinical protein loss, filtration, nutrition and complications can evolve after a serologic change.",
+           "Explain the observed trends and the next review criteria. Distinguish what has improved from outcomes that remain unresolved."],
+          GD, "Chapter 3.3: longitudinal membranous response and complication assessment"),
+], ["Clinical and immunologic response can follow different time courses.",
+    "Disease-related clotting risk and treatment-related bleeding risk need a shared individualized decision."])
+
+case("RN11-CASE-DONOR-GOALS", "T21", ("T02", "T24", "T09", "T26", "T01"),
+     ("T21.O01", "T21.O02", "T02.O01", "T24.O01", "T26.O01"),
+     "Measurements, future pregnancy and a voluntary donor decision",
+     "Use donor-specific kidney measurements and counseling while protecting a capable person's freedom to choose.", [
+    stage("A synthetic potential donor has favorable confirmed GFR, but a high initial ACR was collected after exercise. Subsequent confirmed albumin excretion is 42 mg/day.",
+          ["Why confirm the initial measurement?", "Which donor albuminuria category applies to the confirmed result?"],
+          ["Sample conditions and the creatinine denominator can affect a ratio; donor assessment uses appropriate confirmation.",
+           "AER 30-100 mg/day is an individualized donor-risk decision. Favorable GFR does not make the albumin finding irrelevant."],
+          DONOR, "Recommendations 6.1-6.6, printed S42: donor albumin assessment"),
+    stage("The candidate hopes for a future pregnancy and has questions about whether donation is automatically prohibited.",
+          ["What distinguishes eligibility from risk counseling?", "Which pregnancy risks need an informed discussion?"],
+          ["Future conception alone does not exclude donation; the complete profile and timing are assessed.",
+           "Discuss the greater likelihood of gestational hypertension or preeclampsia and review relevant prior pregnancy/vascular history without guaranteeing an outcome."],
+          DONOR, "Recommendations 15.4-15.11, printed S78: future pregnancy and counseling"),
+    stage("In a private conversation, the candidate describes family pressure and says they are not sure they want to proceed.",
+          ["What must remain voluntary after medical evaluation?", "How should a withdrawal request be handled?"],
+          ["A medical-risk assessment does not replace informed voluntary consent.",
+           "Protect confidential withdrawal and support communication with the family; the recipient's need does not override the donor's choice."],
+          DONOR, "Recommendations 2.1-2.8, printed S27: consent and withdrawal"),
+], ["Donor thresholds concern defined measures within a broader individualized assessment.",
+    "Medical suitability, counseling and voluntary choice are separate essential parts of the decision."])
+
+case("RN11-CASE-HOME-BP", "T09", ("T08", "T02", "T01", "T26", "T27"),
+     ("T09.O01", "T08.O01", "T08.O02", "T02.O01", "T26.O02"),
+     "When measurement settings change the kidney-risk picture",
+     "Confirm BP and urine trends before using categories and predictions to build a follow-up plan.", [
+    stage("A synthetic adult with established CKD has standardized clinic BP 118/72 mmHg, while a week of home readings averages 148/85. The home device and technique have not yet been checked.",
+          ["What must be verified before interpreting the discrepancy?", "Which out-of-office pattern could matter if it is confirmed?"],
+          ["Review device validation, cuff fit, timing and technique, with appropriate repeat/home or ambulatory assessment.",
+           "Higher reproducible out-of-office readings can reveal masked hypertension; a reassuring clinic visit does not settle the whole pattern."],
+          BP, "Recommendations 1.1-1.2 and rationale: standardized and complementary out-of-office BP"),
+    stage("The initial ACR was 430 mg/g during a symptomatic urinary infection. A suitable repeat is 180 mg/g. eGFR has remained near 58 for more than a year.",
+          ["Which part of the CKD picture is already chronic?", "How should the changing albumin result be documented?"],
+          ["Persistent filtration below 60 establishes chronic dysfunction independently of the high initial ACR.",
+           "Record measurement conditions and quantitative trends. Infection can affect albumin measurements, and one category should not be treated as the permanent maximum."],
+          CKD, "Tables 1-3 and Table 16, printed S154: CKD classification and urine variability"),
+    stage("After measurements are reconciled, the clinic proposes a kidney-failure risk estimate and coordinated vascular-risk review.",
+          ["What should be explained about a prediction tool?", "What makes the follow-up plan more useful than a single score?"],
+          ["State the predicted outcome, time horizon and validated population; a numerical probability does not establish a causal diagnosis or treatment preference.",
+           "Link the observed BP, albumin and filtration pattern to agreed monitoring and modifiable risks, with clear responsibility for reassessment."],
+          CKD, "Recommendation 2.2.1 and Practice Points 2.2.4-2.2.5: risk-model application"),
+], ["Measurement validity comes before category and prediction interpretation.",
+    "BP, albumin and filtration supply related but different information for coordinated kidney and vascular care."])
+
+case("RN11-CASE-CRRT-DELIVERY", "T07", ("T23", "T06", "T05", "T25", "T26"),
+     ("T07.O01", "T07.O02", "T23.O01", "T25.O02", "T26.O01"),
+     "The prescribed circuit and the support actually delivered",
+     "Connect dose arithmetic, circuit function, recovery and nutrition during acute kidney support.", [
+    stage("A synthetic critically ill adult receives CRRT prescribed at 25 mL/kg/h, but circuit downtime totals eight hours in the first 24-hour period.",
+          ["What average rate would that schedule deliver if flow is otherwise as prescribed?", "Which operational problems should be investigated?"],
+          ["The time-averaged delivery is 25 x 16/24, about 16.7 mL/kg/h. A written prescription is not proof of the intended delivered dose.",
+           "Review access, interruptions, circuit clotting and actual flows, alongside metabolic/fluid needs and the method of dose measurement."],
+          AKI, "Recommendation 5.8.4 and rationale: delivered CRRT dose and interruptions"),
+    stage("The team reviews a regional-citrate protocol as part of a circuit strategy and asks why calcium measurements are included.",
+          ["How does citrate affect circuit coagulation?", "Why must circuit and systemic calcium be distinguished?"],
+          ["Citrate lowers available ionized calcium in the circuit, impairing calcium-dependent coagulation.",
+           "The patient's systemic calcium and metabolic handling still require protocol-guided support/monitoring. A circuit mechanism does not establish a safe patient-specific prescription by itself."],
+          AKI, "Section 5.3.2: citrate anticoagulation mechanism and monitoring"),
+    stage("Later the acute illness improves. Laboratory values look acceptable on support, and the family asks whether sharply restricting protein would avoid any further KRT.",
+          ["How should readiness to stop support be assessed?", "What is the nutritional reasoning error?"],
+          ["Assess whether intrinsic function can meet current solute, electrolyte and fluid needs; corrected results during support do not independently prove recovery.",
+           "Do not make nutritional deprivation a substitute for needed support. Recovery, intake and the acute nutritional state deserve their own assessment."],
+          AKI, "Recommendations 5.2.1 and 3.3.3: stopping KRT and avoiding protein restriction to delay it"),
+], ["Delivered time and circuit behavior matter as much as the nominal dose.",
+    "Recovery assessment and nutritional support should not be reduced to an on-treatment laboratory value."])
+
+case("RN11-CASE-LUPUS-REASSESSMENT", "T16", ("T10", "T15", "T22", "T17", "T26"),
+     ("T16.O01", "T16.O02", "T15.O01", "T22.O02", "T17.O02"),
+     "An incomplete response is a question to investigate",
+     "Distinguish residual immune activity, chronic injury and a new vascular pattern before equating proteinuria with a treatment choice.", [
+    stage("A synthetic adult treated for lupus nephritis has persistent proteinuria. The team is unsure whether treatment exposure was adequate and whether chronic damage explains part of the result.",
+          ["Which information should be reviewed before declaring refractory inflammation?", "When might tissue reassessment have value?"],
+          ["Review adherence, treatment exposure and the serial clinical/urine/kidney-function pattern.",
+           "Consider repeat biopsy when distinguishing active inflammation, chronicity or another lesion would change management; it is not mandatory for every abnormal follow-up sample."],
+          LN, "Practice Point 10.2.5.2.1, Figure 12 and Section 10.2.5.3, printed S46-S47"),
+    stage("Reassessment tissue includes a TMA pattern. New thrombocytopenia and hemolysis prompt a coordinated hematology/kidney review.",
+          ["What does the pattern establish?", "Which mechanism still needs investigation?"],
+          ["It identifies microvascular injury, not a single causal pathway.",
+           "Assess TTP/ADAMTS13, antiphospholipid and complement-related or other secondary mechanisms in the clinical context. The tissue label alone does not choose a universal treatment."],
+          LN, "Practice Point 10.3.1.1 and rationale, printed S47-S48: lupus with TMA"),
+    stage("While an individualized treatment plan is considered, the team reconciles infection testing, vaccination and past exposures with the patient.",
+          ["Why is historical vaccination alone not the whole safety assessment?", "How can disease urgency and infection risk be coordinated?"],
+          ["Prior/current infections and reactivation risk require appropriate testing and exposure review; vaccine history answers a different question.",
+           "Coordinate kidney, hematology and infection expertise around the actual findings and urgency rather than treating a positive historical label as automatic lifelong exclusion from care."],
+          GD, "Practice Points 1.8.1-1.8.2: infection screening around immunosuppression"),
+], ["Persistent proteinuria is not a direct readout of current histologic activity.",
+    "A new TMA pattern needs etiologic assessment alongside the person's immune and infection context."])
+
+
 def selected_items(per_topic, extra_cases):
     questions = ORIGINAL_QUESTIONS + [q for q in NEW_QUESTIONS
                                       if int(q["id"].rsplit("-", 1)[1]) <= per_topic]
@@ -715,7 +1234,7 @@ def review_evidence(*, version, per_topic, extra_cases):
     chosen = {q["id"] for q in NEW_QUESTIONS
               if int(q["id"].rsplit("-", 1)[1]) <= per_topic}
     chosen.update(c["id"] for c in NEW_CASES[:extra_cases])
-    return {
+    evidence = {
         "schema_version": 1, "pack_id": "renulus-foundations", "pack_version": version,
         "checked_on": DATE, "method": "Assistant primary public locator check, original scenario/key/distractor and numeric review.",
         "independent_human_review": False,
@@ -727,6 +1246,18 @@ def review_evidence(*, version, per_topic, extra_cases):
                     for s in selected_sources(questions, cases) if s["id"] not in {x["id"] for x in base.SOURCES}],
         "items": [e for e in EVIDENCE if e["id"] in chosen],
     }
+    if version == "1.1.0":
+        evidence["inherited_review"] = "Unchanged 1.0.0 and 1.0.1 items retain their recorded review and exact item/source snapshots. The 1.0.1 review evidence file is unchanged."
+        evidence["primary_review_notes"] = ["source-check-wave2.md", "source-check-wave2-final.md"]
+        reviewed = {e["id"]: e for e in evidence["items"] if e["kind"] == "question"}
+        evidence["question_skill_coverage"] = {
+            "scope": "question_review_rows",
+            "counts": dict(sorted(Counter(e["skill"] for e in reviewed.values()).items())),
+            "by_topic": {t["id"]: dict(sorted(Counter(reviewed[q["id"]]["skill"]
+                          for q in questions if q["id"] in reviewed and q["topic_id"] == t["id"]).items()))
+                         for t in TOPICS},
+        }
+    return evidence
 
 
 if __name__ == "__main__":

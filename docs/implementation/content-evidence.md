@@ -266,3 +266,57 @@ Metadata-only GET /content/packs and POST /content/packs/activate {id,version}
 were proposed to main. /content/manifest remains actual active version.
 No raw stem route returns. M4/M3/M6 combined producer/UI and native installation
 remain integration work, not proof provided by this content-only suite.
+
+## Wave 2: published 1.1.0 breadth release
+
+October 4, 2026. renulus-foundations 1.1.0 contains 160 original reserved
+assessment questions and 26 three-stage synthetic teaching cases. The 108
+additions to 1.0.0 include four per topic: 36 mechanism, 34 interpretation and
+38 common-reasoning review rows. Every topic has at least two skill types.
+coverage.json links all 27 topics and 56 objectives; the review JSON verifies
+the skill matrix against the actual question rows. These links do not establish
+complete depth, mastery, an ESENeph blueprint or independent clinical review.
+
+Twelve new mixed cases span proximal wasting/paraproteins, septic obstruction,
+TMA/plasma exchange, acidification/stones/bone, PD transport/volume/nutrition,
+pregnancy/CKD/biopsy/BP, cardiorenal signals, nephrotic recovery/risk, donor
+autonomy/goals, home BP/medicines, CRRT delivery and lupus response/TMA.
+All cases have cited stages; none is a retained user case.
+
+Manifest-file SHA-256:
+85641e86ed3e3b5430737a45ad606e7e768357a2807dd542303b9b8e758a1fbe.
+Canonical bundle SHA-256:
+3f0b712fad056a8857fb9fc913432914cad599096c28aa96fd35e7515076c670.
+Both 1.0.0 and 1.0.1 reproduce byte for byte, including their immutable source
+records and prior review evidence. Stable item/family/key versions are retained;
+this release only adds new item identities. Changed keys or options still need
+a new item version, predecessor correction metadata and atomic withdrawal.
+
+content/reviews/renulus-foundations-1.1.0.json records 120 assistant-only
+question/case checks and the two source-review notes. Final primary checks
+include exact printed sections/pages for ADPKD, AAV, lupus, transplant
+candidates, GD remaining chapters, HD/PD physiology, dRTA and CKD-MBD. The
+author removed an unverified urease-infection qualifier before release and
+replaced it with a supported systemic-context urine-pH interpretation item.
+The final note records locator corrections, primary reading/access failures
+and bounded scope. Dated baselines remain dated; no exhaustive currency,
+corrigendum or retraction clearance is claimed. No restricted manual, ERA bank,
+source prose/figure or source original is redistributed. Human review is false.
+
+Actual shared CPython 3.14.4 checks: 71 content/foundation tests passed with
+one existing Starlette/httpx warning and no failures/skips. The real CLI passed
+current main SOURCES (unchanged hash above), both released predecessors and
+all 120 review rows. Tests cover actual three-pack SQLite activation and restart,
+all prior private snapshots, release-byte reproduction, corrected keys/choices,
+withdrawals, tampered source rollback, balanced option positions, synthetic
+calculations, source relations and bank exclusion from teaching retrieval.
+No provider call or native-installer/model proof is involved.
+
+    python tools/content/validate_pack.py content/packs/renulus-foundations/1.1.0 --source-register C:/Users/karol/Documents/t3-workspaces/Renulus/docs/SOURCES.md --predecessor content/packs/renulus-foundations/1.0.0 --predecessor content/packs/renulus-foundations/1.0.1 --review-evidence content/reviews/renulus-foundations-1.1.0.json
+    python -m pytest tests/content tests/integration/test_foundation.py -q
+
+This pack is ready for the integrator to select/install through the existing
+repository. The authorized api.py bootstrap follow-up will choose the latest
+bundled published release and preserve historical pins and inactive/withdrawn
+states. No applied DDL or repository contract changes are needed. M4 can select
+the exact 1.1.0 manifest for its scoring/exposure/restart producer proof.

@@ -1,9 +1,10 @@
 # Original Renulus learning content
 
-`packs/renulus-foundations/1.0.1` is an original, versioned CC BY 4.0 pack: 27
-topic identities, 56 original objectives, 20 staged synthetic cases and 106
-single-best-answer items. The released 1.0.0 remains unchanged at 52 questions
-and 14 cases; its immutable item and citation snapshots are retained. R01 in
+`packs/renulus-foundations/1.1.0` is an original, versioned CC BY 4.0 pack: 27
+topic identities, 56 original objectives, 26 staged synthetic cases and 160
+single-best-answer items. Released 1.0.0 (52 questions / 14 cases) and 1.0.1
+(106 questions / 20 cases) remain unchanged; their immutable item and citation
+snapshots are retained. R01 in
 `docs/SOURCES.md` is the pack origin. Only labels
 and topic IDs from the historical reference taxonomy are adopted; its original
 questions, data and runtime were never imported. Objectives and cases here are
@@ -18,8 +19,15 @@ monoclonal kidney disease, pregnancy and extracorporeal mechanisms. `coverage.js
 case/item/objective links and gaps across the whole taxonomy. A topic label or
 case tag alone is not evidence that its objectives have been covered. Formal
 ESENeph mappings and a complete curriculum are absent. All 27 topics and 56
-objectives have explicit item/case links in 1.0.1; links do not establish mastery,
+objectives have explicit item/case links in 1.1.0; links do not establish mastery,
 complete depth or an examination blueprint.
+
+The 108 added questions include 36 mechanisms, 34 interpretation and 38 common
+reasoning items, with four per topic and at least two skills per topic. The
+review evidence JSON records this checked matrix. Twelve mixed-domain cases
+connect kidney findings with medicines, infection, pathology, extracorporeal
+delivery, nutrition, donor autonomy, pregnancy, cardiovascular signals and
+patient goals. Each case has three cited stages.
 
 Every item and case explicitly states `assistant_reviewed` and
 `independent_human_review: false`. The assistant checked primary public
@@ -37,7 +45,7 @@ this repository has no operation for saving a user's case.
 Validate without network or inference:
 
 ```powershell
-python tools/content/validate_pack.py content/packs/renulus-foundations/1.0.1 --predecessor content/packs/renulus-foundations/1.0.0 --review-evidence content/reviews/renulus-foundations-1.0.1.json
+python tools/content/validate_pack.py content/packs/renulus-foundations/1.1.0 --predecessor content/packs/renulus-foundations/1.0.0 --predecessor content/packs/renulus-foundations/1.0.1 --review-evidence content/reviews/renulus-foundations-1.1.0.json
 python -m pytest tests/content -q
 ```
 
