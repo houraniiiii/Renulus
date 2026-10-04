@@ -13,6 +13,6 @@ def read_register(path):
         if not urls or match[1][0] in ("T", "R"):
             continue
         title = re.sub(r"\[([^]]+)\]\([^)]+\)", r"\1", cells[0]).strip()
-        entries.append({"id": match[1], "title": title, "url": urls[0],
+        entries.append({"id": match[1], "title": title, "url": urls[0], "urls": urls,
                         "snapshot_status": cells[1].strip(), "access": cells[2].strip()})
     return entries

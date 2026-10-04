@@ -11,12 +11,12 @@ class SequenceFetcher:
     def __init__(self, values):
         self.values = iter(values)
         self.urls = []
-    async def fetch(self, url, hosts):
+    async def fetch(self, url, hosts, limit=2_000_000):
         self.urls.append(url)
         value = next(self.values)
         if isinstance(value, Exception):
             raise value
-        return value, {"content-type": "text/html"}, url
+        return value if isinstance(value, tuple) else (value, {"content-type": "text/html"}, url)
 
 
 @pytest.mark.asyncio

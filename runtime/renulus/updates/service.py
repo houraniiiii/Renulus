@@ -8,6 +8,7 @@ from renulus.contracts import ApiError
 from renulus.storage import utc_now
 from .fetch import SourceFetcher
 from .sources import read_register
+from .publications import Publications, freshness
 
 
 class Links(HTMLParser):
@@ -36,6 +37,7 @@ class UpdatesService:
         self.fetcher = fetcher or SourceFetcher()
         register = services.paths.source_root / "docs" / "SOURCES.md"
         self.sources = read_register(register) if register.exists() else []
+        self.publications = Publications(self)
         for source in self.sources:
             self.db.execute("INSERT INTO update_source_checks(source_id,title,url,snapshot_status) VALUES(?,?,?,?) ON CONFLICT(source_id) DO UPDATE SET title=excluded.title,url=excluded.url,snapshot_status=excluded.snapshot_status",
                             (source["id"], source["title"], source["url"], source["snapshot_status"]))
@@ -44,19 +46,41 @@ class UpdatesService:
         rows = self.db.fetch_all("SELECT * FROM update_source_checks ORDER BY source_id")
         for row in rows:
             row["links"] = json.loads(row.pop("links_json"))
-            success = row["last_success_at"]
-            row["freshness"] = "unchecked" if not success else "stale" if (
-                datetime.now(timezone.utc) - datetime.fromisoformat(success) > timedelta(days=7)) else "checked-recently"
+            row["freshness"] = freshness(row)
             row["currentness"] = "Source snapshot and checks do not establish clinical review."
         return rows
 
-    def list_entries(self, reviewed_only=False):
+    @staticmethod
+    def decode_entry(row):
+        row["topic_ids"] = json.loads(row.pop("topic_ids_json"))
+        row["source_metadata"] = json.loads(row.pop("source_metadata_json"))
+        return row
+
+    def get_entry(self, identifier):
+        row = self.db.fetch_one("SELECT * FROM update_entries WHERE id=?", (identifier,))
+        if not row:
+            raise ApiError("update_missing", "This update is no longer available", 404)
+        return self.decode_entry(row)
+
+    def list_entries(self, reviewed_only=False, *, limit=100, offset=0, state=None):
+        state = "reviewed" if reviewed_only else state
+        if state not in (None, "pending", "reviewed", "dismissed"):
+            raise ApiError("review_state_invalid", "Choose a supported update queue")
         rows = self.db.fetch_all("SELECT * FROM update_entries " +
-            ("WHERE review_state='reviewed' " if reviewed_only else "") + "ORDER BY discovered_at DESC LIMIT 100")
-        for row in rows:
-            row["topic_ids"] = json.loads(row.pop("topic_ids_json"))
-            row["source_metadata"] = json.loads(row.pop("source_metadata_json"))
-        return rows
+            ("WHERE review_state=? " if state else "") + "ORDER BY discovered_at DESC,id DESC LIMIT ? OFFSET ?",
+            ([state] if state else []) + [max(1, min(limit, 250)), max(0, offset)])
+        return [self.decode_entry(row) for row in rows]
+
+    def entries_page(self, *, reviewed_only=False, limit=50, offset=0, state=None):
+        limit, offset = max(1, min(limit, 250)), max(0, offset)
+        state = "reviewed" if reviewed_only else state
+        rows = self.list_entries(limit=limit, offset=offset, state=state)
+        counts = {key: 0 for key in ("pending", "reviewed", "dismissed")}
+        for row in self.db.fetch_all("SELECT review_state,COUNT(*) AS count FROM update_entries GROUP BY review_state"):
+            counts[row["review_state"]] = row["count"]
+        total = counts[state] if state else sum(counts.values())
+        return {"entries": rows, "counts": counts, "total": total, "limit": limit, "offset": offset,
+                "next_offset": offset + len(rows) if offset + len(rows) < total else None}
 
     async def check_source(self, source_id, force=False):
         row = self.db.fetch_one("SELECT * FROM update_source_checks WHERE source_id=?", (source_id,))
@@ -64,7 +88,10 @@ class UpdatesService:
             raise ApiError("source_missing", "This source is not in the development register", 404)
         if row["last_checked_at"] and not force and (datetime.now(timezone.utc) -
             datetime.fromisoformat(row["last_checked_at"]) < timedelta(hours=6)):
-            return {"source_id": source_id, "state": row["state"], "cached": True}
+            result = {"source_id": source_id, "state": row["state"], "cached": True}
+            if row["state"] == "failed":
+                result["error"] = {"code": row["error_code"], "message": "The previous check failed. Its last successful check has not advanced."}
+            return result
         now = utc_now()
         host = urlparse(row["url"]).hostname
         allowed = {host}
@@ -140,8 +167,9 @@ class UpdatesService:
             (summary, json.dumps(topic_ids), reviewer, utc_now(), state, identifier))
         if not count:
             raise ApiError("update_missing", "This update is no longer available", 404)
-        return next(row for row in self.list_entries() if row["id"] == identifier)
+        return self.get_entry(identifier)
 
     def mark_read(self, identifier):
-        self.db.execute("UPDATE update_entries SET read_at=? WHERE id=?", (utc_now(), identifier))
+        if not self.db.execute("UPDATE update_entries SET read_at=? WHERE id=?", (utc_now(), identifier)):
+            raise ApiError("update_missing", "This update is no longer available", 404)
         return {"read": True}
