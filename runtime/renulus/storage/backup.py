@@ -24,6 +24,10 @@ CATALOGUE_OMISSION = (
     "Acquisition catalogue is input metadata tied to external collection paths; "
     "retained library metadata remains in knowledge_documents and knowledge_revisions."
 )
+EXTRACTION_OMISSION = (
+    "Structured extraction documents are rebuildable from retained originals; "
+    "canonical passage text, headings and physical source locators are retained."
+)
 DELETION_NOTICE = (
     "This backup carries only deletion markers known at its export date. "
     "On a new installation it cannot know later deletions. Restoring merges "
@@ -65,7 +69,11 @@ def snapshot_in(conn):
             if available > MAX_RECORDS - count:
                 raise ApiError("backup_limit", "Canonical learning records exceed the bounded 100,000-record recovery scope", 413)
             order = " ORDER BY rowid" if name == "knowledge_source_status_events" else ""
-            rows = conn.execute(f'SELECT * FROM "{name}"{order}')
+            projection = "*"
+            if name == "knowledge_revisions":
+                projection = ",".join('NULL AS extraction_json' if row["name"] == "extraction_json"
+                    else '"' + row["name"] + '"' for row in conn.execute(f'PRAGMA table_info("{name}")'))
+            rows = conn.execute(f'SELECT {projection} FROM "{name}"{order}')
         records[name] = []
         for row in rows:
             count += 1
@@ -86,7 +94,12 @@ def snapshot_in(conn):
 def snapshot_omissions(conn):
     exists = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='knowledge_catalogue'").fetchone()
     count = conn.execute("SELECT COUNT(*) FROM knowledge_catalogue").fetchone()[0] if exists else 0
-    return {"knowledge_catalogue": {"records": count, "reason": CATALOGUE_OMISSION}}
+    result = {"knowledge_catalogue": {"records": count, "reason": CATALOGUE_OMISSION}}
+    exists = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='knowledge_revisions'").fetchone()
+    if exists:
+        count = conn.execute("SELECT COUNT(*) FROM knowledge_revisions WHERE extraction_json IS NOT NULL").fetchone()[0]
+        result["knowledge_extractions"] = {"records": count, "reason": EXTRACTION_OMISSION}
+    return result
 
 
 def portable_records(records, *, originals=False):
@@ -96,6 +109,8 @@ def portable_records(records, *, originals=False):
         result[name] = []
         for row in rows:
             copied = dict(row)
+            if name == "knowledge_revisions" and "extraction_json" in copied:
+                copied["extraction_json"] = None
             for key in copied:
                 if key.endswith("_path"):
                     if originals and name == "knowledge_revisions" and key == "original_path":
@@ -127,7 +142,9 @@ def records_only_bundle(bundle):
         raise ApiError("backup_table", "The acquisition catalogue must be a record list")
     omissions = bundle.get("omissions", {})
     if catalogue is not None:
-        omissions = {"knowledge_catalogue": {"records": len(catalogue), "reason": CATALOGUE_OMISSION}}
+        if not isinstance(omissions, dict):
+            raise ApiError("backup_format", "The export has invalid omission metadata")
+        omissions = {**omissions, "knowledge_catalogue": {"records": len(catalogue), "reason": CATALOGUE_OMISSION}}
     return {**bundle, "records": records, "omissions": omissions}
 
 
@@ -159,13 +176,13 @@ def validate_records(conn, bundle):
     if bundle.get("data_kind", "records-only") not in ("records-only", "full-backup"):
         raise ApiError("backup_format", "The canonical export has an unsupported data kind")
     omissions = bundle.get("omissions", {})
-    if not isinstance(omissions, dict) or set(omissions) - {"knowledge_catalogue"}:
+    reasons = {"knowledge_catalogue": CATALOGUE_OMISSION, "knowledge_extractions": EXTRACTION_OMISSION}
+    if not isinstance(omissions, dict) or set(omissions) - set(reasons):
         raise ApiError("backup_format", "The export has unsupported omission metadata")
-    if "knowledge_catalogue" in omissions:
-        omitted = omissions["knowledge_catalogue"]
+    for name, omitted in omissions.items():
         if not isinstance(omitted, dict) or set(omitted) != {"records", "reason"} or \
-                type(omitted["records"]) is not int or omitted["records"] < 0 or omitted["reason"] != CATALOGUE_OMISSION:
-            raise ApiError("backup_format", "The export has invalid acquisition-catalogue omission metadata")
+                type(omitted["records"]) is not int or omitted["records"] < 0 or omitted["reason"] != reasons[name]:
+            raise ApiError("backup_format", "The export has invalid omitted-data metadata")
     available = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     count = 0
     for name, rows in records.items():

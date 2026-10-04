@@ -1,6 +1,7 @@
 """Derived engine identities cannot travel through either recovery format."""
 import io
 import json
+from pathlib import Path
 import zipfile
 
 from fastapi.testclient import TestClient
@@ -11,7 +12,7 @@ from renulus.memory.models import ManualFact
 from renulus.server import create_app
 from renulus.storage.backup import export_records
 
-from .conftest import forge, preview, state, zip_bytes
+from .conftest import forge, preview, restore, state, zip_bytes
 
 
 def seed_canonical_note_and_local_index(services):
@@ -80,3 +81,33 @@ def test_forged_derived_tables_are_refused_before_any_profile_change(source, tar
     assert [dict(row) for row in target.db.fetch_all("SELECT * FROM memory_index_state")] == local_state
     assert target.db.fetch_all("SELECT * FROM memory_index_entries") == []
     assert not list((target.paths.cache / "recovery/previews").iterdir())
+
+
+@pytest.mark.parametrize("kind", ["json", "zip"])
+def test_large_structured_extraction_is_omitted_before_budget_checks_but_passage_locators_survive(source, target, kind):
+    services, selected = source
+    item = selected[2]
+    structured = json.dumps({"synthetic": "X" * (20 * 1024 * 1024)})
+    services.db.execute("UPDATE knowledge_revisions SET extraction_json=? WHERE id=?",
+        (structured, item["revision_id"]))
+    locators = '[{"page":1,"item_ref":"#/texts/0"}]'
+    services.db.execute("INSERT INTO knowledge_passages VALUES(?,?,?,?,?,?,?)",
+        ("passage_synthetic_recovery", item["revision_id"], 0, "Synthetic transplant passage",
+         "Synthetic transplant passage with heading", locators, '["Synthetic source"]'))
+    if kind == "json":
+        bundle = export_records(services)
+        target.registry["data_recovery"].restore_json(bundle, confirm_backup_date=True,
+            confirmed_exported_at=bundle["exported_at"])
+    else:
+        archive = zip_bytes(services)
+        with zipfile.ZipFile(io.BytesIO(archive)) as contents:
+            bundle = json.loads(contents.read("records.json"))
+        restore(target, archive)
+        restored = target.db.fetch_one("SELECT original_path FROM knowledge_revisions WHERE id=?", (item["revision_id"],))
+        assert Path(restored["original_path"]).read_bytes() == item["bytes"]
+    assert bundle["omissions"]["knowledge_extractions"]["records"] == 1
+    assert all(row["extraction_json"] is None for row in bundle["records"]["knowledge_revisions"])
+    assert target.db.fetch_one("SELECT extraction_json FROM knowledge_revisions WHERE id=?", (item["revision_id"],))["extraction_json"] is None
+    passage = target.db.fetch_one("SELECT * FROM knowledge_passages WHERE id='passage_synthetic_recovery'")
+    assert passage["text"] == "Synthetic transplant passage" and passage["locators_json"] == locators
+    assert services.db.fetch_one("SELECT extraction_json FROM knowledge_revisions WHERE id=?", (item["revision_id"],))["extraction_json"] == structured
