@@ -6,6 +6,11 @@ function loopbackPort(value: string | undefined, fallback: number): number {
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Invalid Renulus loopback port.');
   return port;
 }
+function backendTarget() {
+  const url = new URL(process.env.RENULUS_BACKEND_URL ?? 'http://127.0.0.1:' + loopbackPort(process.env.RENULUS_BACKEND_PORT, 8765));
+  if (url.protocol !== 'http:' || !['127.0.0.1', 'localhost'].includes(url.hostname) || url.username || url.password || url.search || url.hash || url.pathname !== '/') throw new Error('RENULUS_BACKEND_URL must be an HTTP loopback origin.');
+  return url.origin;
+}
 
 export default defineConfig({
   plugins: [react()],
@@ -16,7 +21,7 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:' + loopbackPort(process.env.RENULUS_BACKEND_PORT, 8765),
+        target: backendTarget(),
         changeOrigin: true,
         headers: process.env.RENULUS_SESSION_TOKEN
           ? { 'x-renulus-token': process.env.RENULUS_SESSION_TOKEN }
