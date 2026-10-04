@@ -382,12 +382,38 @@ class KnowledgeRepository:
         # Work is durable in SQLite, not held in a request or an in-memory list.
         return self.db.fetch_one("SELECT id FROM knowledge_jobs WHERE state='queued' ORDER BY created_at,id LIMIT 1")
 
-    def list_documents(self, *, include_deleted=False):
-        sql = "SELECT id FROM knowledge_documents"
-        if not include_deleted:
-            sql += " WHERE deleted_at IS NULL"
-        return {"documents": [self.get_document(r["id"], include_deleted=include_deleted)
-                               for r in self.db.fetch_all(sql + " ORDER BY updated_at DESC")]}
+    def list_documents(self, *, include_deleted=False, limit=None, offset=0, query="", status=None):
+        if limit is not None and (type(limit) is not int or not 1 <= limit <= 100):
+            raise ApiError("invalid_library_page", "Choose between 1 and 100 documents per page", 422)
+        if type(offset) is not int or offset < 0 or not isinstance(query, str) or len(query) > 200:
+            raise ApiError("invalid_library_page", "Check the library search and page offset", 422)
+        if status not in (None, "ready", "queued", "processing", "failed", "cancelled", "empty", "deleted"):
+            raise ApiError("invalid_library_status", "Choose a supported import status", 422)
+        state = "CASE WHEN d.deleted_at IS NOT NULL THEN 'deleted' ELSE COALESCE(r.status,'empty') END"
+        source = " FROM knowledge_documents d LEFT JOIN knowledge_revisions r ON r.id=d.latest_revision"
+        base = [] if include_deleted else ["d.deleted_at IS NULL"]
+        filtered, parameters = list(base), []
+        if query.strip():
+            # Search title/source literally: user percent/underscore characters
+            # must not broaden a query into a wildcard match.
+            term = query.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            filtered.append("(d.title LIKE ? ESCAPE '\\' OR d.source_id LIKE ? ESCAPE '\\')")
+            parameters.extend(["%" + term + "%"] * 2)
+        if status is not None:
+            filtered.append(state + "=?")
+            parameters.append(status)
+        where = " WHERE " + " AND ".join(filtered) if filtered else ""
+        count_where = " WHERE " + " AND ".join(base) if base else ""
+        with self._lock:
+            counts = {row["status"]: row["n"] for row in self.db.fetch_all(
+                "SELECT " + state + " AS status,COUNT(*) AS n" + source + count_where + " GROUP BY " + state)}
+            total = self.db.fetch_one("SELECT COUNT(*) AS n" + source + where, tuple(parameters))["n"]
+            paging = " LIMIT ? OFFSET ?" if limit is not None else " LIMIT -1 OFFSET ?"
+            page_parameters = parameters + ([limit, offset] if limit is not None else [offset])
+            rows = self.db.fetch_all("SELECT d.id" + source + where +
+                                    " ORDER BY d.updated_at DESC,d.id" + paging, tuple(page_parameters))
+            return {"documents": [self.get_document(row["id"], include_deleted=include_deleted) for row in rows],
+                    "total": total, "counts": counts, "offset": offset, "limit": limit}
 
     def get_document(self, document_id, *, include_deleted=False):
         row = self.db.fetch_one("SELECT * FROM knowledge_documents WHERE id=?", (document_id,))

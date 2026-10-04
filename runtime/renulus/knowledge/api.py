@@ -2,9 +2,10 @@ import asyncio
 from contextlib import asynccontextmanager
 import json
 from pathlib import Path
+from typing import Literal
 from urllib.parse import unquote
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -70,8 +71,11 @@ def create_router(services) -> APIRouter:
         return worker.status()
 
     @router.get("/documents")
-    def documents():
-        return repository.list_documents()
+    def documents(limit: int | None = Query(default=None, ge=1, le=100),
+                  offset: int = Query(default=0, ge=0),
+                  query: str = Query(default="", max_length=200),
+                  status: Literal["ready", "queued", "processing", "failed", "cancelled", "empty"] | None = None):
+        return repository.list_documents(limit=limit, offset=offset, query=query, status=status)
 
     @router.get("/documents/{document_id}")
     def document(document_id: str):
