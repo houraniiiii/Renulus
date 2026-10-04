@@ -24,5 +24,11 @@
 .thread-row > button:first-child { display: grid; flex: 1; min-width: 0; text-align: left; padding: var(--space-12); gap: var(--space-4); }
 .thread-row strong { overflow-wrap: anywhere; font-size: 15px; }
 .thread-row span { font-size: 13px; color: var(--ink-muted); }
+.learn-literature { max-width: var(--reading-measure); min-width: 0; overflow-wrap: anywhere; }
+.learn-literature .notice > div { display: grid; gap: var(--space-12); min-width: 0; }
+.learn-discovery-records { display: grid; gap: var(--space-16); list-style: none; padding: 0; margin: 0; }
+.learn-discovery-records li { display: grid; gap: var(--space-4); }
+.learn-discovery-records a { color: var(--renal-teal); text-decoration: underline; text-underline-offset: 3px; display: inline-flex; align-items: center; min-height: 44px; }
+.learn-discovery-records a:hover { color: var(--ink-strong); }
 @media(max-width: 1000px) { .learn-layout { grid-template-columns: 1fr; } .learn-continuation { border-top: 1px solid var(--line); padding-top: var(--space-24); } }
 @media(max-width: 640px) { .learning-composer, .message-user { padding: var(--space-16); } .composer-selects { width: 100%; } }
