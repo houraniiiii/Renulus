@@ -5,6 +5,8 @@ import { randomUUID, createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { waitForFlowWindow } from './wait-for-flow-window.mjs';
+import { syntheticPdf } from './synthetic-pdf.mjs';
+import { capturePdfFrames, classifyPdfFrames } from './pdf-viewer-evidence.mjs';
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const executable = process.env.RENULUS_PACKAGED_EXECUTABLE;
 if (!executable || !path.isAbsolute(executable)) throw new Error('An explicit packaged executable is required.');
@@ -16,16 +18,6 @@ const env = {};
 for (const name of ['SystemRoot','SYSTEMROOT','WINDIR','COMSPEC','PATHEXT','TEMP','TMP','USERPROFILE','LOCALAPPDATA','APPDATA']) if (process.env[name]) env[name] = process.env[name];
 env.PATH = path.join(process.env.SystemRoot, 'System32');
 env.RENULUS_PROFILE = path.join(evidence, 'profile');
-function syntheticPdf() {
-  const stream = page => ['0.95 0.98 0.97 rg 0 0 380 480 re f', '0.1 0.4 0.35 rg BT /F1 24 Tf 38 425 Td (RENULUS - PAGE ' + page + ') Tj ET', 'BT /F1 15 Tf 38 390 Td (Synthetic PDF viewer fixture) Tj ET', 'BT /F1 120 Tf 150 180 Td (' + (page === 'ONE' ? '1' : '2') + ') Tj ET', 'BT /F1 13 Tf 38 45 Td (Not clinical or patient material) Tj ET'].join('\n') + '\n';
-  const one = stream('ONE'), two = stream('TWO');
-  const objects = ['<< /Type /Catalog /Pages 2 0 R >>', '<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>', '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 380 480] /Resources << /Font << /F1 7 0 R >> >> /Contents 4 0 R >>', '<< /Length ' + Buffer.byteLength(one) + ' >>\nstream\n' + one + 'endstream', '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 380 480] /Resources << /Font << /F1 7 0 R >> >> /Contents 6 0 R >>', '<< /Length ' + Buffer.byteLength(two) + ' >>\nstream\n' + two + 'endstream', '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'];
-  let body = '%PDF-1.4\n'; const offsets = [0];
-  for (let i = 0; i < objects.length; i++) { offsets.push(Buffer.byteLength(body)); body += (i + 1) + ' 0 obj\n' + objects[i] + '\nendobj\n'; }
-  const xref = Buffer.byteLength(body);
-  body += 'xref\n0 ' + offsets.length + '\n0000000000 65535 f \n' + offsets.slice(1).map(offset => String(offset).padStart(10, '0') + ' 00000 n \n').join('');
-  return Buffer.from(body + 'trailer\n<< /Size ' + offsets.length + ' /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF\n');
-}
 const pdf = syntheticPdf();
 await writeFile(path.join(evidence, 'synthetic-two-page.pdf'), pdf);
 if (process.env.RENULUS_PDF_FIXTURE_ONLY === '1') { console.log(JSON.stringify({ fixture: path.join(evidence, 'synthetic-two-page.pdf') })); process.exit(0); }
@@ -53,22 +45,15 @@ try {
   await page.route('**/api/v1/library/revisions/native-pdf-revision/original', route => route.fulfill({ status: 200, contentType: 'application/pdf', body: pdf }));
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Library', exact: true }).click();
   await page.getByRole('button', { name: document.title, exact: true }).click();
+  const pdfConsole = [], requestFailures = [];
+  page.on('console', message => { if (pdfConsole.length < 50) pdfConsole.push({ type: message.type(), text: message.text().slice(0, 3000) }); });
+  page.on('requestfailed', request => { if (requestFailures.length < 50) requestFailures.push({ url: request.url(), failure: request.failure() }); });
   await page.getByRole('button', { name: 'Open original · page 2', exact: true }).click();
   const viewer = page.getByTitle('Original document viewer', { exact: true }); await viewer.waitFor(); await page.waitForTimeout(3000);
-  result.pdfViewer = { requestedUrl: await viewer.getAttribute('src'), frames: [] };
-  for (const frame of page.frames().filter(frame => frame !== page.mainFrame())) {
-    try {
-      result.pdfViewer.frames.push({ url: frame.url(), ...await frame.evaluate(() => {
-        const inputs = [];
-        function scan(root) { for (const element of root.querySelectorAll('*')) { if (element.tagName === 'INPUT') inputs.push({ id: element.id, type: element.type, value: element.value }); if (element.shadowRoot) scan(element.shadowRoot); } }
-        scan(document);
-        return { readyState: document.readyState, body: document.body?.innerText.slice(0, 700), embeds: [...document.querySelectorAll('embed')].map(element => ({ type: element.type, src: element.src })), inputs };
-      }) });
-    } catch (error) { result.pdfViewer.frames.push({ url: frame.url(), error: error.message }); }
-  }
+  result.pdfViewer = { requestedUrl: await viewer.getAttribute('src'), frames: await capturePdfFrames(page), console: pdfConsole, requestFailures };
   await viewer.screenshot({ path: path.join(evidence, 'library-pdf-viewer.png') });
   await page.screenshot({ path: path.join(evidence, 'library-source-reader.png'), fullPage: true });
-  result.pdfViewer.blocked = result.pdfViewer.frames.some(frame => /ERR_BLOCKED|blocked|refused/i.test(frame.body ?? ''));
+  Object.assign(result.pdfViewer, classifyPdfFrames(result.pdfViewer.frames, citation.page));
   result.pdfViewer.visualReview = 'required: confirm PAGE TWO marker in captured native viewer';
   await application.evaluate(({ shell }) => {
     globalThis.renulusPublisherProof = [];
@@ -83,6 +68,7 @@ try {
   result.publisher.rendererWindows = await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length);
   result.publisher.rendererStayedLocal = page.url() === result.publisher.rendererUrl;
   if (!result.publisher.dispatch.some(record => record.url === result.publisher.href && record.state === 'OS-open-completed') || result.publisher.rendererWindows !== 1 || !result.publisher.rendererStayedLocal) throw new Error('The publisher link did not complete a system-browser dispatch.');
+  if (result.pdfViewer.blocked || !result.pdfViewer.viewerDetected || !result.pdfViewer.citationPageSelected) throw new Error('The native PDF viewer failed to show the requested physical page. Inspect its frame, console and screenshot evidence.');
 } catch (error) { result.error = { message: error.message, stack: error.stack }; }
 finally { if (application) await application.close(); await writeFile(path.join(evidence, 'journey-evidence.json'), JSON.stringify(result, null, 2)); }
 console.log(JSON.stringify({ evidence, error: result.error?.message, pdfViewerBlocked: result.pdfViewer?.blocked, publisher: result.publisher }));
