@@ -1,5 +1,5 @@
 import { spawn, execFileSync, type ChildProcess } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import path from 'node:path';
 import { backendEnvironment, type DesktopProfile } from './profile';
@@ -28,13 +28,19 @@ export async function startBackend(options: { profile: DesktopProfile; token: st
     return { port, child: null, owned: false, stop: async () => {} };
   }
   const python = process.env.RENULUS_PYTHON ?? path.join(workspace, '.venv', 'Scripts', 'python.exe');
-  const command = packaged ? path.join(resources, 'backend', 'renulus-backend.exe') : python;
+  const bundleRoot = path.join(resources, 'backend');
+  if (packaged) {
+    const manifest = JSON.parse(readFileSync(path.join(bundleRoot, 'bundle.json'), 'utf8')) as { version: number; format: string; python: { executable: string }; bootstrap: string };
+    if (manifest.version !== 1 || manifest.format !== 'embedded-cpython-windows-v1' || manifest.python.executable !== 'python/python.exe' || manifest.bootstrap !== 'bootstrap.py') throw new Error('The packaged runtime launch contract is invalid.');
+  }
+  const command = packaged ? path.join(bundleRoot, 'python', 'python.exe') : python;
   if (!path.isAbsolute(command) || !existsSync(command)) throw new Error('The Renulus Python runtime is not available. Set RENULUS_PYTHON for development.');
   const port = await runBackendStartStep(signal, freeLoopbackPort);
-  const args = [...(packaged ? [] : ['-m', 'renulus.server']), '--profile', profile.root, '--port', String(port)];
+  const args = [...(packaged ? ['-I', '-B', '-X', 'utf8', path.join(bundleRoot, 'bootstrap.py')] : ['-m', 'renulus.server']), '--profile', profile.root, '--port', String(port), ...(packaged ? ['--source-root', bundleRoot] : [])];
   const deps = { forceKillProcessTree: (pid: number) => { execFileSync('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' }); } };
   signal.throwIfAborted();
-  const child = spawn(command, args, { cwd: packaged ? resources : workspace, env: backendEnvironment(profile, token, path.join(workspace, 'runtime'), path.join(workspace, 'upstream', 'hermes')), windowsHide: true, detached: process.platform !== 'win32', stdio: ['ignore', 'ignore', 'ignore'] });
+  const source = packaged ? bundleRoot : workspace;
+  const child = spawn(command, args, { cwd: source, env: backendEnvironment(profile, token, path.join(source, 'runtime'), path.join(source, 'upstream', 'hermes')), windowsHide: true, detached: process.platform !== 'win32', stdio: ['ignore', 'ignore', 'ignore'] });
   let stopped: Promise<void> | undefined;
   let failed = false;
   child.once('error', () => { failed = true; });
@@ -48,7 +54,8 @@ export async function startBackend(options: { profile: DesktopProfile; token: st
   const onAbort = () => { void stop().catch(() => {}); };
   signal.addEventListener('abort', onAbort, { once: true });
   try {
-    const deadline = Date.now() + 30_000;
+    // First packaged startup provisions and verifies the public helper payload.
+    const deadline = Date.now() + (packaged ? 120_000 : 30_000);
     while (Date.now() < deadline) {
       signal.throwIfAborted();
       if (failed || child.exitCode !== null || child.signalCode !== null) throw new Error('The local backend exited during startup.');

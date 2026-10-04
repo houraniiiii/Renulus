@@ -137,3 +137,78 @@ generation or image capability. The integrator's newly verified 19 helper files
 (483,597,181 bytes) are available for an unsigned backend/helper bundle next.
 Only those public helper assets may be acquired from its profile; provider
 credentials, SQLite data and other private state remain outside packaging.
+
+## Embedded Windows payload and packaging lane #12
+
+October 4, 2026 UTC (October 5 locally after 22:00 UTC). Owned packaging uses
+official CPython3.14.4 embeddable x64, not the development venv redirector.
+The ZIP SHA256 is cda80a9b1e75c0f1b4f9872ca1b417f0d19bce32facc811aea9180e70fad5fb9;
+extracted python.exe SHA256 is
+7ca24f26d6e3f463419ee4f537ddd3acd312c38fe45e678cce08572f26a8bd1a.
+Windows Authenticode actually reported Valid / Python Software Foundation.
+The published Sigstore digest matched the archive; full Sigstore signature
+verification was not performed. python314._pth admits only bundled Python,
+selected Windows wheels, runtime and attributed Hermes source. It does not
+import site. No pyvenv.cfg, launcher wrappers, executing .pth or editable
+direct_url.json are copied. Native dependency imports were checked with this
+embedded interpreter; final relocated/installed launch checks follow below.
+
+stage-backend.py snapshots a committed public allowlist and records all file
+sizes/SHA256, wheel versions, source revision and explicit runtime patch
+provenance. docs/SOURCES.md is included because Updates reads that public
+register at runtime. Original/private .local state is excluded. Only the
+declared 19 public helpers / 483,597,181 bytes are copied and hash-checked against
+read-only packaging/runtime/helper-assets.json. Contract SHA256 is
+3d8ba8f76428f2c7fc0348167dd9b8c70e2f47f29dbd6705e01a6c0fdea97fce.
+Original helper names/model cards and additional observed licence texts are
+preserved; no broad legal-compliance claim is made.
+
+Source refresh operates only in this lane's generated test-results payload,
+refuses any uv.lock/pyproject.toml change, preserves selected wheels and removes
+deleted admitted source files. A new inventory is required afterwards. Eight
+synthetic packaging boundary tests pass on actual embedded3.14.4, including
+private-state exclusion, additive migrations/markers, acquired-manifest hash
+protection, patch conflict refusal, dependency preservation/lock refusal and a
+real Windows junction rejected before traversal. Expected Git conflict stderr
+in the refusal test is not a test failure.
+
+The e800affc source snapshot initially staged 39,218 inventoried files /
+2,168,719,551 bytes before the public-register/bootstrap refresh. Renderer and
+native entry built/typechecked from the same committed source with the owned
+backend.ts adoption recorded as a patch and hashes. Parent main/profile/shared
+modules stay untouched. Packager checks matching backend/renderer/native source
+revisions and the installed Electron pin. Lane npm ls reports Electron44.5.1 /
+Vitest4.1.11; electron.exe still hashes to
+49b61a030a520fc36a4b8fa5cce53fb4e935a7bdbbe4b80e9222f598e49cc7fa,
+matching this lane's verified official archive provenance. Parent's formerly
+stale node_modules are not used for packaging.
+
+An actual unsigned x64 folder build passed with electron-builder27.0.0-alpha.6.
+Its v27 schema requires nativeModules.npmRebuild/nodeGypRebuild. Signing is
+explicitly disabled. NSIS toolset1.2.1 / NSIS3.12 and 7-Zip toolset1.0.0 are
+pinned; official release asset hashes match installed builder checksum tables:
+56997fdefe25e7928a1a68b4583d08b240b66cf660234053b20131a74cc082f4 and
+be071f15bd6da2f78fe81c6ddef2009b0c4d8a51f36b780cb806c7e6df95e1b3.
+That folder build alone does not establish installer execution.
+
+The first relocated launch failed during helper provisioning: a .copying
+destination was262characters while machine LongPathsEnabled is0. A controlled
+bootstrap reproduction captured FileNotFoundError on the approved TableFormer
+asset; no provider/account call occurred. The owned bootstrap now uses Windows
+extended filesystem paths for that unchanged copier. No registry mutation or
+helper renaming is required. The failed proof's attributed main/tree was stopped;
+no shared backend or other application was stopped. This negative evidence is
+retained; a corrected native pass is not inferred from a build.
+
+The stable planned executable is release/renulus-portable/Renulus Development.exe
+with adjacent resources/backend and plain licences/notices. NSIS is configured
+per-user with no elevation, automatic launch or generated shortcuts; uninstall
+preserves app data. Parent owns root launchers and .local/delivery.json.
+native-evidence.mjs verifies packaged44.5.1, OS-only PATH, absent Python/uv/Node,
+one managed child per isolated profile, helper/import readiness, all modules,
+sandbox/authentication/routes and owned-child exit. native-journeys.mjs uses
+declared synthetic Library DTO/PDF responses to inspect the physical page2
+viewer and a real Updates publisher link; it is not extraction/indexing proof.
+Actual final native/installer results and artifact hashes will be added after
+those checks run. No live model/authentication or signed/clean-machine proof
+is claimed by these staging results.
