@@ -1,0 +1,1312 @@
+{
+  "schema_version": 1,
+  "pack_id": "renulus-foundations",
+  "pack_version": "1.0.1",
+  "checked_on": "2026-10-04",
+  "method": "Assistant primary public locator check, original scenario/key/distractor and numeric review.",
+  "independent_human_review": false,
+  "inherited_review": "Unchanged 1.0.0 items retain their recorded review and exact source snapshots.",
+  "access_limits": "Some primary PMC/publisher pages blocked browser parsing; publicly indexed primary material and official/author-repository copies were used where recorded. No source originals or prose are stored here.",
+  "sources": [
+    {
+      "id": "K01-2024-expansion",
+      "register_id": "K01",
+      "url": "https://kdigo.org/wp-content/uploads/2026/04/KDIGO-2024-CKD-Guideline.pdf",
+      "edition": "2024",
+      "check_note": "Assistant checked numbered primary recommendations and sections, including in-memory reading of the official 199-page PDF: printed S151 (marker error), S154-S155 (urine measurement/monitoring), S165 (medicine measurement/dosing summary), and S247 (medicine mechanisms). Some other KDIGO locator checks used indexed official material after browser-parser failure. Source originals are not stored or distributed; no exhaustive currency clearance."
+    },
+    {
+      "id": "K10-2012-expansion",
+      "register_id": "K10",
+      "url": "https://kdigo.org/wp-content/uploads/2016/10/KDIGO-2012-AKI-Guideline-English.pdf",
+      "edition": "2012 final",
+      "check_note": "Assistant checked the primary public sections/numbered recommendations cited by the expansion. Some KDIGO recommendations were checked through exact indexed official material where the PDF parser failed. New scope record; original source snapshots are preserved."
+    },
+    {
+      "id": "K08-2021-remaining-expansion",
+      "register_id": "K08",
+      "url": "https://kdigo.org/wp-content/uploads/2024/05/KDIGO-2021-Glomerular-Diseases-Guideline_English_2024-Chapter-Updates.pdf",
+      "edition": "2021; 2024 chapter-update combined file",
+      "check_note": "Assistant checked the primary public sections/numbered recommendations cited by the expansion. Some KDIGO recommendations were checked through exact indexed official material where the PDF parser failed. New scope record; original source snapshots are preserved."
+    },
+    {
+      "id": "K13-2017-expansion",
+      "register_id": "K13",
+      "url": "https://kdigo.org/wp-content/uploads/2026/04/KDIGO-2017-CKD-MBD-Guideline.pdf",
+      "edition": "2017 update",
+      "check_note": "Assistant checked the primary public sections/numbered recommendations cited by the expansion. Some KDIGO recommendations were checked through exact indexed official material where the PDF parser failed. New scope record; original source snapshots are preserved."
+    },
+    {
+      "id": "K11-2021-expansion",
+      "register_id": "K11",
+      "url": "https://kdigo.org/wp-content/uploads/2026/04/KDIGO-2021-Blood-Pressure-in-CKD-Guideline.pdf",
+      "edition": "2021",
+      "check_note": "Assistant checked the primary public sections/numbered recommendations cited by the expansion. Some KDIGO recommendations were checked through exact indexed official material where the PDF parser failed. New scope record; original source snapshots are preserved."
+    },
+    {
+      "id": "K09-2022-expansion",
+      "register_id": "K09",
+      "url": "https://kdigo.org/wp-content/uploads/2022/10/KDIGO-2022-Clinical-Practice-Guideline-for-Diabetes-Management-in-CKD.pdf",
+      "edition": "2022 final",
+      "check_note": "Assistant checked the primary public sections/numbered recommendations cited by the expansion. Some KDIGO recommendations were checked through exact indexed official material where the PDF parser failed. New scope record; original source snapshots are preserved."
+    },
+    {
+      "id": "K03-2025-expansion",
+      "register_id": "K03",
+      "url": "https://kdigo.org/wp-content/uploads/2026/04/KDIGO-2025-ADPKD-Guideline.pdf",
+      "edition": "2025",
+      "check_note": "Assistant checked the primary public sections/numbered recommendations cited by the expansion. Some KDIGO recommendations were checked through exact indexed official material where the PDF parser failed. New scope record; original source snapshots are preserved."
+    },
+    {
+      "id": "K05-2024-expansion",
+      "register_id": "K05",
+      "url": "https://kdigo.org/wp-content/uploads/2024/05/KDIGO-2024-ANCA-Vasculitis-Guideline-Update.pdf",
+      "edition": "2024 amended",
+      "check_note": "Assistant checked the primary public sections/numbered recommendations cited by the expansion. Some KDIGO recommendations were checked through exact indexed official material where the PDF parser failed. New scope record; original source snapshots are preserved."
+    },
+    {
+      "id": "K06-2024-expansion",
+      "register_id": "K06",
+      "url": "https://kdigo.org/wp-content/uploads/2024/01/KDIGO_2024_Lupus_Nephritis_Guideline.pdf",
+      "edition": "2024",
+      "check_note": "Assistant checked the primary public sections/numbered recommendations cited by the expansion. Some KDIGO recommendations were checked through exact indexed official material where the PDF parser failed. New scope record; original source snapshots are preserved."
+    },
+    {
+      "id": "K16-2020-expansion",
+      "register_id": "K16",
+      "url": "https://kdigo.org/wp-content/uploads/2026/04/KDIGO-2020-Transplant-Candidate-Guideline.pdf",
+      "edition": "2020",
+      "check_note": "Assistant checked the primary public sections/numbered recommendations cited by the expansion. Some KDIGO recommendations were checked through exact indexed official material where the PDF parser failed. New scope record; original source snapshots are preserved."
+    },
+    {
+      "id": "G02-hyperkalemia-2026-07",
+      "register_id": "G02",
+      "url": "https://www.ukkidney.org/sites/default/files/documents/FINAL%20VERSION%20-%20UKKA%20CLINICAL%20PRACTICE%20GUIDELINE%20-%20MANAGEMENT%20OF%20HYPERKALAEMIA%20IN%20ADULTS%20-%20UPDATED%20JULY%202026_0.pdf",
+      "edition": "October 2023 final; July 2026 update; review due October 2026",
+      "check_note": "Assistant opened the 180-page primary final PDF. Frontmatter confirms July 2026; printed pages 5 and 7 describe updated chronic-binder guidance and weaker calcium evidence grading. Cited sampling/treatment-monitoring sections checked separately. Original 2023 source metadata remains unchanged for inherited items."
+    },
+    {
+      "id": "G01-hyponatremia-2014-expansion",
+      "register_id": "G01",
+      "url": "https://academic.oup.com/ejendo/article/170/3/G1/6668028",
+      "edition": "2014; July 2014 erratum identified",
+      "check_note": "Assistant checked the primary public sections/numbered recommendations cited by the expansion. Some KDIGO recommendations were checked through exact indexed official material where the PDF parser failed. New scope record; original source snapshots are preserved."
+    },
+    {
+      "id": "K15-2017-donor",
+      "register_id": "K15",
+      "url": "https://kdigo.org/wp-content/uploads/2017/07/2017-KDIGO-LD-GL.pdf",
+      "edition": "2017 final",
+      "check_note": "Assistant read the official primary 2017 PDF in memory: recommendations 2.1-2.8 (printed S27), 5.1-5.8 (S35-S36), 6.1-6.6 (S42), and 15.1-15.11 (S78). Thresholds and scope are donor-specific. No source original is stored; dated baseline, not an exhaustive subsequent-evidence clearance."
+    },
+    {
+      "id": "G02-haemodialysis-2019",
+      "register_id": "G02",
+      "url": "https://bmcnephrol.biomedcentral.com/articles/10.1186/s12882-019-1527-3",
+      "edition": "2019 final",
+      "check_note": "Primary BMC guideline DOI/title/year and sections 1, 2, 4 and appendices checked; article CC BY terms remain independent."
+    },
+    {
+      "id": "G02-peritoneal-dialysis-2017",
+      "register_id": "G02",
+      "url": "https://bmcnephrol.biomedcentral.com/articles/10.1186/s12882-017-0687-2",
+      "edition": "2017 final",
+      "check_note": "Primary BMC guideline title/DOI and membrane/ultrafiltration sections checked. Later treatment-specific guidance must be assessed separately."
+    },
+    {
+      "id": "G02-pregnancy-renal-2019",
+      "register_id": "G02",
+      "url": "https://bmcnephrol.biomedcentral.com/articles/10.1186/s12882-019-1560-2",
+      "edition": "2019 final",
+      "check_note": "Assistant checked primary recommendations 4.1.1, 4.4.5-4.4.6 and 4.8.1 in the published BMC guideline."
+    },
+    {
+      "id": "L01-CUA-stones-2022",
+      "register_id": "L01",
+      "url": "https://cuaj.ca/index.php/journal/article/view/7872",
+      "edition": "2022 update",
+      "check_note": "Official CUAJ catalogue title/year/DOI and primary indexed full-text sections checked; direct PDF parsing failed. Copyright (c) 2022 CUAJ. L01 is bibliography/reference provenance, not an open full-text or AI reuse grant."
+    },
+    {
+      "id": "L01-CUA-ureteral-2021",
+      "register_id": "L01",
+      "url": "https://cuaj.ca/index.php/journal/article/view/7581",
+      "edition": "2021 full-text final",
+      "check_note": "Official CUAJ title/year/DOI and obstructive-pyelonephritis/renal-impairment sections checked. Source text is not distributed."
+    },
+    {
+      "id": "L01-IKMG-evaluation-2019",
+      "register_id": "L01",
+      "url": "https://www.nature.com/articles/s41581-018-0077-4",
+      "edition": "2019 final (published online 2018)",
+      "check_note": "Assistant read the primary author-repository copy at https://discovery.ucl.ac.uk/10064523/1/s41581-018-0077-4.pdf, printed pages 45-56. No exhaustive currency clearance or treatment review claimed."
+    },
+    {
+      "id": "L01-ISTH-TTP-diagnosis-2020",
+      "register_id": "L01",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8146131/",
+      "edition": "2020 final diagnostic guideline",
+      "check_note": "Primary author manuscript/indexed guideline checked. The 2025 focused update retains 2020 iTTP recommendations and changes congenital treatment; no congenital treatment key authored here. L01 does not assert open redistribution rights."
+    },
+    {
+      "id": "G01-ERKNet-dRTA-2021",
+      "register_id": "G01",
+      "url": "https://academic.oup.com/ndt/article/36/9/1585/6259151",
+      "edition": "2021 final",
+      "check_note": "Primary NDT consensus diagnostic/pathophysiology sections checked. Public reading availability is not a blanket AI-processing or redistribution permission."
+    },
+    {
+      "id": "L01-urine-eosinophils-2013",
+      "register_id": "L01",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3817898/",
+      "edition": "2013 original biopsy-linked diagnostic study; 2018 correction checked",
+      "check_note": "Assistant checked the primary PubMed/Europe PMC abstract and the full correction notice (DOI 10.2215/CJN.05270418, PMID 29848506, https://pmc.ncbi.nlm.nih.gov/articles/PMC6032594/?report=xml). The notice removes the erroneous denominator phrase in one Results sentence; no replacement performance table is specified. The qualitative weak-discrimination claim is checked; numeric performance is not re-audited. Original full text remained browser-blocked. A dated study is not a current treatment guideline."
+    }
+  ],
+  "items": [
+    {
+      "id": "RN11-T01-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "mechanism",
+      "source_locators": [
+        {
+          "source_id": "K01-2024-expansion",
+          "locator": "Table 31, printed S247: reversible inhibition of tubular creatinine secretion; Section 1.2.2"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Inhibited tubular creatinine secretion without a matching fall in filtration.",
+      "checked_claim": "Creatinine includes a secretion component. A secretion inhibitor can alter creatinine-based eGFR without an equivalent filtration change; assess the whole clinical pattern rather than automatically diagnosing or excluding AKI.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T01-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "interpretation",
+      "source_locators": [
+        {
+          "source_id": "K01-2024-expansion",
+          "locator": "Practice Point 4.2.4: nonindexed eGFR in extremes of body weight"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "About 31 mL/min.",
+      "checked_claim": "Absolute GFR is estimated as 45 x 1.20 / 1.73 = 31.2 mL/min. Check the medicine's specified dosing metric and the precision required; the conversion does not remove estimation error.",
+      "calculation": {
+        "expression": "45 * 1.20 / 1.73",
+        "result": 31.21387283236994,
+        "unit": "mL/min"
+      },
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T02-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "interpretation",
+      "source_locators": [
+        {
+          "source_id": "L01-IKMG-evaluation-2019",
+          "locator": "Monoclonal immunoglobulin testing; urine protein electrophoresis"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Much of the measured protein is nonalbumin; investigate its type and source.",
+      "checked_claim": "Marked total protein with much less albumin raises a nonalbumin-protein question, including tubular or light-chain protein. Electrophoresis/immunofixation and clinical assessment can characterize it; do not infer a clone from the ratio alone.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T02-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "interpretation",
+      "source_locators": [
+        {
+          "source_id": "K08-2021-remaining-expansion",
+          "locator": "Practice Point 1.3.1: urine sediment in glomerular disease"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "A glomerular inflammatory pattern that warrants etiologic evaluation.",
+      "checked_claim": "Active sediment localizes a kidney process and increases urgency. Serology, chronology and often tissue are still needed to identify its cause and treatment pathway.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T03-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "mechanism",
+      "source_locators": [
+        {
+          "source_id": "G01-hyponatremia-2014-expansion",
+          "locator": "Recommendations 6.3.1.1-6.3.1.2; urine-osmolality interpretation"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Water excretion is relatively unsuppressed; consider water intake relative to solute intake.",
+      "checked_claim": "Very dilute urine in hypotonic hyponatremia points toward water intake exceeding available solute-dependent excretory capacity rather than sustained antidiuresis. The intake history and clinical context still matter.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T03-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "mechanism",
+      "source_locators": [
+        {
+          "source_id": "G01-hyponatremia-2014-expansion",
+          "locator": "Section 7.4.4: sudden urine-output increase during correction"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "A water diuresis can make sodium rise faster than the prescribed-fluid calculation predicts.",
+      "checked_claim": "Restoring volume can remove a nonosmotic antidiuretic stimulus. Abrupt water excretion is a warning for unintended overcorrection and calls for close urine-output and sodium review.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T04-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "interpretation",
+      "source_locators": [
+        {
+          "source_id": "G02-hyperkalemia-2026-07",
+          "locator": "Guidelines 15.1-15.3: sampling and pseudohyperkalemia"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Possible sample artifact requires prompt appropriate repeat assessment; do not dismiss true hyperkalemia.",
+      "checked_claim": "Release of intracellular potassium during sampling can elevate the measured value. Repeat using an appropriate collection method while assessing urgency, risk factors and ECG; a suspected artifact is not a safety clearance.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T04-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "interpretation",
+      "source_locators": [
+        {
+          "source_id": "G01-ERKNet-dRTA-2021",
+          "locator": "Diagnosis and pathophysiology: normal-anion-gap acidosis and impaired urine acidification"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Normal-anion-gap acidosis with impaired distal urinary acidification.",
+      "checked_claim": "The anion gap is 140 - 112 - 18 = 10 mmol/L. Persistent inappropriately high urine pH during systemic acidosis, after relevant confounders are excluded, supports a distal acidification defect; a single urine pH alone is insufficient.",
+      "calculation": {
+        "expression": "140 - 112 - 18",
+        "result": 10,
+        "unit": "mmol/L"
+      },
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T05-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "common_reasoning",
+      "source_locators": [
+        {
+          "source_id": "K13-2017-expansion",
+          "locator": "Recommendation 4.2.1 and rationale: adaptive PTH response"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Assess trends and modifiable drivers; a modest rise can be adaptive.",
+      "checked_claim": "The optimal nondialysis PTH concentration is not established. A rising or persistently elevated value prompts evaluation of phosphate exposure, calcium and vitamin D status, rather than automatic normalization of a single result.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T05-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "mechanism",
+      "source_locators": [
+        {
+          "source_id": "K13-2017-expansion",
+          "locator": "Recommendations 4.1.3 and 4.1.6: hypercalcemia and calcium-based binders"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Excess calcium exposure and possible low-turnover bone disease.",
+      "checked_claim": "Review the serial biochemical pattern and calcium-containing therapies. Guidelines favor avoiding hypercalcemia and restricting calcium-based binder exposure; low turnover is a concern, not a biopsy-free certainty.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T06-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "interpretation",
+      "source_locators": [
+        {
+          "source_id": "K10-2012-expansion",
+          "locator": "Table 2; Recommendation 2.1.2: urine-output staging"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Stage 2.",
+      "checked_claim": "Fourteen hours below 0.5 mL/kg/h meets stage 2. Despite the low rate, the duration does not meet the stage-3 oliguria threshold. Examine causes and trends without waiting for creatinine to catch up.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T06-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "common_reasoning",
+      "source_locators": [
+        {
+          "source_id": "K10-2012-expansion",
+          "locator": "Sections 2.3 and 3.5: cause evaluation and diuretic effects on fractional sodium excretion"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Interpret it with treatment timing and the clinical pattern; it does not independently classify the cause.",
+      "checked_claim": "Urinary indices are contextual measurements. Medication exposure, CKD, timing, urine sediment and hemodynamics must be integrated before attributing AKI to a mechanism.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T07-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "interpretation",
+      "source_locators": [
+        {
+          "source_id": "K10-2012-expansion",
+          "locator": "Recommendation 5.6.2: continuous versus standard intermittent KRT"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Continuous KRT can permit more gradual fluid/solute management in hemodynamic instability.",
+      "checked_claim": "The dated KDIGO final suggests continuous rather than standard intermittent KRT for unstable patients. Modality supports tolerability and goals; it should not be presented as a guaranteed survival advantage.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T07-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "interpretation",
+      "source_locators": [
+        {
+          "source_id": "K10-2012-expansion",
+          "locator": "Recommendation 5.8.4; rationale: prescribed versus delivered CRRT dose"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Review actual delivered clearance and downtime rather than the prescription alone.",
+      "checked_claim": "The 2012 final recommends delivered effluent of 20-25 mL/kg/h for CRRT and notes that a higher prescription may be needed to achieve it. Delivery, interruptions and the whole patient's needs require review.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T08-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "interpretation",
+      "source_locators": [
+        {
+          "source_id": "K01-2024-expansion",
+          "locator": "Tables 1-3 and Figure 2: CGA classification"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "CKD G4 A1 is present; little albuminuria does not negate low filtration.",
+      "checked_claim": "CGA retains separate cause, GFR and albuminuria information. A1 describes albumin excretion, not an assurance of normal filtration or negligible risk.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T08-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "common_reasoning",
+      "source_locators": [
+        {
+          "source_id": "K01-2024-expansion",
+          "locator": "Recommendation 2.2.1; Practice Points 2.2.4-2.2.5, printed S155: risk-equation population limits"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "The equation may be used outside its validated population.",
+      "checked_claim": "Use a tool suited to the population, outcome and time horizon. G3-G5 models need not be valid in G1-G2 or every inherited condition; disease-specific prognostic assessment can be more appropriate.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T09-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "common_reasoning",
+      "source_locators": [
+        {
+          "source_id": "K11-2021-expansion",
+          "locator": "Recommendations 1.1 and 1.2: standardized and out-of-office BP"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Check measurement technique and obtain standardized/out-of-office confirmation.",
+      "checked_claim": "Technique, setting and repeated readings influence interpretation. Validated home or ambulatory BP complements standardized office BP and can expose white-coat or masked patterns.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T09-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "mechanism",
+      "source_locators": [
+        {
+          "source_id": "K01-2024-expansion",
+          "locator": "Practice Point 3.6.4: creatinine response to RAS inhibition"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "A modest hemodynamic change alone does not mandate stopping treatment.",
+      "checked_claim": "The CKD practice point favors continuing ACEi/ARB unless creatinine rises by more than 30% within four weeks, while evaluating symptoms, volume, potassium and other causes. This threshold is a review aid, not permission to ignore a deteriorating patient.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T10-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "mechanism",
+      "source_locators": [
+        {
+          "source_id": "K08-2021-remaining-expansion",
+          "locator": "Practice Point 6.2.1.1: secondary FSGS"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Treat the cause and provide supportive care; the lesion alone does not justify primary-FSGS immunosuppression.",
+      "checked_claim": "Clinical phenotype and mechanism distinguish primary FSGS from secondary/adaptive lesions. KDIGO advises against immunosuppression for secondary FSGS; diagnosis-specific supportive management is still active care.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T10-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "interpretation",
+      "source_locators": [
+        {
+          "source_id": "K08-2021-remaining-expansion",
+          "locator": "Practice Point 3.1.1: nephrotic syndrome with positive anti-PLA2R"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Membranous nephropathy may be diagnosed without biopsy in this defined setting.",
+      "checked_claim": "The remaining membranous guideline permits a nonbiopsy diagnosis in nephrotic syndrome with positive anti-PLA2R. This does not remove assessment for associated conditions or every potential reason for tissue examination.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T11-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "mechanism",
+      "source_locators": [
+        {
+          "source_id": "L01-IKMG-evaluation-2019",
+          "locator": "Light-chain proximal tubulopathy; Fanconi syndrome"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "A proximal tubular reabsorptive defect.",
+      "checked_claim": "Combined inappropriate proximal solute losses suggest a Fanconi-type pattern. Review medications and acquired/inherited causes; monoclonal light-chain proximal tubulopathy is one possible acquired cause, not a diagnosis from this pattern alone.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T11-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "common_reasoning",
+      "source_locators": [
+        {
+          "source_id": "L01-urine-eosinophils-2013",
+          "locator": "Results and discussion: biopsy-reference diagnostic accuracy"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "The negative test does not reliably exclude AIN; continue contextual evaluation.",
+      "checked_claim": "Urine eosinophils are a weak discriminator in biopsy-referenced data. Review exposure timing, competing causes, urine findings and whether tissue would change management; neither a positive nor negative result settles AIN.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T12-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "common_reasoning",
+      "source_locators": [
+        {
+          "source_id": "K03-2025-expansion",
+          "locator": "Chapter 1: diagnostic approach in adults without a known family history"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "It does not exclude ADPKD; phenotype and, when indicated, genetic evaluation remain relevant.",
+      "checked_claim": "Unrecognized familial disease and a de novo variant are possible. Use age, imaging phenotype, differential diagnosis and appropriate counseling rather than treating an absent history as exclusion.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T12-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "mechanism",
+      "source_locators": [
+        {
+          "source_id": "K03-2025-expansion",
+          "locator": "Chapter 4: progression assessment and Mayo imaging classification"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Structural progression risk can become apparent before a marked fall in filtration.",
+      "checked_claim": "Age-adjusted structural assessment complements filtration trends when evaluating progression risk. It supports, rather than replaces, patient-specific eligibility, contraindication and monitoring discussions.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T13-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "interpretation",
+      "source_locators": [
+        {
+          "source_id": "L01-CUA-ureteral-2021",
+          "locator": "Conservative management: obstructive pyelonephritis and suspected septic stone"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Urgent antibiotics, resuscitation and drainage/source-control assessment are required.",
+      "checked_claim": "Suspected infected obstruction requires urgent coordinated source control. Definitive stone treatment is planned around infection stabilization; the scenario is not an indication to wait for spontaneous passage.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T13-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "mechanism",
+      "source_locators": [
+        {
+          "source_id": "L01-CUA-stones-2022",
+          "locator": "Dietary calcium section: calcium oxalate stone prevention"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Calcium with meals can bind intestinal oxalate; very low intake can increase oxalate absorption.",
+      "checked_claim": "Maintain an appropriate normal dietary calcium intake rather than indiscriminate restriction. Meals provide an opportunity for oxalate binding; tailor supplements and other measures to the metabolic assessment.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T14-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "mechanism",
+      "source_locators": [
+        {
+          "source_id": "K09-2022-expansion",
+          "locator": "Practice Point 1.3.5 and rationale: reversible eGFR decrease with SGLT2 inhibitors"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Altered tubuloglomerular feedback and intraglomerular hemodynamics.",
+      "checked_claim": "Increased distal sodium delivery can restore feedback and reduce intraglomerular pressure. A modest reversible dip is generally not a reason to stop, but review volume, symptoms and an unexpectedly large decline.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T14-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "mechanism",
+      "source_locators": [
+        {
+          "source_id": "K09-2022-expansion",
+          "locator": "Practice Point 2.1.2: HbA1c accuracy in advanced CKD"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Altered erythrocyte survival/turnover can make HbA1c less reliable.",
+      "checked_claim": "Advanced CKD, anemia and treatments affecting red cells reduce HbA1c reliability. Use glucose monitoring or CGM when appropriate to assess the actual pattern and treatment risk.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T15-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "interpretation",
+      "source_locators": [
+        {
+          "source_id": "L01-ISTH-TTP-diagnosis-2020",
+          "locator": "Diagnostic context: thrombocytopenia, microangiopathic hemolysis and organ injury"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Thrombotic microangiopathy, with rapid evaluation of its cause.",
+      "checked_claim": "The combination suggests microangiopathic hemolysis and TMA rather than routine CKD anemia. Evaluate the phenotype, ADAMTS13 and competing secondary causes urgently; the syndrome is not its etiologic label.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T15-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "mechanism",
+      "source_locators": [
+        {
+          "source_id": "L01-ISTH-TTP-diagnosis-2020",
+          "locator": "Recommendation 1: high pretest probability and pretreatment ADAMTS13 sample"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Replacement plasma can change the diagnostic measurement.",
+      "checked_claim": "Collect pretreatment diagnostic blood promptly, then follow the urgent specialist pathway. Sampling before replacement improves interpretability; it is not a reason to delay indicated treatment.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T16-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "common_reasoning",
+      "source_locators": [
+        {
+          "source_id": "K05-2024-expansion",
+          "locator": "Practice Point 9.1.1: compatible phenotype and positive MPO/PR3 antibodies"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Serology alone does not establish organ-threatening ANCA-associated vasculitis.",
+      "checked_claim": "Interpret antibody specificity, magnitude and pretest probability together. The urgency recommendation concerns a compatible rapidly deteriorating presentation; an isolated result is not that phenotype.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T16-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "interpretation",
+      "source_locators": [
+        {
+          "source_id": "K06-2024-expansion",
+          "locator": "Diagnosis and kidney biopsy assessment: activity and chronicity"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Potentially reversible inflammatory injury and established damage affect expected treatment benefit differently.",
+      "checked_claim": "Tissue assessment informs what can plausibly respond and what may represent irreversible injury. Interpret class, activity, chronicity, clinical severity and treatment risks together rather than equating all impaired function with active immune disease.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T17-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "interpretation",
+      "source_locators": [
+        {
+          "source_id": "K16-2020-expansion",
+          "locator": "Section 10: active infections and transplant timing"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Treat/control the active infection and reassess timing with the transplant team.",
+      "checked_claim": "Active infection generally warrants delaying transplantation until treated, with condition-specific specialist judgment. Distinguish infection control from permanent exclusion based on a past diagnosis.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T17-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "mechanism",
+      "source_locators": [
+        {
+          "source_id": "K08-2021-remaining-expansion",
+          "locator": "Practice Points 1.8.1-1.8.2: infection screening around immunosuppression"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Prior or current infection can create reactivation risk that vaccine history alone does not resolve.",
+      "checked_claim": "Infection screening is part of treatment-harm prevention. Assess appropriate HBV serology and other indicated infections; prevention or specialist monitoring depends on the actual infection status and planned treatment.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T18-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "mechanism",
+      "source_locators": [
+        {
+          "source_id": "L01-IKMG-evaluation-2019",
+          "locator": "Definition and evaluation of MGRS"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "A small clone can still produce clinically important nephrotoxic protein.",
+      "checked_claim": "The pathogenic properties of the protein and its kidney effect matter, not clone burden alone. Establish whether the clone and renal lesion are linked; do not treat incidental gammopathy as proof.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T18-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "interpretation",
+      "source_locators": [
+        {
+          "source_id": "L01-IKMG-evaluation-2019",
+          "locator": "Renal biopsy evaluation: light microscopy, immunofluorescence and electron microscopy"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Immunoglobulin identity and ultrastructural deposit patterns can be essential to lesion classification.",
+      "checked_claim": "Appropriate light microscopy, immunofluorescence and electron microscopy can distinguish deposition and other monoclonal-associated patterns. Correlate tissue findings with the circulating clone and alternative kidney causes.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T19-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "mechanism",
+      "source_locators": [
+        {
+          "source_id": "K10-2012-expansion",
+          "locator": "Sections 2.3 and 3.1: medication-related hemodynamic AKI"
+        },
+        {
+          "source_id": "K01-2024-expansion",
+          "locator": "Table 31, printed S247; Practice Point 3.6.4: NSAIDs and RAS-inhibition kidney-function assessment"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Volume depletion plus altered afferent/efferent vascular support of glomerular pressure.",
+      "checked_claim": "Reduced perfusion, NSAID-related loss of prostaglandin-mediated afferent support and RAS-blockade effects on efferent tone can combine. Evaluate volume and the medication history without assuming every creatinine rise is intrinsic tubular injury.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T19-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "common_reasoning",
+      "source_locators": [
+        {
+          "source_id": "K01-2024-expansion",
+          "locator": "Practice Point 4.3.2: temporary discontinuation and restart communication"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "The reason, monitoring and explicit conditions/responsibility for restarting.",
+      "checked_claim": "An interruption is a monitored plan, not a silent deletion from therapy. Document why it occurred, what needs reassessment and who will ensure appropriate resumption.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T20-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "common_reasoning",
+      "source_locators": [
+        {
+          "source_id": "G02-haemodialysis-2019",
+          "locator": "Guideline 1: dialysis dose and clinical assessment"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Meeting a small-solute metric does not establish adequate overall dialysis care.",
+      "checked_claim": "Urea-dose metrics describe part of treatment. Assess symptoms, volume, nutrition, residual function, treatment tolerance and patient goals rather than declaring adequacy from one number.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T20-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "mechanism",
+      "source_locators": [
+        {
+          "source_id": "G02-peritoneal-dialysis-2017",
+          "locator": "Section 4: membrane function and ultrafiltration; fast transport"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Rapid glucose absorption dissipates the osmotic gradient earlier.",
+      "checked_claim": "Faster small-solute/glucose transport can shorten effective osmotic fluid removal during a prolonged glucose dwell. Use membrane testing and clinical assessment to tailor the prescription; the mechanism does not dictate one universal regimen.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T21-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "interpretation",
+      "source_locators": [
+        {
+          "source_id": "K15-2017-donor",
+          "locator": "Recommendations 5.6-5.8: donor GFR selection"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "GFR below 60 is not an acceptable donation level in that guideline.",
+      "checked_claim": "Living-donor assessment is not the same as CKD dialysis timing. The 2017 final excludes GFR below 60; values 60-89 require individualized risk assessment, and at least 90 is generally acceptable within the overall evaluation.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T21-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "mechanism",
+      "source_locators": [
+        {
+          "source_id": "K16-2020-expansion",
+          "locator": "Section 19: HLA-antibody assessment and sensitizing events"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "The new sensitizing event, so immunologic assessment can be updated.",
+      "checked_claim": "Pregnancy, transfusion and prior transplantation can alter HLA sensitization. Communicate intervening events so current antibody/crossmatch information can support candidate planning.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T22-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "interpretation",
+      "source_locators": [
+        {
+          "source_id": "K08-2021-remaining-expansion",
+          "locator": "Chapter 5: adult minimal change disease diagnosis"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Immunofluorescence and electron microscopy are needed to characterize the lesion and exclude alternatives.",
+      "checked_claim": "Adult MCD is a biopsy diagnosis requiring the whole pathology assessment. A limited light-microscopic description cannot exclude an immune deposit process or characterize foot-process changes.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T22-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "interpretation",
+      "source_locators": [
+        {
+          "source_id": "G02-pregnancy-renal-2019",
+          "locator": "Recommendation 4.8.1: kidney biopsy during pregnancy"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Consider biopsy in the first or early second trimester if histology will change management.",
+      "checked_claim": "Balance the expected management benefit with maternal/fetal context, timing and procedural risk in a specialist plan. The recommendation is conditional on histology changing care, not an automatic response to an abnormal test.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T23-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "mechanism",
+      "source_locators": [
+        {
+          "source_id": "G02-haemodialysis-2019",
+          "locator": "Appendices: diffusion, convection and dialysis clearance"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Convection transports solute with filtered water; diffusion follows a concentration gradient.",
+      "checked_claim": "Solvent drag and concentration-driven transfer are distinct mechanisms that can coexist. Membrane permeability, flows, molecular size and delivered treatment time determine practical clearance.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T23-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "mechanism",
+      "source_locators": [
+        {
+          "source_id": "L01-ISTH-TTP-diagnosis-2020",
+          "locator": "Recommendation 1 and rationale: plasma exchange in suspected TTP"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Plasma exchange removes/replaces plasma constituents; dialysis primarily targets dialyzable solutes and fluid.",
+      "checked_claim": "The urgent TTP pathway is directed at the disease mechanism, including deficient ADAMTS13 and inhibitory antibodies in immune disease. Kidney support may also be required, but it does not replace disease-specific specialist treatment.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T24-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "interpretation",
+      "source_locators": [
+        {
+          "source_id": "G02-pregnancy-renal-2019",
+          "locator": "Recommendation 4.1.1: renal function assessment in pregnancy"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Use serum creatinine and clinical trends; standard eGFR equations are not validated for pregnancy.",
+      "checked_claim": "The guideline recommends serum creatinine because routine eGFR estimates are invalid in pregnancy. Interpret serial values with gestation, prior function, proteinuria and clinical context.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T24-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "interpretation",
+      "source_locators": [
+        {
+          "source_id": "G02-pregnancy-renal-2019",
+          "locator": "Recommendations 4.4.5-4.4.6: superimposed preeclampsia"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Superimposed preeclampsia, rather than attributing every change to baseline CKD.",
+      "checked_claim": "New maternal findings after 20 weeks can indicate superimposed preeclampsia. Use the whole maternal/fetal assessment and the prior CKD phenotype; no single protein measurement resolves the differential.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T25-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "common_reasoning",
+      "source_locators": [
+        {
+          "source_id": "K01-2024-expansion",
+          "locator": "Recommendation 3.3.1.1: protein intake in adults with nondialysis CKD G3-G5"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "The recommendation is being transferred to a different treatment/nutritional population.",
+      "checked_claim": "The 0.8 g/kg/day CKD recommendation concerns nondialysis adults with G3-G5. Do not use it as a universal dialysis prescription; assess nutritional state, treatment and dietetic needs.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T25-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "common_reasoning",
+      "source_locators": [
+        {
+          "source_id": "K01-2024-expansion",
+          "locator": "Practice Points 3.3.1.3 and 3.3.1.5: nutritional instability and frailty"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Assess malnutrition, function and whether restriction would add harm.",
+      "checked_claim": "Nutritionally unstable or frail patients need individualized support. A restriction aimed at kidney risk can undermine muscle, function or intake when applied without assessment.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T26-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "interpretation",
+      "source_locators": [
+        {
+          "source_id": "K01-2024-expansion",
+          "locator": "Guideline grading key: recommendation strength and certainty; evidence interpretation"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "1 percentage point; NNT 100 over two years.",
+      "checked_claim": "For the explicitly synthetic data, ARR = 0.04 - 0.03 = 0.01, and NNT = 1 / 0.01 = 100 over two years. A 25% relative reduction is a different quantity and does not convey the absolute benefit alone.",
+      "calculation": {
+        "expression": "1 / (0.04 - 0.03)",
+        "result": 99.99999999999999,
+        "unit": "people over two years"
+      },
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T26-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "common_reasoning",
+      "source_locators": [
+        {
+          "source_id": "K01-2024-expansion",
+          "locator": "Practice Points 5.5.1-5.5.2; Table 43: comprehensive conservative care"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Continue active supportive care and review the person's evolving goals and options.",
+      "checked_claim": "Supportive care and advance planning remain active and revisable. Reassess goals, expected benefits, burdens and clinical circumstances through shared decision-making.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T27-001",
+      "version": 1,
+      "kind": "question",
+      "skill": "common_reasoning",
+      "source_locators": [
+        {
+          "source_id": "K01-2024-expansion",
+          "locator": "Practice Point 3.6.3: hyperkalemia management during RAS inhibition"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Address potassium contributors and feasible control measures before automatically withdrawing beneficial therapy.",
+      "checked_claim": "Review diet, supplements, interacting medicines, volume and potassium-control options with the relevant clinicians. Preserve benefit when safely feasible; uncontrolled hyperkalemia or symptomatic hypotension can change that decision.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-T27-002",
+      "version": 1,
+      "kind": "question",
+      "skill": "mechanism",
+      "source_locators": [
+        {
+          "source_id": "K01-2024-expansion",
+          "locator": "Section 1.2.2, sources of error in eGFRcr-cys, printed S151: inflammation and exogenous steroid use"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": "Review non-GFR influences and obtain a more appropriate estimate or measured GFR when needed.",
+      "checked_claim": "Both markers have non-GFR determinants. Integrate muscle mass, inflammation and medications; use combined or measured approaches as appropriate to the decision rather than treating either marker as universally definitive.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-CASE-PROXIMAL",
+      "version": 1,
+      "kind": "case",
+      "skill": "mixed_domain_reasoning",
+      "source_locators": [
+        {
+          "source_id": "L01-IKMG-evaluation-2019",
+          "locator": "Light-chain proximal tubulopathy; monoclonal immunoglobulin testing"
+        },
+        {
+          "source_id": "L01-IKMG-evaluation-2019",
+          "locator": "Definition and evaluation of MGRS"
+        },
+        {
+          "source_id": "L01-IKMG-evaluation-2019",
+          "locator": "Renal biopsy evaluation"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": null,
+      "checked_claim": "A normal glucose concentration does not explain away glycosuria. | A monoclonal result is a lead to investigate, not automatic renal causality.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-CASE-OBSTRUCTION",
+      "version": 1,
+      "kind": "case",
+      "skill": "mixed_domain_reasoning",
+      "source_locators": [
+        {
+          "source_id": "L01-CUA-ureteral-2021",
+          "locator": "Conservative management: obstructive pyelonephritis"
+        },
+        {
+          "source_id": "K10-2012-expansion",
+          "locator": "Sections 2.3 and 5.1: cause evaluation and emergent KRT indications"
+        },
+        {
+          "source_id": "L01-CUA-ureteral-2021",
+          "locator": "Obstructive pyelonephritis: definitive treatment after infection treatment"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": null,
+      "checked_claim": "Treat the obstructed infected source as well as systemic consequences. | Kidney support and urologic source control solve different problems.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-CASE-TMA",
+      "version": 1,
+      "kind": "case",
+      "skill": "mixed_domain_reasoning",
+      "source_locators": [
+        {
+          "source_id": "L01-ISTH-TTP-diagnosis-2020",
+          "locator": "Introduction: TTP/HUS distinction and ADAMTS13"
+        },
+        {
+          "source_id": "L01-ISTH-TTP-diagnosis-2020",
+          "locator": "Recommendation 1, steps 1-2"
+        },
+        {
+          "source_id": "L01-ISTH-TTP-diagnosis-2020",
+          "locator": "Introduction and Recommendation 1: severe deficiency and inhibitor evaluation"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": null,
+      "checked_claim": "TMA recognition is the start of etiologic assessment. | Preserve pretreatment evidence without delaying time-critical specialist care.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-CASE-STONE-ACID",
+      "version": 1,
+      "kind": "case",
+      "skill": "mixed_domain_reasoning",
+      "source_locators": [
+        {
+          "source_id": "G01-ERKNet-dRTA-2021",
+          "locator": "Diagnosis and pathophysiology"
+        },
+        {
+          "source_id": "G01-ERKNet-dRTA-2021",
+          "locator": "Diagnostic criteria; proximal versus distal acidification defects"
+        },
+        {
+          "source_id": "L01-CUA-stones-2022",
+          "locator": "Index patient 2: calcium phosphate stones and distal RTA"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": null,
+      "checked_claim": "Persistent acid-base and urine patterns can localize a tubular disorder. | Stone composition, citrate and bone concerns can be parts of the same process.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-CASE-PD-VOLUME",
+      "version": 1,
+      "kind": "case",
+      "skill": "mixed_domain_reasoning",
+      "source_locators": [
+        {
+          "source_id": "G02-peritoneal-dialysis-2017",
+          "locator": "Sections 3-4: solute clearance and ultrafiltration/fluid management"
+        },
+        {
+          "source_id": "G02-peritoneal-dialysis-2017",
+          "locator": "Section 4: fast transport and ultrafiltration"
+        },
+        {
+          "source_id": "G02-haemodialysis-2019",
+          "locator": "Guidelines 1 and 4.1: holistic adequacy and fluid assessment"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": null,
+      "checked_claim": "Fluid balance and small-solute clearance are related but different outcomes. | Changes in residual function and membrane transport should trigger a whole-patient review.",
+      "calculation": null,
+      "independent_human_review": false
+    },
+    {
+      "id": "RN11-CASE-PREGNANCY",
+      "version": 1,
+      "kind": "case",
+      "skill": "mixed_domain_reasoning",
+      "source_locators": [
+        {
+          "source_id": "G02-pregnancy-renal-2019",
+          "locator": "Recommendation 4.1.1"
+        },
+        {
+          "source_id": "G02-pregnancy-renal-2019",
+          "locator": "Recommendation 4.8.1"
+        },
+        {
+          "source_id": "G02-pregnancy-renal-2019",
+          "locator": "Recommendations 4.4.5-4.4.6"
+        }
+      ],
+      "reviewed_on": "2026-10-04",
+      "reviewer_kind": "assistant",
+      "key_text": null,
+      "checked_claim": "Pregnancy changes the validity of familiar kidney measurements. | A prior CKD diagnosis does not explain every later maternal abnormality.",
+      "calculation": null,
+      "independent_human_review": false
+    }
+  ]
+}

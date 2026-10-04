@@ -143,13 +143,14 @@ def cite(source, locator):
 QUESTIONS = []
 
 
-def q(id, topic, objective, source, locator, stem, correct, wrong, rationale, *, secondary=(), difficulty="application"):
+def q(id, topic, objective, source, locator, stem, correct, wrong, rationale, *, secondary=(), difficulty="application", items=None):
     assert len(wrong) == 3
+    destination = QUESTIONS if items is None else items
     # Balanced fixed placement, reproducible across publication/reinstallation.
-    key_index = len(QUESTIONS) % 4
+    key_index = len(destination) % 4
     choices = list(wrong)
     choices.insert(key_index, (correct, rationale))
-    QUESTIONS.append({
+    destination.append({
         "id": id, "version": 1, "family_id": id + ".family",
         "family_version": 1, "key_version": 1, "topic_id": topic,
         "secondary_topic_ids": list(secondary),
@@ -547,10 +548,11 @@ def stage(narrative, prompts, points, source, locator):
             "sources": [cite(source, locator)]}
 
 
-def case(id, topic, secondary, objectives, title, summary, stages, take_home):
+def case(id, topic, secondary, objectives, title, summary, stages, take_home, *, items=None):
     numbered = [{"id": f"stage-{n + 1}", **s} for n, s in enumerate(stages)]
     source_map = {(s["source_id"], s["locator"]): s for st in stages for s in st["sources"]}
-    CASES.append({"id": id, "version": 1, "topic_id": topic,
+    destination = CASES if items is None else items
+    destination.append({"id": id, "version": 1, "topic_id": topic,
                   "secondary_topic_ids": secondary, "objective_ids": objectives,
                   "license": "CC-BY-4.0", "original": True, "synthetic": True,
                   "usage": "teaching", "title": title, "summary": summary,
@@ -813,24 +815,25 @@ case("RN-CASE-LUPUS", "T16", ["T10", "T22"],
 ], ["Normal filtration does not exclude lupus kidney involvement.", "Tissue evaluation can change what a kidney diagnosis means for treatment."])
 
 
-def publish(path: Path):
-    coverage = coverage_for(TOPICS, CASES, QUESTIONS,
-                            ["T03", "T04", "T06", "T08", "T10", "T20", "T21"], 40)
-    bundle = {"topics": TOPICS, "sources": SOURCES, "cases": CASES,
-              "questions": QUESTIONS, "coverage": coverage}
+def publish_snapshot(path: Path, *, version: str, topics, sources, cases, questions,
+                     target_topics, minimum_questions: int, withdrawals=()):
+    """Reuse the original publisher for additive, immutable content releases."""
+    coverage = coverage_for(topics, cases, questions, target_topics, minimum_questions)
+    bundle = {"topics": topics, "sources": sources, "cases": cases,
+              "questions": questions, "coverage": coverage}
     blobs = {f"{name}.json": (json.dumps(body, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
              for name, body in bundle.items()}
     manifest = {
         "schema_version": 1, "repository_contract": 1, "id": "renulus-foundations",
-        "version": "1.0.0", "state": "published", "published_on": DATE,
+        "version": version, "state": "published", "published_on": DATE,
         "title": "Renulus foundations: cross-domain original learning",
         "license": "CC-BY-4.0", "authors": ["Renulus contributors (assistant-authored initial pack)"],
-        "attribution": "Renulus foundations 1.0.0, Renulus contributors, CC BY 4.0. Identify any subsequent changes. Primary medical sources retain their own rights.",
+        "attribution": f"Renulus foundations {version}, Renulus contributors, CC BY 4.0. Identify any subsequent changes. Primary medical sources retain their own rights.",
         "source_register": "docs/SOURCES.md",
         "files": {name: {"path": f"{name}.json",
                            "sha256": hashlib.sha256(blobs[f"{name}.json"]).hexdigest()} for name in bundle},
         "claims": {"complete_curriculum": False, "complete_esen_eph_blueprint": False,
-                   "independent_human_review": False}, "withdrawals": [],
+                   "independent_human_review": False}, "withdrawals": list(withdrawals),
     }
     blobs["manifest.json"] = (json.dumps(manifest, indent=2) + "\n").encode("utf-8")
     for name, raw in blobs.items():
@@ -844,8 +847,15 @@ def publish(path: Path):
             target.write_bytes(raw)
     pack = validate_pack(path)
     return {"pack": pack.manifest["id"], "version": pack.manifest["version"],
-            "topics": len(TOPICS), "objectives": sum(len(t["objectives"]) for t in TOPICS),
-            "questions": len(QUESTIONS), "cases": len(CASES), "sha256": pack.sha256}
+            "topics": len(topics), "objectives": sum(len(t["objectives"]) for t in topics),
+            "questions": len(questions), "cases": len(cases), "sha256": pack.sha256}
+
+
+def publish(path: Path):
+    return publish_snapshot(path, version="1.0.0", topics=TOPICS, sources=SOURCES,
+                            cases=CASES, questions=QUESTIONS,
+                            target_topics=["T03", "T04", "T06", "T08", "T10", "T20", "T21"],
+                            minimum_questions=40)
 
 
 if __name__ == "__main__":

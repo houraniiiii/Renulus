@@ -190,3 +190,79 @@ creation. Install later eligible revisions explicitly rather than undoing a
 withdrawal. Remaining objectives and formal examination mapping need further
 content work. No full ESENeph blueprint, live model, native installer or
 independently reviewed clinical bank is claimed.
+
+## Wave 2: first coherent increment
+
+October 4, 2026. The second wave writes only content/, tools/content/,
+tests/content/ and this evidence file. Runtime, applied schema, main and the
+source collection remain read only. Existing content/assessment API and the
+raw-question HTTP exposure guard are unchanged.
+
+renulus-foundations 1.0.1 adds 54 original questions (two for each of 27 topics)
+and six three-stage mixed-domain synthetic cases, totaling 106 questions and
+20 cases. New cases connect proximal wasting/paraproteins, septic obstruction,
+TMA/plasma exchange, acidification/stones/bone, PD transport/volume/nutrition,
+and pregnancy/CKD/biopsy/BP. All 56 objectives now have explicit question/case
+links. This is linked coverage, not a full curriculum or ESENeph blueprint.
+
+Manifest-file SHA-256:
+65bea4d4585ff856e63688e9418cac1745d03125deda301a978561370c5b3fd4.
+Canonical bundle SHA-256:
+515c3cef9c6387727d45c0098fe8d319be88d6162f81026ce68aeff9be4ac3e9.
+The original 1.0.0 reproduces byte for byte, including source snapshots, with
+its original hashes. New scoped citation IDs keep later checks independent
+from sources pinned by the released items. Source selection follows actual
+item/stage citations so later-only sources cannot alter this increment.
+
+Authoring reuses the existing helpers, immutable publisher, jsonschema validator
+and canonical SQLite loader. The CLI adds repeatable --predecessor and
+--review-evidence checks: additive ancestry, unchanged pinned citation metadata,
+stable families, correction/withdrawal rules, and evidence-to-key/locator/source
+consistency. No runtime framework, parser dependency, model or migration is added.
+
+content/reviews/renulus-foundations-1.0.1.json holds 60 new-item review records.
+Medical review is explicitly assistant-only: primary public sections, original
+scenario/distractor review, units and synthetic arithmetic. Independent human
+review remains false. Primary source originals, figures, algorithms and prose
+are not redistributed. L01 is bibliographic provenance, not an open full-text
+or AI incorporation grant. Unknown ERA chapter versions remain unknown and
+acquisition metadata is not counted as published reviewed content.
+
+Primary checks include official KDIGO PDFs read in memory with installed
+pypdfium2 and prior indexed official locators; no source files were saved.
+Prepublication checks corrected BP recommendation labels, HbA1c and FENa
+locators, and cystatin-C error references to the actual printed S151. The
+urine-eosinophil study uses a qualitative primary-abstract check plus its
+2018 correction notice; numeric performance is not re-audited. Exact correction
+scope, donor recommendation/page locators and access failures are documented
+in content/reviews/source-check-wave2.md.
+
+The UKKA official hyperkalemia page now links a July 2026 updated final.
+G02-hyperkalemia-2026-07 records it separately; old 2023 metadata is unchanged.
+The primary PDF frontmatter/update notes were read; review remains due October
+2026. Source/update owner should assess the new edition without treating it as
+an automatic rewrite of historical keys. No exhaustive source-currency clearance
+is claimed. Newer main SOURCES.md register/hash remains the snapshot above.
+
+Observed release checks in shared CPython 3.14.4: 60 content/foundation tests
+passed; one existing Starlette/httpx deprecation warning, no failures/skips.
+The real CLI validated 1.0.1 against main SOURCES, 1.0.0 ancestry and all
+60 evidence rows. Tests exercise actual 106-item activation/restart/idempotency,
+original bytes, numeric keys, reserved-question separation, false/missing source
+and key evidence, immutable citation rejection and activation rollback.
+
+    python tools/content/validate_pack.py content/packs/renulus-foundations/1.0.1 --source-register C:/Users/karol/Documents/t3-workspaces/Renulus/docs/SOURCES.md --predecessor content/packs/renulus-foundations/1.0.0 --review-evidence content/reviews/renulus-foundations-1.0.1.json
+    python -m pytest tests/content tests/integration/test_foundation.py -q
+
+The integrator owns exact version selection and activation. Proposed contract
+(issue #4 comment 5983938224) is services.registry["content_pack_selection"] =
+{"id":"renulus-foundations","version":"1.1.0","upgrade_from":["1.0.0","1.0.1"]}.
+For this first increment select 1.0.1 with upgrade_from=["1.0.0"]. Bootstrap
+installs a never-installed selected target only for a fresh lineage or an
+explicit allowed older active version of the same lineage. Preserve inactive
+or withdrawn states; do not auto-downgrade or replace another lineage. Reuse
+install_pack() transactions and existing withdrawal checks; no migration needed.
+Metadata-only GET /content/packs and POST /content/packs/activate {id,version}
+were proposed to main. /content/manifest remains actual active version.
+No raw stem route returns. M4/M3/M6 combined producer/UI and native installation
+remain integration work, not proof provided by this content-only suite.
