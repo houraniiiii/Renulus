@@ -26,6 +26,15 @@ class SyntheticProtector:
 
 @pytest.fixture(autouse=True)
 def no_live_network(monkeypatch):
+    from renulus.retrieval.http import OfficialHTTP
+    original_read = OfficialHTTP._read
+    async def guarded_read(self, *args, **kwargs):
+        # Windows Proactor ConnectEx can bypass socket.connect monkeypatches.
+        # Require the synthetic HTTP transport before any retrieval I/O starts.
+        if self.transport is None:
+            raise AssertionError("Synthetic retrieval tests require an explicit HTTP transport")
+        return await original_read(self, *args, **kwargs)
+    monkeypatch.setattr(OfficialHTTP, "_read", guarded_read)
     # Windows asyncio uses a loopback self-pipe; allow that local mechanism.
     for name in ("connect", "connect_ex"):
         original = getattr(socket.socket, name)

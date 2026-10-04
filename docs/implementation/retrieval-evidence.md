@@ -621,3 +621,9 @@ discovery/memory 29 passed. TypeScript, Vite and Electron compilation passed on
 the lockfile-pinned Electron 44.5.1 and Vitest 4.1.11 installation. These are
 application checks; keyed vendor billing and live generative connections are
 not established by them.
+
+After fixing the registrar fixture, the combined Retrieval, Learn discovery and
+source-status suite passed all 89 checks in 67.84 seconds. Synthetic retrieval
+checks now require an explicit HTTP transport before reads. This supplements the
+socket tripwire because Windows Proactor ConnectEx may bypass a patched Python
+socket.connect method. No live retrieval HTTP route was invoked in this rerun.
