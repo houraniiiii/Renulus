@@ -42,7 +42,9 @@ class StudyService:
             if row["kind"] != "assessment-answer":
                 continue
             payload = row["payload"]
-            bucket = "repeat" if payload.get("repeat") else "assisted" if payload.get("assisted") else "fresh"
+            bucket = payload.get("score_bucket")
+            if bucket not in groups:
+                bucket = "assisted" if payload.get("assisted") else "repeat" if payload.get("repeat") else "fresh"
             groups[bucket]["answered"] += 1
             groups[bucket]["correct"] += int(bool(payload.get("correct")))
             topic = topics.setdefault(row["topic_id"], {"topic_id": row["topic_id"], "answered": 0,

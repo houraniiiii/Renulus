@@ -65,3 +65,15 @@ def test_confirmed_completion_is_idempotent_and_new_home_has_no_fake_progress(tm
     service.change_activity(activity["id"], {"state": "completed"})
     service.change_activity(activity["id"], {"state": "completed"})
     assert len(services.db.fetch_all("SELECT * FROM learning_evidence WHERE kind='study-completion'")) == 1
+
+
+def test_progress_follows_committed_assessment_bucket_and_legacy_assisted_priority(tmp_path):
+    services = create_app(tmp_path).state.services
+    evidence(services, "assisted-repeat", "ckd", True, assisted=True, repeat=True, score_bucket="assisted")
+    evidence(services, "legacy-assisted-repeat", "dialysis", False, assisted=True, repeat=True)
+    evidence(services, "canonical-repeat", "transplantation", True, repeat=False, score_bucket="repeat")
+    assert services.get("study").progress()["groups"] == {
+        "fresh": {"answered": 0, "correct": 0},
+        "assisted": {"answered": 2, "correct": 1},
+        "repeat": {"answered": 1, "correct": 1},
+    }

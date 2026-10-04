@@ -1,5 +1,6 @@
 """Durable capture/recovery and rebuildable, revision-filtered learner recall."""
 import asyncio
+from contextlib import closing
 import shutil
 import threading
 from pathlib import Path
@@ -65,7 +66,7 @@ class MemoryService:
             self._purge()
             # secure_delete handles pages; truncate WAL so superseded text isn't
             # retained in an app-owned log after correction/history removal.
-            with self.db.connect() as conn:
+            with closing(self.db.connect()) as conn:
                 checkpoint = conn.execute('PRAGMA wal_checkpoint(TRUNCATE)').fetchone()
                 if checkpoint[0]:
                     raise ApiError('memory_purge_pending', 'Memory cleanup must finish after active readers close', 503, True)
