@@ -8,6 +8,8 @@ from ..contracts import ApiError, ContextScope, Scope
 from ..storage.database import utc_now
 from .models import Rights, SourceMetadata
 from .repository import MEDIA
+from .acquired import (AcquiredLiterature, MARKER, catalogue_policy, collection_path,
+                       version_identity, version_name)
 
 COLLECTION = Path.home() / "Documents" / "Renulus-data"
 MANIFEST = "metadata/acquisition-2026-10-04/acquisition-manifest.jsonl"
@@ -21,13 +23,7 @@ class CollectionCatalogue:
         self.root = Path(root).resolve()
 
     def _path(self, value):
-        path = Path(value)
-        if not path.is_absolute():
-            path = self.root / path
-        path = path.resolve()
-        if not path.is_relative_to(self.root) or not path.is_file():
-            raise ApiError("collection_path_invalid", "The acquisition entry has no valid file within the authorised collection", 409)
-        return path
+        return collection_path(self.root, value)
 
     def _entry(self, path, source_id, title, digest, size, metadata, rights, reserved=False):
         relative = path.relative_to(self.root).as_posix()
@@ -87,7 +83,9 @@ class CollectionCatalogue:
                         value = item.get("local_path") or item.get("path")
                         if not value:
                             continue
-                        path = self._path(value)
+                        # Catalogue receipts without reading bodies or testing every
+                        # acquired file. Selected import performs existence/hash checks.
+                        path = collection_path(self.root, value, must_exist=False)
                         reserved = sid == "E02" or bool(item.get("reserved"))
                         rights = self._rights(item)
                         status = str(item.get("status", ""))
@@ -103,6 +101,23 @@ class CollectionCatalogue:
                             doi=item.get("doi"), pmid=str(item["pmid"]) if item.get("pmid") else None,
                             pmcid=item.get("pmcid"), notes=["Acquisition does not establish currentness or clinical review"])
                         entry = self._entry(path, sid, item.get("title") or path.stem, item.get("sha256"), item.get("bytes"), metadata, rights, reserved)
+                        policy = catalogue_policy(item)
+                        if policy:
+                            entry["eligibility"], explanation = policy
+                            entry["rights"] = Rights(licence=rights.licence).model_dump()
+                            metadata.notes.append(explanation)
+                            metadata.asset_role = [str(item.get("artifact_type", "acquired-payload"))]
+                            if sid == "L02" and item.get("artifact_type") == "fulltext-jats":
+                                metadata.asset_role.append(MARKER)
+                                try:
+                                    metadata.edition = version_name(version_identity(item))
+                                except ApiError:
+                                    pass
+                            # Dataset receipt dates and claimed finality do not
+                            # settle scientific status for acquired literature.
+                            metadata.publication_status = "unknown"
+                            metadata.latest_final_verified = metadata.content_reviewed = False
+                            entry["metadata"] = metadata.model_dump()
                         if entry["id"] not in seen:
                             entries.append(entry)
                             seen.add(entry["id"])
@@ -166,15 +181,43 @@ class CollectionCatalogue:
         if len(entry_ids) > 250:
             raise ApiError("batch_limit", "Select at most 250 files per import batch", 413)
         results = []
+        acquired_selection = None
         for entry_id in dict.fromkeys(entry_ids):
             entry = self.db.fetch_one("SELECT * FROM knowledge_catalogue WHERE id=?", (entry_id,))
             if not entry:
                 results.append({"entry_id": entry_id, "status": "failed", "code": "catalogue_entry_missing"})
                 continue
-            if entry["eligibility"] != "eligible" or entry["reserved"]:
+            metadata = json.loads(entry["metadata_json"])
+            is_acquired = MARKER in metadata.get("asset_role", [])
+            if entry["reserved"] or (entry["eligibility"] != "eligible" and not (is_acquired and entry["eligibility"] == "inspection_required")):
                 results.append({"entry_id": entry_id, "status": "excluded", "code": entry["eligibility"]})
                 continue
             try:
+                if is_acquired:
+                    # One metadata pass for this deliberate batch, and only its
+                    # selected JATS plus exact matching metadata are opened.
+                    if acquired_selection is None:
+                        candidates = []
+                        for identifier in dict.fromkeys(entry_ids):
+                            candidate = self.db.fetch_one("SELECT * FROM knowledge_catalogue WHERE id=?", (identifier,))
+                            if candidate and not candidate["reserved"] and candidate["eligibility"] in ("eligible", "inspection_required") and MARKER in json.loads(candidate["metadata_json"]).get("asset_role", []):
+                                candidates.append(candidate)
+                        try:
+                            acquired_selection = AcquiredLiterature(self.root).selections(candidates)
+                        except (OSError, UnicodeError):
+                            raise ApiError("acquisition_manifest_unavailable", "The acquisition manifest cannot be read; refresh it before selecting articles", 409) from None
+                    selected, matched = acquired_selection
+                    item = selected.get(entry_id)
+                    if isinstance(item, ApiError):
+                        raise item
+                    if not item:
+                        raise ApiError("article_receipt_missing", "Refresh the catalogue; this selected receipt is no longer in the manifest", 409)
+                    if item.get("sha256") != entry["expected_sha256"] or item.get("bytes") != entry["bytes"]:
+                        raise ApiError("catalogue_receipt_changed", "Refresh the catalogue before selecting this changed receipt", 409)
+                    article = AcquiredLiterature(self.root).inspect(item, matched.get(version_identity(item), {}))
+                    result = self._import_acquired(entry, article)
+                    results.append({"entry_id": entry_id, **result})
+                    continue
                 previous = self.db.fetch_one("SELECT j.id,j.state,r.sha256,d.deleted_at FROM knowledge_jobs j JOIN knowledge_revisions r ON r.id=j.revision_id JOIN knowledge_documents d ON d.id=r.document_id WHERE j.id=?", (entry["job_id"],)) if entry["job_id"] else None
                 if previous and not previous["deleted_at"] and previous["sha256"] == entry["expected_sha256"] and previous["state"] in ("queued", "processing", "ready"):
                     results.append({"entry_id": entry_id, **self.repository._result(previous["id"])})
@@ -192,5 +235,40 @@ class CollectionCatalogue:
                 self.db.execute("UPDATE knowledge_catalogue SET document_id=?,job_id=? WHERE id=?", (result["document_id"], result["job"]["id"], entry_id))
                 results.append({"entry_id": entry_id, **result})
             except ApiError as error:
+                if is_acquired:
+                    metadata["notes"].append("Selected inspection unavailable: " + error.code + " — " + error.message)
+                    self.db.execute("UPDATE knowledge_catalogue SET eligibility=?,metadata_json=?,rights_json=?,checked_at=? WHERE id=?",
+                        (error.code, json.dumps(metadata), Rights().model_dump_json(), utc_now(), entry_id))
                 results.append({"entry_id": entry_id, "status": "failed", "code": error.code, "message": error.message})
-        return {"results": results, "queued": sum(r["status"] == "queued" for r in results)}
+        return {"results": results, "queued": len({r["job"]["id"] for r in results if r["status"] == "queued"})}
+
+    def _import_acquired(self, entry, article):
+        # Reuse the parent's existing ingestion/mutation guards. No new lock,
+        # schema or API contract is introduced by this adapter.
+        with self.repository._ingest_lock, self.repository._lock:
+            effective = self.repository.source_status.effective(article.metadata)
+            if any((effective.retracted, effective.superseded, effective.repository_removed, effective.access_changed)):
+                raise ApiError("article_status_unavailable", "A recorded source-status restriction overrides the acquired receipt", 409)
+            if effective.publication_status == "final" or effective.latest_final_verified or effective.content_reviewed:
+                raise ApiError("article_version_review_required", "Publication-wide review does not establish currentness for this acquired article version; a version-specific status review is required", 409)
+            base = article.key
+            version_prefix = "acquired:L02:" + article.metadata.edition + ":"
+            previous = self.db.fetch_one("SELECT j.id,j.state,j.idempotency_key,r.sha256,r.document_id,d.deleted_at FROM knowledge_jobs j JOIN knowledge_revisions r ON r.id=j.revision_id JOIN knowledge_documents d ON d.id=r.document_id WHERE j.idempotency_key>=? AND j.idempotency_key<? ORDER BY (d.deleted_at IS NOT NULL),j.created_at DESC,r.ordinal DESC,j.id DESC LIMIT 1", (version_prefix, version_prefix + "\uffff"))
+            same_proof = previous and (previous["idempotency_key"] == base or previous["idempotency_key"].startswith(base + ":"))
+            if same_proof and not previous["deleted_at"] and previous["sha256"] == article.evidence["derivative_sha256"] and previous["state"] in ("queued", "processing", "ready"):
+                result = self.repository._result(previous["id"])
+            else:
+                key, replacement = base, None
+                if previous:
+                    if previous["deleted_at"]:
+                        key += ":reimport:" + previous["id"]
+                    else:
+                        replacement = previous["document_id"]
+                        key += ":retry:" + previous["id"]
+                result = self.repository.import_text(article.text, title=article.title,
+                    metadata=article.metadata, rights=article.rights, scope=ContextScope(kind=Scope.LIBRARY),
+                    idempotency_key=key, document_id=replacement, process=False)
+            self.db.execute("UPDATE knowledge_catalogue SET title=?,eligibility='eligible',metadata_json=?,rights_json=?,document_id=?,job_id=?,checked_at=? WHERE id=?",
+                (article.title, article.metadata.model_dump_json(), article.rights.model_dump_json(),
+                 result["document_id"], result["job"]["id"], utc_now(), entry["id"]))
+            return result
