@@ -51,3 +51,21 @@ docs/implementation/desktop-evidence.md and generated locally by
 scripts/install-electron.mjs. Extraction is development/install tooling only;
 the renderer has no archive-extraction interface. The NSIS packaging reservation
 does not enable Squirrel or its electron-winstaller install hook.
+
+Portable packaging adapts upstream scripts/bundles/payload.py's committed
+git-archive source snapshot, with an explicit Renulus runtime/content/licence
+allowlist. Runtime-lane diffs are preserved as source patches when an approved
+follow-up must precede parent integration. All source revisions and patch hashes
+are recorded in backend/bundle.json; backend/inventory.json records payload
+sizes and SHA256 hashes. Source originals and private profiles are not inputs.
+
+CPython 3.14.4 is the official PSF Windows amd64 embedded ZIP; its original
+LICENSE.txt remains in resources/backend/python. Only python314._pth is tailored
+for the app-owned import layout. Dependency wheel licences/metadata/source
+headers are retained under resources/backend/dependencies. Hermes's original
+licence remains under resources/backend/upstream/hermes and Renulus teaching
+content retains content/LICENSE. Electron's LICENSE and LICENSES.chromium.html
+remain beside the application executable. Complete CPU helper terms and their
+source/card evidence supplement the original bundled model cards under
+licenses/runtime-helpers/PROVENANCE.md; the helper weights and inventory are
+unchanged. The unsigned NSIS profile does not discover signing credentials.

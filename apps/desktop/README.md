@@ -45,11 +45,52 @@ RENULUS_TEST_ATTACH=1 selects native attachment evidence using the explicit
 development backend/token. They require disconnected synthetic profiles and
 write captures/public state under test-results. They do not log in or call models.
 
-pack:win is a packaging reservation that requires an explicit absolute
-RENULUS_BACKEND_BUNDLE with verified renulus-backend.exe and helpers. It builds
-an unsigned directory first, never publishes, and preserves app data on uninstall.
-A self-contained Windows backend/helper bundle and installer verification are
-the next integration steps; source native launch does not establish installation.
+The Windows payload uses official CPython 3.14.4 embeddable x64 Python and the
+selected Windows wheel tree. python314._pth limits imports to the bundle and
+disables user/registry/site startup discovery. No venv launcher, pyvenv.cfg or
+developer interpreter path is shipped. Doctors launch the application executable;
+Python, uv, Node and compiler tooling are build tools only.
+
+For developer packaging, run scripts/stage-backend.py with explicit --source,
+--source-revision, --environment, --helpers, --python-archive and a fresh --target
+under test-results. The archive checksum is enforced. Only reviewed public helper
+files are copied and hash-checked; their manifest must equal the source-root
+packaging/runtime/helper-assets.json. The committed source snapshot includes all
+numbered migrations, content packs, licences and attributed Hermes runtime.
+An explicitly approved --runtime-patch-repo/--runtime-patch-revision applies only
+the scoped runtime diff in generated scratch data, refuses conflicts and records
+the patch/revision/hash. It never edits either source repository.
+
+scripts/stage-renderer.py --source <integration> --revision <commit> --target
+<fresh-test-results-folder> builds/typechecks committed integrated module pages
+in this lane's scratch directory. --include-native also preserves the committed
+main/profile files and compiles them with this lane's owned backend.ts adoption.
+Its source/adoption hashes and exact diff are recorded in dist-electron.
+Set RENULUS_RENDERER_BUNDLE to its absolute apps/desktop/dist path,
+RENULUS_NATIVE_BUNDLE to its dist-electron path, and RENULUS_BACKEND_BUNDLE to the
+verified backend payload. All three integrated inputs must use one revision;
+the native entry must match this lane's actually installed patched Electron pin.
+npm run pack:win builds the native entry and an unsigned Windows directory under
+release/win-unpacked. To build NSIS after the directory proof, invoke the pinned
+electron-builder CLI with --config electron-builder.config.cjs --win nsis
+--publish never. Signing is explicitly disabled; installation is per-user with
+no elevation, automatic launch or generated desktop/start-menu shortcuts.
+App data is preserved on uninstall.
+NSIS toolset1.2.1 (NSIS3.12) and Windows7-Zip toolset1.0.0 are explicitly pinned.
+Their official release archive digests match the installed builder's checksum
+tables; acquisition and resulting artifact hashes are recorded with evidence.
+
+Copy the complete win-unpacked folder to a fresh location before proof. Set
+RENULUS_PACKAGED_EXECUTABLE to its absolute Renulus Development.exe, then run
+node scripts/native-evidence.mjs. Packaged proof strips the target PATH to OS
+directories, asserts python/python3/py/uv/node/npm do not resolve, verifies the
+bundled interpreter paths and launches two independent managed profiles. It
+checks actual helper/import readiness and disconnected Connections, sandbox,
+authentication, routes and owned-child cleanup. RENULUS_EXPECT_SOURCE_REVISION
+can enforce the exact committed snapshot while preserving the bundled native
+adoption provenance in evidence. RENULUS_INSTALLED_PROOF=1 marks
+the same checks against an executable in the explicit isolated install folder.
+These checks do not establish signed or clean-machine release evidence.
 
 Feature entry points are src/modules/{study,learn,library,cases,assessment,
 memory,updates,connections}/index.tsx with a default React component. A missing
