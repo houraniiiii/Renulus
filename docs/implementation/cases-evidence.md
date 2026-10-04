@@ -4,8 +4,7 @@ October 4, 2026 · issue #7 · branch `build/case-discussion`.
 
 Owned writes: `runtime/renulus/cases/`, `apps/desktop/src/modules/cases/`,
 `tests/cases/` and this file. Shared runtime, storage, manifests and shell are
-read only. This is the first bounded backend handoff; UI follows the desktop
-shell handoff.
+read only. The first backend handoff is followed by the isolated Flow page.
 
 ## Decisions and requested prerequisites
 
@@ -103,12 +102,13 @@ Live model authentication and no-save behaviour of the actual Hermes adapter
 require F0/integrated evidence. Image/PDF capabilities are explicitly unavailable;
 no input bytes/path are accepted for disk extraction. Generic principle capture
 is not exposed. Explain/practice tickets expose an internal guarded context and
-cancellation seam; destination integration is still required. UI follows this
-backend commit; installer and complete S2 acceptance are not claimed.
+cancellation seam; main owns destination integration. The isolated Cases UI is
+implemented below. Installer and complete S2 acceptance are not claimed.
 
 ## Additive producer handoff for integration
 
 Baseline backend commit: `454a8015c29c3415a203ba4b3f21d8e6e5c4c447`.
+Additive producer commit: `b0fb9a08c8a3d4b1d524d5399ca2dd78fb8b4f0a`.
 The proposed `cases/schema.sql` remains unchanged: only explicit Save writes
 `case_sessions`; the shared `deletion_ledger` is the deletion authority. No table
 is added for temporary handoffs, messages, runs or drafts.
@@ -160,3 +160,59 @@ Integration requests: wire Learn to this guarded seam and preserve the opaque
 `case_id` when returning to Cases. The shell disclosure currently says temporary
 case is not saved even after explicit Save; adjust the shared copy to distinguish
 temporary processing from a saved snapshot. Temporary scope itself remains correct.
+
+## Flow Cases page handoff
+
+The desktop prerequisite `75678df` was explicitly handed off and cherry-picked
+locally as `444e3829`; main already integrated the foundation as `5a8644e`.
+Do not replay this duplicate prerequisite. The isolated UI depends on the
+additive producer commit above for its Explain payload.
+
+Owned UI files are `apps/desktop/src/modules/cases/index.tsx`, `types.ts`,
+`useCases.ts`, `cases.css` and `useCases.test.tsx`. The default entry uses the
+shared Flow primitives, API helper, SSE helper and volatile navigation. No
+shared shell, platform, tokens, manifests or dependencies were changed.
+
+The page starts a text case, clears an accepted draft, discusses through ordered
+SSE, stops a run, explicitly saves, reopens a saved snapshot, closes/discards
+temporary changes, deletes and reports deferred physical cleanup. Original
+teaching options come from the content repository API; the page reveals only
+returned stages, then teaching points and the debrief. Empty, loading, unavailable
+provider and storage-error states use actual responses. No sample content or
+provider answer ships with the page.
+
+Temporary and saved-snapshot cues distinguish the current live work from the
+canonical snapshot. New questions and staged reveals stay temporary until Save.
+The page clears a discussion question only after the started event; a request
+rejected before acceptance retains the draft. Async action epochs suppress late
+Save and handoff results after deletion or unmount. Unmount aborts requests/streams
+and cancels the actual backend run.
+
+Explore in Learn requests the app-owned Explain ticket with the current revision
+and question. It navigates using the entire returned payload in React memory and
+the returned temporary scope, including for saved cases. Cases remounts from a
+volatile `handoff.case_id` (or temporary-scope entity ID) by GET, preserving its
+live backend session without any automatic Save. Main owns guarded Learn/practice
+integration and its return action. This lane does not claim that consumer is done.
+
+UI checks on Windows, October 4, 2026:
+
+- `npm run typecheck`: passed.
+- `npm test -- --reporter=dot`: **24 passed** across three test files, including
+  eight Cases tests. The suite verifies explicit Save only, volatile temporary
+  and saved-case navigation/return, no browser-storage writes or raw URL payload,
+  late Save/handoff rejection after delete, SSE envelope consumption, cancellation
+  on unmount, submitted-draft cleanup and rejected-question retention.
+- `npx vite build`: passed (renderer build; Electron packaging not exercised).
+- Browser smoke check against the isolated actual backend on ports 8879/5197:
+  synthetic text start and explicit Save succeeded. Desktop and 800×900 layouts
+  were inspected; the final default-viewport page has no document overflow.
+  The temporary viewport override was reset. The preview has no live provider or
+  installed content pack; discussion/reveals are covered with isolated fixtures,
+  not claimed as live provider/content validation.
+- `git diff --check`: passed. Python backend suite remains **38 passed**; UI
+  changes do not alter its schema or provider adapter.
+
+Image/PDF extraction remains disabled until a real no-write parser/provider proof
+exists. Generic principle capture, live subscription retention, clean-machine
+installation and complete combined consumer verification remain follow-up work.

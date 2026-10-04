@@ -1,0 +1,35 @@
+/* Flow extension: one case/question leads; authored and saved options recede. */
+.cases-workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(12rem, 16rem); gap: var(--space-40); align-items: start; }
+.cases-main { min-width: 0; display: grid; gap: var(--space-24); }
+.case-start { margin-top: var(--space-8); }
+.case-catalogue { padding-left: var(--space-24); border-left: 1px solid var(--line); }
+.case-catalogue h2 { display: flex; gap: var(--space-12); align-items: center; }
+.case-catalogue .state { padding: var(--space-16) 0; gap: var(--space-8); }
+.case-catalogue .state svg { display: none; }
+.case-catalogue .state h2 { font-size: 16px; }
+.case-catalogue .state p { font-size: 14px; }
+.case-context { display: grid; gap: var(--space-16); }
+.case-context-meta { display: flex; gap: var(--space-12); flex-wrap: wrap; align-items: center; }
+.case-details summary, .case-debrief summary { cursor: pointer; padding: var(--space-8) 0; min-height: 44px; font-weight: 600; color: var(--ink-strong); }
+.case-text { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
+.case-details[open] .case-text { margin-top: var(--space-8); }
+.case-teaching { display: grid; gap: var(--space-24); }
+.case-stage { display: grid; gap: var(--space-12); }
+.case-stage + .case-stage { padding-top: var(--space-24); border-top: 1px solid var(--line-subtle); }
+.case-prompts { margin: 0; padding-left: var(--space-24); color: var(--ink-strong); }
+.case-prompts li + li, .case-debrief li + li { margin-top: var(--space-8); }
+.case-debrief { color: var(--ink-secondary); }
+.case-discussion { display: grid; gap: var(--space-24); }
+.case-message { display: grid; gap: var(--space-8); }
+.case-message h3 { font-size: 15px; color: var(--ink-secondary); }
+.case-message-assistant { padding-bottom: var(--space-24); border-bottom: 1px solid var(--line-subtle); }
+.case-composer .textarea { min-height: 112px; }
+.case-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
+.case-list button { width: 100%; display: grid; gap: var(--space-4); text-align: left; padding: var(--space-12); border-radius: var(--radius-control); min-height: 44px; overflow-wrap: anywhere; }
+.case-list button:hover:not(:disabled) { background: var(--renal-teal-soft); }
+.case-list button span { font-size: 13px; color: var(--ink-muted); }
+.case-confirm { width: min(480px, calc(100% - 32px)); border: 1px solid var(--line); border-radius: var(--radius-panel); padding: var(--space-32); color: var(--ink); background: var(--surface); box-shadow: var(--shadow-overlay); }
+.case-confirm h2, .case-confirm p { margin-bottom: var(--space-24); }
+.case-confirm::backdrop { background: color-mix(in srgb, var(--ink-strong) 24%, transparent); }
+@media (max-width: 1050px) { .cases-workspace { grid-template-columns: minmax(0, 1fr); gap: var(--space-32); } .case-catalogue { border-left: 0; border-top: 1px solid var(--line); padding: var(--space-24) 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-24); } .case-catalogue .section + .section { margin-top: 0; } }
+@media (max-width: 600px) { .case-catalogue { grid-template-columns: 1fr; } .case-confirm { padding: var(--space-24); } .cases-page .page-header-actions { gap: var(--space-8); } }
