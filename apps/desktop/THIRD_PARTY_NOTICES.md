@@ -38,3 +38,16 @@ stock headless gateway startup; the general-purpose Hermes renderer/preload,
 filesystem commands, updater, telemetry and credential discovery are not enabled.
 Electron, electron-builder, Vite and other development tools retain their
 package notices; distributing a full dependency tree needs its complete notices.
+
+Security correction on October 4, 2026 pins Electron 44.5.1 and Vitest 4.1.11.
+Electron's published installer now uses its BSD-2-Clause
+@electron-internal/extract-zip (lock: 1.0.5) rather than extract-zip 2.0.1.
+This is an upstream adoption; Renulus does not provide a replacement extractor.
+The downloaded Electron Windows x64 ZIP is verified against its npm checksums
+and the fresh official release SHASUMS256.txt. The ZIP SHA256 is
+9b382492dcfee91f8f9e92c91f7972550a1b95d2299cac72279dab33a600d7db.
+Source/artifact and package-integrity details are recorded in
+docs/implementation/desktop-evidence.md and generated locally by
+scripts/install-electron.mjs. Extraction is development/install tooling only;
+the renderer has no archive-extraction interface. The NSIS packaging reservation
+does not enable Squirrel or its electron-winstaller install hook.
