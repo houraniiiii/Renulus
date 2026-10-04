@@ -16,6 +16,7 @@ const expectedVersion = JSON.parse(await readFile(path.join(desktop, 'package.js
 const attached = process.env.RENULUS_TEST_ATTACH === '1';
 const packagedExecutable = process.env.RENULUS_PACKAGED_EXECUTABLE;
 const installed = process.env.RENULUS_INSTALLED_PROOF === '1';
+const serialNative = process.env.RENULUS_NATIVE_SERIAL === '1';
 if (installed && !packagedExecutable) throw new Error('Installed proof requires an explicit packaged executable.');
 if (packagedExecutable && (!path.isAbsolute(packagedExecutable) || attached)) throw new Error('Packaged proof needs an explicit absolute executable and its own managed backend.');
 const python = process.env.RENULUS_PYTHON;
@@ -56,6 +57,7 @@ delete env.ELECTRON_RUN_AS_NODE;
 const applications = [];
 const records = [];
 let startupCancellation = { tested: false };
+let sameProfileRestart = { tested: false };
 function alive(pid) { try { process.kill(pid, 0); return true; } catch (error) { return error.code === 'EPERM'; } }
 async function proveOpeningClose() {
   const startedAt = Date.now();
@@ -81,9 +83,10 @@ async function proveOpeningClose() {
   await closed;
   applications.pop();
   const childrenAfterClose = opening.childPids.filter(alive);
-  const otherOwnedBackendsAlive = records.every(record => record.childPids.every(alive));
-  if (childrenAfterClose.length || !otherOwnedBackendsAlive) throw new Error('Closing the opening window failed owned-child cleanup or affected another isolated instance.');
-  return { tested: true, profile, firstVisibleWindowSeconds, ...opening, childrenAfterClose, otherOwnedBackendsAlive };
+  const otherOwnedBackendsAlive = serialNative ? undefined : records.every(record => record.childPids.every(alive));
+  const previousOwnedBackendsStopped = serialNative ? records.every(record => record.childrenAfterClose?.length === 0) : undefined;
+  if (childrenAfterClose.length || (serialNative ? !previousOwnedBackendsStopped : !otherOwnedBackendsAlive)) throw new Error('Closing the opening window failed owned-child cleanup or independent-instance checks.');
+  return { tested: true, profile, firstVisibleWindowSeconds, ...opening, childrenAfterClose, otherOwnedBackendsAlive, previousOwnedBackendsStopped };
 }
 try {
   for (const name of ['a', 'b']) {
@@ -137,6 +140,12 @@ try {
       await page.screenshot({ path: path.join(evidence, 'flow-native-compact.png'), fullPage: true });
       records[0].routesChecked = routes; records[0].compactOverflow = overflow; records[0].destinationSearch = 'passed';
     }
+    if (serialNative) {
+      await application.close(); applications.pop();
+      records.at(-1).childrenAfterClose = records.at(-1).childPids.filter(alive);
+      if (records.at(-1).childrenAfterClose.length) throw new Error('An owned backend survived serial proof close.');
+      console.log(JSON.stringify({ stage: 'serial-native-instance-closed', name }));
+    }
   }
   if (records[0].userData === records[1].userData || records[0].pid === records[1].pid) throw new Error('Two instances were not isolated.');
   if (process.env.RENULUS_EXPECT_STARTUP_WINDOW === '1' && records.some(record => !record.startupWindowSeen)) throw new Error('The required early opening window was not observed.');
@@ -145,10 +154,34 @@ try {
   for (const app of applications.reverse()) await app.close();
 }
 for (const record of records) {
-  record.childrenAfterClose = record.childPids.filter(alive);
+  record.childrenAfterClose ??= record.childPids.filter(alive);
   if (record.childrenAfterClose.length) throw new Error('An owned backend survived native app close.');
+}
+if (packagedExecutable && process.env.RENULUS_PROVE_WARM_RESTART === '1') {
+  const original = records[0];
+  const startedAt = Date.now();
+  let application;
+  try {
+    console.log(JSON.stringify({ stage: 'same-profile-restart-starting', profile: original.profile }));
+    application = await electron.launch({ executablePath: packagedExecutable, args: [], cwd: path.dirname(packagedExecutable), env: { ...env, RENULUS_PROFILE: original.profile }, timeout: 360_000 });
+    const { page, ...windowTiming } = await waitForFlowWindow(application, { startedAt, timeout: 360_000 });
+    const native = await application.evaluate(({ app }) => ({ mainPid: process.pid, userData: app.getPath('userData'), packaged: app.isPackaged, electron: process.versions.electron, childPids: process._getActiveHandles().filter(handle => handle.constructor.name === 'ChildProcess').map(handle => handle.pid).filter(Boolean) }));
+    const backend = await page.evaluate(async () => {
+      const meta = await fetch('/api/v1/meta');
+      const status = await fetch('/api/v1/runtime/status');
+      const connections = await fetch('/api/v1/connections');
+      if (!meta.ok || !status.ok || !connections.ok) throw new Error('The same-profile backend did not authenticate.');
+      return { meta: await meta.json(), runtime: await status.json(), connections: await connections.json() };
+    });
+    sameProfileRestart = { tested: true, classification: 'same-profile restart with provisioned helpers; OS caches uncontrolled', profile: original.profile, ...windowTiming, backendReadySeconds: (Date.now() - startedAt) / 1000, ...native, backend };
+    if (!native.packaged || native.electron !== expectedVersion || native.mainPid === original.pid || native.userData !== original.userData || native.childPids.length !== 1 || backend.meta.api_version !== 1 || backend.connections.selected_provider !== null || backend.connections.connections.some(connection => connection.status !== 'disconnected') || !backend.runtime.helpers.embedding.ready || !backend.runtime.helpers.docling.ready) throw new Error('The same-profile restart changed the native/runtime isolation or disconnected state.');
+    if (process.env.RENULUS_EXPECT_STARTUP_WINDOW === '1' && !windowTiming.startupWindowSeen) throw new Error('The same-profile opening window was not observed.');
+    console.log(JSON.stringify({ stage: 'same-profile-restart-ready', ...windowTiming, backendReadySeconds: sameProfileRestart.backendReadySeconds }));
+  } finally { if (application) await application.close(); }
+  sameProfileRestart.childrenAfterClose = sameProfileRestart.childPids.filter(alive);
+  if (sameProfileRestart.childrenAfterClose.length) throw new Error('A same-profile owned backend survived app close.');
 }
 const attachedBackendAlive = attached ? (await fetch(new URL('/api/v1/meta', env.RENULUS_BACKEND_URL), { headers: { 'x-renulus-token': env.RENULUS_SESSION_TOKEN } })).status === 200 : undefined;
 if (attached && !attachedBackendAlive) throw new Error('Attached backend did not survive app close.');
-await writeFile(path.join(evidence, 'native-evidence.json'), JSON.stringify({ checkedAt: new Date().toISOString(), kind: packagedExecutable ? installed ? 'unsigned-installed-native' : 'unsigned-relocated-directory-native' : attached ? 'attached-development-native' : 'managed-development-native', portableRuntime, packagedSource, records, startupCancellation, attachedBackendAlive, limits: [installed ? 'No signed or clean-machine Windows package proof' : 'No installed or signed Windows package proof', 'No provider login or model inference', packagedExecutable ? 'Launch checks do not exercise every integrated feature journey' : 'Feature entries remain integration states in this lane', 'Windows tree-kill does not prove backend shutdown callbacks'] }, null, 2));
+await writeFile(path.join(evidence, 'native-evidence.json'), JSON.stringify({ checkedAt: new Date().toISOString(), kind: packagedExecutable ? installed ? 'unsigned-installed-native' : 'unsigned-relocated-directory-native' : attached ? 'attached-development-native' : 'managed-development-native', instanceMode: serialNative ? 'serial independent profiles' : 'concurrent independent profiles', portableRuntime, packagedSource, records, startupCancellation, sameProfileRestart, attachedBackendAlive, limits: [installed ? 'No signed or clean-machine Windows package proof' : 'No installed or signed Windows package proof', 'No provider login or model inference', packagedExecutable ? 'Launch checks do not exercise every integrated feature journey' : 'Feature entries remain integration states in this lane', 'Windows tree-kill does not prove backend shutdown callbacks'] }, null, 2));
 console.log(JSON.stringify({ evidence, electronVersion: expectedVersion, instances: records.length, ownedBackendsStopped: !attached, attachedBackendAlive, nativeLaunch: 'passed' }));

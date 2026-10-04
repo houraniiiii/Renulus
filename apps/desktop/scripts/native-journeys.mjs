@@ -39,7 +39,7 @@ try {
   result.native = await application.evaluate(({ app }) => ({ packaged: app.isPackaged, version: process.versions.electron, executable: process.execPath }));
   if (!result.native.packaged || result.native.version !== expectedVersion) throw new Error('The patched packaged Electron is required.');
   await page.setViewportSize({ width: 1440, height: 960 });
-  await page.route(url => url.pathname === '/api/v1/library/documents', route => route.fulfill({ json: { documents: [document] } }));
+  await page.route(url => url.pathname === '/api/v1/library/documents', route => route.fulfill({ json: { documents: [document], total: 1, counts: { ready: 1 }, offset: 0, limit: 25 } }));
   await page.route(url => url.pathname === '/api/v1/library/documents/native-pdf-document', route => route.fulfill({ json: document }));
   await page.route('**/api/v1/library/revisions/native-pdf-revision/citation*', route => route.fulfill({ json: citation }));
   await page.route('**/api/v1/library/revisions/native-pdf-revision/original', route => route.fulfill({ status: 200, contentType: 'application/pdf', body: pdf }));
@@ -65,6 +65,14 @@ try {
   const publisher = page.locator('.source-check-list a[href^="https://kdigo.org/"]').first(); await publisher.waitFor();
   result.publisher = { href: await publisher.getAttribute('href'), label: await publisher.innerText(), rendererUrl: page.url() }; await publisher.click(); await page.waitForTimeout(2000);
   result.publisher.dispatch = await application.evaluate(() => globalThis.renulusPublisherProof);
+  result.publisher.sourceBridge = { available: await page.evaluate(() => typeof window.renulus?.openSource === 'function') };
+  if (process.env.RENULUS_EXPECT_SOURCE_BRIDGE === '1' && !result.publisher.sourceBridge.available) throw new Error('The required native source bridge is missing.');
+  if (result.publisher.sourceBridge.available) {
+    const before = result.publisher.dispatch.length;
+    await page.evaluate(url => window.renulus.openSource(url), result.publisher.href);
+    result.publisher.sourceBridge.dispatch = (await application.evaluate(() => globalThis.renulusPublisherProof)).slice(before);
+    if (!result.publisher.sourceBridge.dispatch.some(record => record.url === result.publisher.href && record.state === 'OS-open-completed')) throw new Error('The public HTTPS source bridge did not complete a system-browser dispatch.');
+  }
   result.publisher.rendererWindows = await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length);
   result.publisher.rendererStayedLocal = page.url() === result.publisher.rendererUrl;
   if (!result.publisher.dispatch.some(record => record.url === result.publisher.href && record.state === 'OS-open-completed') || result.publisher.rendererWindows !== 1 || !result.publisher.rendererStayedLocal) throw new Error('The publisher link did not complete a system-browser dispatch.');
