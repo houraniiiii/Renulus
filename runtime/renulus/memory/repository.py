@@ -13,6 +13,20 @@ class MemoryRepository:
         self.db.execute(
             "UPDATE memory_jobs SET state='queued',updated_at=? WHERE state='running'",
             (utc_now(),))
+        self.reconcile_deletions()
+
+    def reconcile_deletions(self):
+        # A restore may bring older canonical rows alongside newer markers.
+        # Remove them and suppress their producer sources before rebuilding.
+        with self.db.transaction() as conn:
+            rows = conn.execute(
+                "SELECT f.id FROM memory_facts f JOIN deletion_ledger d ON d.entity_id=f.id "
+                "WHERE d.entity_type='memory_fact'").fetchall()
+            for row in rows:
+                self._suppress(conn, row['id'])
+                conn.execute('DELETE FROM memory_facts WHERE id=?', (row['id'],))
+            if rows:
+                self.invalidate(conn)
 
     def _fact(self, conn, identifier):
         row = conn.execute(
@@ -32,6 +46,8 @@ class MemoryRepository:
         result['index_state'] = ('ready' if entry and entry['revision'] == row['revision'] and
                                   entry['state'] == 'ready' else
                                   'failed' if state['state'] == 'failed' else 'pending')
+        result['sources'] = self.db.fetch_all(
+            'SELECT source_key FROM memory_sources WHERE record_id=? ORDER BY source_key', (row['id'],))
         return result
 
     def get(self, identifier):
@@ -151,6 +167,25 @@ class MemoryRepository:
 
     def material(self, evidence_id, scope: ContextScope):
         require_eligible(scope)
+        metadata = self.db.fetch_one(
+            'SELECT kind,json_valid(payload_json) AS payload_valid, CASE WHEN json_valid(payload_json) THEN '
+            "json_extract(payload_json,'$.scope.kind') END AS scope_kind, "
+            "CASE WHEN json_valid(payload_json) THEN json_type(payload_json,'$.scope') END AS scope_type "
+            'FROM learning_evidence WHERE id=?', (evidence_id,))
+        if not metadata:
+            raise ApiError('memory_evidence_missing', 'This learning evidence is no longer available', 404)
+        if metadata['kind'] not in ('study-interest', 'assessment-answer', 'learning-point'):
+            raise ApiError('memory_evidence_ineligible', 'This evidence type is not eligible for learner memory', 409)
+        if (not metadata['payload_valid'] or (metadata['scope_kind'] is None and
+                (metadata['kind'] != 'study-interest' or metadata['scope_type'] is not None))):
+            raise ApiError('memory_evidence_invalid', 'Learning evidence needs a classified scope', 409)
+        if metadata['scope_kind'] is not None:
+            try:
+                require_eligible(ContextScope(kind=metadata['scope_kind']))
+            except ValueError:
+                raise ApiError('memory_evidence_invalid', 'Learning evidence needs a classified scope', 409) from None
+        # Inspect classification metadata before fetching any producer text. A
+        # caller cannot relabel a stored case reference by supplying study scope.
         row = self.db.fetch_one('SELECT * FROM learning_evidence WHERE id=?', (evidence_id,))
         if not row:
             raise ApiError('memory_evidence_missing', 'This learning evidence is no longer available', 404)
@@ -228,20 +263,31 @@ class MemoryRepository:
 
     def scan(self):
         # Immutable producer records are the queue input, never a raw transcript.
-        rows = self.db.fetch_all(
-            "SELECT e.* FROM learning_evidence e WHERE e.kind IN ('study-interest','assessment-answer','learning-point') "
-            'AND NOT EXISTS (SELECT 1 FROM memory_jobs j WHERE j.evidence_id=e.id) '
-            "AND NOT EXISTS (SELECT 1 FROM memory_suppression s WHERE s.source_key='evidence:' || e.id) "
-            'ORDER BY e.created_at LIMIT 100')
-        for row in rows:
-            try:
-                payload = json.loads(row['payload_json'])
-                scope = (ContextScope.model_validate(payload['scope']) if 'scope' in payload else
-                         ContextScope(kind=Scope.STUDY, entity_id=row['entity_id']))
-                self.enqueue(row['id'], scope)
-            except (ApiError, ValueError, TypeError, KeyError):
-                # Ineligible input produces no job, audit or error payload.
-                continue
+        cursor, queued = '', 0
+        while queued < 100:
+            rows = self.db.fetch_all(
+                "SELECT e.id,e.kind,e.entity_id,json_extract(e.payload_json,'$.scope') AS declared_scope "
+                "FROM learning_evidence e WHERE e.id>? AND json_valid(e.payload_json) "
+                "AND e.kind IN ('study-interest','assessment-answer','learning-point') "
+                "AND (json_extract(e.payload_json,'$.scope.kind') IN ('study','personal-library','generated-practice','reviewed-assessment') "
+                "OR (e.kind='study-interest' AND json_extract(e.payload_json,'$.scope') IS NULL)) "
+                'AND NOT EXISTS (SELECT 1 FROM memory_jobs j WHERE j.evidence_id=e.id) '
+                "AND NOT EXISTS (SELECT 1 FROM memory_suppression s WHERE s.source_key='evidence:' || e.id) "
+                'ORDER BY e.id LIMIT 100', (cursor,))
+            if not rows:
+                break
+            for row in rows:
+                cursor = row['id']
+                try:
+                    scope = (ContextScope.model_validate_json(row['declared_scope']) if row['declared_scope'] else
+                             ContextScope(kind=Scope.STUDY, entity_id=row['entity_id']))
+                    self.enqueue(row['id'], scope)
+                    queued += 1
+                except (ApiError, ValueError, TypeError, KeyError):
+                    # Ineligible input produces no job, audit or error payload.
+                    continue
+                if queued == 100:
+                    break
 
     def claim(self, identifier):
         with self.db.transaction() as conn:

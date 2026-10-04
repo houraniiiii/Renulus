@@ -22,6 +22,7 @@ class MemoryService:
         self._process_lock = asyncio.Lock()
         self._wake = asyncio.Event()
         self._worker = self._loop = None
+        self._active_runs = set()
         self._stopping = False
         # Reindex on restart; no index file is a record authority. This also
         # reconciles deletion markers from restores before any recall.
@@ -50,7 +51,6 @@ class MemoryService:
             if self._engine:
                 self._engine.close()
                 self._engine = None
-            self._embedding = None
             if self.root.exists():
                 for path in self.root.iterdir():
                     if path.is_dir():
@@ -60,18 +60,36 @@ class MemoryService:
                 conn.execute("UPDATE memory_index_state SET generation=NULL,state='dirty' WHERE singleton=1")
 
     def _purge_result(self, result):
+        self._cancel_retired_jobs()
         try:
             self._purge()
             # secure_delete handles pages; truncate WAL so superseded text isn't
             # retained in an app-owned log after correction/history removal.
             with self.db.connect() as conn:
-                conn.execute('PRAGMA wal_checkpoint(TRUNCATE)')
+                checkpoint = conn.execute('PRAGMA wal_checkpoint(TRUNCATE)').fetchone()
+                if checkpoint[0]:
+                    raise ApiError('memory_purge_pending', 'Memory cleanup must finish after active readers close', 503, True)
             pending = False
         except (OSError, ApiError):
             self.db.execute("UPDATE memory_index_state SET state='failed',error_code='memory_purge_pending' WHERE singleton=1")
             pending = True
         self.notify()
         return {**result, 'purge_pending': pending}
+
+    def _cancel_retired_jobs(self):
+        provider = self.services.registry.get('provider')
+        if not provider or not self._loop or self._loop.is_closed():
+            return
+        identifiers = [row['id'] for row in self.db.fetch_all(
+            "SELECT id FROM memory_jobs WHERE state='cancelled'") if row['id'] in self._active_runs]
+        async def cancel_runs():
+            for identifier in identifiers:
+                try:
+                    await provider.cancel(identifier)
+                except Exception:
+                    pass  # The canonical state guard still excludes late results.
+        if identifiers:
+            asyncio.run_coroutine_threadsafe(cancel_runs(), self._loop)
 
     def edit(self, identifier, text, revision):
         result = self.repository.edit(identifier, text, revision)
@@ -98,12 +116,13 @@ class MemoryService:
         return job
 
     def _get_embedding(self):
-        config = embedding_config(self.services)
-        if self._embedding is None or self._embedding.config['fingerprint'] != config['fingerprint']:
-            bootstrap(self.services)
-            from .providers import OfflineEmbedding
-            self._embedding = OfflineEmbedding(config)
-        return self._embedding
+        with self._lock:
+            config = embedding_config(self.services)
+            if self._embedding is None or self._embedding.config['fingerprint'] != config['fingerprint']:
+                bootstrap(self.services)
+                from .providers import OfflineEmbedding
+                self._embedding = OfflineEmbedding(config)
+            return self._embedding
 
     def _extract(self, job, material, loop):
         # Extraction gets its own disposable derived namespace, never the live
@@ -122,6 +141,8 @@ class MemoryService:
             self._remove(path)
 
     async def process_pending(self, *, retry=False):
+        if self._loop is None:
+            self._loop = asyncio.get_running_loop()
         async with self._process_lock:
             if retry:
                 self.repository.retry()
@@ -134,6 +155,7 @@ class MemoryService:
                 job = self.repository.claim(row['id'])
                 if not job:
                     continue
+                self._active_runs.add(job['id'])
                 try:
                     if not self.repository.current(job):
                         self.repository.cancel(job['id'])
@@ -157,6 +179,8 @@ class MemoryService:
                 except Exception as error:
                     code = error.code if isinstance(error, ApiError) else 'memory_capture_failed'
                     self.repository.fail(job['id'], code)
+                finally:
+                    self._active_runs.discard(job['id'])
             state = self.db.fetch_one('SELECT state FROM memory_index_state WHERE singleton=1')['state']
             if state in ('dirty', 'empty') or retry:
                 try:

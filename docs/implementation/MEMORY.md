@@ -24,9 +24,9 @@ as mastery or copied bank content. General points use actual Mem0 extraction.
 `MemoryService.retrieve(query, scope=ContextScope(...), limit=10,
 budget_chars=4000, topic_id=None)` returns `{records, context, producer}`.
 Context contains canonical IDs and revisions, a bounded character budget and
-canonical text. Learn can consume this through its existing Hermes context
-path before the approved provider call. This lane does not edit Learn or
-introduce another agent loop.
+canonical text. M1/integration must consume this through its existing Hermes
+context path before the approved provider call. Combined Learn context
+injection is a handoff boundary, not an implemented claim of this lane.
 
 The desktop routes are `/memory/facts` (list/add), `/memory/facts/{id}`
 (read/revision-guarded edit/delete), `/memory/facts/{id}/history`
@@ -118,3 +118,100 @@ is explicitly synthetic. Live subscription extraction, educational accuracy,
 installed-app packaging and combined Learn context injection are not
 established by these checks. UI and additional asynchronous race checks
 continue after the first backend handoff.
+
+## Complete owned slice and final checks
+
+The first useful backend commit is
+`de4946f1eab6ff5ddd3da3bc879b2a55f3313fa4`. The subsequent handoff adds the
+Flow page and controlled asynchronous checks, reconciles restored facts
+against retained deletion markers, exposes all deduplicated source references,
+and checks producer classification metadata before reading text. Automatic
+scanning pages beyond invalid records without copying case payloads or
+creating rejected-input jobs. Shared schema/build/contracts remain untouched.
+
+The page uses existing Flow tokens, Source Sans, UI primitives, navigation,
+API and resource hooks. It supports list/add/edit/delete, revision history
+and its removal, scoped semantic search, actual recall status, capture-job
+inspection/cancellation, retry and index rebuild. Drafts survive transport
+errors and revision conflicts; stopped or superseded requests cannot overwrite
+current state. A non-study navigation context requires an explicit fresh
+study transition before memory operations. No case input is silently relabelled.
+
+Capture cancellation, source revision/classification/deletion, suppression
+and canonical index epochs are checked before results commit. Edit/delete
+also cancel an active provider run through the existing seam. Failed indexing
+keeps canonical facts and completed jobs; explicit retry rebuilds the index.
+Failed physical cleanup or a busy SQLite WAL checkpoint reports
+`purge_pending:true`. An open canonical reader cannot make cleanup appear
+complete. Restart/rebuild honors retained deletion markers. Concurrent
+capture/search shares one lazily loaded embedding instance in this module.
+
+Final backend command is the helper-enabled command above: **27 passed, two
+warnings, in 16.32 seconds**, on October 4, 2026. Of these, two exercise the
+actual Mem0/Qdrant/FastEmbed producer path; 25 exercise real SQLite/API and
+policy or explicitly controlled synthetic engines. New checks cover
+cancellation during extraction, a completed job winning a later cancel,
+edit/delete while generation runs, stale index activation, retry after
+provider/index failure, restored deletion markers, missing-helper canonical
+CRUD, classification rejection before producer-text fetch, valid evidence
+beyond a page of invalid records, Windows-style physical-lock recovery and
+an actual SQLite reader preventing WAL truncation.
+
+Desktop checks using integration's installed dependencies:
+
+```powershell
+node apps/desktop/src/modules/memory/typecheck.mjs
+node ../Renulus-wt-integration/apps/desktop/node_modules/vitest/vitest.mjs run --config apps/desktop/src/modules/memory/preview.config.mjs --configLoader runner
+node ../Renulus-wt-integration/apps/desktop/node_modules/vite/bin/vite.js build --config apps/desktop/src/modules/memory/preview.config.mjs --configLoader runner
+```
+
+Full desktop TypeScript check passed; **19 UI tests passed in 27.79 seconds**
+with simulated API responses. Renderer production build passed, including the
+memory route and bundled Flow font. The owned verification config permits
+`RENULUS_DEPENDENCY_ROOT` for any installed desktop dependency directory and
+does not alter production build configuration. The design detector returned
+`[]` for the changed page components/CSS before the bounded finish-review fixes.
+
+Browser checks against a disposable real backend without helpers performed
+add, edit to revision 2, inspect/remove history, delete and reload to zero
+facts. Available captures are 1280 by 800 and 380 by 1641 pixels; the compact
+capture was initially summarized as 390px, which was corrected to its actual
+380px width. The worker observed no page exceptions or horizontal overflow
+and verified the bundled Flow font loaded. Captures/profiles/build output
+remain ignored under `.local/runtime/memory/`; synthetic test fixtures are
+the only retained examples.
+The screenshot paths are
+`.local/runtime/memory/ui-verification-2026-10-04/.desktop-check.png` and
+`.local/runtime/memory/ui-verification-2026-10-04/.compact-check.png`.
+
+The independent finish review confirmed the Flow identity and requested two
+material fixes. Both were applied in one batch: unavailable local search now
+has learner-facing copy, unhelpful retry/rebuild controls are disabled until
+helpers are usable, and technical details live in an optional disclosure.
+Closing an add/edit form after save or cancellation returns focus to its
+stable trigger. The final 19-test run includes these behaviors. Renderer
+build and typecheck passed after the fixes. Available screenshots predate
+that final batch; post-fix visual recapture is not established.
+The reviewer scored both findings resolved at source/test scope; this is
+not whole-surface visual approval. The documentation check found no durable
+Flow system drift, so shared design records were not changed.
+
+A separate HTTP check on the isolated memory profile **with validated helpers**
+performed add -> actual reindex/search -> edit revision 2 -> history count
+2 -> history purge to 0 -> delete -> actual rebuild count 0. The final API
+list was empty, `producer=mem0-oss`, `purge_pending=false`; no generation was
+used in this manual flow.
+
+The preview host subsequently disconnected. Automatic approval review rejected
+an additional hidden Electron verification process with reason "blocked by
+policy". That process did not run, and it is not native-app evidence. The
+available renderer/browser checks do not establish a signed installer or
+installed-app lifecycle.
+
+All test facts are synthetic. Real local producers are SQLite, the vendored
+Hermes/Mem0 operations, Qdrant and FastEmbed CPU inference; the extraction
+provider response and controlled race engines are mocked. No paid/live
+generation, private credentials, new model acquisition, Torch inference or
+Docling inference is part of this lane's proof. Live subscription extraction,
+clinical/educational quality and combined Learn personalization need separate
+integration evidence.

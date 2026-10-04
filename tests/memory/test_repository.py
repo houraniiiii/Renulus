@@ -126,3 +126,39 @@ def test_scope_cannot_be_relabelled_or_inferred_from_a_case(repository, services
     assert error.value.code == 'memory_scope_excluded'
     assert repository.jobs() == []
     assert repository.list() == []
+
+
+@pytest.mark.parametrize('declared', ['temporary-case', 'saved-case', 'unclassified', None])
+def test_ineligible_classification_is_rejected_before_reading_producer_text(repository, services, monkeypatch, declared):
+    payload = {'general_learning': True, 'text': 'SYNTHETIC_INELIGIBLE_PRODUCER_5291'}
+    if declared is not None:
+        payload['scope'] = {'kind': declared}
+    services.db.execute('INSERT INTO learning_evidence VALUES(?,?,?,?,?,?)',
+        ('excluded-evidence', 'learning-point', None, None, json.dumps(payload), utc_now()))
+    fetch_one = services.db.fetch_one
+    def classified_reads(sql, parameters=()):
+        assert 'SELECT * FROM learning_evidence' not in sql
+        return fetch_one(sql, parameters)
+    monkeypatch.setattr(services.db, 'fetch_one', classified_reads)
+    with pytest.raises(ApiError):
+        repository.enqueue('excluded-evidence', ContextScope(kind=Scope.STUDY))
+    assert repository.jobs() == []
+    assert repository.list() == []
+
+
+def test_scan_reaches_eligible_evidence_beyond_invalid_page_without_copying_cases(repository, services):
+    # More than one scan page of invalid but declared input must not starve a
+    # later valid record. Malformed JSON and case scopes are excluded too.
+    for number in range(105):
+        evidence(services, f'invalid-{number:03}', text='   ')
+    services.db.execute('INSERT INTO learning_evidence VALUES(?,?,?,?,?,?)',
+        ('malformed-1', 'learning-point', None, None, '{broken', utc_now()))
+    evidence(services, 'temporary-1', scope=ContextScope(kind=Scope.TEMPORARY_CASE))
+    evidence(services, 'saved-1', scope=ContextScope(kind=Scope.SAVED_CASE))
+    evidence(services, 'unclassified-1', scope=ContextScope(kind=Scope.UNCLASSIFIED))
+    evidence(services, 'valid-last')
+    repository.scan()
+    assert [job['evidence_id'] for job in repository.jobs()] == ['valid-last']
+    assert repository.list() == []
+    repository.scan()
+    assert len(repository.jobs()) == 1

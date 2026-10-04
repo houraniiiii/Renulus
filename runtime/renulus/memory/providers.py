@@ -6,6 +6,7 @@ import asyncio
 from contextvars import ContextVar
 import json
 import math
+import threading
 
 from mem0.embeddings.base import EmbeddingBase
 from mem0.llms.base import LLMBase
@@ -19,6 +20,7 @@ generation_binding = ContextVar('renulus_memory_generation')
 class OfflineEmbedding:
     def __init__(self, config):
         self.config, self.model = config, None
+        self._load_lock = threading.Lock()
         from tokenizers import Tokenizer
         self.tokenizer = Tokenizer.from_file(str(config['tokenizer_path']))
         self.tokenizer.no_truncation()
@@ -28,12 +30,13 @@ class OfflineEmbedding:
         # Do not quietly truncate facts or queries at the 512-token helper limit.
         if any(len(self.tokenizer.encode(text).ids) > self.config['max_tokens'] for text in texts):
             raise ApiError('memory_embedding_budget', 'Shorten this learning note or query before indexing', 422)
-        if self.model is None:
-            from fastembed import TextEmbedding
-            self.model = TextEmbedding(model_name=self.config['model_id'],
-                specific_model_path=str(self.config['model_path']),
-                cache_dir=str(self.config['cache_dir']), local_files_only=True,
-                threads=self.config['cpu_threads'], providers=['CPUExecutionProvider'], cuda=False)
+        with self._load_lock:
+            if self.model is None:
+                from fastembed import TextEmbedding
+                self.model = TextEmbedding(model_name=self.config['model_id'],
+                    specific_model_path=str(self.config['model_path']),
+                    cache_dir=str(self.config['cache_dir']), local_files_only=True,
+                    threads=self.config['cpu_threads'], providers=['CPUExecutionProvider'], cuda=False)
         values = self.model.query_embed(texts) if memory_action == 'search' else self.model.passage_embed(texts)
         vectors = [[float(x) for x in vector] for vector in values]
         if len(vectors) != len(texts) or any(len(v) != self.config['dimensions'] or
