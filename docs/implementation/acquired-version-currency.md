@@ -38,3 +38,9 @@ identifiers. Deleted, reserved, unrelated and unbound files are excluded. Bodies
 local paths and provenance notes are absent. The review UI can select a file
 instead of asking a learner to copy its hash. Three additional checks passed,
 including the production route and its strict identity validation.
+
+The optional original-hash field is omitted from an import's request identity
+when absent, preserving retries recorded before the additive field existed.
+A supplied hash remains part of the request identity and conflicts with an old
+unbound import key. Twenty-five adjacent repository/version checks passed,
+including a pre-field stored request replay; no historical jobs are rewritten.

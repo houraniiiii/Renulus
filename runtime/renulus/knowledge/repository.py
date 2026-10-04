@@ -192,7 +192,11 @@ class KnowledgeRepository:
         if not rights.cache or not rights.display or (not reserved and (not rights.index or not rights.embedding)):
             raise ApiError("source_permission_required", "Confirm display, local caching, indexing and embedding permission for this source", 403)
         digest = hashlib.sha256(data).hexdigest()
-        request_hash = hashlib.sha256(dumps([digest, title, metadata.model_dump(), rights.model_dump(),
+        request_metadata = metadata.model_dump()
+        if request_metadata.get("original_sha256") is None:
+            # The additive provenance field must not change a pre-field replay.
+            request_metadata.pop("original_sha256", None)
+        request_hash = hashlib.sha256(dumps([digest, title, request_metadata, rights.model_dump(),
                                              scope.model_dump(), document_id, reserved]).encode()).hexdigest()
         key = key or durable_id("import")
         with self._lock:

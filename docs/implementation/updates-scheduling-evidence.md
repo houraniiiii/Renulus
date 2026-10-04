@@ -116,3 +116,14 @@ inspected; the narrow page width was 345 CSS pixels within a 355-pixel window,
 with no horizontal overflow. Bundled Source Sans 3 and the existing Flow tokens
 were used. Preview state and dependency junctions are ignored, not product data
 or committed source evidence. This is not Windows installer or live network proof.
+# Live free-source integration proof
+
+At 2026-10-04 22:54 UTC, the integration owner deliberately enabled a three-topic
+Europe PMC metadata selection in the task-owned profile: T10, T19 and T21.
+The real automatic batch checked all three successfully between 22:54:05 and
+22:54:08 UTC, with zero failures. Persisted attempts, success timestamps and the
+next daily due times were returned through the local API. No optional key,
+generative provider or case payload was used. The batch is complete, and its
+discoveries still require explicit review. This proves the selected live free
+route rather than every registered publication source. A newly delivered clean
+profile keeps automatic checks disabled by default.

@@ -1,11 +1,14 @@
 import json
+import hashlib
 
 import pytest
 
 from renulus.contracts import ApiError
 from renulus.knowledge.models import SourceMetadata
+from renulus.knowledge.models import own_text_rights
+from renulus.knowledge.repository import dumps
 from renulus.knowledge.source_status import validate_event
-from test_repository import repository, import_note, STUDY
+from test_repository import repository, import_note, STUDY, LIBRARY
 from test_source_status import event
 
 
@@ -84,3 +87,23 @@ def test_partial_or_malformed_version_bindings_cannot_enter_the_journal(binding)
     with pytest.raises(ApiError) as caught:
         validate_event(payload)
     assert caught.value.code == "source_status_invalid"
+
+
+def test_pre_provenance_import_key_replays_after_additive_metadata_field(repository):
+    text, title = "Synthetic legacy transplant note", "Legacy source"
+    metadata = SourceMetadata()
+    note = import_note(repository, text, title=title, metadata=metadata,
+        idempotency_key="legacy-before-hash-field", process=False)
+    # The previous release's request recorded no original_sha256 field.
+    legacy_metadata = metadata.model_dump(exclude={"original_sha256"})
+    legacy_hash = hashlib.sha256(dumps([hashlib.sha256(text.encode()).hexdigest(),
+        title, legacy_metadata, own_text_rights().model_dump(), LIBRARY.model_dump(),
+        None, False]).encode()).hexdigest()
+    repository.db.execute("UPDATE knowledge_jobs SET request_hash=? WHERE id=?", (legacy_hash, note["job"]["id"]))
+    replay = import_note(repository, text, title=title, metadata=metadata,
+        idempotency_key="legacy-before-hash-field", process=False)
+    assert replay["job"]["id"] == note["job"]["id"]
+    with pytest.raises(ApiError) as changed:
+        import_note(repository, text, title=title, metadata=SourceMetadata(original_sha256="a" * 64),
+            idempotency_key="legacy-before-hash-field", process=False)
+    assert changed.value.code == "idempotency_conflict"
