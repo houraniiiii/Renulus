@@ -21,6 +21,8 @@ function mockApi(rows = [entry()], extra?: (path: string, options: RequestInit) 
     }
     if (path.endsWith('/updates/sources')) return json({ sources: [] });
     if (path.endsWith('/updates/publications')) return json({ publications: [] });
+    if (path.endsWith('/updates/schedule')) return json({ enabled: false, cadence_hours: 24, selection: [], options: [], jobs: [], running: false,
+      next_due_at: null, last_run: null, max_batch: 5, max_selection: 20, max_retries: 2 });
     if (path.endsWith('/content/topics')) return json([{ id: 'ckd', title: 'Chronic kidney disease' }, { id: 'transplantation', title: 'Transplantation' }]);
     if (path.includes('/affected?')) return json({ affected: [], total: 0, next_offset: null });
     if (path.endsWith('/review')) return json({ ...rows[0], review_state: 'reviewed' });

@@ -6,6 +6,7 @@ import { Button, ErrorState, LoadingState, Notice, PageHeader, Select } from '..
 import SourceChecks, { checkMessage } from './SourceChecks';
 import UpdatesQueue from './UpdatesQueue';
 import ReviewDetail from './ReviewDetail';
+import AutomaticChecks from './AutomaticChecks';
 import { reviewDraft, reviewPayload, literatureMessage } from './types';
 import type { Entry, EntryPage, Filter, LiteratureResult, Publication, ReviewDraft, Source, Topic } from './types';
 import './updates.css';
@@ -84,12 +85,13 @@ export default function Updates() {
     } catch (caught) { setError(caught); } finally { setBusy(null); }
   }
 
-  if (resource.status === 'loading') return <LoadingState label="Loading source updates" />;
-  if (resource.status === 'error') return <ErrorState error={resource.error} onRetry={retry} />;
+  if (resource.status === 'loading') return <><LoadingState label="Loading source updates" /><AutomaticChecks key="automatic-checks" onComplete={retry} /></>;
+  if (resource.status === 'error') return <><ErrorState error={resource.error} onRetry={retry} /><AutomaticChecks key="automatic-checks" onComplete={retry} /></>;
   const data = resource.data;
   return <><PageHeader title="Stay current." description="Follow changes in your sources and decide what matters for your learning." actions={<Button variant="ghost" onClick={() => setShowSources(value => !value)}><RefreshCw size={17} />{showSources ? 'Hide source checks' : 'Source checks'}</Button>} />
     <section className="updates-discover"><div><h2>Look for recent research</h2><p>Europe PMC checks up to 25 publication records for your selected topic.</p></div><div className="updates-search"><Select label="Nephrology topic" value={topic} onChange={event => setTopic(event.target.value)}><option value="">Choose a topic</option>{data.topics.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</Select><Button variant="secondary" disabled={!topic || busy !== null} busy={busy === 'literature'} onClick={checkLiterature}><Search size={17} />Check last 30 days</Button></div></section>
     {error !== null && <ErrorState error={error} onRetry={() => setError(null)} />}{notice && <Notice><p role="status">{notice}</p></Notice>}
+    <AutomaticChecks key="automatic-checks" onComplete={retry} />
     {showSources && <SourceChecks sources={data.sources} publications={data.publications} done={message => { setNotice(message); retry(); }} />}
     <div className="updates-workspace"><UpdatesQueue page={data.page} filter={filter} selectedId={current?.id} busy={busy !== null} open={open} filterChanged={changeFilter} pageChanged={value => { setOffset(value); retry(); }} />
       <ReviewDetail entry={current} draft={draft} topics={data.topics} reviewTopics={reviewTopics} busy={busy} change={setDraft} topicsChanged={setReviewTopics} review={review} refresh={refresh} sync={sync} />

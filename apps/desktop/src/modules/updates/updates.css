@@ -49,6 +49,26 @@
 .source-check-list a { overflow-wrap: anywhere; }
 .update-entry-kicker { flex-wrap: wrap; }
 .update-topic-list { min-width: 0; }
+.updates-automatic { border-bottom: 1px solid var(--line-subtle); padding: var(--space-16) 0; }
+.updates-automatic > summary { cursor: pointer; font-size: 15px; font-weight: 600; color: var(--renal-teal); }
+.updates-automatic > summary span { margin-left: var(--space-8); font-weight: 400; color: var(--ink-muted); }
+.updates-automatic-help { font-size: 14px; max-width: 70ch; margin: var(--space-12) 0 var(--space-16); }
+.updates-automatic-controls { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-24); margin: var(--space-16) 0; }
+.updates-automatic-controls .field { margin: 0; min-width: 160px; }
+.updates-schedule-selection { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: var(--space-24); max-height: 280px; overflow: auto; padding: var(--space-8) var(--space-4); }
+.updates-schedule-selection fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.updates-schedule-selection legend { font-weight: 600; font-size: 14px; margin-bottom: var(--space-12); }
+.updates-schedule-selection label { margin: var(--space-8) 0; overflow-wrap: anywhere; }
+.updates-schedule-selection small { display: block; font-size: 12px; color: var(--ink-muted); margin-top: var(--space-4); }
+.updates-automatic-actions { display: flex; flex-wrap: wrap; gap: var(--space-12); margin: var(--space-16) 0; }
+.updates-automatic-message, .updates-automatic-failure { font-size: 14px; margin: var(--space-12) 0; }
+.updates-schedule-times { display: flex; flex-wrap: wrap; gap: var(--space-16) var(--space-32); margin: var(--space-16) 0; font-size: 13px; font-variant-numeric: tabular-nums; }
+.updates-schedule-times dt { font-weight: 600; }
+.updates-schedule-times dd { margin: var(--space-4) 0 0; color: var(--ink-muted); }
+.updates-schedule-results > summary { cursor: pointer; font-size: 14px; color: var(--renal-teal); }
+.updates-schedule-results ul { list-style: none; padding: 0; margin: var(--space-12) 0; }
+.updates-schedule-results li { display: grid; gap: var(--space-4); padding: var(--space-12) 0; border-bottom: 1px solid var(--line-subtle); font-size: 13px; overflow-wrap: anywhere; }
+.updates-schedule-results li span { color: var(--ink-muted); }
 @media (max-width: 1100px) { .updates-discover { grid-template-columns: 1fr; } .updates-search { justify-content: start; } .updates-workspace { gap: var(--space-24); grid-template-columns: minmax(300px, 1fr) minmax(300px, 1fr); } .update-detail { padding-left: var(--space-24); } }
 @media (max-width: 760px) { .updates-workspace { grid-template-columns: 1fr; } .update-detail { border-left: 0; border-top: 1px solid var(--line-subtle); padding: var(--space-24) 0 0; } .updates-search { flex-wrap: wrap; } .updates-search .field { min-width: 180px; flex: 1; } }
 @media (max-width: 420px) { .update-topic-list, .update-date-fields { grid-template-columns: 1fr; } .updates-filters { gap: var(--space-12); } }

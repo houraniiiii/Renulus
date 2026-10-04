@@ -32,10 +32,40 @@ class TrackPublication(BaseModel):
     max_bytes: int = Field(default=16_000_000, ge=1024, le=20_000_000)
 
 
+class ScheduledRoute(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    kind: Literal["source", "publication", "literature"]
+    id: str = Field(min_length=1, max_length=200)
+
+
+class ScheduleSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    enabled: bool
+    cadence_hours: int = Field(default=24, ge=24, le=720)
+    selection: list[ScheduledRoute] = Field(default_factory=list, max_length=20)
+
+
 def create_router(services):
     service = UpdatesService(services)
     services.registry["updates"] = service
     router = APIRouter(prefix="/updates", tags=["updates"])
+
+    @router.get("/schedule")
+    def schedule():
+        return service.scheduling.status()
+
+    @router.put("/schedule")
+    async def configure_schedule(body: ScheduleSettings):
+        return service.scheduling.configure(**body.model_dump())
+
+    @router.post("/schedule/check")
+    async def check_selection():
+        service.scheduling.begin()
+        return service.scheduling.status()
+
+    @router.post("/schedule/cancel")
+    async def cancel_schedule():
+        return await service.scheduling.cancel()
 
     @router.get("/sources")
     def sources():
@@ -81,7 +111,7 @@ def create_router(services):
 
     @router.post("/entries/{entry_id}/refresh")
     async def refresh(entry_id: str):
-        return await service.refresh_entry(entry_id)
+        return await service.scheduling.manual(service.refresh_entry, entry_id)
 
     @router.post("/publications")
     def track(body: TrackPublication):
@@ -89,7 +119,7 @@ def create_router(services):
 
     @router.post("/publications/{publication_id}/check")
     async def check_publication(publication_id: str, force: bool = False):
-        return await service.publications.check(publication_id, force)
+        return await service.scheduling.manual(service.publications.check, publication_id, force)
 
     @router.delete("/publications/{publication_id}")
     def stop_publication(publication_id: str):
@@ -97,11 +127,11 @@ def create_router(services):
 
     @router.post("/sources/{source_id}/check")
     async def check(source_id: str, force: bool = False):
-        return await service.check_source(source_id, force)
+        return await service.scheduling.manual(service.check_source, source_id, force)
 
     @router.post("/literature/check")
     async def literature(body: LiteratureCheck):
-        return await service.check_literature(body.topic_ids, body.days)
+        return await service.scheduling.manual(service.check_literature, body.topic_ids, body.days)
 
     @router.post("/entries/{entry_id}/review")
     def review(entry_id: str, body: Review):

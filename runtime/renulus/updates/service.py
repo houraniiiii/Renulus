@@ -12,6 +12,7 @@ from .publications import Publications, freshness
 from .impact import AffectedVersions
 from .reviews import SourceReviews
 from .literature import Literature
+from .scheduling import Scheduling
 
 
 class Links(HTMLParser):
@@ -48,6 +49,9 @@ class UpdatesService:
         for source in self.sources:
             self.db.execute("INSERT INTO update_source_checks(source_id,title,url,snapshot_status) VALUES(?,?,?,?) ON CONFLICT(source_id) DO UPDATE SET title=excluded.title,url=excluded.url,snapshot_status=excluded.snapshot_status",
                             (source["id"], source["title"], source["url"], source["snapshot_status"]))
+        self.scheduling = Scheduling(self)
+        services.on_startup.append(self.scheduling.start)
+        services.on_shutdown.append(self.scheduling.close)
 
     def list_sources(self):
         rows = self.db.fetch_all("SELECT * FROM update_source_checks ORDER BY source_id")
