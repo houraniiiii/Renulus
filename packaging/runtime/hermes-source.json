@@ -1,0 +1,32 @@
+{
+  "upstream_repository": "https://github.com/NousResearch/hermes-agent",
+  "revision": "af90026aa09949579bd423d24def3d38f743cde0",
+  "revision_committed_at": "2026-10-04T13:49:41Z",
+  "acquisition_url": "https://codeload.github.com/NousResearch/hermes-agent/tar.gz/af90026aa09949579bd423d24def3d38f743cde0",
+  "archive_sha256": "c1ee01756a755a4d5ee670f7a671e658359423355545b32fc908a413c6abdb4f",
+  "source_file_count": 17259,
+  "source_bytes": 205050446,
+  "layout": "Full upstream layout retained under upstream/hermes",
+  "license": {
+    "spdx": "MIT",
+    "copyright": "Copyright (c) 2025 Nous Research",
+    "path": "upstream/hermes/LICENSE",
+    "sha256": "821556e6336796450ab852d375117b48a4887e71d255794fd6318d99982a5ab6"
+  },
+  "maintained_head_observed": {
+    "revision": "32172d4622195697e4f077976140d0ed0738318a",
+    "committed_at": "2026-10-04T19:16:22Z",
+    "commits_ahead": 27,
+    "decision": "Retain inspected research baseline; intervening file list has no runtime transport/auth changes"
+  },
+  "patches": [
+    {
+      "id": "R001",
+      "path": "upstream/hermes/providers/__init__.py",
+      "original_sha256": "b304c7d8762e8d3fe3729abcdb2668d3ca09f71ccc2612252c49376b6b23e5ac",
+      "patched_sha256": "8494e4cbc61e566b819639b2789f740b15d60dd725f5fb143d7f9c0e70f226d1",
+      "reason": "Context-local provider discovery opt-out for controlled Renulus transport calls; upstream defaults unchanged"
+    }
+  ],
+  "distribution": "Only downstream controlled app is built; source snapshot is attribution/update baseline, not a second app"
+}
