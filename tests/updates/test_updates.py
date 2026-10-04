@@ -19,6 +19,11 @@ class SequenceFetcher:
         return value if isinstance(value, tuple) else (value, {"content-type": "text/html"}, url)
 
 
+SYNTHETIC_EVIDENCE = [{"url": "https://kdigo.org/synthetic-correction.pdf",
+    "locator": "Synthetic publisher notice, page 1", "finding": "Synthetic correction inspected for an application-rule test",
+    "checked_on": "2026-10-04", "inspected": True}]
+
+
 @pytest.mark.asyncio
 async def test_source_change_is_deduplicated_and_needs_explicit_review(tmp_path):
     app = create_app(tmp_path)
@@ -33,7 +38,7 @@ async def test_source_change_is_deduplicated_and_needs_explicit_review(tmp_path)
     assert len(service.list_entries()) == 1
     item = service.list_entries()[0]
     service.review(item["id"], "Reviewed official correction; inspect the affected recommendation.",
-                   ["ckd"], "learner", "reviewed")
+                   ["ckd"], "learner", "reviewed", evidence=SYNTHETIC_EVIDENCE)
     assert service.list_entries(reviewed_only=True)[0]["reviewed_at"]
 
 

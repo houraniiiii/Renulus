@@ -1,14 +1,17 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 from html.parser import HTMLParser
 import json
-from urllib.parse import urlencode, urljoin, urlparse
+from urllib.parse import urljoin, urlparse
 
 from renulus.contracts import ApiError
 from renulus.storage import utc_now
 from .fetch import SourceFetcher
 from .sources import read_register
 from .publications import Publications, freshness
+from .impact import AffectedVersions
+from .reviews import SourceReviews
+from .literature import Literature
 
 
 class Links(HTMLParser):
@@ -38,6 +41,10 @@ class UpdatesService:
         register = services.paths.source_root / "docs" / "SOURCES.md"
         self.sources = read_register(register) if register.exists() else []
         self.publications = Publications(self)
+        self.affected = AffectedVersions(self.db)
+        self.reviews = SourceReviews(self)
+        self.literature = Literature(self)
+        services.on_startup.append(self.reviews.retry_pending)
         for source in self.sources:
             self.db.execute("INSERT INTO update_source_checks(source_id,title,url,snapshot_status) VALUES(?,?,?,?) ON CONFLICT(source_id) DO UPDATE SET title=excluded.title,url=excluded.url,snapshot_status=excluded.snapshot_status",
                             (source["id"], source["title"], source["url"], source["snapshot_status"]))
@@ -60,7 +67,7 @@ class UpdatesService:
         row = self.db.fetch_one("SELECT * FROM update_entries WHERE id=?", (identifier,))
         if not row:
             raise ApiError("update_missing", "This update is no longer available", 404)
-        return self.decode_entry(row)
+        return self.reviews.decorate([self.decode_entry(row)])[0]
 
     def list_entries(self, reviewed_only=False, *, limit=100, offset=0, state=None):
         state = "reviewed" if reviewed_only else state
@@ -69,7 +76,7 @@ class UpdatesService:
         rows = self.db.fetch_all("SELECT * FROM update_entries " +
             ("WHERE review_state=? " if state else "") + "ORDER BY discovered_at DESC,id DESC LIMIT ? OFFSET ?",
             ([state] if state else []) + [max(1, min(limit, 250)), max(0, offset)])
-        return [self.decode_entry(row) for row in rows]
+        return self.reviews.decorate([self.decode_entry(row) for row in rows])
 
     def entries_page(self, *, reviewed_only=False, limit=50, offset=0, state=None):
         limit, offset = max(1, min(limit, 250)), max(0, offset)
@@ -129,45 +136,19 @@ class UpdatesService:
                     "error": {"code": code, "message": "The official source could not be checked. Its last successful check remains visible."}}
 
     async def check_literature(self, topic_ids, days=7):
-        content = self.services.registry.get("content")
-        topics = {topic["id"]: topic.get("title", topic.get("name", topic["id"]))
-                  for topic in content.list_topics()} if content else {}
-        selected = [(key, topics[key]) for key in topic_ids if key in topics][:5]
-        if not selected:
-            raise ApiError("topics_required", "Choose an installed topic for the literature check")
-        since = (date.today() - timedelta(days=days)).isoformat()
-        now, discovered = utc_now(), 0
-        for topic_id, topic in selected:
-            # Only canonical topic labels leave the app, never raw case or chat text.
-            query = f'({topic}) FIRST_PDATE:[{since} TO {date.today().isoformat()}]'
-            url = "https://www.ebi.ac.uk/europepmc/webservices/rest/search?" + urlencode(
-                {"query": query, "format": "json", "pageSize": 25, "sort": "FIRST_PDATE_D desc"})
-            body, _, _ = await self.fetcher.fetch(url, {"www.ebi.ac.uk"})
-            result = json.loads(body)
-            with self.db.transaction() as conn:
-                for article in result.get("resultList", {}).get("result", []):
-                    external_id = f"epmc:{article.get('source', 'MED')}:{article['id']}"
-                    title, pub_type = article.get("title", "Untitled publication"), article.get("pubType", "")
-                    kind = "retraction" if "retract" in pub_type.lower() else "correction" if any(
-                        word in pub_type.lower() for word in ("erratum", "correction")) else "research"
-                    article_url = f"https://europepmc.org/article/{article.get('source','MED')}/{article['id']}"
-                    count = conn.execute("INSERT OR IGNORE INTO update_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                        ("update_" + hashlib.sha256(external_id.encode()).hexdigest()[:24], "L03", external_id,
-                         title, article_url, kind, article.get("firstPublicationDate"), now, None, None,
-                         "pending", "New publication metadata. Educational implications have not been reviewed.",
-                         json.dumps([topic_id]), json.dumps(article), None)).rowcount
-                    discovered += count
-        return {"discovered": discovered, "checked_at": now, "review_state": "pending",
-                "source": "Europe PMC publication metadata"}
+        return await self.literature.check(topic_ids, days)
 
-    def review(self, identifier, summary, topic_ids, reviewer, state):
-        if state == "reviewed" and not summary.strip():
-            raise ApiError("review_summary_required", "Write the reviewed educational implication")
-        count = self.db.execute("UPDATE update_entries SET summary=?,topic_ids_json=?,reviewer=?,reviewed_at=?,review_state=? WHERE id=?",
-            (summary, json.dumps(topic_ids), reviewer, utc_now(), state, identifier))
-        if not count:
-            raise ApiError("update_missing", "This update is no longer available", 404)
-        return self.get_entry(identifier)
+    async def refresh_entry(self, identifier):
+        entry = self.get_entry(identifier)
+        if entry["source_id"] == "L03" and entry["external_id"].startswith("epmc:"):
+            return await self.literature.refresh(entry)
+        publication_id = entry["source_metadata"].get("publication_id")
+        result = await self.publications.check(publication_id, force=True) if publication_id else await self.check_source(entry["source_id"], force=True)
+        return {**result, "entry": self.get_entry(identifier)}
+
+    def review(self, identifier, summary, topic_ids, reviewer, state, *, target=None, changes=None, evidence=None):
+        return self.reviews.review(identifier, summary, topic_ids, reviewer, state,
+                                   target=target, changes=changes, evidence=evidence)
 
     def mark_read(self, identifier):
         if not self.db.execute("UPDATE update_entries SET read_at=? WHERE id=?", (utc_now(), identifier)):

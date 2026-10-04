@@ -11,7 +11,7 @@ from renulus.contracts import ApiError
 from renulus.server import create_app
 from renulus.storage import AppPaths, Database
 from renulus.updates.fetch import SourceFetcher
-from test_updates import SequenceFetcher
+from test_updates import SequenceFetcher, SYNTHETIC_EVIDENCE
 
 
 def tracked(service):
@@ -119,7 +119,7 @@ def test_review_read_and_id_lookup_work_beyond_100_with_stable_pagination(tmp_pa
     second = client.get(f"/api/v1/updates/entries?limit=100&state=pending&offset={first['next_offset']}").json()
     assert not set(item["id"] for item in first["entries"]) & set(item["id"] for item in second["entries"])
     assert client.get("/api/v1/updates/entries?limit=999999").status_code == 422
-    reviewed = client.post("/api/v1/updates/entries/update_0000/review", json={"summary": "Synthetic educational review for the application-rule test", "state": "reviewed"})
+    reviewed = client.post("/api/v1/updates/entries/update_0000/review", json={"summary": "Synthetic educational review for the application-rule test", "state": "reviewed", "evidence": SYNTHETIC_EVIDENCE})
     assert reviewed.status_code == 200
     assert reviewed.json()["id"] == "update_0000"
     assert client.get("/api/v1/updates/entries/update_0000").json()["review_state"] == "reviewed"

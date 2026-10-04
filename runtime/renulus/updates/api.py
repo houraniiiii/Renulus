@@ -1,9 +1,10 @@
 from typing import Literal
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Path, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 from .service import UpdatesService
+from .models import ReviewedEvidence, SourceChanges, SourceTarget
 
 
 class LiteratureCheck(BaseModel):
@@ -18,6 +19,9 @@ class Review(BaseModel):
     topic_ids: list[str] = Field(default_factory=list, max_length=100)
     reviewer: Literal["learner", "assistant"] = "learner"
     state: Literal["reviewed", "dismissed"]
+    evidence: list[ReviewedEvidence] = Field(default_factory=list, max_length=20)
+    target: SourceTarget | None = None
+    changes: SourceChanges | None = None
 
 
 class TrackPublication(BaseModel):
@@ -54,6 +58,31 @@ def create_router(services):
     def publication_candidates(source_id: str):
         return {"candidates": service.publications.candidates(source_id)}
 
+    @router.get("/sources/{source_id}/status")
+    def source_status(source_id: str):
+        return {"statuses": service.reviews.statuses(source_id)}
+
+    @router.get("/entries/{entry_id}/affected")
+    def affected(entry_id: str, limit: int = Query(100, ge=1, le=250), offset: int = Query(0, ge=0)):
+        service.get_entry(entry_id)
+        return service.affected.for_entry(entry_id, limit, offset)
+
+    @router.get("/affected/{kind}/{entity_id}/versions/{version}")
+    def annotations(kind: Literal["question", "case"], entity_id: str, version: int = Path(ge=1)):
+        return service.affected.needs_re_review(kind, entity_id, version)
+
+    @router.post("/entries/{entry_id}/sync")
+    def sync(entry_id: str):
+        return service.reviews.sync_entry(entry_id)
+
+    @router.get("/literature/checks")
+    def literature_checks():
+        return {"checks": service.literature.checks()}
+
+    @router.post("/entries/{entry_id}/refresh")
+    async def refresh(entry_id: str):
+        return await service.refresh_entry(entry_id)
+
     @router.post("/publications")
     def track(body: TrackPublication):
         return service.publications.track(**body.model_dump())
@@ -76,7 +105,10 @@ def create_router(services):
 
     @router.post("/entries/{entry_id}/review")
     def review(entry_id: str, body: Review):
-        return service.review(entry_id, body.summary, body.topic_ids, body.reviewer, body.state)
+        return service.review(entry_id, body.summary, body.topic_ids, body.reviewer, body.state,
+                              evidence=[item.model_dump(mode="json") for item in body.evidence],
+                              target=body.target.model_dump(exclude_none=True) if body.target else None,
+                              changes=body.changes.model_dump(mode="json", exclude_unset=True) if body.changes else None)
 
     @router.post("/entries/{entry_id}/read")
     def read(entry_id: str):

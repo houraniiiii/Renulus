@@ -132,6 +132,11 @@ class Publications:
                     conn.execute("INSERT INTO update_entries(id,source_id,external_id,title,url,kind,publication_date,discovered_at,review_state,summary,source_metadata_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
                         (entry_id, row["source_id"], identity, "Publication content changed: " + row["title"], row["url"],
                          "publication-change", None, now, "pending", "Inspect the changed publication before reviewing its status or educational implications.", json.dumps(change)))
+                    target = {"register_id": row["source_id"], "canonical_url": row["url"]}
+                    self.updates.affected.record(conn, entry_id, target, now, "published bytes changed; educational implication unreviewed")
+                    self.updates.reviews.observed_change(conn, entry_id, target, current["digest"], metadata, now)
+            if state == "changed":
+                self.updates.reviews.sync("observed:" + entry_id)
             return {**self.get(identifier), "review_required": state == "changed"}
         except Exception as error:
             code = error.code if isinstance(error, ApiError) else "publication_fetch_failed"
