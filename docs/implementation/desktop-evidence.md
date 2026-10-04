@@ -232,3 +232,13 @@ this narrow regression test; provisioning still executes before server startup.
 The matching e800affc renderer/native checkpoint rebuilt and typechecked after
 the owned startup-budget change, with parent main/profile bytes preserved. Final
 source staging remains held for the parent's completed integration revision.
+
+The integration adds a pre-runtime opening window so the measured cold setup is
+visible. It uses Flow palette values, accessible status copy and reduced-motion
+support. This ephemeral window has no preload, JavaScript, network access or
+permitted device actions. Closing it uses the existing owned-process cancellation
+path. The real Flow window replaces it only after the frontend is ready, and
+explicit activation can focus either current surface. The integrated full build
+and the final Electron compilation passed. Actual first-display timing, closing
+during startup and the packaged handoff are pending native lane verification;
+the compile result is not that proof.

@@ -5,6 +5,7 @@ import path from 'node:path';
 import { allowedAuthorizationUrl, allowedSourceUrl, resolveProfile, type DesktopProfile } from './profile';
 import { startBackend, type ManagedBackend } from './backend';
 import { startFrontend } from './frontend';
+import { createStartupWindow } from './startup-window';
 import { activateWindow, ensureMainWindow } from './upstream/main-window-lifecycle';
 
 app.setName('Renulus');
@@ -18,6 +19,7 @@ app.setAppUserModelId('org.renulus.desktop.' + (app.isPackaged ? 'app' : 'dev.' 
 const ownsInstance = app.requestSingleInstanceLock({ instance: profile.instance });
 if (!ownsInstance) app.exit(0);
 let window: BrowserWindow | null = null;
+let openingWindow: BrowserWindow | null = null;
 let backend: ManagedBackend | undefined;
 let frontend: Awaited<ReturnType<typeof startFrontend>> | undefined;
 const lifetime = new AbortController();
@@ -49,7 +51,11 @@ function createWindow() {
   });
   owner.webContents.on('will-navigate', (event, url) => { if (new URL(url).origin !== origin) event.preventDefault(); });
   owner.webContents.on('will-attach-webview', event => event.preventDefault());
-  owner.once('ready-to-show', () => owner.show());
+  owner.once('ready-to-show', () => {
+    owner.show();
+    if (openingWindow && !openingWindow.isDestroyed()) openingWindow.destroy();
+    openingWindow = null;
+  });
   owner.on('closed', () => { if (window === owner) window = null; });
   void owner.loadURL(origin);
 }
@@ -62,8 +68,8 @@ ipcMain.handle('renulus:open-source', async (event, url: unknown) => {
   if (event.sender !== window?.webContents || typeof url !== 'string' || !allowedSourceUrl(url)) throw new Error('The source URL is not permitted.');
   await shell.openExternal(url);
 });
-app.on('second-instance', () => ensureMainWindow(window, { isReady: app.isReady(), createWindow, focusWindow: activateWindow }));
-app.on('activate', () => ensureMainWindow(window, { isReady: app.isReady(), createWindow, focusWindow: activateWindow }));
+app.on('second-instance', () => ensureMainWindow(window ?? openingWindow, { isReady: app.isReady(), createWindow, focusWindow: activateWindow }));
+app.on('activate', () => ensureMainWindow(window ?? openingWindow, { isReady: app.isReady(), createWindow, focusWindow: activateWindow }));
 app.on('window-all-closed', () => app.quit());
 app.on('before-quit', event => {
   if (stopping) return;
@@ -76,6 +82,9 @@ app.on('before-quit', event => {
 });
 if (ownsInstance) void app.whenReady().then(async () => {
   try {
+    openingWindow = createStartupWindow(profile.instance, path.join(__dirname, '../dist/renulus.ico'), lifetime.signal);
+    const openingOwner = openingWindow;
+    openingOwner.on('closed', () => { if (openingWindow === openingOwner) openingWindow = null; });
     backend = await startBackend({ profile, token, workspace, resources: process.resourcesPath, packaged: app.isPackaged, signal: lifetime.signal, onOwnedChild: handle => { backend = handle; } });
     lifetime.signal.throwIfAborted();
     frontend = await startFrontend(path.join(__dirname, '../dist'), backend.port, token);
