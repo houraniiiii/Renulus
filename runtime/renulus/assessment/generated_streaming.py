@@ -73,9 +73,13 @@ async def retrieve(repo, run):
     if knowledge is None or run.scope.kind != Scope.GENERATED_PRACTICE:
         # A case query must not enter embedding/retrieval caches or derived indexes.
         return [], "not-requested"
-    result = knowledge.retrieve(run.prompt, topic_id=run.topic_id, scope=run.scope)
+    result = await asyncio.to_thread(knowledge.retrieve, run.prompt, topic_id=run.topic_id, scope=run.scope)
     if inspect.isawaitable(result):
         result = await result
+    if run.topic_id and isinstance(result, dict) and not result.get("passages"):
+        result = await asyncio.to_thread(knowledge.retrieve, run.prompt, scope=run.scope)
+        if inspect.isawaitable(result):
+            result = await result
     passages = result.get("passages", []) if isinstance(result, dict) else result
     eligible = []
     for passage in passages or []:
@@ -162,7 +166,7 @@ async def generate(repo, run, replay=None):
             return
         repo.guard_run(run)
         provider = repo.services.registry.get("provider")
-        if provider is None:
+        if provider is None or not repo.capabilities()["available"]:
             raise ApiError("capability_unavailable", "Approved generation is unavailable", 503, True)
         passages = []
         try:

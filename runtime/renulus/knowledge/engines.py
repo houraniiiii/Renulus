@@ -20,7 +20,7 @@ MAX_PASSAGES = 12000
 TEMP_MAX_BYTES = 10 * 1024 * 1024
 TEMP_MAX_PAGES = 20
 TEMP_MAX_PIXELS = 12_000_000
-TEMPORARY_EXTRACTION_PROVEN = False
+TEMPORARY_EXTRACTION_PROVEN = True
 
 
 @dataclass
@@ -69,7 +69,11 @@ class OfflineAssets:
         result["text_import"] = result["fastembed"]["ready"] and all(
             result["packages"][x] for x in ("docling_core", "fastembed", "lancedb"))
         result["pdf_image_import"] = result["text_import"] and result["docling"]["ready"] and result["ocr"]["ready"] and result["packages"]["docling"]
-        result["temporary_extraction"] = TEMPORARY_EXTRACTION_PROVEN and result["pdf_image_import"]
+        helpers = self.services.registry.get("helpers")
+        startup = getattr(helpers, "startup", None)
+        prepared = startup.status() if startup is not None else {}
+        result["temporary_extraction"] = bool(TEMPORARY_EXTRACTION_PROVEN and result["pdf_image_import"]
+            and prepared.get("configured") and prepared.get("imports", {}).get("docling", {}).get("ready"))
         result["temporary_limits"] = {"max_bytes": TEMP_MAX_BYTES, "max_pages": TEMP_MAX_PAGES,
                                       "image_pixels": TEMP_MAX_PIXELS, "ocr_confidence": "unavailable"}
         return result

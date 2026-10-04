@@ -43,7 +43,7 @@ export interface Catalog {
   mode: 'reviewed'; domains: { id: string; label: string; available_families: number }[];
   available_families: number; tracks: { id: string; available: boolean; reason?: string }[];
   complete_exam_available: false; coverage_note: string;
-  generated: { available: boolean; reason: string };
+  generated: { available: boolean; reason: string | null };
 }
 export interface AnswerResult { feedback: Feedback; session: Session }
 export interface ReviewResult { session_id: string; feedback: Feedback[]; scores: Scores;

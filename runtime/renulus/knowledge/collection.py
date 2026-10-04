@@ -175,10 +175,20 @@ class CollectionCatalogue:
                 results.append({"entry_id": entry_id, "status": "excluded", "code": entry["eligibility"]})
                 continue
             try:
+                previous = self.db.fetch_one("SELECT j.id,j.state,r.sha256,d.deleted_at FROM knowledge_jobs j JOIN knowledge_revisions r ON r.id=j.revision_id JOIN knowledge_documents d ON d.id=r.document_id WHERE j.id=?", (entry["job_id"],)) if entry["job_id"] else None
+                if previous and not previous["deleted_at"] and previous["sha256"] == entry["expected_sha256"] and previous["state"] in ("queued", "processing", "ready"):
+                    results.append({"entry_id": entry_id, **self.repository._result(previous["id"])})
+                    continue
+                key = "catalogue:" + entry_id + ":" + str(entry["expected_sha256"])
+                replacement = entry["document_id"] if previous and not previous["deleted_at"] else None
+                if previous and previous["state"] in ("failed", "cancelled"):
+                    key += ":retry:" + previous["id"]
+                elif previous and previous["deleted_at"]:
+                    key += ":reimport:" + previous["id"]
                 result = self.repository.import_file(self._path(entry["collection_path"]),
                     title=entry["title"], metadata=json.loads(entry["metadata_json"]), rights=json.loads(entry["rights_json"]),
                     scope=ContextScope(kind=Scope.LIBRARY), expected_sha256=entry["expected_sha256"],
-                    idempotency_key="catalogue:" + entry_id + ":" + str(entry["expected_sha256"]), process=False)
+                    idempotency_key=key, document_id=replacement, process=False)
                 self.db.execute("UPDATE knowledge_catalogue SET document_id=?,job_id=? WHERE id=?", (result["document_id"], result["job"]["id"], entry_id))
                 results.append({"entry_id": entry_id, **result})
             except ApiError as error:

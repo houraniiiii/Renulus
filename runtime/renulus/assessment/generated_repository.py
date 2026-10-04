@@ -48,10 +48,19 @@ class GeneratedPracticeRepository:
         self.runs: dict[str, PracticeRun] = {}
 
     def capabilities(self):
-        installed = self.services.registry.get("provider") is not None
-        return {"available": installed, "reason": None if installed else
+        provider = self.services.registry.get("provider")
+        available, verified = False, False
+        if provider is not None:
+            status = provider.status()
+            selected = status.get("selected_provider")
+            available = status.get("test_adapter") is True or any(
+                row.get("provider") == selected and row.get("status") == "connected"
+                and any(model.get("availability") == "available" for model in row.get("models", []))
+                for row in status.get("connections", []))
+            verified = status.get("live_provider_verified") is True
+        return {"available": available, "reason": None if available else
                 "Connect an approved subscription before generating practice",
-                "live_provider_verified": False, "maximum_questions": 5}
+                "live_provider_verified": verified, "maximum_questions": 5}
 
     def _expire(self):
         now = monotonic()

@@ -5,6 +5,7 @@ import { useResource } from '../../platform/useResource';
 import { useNavigation } from '../../shell/navigation';
 import { Badge, Button, EmptyState, ErrorState, Input, LoadingState, Notice, PageHeader, Select } from '../../ui';
 import type { AnswerResult, Catalog, Citation, Feedback, HelpResult, ReviewResult, Scores, Session } from './types';
+import GeneratedPractice from './GeneratedPractice';
 import './assessment.css';
 
 const base = '/assessment';
@@ -65,6 +66,17 @@ function FeedbackView({ feedback, focus = false }: { feedback: Feedback; focus?:
 
 export default function AssessmentPage() {
   const nav = useNavigation();
+  const temporary = nav.scope.kind === 'temporary-case' || nav.scope.kind === 'unclassified';
+  if (temporary) return <div className="assessment-page"><PageHeader title="Test" description="Practise in this temporary context." />
+    <Notice tone="warning"><p>This case context is temporary. Start a separate study session to use the reviewed bank.</p></Notice>
+    <div className="actions assessment-separated"><Button variant="secondary" onClick={() => nav.navigate('assessment', { freshStudy: true })}>
+      Start separate study<ArrowRight size={17} /></Button></div>
+    <GeneratedPractice key={nav.revision} /></div>;
+  return <AssessmentStudyPage key={nav.revision} />;
+}
+
+function AssessmentStudyPage() {
+  const nav = useNavigation();
   const [mode, setMode] = useState<'reviewed' | 'generated'>('reviewed');
   const [topic, setTopic] = useState(typeof nav.handoff?.topic_id === 'string' ? nav.handoff.topic_id : '');
   const [count, setCount] = useState('10');
@@ -77,6 +89,7 @@ export default function AssessmentPage() {
   const [actionError, setActionError] = useState<unknown>();
   const mounted = useRef(true);
   const pending = useRef<(() => Promise<void>) | null>(null);
+  const handoffConsumed = useRef(false);
   const questionHeading = useRef<HTMLLegendElement>(null);
   const overview = useResource(async signal => {
     const [catalog, history, scores] = await Promise.all([
@@ -155,13 +168,24 @@ export default function AssessmentPage() {
     finally { if (mounted.current) setBusy(false); }
   }
   const locked = busy || !!actionError;
-  const temporary = nav.scope.kind === 'temporary-case' || nav.scope.kind === 'unclassified';
   const data = overview.resource.status === 'ready' ? overview.resource.data : null;
-
-  if (temporary) return <><PageHeader title="Test" description="Reviewed quizzes retain answers and learning progress." />
-    <Notice tone="warning"><p>This case context is temporary. Start a separate study session to use the reviewed bank.</p></Notice>
-    <div className="actions assessment-separated"><Button onClick={() => nav.navigate('assessment', { freshStudy: true })}>
-      Start separate study<ArrowRight size={17} /></Button></div></>;
+  useEffect(() => {
+    const questionId = nav.handoff?.question_id;
+    if (!data || typeof questionId !== 'string' || handoffConsumed.current) return;
+    handoffConsumed.current = true;
+    perform(async () => {
+      const rows = await api<{ mistakes: { question_id: string; session_id: string; item_id: string }[] }>(base + '/mistakes');
+      const mistake = rows.mistakes.find(row => row.question_id === questionId);
+      const retained = data.history.find(previous => previous.id === mistake?.session_id);
+      if (!mistake || !retained) throw new ApiError('This retained mistake could not be opened. Choose its session from quiz history.',
+        404, 'mistake_not_found');
+      const detail = await api<ReviewResult>(path(retained.id, '/review?item_id=' + encodeURIComponent(mistake.item_id)));
+      return { retained, detail };
+    }, ({ retained, detail }) => {
+      setSession({ ...retained, scores: detail.scores });
+      setFeedback(detail.feedback[0] ?? null); setHelp(null); setChoice(''); setReview(null);
+    });
+  }, [data, nav.handoff]);
 
   return <div className="assessment-page">
     <PageHeader title="Test" description="Commit an answer, then work through its reasoning and sources."
@@ -181,10 +205,7 @@ export default function AssessmentPage() {
       </fieldset>
       {overview.resource.status === 'loading' && <LoadingState label="Loading quiz coverage and your sessions" />}
       {overview.resource.status === 'error' && <ErrorState error={overview.resource.error} onRetry={overview.retry} />}
-      {data && mode === 'generated' && <EmptyState title="Practice generation is not connected">
-        <p>{data.catalog.generated.reason}. Your reviewed results stay separate.</p>
-        <Button variant="secondary" onClick={() => nav.navigate('connections')}>Check Connections</Button>
-      </EmptyState>}
+      {mode === 'generated' && <GeneratedPractice onBack={() => setMode('reviewed')} />}
       {data && mode === 'reviewed' && <div className="assessment-overview">
         <section className="section"><h2>Choose a focused quiz</h2>
           <form className="assessment-chooser" onSubmit={event => { event.preventDefault(); launch(); }}>
@@ -248,9 +269,9 @@ export default function AssessmentPage() {
           {help && <div className="assessment-help"><h3>Source help · assisted</h3><SourceList sources={help.sources} /></div>}
         </form>}
         {feedback && <><FeedbackView feedback={feedback} focus /><div className="actions">
-          {session.answered_count < session.item_count && <Button disabled={locked} onClick={() =>
+          {session.status === 'active' && session.answered_count < session.item_count && <Button disabled={locked} onClick={() =>
             perform(() => api<Session>(path(session.id)), adopt)}>Next question<ArrowRight size={17} /></Button>}
-          {session.answered_count === session.item_count && <Button disabled={locked} onClick={() => transition('end')}>Finish quiz</Button>}
+          {session.status === 'active' && session.answered_count === session.item_count && <Button disabled={locked} onClick={() => transition('end')}>Finish quiz</Button>}
         </div></>}
         {session.status === 'active' && !session.current_item && !feedback && <EmptyState title="All selected answers are committed"
           action={<Button disabled={locked} onClick={() => transition('end')}>Finish quiz</Button>}>

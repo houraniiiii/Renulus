@@ -16,7 +16,6 @@ def inventory(root):
             for path in root.rglob("*") if path.is_file()}
 
 
-@pytest.mark.xfail(strict=True, reason="Cold filelock._strict import probes a default Temp directory; temporary capability remains disabled")
 def test_real_documentstream_text_native_scanned_pdf_and_image_never_write(live_repository, monkeypatch, caplog):
     from PIL import Image, ImageDraw, ImageFont
     image = Image.new("RGB", (1200, 350), "white")
@@ -71,10 +70,10 @@ def test_real_documentstream_text_native_scanned_pdf_and_image_never_write(live_
     assert all(p["locators"] and p["locators"][0]["page"] == 1 for result in results[1:] for p in result.passages)
 
 
-def test_byte_scope_capability_stays_closed_without_verified_helpers(live_repository):
-    # Keep gated until the preceding real write-denial proof passes and the
-    # implementation explicitly publishes its verified capability.
+def test_byte_scope_capability_requires_prepared_verified_helpers(live_repository):
     assert callable(live_repository.extract_bytes)
+    assert live_repository.capabilities()["temporary_extraction"] is True
+    live_repository.services.registry["helpers"].startup.close()
     assert live_repository.capabilities()["temporary_extraction"] is False
     from renulus.contracts import ApiError
     with pytest.raises(ApiError) as caught:

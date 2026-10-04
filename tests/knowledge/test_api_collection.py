@@ -153,3 +153,42 @@ def test_manifest_permission_strings_remain_visible_without_processing_permissio
     assert all(not entry["rights"]["index"] and not entry["rights"]["embedding"] for entry in entries)
     assert collection.import_selected([entry["id"] for entry in entries])["queued"] == 0
     assert repository.list_documents()["documents"] == []
+
+
+def test_failed_catalogue_retry_preserves_identity_and_ready_import_is_idempotent(client, tmp_path):
+    from renulus.contracts import ApiError
+    _, repository = client
+    repository.services.registry["knowledge_worker"].stop()
+    class FailOnce(SyntheticExtractor):
+        fail = True
+        def extract_file(self, path, title):
+            if self.fail:
+                self.fail = False
+                raise ApiError("extraction_failed", "Synthetic first attempt failure", 422)
+            return super().extract_file(path, title)
+    repository.extractor = FailOnce()
+    root = tmp_path / "selected-collection"
+    root.mkdir()
+    source = root / "synthetic.txt"
+    source.write_text("Synthetic dialysis access teaching")
+    item = {"source_id": "R01", "local_path": str(source),
+        "sha256": hashlib.sha256(source.read_bytes()).hexdigest(), "bytes": source.stat().st_size,
+        "processing_scope": {name: True for name in ("display", "cache", "index", "embedding", "model_input")},
+        "licence": {"identifier": "CC-BY-4.0"}}
+    manifest = root / MANIFEST
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(json.dumps(item) + "\n")
+    catalogue = CollectionCatalogue(repository, root)
+    catalogue.register()
+    entry_id = catalogue.list()["entries"][0]["id"]
+    first = catalogue.import_selected([entry_id])["results"][0]
+    assert repository.run_job(first["job"]["id"])["state"] == "failed"
+    retry = catalogue.import_selected([entry_id])["results"][0]
+    assert retry["document_id"] == first["document_id"]
+    assert retry["revision_id"] != first["revision_id"]
+    assert repository.run_job(retry["job"]["id"])["state"] == "ready"
+    repeated = catalogue.import_selected([entry_id])["results"][0]
+    assert repeated["job"]["id"] == retry["job"]["id"]
+    assert repeated["status"] == "ready"
+    assert len(repository.list_documents()["documents"]) == 1
+    assert source.read_text() == "Synthetic dialysis access teaching"

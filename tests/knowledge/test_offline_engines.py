@@ -1,4 +1,5 @@
 """Real selected-engine checks with explicitly provisioned offline artifacts."""
+import asyncio
 import importlib.util
 import json
 import os
@@ -52,7 +53,12 @@ def live_repository(monkeypatch):
         return guarded
     monkeypatch.setattr(socket.socket, "connect", local_only(original_connect))
     monkeypatch.setattr(socket.socket, "connect_ex", local_only(original_connect_ex))
-    return KnowledgeRepository(services)
+    startup = services.registry["helpers"].startup
+    asyncio.run(startup.start())
+    try:
+        yield KnowledgeRepository(services)
+    finally:
+        startup.close()
 
 
 def test_real_text_hybrid_roundtrip_and_shared_token_budget(live_repository):
