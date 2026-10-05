@@ -618,3 +618,35 @@ Electron 44.5.1, embedded CPython 3.14.4 and the same 19 public helpers
 refresh source, create the planned package directories, start a backend or
 access either clean delivery profile. Final matching package/install/native
 producer proof remains pending the explicit final frozen revision.
+
+The parent then required every final generated directory to start on E because
+C had fallen below 1 GB free. The matching driver now first verifies the
+preserved C public input inventory, copies it to a fresh guarded E payload and
+copies the pinned installed Node build environment to E. Source refresh occurs
+only in that new E payload. Renderer/native source snapshots, build working
+directory, tool caches and child TEMP/TMP are on E from the start. Python and
+Node developer executables, the official Python archive, public helper source
+and existing locks remain read-only inputs. No venv wrapper is distributed.
+
+Fresh synthetic native profiles, proof screenshots/archives and installer
+evidence can now use exactly E:/Renulus-native-delivery/desktop-20261005/proofs
+via RENULUS_NATIVE_EVIDENCE_ROOT. The producer proof still verifies that its
+packaged app uses the fresh profile inside its own evidence directory. Child
+native apps and Windows dialog helpers receive an evidence-owned E TEMP/TMP.
+No existing profile, model asset profile or credentials are relocated.
+
+Seven Python path/dependency checks and three Node confinement checks passed
+with their new scratch on E, including an actual Windows junction refusal.
+Python/Node syntax and PowerShell parser checks passed. The read-only all-E plan
+against 6abd3ae9 is recorded in E:/Renulus-native-delivery/desktop-20261005/
+plan-6abd3ae9-all-e.json; it created no payload, source snapshot or build.
+
+Review of the installed pinned electron-builder NSIS installSection.nsh and
+installUtil.nsh showed that a fresh /D target still calls uninstallOldVersion
+for the same registered installer identity. Final checkpoint builds therefore
+use org.renulus.desktop.delivery.<exact-frozen-revision> instead of the earlier
+development installer identity. Actual configuration loads verified distinct
+IDs and rejected HEAD as a moving identity. This protects retained checkpoint
+install directories from an automatic upgrade uninstall; preservation remains
+an explicit post-install check. Product filename and the executable layout stay
+Renulus Development.exe. Final native and NSIS execution remain pending freeze.

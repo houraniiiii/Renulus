@@ -3,15 +3,13 @@ import { _electron as electron } from '@playwright/test';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomUUID } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { extractFile, listPackage } from '@electron/asar';
 import { waitForFlowWindow } from './wait-for-flow-window.mjs';
+import { createNativeEvidence } from './native-evidence-directory.mjs';
 
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-await mkdir(path.join(desktop, 'test-results'), { recursive: true });
-const evidence = path.join(desktop, 'test-results', 'native-' + randomUUID().slice(0, 8));
-await mkdir(evidence);
+const evidence = await createNativeEvidence('native');
 const expectedVersion = JSON.parse(await readFile(path.join(desktop, 'package.json'), 'utf8')).devDependencies.electron;
 const attached = process.env.RENULUS_TEST_ATTACH === '1';
 const packagedExecutable = process.env.RENULUS_PACKAGED_EXECUTABLE;
@@ -53,6 +51,9 @@ if (packagedExecutable) {
   portableRuntime = { backendRoot, isolatedPath: env.PATH, absentTools, ...runtime };
 }
 if (!attached) { delete env.RENULUS_BACKEND_URL; delete env.RENULUS_SESSION_TOKEN; }
+const childTemporary = path.join(evidence, 'temporary');
+await mkdir(childTemporary);
+env.TEMP = childTemporary; env.TMP = childTemporary;
 delete env.ELECTRON_RUN_AS_NODE;
 const applications = [];
 const records = [];

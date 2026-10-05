@@ -5,6 +5,8 @@ const bundle = process.env.RENULUS_BACKEND_BUNDLE;
 const renderer = process.env.RENULUS_RENDERER_BUNDLE;
 const native = process.env.RENULUS_NATIVE_BUNDLE;
 const output = process.env.RENULUS_DELIVERY_OUTPUT;
+const revision = process.env.RENULUS_DELIVERY_REVISION;
+if (revision && (!output || !/^[0-9a-f]{40}$/.test(revision))) throw new Error('A checkpoint installer identity requires an exact delivery revision and guarded output.');
 if (output) {
   const roots = [path.join(__dirname, 'release'), path.resolve('E:/Renulus-native-delivery/desktop-20261005')];
   const confined = path.isAbsolute(output) && roots.some(root => {
@@ -33,7 +35,9 @@ if (native) {
 module.exports = {
   electronVersion: require('./package.json').devDependencies.electron,
   electronDist: path.join(__dirname, 'node_modules', 'electron', 'dist'),
-  appId: 'org.renulus.desktop.development',
+  // NSIS uninstalls an earlier registered app with the same ID even for a fresh /D.
+  // Keep checkpoint installs independent so their public payloads stay intact.
+  appId: revision ? 'org.renulus.desktop.delivery.' + revision : 'org.renulus.desktop.development',
   productName: 'Renulus Development',
   artifactName: 'Renulus-Development-${version}-windows-x64-setup.${ext}',
   asar: true,

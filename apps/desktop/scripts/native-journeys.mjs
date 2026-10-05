@@ -1,7 +1,7 @@
 /** Packaged viewer/source proof. Library DTO/PDF fixtures are synthetic, not ingestion evidence. */
 import { _electron as electron } from '@playwright/test';
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
-import { randomUUID, randomBytes, createHash } from 'node:crypto';
+import { randomBytes, createHash } from 'node:crypto';
 import { createServer } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,6 +9,7 @@ import { waitForFlowWindow } from './wait-for-flow-window.mjs';
 import { syntheticPdf } from './synthetic-pdf.mjs';
 import { capturePdfFrames, classifyPdfFrames } from './pdf-viewer-evidence.mjs';
 import { proveNativeProductBackup } from './native-product-backup.mjs';
+import { createNativeEvidence } from './native-evidence-directory.mjs';
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourceDesktop = process.env.RENULUS_SOURCE_DESKTOP;
 const expectedRevision = process.env.RENULUS_EXPECT_SOURCE_REVISION;
@@ -24,14 +25,15 @@ if (sourceDesktop) {
   const preload = createHash('sha256').update(await readFile(path.join(sourceDesktop, 'dist-electron/preload.cjs'))).digest('hex');
   if (sourceProvenance.source_revision !== expectedRevision || renderer.source_revision !== expectedRevision || sourceProvenance.main_bundle_sha256 !== main || sourceProvenance.preload_bundle_sha256 !== preload || sourceProvenance.backend_adoption.source_sha256 !== sourceProvenance.backend_adoption.adopted_sha256) throw new Error('The source journey requires unchanged matching compiled main/preload/backend.');
 }
-await mkdir(path.join(desktop, 'test-results'), { recursive: true });
-const evidence = path.join(desktop, 'test-results', 'journeys-' + randomUUID().slice(0, 8));
-await mkdir(evidence);
+const evidence = await createNativeEvidence('journeys');
 const expectedVersion = JSON.parse(await readFile(path.join(desktop, 'package.json'), 'utf8')).devDependencies.electron;
 const env = {};
 for (const name of ['SystemRoot','SYSTEMROOT','WINDIR','COMSPEC','PATHEXT','TEMP','TMP','USERPROFILE','LOCALAPPDATA','APPDATA']) if (process.env[name]) env[name] = process.env[name];
 env.PATH = path.join(process.env.SystemRoot, 'System32');
 env.RENULUS_PROFILE = path.join(evidence, 'profile');
+const childTemporary = path.join(evidence, 'temporary');
+await mkdir(childTemporary);
+env.TEMP = childTemporary; env.TMP = childTemporary;
 let attachedServer;
 if (sourceDesktop) {
   const token = randomBytes(32).toString('hex'); let metadataRequests = 0;

@@ -5,9 +5,9 @@ import { createReadStream } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertSyntheticEvidenceDirectory } from './native-evidence-directory.mjs';
 
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const testRoot = path.join(desktop, 'test-results');
 
 async function hashFile(file) {
   const digest = createHash('sha256');
@@ -16,8 +16,7 @@ async function hashFile(file) {
 }
 
 export async function proveNativeProductBackup(application, page, evidence, executable, env) {
-  const relative = path.relative(testRoot, evidence);
-  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('The producer proof requires its owned synthetic evidence folder.');
+  assertSyntheticEvidenceDirectory(evidence);
   const native = await application.evaluate(({ app }) => ({ packaged: app.isPackaged, pid: process.pid, executable: process.execPath, resources: process.resourcesPath, userData: app.getPath('userData') }));
   const profileRelative = path.relative(evidence, native.userData);
   if (!native.packaged || path.resolve(native.executable) !== path.resolve(executable) || !profileRelative || profileRelative.startsWith('..') || path.isAbsolute(profileRelative)) throw new Error('Actual producer backup proof is confined to the packaged app and its fresh synthetic profile.');
@@ -52,7 +51,7 @@ export async function proveNativeProductBackup(application, page, evidence, exec
   function operateDialog(action, name) {
     return new Promise((resolve, reject) => {
       const powershell = path.join(process.env.SystemRoot, 'System32/WindowsPowerShell/v1.0/powershell.exe');
-      const helper = spawn(powershell, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(desktop, 'scripts/operate-owned-save-dialog.ps1'), '-AppProcessId', String(native.pid), '-ExpectedExecutable', executable, '-Action', action, '-Target', target, '-EvidencePath', path.join(evidence, name)], { windowsHide: true, timeout: 30_000 });
+      const helper = spawn(powershell, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(desktop, 'scripts/operate-owned-save-dialog.ps1'), '-AppProcessId', String(native.pid), '-ExpectedExecutable', executable, '-Action', action, '-Target', target, '-EvidencePath', path.join(evidence, name)], { windowsHide: true, timeout: 30_000, env: { ...process.env, TEMP: env.TEMP, TMP: env.TMP } });
       let stderr = ''; helper.stderr.on('data', block => { stderr += block; }); helper.stdout.resume();
       helper.once('error', reject); helper.once('close', async code => {
         try { const gui = JSON.parse((await readFile(path.join(evidence, name + '.json'), 'utf8')).replace(/^﻿/, '')); if (code || gui.error || !gui.dialogFound) throw new Error(gui.error ?? stderr ?? 'Native dialog operation failed'); resolve(gui); } catch (error) { reject(error); }

@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
+from uuid import uuid4
 
 spec = importlib.util.spec_from_file_location("stage_delivery", Path(__file__).with_name("stage-delivery.py"))
 delivery = importlib.util.module_from_spec(spec)
@@ -12,6 +13,20 @@ spec.loader.exec_module(delivery)
 
 
 class DeliveryBoundaries(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.test_root = delivery.EXTERNAL_DELIVERY_ROOT / "temporary" / ("delivery-tests-" + uuid4().hex)
+        cls.test_root.mkdir(parents=True)
+
+    def test_backend_and_renderer_staging_are_confined_to_exact_generated_roots(self):
+        target = delivery.EXTERNAL_DELIVERY_ROOT / "source-only-test-not-created"
+        self.assertEqual(delivery.generated_path(target, fresh=True), target.resolve())
+        self.assertFalse(target.exists())
+        for escaped in (target / "../../outside", delivery.EXTERNAL_DELIVERY_ROOT,
+                        delivery.EXTERNAL_DELIVERY_ROOT.parent / "desktop-20261005-other/payload"):
+            with self.subTest(escaped=escaped), self.assertRaises(ValueError):
+                delivery.generated_path(escaped, fresh=True)
+
     def test_exact_authorised_external_root_accepts_fresh_output_without_writes(self):
         target = delivery.EXTERNAL_DELIVERY_ROOT / "preflight-only-synthetic-fresh"
         self.assertFalse(target.exists())
@@ -27,7 +42,7 @@ class DeliveryBoundaries(unittest.TestCase):
                 delivery.delivery_output(target)
 
     def test_external_root_existing_checkpoint_is_preserved(self):
-        with tempfile.TemporaryDirectory(dir=delivery.DESKTOP / "test-results") as temporary:
+        with tempfile.TemporaryDirectory(dir=self.test_root) as temporary:
             root = Path(temporary)
             target = root / "existing"
             target.mkdir()
@@ -39,7 +54,7 @@ class DeliveryBoundaries(unittest.TestCase):
             self.assertEqual(sentinel.read_bytes(), b"synthetic-checkpoint")
 
     def test_existing_checkpoint_and_path_escape_are_rejected_without_changes(self):
-        with tempfile.TemporaryDirectory(dir=delivery.DESKTOP / "test-results") as temporary:
+        with tempfile.TemporaryDirectory(dir=self.test_root) as temporary:
             root = Path(temporary)
             release, existing = root / "release", root / "release/checkpoint"
             existing.mkdir(parents=True)
@@ -53,12 +68,12 @@ class DeliveryBoundaries(unittest.TestCase):
             self.assertFalse((root / "outside").exists())
 
     def test_moving_branch_name_cannot_identify_a_delivery(self):
-        with tempfile.TemporaryDirectory(dir=delivery.DESKTOP / "test-results") as temporary:
+        with tempfile.TemporaryDirectory(dir=self.test_root) as temporary:
             with self.assertRaisesRegex(ValueError, "exact 40-character"):
                 delivery.committed_revision(Path(temporary), "HEAD")
 
     def test_changed_wheel_lock_blocks_refresh_before_any_public_payload_mutation(self):
-        with tempfile.TemporaryDirectory(dir=delivery.DESKTOP / "test-results") as temporary:
+        with tempfile.TemporaryDirectory(dir=self.test_root) as temporary:
             root = Path(temporary)
             repo, payload = root / "source", root / "payload"
             repo.mkdir(); payload.mkdir()
