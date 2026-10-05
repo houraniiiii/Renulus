@@ -8,6 +8,7 @@ import { randomUUID, randomBytes, createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { waitForFlowWindow } from './wait-for-flow-window.mjs';
+import { createNativeEvidence } from './native-evidence-directory.mjs';
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const suppliedSource = process.env.RENULUS_SOURCE_DESKTOP;
 const sourceDesktop = suppliedSource && path.resolve(suppliedSource);
@@ -15,7 +16,9 @@ const expectedRevision = process.env.RENULUS_EXPECT_SOURCE_REVISION;
 const python = process.env.RENULUS_FIXTURE_PYTHON;
 const rendererConsumer = process.env.RENULUS_SAVE_RENDERER_FLOW === '1';
 const relativeSource = sourceDesktop ? path.relative(path.join(desktop, 'test-results'), sourceDesktop) : '..';
-if (!sourceDesktop || !path.isAbsolute(suppliedSource) || relativeSource.startsWith('..') || path.isAbsolute(relativeSource) || !/^[0-9a-f]{40}$/.test(expectedRevision ?? '') || !python || !path.isAbsolute(python)) throw new Error('Explicit owned compiled source/revision and fixture interpreter are required.');
+const externalSource = path.resolve('E:/Renulus-native-delivery/desktop-20261005', 'source-' + (expectedRevision ?? '').slice(0, 8), 'apps/desktop');
+const ownedSource = !relativeSource.startsWith('..') && !path.isAbsolute(relativeSource) || sourceDesktop === externalSource;
+if (!sourceDesktop || !path.isAbsolute(suppliedSource) || !ownedSource || !/^[0-9a-f]{40}$/.test(expectedRevision ?? '') || !python || !path.isAbsolute(python)) throw new Error('Explicit owned compiled source/revision and fixture interpreter are required.');
 const provenance = JSON.parse(await readFile(path.join(sourceDesktop, 'dist-electron/native-provenance.json'), 'utf8'));
 const renderer = JSON.parse(await readFile(path.join(sourceDesktop, 'dist/renderer-provenance.json'), 'utf8'));
 const expectedVersion = JSON.parse(await readFile(path.join(desktop, 'package.json'), 'utf8')).devDependencies.electron;
@@ -27,11 +30,13 @@ if (rendererConsumer) {
   const preloadBundle = createHash('sha256').update(await readFile(path.join(sourceDesktop, 'dist-electron/preload.cjs'))).digest('hex');
   if (preloadSource !== provenance.preload_source_sha256 || preloadBundle !== provenance.preload_bundle_sha256) throw new Error('The renderer consumer proof requires the recorded unchanged preload source and bundle.');
 }
-const evidence = path.join(desktop, 'test-results', 'native-save-' + randomUUID().slice(0, 8));
+const evidence = await createNativeEvidence('native-save');
 console.log(JSON.stringify({ stage: 'native-save-evidence', evidence }));
 const exports = path.join(evidence, 'exports'); await mkdir(exports, { recursive: true });
+const childTemporary = path.join(evidence, 'temporary'); await mkdir(childTemporary);
+const temporaryEnvironment = { ...process.env, TEMP: childTemporary, TMP: childTemporary };
 const fixture = path.join(evidence, 'synthetic-transfer.zip');
-execFileSync(python, ['-I', '-B', '-c', 'import sys,zipfile; z=zipfile.ZipFile(sys.argv[1],"w",compression=zipfile.ZIP_STORED); f=z.open("synthetic-transfer.bin","w"); block=b"Z"*65536; [f.write(block) for _ in range(1024)]; f.close(); z.close()', fixture], { windowsHide: true });
+execFileSync(python, ['-I', '-B', '-c', 'import sys,zipfile; z=zipfile.ZipFile(sys.argv[1],"w",compression=zipfile.ZIP_STORED); f=z.open("synthetic-transfer.bin","w"); block=b"Z"*65536; [f.write(block) for _ in range(1024)]; f.close(); z.close()', fixture], { windowsHide: true, env: temporaryEnvironment });
 const fixtureBytes = (await stat(fixture)).size;
 async function hashFile(file) { const hash = createHash('sha256'); for await (const block of createReadStream(file)) hash.update(block); return hash.digest('hex'); }
 const fixtureHash = await hashFile(fixture);
@@ -77,6 +82,7 @@ await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const env = {};
 for (const name of ['SystemRoot','SYSTEMROOT','WINDIR','COMSPEC','PATHEXT','TEMP','TMP','USERPROFILE','LOCALAPPDATA','APPDATA']) if (process.env[name]) env[name] = process.env[name];
 env.PATH = path.join(process.env.SystemRoot, 'System32'); env.RENULUS_PROFILE = path.join(evidence, 'profile');
+env.TEMP = childTemporary; env.TMP = childTemporary;
 env.RENULUS_BACKEND_URL = 'http://127.0.0.1:' + server.address().port; env.RENULUS_SESSION_TOKEN = token;
 const executable = path.join(desktop, 'node_modules/electron/dist/electron.exe');
 const powershell = path.join(process.env.SystemRoot, 'System32/WindowsPowerShell/v1.0/powershell.exe');
@@ -86,7 +92,7 @@ result.consumer = rendererConsumer ? 'actual committed DataManagement Download/C
 if (rendererConsumer) result.limits[result.limits.length - 1] = 'Connections health/empty account/recovery status reads are declared synthetic fixtures; real producer/segmented archive semantics and final matching bundle remain separate';
 function operateDialog(action, target, name) {
   return new Promise((resolve, reject) => {
-    const helper = spawn(powershell, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(desktop, 'scripts/operate-owned-save-dialog.ps1'), '-AppProcessId', String(mainPid), '-ExpectedExecutable', executable, '-Action', action, '-Target', target, '-EvidencePath', path.join(evidence, name)], { windowsHide: true, timeout: 30_000 });
+    const helper = spawn(powershell, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(desktop, 'scripts/operate-owned-save-dialog.ps1'), '-AppProcessId', String(mainPid), '-ExpectedExecutable', executable, '-Action', action, '-Target', target, '-EvidencePath', path.join(evidence, name)], { windowsHide: true, timeout: 30_000, env: temporaryEnvironment });
     let stdout = '', stderr = ''; helper.stdout.on('data', block => { stdout += block; }); helper.stderr.on('data', block => { stderr += block; });
     helper.once('error', reject); helper.once('close', code => resolve({ code, stdout, stderr }));
   });
