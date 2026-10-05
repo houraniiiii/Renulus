@@ -150,6 +150,10 @@ def create_router(services) -> APIRouter:
     def topics():
         return repository.list_topics()
 
+    @router.get("/tracks")
+    def tracks():
+        return repository.track_metadata()
+
     @router.get("/sources")
     def sources():
         return repository.list_sources()

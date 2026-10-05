@@ -1,10 +1,11 @@
 # Original Renulus learning content
 
-`packs/renulus-foundations/1.1.0` is an original, versioned CC BY 4.0 pack: 27
+`packs/renulus-foundations/1.1.1` is an original, versioned CC BY 4.0 pack: 27
 topic identities, 56 original objectives, 26 staged synthetic cases and 160
-single-best-answer items. Released 1.0.0 (52 questions / 14 cases) and 1.0.1
-(106 questions / 20 cases) remain unchanged; their immutable item and citation
-snapshots are retained. R01 in
+single-best-answer items. It adds dated partial ESENeph mapping to the unchanged
+1.1.0 bank. Released 1.0.0 (52 questions / 14 cases), 1.0.1 (106 questions / 20
+cases) and 1.1.0 (160 questions / 26 cases) remain unchanged; their immutable
+item and citation snapshots are retained. R01 in
 `docs/SOURCES.md` is the pack origin. Only labels
 and topic IDs from the historical reference taxonomy are adopted; its original
 questions, data and runtime were never imported. Objectives and cases here are
@@ -17,10 +18,21 @@ diabetic kidney disease, ADPKD, drug stewardship, nutrition, supportive care,
 vasculitis, lupus, tubular/interstitial disease, stones/obstruction, TMA,
 monoclonal kidney disease, pregnancy and extracorporeal mechanisms. `coverage.json` records actual
 case/item/objective links and gaps across the whole taxonomy. A topic label or
-case tag alone is not evidence that its objectives have been covered. Formal
-ESENeph mappings and a complete curriculum are absent. All 27 topics and 56
-objectives have explicit item/case links in 1.1.0; links do not establish mastery,
-complete depth or an examination blueprint.
+case tag alone is not evidence that its objectives have been covered. All 27
+topics and 56 objectives have explicit general item/case links inherited from
+1.1.0; links do not establish mastery, complete depth or an examination blueprint.
+
+The formal mapping checked October 5, 2026 pins the official hub-linked undated
+blueprint and 2022 curriculum by PDF SHA-256, page and edition. It maps 152 exact
+reviewed-bank question versions across 11 domains, 26 supporting cases and 55
+objectives; one objective supplies generic curriculum support. Eight questions
+remain General only: four appraisal items without an exam-domain assignment and
+four objective mismatches requiring later reviewed metadata versions. All 160
+questions still have four options, while the official examination uses five.
+Every domain remains partial, with explicit missing facets and family capacity
+shortfalls. Full exam simulation and complete blueprint coverage are unavailable.
+Original mappings are in `mappings/esen-eph-2026-10-05.json` and the canonical
+release manifest; source PDFs and official exam questions are not distributed.
 
 The 108 added questions include 36 mechanisms, 34 interpretation and 38 common
 reasoning items, with four per topic and at least two skills per topic. The
@@ -45,7 +57,7 @@ this repository has no operation for saving a user's case.
 Validate without network or inference:
 
 ```powershell
-python tools/content/validate_pack.py content/packs/renulus-foundations/1.1.0 --predecessor content/packs/renulus-foundations/1.0.0 --predecessor content/packs/renulus-foundations/1.0.1 --review-evidence content/reviews/renulus-foundations-1.1.0.json
+python tools/content/validate_pack.py content/packs/renulus-foundations/1.1.1 --predecessor content/packs/renulus-foundations/1.0.0 --predecessor content/packs/renulus-foundations/1.0.1 --predecessor content/packs/renulus-foundations/1.1.0 --review-evidence content/reviews/renulus-foundations-1.1.1.json
 python -m pytest tests/content -q
 ```
 
@@ -64,6 +76,12 @@ checks those records and pinned source metadata against the payload and checks
 immutable ancestry against each selected predecessor. It cannot perform the
 medical reading or infer medical truth from a review flag. Source originals and
 ERA bank/manual material are excluded.
+
+`tools/content/author_eseneph.py` reproduces the 1.1.1 release, original mapping
+and mapping-review evidence. Questions, keys, cases, clinical source snapshots
+and general coverage are byte-identical to 1.1.0. Topic mapping metadata advances
+to version 2. Mapping review is an assistant interpretation of supported scope;
+it is not a new clinical-source review or independent human review.
 
 The integrator applies `runtime/renulus/content/schema.sql` through the canonical
 ledger. Content adds no alternate service, provider, model, private dataset or
@@ -85,8 +103,8 @@ The integrator may set an exact selection before router creation:
 ```python
 services.registry["content_pack_selection"] = {
     "id": "renulus-foundations",
-    "version": "1.1.0",
-    "upgrade_from": ["1.0.0", "1.0.1"],
+    "version": "1.1.1",
+    "upgrade_from": ["1.0.0", "1.0.1", "1.1.0"],
 }
 ```
 
@@ -98,3 +116,13 @@ return the startup outcome and any activation error without question content.
 later manual installs. Reactivating an eligible inactive bank requires an
 explicit install; a withdrawn bank cannot be reactivated. No public question
 stem/detail route is added.
+
+`ContentRepository.track_metadata()` and `GET /api/v1/content/tracks` return
+the same direct JSON list for General and ESENeph. Counts and objective support
+come from active nonwithdrawn pins in one SQLite read snapshot. Public metadata
+includes dated sources, explicit gaps, format limits and assistant-review status,
+without stems, options, keys or learner records. `list_question_summaries` and
+`GET /api/v1/content/questions?track=esen_eph` select only the 152 mapped
+reviewed-bank pins; General remains 160. The existing `topic_id` and `domain`
+filters still refer to stable topic IDs. Parent-owned assessment and Flow
+consumers must preserve the partial-preparation and generated-practice labels.

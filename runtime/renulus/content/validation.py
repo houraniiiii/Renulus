@@ -202,4 +202,9 @@ def validate_pack(path: str | Path, *, known_register_ids: Iterable[str] | None 
         if target not in topics or not any(q["topic_id"] == target for q in assessed) or not any(
                 target in [c["topic_id"], *c["secondary_topic_ids"]] for c in bundle["cases"]):
             raise PackValidationError(f"Required domain lacks cases/questions: {target}")
+    from .programmes import validate_programme_mappings
+    try:
+        validate_programme_mappings(bundle, known)
+    except ValueError as exc:
+        raise PackValidationError(f"Programme mapping: {exc}") from exc
     return ValidatedPack(bundle=bundle, sha256=digest(bundle))

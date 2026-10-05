@@ -65,6 +65,16 @@ def validate_review_evidence(pack, path, predecessors=()):
         raise PackValidationError("Review evidence identity/method mismatch")
     if not evidence.get("method") or not evidence.get("access_limits"):
         raise PackValidationError("Review evidence must state method and access limits")
+    programmes = pack.manifest.get("programme_mappings", [])
+    if programmes:
+        mapping = programmes[0]
+        expected_mapping = {
+            "id": mapping["id"], "version": mapping["version"], "checked_on": mapping["checked_on"],
+            "evidence_sha256": {s["id"]: s["sha256"] for s in mapping["evidence"] if "sha256" in s},
+            "excluded_question_ids": sorted(p["id"] for p in mapping.get("excluded_questions", [])),
+        }
+        if evidence.get("programme_mapping") != expected_mapping:
+            raise PackValidationError("Programme review evidence differs from the pinned mapping")
     selected = {(i["id"], i["version"]): i for kind in ("questions", "cases") for i in pack.bundle[kind]}
     inherited = set()
     for prior in predecessors:

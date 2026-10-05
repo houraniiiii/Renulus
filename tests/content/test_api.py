@@ -20,7 +20,7 @@ def client(app):
 
 
 def test_actual_shared_server_activates_real_original_pack(client, app):
-    assert client.get("/api/v1/content/manifest").json()["version"] == "1.1.0"
+    assert client.get("/api/v1/content/manifest").json()["version"] == "1.1.1"
     assert len(client.get("/api/v1/content/topics").json()) == 27
     assert len(client.get("/api/v1/content/cases").json()) == 26
     assert len(client.get("/api/v1/content/questions").json()) == 160
@@ -28,7 +28,7 @@ def test_actual_shared_server_activates_real_original_pack(client, app):
     assert client.get("/api/v1/content/sources/K10-2012").json()["register_id"] == "K10"
     status = client.get("/api/v1/content/bootstrap").json()
     assert status["status"] == "activated" and status["reason"] == "fresh_profile"
-    assert status["active"] == {"id": "renulus-foundations", "version": "1.1.0"}
+    assert status["active"] == {"id": "renulus-foundations", "version": "1.1.1"}
 
 
 def test_http_question_catalogue_is_metadata_only(client):
@@ -61,7 +61,7 @@ def test_routes_reject_unselected_pack_path_and_user_case_save(client, app):
 
 def test_withdrawn_default_pack_is_not_reactivated_on_restart(app):
     repository = app.state.services.registry["content"]
-    repository.withdraw_pack("renulus-foundations", "1.1.0", "Synthetic pack hold")
+    repository.withdraw_pack("renulus-foundations", "1.1.1", "Synthetic pack hold")
     restarted = create_app(app.state.services.paths.root, token="synthetic-test-token")
     assert restarted.state.services.registry["content"].active_manifest() is None
     assert restarted.state.services.registry["content"].list_questions() == []

@@ -56,7 +56,8 @@ TOPIC = obj({
     "id": IDENT, "version": VERSION, "label": TEXT, "description": TEXT,
     "objectives": array(obj({"id": IDENT, "text": TEXT}), 2),
     "mapping": obj({"general_nephrology": {"const": True},
-                     "esen_eph": {"const": "not_formally_mapped"}}),
+                     "esen_eph": {"enum": ["not_formally_mapped", "partially_mapped"]},
+                     "mapping_version": IDENT}, optional=("mapping_version",)),
     "license": {"const": "CC-BY-4.0"},
 })
 SOURCE = obj({
@@ -74,6 +75,45 @@ WITHDRAWAL = obj({
     "question_id": IDENT, "version": VERSION, "reason": TEXT,
     "replacement_version": VERSION,
 }, optional=("replacement_version",))
+PIN = obj({"id": IDENT, "version": VERSION})
+PROGRAMME_EVIDENCE = obj({
+    "id": IDENT, "register_id": {"const": "C01"}, "title": TEXT,
+    "edition": TEXT, "kind": {"enum": ["exam_format", "blueprint", "curriculum"]},
+    "url": {"type": "string", "format": "uri", "pattern": "^https://"},
+    "checked_on": DATE, "rights_note": TEXT,
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "page_count": VERSION,
+}, optional=("sha256", "page_count"))
+PROGRAMME = obj({
+    "id": {"const": "esen_eph"}, "version": IDENT, "title": TEXT,
+    "checked_on": DATE, "status": {"const": "partial"}, "method": TEXT,
+    "reviewer_kind": {"const": "assistant"},
+    "independent_human_review": {"const": False},
+    "official_endorsement": {"const": False},
+    "exam_simulation_available": {"const": False},
+    "excluded_questions": array(obj({"id": IDENT, "version": VERSION,
+        "category": {"enum": ["curriculum_support", "objective_mismatch"]}, "reason": TEXT})),
+    "evidence": array(PROGRAMME_EVIDENCE, 3),
+    "exam": obj({
+        "source_id": IDENT, "papers": VERSION, "questions_per_paper": VERSION,
+        "total_questions": VERSION, "minutes_per_paper": VERSION,
+        "options_per_question": VERSION, "weight_note": TEXT,
+    }),
+    "domains": array(obj({
+        "id": IDENT, "label": TEXT, "indicative_questions": VERSION,
+        "source_id": IDENT, "source_page": VERSION,
+    }), 11),
+    "alignments": array(obj({
+        "id": IDENT, "label": TEXT,
+        "domain_id": {"anyOf": [IDENT, {"type": "null"}]},
+        "relation": {"enum": ["exam_domain", "curriculum_support"]},
+        "status": {"enum": ["partial", "gap", "supporting"]},
+        "objective_ids": array(IDENT), "questions": array(PIN), "cases": array(PIN),
+        "curriculum_reference": obj({"source_id": IDENT, "section": TEXT,
+                                     "pages": array(VERSION, 1)}),
+        "scope_note": TEXT, "gaps": array(TEXT, 1),
+    }), 11),
+}, optional=("excluded_questions",))
 MANIFEST = obj({
     "schema_version": {"const": 1}, "repository_contract": {"const": 1},
     "id": IDENT, "version": {"type": "string", "pattern": r"^[0-9]+\.[0-9]+\.[0-9]+$"},
@@ -88,7 +128,8 @@ MANIFEST = obj({
                    "complete_esen_eph_blueprint": {"const": False},
                    "independent_human_review": {"type": "boolean"}}),
     "withdrawals": array(WITHDRAWAL),
-})
+    "programme_mappings": array(PROGRAMME, 1),
+}, optional=("programme_mappings",))
 COVERAGE_ROW = obj({
     "topic_id": IDENT, "objective_ids": array(IDENT),
     "case_ids": array(IDENT), "question_ids": array(IDENT),

@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 
+from .programmes import mapped_question_pins, programme_metadata
 from .validation import canonical_json, digest, validate_pack
 
 
@@ -37,11 +38,15 @@ class ContentRepository:
 
     def active_manifest(self) -> dict | None:
         with closing(self.db.connect()) as conn:
-            row = conn.execute(
-                "SELECT p.manifest_json FROM content_active_pack a JOIN content_packs p "
-                "ON p.pack_id=a.pack_id AND p.version=a.pack_version WHERE a.slot=1"
-            ).fetchone()
-            return json.loads(row[0]) if row else None
+            return self._manifest_from(conn)
+
+    @staticmethod
+    def _manifest_from(conn):
+        row = conn.execute(
+            "SELECT p.manifest_json FROM content_active_pack a JOIN content_packs p "
+            "ON p.pack_id=a.pack_id AND p.version=a.pack_version WHERE a.slot=1"
+        ).fetchone()
+        return json.loads(row[0]) if row else None
 
     @staticmethod
     def _store(conn, table, id_column, item, *, family=False):
@@ -163,21 +168,23 @@ class ContentRepository:
                 "installed": previous is None, "active": True,
                 "questions": len(bundle["questions"]), "cases": len(bundle["cases"])}
 
-    def _active_rows(self, name):
+    def _active_rows(self, name, connection=None):
+        if connection is None:
+            with closing(self.db.connect()) as conn:
+                return self._active_rows(name, conn)
         table, id_column, version_column = {
             "topics": ("content_topics", "topic_id", "topic_version"),
             "cases": ("content_case_versions", "case_id", "case_version"),
             "questions": ("content_question_versions", "question_id", "question_version"),
         }[name]
-        with closing(self.db.connect()) as conn:
-            rows = conn.execute(
-                f"SELECT v.body_json FROM content_active_pack a JOIN content_pack_{name} s "
-                f"ON s.pack_id=a.pack_id AND s.pack_version=a.pack_version JOIN {table} v "
-                f"ON v.{id_column}=s.{id_column} AND v.version=s.{version_column} WHERE a.slot=1 "
-                + ("AND NOT EXISTS (SELECT 1 FROM content_question_withdrawals w WHERE "
-                   "w.question_id=v.question_id AND w.version=v.version) " if name == "questions" else "")
-                + f"ORDER BY v.{id_column}").fetchall()
-            return [json.loads(r[0]) for r in rows]
+        rows = connection.execute(
+            f"SELECT v.body_json FROM content_active_pack a JOIN content_pack_{name} s "
+            f"ON s.pack_id=a.pack_id AND s.pack_version=a.pack_version JOIN {table} v "
+            f"ON v.{id_column}=s.{id_column} AND v.version=s.{version_column} WHERE a.slot=1 "
+            + ("AND NOT EXISTS (SELECT 1 FROM content_question_withdrawals w WHERE "
+               "w.question_id=v.question_id AND w.version=v.version) " if name == "questions" else "")
+            + f"ORDER BY v.{id_column}").fetchall()
+        return [json.loads(r[0]) for r in rows]
 
     def list_topics(self) -> list[dict]:
         return [{**topic, "title": topic["label"], "name": topic["label"]}
@@ -259,14 +266,31 @@ class ContentRepository:
 
     def list_question_summaries(self, topic_id=None, domain=None, track=None) -> list[dict]:
         """Key-free selection metadata. Domain currently means a stable topic ID."""
-        if track not in (None, "general_nephrology"):
+        if track not in (None, "general_nephrology", "esen_eph"):
             return []
         if topic_id is not None and domain is not None and topic_id != domain:
             return []
+        # Manifest and active pins must describe one SQLite snapshot even if a
+        # concurrent pack activation/withdrawal changes the active selection.
+        with closing(self.db.connect()) as conn:
+            conn.execute("BEGIN")
+            pins = mapped_question_pins(self._manifest_from(conn), track) if track == "esen_eph" else None
+            questions = self._active_rows("questions", conn)
         return [{k: q[k] for k in ("id", "version", "family_id", "family_version",
                                   "key_version", "topic_id", "objective_ids",
                                   "difficulty", "usage", "review")}
-                for q in self.list_questions(topic_id or domain)]
+                for q in questions if q["usage"] == "assessment_reserved"
+                and (topic_id or domain) in (None, q["topic_id"])
+                and (pins is None or (q["id"], q["version"]) in pins)]
+
+    def track_metadata(self) -> list[dict]:
+        """Public coverage; exact active versions, no stems/options/keys or attempts."""
+        with closing(self.db.connect()) as conn:
+            conn.execute("BEGIN")
+            return programme_metadata(self._manifest_from(conn), self._active_rows("topics", conn),
+                                      self._active_rows("cases", conn),
+                                      [q for q in self._active_rows("questions", conn)
+                                       if q["usage"] == "assessment_reserved"])
 
     def withdraw_question(self, id: str, version: int, reason: str, replacement_version=None):
         with self.db.transaction() as conn:

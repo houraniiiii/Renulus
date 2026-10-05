@@ -1,0 +1,604 @@
+[
+  {
+    "id": "T01",
+    "version": 2,
+    "label": "Foundations of kidney science",
+    "description": "General nephrology learning in foundations of kidney science. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T01.O01",
+        "text": "Relate filtration and tubular transport to clinical measurements."
+      },
+      {
+        "id": "T01.O02",
+        "text": "Explain how muscle mass and non-GFR determinants affect creatinine."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T02",
+    "version": 2,
+    "label": "Clinical assessment and diagnostics",
+    "description": "General nephrology learning in clinical assessment and diagnostics. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T02.O01",
+        "text": "Combine chronology, urine findings and imaging to frame a kidney problem."
+      },
+      {
+        "id": "T02.O02",
+        "text": "Choose a confirmatory test and explain what its result can and cannot establish."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T03",
+    "version": 2,
+    "label": "Sodium, water and volume",
+    "description": "General nephrology learning in sodium, water and volume. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T03.O01",
+        "text": "Classify hyponatremia using tonicity and urine measurements."
+      },
+      {
+        "id": "T03.O02",
+        "text": "Prioritize symptoms and control correction while treating a water or volume disorder."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T04",
+    "version": 2,
+    "label": "Potassium and acid-base",
+    "description": "General nephrology learning in potassium and acid-base. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T04.O01",
+        "text": "Separate cardiac protection, potassium redistribution and potassium removal."
+      },
+      {
+        "id": "T04.O02",
+        "text": "Evaluate CKD acidosis and monitor the effects of its treatment."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T05",
+    "version": 2,
+    "label": "Mineral metabolism and bone",
+    "description": "General nephrology learning in mineral metabolism and bone. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T05.O01",
+        "text": "Interpret calcium, phosphate and PTH trends together."
+      },
+      {
+        "id": "T05.O02",
+        "text": "Choose a CKD-MBD intervention with attention to dialysis status and treatment harms."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T06",
+    "version": 2,
+    "label": "Acute kidney injury and acute kidney disease",
+    "description": "General nephrology learning in acute kidney injury and acute kidney disease. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T06.O01",
+        "text": "Recognize and stage AKI from creatinine and urine-output changes."
+      },
+      {
+        "id": "T06.O02",
+        "text": "Treat reversible causes, recognize urgent KRT needs and plan recovery follow-up."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T07",
+    "version": 2,
+    "label": "Critical care nephrology",
+    "description": "General nephrology learning in critical care nephrology. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T07.O01",
+        "text": "Identify kidney-related disturbances requiring immediate monitored treatment."
+      },
+      {
+        "id": "T07.O02",
+        "text": "Select kidney support in the context of circulation, organ failure and treatment goals."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T08",
+    "version": 2,
+    "label": "Chronic kidney disease",
+    "description": "General nephrology learning in chronic kidney disease. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T08.O01",
+        "text": "Establish CKD chronicity and classify cause, GFR and albuminuria."
+      },
+      {
+        "id": "T08.O02",
+        "text": "Use progression risk and kidney-protective therapy to plan longitudinal care."
+      },
+      {
+        "id": "T08.O03",
+        "text": "Investigate anemia in CKD rather than assuming erythropoietin deficiency."
+      },
+      {
+        "id": "T08.O04",
+        "text": "Individualize ESA treatment goals while avoiding excessive hemoglobin targets."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T09",
+    "version": 2,
+    "label": "Hypertension and vascular kidney disease",
+    "description": "General nephrology learning in hypertension and vascular kidney disease. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T09.O01",
+        "text": "Interpret standardized and out-of-office blood pressure measurements."
+      },
+      {
+        "id": "T09.O02",
+        "text": "Individualize blood pressure treatment using symptoms, tolerance and comorbidity."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T10",
+    "version": 2,
+    "label": "Glomerular diseases",
+    "description": "General nephrology learning in glomerular diseases. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T10.O01",
+        "text": "Integrate nephrotic or nephritic findings, serology and biopsy indications."
+      },
+      {
+        "id": "T10.O02",
+        "text": "Distinguish disease-specific treatment from supportive care and prevent treatment harms."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T11",
+    "version": 2,
+    "label": "Tubular and interstitial disease",
+    "description": "General nephrology learning in tubular and interstitial disease. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T11.O01",
+        "text": "Use urine and electrolyte findings to localize a tubular defect."
+      },
+      {
+        "id": "T11.O02",
+        "text": "Evaluate drug-related interstitial injury and assess alternatives to continued exposure."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T12",
+    "version": 2,
+    "label": "Cystic and inherited kidney disease",
+    "description": "General nephrology learning in cystic and inherited kidney disease. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T12.O01",
+        "text": "Assess ADPKD progression risk and discuss familial testing implications."
+      },
+      {
+        "id": "T12.O02",
+        "text": "Explain eligibility, adverse effects and monitoring of a disease-modifying treatment."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T13",
+    "version": 2,
+    "label": "Stones and obstruction",
+    "description": "General nephrology learning in stones and obstruction. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T13.O01",
+        "text": "Recognize an obstructed or infected urinary tract requiring urgent evaluation."
+      },
+      {
+        "id": "T13.O02",
+        "text": "Connect stone composition and metabolic assessment to recurrence prevention."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T14",
+    "version": 2,
+    "label": "Diabetes and metabolic kidney disease",
+    "description": "General nephrology learning in diabetes and metabolic kidney disease. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T14.O01",
+        "text": "Select kidney-protective and glucose-lowering treatments within kidney-function limits."
+      },
+      {
+        "id": "T14.O02",
+        "text": "Monitor treatment effects and adjust therapy during acute illness or fasting."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T15",
+    "version": 2,
+    "label": "Thrombotic microangiopathy and complement",
+    "description": "General nephrology learning in thrombotic microangiopathy and complement. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T15.O01",
+        "text": "Integrate hemolysis, platelet count and kidney injury to recognize TMA."
+      },
+      {
+        "id": "T15.O02",
+        "text": "Distinguish urgent diagnostic pathways and explain when complement evaluation is relevant."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T16",
+    "version": 2,
+    "label": "Kidney disease in systemic illness",
+    "description": "General nephrology learning in kidney disease in systemic illness. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T16.O01",
+        "text": "Recognize organ-threatening vasculitis and lupus-related kidney disease."
+      },
+      {
+        "id": "T16.O02",
+        "text": "Balance timely tissue diagnosis with the urgency of treating systemic disease."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T17",
+    "version": 2,
+    "label": "Infection in nephrology",
+    "description": "General nephrology learning in infection in nephrology. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T17.O01",
+        "text": "Assess infection risks before kidney replacement or immunosuppression."
+      },
+      {
+        "id": "T17.O02",
+        "text": "Explain prevention, vaccination and evidence-based evaluation of a suspected infection."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T18",
+    "version": 2,
+    "label": "Onconephrology and paraproteins",
+    "description": "General nephrology learning in onconephrology and paraproteins. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T18.O01",
+        "text": "Connect malignancy, monoclonal proteins and cancer treatment to kidney injury."
+      },
+      {
+        "id": "T18.O02",
+        "text": "Select appropriate hematologic and kidney investigations without attributing every AKI to cancer."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T19",
+    "version": 2,
+    "label": "Medicines and nephrotoxicity",
+    "description": "General nephrology learning in medicines and nephrotoxicity. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T19.O01",
+        "text": "Review kidney-function-dependent benefits, risks and interactions of prescribed drugs."
+      },
+      {
+        "id": "T19.O02",
+        "text": "Document monitoring and a restart plan when temporarily interrupting treatment."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T20",
+    "version": 2,
+    "label": "Dialysis and kidney failure therapies",
+    "description": "General nephrology learning in dialysis and kidney failure therapies. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T20.O01",
+        "text": "Recognize clinical indications for dialysis without relying on a GFR cutoff alone."
+      },
+      {
+        "id": "T20.O02",
+        "text": "Plan modality, access and ongoing dialysis care with the person's preferences."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T21",
+    "version": 2,
+    "label": "Kidney transplantation",
+    "description": "General nephrology learning in kidney transplantation. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T21.O01",
+        "text": "Plan timely transplant assessment and discuss preemptive transplantation."
+      },
+      {
+        "id": "T21.O02",
+        "text": "Assess candidate risks and infection-prevention needs before transplantation."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T22",
+    "version": 2,
+    "label": "Procedures and interventional nephrology",
+    "description": "General nephrology learning in procedures and interventional nephrology. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T22.O01",
+        "text": "Explain the diagnostic value and limitations of kidney biopsy."
+      },
+      {
+        "id": "T22.O02",
+        "text": "Plan an intervention with attention to bleeding, infection and access complications."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T23",
+    "version": 2,
+    "label": "Extracorporeal therapies and apheresis",
+    "description": "General nephrology learning in extracorporeal therapies and apheresis. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T23.O01",
+        "text": "Explain solute clearance, fluid removal and modality constraints."
+      },
+      {
+        "id": "T23.O02",
+        "text": "Evaluate an apheresis indication against disease-specific evidence and treatment risk."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T24",
+    "version": 2,
+    "label": "Life-course and special populations",
+    "description": "General nephrology learning in life-course and special populations. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T24.O01",
+        "text": "Adapt kidney assessment to age, pregnancy, frailty and developmental context."
+      },
+      {
+        "id": "T24.O02",
+        "text": "Explain population-specific treatment tradeoffs and transitions in care."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T25",
+    "version": 2,
+    "label": "Nutrition, prevention and rehabilitation",
+    "description": "General nephrology learning in nutrition, prevention and rehabilitation. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T25.O01",
+        "text": "Tailor nutrition and activity advice to CKD stage and nutritional stability."
+      },
+      {
+        "id": "T25.O02",
+        "text": "Balance dietary restriction with function, growth and malnutrition risk."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T26",
+    "version": 2,
+    "label": "Supportive care, ethics and evidence",
+    "description": "General nephrology learning in supportive care, ethics and evidence. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T26.O01",
+        "text": "Discuss conservative kidney care and advance care planning using the person's goals."
+      },
+      {
+        "id": "T26.O02",
+        "text": "Distinguish a graded recommendation from a practice point and identify evidence limits."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  },
+  {
+    "id": "T27",
+    "version": 2,
+    "label": "Kidney interfaces with other specialties",
+    "description": "General nephrology learning in kidney interfaces with other specialties. Item coverage is reported separately.",
+    "objectives": [
+      {
+        "id": "T27.O01",
+        "text": "Relate kidney findings to cardiac, endocrine and intensive-care problems."
+      },
+      {
+        "id": "T27.O02",
+        "text": "Coordinate a shared care plan and specify which uncertainty requires another specialty."
+      }
+    ],
+    "mapping": {
+      "general_nephrology": true,
+      "esen_eph": "partially_mapped",
+      "mapping_version": "2026-10-05"
+    },
+    "license": "CC-BY-4.0"
+  }
+]

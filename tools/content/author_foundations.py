@@ -12,6 +12,7 @@ import hashlib
 import json
 from pathlib import Path
 import sys
+from tempfile import TemporaryDirectory
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "runtime"))
@@ -816,7 +817,8 @@ case("RN-CASE-LUPUS", "T16", ["T10", "T22"],
 
 
 def publish_snapshot(path: Path, *, version: str, topics, sources, cases, questions,
-                     target_topics, minimum_questions: int, withdrawals=()):
+                     target_topics, minimum_questions: int, withdrawals=(),
+                     published_on=None, programme_mappings=None):
     """Reuse the original publisher for additive, immutable content releases."""
     coverage = coverage_for(topics, cases, questions, target_topics, minimum_questions)
     bundle = {"topics": topics, "sources": sources, "cases": cases,
@@ -825,7 +827,7 @@ def publish_snapshot(path: Path, *, version: str, topics, sources, cases, questi
              for name, body in bundle.items()}
     manifest = {
         "schema_version": 1, "repository_contract": 1, "id": "renulus-foundations",
-        "version": version, "state": "published", "published_on": DATE,
+        "version": version, "state": "published", "published_on": published_on or DATE,
         "title": "Renulus foundations: cross-domain original learning",
         "license": "CC-BY-4.0", "authors": ["Renulus contributors (assistant-authored initial pack)"],
         "attribution": f"Renulus foundations {version}, Renulus contributors, CC BY 4.0. Identify any subsequent changes. Primary medical sources retain their own rights.",
@@ -835,17 +837,26 @@ def publish_snapshot(path: Path, *, version: str, topics, sources, cases, questi
         "claims": {"complete_curriculum": False, "complete_esen_eph_blueprint": False,
                    "independent_human_review": False}, "withdrawals": list(withdrawals),
     }
+    if programme_mappings is not None:
+        manifest["programme_mappings"] = programme_mappings
     blobs["manifest.json"] = (json.dumps(manifest, indent=2) + "\n").encode("utf-8")
     for name, raw in blobs.items():
         target = path / name
         if target.exists() and target.read_bytes() != raw:
             raise SystemExit(f"Refusing to alter published snapshot: {target}. Publish a new version.")
+    # An invalid authoring draft must not create a published release folder.
+    # Stage inside the chosen pack parent; do not use a personal/global cache.
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with TemporaryDirectory(prefix=".renulus-author-", dir=path.parent) as staging:
+        staged = Path(staging)
+        for name, raw in blobs.items():
+            (staged / name).write_bytes(raw)
+        pack = validate_pack(staged)
     path.mkdir(parents=True, exist_ok=True)
     for name, raw in blobs.items():
         target = path / name
         if not target.exists():
             target.write_bytes(raw)
-    pack = validate_pack(path)
     return {"pack": pack.manifest["id"], "version": pack.manifest["version"],
             "topics": len(topics), "objectives": sum(len(t["objectives"]) for t in topics),
             "questions": len(questions), "cases": len(cases), "sha256": pack.sha256}

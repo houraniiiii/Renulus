@@ -1,0 +1,2155 @@
+{
+  "id": "esen_eph",
+  "version": "2026-10-05",
+  "title": "ESENeph preparation — partial curriculum alignment",
+  "checked_on": "2026-10-05",
+  "status": "partial",
+  "method": "Assistant read of the exact hub-linked blueprint, 2022 content-of-learning/procedure/generic references, original objectives, question stems/keys and case stages. Explicit pinned links record supported scope and missing depth; this is Renulus's interpretation.",
+  "reviewer_kind": "assistant",
+  "independent_human_review": false,
+  "official_endorsement": false,
+  "exam_simulation_available": false,
+  "excluded_questions": [
+    {
+      "id": "RN-EVID-001",
+      "version": 1,
+      "category": "curriculum_support",
+      "reason": "Generic research/critical-appraisal support; no supported blueprint-domain assignment."
+    },
+    {
+      "id": "RN11-T26-001",
+      "version": 1,
+      "category": "curriculum_support",
+      "reason": "Generic research/critical-appraisal support; no supported blueprint-domain assignment."
+    },
+    {
+      "id": "RN11-T26-003",
+      "version": 1,
+      "category": "curriculum_support",
+      "reason": "Generic research/critical-appraisal support; no supported blueprint-domain assignment."
+    },
+    {
+      "id": "RN11-T26-004",
+      "version": 1,
+      "category": "curriculum_support",
+      "reason": "Generic research/critical-appraisal support; no supported blueprint-domain assignment."
+    },
+    {
+      "id": "RN11-T23-004",
+      "version": 1,
+      "category": "objective_mismatch",
+      "reason": "Citrate anticoagulation mechanism is linked to an apheresis-indication objective."
+    },
+    {
+      "id": "RN11-T20-001",
+      "version": 1,
+      "category": "objective_mismatch",
+      "reason": "Overall HD adequacy is linked to a dialysis-initiation objective."
+    },
+    {
+      "id": "RN11-T20-003",
+      "version": 1,
+      "category": "objective_mismatch",
+      "reason": "Urea reduction arithmetic is linked to a dialysis-initiation objective."
+    },
+    {
+      "id": "RN11-T17-004",
+      "version": 1,
+      "category": "objective_mismatch",
+      "reason": "Cancer remission in candidate assessment is linked to an infection-risk objective."
+    }
+  ],
+  "evidence": [
+    {
+      "id": "C01-esen-eph-hub-20261005",
+      "register_id": "C01",
+      "title": "European Specialty Examination in Nephrology",
+      "edition": "Live official hub checked 2026-10-05; not an independently dated blueprint edition",
+      "kind": "exam_format",
+      "url": "https://www.thefederation.uk/examinations/european-specialty-examination-nephrology",
+      "checked_on": "2026-10-05",
+      "rights_note": "Public reference metadata only. No open redistribution licence verified; source PDFs, prose, figures and official examination questions are not included."
+    },
+    {
+      "id": "C01-linked-blueprint-20261005",
+      "register_id": "C01",
+      "title": "SCE in Nephrology Blueprint",
+      "edition": "Undated two-page PDF currently linked by the ESENeph hub; historical SCE title retained",
+      "kind": "blueprint",
+      "url": "https://www.thefederation.uk/sites/default/files/uploads/Specialty%20Certificate%20Examination%20in%20Nephrology%20blueprint.pdf",
+      "sha256": "20e0d68613b660c9df1669a0958ec594e5cc317ea4f6e261ad9e994154482d9c",
+      "page_count": 2,
+      "checked_on": "2026-10-05",
+      "rights_note": "Public reference metadata only. No open redistribution licence verified; source PDFs, prose, figures and official examination questions are not included."
+    },
+    {
+      "id": "C01-renal-curriculum-2022",
+      "register_id": "C01",
+      "title": "Renal Medicine 2022 curriculum",
+      "edition": "2022; implemented August 2022; official hub-linked 58-page PDF checked 2026-10-05",
+      "kind": "curriculum",
+      "url": "https://www.thefederation.uk/sites/default/files/Renal%2520Medicine%25202022%2520Curriculum%2520FINAL.pdf",
+      "sha256": "1723591e724a1d27e40e80648c5c2854a2ac3dad211dcbc7fd077d02b9d74d16",
+      "page_count": 58,
+      "checked_on": "2026-10-05",
+      "rights_note": "Public reference metadata only. No open redistribution licence verified; source PDFs, prose, figures and official examination questions are not included. The UK training curriculum is a reference, not every EU doctor's national programme."
+    }
+  ],
+  "exam": {
+    "source_id": "C01-esen-eph-hub-20261005",
+    "papers": 2,
+    "questions_per_paper": 100,
+    "total_questions": 200,
+    "minutes_per_paper": 180,
+    "options_per_question": 5,
+    "weight_note": "Page 1 gives indicative counts across both papers; actual composition may vary. This pack has four-choice SBAs and cannot reproduce a best-of-five full exam."
+  },
+  "domains": [
+    {
+      "id": "glomerular_interstitial",
+      "label": "Glomerular and interstitial disorders",
+      "indicative_questions": 30,
+      "source_id": "C01-linked-blueprint-20261005",
+      "source_page": 1
+    },
+    {
+      "id": "acute_biochemistry",
+      "label": "Acute injury, acute support, fluid and biochemical disorders",
+      "indicative_questions": 26,
+      "source_id": "C01-linked-blueprint-20261005",
+      "source_page": 1
+    },
+    {
+      "id": "ckd_urine",
+      "label": "CKD and urinary abnormalities",
+      "indicative_questions": 24,
+      "source_id": "C01-linked-blueprint-20261005",
+      "source_page": 1
+    },
+    {
+      "id": "bone_anemia",
+      "label": "Bone and anemia complications",
+      "indicative_questions": 12,
+      "source_id": "C01-linked-blueprint-20261005",
+      "source_page": 1
+    },
+    {
+      "id": "cardiovascular_diabetes",
+      "label": "Cardiovascular, blood pressure and diabetes care",
+      "indicative_questions": 20,
+      "source_id": "C01-linked-blueprint-20261005",
+      "source_page": 1
+    },
+    {
+      "id": "urology",
+      "label": "Stones, urinary infection and obstruction",
+      "indicative_questions": 14,
+      "source_id": "C01-linked-blueprint-20261005",
+      "source_page": 1
+    },
+    {
+      "id": "inherited_rare",
+      "label": "Inherited and uncommon disorders",
+      "indicative_questions": 14,
+      "source_id": "C01-linked-blueprint-20261005",
+      "source_page": 1
+    },
+    {
+      "id": "peritoneal_dialysis",
+      "label": "Peritoneal dialysis",
+      "indicative_questions": 8,
+      "source_id": "C01-linked-blueprint-20261005",
+      "source_page": 1
+    },
+    {
+      "id": "hemodialysis",
+      "label": "Hemodialysis",
+      "indicative_questions": 14,
+      "source_id": "C01-linked-blueprint-20261005",
+      "source_page": 1
+    },
+    {
+      "id": "transplantation",
+      "label": "Kidney transplantation",
+      "indicative_questions": 14,
+      "source_id": "C01-linked-blueprint-20261005",
+      "source_page": 1
+    },
+    {
+      "id": "other",
+      "label": "Other clinical and care domains",
+      "indicative_questions": 24,
+      "source_id": "C01-linked-blueprint-20261005",
+      "source_page": 1
+    }
+  ],
+  "alignments": [
+    {
+      "id": "glomerular_diagnosis",
+      "domain_id": "glomerular_interstitial",
+      "label": "Urine, serology and tissue interpretation",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T02.O02",
+        "T10.O01",
+        "T22.O01",
+        "T22.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN-GN-001",
+          "version": 1
+        },
+        {
+          "id": "RN-GN-002",
+          "version": 1
+        },
+        {
+          "id": "RN-GN-004",
+          "version": 1
+        },
+        {
+          "id": "RN11-T02-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T10-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T22-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T22-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T22-004",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN-CASE-LUPUS",
+          "version": 1
+        },
+        {
+          "id": "RN-CASE-NEPHROTIC",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          30
+        ]
+      },
+      "scope_note": "Diagnostic decisions and sampling limitations; the pathology items use text, not diagnostic images.",
+      "gaps": [
+        "No reviewed IgA/IgAV or anti-GBM-specific assessment; no image-based histology assessment."
+      ]
+    },
+    {
+      "id": "glomerular_management",
+      "domain_id": "glomerular_interstitial",
+      "label": "Disease response and competing treatment risks",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T10.O01",
+        "T10.O02",
+        "T27.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN-GN-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T10-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T10-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T10-004",
+          "version": 1
+        },
+        {
+          "id": "RN11-T27-004",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN11-CASE-NEPHROTIC-RISK",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          30
+        ]
+      },
+      "scope_note": "FSGS, membranous response, infection-related reasoning and thrombosis/bleeding tradeoffs.",
+      "gaps": [
+        "No complete disease-by-disease induction, maintenance, relapse or drug-monitoring bank."
+      ]
+    },
+    {
+      "id": "systemic_immune",
+      "domain_id": "glomerular_interstitial",
+      "label": "Systemic inflammation and microvascular injury",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T15.O01",
+        "T15.O02",
+        "T16.O01",
+        "T16.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN-AAV-001",
+          "version": 1
+        },
+        {
+          "id": "RN-LN-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T15-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T15-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T15-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T15-004",
+          "version": 1
+        },
+        {
+          "id": "RN11-T16-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T16-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T16-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T16-004",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN-CASE-LUPUS",
+          "version": 1
+        },
+        {
+          "id": "RN-CASE-VASCULITIS",
+          "version": 1
+        },
+        {
+          "id": "RN11-CASE-LUPUS-REASSESSMENT",
+          "version": 1
+        },
+        {
+          "id": "RN11-CASE-TMA",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          30
+        ]
+      },
+      "scope_note": "Lupus, AAV and TMA recognition/etiology are selected contexts within the curriculum's immune/systemic scope.",
+      "gaps": [
+        "No comprehensive complement-disease treatment or anti-GBM pathway."
+      ]
+    },
+    {
+      "id": "tubular_interstitial",
+      "domain_id": "glomerular_interstitial",
+      "label": "Tubular localization and interstitial-injury reasoning",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T11.O01",
+        "T11.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN11-T11-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T11-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T11-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T11-004",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN11-CASE-PROXIMAL",
+          "version": 1
+        },
+        {
+          "id": "RN11-CASE-STONE-ACID",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          28,
+          30
+        ]
+      },
+      "scope_note": "Proximal losses, drug-related glycosuria, AIN test limits and acidification interpretation; these are not four AIN treatment items.",
+      "gaps": [
+        "No comprehensive interstitial treatment course or inherited salt-wasting assessment."
+      ]
+    },
+    {
+      "id": "paraprotein",
+      "domain_id": "glomerular_interstitial",
+      "label": "Nonalbumin proteins and renal deposition workup",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T02.O01",
+        "T18.O01",
+        "T18.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN11-T02-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T18-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T18-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T18-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T18-004",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN11-CASE-PROXIMAL",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          30,
+          32,
+          33
+        ]
+      },
+      "scope_note": "MGRS and amyloid investigation; assignment is an assistant interpretation of the immune/systemic curriculum context.",
+      "gaps": [
+        "No comprehensive cancer-treatment toxicity, myeloma or clone-directed therapy assessment."
+      ]
+    },
+    {
+      "id": "apheresis",
+      "domain_id": "glomerular_interstitial",
+      "label": "Plasma exchange as a distinct mechanism",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T23.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN11-T23-002",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN11-CASE-TMA",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          30
+        ]
+      },
+      "scope_note": "A TTP plasma-exchange distinction; the case prompts etiologic and urgent specialist reasoning.",
+      "gaps": [
+        "No complete disease-specific plasma-exchange indication or complication matrix."
+      ]
+    },
+    {
+      "id": "aki_staging",
+      "domain_id": "acute_biochemistry",
+      "label": "Acute injury definitions and staging",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T06.O01"
+      ],
+      "questions": [
+        {
+          "id": "RN-AKI-001",
+          "version": 1
+        },
+        {
+          "id": "RN-AKI-002",
+          "version": 1
+        },
+        {
+          "id": "RN-AKI-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T06-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T06-003",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN-CASE-AKI",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          28,
+          29
+        ]
+      },
+      "scope_note": "Creatinine/urine-output definitions and limits of an unknown baseline.",
+      "gaps": [
+        "No exhaustive etiologic AKI differential or all post-AKI outcomes."
+      ]
+    },
+    {
+      "id": "aki_management",
+      "domain_id": "acute_biochemistry",
+      "label": "Cause review, recovery and medicine-related AKI",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T06.O02",
+        "T19.O01"
+      ],
+      "questions": [
+        {
+          "id": "RN-AKI-004",
+          "version": 1
+        },
+        {
+          "id": "RN-AKI-005",
+          "version": 1
+        },
+        {
+          "id": "RN-AKI-006",
+          "version": 1
+        },
+        {
+          "id": "RN11-T06-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T06-004",
+          "version": 1
+        },
+        {
+          "id": "RN11-T19-001",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN-CASE-AKI",
+          "version": 1
+        },
+        {
+          "id": "RN11-CASE-OBSTRUCTION",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          29
+        ]
+      },
+      "scope_note": "Diuretics, low-dose dopamine, fractional excretion limits, follow-up and hemodynamic drug interactions.",
+      "gaps": [
+        "No complete shock/sepsis resuscitation, hepatorenal or tumor-lysis bank."
+      ]
+    },
+    {
+      "id": "changing_filtration",
+      "domain_id": "acute_biochemistry",
+      "label": "Measurements during changing kidney function",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T01.O01"
+      ],
+      "questions": [
+        {
+          "id": "RN11-T01-003",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN11-CASE-CARDIORENAL",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          29
+        ]
+      },
+      "scope_note": "Non-steady-state estimates and acute medication decisions.",
+      "gaps": [
+        "No measured-clearance or kinetic-estimation curriculum."
+      ]
+    },
+    {
+      "id": "acute_support",
+      "domain_id": "acute_biochemistry",
+      "label": "Acute support delivery and cessation",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T07.O01",
+        "T07.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN11-T07-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T07-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T07-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T07-004",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN11-CASE-CRRT-DELIVERY",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          29,
+          34
+        ]
+      },
+      "scope_note": "Circulatory tolerance, dose arithmetic, downtime and stopping support. The citrate question's apheresis-objective link is not counted as direct alignment.",
+      "gaps": [
+        "No comprehensive acute-access procedure, circuit troubleshooting or poisoning/toxin assessment; citrate item needs an objective-metadata revision before formal inclusion."
+      ]
+    },
+    {
+      "id": "water_sodium",
+      "domain_id": "acute_biochemistry",
+      "label": "Water, sodium and correction reasoning",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T03.O01",
+        "T03.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN-NA-001",
+          "version": 1
+        },
+        {
+          "id": "RN-NA-002",
+          "version": 1
+        },
+        {
+          "id": "RN-NA-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T03-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T03-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T03-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T03-004",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN-CASE-HYPONA",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          28
+        ]
+      },
+      "scope_note": "Tonicity, urine dilution, effective volume and monitored correction.",
+      "gaps": [
+        "No reviewed hypernatremia or diabetes-insipidus assessment."
+      ]
+    },
+    {
+      "id": "potassium_acidosis",
+      "domain_id": "acute_biochemistry",
+      "label": "Potassium and metabolic acid-base patterns",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T04.O01",
+        "T04.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN-AB-001",
+          "version": 1
+        },
+        {
+          "id": "RN-AB-002",
+          "version": 1
+        },
+        {
+          "id": "RN-K-001",
+          "version": 1
+        },
+        {
+          "id": "RN-K-002",
+          "version": 1
+        },
+        {
+          "id": "RN-K-003",
+          "version": 1
+        },
+        {
+          "id": "RN-K-004",
+          "version": 1
+        },
+        {
+          "id": "RN11-T04-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T04-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T04-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T04-004",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN-CASE-ACIDOSIS",
+          "version": 1
+        },
+        {
+          "id": "RN-CASE-HYPERK",
+          "version": 1
+        },
+        {
+          "id": "RN11-CASE-STONE-ACID",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          28
+        ]
+      },
+      "scope_note": "Hyperkalemia, redistribution/removal, CKD alkali monitoring and selected gap/RTA interpretation.",
+      "gaps": [
+        "No systematic hypokalemia, metabolic alkalosis or mixed respiratory/acid-base bank."
+      ]
+    },
+    {
+      "id": "ckd_classification",
+      "domain_id": "ckd_urine",
+      "label": "Chronicity, filtration markers and urine quantification",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T01.O01",
+        "T01.O02",
+        "T02.O01",
+        "T08.O01"
+      ],
+      "questions": [
+        {
+          "id": "RN-CKD-001",
+          "version": 1
+        },
+        {
+          "id": "RN-CKD-002",
+          "version": 1
+        },
+        {
+          "id": "RN-CKD-003",
+          "version": 1
+        },
+        {
+          "id": "RN-CKD-004",
+          "version": 1
+        },
+        {
+          "id": "RN11-T01-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T01-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T01-004",
+          "version": 1
+        },
+        {
+          "id": "RN11-T02-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T02-004",
+          "version": 1
+        },
+        {
+          "id": "RN11-T08-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T08-004",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN-CASE-CKD",
+          "version": 1
+        },
+        {
+          "id": "RN11-CASE-HOME-BP",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          29
+        ]
+      },
+      "scope_note": "Marker/measurement limitations support CKD decisions; they do not establish every foundational science objective.",
+      "gaps": [
+        "No complete persistent-hematuria workup or structural CKD differential."
+      ]
+    },
+    {
+      "id": "ckd_progression",
+      "domain_id": "ckd_urine",
+      "label": "Progression risk and longitudinal protection",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T08.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN-CKD-005",
+          "version": 1
+        },
+        {
+          "id": "RN-CKD-006",
+          "version": 1
+        },
+        {
+          "id": "RN11-T08-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T08-003",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN-CASE-CKD",
+          "version": 1
+        },
+        {
+          "id": "RN11-CASE-HOME-BP",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          29,
+          30
+        ]
+      },
+      "scope_note": "Risk-tool applicability, SGLT2 protection and change evaluation.",
+      "gaps": [
+        "No full cause-specific longitudinal CKD management or complications matrix."
+      ]
+    },
+    {
+      "id": "advanced_ckd",
+      "domain_id": "ckd_urine",
+      "label": "Preparing for replacement therapy",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T20.O01",
+        "T20.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN-DIAL-001",
+          "version": 1
+        },
+        {
+          "id": "RN-DIAL-002",
+          "version": 1
+        },
+        {
+          "id": "RN-DIAL-003",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN-CASE-DIALYSIS",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          29,
+          30
+        ]
+      },
+      "scope_note": "Clinical initiation and anticipatory planning; not proof of maintenance dialysis competence.",
+      "gaps": [
+        "No complete education/modality/access selection bank."
+      ]
+    },
+    {
+      "id": "bone",
+      "domain_id": "bone_anemia",
+      "label": "Mineral and bone trend interpretation",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T05.O01",
+        "T05.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN-MBD-001",
+          "version": 1
+        },
+        {
+          "id": "RN-MBD-002",
+          "version": 1
+        },
+        {
+          "id": "RN-MBD-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T05-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T05-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T05-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T05-004",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN-CASE-MBD",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          29,
+          30
+        ]
+      },
+      "scope_note": "PTH/calcium/phosphate, binder exposure and low-turnover concerns.",
+      "gaps": [
+        "No comprehensive fracture, osteoporosis or calciphylaxis assessment."
+      ]
+    },
+    {
+      "id": "anemia",
+      "domain_id": "bone_anemia",
+      "label": "Anemia investigation and ESA goals",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T08.O03",
+        "T08.O04"
+      ],
+      "questions": [
+        {
+          "id": "RN-ANEMIA-001",
+          "version": 1
+        },
+        {
+          "id": "RN-ANEMIA-002",
+          "version": 1
+        }
+      ],
+      "cases": [],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          29,
+          30
+        ]
+      },
+      "scope_note": "Two exact reviewed items; no anemia teaching case is claimed.",
+      "gaps": [
+        "No comprehensive iron-treatment, ESA hyporesponse, transfusion or HIF-PHI bank."
+      ]
+    },
+    {
+      "id": "blood_pressure",
+      "domain_id": "cardiovascular_diabetes",
+      "label": "Blood pressure validity and tolerance",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T09.O01",
+        "T09.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN-BP-001",
+          "version": 1
+        },
+        {
+          "id": "RN-BP-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T09-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T09-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T09-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T09-004",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN-CASE-DIABETES",
+          "version": 1
+        },
+        {
+          "id": "RN11-CASE-HOME-BP",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          32
+        ]
+      },
+      "scope_note": "Measurement settings, masked patterns and tolerated treatment.",
+      "gaps": [
+        "No complete secondary-hypertension, renovascular or emergency-treatment bank."
+      ]
+    },
+    {
+      "id": "diabetes",
+      "domain_id": "cardiovascular_diabetes",
+      "label": "Diabetes protection and treatment interpretation",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T14.O01",
+        "T14.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN-DM-001",
+          "version": 1
+        },
+        {
+          "id": "RN-DM-002",
+          "version": 1
+        },
+        {
+          "id": "RN-DM-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T14-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T14-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T14-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T14-004",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN-CASE-DIABETES",
+          "version": 1
+        },
+        {
+          "id": "RN11-CASE-CARDIORENAL",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          32
+        ]
+      },
+      "scope_note": "Selected kidney-protective mechanisms, metformin, fasting and HbA1c limitations.",
+      "gaps": [
+        "No complete insulin adjustment, pancreatic transplantation or diabetes complication bank."
+      ]
+    },
+    {
+      "id": "cardiorenal",
+      "domain_id": "cardiovascular_diabetes",
+      "label": "Cardiac/kidney risk and shared care",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T27.O01",
+        "T27.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN11-T27-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T27-003",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN11-CASE-CARDIORENAL",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          32
+        ]
+      },
+      "scope_note": "Albuminuria risk and medication benefit versus manageable potassium.",
+      "gaps": [
+        "No comprehensive heart-failure, ischemia or dialysis cardiovascular assessment."
+      ]
+    },
+    {
+      "id": "obstruction",
+      "domain_id": "urology",
+      "label": "An infected obstructed system",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T13.O01"
+      ],
+      "questions": [
+        {
+          "id": "RN11-T13-001",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN11-CASE-OBSTRUCTION",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          31
+        ]
+      },
+      "scope_note": "Urgent source-control reasoning.",
+      "gaps": [
+        "No complete chronic obstruction, congenital tract or imaging pathway."
+      ]
+    },
+    {
+      "id": "stones",
+      "domain_id": "urology",
+      "label": "Stone composition and metabolic prevention",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T13.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN11-T13-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T13-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T13-004",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN11-CASE-STONE-ACID",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          31
+        ]
+      },
+      "scope_note": "Selected calcium, oxalate, citrate and urine-pH mechanisms.",
+      "gaps": [
+        "No complete stone-procedure or metabolic differential bank."
+      ]
+    },
+    {
+      "id": "urinary_infection_gap",
+      "domain_id": "urology",
+      "label": "Routine and recurrent urinary infection",
+      "relation": "exam_domain",
+      "status": "gap",
+      "objective_ids": [],
+      "questions": [],
+      "cases": [],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          31
+        ]
+      },
+      "scope_note": "The obstructed sepsis case does not cover uncomplicated/recurrent UTI.",
+      "gaps": [
+        "No dedicated reviewed recurrent UTI assessment or teaching case."
+      ]
+    },
+    {
+      "id": "adpkd",
+      "domain_id": "inherited_rare",
+      "label": "ADPKD progression and family considerations",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T12.O01",
+        "T12.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN-PKD-001",
+          "version": 1
+        },
+        {
+          "id": "RN-PKD-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T12-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T12-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T12-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T12-004",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN-CASE-ADPKD",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          30,
+          31
+        ]
+      },
+      "scope_note": "ADPKD imaging/progression, family history and treatment monitoring.",
+      "gaps": [
+        "No complete cascade-testing or genetic-variant interpretation bank."
+      ]
+    },
+    {
+      "id": "other_inherited_gap",
+      "domain_id": "inherited_rare",
+      "label": "Genetic and metabolic disease beyond ADPKD",
+      "relation": "exam_domain",
+      "status": "gap",
+      "objective_ids": [],
+      "questions": [],
+      "cases": [],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          28,
+          31
+        ]
+      },
+      "scope_note": "A cystic-topic tag does not establish the wider rare/genetic curriculum.",
+      "gaps": [
+        "No dedicated Alport, Fabry, cystinosis, primary hyperoxaluria or inherited salt-wasting bank."
+      ]
+    },
+    {
+      "id": "pd_clearance",
+      "domain_id": "peritoneal_dialysis",
+      "label": "PD transport, residual function and fluid removal",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T20.O02",
+        "T23.O01"
+      ],
+      "questions": [
+        {
+          "id": "RN11-T20-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T20-004",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN11-CASE-PD-VOLUME",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          34
+        ]
+      },
+      "scope_note": "Two PD-specific questions plus a volume/clearance case.",
+      "gaps": [
+        "No complete PD prescription or ultrafiltration-failure algorithm."
+      ]
+    },
+    {
+      "id": "pd_infection_gap",
+      "domain_id": "peritoneal_dialysis",
+      "label": "PD infection and catheter complications",
+      "relation": "exam_domain",
+      "status": "gap",
+      "objective_ids": [],
+      "questions": [],
+      "cases": [],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          34
+        ]
+      },
+      "scope_note": "General infection teaching is not PD-peritonitis coverage.",
+      "gaps": [
+        "No reviewed peritonitis, exit-site/tunnel infection or PD access-failure assessment."
+      ]
+    },
+    {
+      "id": "hd_clearance",
+      "domain_id": "hemodialysis",
+      "label": "HD dose, modalities and overall adequacy",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T23.O01"
+      ],
+      "questions": [
+        {
+          "id": "RN11-T23-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T23-003",
+          "version": 1
+        }
+      ],
+      "cases": [],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          34
+        ]
+      },
+      "scope_note": "Diffusion/convection and membrane differences; no HD-focused staged case is claimed. Existing urea/adequacy questions point to a dialysis-initiation objective and are excluded from formal alignment.",
+      "gaps": [
+        "No complete maintenance/home-HD prescription, water-quality or complication case bank; two adequacy items need objective-metadata revisions."
+      ]
+    },
+    {
+      "id": "hd_emergency",
+      "domain_id": "hemodialysis",
+      "label": "Urgent removal after a missed HD treatment",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T20.O01"
+      ],
+      "questions": [
+        {
+          "id": "RN-DIAL-004",
+          "version": 1
+        }
+      ],
+      "cases": [],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          34
+        ]
+      },
+      "scope_note": "One maintenance-HD emergency item; general hyperkalemia items remain in the acute domain.",
+      "gaps": [
+        "No complete intradialytic emergency bank."
+      ]
+    },
+    {
+      "id": "hd_access_gap",
+      "domain_id": "hemodialysis",
+      "label": "HD access and unit operation",
+      "relation": "exam_domain",
+      "status": "gap",
+      "objective_ids": [],
+      "questions": [],
+      "cases": [],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          34,
+          35
+        ]
+      },
+      "scope_note": "Preparing for access does not establish catheter insertion or access troubleshooting.",
+      "gaps": [
+        "No access infection, thrombosis, aneurysm, catheter insertion or water-system assessment."
+      ]
+    },
+    {
+      "id": "transplant_candidates",
+      "domain_id": "transplantation",
+      "label": "Candidate and donor eligibility",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T21.O01",
+        "T21.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN-TX-001",
+          "version": 1
+        },
+        {
+          "id": "RN-TX-002",
+          "version": 1
+        },
+        {
+          "id": "RN-TX-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T21-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T21-003",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN-CASE-TRANSPLANT",
+          "version": 1
+        },
+        {
+          "id": "RN11-CASE-DONOR-GOALS",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          34,
+          35
+        ]
+      },
+      "scope_note": "Preemptive assessment, candidate comorbidity and selected donor measurements. The cancer-remission item has an infection-objective link and is excluded from direct alignment.",
+      "gaps": [
+        "No deceased-donor selection/allocation or complete candidate-assessment bank; cancer item needs an objective-metadata revision."
+      ]
+    },
+    {
+      "id": "transplant_prevention",
+      "domain_id": "transplantation",
+      "label": "Sensitization and pretransplant infection planning",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T17.O01",
+        "T17.O02",
+        "T21.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN-TX-004",
+          "version": 1
+        },
+        {
+          "id": "RN11-T17-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T17-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T21-002",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN-CASE-TRANSPLANT",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          33,
+          34
+        ]
+      },
+      "scope_note": "HLA-antibody reassessment and infection/vaccine timing before transplant.",
+      "gaps": [
+        "No posttransplant virology, prophylaxis or immunosuppressant-level assessment."
+      ]
+    },
+    {
+      "id": "donor_choice",
+      "domain_id": "transplantation",
+      "label": "Voluntary donation and future pregnancy",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T21.O02",
+        "T24.O01"
+      ],
+      "questions": [
+        {
+          "id": "RN11-T21-004",
+          "version": 1
+        },
+        {
+          "id": "RN11-T24-003",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN11-CASE-DONOR-GOALS",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          35
+        ]
+      },
+      "scope_note": "Autonomy and selected donor counseling, not a national legal qualification.",
+      "gaps": [
+        "No complete donor psychosocial or jurisdiction-specific legal assessment."
+      ]
+    },
+    {
+      "id": "transplant_aftercare_gap",
+      "domain_id": "transplantation",
+      "label": "Transplant dysfunction and longer-term care",
+      "relation": "exam_domain",
+      "status": "gap",
+      "objective_ids": [],
+      "questions": [],
+      "cases": [],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          34
+        ]
+      },
+      "scope_note": "Candidate questions cannot stand in for recipient aftercare.",
+      "gaps": [
+        "No reviewed rejection, BK/CMV, immunosuppressant toxicity, graft vascular or obstructive complication bank."
+      ]
+    },
+    {
+      "id": "prescribing",
+      "domain_id": "other",
+      "label": "Kidney-aware prescribing and transitions",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T19.O01",
+        "T19.O02",
+        "T27.O01"
+      ],
+      "questions": [
+        {
+          "id": "RN-DRUG-001",
+          "version": 1
+        },
+        {
+          "id": "RN-DRUG-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T19-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T19-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T19-004",
+          "version": 1
+        },
+        {
+          "id": "RN11-T27-002",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN-CASE-ACIDOSIS",
+          "version": 1
+        },
+        {
+          "id": "RN-CASE-ADPKD",
+          "version": 1
+        },
+        {
+          "id": "RN-CASE-AKI",
+          "version": 1
+        },
+        {
+          "id": "RN11-CASE-CARDIORENAL",
+          "version": 1
+        },
+        {
+          "id": "RN11-CASE-NEPHROTIC-RISK",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          29,
+          32
+        ]
+      },
+      "scope_note": "Dose metrics, non-GFR influences, combinations, OTC exposures and restart responsibility.",
+      "gaps": [
+        "No complete pharmacokinetic, drug-level or dialysis-removal bank."
+      ]
+    },
+    {
+      "id": "infection",
+      "domain_id": "other",
+      "label": "Infection assessment around immune treatment",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T17.O01",
+        "T17.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN11-T17-002",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN-CASE-TRANSPLANT",
+          "version": 1
+        },
+        {
+          "id": "RN11-CASE-LUPUS-REASSESSMENT",
+          "version": 1
+        },
+        {
+          "id": "RN11-CASE-OBSTRUCTION",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          33
+        ]
+      },
+      "scope_note": "HBV risk and selected case infection reasoning; pretransplant vaccine items are counted only in the transplant domain.",
+      "gaps": [
+        "No complete infection-prevention, opportunistic infection or dialysis virology bank."
+      ]
+    },
+    {
+      "id": "pregnancy",
+      "domain_id": "other",
+      "label": "Kidney assessment and tissue decisions in pregnancy",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T22.O02",
+        "T24.O01",
+        "T24.O02",
+        "T27.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN11-T22-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T24-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T24-002",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN11-CASE-PREGNANCY",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          33,
+          34
+        ]
+      },
+      "scope_note": "Creatinine/eGFR limits, superimposed preeclampsia and selected biopsy decisions.",
+      "gaps": [
+        "No complete prepregnancy, transplant pregnancy, pregnancy immunosuppression or HELLP assessment."
+      ]
+    },
+    {
+      "id": "nutrition",
+      "domain_id": "other",
+      "label": "Nutritional context and restriction tradeoffs",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T25.O01",
+        "T25.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN-NUTR-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T25-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T25-002",
+          "version": 1
+        },
+        {
+          "id": "RN11-T25-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T25-004",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN-CASE-SUPPORTIVE",
+          "version": 1
+        },
+        {
+          "id": "RN11-CASE-CRRT-DELIVERY",
+          "version": 1
+        },
+        {
+          "id": "RN11-CASE-PD-VOLUME",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          30
+        ]
+      },
+      "scope_note": "Adult, frailty, pediatric growth and acute-support nutrition contexts.",
+      "gaps": [
+        "No complete dialysis diet, rehabilitation or nutritional-assessment bank."
+      ]
+    },
+    {
+      "id": "supportive_care",
+      "domain_id": "other",
+      "label": "Conservative care and changing goals",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T24.O02",
+        "T26.O01"
+      ],
+      "questions": [
+        {
+          "id": "RN-CARE-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T24-004",
+          "version": 1
+        },
+        {
+          "id": "RN11-T26-002",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN-CASE-SUPPORTIVE",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          33
+        ]
+      },
+      "scope_note": "Active conservative care, frailty and revisiting preferences.",
+      "gaps": [
+        "No complete symptom-prescribing or dialysis-withdrawal assessment."
+      ]
+    },
+    {
+      "id": "procedure_decisions",
+      "domain_id": "other",
+      "label": "Procedure indications and limitations",
+      "relation": "exam_domain",
+      "status": "partial",
+      "objective_ids": [
+        "T22.O01",
+        "T22.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN11-T22-002",
+          "version": 1
+        }
+      ],
+      "cases": [
+        {
+          "id": "RN-CASE-LUPUS",
+          "version": 1
+        },
+        {
+          "id": "RN-CASE-NEPHROTIC",
+          "version": 1
+        },
+        {
+          "id": "RN11-CASE-PREGNANCY",
+          "version": 1
+        }
+      ],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.6",
+        "pages": [
+          35
+        ]
+      },
+      "scope_note": "Selected biopsy decisions; a second link within Other does not double-count its question. Text learning cannot certify hands-on procedure competence.",
+      "gaps": [
+        "No technical catheter insertion, asepsis, consent or procedural-complication assessment."
+      ]
+    },
+    {
+      "id": "sexual_health_gap",
+      "domain_id": "other",
+      "label": "Fertility, contraception and sexual health",
+      "relation": "exam_domain",
+      "status": "gap",
+      "objective_ids": [],
+      "questions": [],
+      "cases": [],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          33
+        ]
+      },
+      "scope_note": "Pregnancy and donor counseling do not establish sexual-health coverage.",
+      "gaps": [
+        "No dedicated reviewed contraception, fertility or sexual dysfunction assessment/case."
+      ]
+    },
+    {
+      "id": "transition_gap",
+      "domain_id": "other",
+      "label": "Transition to adult kidney care",
+      "relation": "exam_domain",
+      "status": "gap",
+      "objective_ids": [],
+      "questions": [],
+      "cases": [],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          33
+        ]
+      },
+      "scope_note": "A pediatric nutrition item does not establish adolescent transition coverage.",
+      "gaps": [
+        "No reviewed transition-care or young-adult transplant adherence assessment/case."
+      ]
+    },
+    {
+      "id": "end_of_life_gap",
+      "domain_id": "other",
+      "label": "Care during dying and dialysis withdrawal",
+      "relation": "exam_domain",
+      "status": "gap",
+      "objective_ids": [],
+      "questions": [],
+      "cases": [],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.5",
+        "pages": [
+          33
+        ]
+      },
+      "scope_note": "A conservative-care definition and goals discussion are not a terminal-care bank.",
+      "gaps": [
+        "No dedicated terminal symptom, withdrawal or end-of-life medication assessment/case."
+      ]
+    },
+    {
+      "id": "critical_appraisal_support",
+      "domain_id": null,
+      "label": "Evidence interpretation for learning",
+      "relation": "curriculum_support",
+      "status": "supporting",
+      "objective_ids": [
+        "T26.O02"
+      ],
+      "questions": [
+        {
+          "id": "RN-EVID-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T26-001",
+          "version": 1
+        },
+        {
+          "id": "RN11-T26-003",
+          "version": 1
+        },
+        {
+          "id": "RN11-T26-004",
+          "version": 1
+        }
+      ],
+      "cases": [],
+      "curriculum_reference": {
+        "source_id": "C01-renal-curriculum-2022",
+        "section": "3.2",
+        "pages": [
+          14
+        ]
+      },
+      "scope_note": "Generic curriculum research/critical-appraisal support; no exam-domain assignment is inferred for these four questions.",
+      "gaps": [
+        "Not counted as ESENeph blueprint coverage."
+      ]
+    }
+  ]
+}
