@@ -105,3 +105,12 @@ PDF/CSP gate and native diagnostics. This lane adds no location overlay and
 does not claim that a PDF page or bounding-box highlight rendered natively.
 
 GitHub #6 receives the handoff commit, decisions, checks and these limits.
+
+Parent live integration follow-up: the actual Library UI queried CKD
+albuminuria/eGFR on the owned profile, returned eight real E01 passages, and
+opened the first result through Inspect citation. The request pinned revision
+`rev_95b1fbeec8dd48a09c282474431b94af`, passage
+`passage_c9474735614c478ebba30383f17d82e2` and physical page 9. The reader
+showed one extracted location for this passage, retained the ERA user-owned
+terms, and displayed unknown edition/not verified current rather than
+inferring currency from receipt dates. No retrieved source body was published.

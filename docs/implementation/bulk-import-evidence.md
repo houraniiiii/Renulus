@@ -25,3 +25,23 @@ in acquired-literature.md. TypeScript, Vite production build and Electron
 compilation passed. Fixtures are synthetic; these counts do not constitute
 the actual large collection scan, which is recorded separately after running
 the new control against the owned development profile.
+
+The integration owner subsequently ran the actual Library control against the
+owned development backend and the registered L02 collection. The first dev
+view inspected 700 receipts and bound 389 unique jobs before a development
+reload closed the view. Its durable accepted work remained. A production Vite
+preview then continued a fresh deliberate scan, excluding matching live jobs.
+At 00:17:21 UTC on October 5, a read-only snapshot found 1,357 inspected
+receipts since the first scan, 756 adopted receipts and 756 distinct bound jobs.
+Their canonical topic tags span T01–T27. The Library had 945 documents: 156
+ready, one processing and 788 queued.
+
+In that production view the owner clicked Pause article checks after 600
+reported receipts, 331 reported additions and 269 reported attention results.
+The UI changed to the paused notice and Resume article checks. The canonical
+snapshot includes committed work from the interrupted page; the UI correctly
+does not manufacture an observed result for that page. Clicking Resume
+continued from the last reported cursor. At the next observation it had
+reported 1,200 receipts, 670 additions and 530 attention results with no visible
+error. These are observed scan counters, distinct from persisted totals and
+from CPU indexing. The full traversal is still running.
