@@ -28,6 +28,9 @@ EXTRACTION_OMISSION = (
     "Structured extraction documents are rebuildable from retained originals; "
     "canonical passage text, headings and physical source locators are retained."
 )
+CASE_ORIGINAL_OMISSION = (
+    'Records-only export retains case attachment metadata. Original bytes require a full backup including originals.'
+)
 DELETION_NOTICE = (
     "This backup carries only deletion markers known at its export date. "
     "On a new installation it cannot know later deletions. Restoring merges "
@@ -107,7 +110,7 @@ def snapshot_omissions(conn, *, originals=True):
         if exists:
             count = conn.execute('SELECT COUNT(*) FROM case_attachments').fetchone()[0]
             result['case_originals'] = {'records': count,
-                'reason': 'Records-only export retains case attachment metadata. Original bytes require a full backup including originals.'}
+                'reason': CASE_ORIGINAL_OMISSION}
     return result
 
 
@@ -209,7 +212,8 @@ def validate_records(conn, bundle):
     if bundle.get("data_kind", "records-only") not in ("records-only", "full-backup"):
         raise ApiError("backup_format", "The canonical export has an unsupported data kind")
     omissions = bundle.get("omissions", {})
-    reasons = {"knowledge_catalogue": CATALOGUE_OMISSION, "knowledge_extractions": EXTRACTION_OMISSION}
+    reasons = {"knowledge_catalogue": CATALOGUE_OMISSION, "knowledge_extractions": EXTRACTION_OMISSION,
+               'case_originals': CASE_ORIGINAL_OMISSION}
     if not isinstance(omissions, dict) or set(omissions) - set(reasons):
         raise ApiError("backup_format", "The export has unsupported omission metadata")
     for name, omitted in omissions.items():
