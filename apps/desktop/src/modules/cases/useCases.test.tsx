@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from '@t
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NavigationProvider, useNavigation } from '../../shell/navigation';
 import CasesPage from './index';
+import GeneratedPractice from '../assessment/GeneratedPractice';
 import { useCases } from './useCases';
 import type { CaseHandoff, CaseSession } from './types';
 
@@ -46,9 +47,10 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); window
 
 function HandoffHarness({ observe }: { observe: (payload: Record<string, unknown> | undefined) => void }) {
   const navigation = useNavigation();
-  if (navigation.route === 'learn') {
+  if (navigation.route === 'learn' || navigation.route === 'assessment') {
     observe(navigation.handoff);
-    return <button onClick={() => navigation.navigate('cases', { payload: { case_id: navigation.handoff?.case_id } })}>Return to Cases</button>;
+    return navigation.route === 'assessment' ? <GeneratedPractice /> :
+      <button onClick={() => navigation.navigate('cases', { payload: { case_id: navigation.handoff?.case_id } })}>Return to Cases</button>;
   }
   return <CasesPage key={navigation.revision} />;
 }
@@ -143,11 +145,19 @@ describe('cases UI retention and run guards', () => {
     expect((screen.getByLabelText('Your learning question') as HTMLTextAreaElement).value).toBe('An unsent synthetic question');
   });
 
-  it.each([false, true])('hands off and reopens a case in memory with explicit Save only (saved=%s)', async savedFirst => {
+  it.each([
+    { savedFirst: false, target: 'explain' }, { savedFirst: true, target: 'explain' },
+    { savedFirst: false, target: 'generated-practice' }, { savedFirst: true, target: 'generated-practice' },
+  ] as const)('hands off and reopens with explicit Save only (saved=$savedFirst, target=$target)', async ({ savedFirst, target }) => {
+    const practice = target === 'generated-practice';
     const ticket: CaseHandoff = { id: 'handoff_synthetic', case_handoff_id: 'handoff_synthetic',
-      case_id: temporary.id, revision: 1, target: 'explain', expires_at: now, question: 'Explain this synthetic case',
+      case_id: temporary.id, revision: 1, target, expires_at: now, question: practice ? '' : 'Explain this synthetic case',
       case_text: SENTINEL, scope: { kind: 'temporary-case', entity_id: temporary.id } };
     const fetch = mockApi(path => path.endsWith('/handoff') ? json(ticket, 201) :
+      path.endsWith('/practice/capabilities') ? json({ available: true }) :
+      path.endsWith('/practice/generate') ? new Response(frame(1, 'started', { scope: ticket.scope, mode: 'generated', persistent: false }) +
+        frame(2, 'error', { code: 'synthetic_stop', message: 'Synthetic practice stopped without a provider.', retryable: false }),
+        { headers: { 'Content-Type': 'text/event-stream' } }) :
       path.endsWith('/' + temporary.id) ? json(savedFirst ? snapshot : temporary) : undefined);
     const store = vi.spyOn(Storage.prototype, 'setItem');
     const observe = vi.fn();
@@ -161,16 +171,29 @@ describe('cases UI retention and run guards', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Save case' }));
       await waitFor(() => expect(screen.getByRole('button', { name: 'Saved' })).toBeTruthy());
     }
-    fireEvent.change(screen.getByLabelText('Your learning question'), { target: { value: ticket.question } });
-    fireEvent.click(screen.getByRole('button', { name: 'Explore in Learn' }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Return to Cases' })).toBeTruthy());
-    expect(observe).toHaveBeenLastCalledWith(ticket);
-    expect(window.location.hash).toBe('#/learn');
+    if (!practice) fireEvent.change(screen.getByLabelText('Your learning question'), { target: { value: ticket.question } });
+    fireEvent.click(screen.getByRole('button', { name: practice ? 'Practise from this case' : 'Explore in Learn' }));
+    if (practice) await screen.findByLabelText('Practice instruction');
+    else await screen.findByRole('button', { name: 'Return to Cases' });
+    expect(observe).toHaveBeenLastCalledWith(practice ? { case_handoff_id: ticket.case_handoff_id, case_id: ticket.case_id } : ticket);
+    expect(window.location.hash).toBe(practice ? '#/assessment' : '#/learn');
     expect(window.location.href).not.toContain(SENTINEL);
+    if (practice) {
+      expect((screen.getByLabelText('Practice instruction') as HTMLTextAreaElement).value).toBe('Practise the reasoning from this temporary case.');
+      const generate = screen.getByRole('button', { name: 'Generate practice' }) as HTMLButtonElement;
+      await waitFor(() => expect(generate.disabled).toBe(false));
+      fireEvent.click(generate);
+      await screen.findByText('Synthetic practice stopped without a provider.');
+      const request = fetch.mock.calls.find(([path]) => path.endsWith('/practice/generate'))!;
+      expect(JSON.parse(request[1].body as string)).toMatchObject({ context: 'temporary', case_handoff_id: ticket.case_handoff_id });
+      expect(request[1].body).not.toContain(SENTINEL);
+      expect(request[1].body).not.toContain('case_text');
+      expect(fetch.mock.calls.some(([path]) => path.endsWith('/practice/sessions'))).toBe(false);
+    }
     fireEvent.click(screen.getByRole('button', { name: 'Return to Cases' }));
     await waitFor(() => expect(screen.getByText(SENTINEL)).toBeTruthy());
     const handoff = fetch.mock.calls.find(([path]) => path.endsWith('/handoff'))!;
-    expect(JSON.parse(handoff[1].body as string)).toEqual({ revision: 1, target: 'explain', question: ticket.question });
+    expect(JSON.parse(handoff[1].body as string)).toEqual({ revision: 1, target, question: ticket.question });
     expect(fetch.mock.calls.filter(([path]) => path.endsWith('/save'))).toHaveLength(savedFirst ? 1 : 0);
     expect(store).not.toHaveBeenCalled();
   });

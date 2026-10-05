@@ -34,6 +34,11 @@ export default function CasesPage() {
     const ticket = await cases.handoff(question);
     if (ticket) navigation.navigate('learn', { scope: ticket.scope, payload: { ...ticket } });
   }
+  async function practise() {
+    const ticket = await cases.handoff('', 'generated-practice');
+    if (ticket) navigation.navigate('assessment', { scope: ticket.scope,
+      payload: { case_handoff_id: ticket.case_handoff_id, case_id: ticket.case_id } });
+  }
   function confirm(action: 'delete' | 'close') {
     if (action === 'close' && !item?.dirty) { void cases.close(); return; }
     setConfirmation(action);
@@ -114,8 +119,10 @@ export default function CasesPage() {
             <div className="actions">{cases.running ? <Button variant="secondary" onClick={() => void cases.stop()}><Square size={15} aria-hidden="true" />Stop response</Button> :
               <><Button type="submit" disabled={disabled || !question.trim() || !cases.capabilities?.discussion.adapter_installed}>Discuss<ArrowRight size={17} aria-hidden="true" /></Button>
                 <Button variant="ghost" disabled={disabled || !question.trim() || !cases.capabilities?.handoffs.explain}
-                  busy={cases.busy === 'handoff'} onClick={() => void explain()}>Explore in Learn<ArrowRight size={17} aria-hidden="true" /></Button></>}</div>
-            <p className="muted">Learn keeps this case temporary. Return here to choose Save.</p>
+                  busy={cases.busy === 'handoff'} onClick={() => void explain()}>Explore in Learn<ArrowRight size={17} aria-hidden="true" /></Button>
+                <Button variant="ghost" disabled={disabled || !cases.capabilities?.handoffs['generated-practice']}
+                  busy={cases.busy === 'practice-handoff'} onClick={() => void practise()}>Practise from this case<ArrowRight size={17} aria-hidden="true" /></Button></>}</div>
+            <p className="muted">Learn and practice keep this case temporary. Return here to choose Save.</p>
           </form>
         </>}
       </main>

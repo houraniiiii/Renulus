@@ -115,15 +115,15 @@ export function useCases(resumeCaseId?: string) {
     if (!item?.teaching || active.current) return;
     return change('currency', () => request<CaseSession>(casePath(item.id)));
   }
-  async function handoff(question: string) {
+  async function handoff(question: string, target: CaseHandoff['target'] = 'explain') {
     const item = current.current;
-    if (!item || active.current || !question.trim()) return;
+    if (!item || active.current || (target === 'explain' && !question.trim())) return;
     const token = ++epoch.current;
-    setBusy('handoff');
+    setBusy(target === 'explain' ? 'handoff' : 'practice-handoff');
     setError(undefined);
     try {
       const ticket = await request<CaseHandoff>(casePath(item.id) + '/handoff', { method: 'POST',
-        body: { revision: item.revision, target: 'explain', question: question.trim() } });
+        body: { revision: item.revision, target, question: question.trim() } });
       if (!alive.current || epoch.current !== token) {
         void api('/cases/handoffs/' + encodeURIComponent(ticket.id), { method: 'DELETE', timeoutMs: 5000 }).catch(() => {});
         return;
