@@ -1,6 +1,6 @@
 # Final integration validation
 
-October 5, 2026 UTC. The application source is frozen at
+October 5, 2026 UTC. The installed application uses the exact source freeze
 `ebb2db2e5080f4d42eaf31c2eb63711797704df0`. Later test-harness, confined proof-tool
 and evidence changes do not change the frozen renderer, managed backend or native
 entry used for packaging. Native matching source and installer checks remain a
@@ -52,7 +52,7 @@ result is **not accepted**. Capacity fixtures exhausted C at approximately
 space left on device` during pytest cache/session finalization. The run reached
 100%, but no all-passing total is attributed to it. Its individual failures
 require a clean resource-aware rerun before they can be adjudicated as product
-defects. The earlier complete 807-check baseline and later focused results
+defects. The earlier 807-check evidence and later focused results
 remain separate evidence. Native build/install/proof outputs remain on E.
 
 An attempt to release only completed synthetic capacity files was automatically
@@ -159,24 +159,62 @@ canonical bytes. Per-scope commands, timestamps, exits, logs and JUnit are in
 ignored `.local/backend-final-20261005T0301Z/acceptance-summary.json` and its
 named scope directories. Interrupted attempts retain partial events.
 
-The actual normal desktop shortcut found a separate external wrapper bug:
-`Start-Process` launched the interactive executable with `WindowStyle Hidden`.
-The window existed but was invisible. The wrapper now uses `Normal`; the exact
-owned hidden app/backend were closed before a second actual shortcut launch
-at 03:06:14 UTC. Visible Flow was observed by 03:10:56 UTC, a coarse upper
-bound of approximately 282 seconds on the E HDD. Health returned 200 with all
-ten modules; an unauthenticated metadata request returned 401. The real Library
-navigation was invoked through Windows UI Automation. This wrapper is outside
-the installer/main assets; installed artifact hashes and freeze are unchanged.
+## Normal shortcut and queued Library workload
 
-That workload check **has not passed Library acceptance**. With the real
-background worker and 6,826 queued imports, both the 100-document listing and
-local passage search reported their request timeout. The earlier successful
-CPU/API audit used ASGI transport without starting worker lifespans. At
-03:20:59 UTC, a read-only aggregate audit showed 516 ready jobs, 6,790 queued,
-one processing at embedding, four historical failures, 7,307 documents and
-12,610 passages, with zero Study/case/Test/Memory rows. The native pipeline had
-completed 35 more imports, but the interactive workload remained a separate
-failing gate. Library #6 is reopened for a bounded responsiveness fix in an
-isolated lane. The eight-hour target was reached at 03:21 UTC; the 15-minute
-heartbeat continues while that concrete remediation is active.
+The parent's actual shortcut evidence is retained in ignored
+`E:/Renulus-native-delivery/desktop-20261005/shortcut-launch-evidence.json`.
+The first launch at **03:03:55 UTC** found a separate external wrapper bug:
+`Start-Process` launched the interactive executable with `WindowStyle Hidden`.
+The window existed but was invisible. External wrapper fix `4b1d2b71` uses
+`Normal`; the exact owned hidden app/backend were closed before the second
+actual shortcut launch at **03:06:14 UTC**, with app PID **30520** and backend
+PID **44272**. Visible Flow was observed by **03:10:56 UTC**, a coarse upper
+bound of approximately 282 seconds on the E HDD, not an event-timed benchmark.
+Health returned 200 with all ten modules; an unauthenticated metadata request
+returned 401. The real Library navigation used Windows UI Automation. The
+wrapper is outside the installer/main assets, whose recorded hashes and exact
+`ebb2db2e5080f4d42eaf31c2eb63711797704df0` freeze remain unchanged.
+
+The native GUI defaults to **25 documents per page**. Its initial listing and
+local passage search hit the **30-second request timeout** under cold and
+overlapping helper workers while the normal background ingestion worker ran.
+The older 100-document ASGI audit did not start the background worker lifespan;
+it is separate from this 25-document GUI workload. At **03:20:59 UTC**, the
+then-recorded aggregate audit showed 516 ready jobs, 6,790 queued, one processing
+at embedding, four historical failures, 7,307 documents and 12,610 passages,
+with zero Study/case/Test/Memory rows. The pipeline had made progress, but the
+initial interactive workload failed at that checkpoint. The eight-hour target
+was reached at 03:21 UTC.
+
+Later observations establish a successful normal GUI retry sequence:
+
+| October 5, 2026 UTC | Actual observation |
+| --- | --- |
+| 03:19 | Heavy test workers stopped; the app's ingestion worker continued. |
+| 03:23 → 03:26:49 | Library refresh begun, then 25 items observed: 547 indexed, 6,759 queued, one processing, zero active failures. |
+| 03:26:49 → 03:27:33 | `dialysis adequacy` search begun, then eight Inspect citation controls and Passages observed, with no empty result or timeout notice. |
+| 03:28:36 | First citation inspected; physical-page labels `13`, `8`, `1 / 2` and `2` observed. |
+| 03:29:50 | Returned to Today. |
+
+These are GUI action/observation windows, not single-request latency
+measurements. They supersede the pending normal-shortcut status and record
+success after the initial failed Library checkpoint. The initial timeouts
+remain negative responsiveness evidence and do not prove a permanently hung
+pipeline. The retries do not establish sustained responsiveness under
+overlapping workers.
+Private source bodies remain local; no provider requests were made.
+
+A later read-only snapshot at **03:39:15 UTC** recorded 621 ready jobs, 6,685
+queued, one processing at embedding and four historical failed revisions, with
+7,307 documents, 15,047 passages and zero Study/case/Test/Memory rows. The four
+historical failures are separate from the GUI's earlier zero active failures.
+This snapshot shows continued ingestion and is separate from the earlier native
+acceptance times; see [profile evidence](complete-delivery-profile-live-proof.md).
+
+The parent has integrated Library patch `a5488b2d` as a candidate product freeze,
+with compatible API checks running. That candidate is not claimed installed.
+Parent review/refreeze and matching packaging/native acceptance remain pending;
+the installed observations above apply to the old exact `ebb2db2e` freeze. The
+earlier 807-check evidence, failed/incomplete 901-test regression and
+unadjudicated full actual-engine attempt retain the limits recorded above;
+these native observations do not establish a full regression pass.

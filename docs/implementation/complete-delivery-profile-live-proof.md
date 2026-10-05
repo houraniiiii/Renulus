@@ -4,8 +4,9 @@ October 5, 2026 UTC. This is the larger clean learning profile selected for the
 final Windows delivery. The guarded source ZIP was exported at
 **01:13:13.447 UTC**; supported segmented restore and the actual CPU index
 rebuild completed at **02:18:00.209 UTC**. A separate application API and
-excluded-state audit passed afterward. Native installed-profile launch remains
-its own delivery gate until recorded.
+excluded-state audit passed afterward. The separate normal installed-profile
+launch and later worker progress are recorded below; these do not replace the
+snapshot or isolated API-audit counts.
 
 | Observation | Verified result |
 | --- | --- |
@@ -91,4 +92,46 @@ were empty, no credentials file existed, subscriptions were disconnected and
 unselected, and automatic source checking was off. Ignored reports are
 `E:/Renulus-native-delivery/desktop-20261005/data/e-profile-preparation.json`
 and `data/e-profile-verification.json`; private passage bodies remain local.
-The normal installed launch of this chosen profile is a separate observation.
+The preparation API audit used ASGI transport without the background worker
+lifespan. Its CPU/API success is separate from the normal GUI workload below;
+the older 100-document ASGI audit is not the GUI's default page size.
+
+## Normal installed workload and later snapshot
+
+The parent's ignored
+`E:/Renulus-native-delivery/desktop-20261005/shortcut-launch-evidence.json`
+records the real shortcut launch of this E profile. The invisible first app at
+03:03:55 UTC was corrected by external wrapper commit `4b1d2b71`; the
+03:06:14 UTC relaunch had visible Flow by 03:10:56 UTC (a coarse upper bound of
+about 282 seconds), all ten health modules and unauthenticated metadata rejection
+with 401. These installed observations use the exact product freeze
+`ebb2db2e5080f4d42eaf31c2eb63711797704df0`.
+
+The GUI defaults to **25 documents per page**. Initial listing/search timed
+out at the 30-second request limit under cold/overlapping helper workers. Heavy
+test workers stopped at 03:19 UTC. A refresh begun at 03:23 UTC was observed
+by **03:26:49 UTC** with 25 items, 547 indexed, 6,759 queued, one processing
+and zero active failures. The `dialysis adequacy` query begun at 03:26:49 UTC
+showed eight Inspect citation controls and Passages by **03:27:33 UTC** without
+a timeout notice. Citation inspection at 03:28:36 UTC and return to Today at
+03:29:50 UTC complete this retry sequence. See the
+[native acceptance account](final-validation.md#normal-shortcut-and-queued-library-workload)
+for physical-page labels and timing limits. Source bodies remain local.
+
+The later read-only aggregate report
+`E:/Renulus-native-delivery/desktop-20261005/normal-app-counts.json` records
+**03:39:15 UTC**, separately from the accepted native observations:
+
+| Observation at 03:39:15 UTC | Result |
+| --- | --- |
+| Ingestion jobs | 621 ready; 6,685 queued; one processing at embedding |
+| Historical failed revisions | 4; separate from active document failures |
+| Library documents / passages | 7,307 / 15,047 |
+| Study threads / cases / Test sessions / Memory facts | 0 / 0 / 0 / 0 |
+
+The timeouts do not prove a permanently hung pipeline; subsequent observations
+show continued indexing and successful GUI retries. Sustained responsiveness
+under overlapping workers remains unproved. The parent's later Library patch
+`a5488b2d` is a candidate product freeze with compatible API checks running,
+not a claimed installed update. Parent review/refreeze and matching delivery
+validation remain separate from the old exact `ebb2db2e` installed evidence above.

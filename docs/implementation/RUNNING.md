@@ -23,8 +23,9 @@ learning profile:
 
 The installer is 965,927,137 bytes, SHA-256
 `8cce7d8a887fbf0ed20cae4315df14ea103224f551a550d5a4ae8efc8d023c42`.
-Product source is frozen at `ebb2db2e5080f4d42eaf31c2eb63711797704df0`; later
-test/proof/evidence commits do not change this installed build. `-CheckOnly`
+The installed product uses the exact source freeze
+`ebb2db2e5080f4d42eaf31c2eb63711797704df0`; later test/proof/evidence commits
+do not change this installed build. `-CheckOnly`
 checks the launcher without starting the app. A checkout without a delivery
 record uses its prepared contributor build. The original shared C checkout and
 its inherited reference launcher remain separate; use the repaired desktop
@@ -38,17 +39,34 @@ and managed helpers prepare; actual first-run Flow readiness on this E HDD
 varied from about 61 to 197 seconds, and the provisioned restart took about
 38 seconds. These are observed development-machine timings, not a clean-machine
 benchmark. Closing the app stops its owned backend. The installer is unsigned;
-signing and clean-machine release acceptance remain separate. The actual
-normal shortcut required an external wrapper fix from Hidden to Normal;
-visible Flow was then observed within about 282 seconds on the large profile.
-Current Library listing/search responsiveness under its queued ingestion
-workload is being fixed in reopened issue #6. Standalone CPU/API validation
-does not establish this native workload gate.
+signing and clean-machine release acceptance remain separate. The actual normal
+shortcut first launched an invisible app at 03:03:55 UTC on October 5, 2026.
+External launcher fix `4b1d2b71` changed the app's window style from Hidden to
+Normal. The 03:06:14 UTC relaunch had visible Flow by 03:10:56 UTC, a coarse
+upper bound of about 282 seconds on the large profile. Health returned 200 with
+all ten modules; an unauthenticated metadata request returned 401.
 
-The prepared profile has 7,307 verified originals and 11,755 rebuilt passages
-from 481 ready documents. Another 6,826 imports are queued; they are present
-but are not yet searchable. The normal worker resumes the queue. Each profile
-owns its SQLite records, library copies, managed helpers and derived indexes.
+The GUI Library defaults to **25 documents per page**. Its initial listing and
+passage search hit the 30-second request timeout under cold and overlapping
+helper workers. After heavy test workers stopped at 03:19 UTC, a refresh begun
+at 03:23 UTC was observed by 03:26:49 UTC with 25 items, 547 indexed documents,
+6,759 queued, one processing and zero active failures. A `dialysis adequacy`
+search begun at 03:26:49 UTC showed eight Inspect citation controls and Passages
+by 03:27:33 UTC without a timeout notice; citation inspection and return to
+Today followed. These observation times do not measure individual request
+latency. See [normal shortcut acceptance](final-validation.md#normal-shortcut-and-queued-library-workload).
+
+The parent has integrated Library patch `a5488b2d` as a candidate product freeze;
+compatible API checks are running. Refreeze, packaging and installed acceptance
+for that candidate remain with the parent and packaging lane. This record
+continues to describe the installed `ebb2db2e` build.
+
+At the separate 02:54 UTC preparation audit, the profile had 7,307 verified
+originals and 11,755 rebuilt passages from 481 ready documents, with another
+6,826 imports queued. Those are dated snapshot counts; the normal worker
+continues indexing. Queued imports are present but are not yet searchable.
+Each profile owns its SQLite records, library copies, managed helpers and
+derived indexes.
 Third-party acquired originals stay local and are excluded from the public
 bundle and Git repository.
 

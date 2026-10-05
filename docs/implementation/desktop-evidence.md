@@ -806,11 +806,37 @@ GetProcessMainWindow returned zero. This is a concrete failure of the normal
 shortcut entry path; the earlier direct Electron native proofs remain separate.
 The serial-proof release notification did not establish shortcut acceptance.
 
-The parent changed that external wrapper's packaged-app launch arguments to
-WindowStyle Normal; a read-only check of its E delivery repository confirmed
-the Normal argument. Parent owns graceful closure of the exact hidden instance,
-actual shortcut relaunch and visible-window acceptance. These actions and their
-wrapper commit are separate from the installed application and bundled main
-assets. Product revision ebb2db2e5080f4d42eaf31c2eb63711797704df0 and the
-recorded installer/executable/ASAR hashes remain unchanged. Normal-shortcut
-acceptance is pending that relaunch evidence; no native proof was rerun.
+The parent's external wrapper fix `4b1d2b71` changed the packaged-app launch to
+WindowStyle Normal. Its ignored shortcut-launch-evidence.json records the prior
+owned hidden app/backend gone before the actual shortcut relaunch at
+**03:06:14 UTC**, app PID **30520** / backend PID **44272**. Visible Flow was
+observed by **03:10:56 UTC**, a coarse upper bound of about 282 seconds on E HDD,
+not an event-timed startup benchmark. Health returned 200 with all ten modules
+and an unauthenticated metadata request returned 401. This establishes the
+corrected normal shortcut launch, separately from the direct native proofs.
+
+The native Library page size was **25**. Initial listing and passage search
+hit the 30-second request timeout under cold/overlapping helper workers. The
+older 100-document ASGI audit had no background worker lifespan and does not
+describe that GUI workload. After heavy test workers stopped at 03:19 UTC, a
+refresh begun at 03:23 UTC was observed by **03:26:49 UTC** with 25 items,
+547 indexed, 6,759 queued, one processing and zero active failures. A
+`dialysis adequacy` query begun at 03:26:49 UTC showed eight Inspect citation
+controls and Passages by **03:27:33 UTC**, without a timeout notice. The first
+citation was inspected at **03:28:36 UTC**, with physical-page labels `13`,
+`8`, `1 / 2` and `2`; Today was reached again at **03:29:50 UTC**. These are
+action/observation times, not individual request latencies. The initial timeouts
+do not prove a permanently hung pipeline; the later retries do not establish
+sustained responsiveness under overlapping workers.
+
+This account uses the parent's metadata-only evidence at
+`E:/Renulus-native-delivery/desktop-20261005/shortcut-launch-evidence.json`;
+no private source bodies were read or published by this documentation lane.
+The wrapper correction is external to the installed application and bundled
+main assets. Installed product source remains exactly
+`ebb2db2e5080f4d42eaf31c2eb63711797704df0`, with the recorded
+installer/executable/ASAR hashes unchanged. The parent has since integrated
+Library patch `a5488b2d` as a candidate product freeze, with compatible API checks
+running; matching refreeze/packaging/installed acceptance remain separate work.
+See [normal shortcut acceptance](final-validation.md#normal-shortcut-and-queued-library-workload)
+and the [later profile snapshot](complete-delivery-profile-live-proof.md#normal-installed-workload-and-later-snapshot).
