@@ -804,3 +804,109 @@ wrapper commit are separate from the installed application and bundled main
 assets. Product revision ebb2db2e5080f4d42eaf31c2eb63711797704df0 and the
 recorded installer/executable/ASAR hashes remain unchanged. Normal-shortcut
 acceptance is pending that relaunch evidence; no native proof was rerun.
+
+## Matching replacement — October 5, 2026
+
+The parent explicitly froze replacement product source at
+3ff9b0d6145c8d52f4c9e9b0a3009f0fc351c4cc, including the accepted Library
+responsiveness/citation correction. The replacement was built from that exact
+committed backend/renderer/native snapshot; the previous ASAR was not relabelled.
+Dependencies and public helper pins were unchanged. Package, fresh unsigned
+NSIS installation and one isolated installed native startup/shutdown passed.
+The parent independently accepted the report and reviewed its Flow screenshot,
+then took the released native slot for its actual desktop-shortcut and chosen
+learning-profile checks. No further native instance or matrix was started by
+this lane after that release.
+
+All replacement artifact and report paths below are relative to
+E:/Renulus-native-delivery/desktop-20261005. The completed installer is
+matching-3ff9b0d6/Renulus-Development-0.1.0-windows-x64-setup.exe:
+965,928,451 bytes, SHA256
+49f82a58b227c3d572747c3b282fdec20c09fe03777e878c9ba8125281460ed2.
+Fresh installation to installed-3ff9b0d6 exited zero in 432.7511048 seconds.
+Authenticode reports NotSigned. Installed Renulus Development.exe SHA256 is
+38d56a3887c2acf0e8b0db8d45047e59471723cbf3f557253f5f8a77691b3cb9;
+resources/app.asar SHA256 is
+8ea2cab31aaefb3ea56ca37ad524307c4c342538421811fbebe6ec80225c66f0.
+Both match the completed unpacked package. A distinct per-revision NSIS identity
+preserves the installed ebb2db2e checkpoint.
+
+The public payload is 39,236 files / 2,169,529,464 bytes, inventory SHA256
+34c0746714def26e518e10e0470e7054e3b1e77316a9abbeeba62d76f4786952;
+the installed inventory was rechecked at final handoff. Actual embedded
+CPython 3.14.4 and Electron 44.5.1 were observed. The same 19 public helper files
+total 483,597,181 bytes. The installed helper contract and official embedded
+Python archive checksums match the recorded manufacturing provenance. Private
+originals, profiles, credentials, SQLite state and data/** are excluded from
+every package input. All child scratch, cache, TEMP/TMP, install and proof writes
+stayed inside the authorised E root; host environment variables were unchanged.
+
+| Actual replacement installed synthetic run | Time |
+| --- | ---: |
+| Protected first visible opening window | 3.516 s |
+| Actual Flow renderer | 166.522 s |
+| Authenticated metadata, HTTP 200 / API version 1 | 166.547 s |
+| Physical application/backend shutdown | 8.245 s |
+
+proofs/replacement-2601cd66/replacement-evidence.json records the exact source
+revision, equal isolated interpreter prefix/base-prefix and all interpreter
+paths inside the installed backend. python/python3/py/uv/node/npm were absent
+from the app child's OS-only PATH. Renderer sandbox/context isolation were true,
+Node integration false, and exactly one managed Python child was observed. App
+PID 16392 and backend PID 2160 were physically absent after closure, independently
+verified by the parent. These timings are observations on this Windows machine
+with uncontrolled caches/load, not clean-VM benchmarks or shutdown-callback
+evidence. replacement-flow.png was reviewed.
+
+The supplementary owned-window-observation.json at 04:43:39.5818011 UTC recorded
+a zero handle/visible:false during successful shutdown, after the Flow screenshot
+at about 04:43:35 UTC and before completion at about 04:43:43 UTC. The final
+report preserves this timing context; that sample is not a hidden-startup
+failure.
+
+Manufacturing/tool source was fe6d3b53360d4f3ac5a8e2ac6296651a8d826573; the
+focused replacement proof was introduced by
+af9f3f24fee9bf746bd812f254bbb36ac07b82e2. Twelve recorded script/configuration
+hashes were rechecked at handoff. The unbundled tool chain includes 0791e624,
+49482d35, af9f3f24 and fe6d3b53, already parent-integrated. Its 10 Python delivery
+checks, 12 PowerShell boundary refusals, actual Node-child environment
+presence/removal check and five focused-proof source checks passed. Parent's
+later unbundled Windows PowerShell 5.1 compatibility fix 2ffa7080 is separate
+from the manufacturing tool source and frozen product.
+
+The first Package run retained under preparation/restage-a5488b2d-20261005/
+runs/3ff9b0d6-package-50cd8519 failed after public staging/Node copy because an
+inherited empty RENULUS_BACKEND_URL was rejected by the frozen Vite URL parser.
+The runner fix genuinely removes that child environment entry. Guarded
+continuation revalidated the completed public inventory/source/pins, created
+a fresh committed-source snapshot and resumed compile/package without repeating
+the public payload copy. Frozen product code, failed logs/snapshot and prior
+checkpoints were preserved. The completed continuation snapshot is
+source-3ff9b0d6/continued-8e74325b.
+
+preparation/restage-a5488b2d-20261005/preserved-after-3ff9b0d6.json records fresh
+read-only hashes of the previous ebb2db2e installed executable and ASAR, both
+matching their original install receipt. The retained previous installer's
+existence, size and modification time were checked; its original verified
+checksum was not recomputed during this handoff. No old payload/checkpoint was
+deleted and no private learning profile was inspected. No rejected cleanup was
+retried.
+
+Final public reports are proofs/final-native-3ff9b0d6-fe6d3b53/native-delivery.md
+and native-delivery.json, with SHA256SUMS.txt. They link the completed Package
+2ee5c476, Install f9f108dc and Proof f0df11d5 controller receipts, actual installer
+5f8670e4 evidence, manufacturing checksums, source comparison and preservation
+records. Generated READY/ready-plan status now records all three completed
+gates and the released native slot. Original preparation/status records were
+retained alongside the final report.
+
+Main/preload/profile source, compiled main/preload hashes and Electron pin are
+unchanged from ebb2db2e, as recorded in native-source-comparison.json. The older
+two-profile/full-navigation/physical-PDF/source/64-MiB-transfer/real-format-2
+backup matrix remains dated evidence for ebb2db2e; it was not repeated or
+relabelled for the replacement. This replacement proves one fresh synthetic
+installed startup/shutdown. It does not claim signed release, clean-VM,
+uninstaller, live account/inference or actual chosen-profile shortcut proof.
+Parent owns normal shortcut, Library25/search/citation acceptance and delivery
+pointers. External WindowStyle Normal launcher fix 4b1d2b71 is separate from
+the frozen installer/main assets. This final append changes evidence only.
