@@ -10,6 +10,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import AssessmentPage from './index';
 import { NavigationProvider, useNavigation } from '../../shell/navigation';
 import { fixturePython, fixtureReady, stopFixture } from '../../testBackend';
+import type { Catalog } from './types';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../..');
 const testProfile = mkdtempSync(join(tmpdir(), 'renulus-assessment-ui-'));
@@ -20,6 +21,8 @@ let simulateLostAcknowledgement = false;
 let simulateLostGenerationCompletion = false;
 const answerRequests: string[] = [];
 const generationRequests: string[] = [];
+const startRequests: string[] = [];
+let transformCatalog: ((catalog: Catalog, track: string | null) => Catalog) | null = null;
 vi.setConfig({ testTimeout: 30_000 });
 configure({ asyncUtilTimeout: 5_000 });
 
@@ -32,7 +35,22 @@ beforeAll(async () => {
   await new Promise<void>((resolve, reject) => reservation.close(error => error ? reject(error) : resolve()));
   origin = 'http://127.0.0.1:' + port;
   let startupError = '';
-  backend = spawn(fixturePython(repositoryRoot), [join(repositoryRoot, 'tests/assessment/serve_fixture.py'),
+  // Venv editable finders can otherwise win over PYTHONPATH and silently test
+  // another worktree. Prepend this lane before importing the API/fixtures.
+  const runtimeRoot = join(repositoryRoot, 'runtime');
+  const fixtureRoot = join(repositoryRoot, 'tests/assessment');
+  const bootstrap = [
+    'import runpy, sys',
+    'from pathlib import Path',
+    'sys.path[:0] = ' + JSON.stringify([runtimeRoot, fixtureRoot]),
+    'import renulus',
+    'assert Path(renulus.__file__).resolve().parent.parent == Path(' + JSON.stringify(runtimeRoot) + ').resolve()',
+    'from test_track_catalog import MappedContentRepository',
+    'import conftest',
+    'conftest.SyntheticContentRepository = MappedContentRepository',
+    'runpy.run_path(' + JSON.stringify(join(fixtureRoot, 'serve_fixture.py')) + ', run_name="__main__")',
+  ].join('\n');
+  backend = spawn(fixturePython(repositoryRoot), ['-c', bootstrap,
     '--profile', testProfile, '--port', String(port), '--generated-provider'], { cwd: repositoryRoot, windowsHide: true,
       stdio: ['ignore', 'ignore', 'pipe'], env: { ...process.env, PYTHONPATH: join(repositoryRoot, 'runtime') } });
   backend.stderr?.on('data', chunk => { startupError = (startupError + String(chunk)).slice(-2000); });
@@ -43,6 +61,12 @@ beforeAll(async () => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
     const headers = new Headers(init?.headers); headers.set('x-renulus-token', 'assessment-fixture-session');
     const response = await originalFetch(new URL(url, origin), { ...init, headers });
+    const parsed = new URL(url, origin);
+    if (parsed.pathname === '/api/v1/assessment/catalog' && transformCatalog && response.ok) {
+      const catalog = await response.json() as Catalog;
+      return Response.json(transformCatalog(catalog, parsed.searchParams.get('track')));
+    }
+    if (parsed.pathname === '/api/v1/assessment/start') startRequests.push(String(init?.body));
     if (url.endsWith('/practice/generate')) {
       generationRequests.push(String(init?.body));
       if (simulateLostGenerationCompletion) {
@@ -59,7 +83,7 @@ beforeAll(async () => {
   });
 }, 75_000);
 
-afterEach(() => { cleanup(); simulateLostAcknowledgement = false; simulateLostGenerationCompletion = false; });
+afterEach(() => { cleanup(); simulateLostAcknowledgement = false; simulateLostGenerationCompletion = false; transformCatalog = null; });
 afterAll(async () => {
   configure({ asyncUtilTimeout: 1000 });
   vi.resetConfig();
@@ -75,6 +99,78 @@ function mount() {
 }
 
 describe('assessment UI with real local API responses', () => {
+  it('selects the mapped content track, shows honest gaps and launches that exact track', async () => {
+    mount();
+    await screen.findByText('Choose a focused quiz');
+    fireEvent.change(screen.getByLabelText('Topic'), { target: { value: 'glomerular' } });
+    fireEvent.change(screen.getByLabelText('Track'), { target: { value: 'esen_eph' } });
+    await screen.findByText('Mapping checked 2026-10-05.');
+    expect((screen.getByLabelText('Track') as HTMLSelectElement).value).toBe('esen_eph');
+    expect((screen.getByLabelText('Topic') as HTMLSelectElement).value).toBe('');
+    expect(screen.getByText('3 reviewed questions in 2 item families available.')).toBeDefined();
+    expect(screen.getByText('0 questions match the exam option format. Exam simulation is unavailable.')).toBeDefined();
+    expect(screen.getByRole('option', { name: 'Glomerular workflow fixture (0 item families)' }).hasAttribute('disabled')).toBe(true);
+    expect(screen.queryByText(/ESENeph examination mapping is not available/)).toBeNull();
+    fireEvent.click(screen.getByText('View indicative domain coverage'));
+    expect(screen.getByRole('row', { name: 'Uncovered fixture domain 0 0 2 Gap' })).toBeDefined();
+    expect(screen.getByRole('row', { name: 'Haemodialysis fixture domain 2 1 3 Partial' })).toBeDefined();
+    const before = startRequests.length;
+    fireEvent.click(screen.getByText('Start reviewed quiz'));
+    await screen.findByText('Question 1');
+    expect(startRequests.length - before).toBe(1);
+    expect(JSON.parse(startRequests[before]).selector).toEqual({ track: 'esen_eph', topic_ids: [] });
+    expect(screen.getByText('ESENeph preparation')).toBeDefined();
+    expect(screen.getByText('Only 2 item families matched the requested 10 questions.')).toBeDefined();
+    fireEvent.click(screen.getByLabelText('Token a'));
+    fireEvent.click(screen.getByText('Commit answer'));
+    await screen.findByText('PRIVATE_REVIEWED_KEY_SENTINEL');
+    expect(screen.getByText('Correct')).toBeDefined();
+  });
+
+  it('preserves an explicit unavailable legacy track and prevents its launch', async () => {
+    transformCatalog = (catalog, track) => {
+      const unavailable = { ...catalog, tracks: catalog.tracks.map(candidate => candidate.id === 'esen_eph'
+        ? { ...candidate, available: false, available_families: 0, available_questions: 0,
+          status: 'not_formally_mapped', reason: 'The active pack has no formal mapping',
+          checked_on: undefined, format_compatible_questions: undefined, domains: [] } : candidate) };
+      return track === 'esen_eph' ? { ...unavailable, available_families: 0, available_questions: 0,
+        domains: catalog.domains.map(domain => ({ ...domain, available_families: 0 })) } : unavailable;
+    };
+    mount();
+    await screen.findByText('Choose a focused quiz');
+    expect(screen.getByRole('option', { name: 'ESENeph preparation (unavailable)' })).toBeDefined();
+    fireEvent.change(screen.getByLabelText('Track'), { target: { value: 'esen_eph' } });
+    await screen.findByText('ESENeph preparation is unavailable.');
+    expect(screen.getByText(/The active pack has no formal mapping/)).toBeDefined();
+    const button = screen.getByText('Start reviewed quiz') as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    const before = startRequests.length;
+    fireEvent.click(button);
+    expect(startRequests.length).toBe(before);
+    fireEvent.change(screen.getByLabelText('Track'), { target: { value: 'general_nephrology' } });
+    await screen.findByText('4 reviewed questions in 3 item families available.');
+    expect((screen.getByText('Start reviewed quiz') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('retains the chosen track through a catalog failure and cannot launch stale general coverage', async () => {
+    mount();
+    await screen.findByText('Choose a focused quiz');
+    transformCatalog = (catalog, track) => {
+      if (track === 'esen_eph') throw new TypeError('Synthetic lost track coverage');
+      return catalog;
+    };
+    const before = startRequests.length;
+    fireEvent.change(screen.getByLabelText('Track'), { target: { value: 'esen_eph' } });
+    await screen.findByRole('alert');
+    expect(screen.queryByText('Start reviewed quiz')).toBeNull();
+    expect(startRequests.length).toBe(before);
+    transformCatalog = null;
+    fireEvent.click(screen.getByText('Try again'));
+    await screen.findByText('Mapping checked 2026-10-05.');
+    expect((screen.getByLabelText('Track') as HTMLSelectElement).value).toBe('esen_eph');
+    expect(screen.getByText('3 reviewed questions in 2 item families available.')).toBeDefined();
+  });
+
   it('commits, shows actual source feedback, pauses, resumes and reviews without prototype scores', async () => {
     mount();
     await screen.findByText('Choose a focused quiz');

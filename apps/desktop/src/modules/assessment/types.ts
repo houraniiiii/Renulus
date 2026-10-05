@@ -52,13 +52,22 @@ export interface Session {
   selector: { domain_ids: string[]; topic_ids: string[]; track: string | null };
   coverage: { requested_count: number; selected_count: number; available_families: number;
     insufficient_count: boolean; missing_topic_ids: string[]; missing_domain_ids: string[];
-    complete_exam_available: false; note: string };
+    complete_exam_available: false; note: string; track_title?: string };
   item_count: number; answered_count: number; scores: Scores; current_item: Item | null;
   source_currency?: SessionSourceCurrency;
 }
+export interface TrackDomain {
+  id: string; label: string; status: string; indicative_questions: number;
+  available_questions: number; available_families: number; family_shortfall: number;
+}
+export interface AssessmentTrack {
+  id: string; title: string; available: boolean; available_families?: number; available_questions?: number;
+  status?: string; reason?: string; coverage_note?: string; checked_on?: string;
+  exam_simulation_available: false; format_compatible_questions?: number; domains: TrackDomain[];
+}
 export interface Catalog {
   mode: 'reviewed'; domains: { id: string; label: string; available_families: number }[];
-  available_families: number; tracks: { id: string; available: boolean; reason?: string }[];
+  track: string; available_families: number; available_questions: number; tracks: AssessmentTrack[];
   complete_exam_available: false; coverage_note: string;
   generated: { available: boolean; reason: string | null };
 }

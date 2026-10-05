@@ -134,21 +134,24 @@ class AssessmentRepository:
     def catalog(self, selector=None):
         selector = selector or Selector()
         with self.db.transaction() as conn:
-            summaries = self.content.summaries(selector)
+            tracks = self.content.tracks()
+            summaries = self.content.summaries(selector, tracks)
+            track_id = selector.track or "general_nephrology"
+            selected_track = next((track for track in tracks if track["id"] == track_id), {})
             topics = self.content.topics()
             by_topic = defaultdict(set)
             for summary in summaries:
                 by_topic[summary["topic_id"]].add(summary["family_id"])
-            return {"mode": "reviewed",
+            return {"mode": "reviewed", "track": track_id,
                     "domains": [{"id": topic["id"], "label": topic["label"],
                                  "available_families": len(by_topic[topic["id"]])}
                                 for topic in topics],
                     "available_families": len({q["family_id"] for q in summaries}),
-                    "tracks": [{"id": "general_nephrology", "available": True},
-                               {"id": "esen_eph", "available": False,
-                                "reason": "The installed pack is not formally mapped to ESENeph"}],
+                    "available_questions": len(summaries),
+                    "tracks": tracks,
                     "complete_exam_available": False,
-                    "coverage_note": "A selected quiz is not a complete curriculum or exam simulation",
+                    "coverage_note": selected_track.get("coverage_note") or
+                                     "A selected quiz is not a complete curriculum or exam simulation",
                     "generated": {"available": self.services.registry.get("provider") is not None,
                                   "reason": None if self.services.registry.get("provider") is not None else
                                   "Connect an approved subscription before generating practice"}}
@@ -182,21 +185,26 @@ class AssessmentRepository:
             previous = self._replay(conn, request.idempotency_key, "start", "", body)
             if previous is not None:
                 return previous
-            summaries = self.content.summaries(request.selector)
+            tracks = self.content.tracks()
+            summaries = self.content.summaries(request.selector, tracks)
             chosen = self._choose(conn, summaries, request.count)
             if not chosen:
                 raise ApiError("insufficient_coverage",
                                "No reviewed items match this selection; choose other topics or install a pack",
                                409)
             questions = [self.content.pin(summary) for summary in chosen]
+            selected_track = next((track for track in tracks
+                                   if track["id"] == (request.selector.track or "general_nephrology")), {})
             topics = {q["topic_id"] for q in summaries}
             coverage = {"requested_count": request.count, "selected_count": len(questions),
                         "available_families": len({q["family_id"] for q in summaries}),
                         "insufficient_count": len(questions) < request.count,
                         "missing_topic_ids": sorted(set(request.selector.topic_ids) - topics),
                         "missing_domain_ids": sorted(set(request.selector.domain_ids) - topics),
+                        "track_title": selected_track.get("title", request.selector.track or "General nephrology"),
                         "complete_exam_available": False,
-                        "note": "Limited reviewed quiz coverage; this is not a complete exam simulation"}
+                        "note": selected_track.get("coverage_note") or
+                                "Limited reviewed quiz coverage; this is not a complete exam simulation"}
             session_id, now = durable_id("assessment"), utc_now()
             conn.execute("INSERT INTO assessment_sessions VALUES(?,?,?,?,?,?,?,?,?)",
                          (session_id, "reviewed", "reviewed-assessment", "active",

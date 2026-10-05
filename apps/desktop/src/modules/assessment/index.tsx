@@ -4,7 +4,7 @@ import { api, ApiError, isCancelled } from '../../platform/api';
 import { useResource } from '../../platform/useResource';
 import { useNavigation } from '../../shell/navigation';
 import { Badge, Button, EmptyState, ErrorState, Input, LoadingState, Notice, PageHeader, Select } from '../../ui';
-import type { AnswerResult, Catalog, Citation, Feedback, HelpResult, ReviewResult, Scores, Session } from './types';
+import type { AnswerResult, AssessmentTrack, Catalog, Citation, Feedback, HelpResult, ReviewResult, Scores, Session } from './types';
 import GeneratedPractice from './GeneratedPractice';
 import SourceCurrencyNotice, { currencySummary, SessionCurrencyNotice } from './SourceCurrencyNotice';
 import './assessment.css';
@@ -32,6 +32,36 @@ function ScoreTable({ scores }: { scores: Scores }) {
       <th scope="row">{labels[bucket]}</th><td>{scores.reviewed[bucket].correct} / {scores.reviewed[bucket].answered}</td>
     </tr>)}</tbody>
   </table>;
+}
+
+function TrackCoverage({ catalog, track }: { catalog: Catalog; track: AssessmentTrack | undefined }) {
+  return <section className="assessment-track-coverage" aria-label="Selected track coverage">
+    <Notice tone="warning">
+      {track?.available
+        ? <p>{catalog.available_questions} reviewed questions in {catalog.available_families} item families available.</p>
+        : <p><strong>{track?.title ?? 'This track'} is unavailable.</strong>{' '}
+          {track?.reason ?? 'No reviewed content is available for this track.'}</p>}
+      <p>{catalog.coverage_note}</p>
+      {track?.checked_on && <p>Mapping checked {track.checked_on}.</p>}
+      {track?.format_compatible_questions !== undefined && <p>
+        {track.format_compatible_questions} questions match the exam option format. Exam simulation is unavailable.</p>}
+    </Notice>
+    {!!track?.domains.length && <details className="assessment-domain-details">
+      <summary>View indicative domain coverage</summary>
+      <p className="muted">Family shortfalls compare distinct item families with indicative domain counts.
+        These counts do not establish curriculum depth or mastery.</p>
+      <div className="assessment-coverage-scroll" tabIndex={0} role="region" aria-label="Indicative domain coverage">
+        <table className="assessment-scores assessment-domain-coverage">
+          <caption>Mapped reviewed bank</caption>
+          <thead><tr><th scope="col">Domain</th><th scope="col">Questions</th>
+            <th scope="col">Item families</th><th scope="col">Family shortfall</th><th scope="col">Coverage</th></tr></thead>
+          <tbody>{track.domains.map(domain => <tr key={domain.id}><th scope="row">{domain.label}</th>
+            <td>{domain.available_questions}</td><td>{domain.available_families}</td><td>{domain.family_shortfall}</td>
+            <td>{domain.status === 'gap' ? 'Gap' : 'Partial'}</td></tr>)}</tbody>
+        </table>
+      </div>
+    </details>}
+  </section>;
 }
 
 function FeedbackView({ feedback, focus = false }: { feedback: Feedback; focus?: boolean }) {
@@ -80,6 +110,7 @@ export default function AssessmentPage() {
 function AssessmentStudyPage() {
   const nav = useNavigation();
   const [mode, setMode] = useState<'reviewed' | 'generated'>('reviewed');
+  const [track, setTrack] = useState('general_nephrology');
   const [topic, setTopic] = useState(typeof nav.handoff?.topic_id === 'string' ? nav.handoff.topic_id : '');
   const [count, setCount] = useState('10');
   const [session, setSession] = useState<Session | null>(null);
@@ -97,11 +128,11 @@ function AssessmentStudyPage() {
   const visibleQuestionId = feedback ? null : session?.current_item?.id;
   const overview = useResource(async signal => {
     const [catalog, history, scores] = await Promise.all([
-      api<Catalog>(base + '/catalog', { signal }),
+      api<Catalog>(base + '/catalog?track=' + encodeURIComponent(track), { signal }),
       api<{ sessions: Session[] }>(base + '/sessions', { signal }),
       api<Scores>(base + '/aggregates', { signal }),
     ]);
-    return { catalog, history: history.sessions, scores };
+    return { catalog, track, history: history.sessions, scores };
   });
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => {
@@ -133,9 +164,9 @@ function AssessmentStudyPage() {
   }
   function launch() {
     const amount = Number(count);
-    if (!Number.isInteger(amount) || amount < 1 || amount > 50) return;
+    if (!Number.isInteger(amount) || amount < 1 || amount > 50 || !selectedTrack?.available || !availableFamilies) return;
     const body = { idempotency_key: crypto.randomUUID(), mode: 'reviewed', count: amount,
-      selector: { topic_ids: topic ? [topic] : [], track: 'general_nephrology' } };
+      selector: { topic_ids: topic ? [topic] : [], track } };
     perform(() => api<Session>(base + '/start', { method: 'POST', body }), adopt);
   }
   function transition(action: 'pause' | 'resume' | 'end') {
@@ -179,7 +210,11 @@ function AssessmentStudyPage() {
     finally { if (mounted.current) setBusy(false); }
   }
   const locked = busy || !!actionError;
-  const data = overview.resource.status === 'ready' ? overview.resource.data : null;
+  const data = overview.resource.status === 'ready' && overview.resource.data.track === track ? overview.resource.data : null;
+  const selectedTrack = data?.catalog.tracks.find(candidate => candidate.id === track);
+  const availableFamilies = topic
+    ? data?.catalog.domains.find(domain => domain.id === topic)?.available_families ?? 0
+    : data?.catalog.available_families ?? 0;
   useEffect(() => {
     const questionId = nav.handoff?.question_id;
     if (!data || typeof questionId !== 'string' || handoffConsumed.current) return;
@@ -215,12 +250,19 @@ function AssessmentStudyPage() {
         <label><input type="radio" name="assessment-mode" checked={mode === 'generated'} onChange={() => setMode('generated')} />
           <span><strong>Generated practice</strong><span>Separate from reviewed results</span></span></label>
       </fieldset>
-      {overview.resource.status === 'loading' && <LoadingState label="Loading quiz coverage and your sessions" />}
+      {(overview.resource.status === 'loading' || (overview.resource.status === 'ready' && !data))
+        && <LoadingState label="Loading quiz coverage and your sessions" />}
       {overview.resource.status === 'error' && <ErrorState error={overview.resource.error} onRetry={overview.retry} />}
       {mode === 'generated' && <GeneratedPractice onBack={() => setMode('reviewed')} />}
       {data && mode === 'reviewed' && <div className="assessment-overview">
         <section className="section"><h2>Choose a focused quiz</h2>
           <form className="assessment-chooser" onSubmit={event => { event.preventDefault(); launch(); }}>
+            <Select label="Track" value={track} disabled={locked} onChange={event => {
+              setTrack(event.target.value); setTopic(''); overview.retry();
+            }}>{data.catalog.tracks.length === 0 && <option value="">No tracks available</option>}
+              {data.catalog.tracks.map(candidate => <option key={candidate.id} value={candidate.id}>
+                {candidate.title}{!candidate.available && ' (unavailable)'}</option>)}
+            </Select>
             <Select label="Topic" value={topic} disabled={locked} onChange={event => setTopic(event.target.value)}>
               <option value="">Across available topics</option>{data.catalog.domains.map(domain =>
                 <option key={domain.id} value={domain.id} disabled={domain.available_families === 0}>
@@ -228,16 +270,16 @@ function AssessmentStudyPage() {
             </Select>
             <Input label="Questions" type="number" min={1} max={50} step={1} value={count} disabled={locked}
               onChange={event => setCount(event.target.value)} hint="If coverage is limited, the quiz uses the available item families." />
-            <Button type="submit" busy={busy} disabled={locked || data.catalog.available_families === 0
+            <Button type="submit" busy={busy} disabled={locked || !selectedTrack?.available || availableFamilies === 0
               || !Number.isInteger(Number(count)) || Number(count) < 1 || Number(count) > 50}>
               Start reviewed quiz<ArrowRight size={17} /></Button>
           </form>
-          <Notice tone="warning"><p>{data.catalog.available_families} reviewed item families available.
-            {' '}{data.catalog.coverage_note}. ESENeph examination mapping is not available.</p></Notice>
+          <TrackCoverage catalog={data.catalog} track={selectedTrack} />
           <section className="section assessment-separated"><h2>Pick up a session</h2>
             {data.history.length === 0 ? <p>No sessions yet. Your committed answers will appear here.</p>
               : <ul className="assessment-history">{data.history.map(previous => <li key={previous.id}>
                 <div><strong>{previous.status === 'ended' ? 'Ended session' : 'Reviewed quiz'}</strong>
+                  {previous.coverage.track_title && <span>{previous.coverage.track_title}</span>}
                   <span>{previous.answered_count} / {previous.item_count} answered · {previous.status}</span>
                   <span className="muted">{new Date(previous.created_at).toLocaleString()}</span>
                   {currencySummary(previous.source_currency) && <span className="assessment-currency-summary">
@@ -255,9 +297,11 @@ function AssessmentStudyPage() {
     </> : <div className="assessment-session-layout">
       <section className="section">
         <div className="assessment-meta"><Badge>Reviewed quiz</Badge>
+          {session.coverage.track_title && <span>{session.coverage.track_title}</span>}
           <span>{session.answered_count} / {session.item_count} committed</span>
           {session.current_item?.assisted && <Badge tone="warning">Assisted</Badge>}
           {session.current_item?.repeat && <Badge tone="neutral">Repeat exposure</Badge>}</div>
+        {session.selector.track === 'esen_eph' && <Notice tone="warning"><p>{session.coverage.note}</p></Notice>}
         {session.coverage.insufficient_count && <Notice tone="warning"><p>
           Only {session.item_count} item families matched the requested {session.coverage.requested_count} questions.</p></Notice>}
         {session.status === 'paused' && <EmptyState title="Quiz paused" action={
