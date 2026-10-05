@@ -6,6 +6,11 @@ integrated saved-scope fix. Review used current contracts/source and existing
 actual-engine evidence. No new source data, helper run, provider or parent
 profile was used.
 
+Subsequent authorised implementation adds the guarded actual image consumer:
+see [Cases image consumer](case-image-consumer.md). The image row below is the
+earlier review finding; live interpretation and clinical accuracy remain
+unproved. The strict runtime prerequisite is identified in the new evidence.
+
 ## Concrete correction
 
 The real Cases page offered only **Explore in Learn**. Its hook hard-coded

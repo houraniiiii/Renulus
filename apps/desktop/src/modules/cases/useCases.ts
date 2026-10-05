@@ -189,7 +189,7 @@ export function useCases(resumeCaseId?: string) {
     finally { run.controller.abort(); }
   }
 
-  async function send(question: string, onAccepted?: () => void) {
+  async function send(question: string, onAccepted?: () => void, image?: { id: string; model: string }) {
     const item = current.current;
     if (!item || active.current || !question.trim()) return;
     const run: ActiveStream = { controller: new AbortController(), caseId: item.id, epoch: ++epoch.current };
@@ -201,9 +201,9 @@ export function useCases(resumeCaseId?: string) {
     let lastSequence = 0;
     let terminal = false;
     try {
-      for await (const packet of stream<CaseEvent>(casePath(item.id) + '/discuss', { method: 'POST',
+      for await (const packet of stream<CaseEvent>(image ? '/cases/attachments/' + encodeURIComponent(image.id) + '/discuss-image' : casePath(item.id) + '/discuss', { method: 'POST',
         signal: run.controller.signal, body: { message: question, revision: item.revision,
-          request_id: crypto.randomUUID() } })) {
+          request_id: crypto.randomUUID(), ...(image ? { model: image.model } : {}) } })) {
         if (!alive.current || epoch.current !== run.epoch || run.controller.signal.aborted) break;
         const event = packet.data;
         if (event.sequence <= lastSequence) continue;
@@ -253,6 +253,7 @@ export function useCases(resumeCaseId?: string) {
   }
 
   return { session, capabilities, saved, teaching, loading, busy, error, catalogueError,
+    discussImage: (id: string, model: string, question: string) => send(question, undefined, { id, model }),
     running, partial, pendingQuestion, purgePending, reload, start, open, save, reveal,
     close, remove, retryPurge, stop, send, handoff, applyPreview, refreshCurrency };
 }

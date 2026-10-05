@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: MIT
-"""Volatile extraction previews. Engines belong to knowledge; no file writes here."""
+"""Volatile text/image previews. Engines belong to knowledge; no file writes here."""
 
 import asyncio
+import base64
+from pathlib import PurePath
 from dataclasses import dataclass, field
 import math
 from time import monotonic
@@ -10,6 +12,7 @@ from typing import Any
 from renulus.contracts import ApiError, ContextScope, Scope, durable_id
 
 from .models import EditCase
+from .images import image_capabilities, require_image_model
 
 MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
 MAX_PREVIEW_CHARACTERS = 50000
@@ -36,6 +39,8 @@ class Preview:
     error: dict | None = None
     created: float = field(default_factory=monotonic)
     upload_started: bool = False
+    mode: str = 'text'
+    image: dict | None = field(default=None, repr=False)
 
 
 class AttachmentPreviews:
@@ -87,7 +92,7 @@ class AttachmentPreviews:
         return session
 
     def preflight(self, case_id: str, revision: int, scope: ContextScope,
-                  filename: str, title: str) -> Preview:
+                  filename: str, title: str, mode: str = 'text') -> Preview:
         with self.repository._lock:
             # An abandoned reservation contains no file bytes and must not keep
             # a worker slot forever when its response was lost.
@@ -101,9 +106,13 @@ class AttachmentPreviews:
             self.repository._check_idle(session)
             if session.kind != "daily":
                 raise ApiError("teaching_case_immutable", "Original teaching cases use their installed material", 409)
-            if not self.capabilities()["supported"]:
-                raise ApiError("temporary_extraction_unverified",
-                               "Verified temporary extraction is not ready in this installation", 409)
+            if mode == 'image' and PurePath(filename).suffix.lower() not in ('.png', '.jpg', '.jpeg'):
+                raise ApiError('unsupported_attachment', 'Image discussion accepts PNG or JPEG; PDFs use text extraction', 415)
+            capability = image_capabilities(self.services) if mode == 'image' else self.capabilities()
+            if not capability["supported"]:
+                raise ApiError(capability["code"], capability["reason"],
+                    403 if capability["code"] == "learning_use_unverified" else 409,
+                    capability.get("retryable", False))
             if len(self.tasks) + sum(j.state == "reading" for j in self.jobs.values()) >= MAX_EXTRACTIONS:
                 raise ApiError("case_extraction_busy", "Wait for the current extraction to finish", 429, True)
             if len(self.jobs) >= MAX_PREVIEWS:
@@ -112,25 +121,30 @@ class AttachmentPreviews:
                     raise ApiError("case_preview_capacity", "Discard an attachment preview before adding another", 429)
                 del self.jobs[old]
             job = Preview(durable_id("case_extract"), case_id, revision, session,
-                          scope.model_copy(deep=True), filename, title)
+                          scope.model_copy(deep=True), filename, title, mode=mode)
             self._guard(job)
             self.jobs[job.id] = job
             return job
 
     def claim_upload(self, job_id: str, case_id: str, revision: int, scope: ContextScope,
-                     filename: str, title: str) -> Preview:
+                     filename: str, title: str, mode: str = 'text') -> Preview:
         with self.repository._lock:
             job = self.jobs.get(job_id)
             if job is None:
                 raise ApiError("case_preview_not_found", "Prepare the attachment again before uploading", 404)
             if (job.case_id, job.revision, job.scope, job.filename, job.title) != (case_id, revision, scope, filename, title):
                 raise ApiError("case_scope_mismatch", "The attachment reservation does not match this case", 409)
+            if job.mode != mode:
+                raise ApiError('case_scope_mismatch', 'The attachment mode changed; prepare it again', 409)
             self._guard(job)
             if job.state != "reading" or job.upload_started:
                 raise ApiError("case_upload_already_started", "This attachment upload has already started", 409)
-            if not self.capabilities()["supported"]:
+            capability = image_capabilities(self.services) if mode == 'image' else self.capabilities()
+            if not capability["supported"]:
                 self.cancel(job.id)
-                raise ApiError("temporary_extraction_unverified", "Temporary extraction is unavailable", 409)
+                raise ApiError(capability["code"], capability["reason"],
+                    403 if capability["code"] == "learning_use_unverified" else 409,
+                    capability.get("retryable", False))
             job.upload_started = True
             return job
 
@@ -139,6 +153,13 @@ class AttachmentPreviews:
             self._guard(job)
             if job.state != "reading":
                 raise ApiError("case_upload_already_started", "This attachment upload has already started", 409)
+            if job.mode == 'image':
+                from renulus.runtime.inputs import validate_inputs
+                part = {'type': 'image', 'media_type': MEDIA[PurePath(job.filename).suffix.lower()],
+                        'data': base64.b64encode(data).decode('ascii'), 'detail': 'auto'}
+                job.image = validate_inputs([{'role': 'user', 'content': [part]}])[0]['content'][0]
+                job.state = 'ready'
+                return self.view(job.id)
             job.state = "processing"
             task = asyncio.create_task(self._extract(job, data))
             self.tasks.add(task)
@@ -200,6 +221,7 @@ class AttachmentPreviews:
     @staticmethod
     def _clear(job: Preview):
         job.text = ""
+        job.image = None
         job.ocr = {}
         job.filename = ""
         job.title = ""
@@ -234,13 +256,16 @@ class AttachmentPreviews:
             return {"id": job.id, "case_id": job.case_id, "revision": job.revision,
                     "scope": job.scope.model_dump(mode="json"), "state": job.state,
                     "filename": job.filename, "title": job.title, "text": job.text,
-                    "ocr": dict(job.ocr), "error": job.error}
+                    "ocr": dict(job.ocr), "error": job.error, 'mode': job.mode,
+                    'image': dict(job.image) if job.image else None, 'image_retained': False}
 
     def apply(self, job_id: str, revision: int, reviewed_text: str) -> dict:
         with self.repository._lock:
             job = self.jobs.get(job_id)
             if job is None or job.state != "ready":
                 raise ApiError("case_preview_not_ready", "Extract and review the attachment before using its text", 409)
+            if job.mode != 'text':
+                raise ApiError('case_preview_not_ready', 'Images must be explicitly sent for image discussion', 409)
             session = self._guard(job)
             self.repository._check_revision(session, revision)
             merged = session.text + "\n\nReviewed attachment text:\n" + reviewed_text.strip()
@@ -249,3 +274,21 @@ class AttachmentPreviews:
             result = self.repository.edit(job.case_id, EditCase(revision=revision, text=merged))
             job.state = "applied"
             return result
+
+    def discuss_image(self, job_id, request):
+        from .models import DiscussCase
+        with self.repository._lock:
+            job = self.jobs.get(job_id)
+            if job is None or job.state != 'ready' or job.mode != 'image' or not job.image:
+                raise ApiError('case_preview_not_ready', 'Review an image before explicitly sending it', 409)
+            session = self._guard(job)
+            self.repository._check_revision(session, request.revision)
+            require_image_model(self.services, request.model)
+            image = dict(job.image)
+            message = request.message + '\n[Image input requested. Image bytes are omitted from Save; reselect the image for later image discussion.]'
+            run, messages = self.repository.begin_discussion(job.case_id, DiscussCase(
+                revision=request.revision, message=message, request_id=request.request_id))
+            run.mode, run.model = 'image', request.model
+            messages[-1]['content'] = [{'type': 'text', 'text': request.message}, image]
+            self.cancel(job.id)
+            return run, messages

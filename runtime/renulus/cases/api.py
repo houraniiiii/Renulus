@@ -12,10 +12,12 @@ from fastapi.responses import StreamingResponse
 from pydantic import ValidationError
 
 from renulus.contracts import ApiError
+from renulus.runtime.inputs import MAX_IMAGE_BYTES
 
 from .attachments import AttachmentPreviews, MEDIA, MAX_ATTACHMENT_BYTES
 from .models import (ApplyPreview, AttachmentInput, DiscussCase, EditCase, ExtractionOptions,
-                     HandoffCase, RevisionInput, StartCase)
+                     HandoffCase, ImageDiscussion, RevisionInput, StartCase)
+from .images import image_capabilities
 from .repository import CaseRepository
 from .streaming import cancel_provider, events
 
@@ -37,8 +39,7 @@ def create_router(services) -> APIRouter:
             "text": {"supported": True, "max_characters": 50000},
             "image": dict(extraction), "pdf": dict(extraction)},
             "extraction": extraction,
-            "image_interpretation": {"supported": False, "code": "image_input_unverified",
-                "reason": "Cases discussion currently accepts extracted text; image interpretation is not enabled"},
+            "image_interpretation": image_capabilities(services),
             "discussion": {"adapter_installed": "provider" in services.registry,
                            "scope": "temporary-case"},
             "teaching": {"content_installed": "content" in services.registry},
@@ -137,7 +138,7 @@ def create_router(services) -> APIRouter:
     async def prepare_attachment(case_id: str, request: Request):
         # Reserve a cancellation handle before the UI sends any file bytes.
         body, filename, _ = attachment_headers(request)
-        job = previews.preflight(case_id, body.revision, body.scope, filename, body.title)
+        job = previews.preflight(case_id, body.revision, body.scope, filename, body.title, body.mode)
         return previews.view(job.id)
 
     @router.post("/sessions/{case_id}/attachments/extract", status_code=202)
@@ -145,28 +146,30 @@ def create_router(services) -> APIRouter:
         # No UploadFile, multipart parser, original-copy path, disk staging or
         # spooled file. Scope and safety are checked before the first body read.
         body, filename, suffix = attachment_headers(request)
+        byte_limit = MAX_IMAGE_BYTES if body.mode == "image" else MAX_ATTACHMENT_BYTES
+        limit_message = "Images must be between 1 byte and 8 MiB" if body.mode == "image" else "Attachments must be between 1 byte and 10 MiB"
         length = request.headers.get("content-length")
         if length is not None:
             try:
-                if not 0 < int(length) <= MAX_ATTACHMENT_BYTES:
+                if not 0 < int(length) <= byte_limit:
                     raise ValueError
             except ValueError:
-                raise ApiError("case_attachment_limit", "Attachments must be between 1 byte and 10 MiB", 413) from None
+                raise ApiError("case_attachment_limit", limit_message, 413) from None
         preview_id = request.headers.get("x-renulus-preview-id")
         if preview_id is None:
             # Preserve the single-request seam for direct API consumers. The UI
             # uses prepare so cancellation cannot lose its handle during upload.
-            preview_id = previews.preflight(case_id, body.revision, body.scope, filename, body.title).id
+            preview_id = previews.preflight(case_id, body.revision, body.scope, filename, body.title, body.mode).id
         if not preview_id or len(preview_id) > 128:
             raise ApiError("invalid_attachment_preview", "Prepare the attachment again before uploading", 422)
-        job = previews.claim_upload(preview_id, case_id, body.revision, body.scope, filename, body.title)
+        job = previews.claim_upload(preview_id, case_id, body.revision, body.scope, filename, body.title, body.mode)
         data = bytearray()
         try:
             async for block in request.stream():
                 with repository._lock:
                     previews._guard(job)
-                if len(data) + len(block) > MAX_ATTACHMENT_BYTES:
-                    raise ApiError("case_attachment_limit", "The attachment exceeds 10 MiB", 413)
+                if len(data) + len(block) > byte_limit:
+                    raise ApiError("case_attachment_limit", limit_message, 413)
                 data.extend(block)
             valid = (suffix == ".pdf" and data[:1024].lstrip().startswith(b"%PDF-")) or (
                 suffix == ".png" and data.startswith(b"\x89PNG\r\n\x1a\n")) or (
@@ -201,6 +204,12 @@ def create_router(services) -> APIRouter:
         return StreamingResponse(events(repository, run, messages), media_type="text/event-stream",
                                  headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no",
                                           "X-Renulus-Run-ID": run.id})
+
+    @router.post('/attachments/{preview_id}/discuss-image')
+    async def discuss_image(preview_id: str, body: ImageDiscussion):
+        run, messages = previews.discuss_image(preview_id, body)
+        return StreamingResponse(events(repository, run, messages), media_type='text/event-stream',
+            headers={'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no', 'X-Renulus-Run-ID': run.id})
 
     @router.get("/runs/{run_id}")
     async def run_status(run_id: str):

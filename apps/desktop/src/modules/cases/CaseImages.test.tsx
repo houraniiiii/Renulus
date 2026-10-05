@@ -1,0 +1,140 @@
+// @vitest-environment jsdom
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { NavigationProvider } from '../../shell/navigation';
+import CasesPage from './index';
+import type { AttachmentPreview, CaseSession } from './types';
+
+const MODEL = 'gpt-6.1-sol';
+const DATA = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a3ioAAAAASUVORK5CYII=';
+const caseItem: CaseSession = { id: 'case_image_ui', kind: 'daily', title: 'Daily case', text: 'Synthetic learning',
+  revision: 1, scope: { kind: 'temporary-case', entity_id: 'case_image_ui' }, saved: false, dirty: true,
+  saved_at: null, created_at: '2026-10-05', updated_at: '2026-10-05', active_run_id: null, messages: [], teaching: null };
+const preview: AttachmentPreview = { id: 'image_preview', case_id: caseItem.id, revision: 1, scope: caseItem.scope,
+  mode: 'image', state: 'ready', filename: 'synthetic.png', title: 'Temporary image', text: '', ocr: {}, error: null,
+  image: { media_type: 'image/png', data: DATA }, image_retained: false };
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+const frame = (sequence: number, type: string, payload: unknown) => 'event: ' + type + '\ndata: ' + JSON.stringify({
+  id: 'image_event_' + sequence, run_id: 'image_run_ui', sequence, type, payload }) + '\n\n';
+
+function fixture({ supported = true, pause = false, reject = false } = {}) {
+  let current = caseItem;
+  let readerCancelled = false;
+  const fetch = vi.fn((path: string, options: RequestInit) => {
+    if (path.endsWith('/capabilities')) return Promise.resolve(json({
+      inputs: { text: { supported: true }, pdf: { supported: false }, image: { supported: false } },
+      extraction: { supported: false, max_bytes: 10 * 1024 * 1024, formats: [], scope: 'temporary-case' },
+      image_interpretation: { supported, models: supported ? [MODEL] : [], provider: 'codex',
+        interpretation_verified: false, max_bytes: 8 * 1024 * 1024, image_pixels: 16000000,
+        reason: supported ? null : 'The selected account has no verified image-input model. Check Connections.' },
+      discussion: { adapter_installed: true, scope: 'temporary-case' }, teaching: { content_installed: false },
+      handoffs: {}, memory_capture: false }));
+    if (path.endsWith('/saved') || path.endsWith('/teaching')) return Promise.resolve(json({ cases: [] }));
+    if (path.endsWith('/sessions') && options.method === 'POST') return Promise.resolve(json(caseItem));
+    if (path.endsWith('/save')) {
+      current = { ...current, saved: true, dirty: false, saved_at: '2026-10-05', scope: { kind: 'saved-case', entity_id: caseItem.id } };
+      return Promise.resolve(json(current));
+    }
+    if (path.endsWith('/prepare')) return Promise.resolve(json({ ...preview, image: null, state: 'reading' }));
+    if (path.endsWith('/extract')) return Promise.resolve(json(preview));
+    if (options.method === 'DELETE') return Promise.resolve(json({ state: 'cancelled' }));
+    if (path.endsWith('/discuss-image')) {
+      if (reject) return Promise.resolve(json({ error: { code: 'image_capabilities_unverified',
+        message: 'The selected account changed. Review the image and check Connections.', retryable: true } }, 409));
+      current = { ...caseItem, revision: pause ? 2 : 3, messages: pause ? [] : [
+        { id: 'image-question', role: 'user', content: 'Synthetic image question [Image bytes are omitted from Save.]', created_at: '2026-10-05' },
+        { id: 'image-answer', role: 'assistant', content: 'Synthetic image response', created_at: '2026-10-05' }] };
+      return Promise.resolve(new Response(new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(frame(1, 'started', { revision: 2, scope: caseItem.scope }) +
+            frame(2, 'answer.delta', { text: pause ? 'Synthetic partial image response' : 'Synthetic image response' })));
+          if (!pause) { controller.enqueue(new TextEncoder().encode(frame(3, 'completed', { revision: 3 }))); controller.close(); }
+        }, cancel() { readerCancelled = true; },
+      }), { headers: { 'Content-Type': 'text/event-stream' } }));
+    }
+    if (path.endsWith('/cancel')) return Promise.resolve(json({ status: 'cancelled' }));
+    if (path.endsWith('/' + caseItem.id)) return Promise.resolve(json(current));
+    throw new Error('Unexpected synthetic Cases path: ' + path);
+  });
+  vi.stubGlobal('fetch', fetch);
+  return { fetch, cancelled: () => readerCancelled };
+}
+
+async function reviewImage() {
+  render(<NavigationProvider><CasesPage /></NavigationProvider>);
+  fireEvent.change(screen.getByLabelText('What would you like to discuss?'), { target: { value: caseItem.text } });
+  await waitFor(() => expect((screen.getByRole('button', { name: 'Start temporary case' }) as HTMLButtonElement).disabled).toBe(false));
+  fireEvent.click(screen.getByRole('button', { name: 'Start temporary case' }));
+  await waitFor(() => expect(screen.getByLabelText('Use this file for')).toBeTruthy());
+  fireEvent.change(screen.getByLabelText('Use this file for'), { target: { value: 'image' } });
+  fireEvent.change(screen.getByLabelText('Image to review before sending'), {
+    target: { files: [new File(['synthetic image bytes'], 'synthetic.png', { type: 'image/png' })] } });
+  await waitFor(() => expect(screen.getByAltText('Selected image for temporary case discussion')).toBeTruthy());
+  fireEvent.change(screen.getByLabelText('Question about this image'), { target: { value: 'Synthetic image question' } });
+}
+
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); window.history.replaceState(null, '', '#'); });
+
+describe('actual Cases renderer image consumer', () => {
+  it('reviews without inference, sends only explicitly with the selected model and discloses Save omissions', async () => {
+    const { fetch } = fixture();
+    const store = vi.spyOn(Storage.prototype, 'setItem');
+    await reviewImage();
+    expect(screen.getByText(/Image bytes are temporary and omitted from Save/)).toBeTruthy();
+    expect((screen.getByAltText('Selected image for temporary case discussion') as HTMLImageElement).src).toBe('data:image/png;base64,' + DATA);
+    expect(fetch.mock.calls.some(([path]) => path.endsWith('/discuss-image'))).toBe(false);
+    expect((screen.getByLabelText('Selected account image model') as HTMLSelectElement).value).toBe(MODEL);
+    fireEvent.click(screen.getByRole('button', { name: 'Send image for discussion' }));
+    await waitFor(() => expect(screen.getByText('Synthetic image response')).toBeTruthy());
+    const send = fetch.mock.calls.find(([path]) => path.endsWith('/discuss-image'))!;
+    expect(send[0]).toContain('/attachments/image_preview/discuss-image');
+    expect(JSON.parse(send[1].body as string)).toMatchObject({ revision: 1, model: MODEL, message: 'Synthetic image question' });
+    expect(send[1].body).not.toContain(DATA);
+    expect(fetch.mock.calls.some(([path]) => path.endsWith('/save'))).toBe(false);
+    expect(store).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByAltText('Selected image for temporary case discussion')).toBeNull());
+  });
+
+  it('uses the normal real run cancellation route and clears the image preview', async () => {
+    const state = fixture({ pause: true });
+    await reviewImage();
+    fireEvent.click(screen.getByRole('button', { name: 'Send image for discussion' }));
+    await waitFor(() => expect(screen.getByText('Synthetic partial image response')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Stop response' }));
+    await waitFor(() => expect(state.fetch.mock.calls.some(([path]) => path.endsWith('/image_run_ui/cancel'))).toBe(true));
+    await waitFor(() => expect(state.cancelled()).toBe(true));
+    await waitFor(() => expect(screen.queryByAltText('Selected image for temporary case discussion')).toBeNull());
+    expect(state.fetch.mock.calls.some(([path]) => path.endsWith('/save'))).toBe(false);
+  });
+
+  it('clears a pending image review when Save changes scope without changing revision', async () => {
+    const { fetch } = fixture();
+    await reviewImage();
+    fireEvent.click(screen.getByRole('button', { name: 'Save case' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Saved' })).toBeTruthy());
+    await waitFor(() => expect(screen.queryByAltText('Selected image for temporary case discussion')).toBeNull());
+    await waitFor(() => expect(fetch.mock.calls.some(([path, options]) => path.endsWith('/image_preview') && options.method === 'DELETE')).toBe(true));
+    expect(fetch.mock.calls.some(([path]) => path.endsWith('/discuss-image'))).toBe(false);
+  });
+
+  it('keeps a review visible when a changed account rejects Send before acceptance', async () => {
+    const { fetch } = fixture({ reject: true });
+    await reviewImage();
+    fireEvent.click(screen.getByRole('button', { name: 'Send image for discussion' }));
+    await waitFor(() => expect(screen.getByText('The selected account changed. Review the image and check Connections.')).toBeTruthy());
+    expect(screen.getByAltText('Selected image for temporary case discussion')).toBeTruthy();
+    expect(fetch.mock.calls.filter(([path]) => path.endsWith('/discuss-image'))).toHaveLength(1);
+    expect(fetch.mock.calls.some(([path]) => path.endsWith('/save'))).toBe(false);
+  });
+
+  it('disables image discussion for an unverified account while explaining the limitation', async () => {
+    const { fetch } = fixture({ supported: false });
+    render(<NavigationProvider><CasesPage /></NavigationProvider>);
+    fireEvent.change(screen.getByLabelText('What would you like to discuss?'), { target: { value: caseItem.text } });
+    await waitFor(() => expect((screen.getByRole('button', { name: 'Start temporary case' }) as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(screen.getByRole('button', { name: 'Start temporary case' }));
+    await waitFor(() => expect(screen.getByText(/Image discussion is unavailable/)).toBeTruthy());
+    expect((screen.getByRole('option', { name: 'Image discussion with selected subscription' }) as HTMLOptionElement).disabled).toBe(true);
+    expect(fetch.mock.calls.some(([path]) => path.endsWith('/prepare') || path.endsWith('/discuss-image'))).toBe(false);
+  });
+});

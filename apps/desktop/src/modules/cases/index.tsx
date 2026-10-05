@@ -102,7 +102,7 @@ export default function CasesPage() {
                 {item.teaching.revealed_count < item.teaching.stage_count ? 'Reveal next stage' : 'Reveal debrief'}<ArrowRight size={17} aria-hidden="true" /></Button>}
             </section></> : <details className="case-details" open><summary>Case details</summary><p className="case-text prose">{item.text}</p></details>}
           </div>
-          {item.kind === 'daily' && <CaseAttachments session={item} capabilities={cases.capabilities} disabled={disabled} apply={cases.applyPreview} />}
+          {item.kind === 'daily' && <CaseAttachments session={item} capabilities={cases.capabilities} disabled={disabled} apply={cases.applyPreview} discussImage={cases.discussImage} />}
           <section className="case-discussion" aria-label="Case discussion">
             {item.messages.map(message => <article className={'case-message case-message-' + message.role} key={message.id}>
               <h3>{message.role === 'user' ? 'Your question' : 'Discussion'}</h3><p className="case-text prose">{message.content}</p>

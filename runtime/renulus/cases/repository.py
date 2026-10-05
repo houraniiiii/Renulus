@@ -63,6 +63,7 @@ class Run:
     fingerprint: str
     scope: ContextScope
     mode: str = "discuss"
+    model: str | None = None
     cancel: asyncio.Event = field(default_factory=asyncio.Event)
     status: str = "pending"
     events: list[Event] = field(default_factory=list)

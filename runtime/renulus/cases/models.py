@@ -59,8 +59,14 @@ class AttachmentInput(RevisionInput):
 
 class ExtractionOptions(RevisionInput):
     scope: ContextScope
+    mode: Literal["text", "image"] = "text"
     title: str = Field(default="Attachment", min_length=1, max_length=120)
 
 
 class ApplyPreview(RevisionInput):
     text: str = Field(min_length=1, max_length=50000)
+
+
+class ImageDiscussion(DiscussCase):
+    message: str = Field(min_length=1, max_length=11800)
+    model: str = Field(min_length=1, max_length=128)

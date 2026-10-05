@@ -47,7 +47,11 @@ async def cancel_provider(repo: CaseRepository, run_id: str):
             await asyncio.wait_for(provider.cancel(run_id), timeout=2)
 
 
-def safe_error(error: Exception) -> dict:
+def safe_error(error: Exception, *, trusted_runtime: bool = False) -> dict:
+    if trusted_runtime and isinstance(error, ApiError):
+        # ProviderManager has already mapped raw SDK failures to its public
+        # contract. Preserve policy denials and their non-retryable meaning.
+        return {"code": error.code, "message": error.message, "retryable": error.retryable}
     # Provider exceptions may contain echoed raw prompts/tokens. Never stringify
     # them in events, logs, cache, memory or any canonical record.
     messages = {
@@ -62,6 +66,9 @@ def safe_error(error: Exception) -> dict:
         "case_response_invalid": "The provider did not return a usable response",
         "case_response_too_large": "The response exceeded the case limit",
         "case_context_full": "Start a new session for further discussion",
+        "image_capabilities_unverified": "The selected account has no verified image-input model. Check Connections",
+        "image_input_unsupported": "The selected account does not support image input for this model",
+        "connection_changed": "The selected connection changed. Review the image and send it again",
     }
     if isinstance(error, ApiError) and error.code in messages:
         return {"code": error.code, "message": messages[error.code], "retryable": error.retryable}
@@ -98,8 +105,12 @@ async def discuss(repo: CaseRepository, run: Run, messages: list[dict]) -> Async
         provider = repo.services.get("provider")
         system = messages[0]["content"]
         # Exact shared generation.Provider seam. Scope is set before the call.
+        if run.mode == 'image':
+            from .images import require_image_model
+            require_image_model(repo.services, run.model)
         iterator = provider.stream(messages[1:], scope=run.scope, run_id=run.id,
-                                   model=None, system=system, purpose="case-discuss")
+                                   model=run.model, system=system,
+                                   purpose='case-image-discuss' if run.mode == 'image' else 'case-discuss')
         run.iterator = iterator
         while True:
             try:
@@ -116,10 +127,12 @@ async def discuss(repo: CaseRepository, run: Run, messages: list[dict]) -> Async
         repo.finish_error(run, cancelled=True)
         raise
     except Exception as error:
+        from renulus.runtime.manager import ProviderManager
         cancelled = run.cancel.is_set() or (isinstance(error, ApiError) and
                     error.code in ("case_deleted", "case_run_cancelled", "case_not_found"))
         yield repo.finish_error(run, cancelled=cancelled,
-                               error=None if cancelled else safe_error(error))
+                               error=None if cancelled else safe_error(error,
+                                   trusted_runtime=isinstance(provider, ProviderManager)))
     finally:
         if run.status != "completed":
             await cancel_provider(repo, run.id)
