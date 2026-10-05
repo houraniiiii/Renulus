@@ -17,6 +17,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import re
 import shlex
 import shutil
 import subprocess
@@ -130,6 +131,15 @@ def loopback(host):
         return False
 
 
+def command_program(command):
+    if isinstance(command, str):
+        # Windows audit events contain a serialized command line. Classify
+        # its executable without shell-parsing a Python -c program's quotes.
+        prefix = re.match(r'\s*(?:"([^"]+)"|([^\s"]+))(?=\s|$)', command)
+        return (prefix.group(1) or prefix.group(2)) if prefix else ""
+    return command[0] if command else ""
+
+
 class OfflineGuard:
     """Prevent external traffic, profile access and unreserved inference."""
 
@@ -182,17 +192,23 @@ class OfflineGuard:
                 self.deny("External DNS forbidden in offline regression")
         elif event == "subprocess.Popen":
             command = args[1]
-            if isinstance(command, str):
-                command = [part.strip('"') for part in shlex.split(command, posix=False)]
-            supplied = args[0] or (command[0] if command else "")
+            supplied = args[0] or command_program(command)
             executable = self.path(supplied)
-            read_git = bool(command and len(command) > 1
-                and Path(str(supplied)).stem.lower() == "git"
-                and Path(str(command[0])).stem.lower() == "git"
-                and (command[1] in ("rev-parse", "describe", "log", "status", "show", "rev-list")
-                    or command[1:3] == ["branch", "--show-current"]
-                    or (command[1] == "tag" and "--list" in command[2:])))
-            if (executable is None or executable.resolve() != Path(sys.executable).resolve()) and not read_git:
+            python = executable is not None and executable.resolve() == Path(sys.executable).resolve()
+            read_git = False
+            if not python:
+                if isinstance(command, str):
+                    try:
+                        command = [part.strip('"') for part in shlex.split(command, posix=False)]
+                    except ValueError:
+                        command = []
+                read_git = bool(command and len(command) > 1
+                    and Path(str(supplied)).stem.lower() == "git"
+                    and Path(str(command[0])).stem.lower() == "git"
+                    and (command[1] in ("rev-parse", "describe", "log", "status", "show", "rev-list")
+                        or command[1:3] == ["branch", "--show-current"]
+                        or (command[1] == "tag" and "--list" in command[2:])))
+            if not python and not read_git:
                 self.deny("Only synthetic Python and read-only Git subprocesses allowed")
         for target in targets:
             path = self.path(target)
@@ -424,6 +440,18 @@ def receipt_result(plugin, exit_code, junit, clean_source):
                 and counts.get("passed") == selected and not plugin.guard.violations}
 
 
+def unexpected_module_sources(module_sources, root):
+    root = root.resolve()
+    runtime = root / "runtime"
+    adopted = {
+        "renulus.memory._vendored_hermes_backend":
+            root / "upstream/hermes/plugins/memory/mem0/_backend.py",
+    }
+    return {name: path for name, path in module_sources.items()
+            if not Path(path).resolve().is_relative_to(runtime)
+            and adopted.get(name) != Path(path).resolve()}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--scratch", type=Path, required=True)
@@ -438,8 +466,8 @@ def main(argv=None):
     if head != args.expect_commit:
         parser.error("Worktree HEAD differs from the explicitly pinned commit")
     if git("status", "--porcelain", "--", "runtime", "content", "upstream/hermes", "packages",
-           "pyproject.toml", "uv.lock"):
-        parser.error("Production sources must be clean before regression")
+           "packaging/runtime", "pyproject.toml", "uv.lock", "tests", "scripts/run_backend_regression.py"):
+        parser.error("Tested sources, tests and runner must be clean before regression")
     scratch = args.scratch.resolve()
     if scratch.exists():
         parser.error("Scratch must be a fresh path; prior evidence is never reused or deleted")
@@ -466,7 +494,7 @@ def main(argv=None):
            "cpu_threads": 2, "offline": True, "synthetic_profiles": True}
     run["source_trees"] = {name: git("rev-parse", "HEAD:" + name) for name in (
         "runtime", "upstream/hermes", "tests", "content", "packaging/runtime",
-        "pyproject.toml", "uv.lock")}
+        "pyproject.toml", "uv.lock", "scripts/run_backend_regression.py")}
     run["package_versions"] = {name: importlib.metadata.version(name) for name in (
         "pytest", "pytest-asyncio", "fastapi", "pydantic", "httpx", "docling", "docling-core",
         "fastembed", "lancedb", "mem0ai", "qdrant-client", "onnxruntime", "tokenizers")}
@@ -497,19 +525,26 @@ def main(argv=None):
                          sha256=hashlib.sha256(xml.read_bytes()).hexdigest())
         except ET.ParseError:
             pass
-    clean_source = git("rev-parse", "HEAD") == head and not git(
+    head_unchanged = git("rev-parse", "HEAD") == head
+    production_unchanged = not git(
         "status", "--porcelain", "--", "runtime", "content", "upstream/hermes", "packages",
-        "pyproject.toml", "uv.lock")
+        "packaging/runtime", "pyproject.toml", "uv.lock")
+    tests_and_runner_unchanged = not git(
+        "status", "--porcelain", "--", "tests", "scripts/run_backend_regression.py")
     module_sources = {name: str(Path(module.__file__).resolve())
                       for name, module in tuple(sys.modules.items())
                       if name.startswith("renulus") and getattr(module, "__file__", None)}
-    wrong_sources = {name: path for name, path in module_sources.items()
-                     if not Path(path).is_relative_to(ROOT / "runtime")}
+    wrong_sources = unexpected_module_sources(module_sources, ROOT)
     plugin.files.json("module-sources.json", module_sources)
-    clean_source = clean_source and not wrong_sources
+    clean_source = (head_unchanged and production_unchanged and tests_and_runner_unchanged
+                    and not wrong_sources)
     result = {"finished_utc": stamp(), "source_commit": head,
               "elapsed_seconds": time.monotonic() - started, "exit_code": exit_code,
               **receipt_result(plugin, exit_code, junit, clean_source),
+              "source_checks": {"head_unchanged": head_unchanged,
+                                "production_unchanged": production_unchanged,
+                                "tests_and_runner_unchanged": tests_and_runner_unchanged,
+                                "unexpected_module_sources": wrong_sources},
               "runner_error": runtime_error,
               "minimum_free_bytes": plugin.minimum_free, "guard_violations": guard.violations}
     plugin.files.json("result.json", result)

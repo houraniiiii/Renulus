@@ -7,7 +7,7 @@ import zipfile
 
 from .test_content_release_compatibility import (
     profiles as release_profiles, learner_records, assert_learner_records,
-    assert_current_bank, restore_backup, succeeded)
+    assert_current_bank, current_bank_snapshot, restore_backup, succeeded)
 from .test_offline_engine_round_trip import (
     offline_profiles, library_search, memory_search, restore_zip, wait_ready)
 
@@ -27,18 +27,23 @@ def test_segmented_legacy_bank_and_learner_history_keep_latest_target_selection(
             assert manifest["format_version"] == 2
             assert "records.json" not in archive.namelist()
     with release_profiles("latest-segmented") as (client, services):
-        assert_current_bank(client)
+        current_bank = current_bank_snapshot(client, services)
+        before_keys = {item["id"]: services.registry["content"].get_question_version(item["id"], item["version"])
+            for item in services.registry["content"].list_question_summaries()}
         target = learner_records(client, services.registry["content"], "target-segmented")
         restored = restore_backup(client, "zip", data, {})
         assert restored["restored_records"] > 0 and restored["format_version"] == 2
-        assert_current_bank(client)
+        assert_current_bank(client, current_bank)
         assert_learner_records(client, legacy)
         assert_learner_records(client, target)
         for identifier, snapshot in keys.items():
             assert services.registry["content"].get_question_version(identifier, snapshot["version"]) == snapshot
+        for identifier, snapshot in before_keys.items():
+            assert services.registry["content"].get_question_version(identifier, snapshot["version"]) == snapshot
         assert restore_backup(client, "zip", data, {})["restored_records"] == 0
+        assert_current_bank(client, current_bank)
     with release_profiles("latest-segmented", reopen=True) as (client, services):
-        assert_current_bank(client)
+        assert_current_bank(client, current_bank)
         assert_learner_records(client, legacy)
         assert_learner_records(client, target)
         session = succeeded(client.get(f"/api/v1/assessment/sessions/{legacy['session']['id']}"))
@@ -48,6 +53,9 @@ def test_segmented_legacy_bank_and_learner_history_keep_latest_target_selection(
             "item_id": item["id"], "option_ids": key["correct_option_ids"], "idempotency_key": "v2-restored-resume"}))
         assert finished["feedback"]["correct"] is True
         assert finished["feedback"]["explanation"] == key["rationale"]
+        assert finished["feedback"]["item"]["question_version"] == str(key["version"])
+        assert finished["feedback"]["item"]["key_version"] == str(key["key_version"])
+        assert_current_bank(client, current_bank)
 
 
 def test_actual_cpu_segmented_library_note_restore_retrieve_cite_edit_delete(offline_profiles, tmp_path):

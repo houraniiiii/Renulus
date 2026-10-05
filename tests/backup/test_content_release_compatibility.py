@@ -4,6 +4,7 @@ import asyncio
 from contextlib import contextmanager
 import io
 import json
+import re
 import socket
 import zipfile
 
@@ -11,6 +12,7 @@ from fastapi.testclient import TestClient
 import pytest
 
 from renulus import server
+from renulus.content.validation import validate_pack
 
 
 @pytest.fixture
@@ -142,14 +144,53 @@ def restore_backup(client, kind, archive, records):
         "acknowledge_deletion_limits": True}))
 
 
-def assert_current_bank(client):
-    assert succeeded(client.get("/api/v1/content/manifest"))["version"] == "1.1.0"
-    assert len(succeeded(client.get("/api/v1/content/questions"))) == 160
-    assert len(succeeded(client.get("/api/v1/content/cases"))) == 26
+def current_bank_snapshot(client, services):
+    content = services.registry["content"]
+    lineage = content.pack_root / "renulus-foundations"
+    published = [path for path in lineage.iterdir()
+        if path.is_dir() and re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", path.name)
+        and (path / "manifest.json").is_file()
+        and json.loads((path / "manifest.json").read_text(encoding="utf-8"))["state"] == "published"]
+    latest = max(published, key=lambda path: tuple(int(part) for part in path.name.split(".")))
+    pack = validate_pack(latest)
+    assert (pack.manifest["id"], pack.manifest["version"]) == (lineage.name, latest.name)
+    assert tuple(int(part) for part in latest.name.split(".")) >= (1, 1, 0)
+    questions = [item for item in pack.bundle["questions"] if item["usage"] == "assessment_reserved"]
+    # The published 160-question/26-case baseline remains a minimum when the
+    # bundled release grows. Exact selection and source identities still match.
+    assert len(questions) >= 160
+    assert len(pack.bundle["cases"]) >= 26
+    question_fields = ("id", "version", "family_id", "family_version", "key_version", "topic_id",
+                       "objective_ids", "difficulty", "usage", "review")
+    case_fields = ("id", "version", "title", "summary", "topic_id", "secondary_topic_ids",
+                   "objective_ids", "review")
+    cited = {reference["source_id"] for item in [*questions, *pack.bundle["cases"]]
+             for reference in item["sources"]}
+    cited.update(reference["source_id"] for case in pack.bundle["cases"]
+                 for stage in case["stages"] for reference in stage["sources"])
+    snapshot = {
+        "manifest": pack.manifest,
+        "questions": sorted(({field: item[field] for field in question_fields} for item in questions),
+                            key=lambda item: item["id"]),
+        "cases": sorted(({field: item[field] for field in case_fields} for item in pack.bundle["cases"]),
+                        key=lambda item: item["id"]),
+        "sources": sorted((source for source in pack.bundle["sources"] if source["id"] in cited),
+                          key=lambda source: source["id"]),
+    }
+    installed = services.db.fetch_one("SELECT sha256 FROM content_packs WHERE pack_id=? AND version=?",
+                                     (pack.manifest["id"], pack.manifest["version"]))
+    assert installed["sha256"] == pack.sha256
+    assert_current_bank(client, snapshot)
+    return snapshot
+
+
+def assert_current_bank(client, snapshot):
+    for endpoint, expected in snapshot.items():
+        assert succeeded(client.get("/api/v1/content/" + endpoint)) == expected
 
 
 @pytest.mark.parametrize("kind", ["json", "zip"])
-def test_legacy_100_backup_keeps_historical_keys_and_sessions_without_downgrading_110_target(profiles, kind):
+def test_legacy_100_backup_keeps_historical_keys_and_sessions_without_downgrading_current_target(profiles, kind):
     with profiles("legacy", "1.0.0") as (client, services):
         content = services.registry["content"]
         assert content.active_manifest()["version"] == "1.0.0"
@@ -159,13 +200,13 @@ def test_legacy_100_backup_keeps_historical_keys_and_sessions_without_downgradin
         archive, records = export_legacy(client, kind)
 
     with profiles("target") as (client, services):
-        assert_current_bank(client)
+        current_bank = current_bank_snapshot(client, services)
         target = learner_records(client, services.registry["content"], "target")
         before_keys = {item["id"]: services.registry["content"].get_question_version(item["id"], item["version"])
             for item in services.registry["content"].list_question_summaries()}
         restored = restore_backup(client, kind, archive, records)
         assert restored["restored_records"] > 0
-        assert_current_bank(client)
+        assert_current_bank(client, current_bank)
         assert_learner_records(client, legacy)
         assert_learner_records(client, target)
         for identifier, snapshot in historical_keys.items():
@@ -175,10 +216,10 @@ def test_legacy_100_backup_keeps_historical_keys_and_sessions_without_downgradin
         assert {item["id"] for item in succeeded(client.get("/api/v1/memory/facts"))["records"]} == {
             legacy["note"]["id"], target["note"]["id"]}
         assert restore_backup(client, kind, archive, records)["restored_records"] == 0
-        assert_current_bank(client)
+        assert_current_bank(client, current_bank)
 
     with profiles("target", reopen=True) as (client, services):
-        assert_current_bank(client)
+        assert_current_bank(client, current_bank)
         assert_learner_records(client, legacy)
         assert_learner_records(client, target)
         identifier = legacy["session"]["id"]
@@ -191,4 +232,4 @@ def test_legacy_100_backup_keeps_historical_keys_and_sessions_without_downgradin
         assert finished["feedback"]["explanation"] == key["rationale"]
         assert finished["feedback"]["item"]["question_version"] == str(key["version"])
         assert finished["feedback"]["item"]["key_version"] == str(key["key_version"])
-        assert_current_bank(client)
+        assert_current_bank(client, current_bank)
