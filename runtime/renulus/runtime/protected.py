@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import secrets
 from typing import Protocol
+from uuid import uuid4
 
 from renulus.contracts import ApiError
 
@@ -67,7 +68,7 @@ class ConnectionStore:
 
     def load(self) -> dict:
         if not self.path.exists():
-            return {"version": 1, "host_id": secrets.token_hex(24), "selected_provider": None, "connections": {}}
+            return {"version": 1, "host_id": uuid4().urn, "selected_provider": None, "connections": {}}
         try:
             payload = json.loads(self.protector.unprotect(self.path.read_bytes(), self.entropy))
             if payload.get("version") != 1 or not isinstance(payload.get("connections"), dict):

@@ -41,6 +41,7 @@ class ProviderManager:
         self._unsupported_models: set[tuple[str, str]] = set()
         self._completed_requests = 0
         self._credential_locks = {name: asyncio.Lock() for name in ALLOWED_MODELS}
+        self._connection_versions = {name: 0 for name in ALLOWED_MODELS}
         self._auth = None
         self._context = None
 
@@ -50,6 +51,10 @@ class ProviderManager:
 
     def _save(self) -> None:
         self.store.save(self._settings)
+
+    def _require_connection_version(self, provider: str, version: int) -> None:
+        if self._connection_versions[provider] != version:
+            raise ApiError("connection_changed", "The connection changed during the request. Retry with the current connection.", 409, True)
 
     def connections(self) -> dict:
         rows = []
@@ -130,9 +135,12 @@ class ProviderManager:
         if not isinstance(api_key, str) or not api_key.strip() or len(api_key) > 8192:
             raise ApiError("invalid_connection", "Enter your OpenCode Go subscription key.")
         async with self._credential_locks["opencode-go"]:
+            version = self._connection_versions["opencode-go"]
             # Discovery tests the explicitly entered credential without inference.
             catalog = await self._fetch_catalog("opencode-go", api_key.strip())
+            self._require_connection_version("opencode-go", version)
             self._stop_provider_runs("opencode-go")
+            self._connection_versions["opencode-go"] += 1
             self._settings["connections"]["opencode-go"] = {"access_token": api_key.strip()}
             self._clear_capabilities("opencode-go")
             self._catalogs["opencode-go"] = catalog
@@ -176,7 +184,8 @@ class ProviderManager:
                 if record.get("expires_at", 0) <= time.time() + 60:
                     if not record.get("refresh_token"):
                         raise ApiError("authentication_required", "Continue with ChatGPT to reconnect.", 401, True)
-                    from .auth import TOKEN_URL, RESOURCE, PLAN_SCOPE
+                    from .auth import TOKEN_URL, RESOURCE, validate_plan_token
+                    version = self._connection_versions[provider]
                     try:
                         async with self._client() as client:
                             response = await client.post(TOKEN_URL, data={
@@ -184,41 +193,54 @@ class ProviderManager:
                                 "refresh_token": record["refresh_token"], "resource": RESOURCE})
                             response.raise_for_status()
                             tokens = response.json()
-                        if PLAN_SCOPE not in set(tokens.get("scope", " ".join(record["scopes"])).split()):
-                            raise ApiError("plan_permission_required", "Authorize ChatGPT plan usage before continuing.", 403)
-                        record.update(access_token=tokens["access_token"],
-                                      refresh_token=tokens.get("refresh_token", record["refresh_token"]),
-                                      expires_at=time.time() + float(tokens["expires_in"]))
+                        self._require_connection_version(provider, version)
+                        validated = validate_plan_token(tokens, previous_scopes=record.get("scopes", []))
+                        record.update(validated, refresh_token=tokens.get("refresh_token", record["refresh_token"]))
                         self._save()
                     except Exception as error:
+                        self._require_connection_version(provider, version)
+                        public = safe_error(error)
                         self._catalogs.pop(provider, None)
-                        self._catalog_errors[provider] = "authentication_required"
-                        raise safe_error(error) from None
+                        self._catalog_errors[provider] = ("authentication_required" if public.code in {
+                            "invalid_token_response", "plan_permission_required"} else public.code)
+                        raise public from None
         return record["access_token"]
 
     async def refresh(self, provider: str) -> dict:
         require_provider(provider)
+        version = self._connection_versions[provider]
         try:
             token = await self._access_token(provider)
-            self._catalogs[provider] = await self._fetch_catalog(provider, token)
+            catalog = await self._fetch_catalog(provider, token)
+            self._require_connection_version(provider, version)
+            self._catalogs[provider] = catalog
             # Explicit refresh permits retry after an account-specific rejection.
             self._clear_capabilities(provider)
             self._catalog_errors.pop(provider, None)
         except Exception as error:
+            self._require_connection_version(provider, version)
             public = safe_error(error)
             self._catalogs.pop(provider, None)
-            self._catalog_errors[provider] = public.code
+            if provider in self._settings["connections"]:
+                self._catalog_errors[provider] = public.code
+            else:
+                self._catalog_errors.pop(provider, None)
             raise public from None
         return self.connections()
 
     async def disconnect(self, provider: str) -> dict:
         require_provider(provider)
+        self._connection_versions[provider] += 1
         # Stop active runs before dropping credentials. No switch to another provider.
-        for run_id in list(self._runs):
-            await self.cancel(run_id)
+        self._stop_provider_runs(provider)
         if provider == "codex" and self._auth:
             await self._auth.cancel_all()
         record = self._settings["connections"].pop(provider, None)
+        if provider == "codex" and record:
+            # Sign-out removes credentials, not the stable registration for this
+            # app/account/host. Reconnect must not create a new dynamic client.
+            self._settings["codex_registration"] = {
+                name: record[name] for name in ("client_id", "subject", "issuer") if name in record}
         self._catalogs.pop(provider, None)
         self._catalog_errors.pop(provider, None)
         self._clear_capabilities(provider)
@@ -357,15 +379,26 @@ class ProviderManager:
 
         iterator = None
         provider = chosen = None
+        version = None
         images = has_images(messages)
         try:
             provider, chosen = self._route(model)
             run.provider = provider
+            version = self._connection_versions[provider]
             catalog = self._catalogs.get(provider)
             capability = self._model_status(provider, chosen, catalog)
             if images and capability["image_input"] == "account_unsupported":
                 raise ApiError("image_input_unsupported", "This account rejected image input for the selected model. Choose an explicitly available image route.", 409)
-            token = await self._access_token(provider)
+            run.pending = asyncio.create_task(self._access_token(provider))
+            try:
+                token = await run.pending
+            except asyncio.CancelledError:
+                if not run.stopped.is_set():
+                    raise
+                yield event("cancelled")
+                return
+            finally:
+                run.pending = None
             if run.stopped.is_set():
                 yield event("cancelled")
                 return
@@ -435,6 +468,14 @@ class ProviderManager:
             run.stopped.set()
             raise
         except Exception as error:
+            if run.stopped.is_set():
+                yield event("cancelled")
+                return
+            if provider and version != self._connection_versions[provider]:
+                yield event("error", code="connection_changed",
+                            message="The connection changed during the request. Retry with the current connection.",
+                            retryable=True, status=409)
+                return
             rejected = rejection_kind(error, images=images)
             if provider and chosen and rejected == "image":
                 self._capabilities.setdefault((provider, chosen), {}).update(

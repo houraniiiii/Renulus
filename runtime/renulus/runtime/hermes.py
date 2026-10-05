@@ -12,7 +12,7 @@ from openai import AsyncOpenAI
 
 from renulus.contracts import ApiError
 from .inputs import to_hermes_messages
-from .policy import ALLOWED_MODELS, BASE_URLS, INSTRUCTIONS, require_provider
+from .policy import ALLOWED_MODELS, BASE_URLS, INSTRUCTIONS, require_provider, stream_failure
 
 
 class HermesSubscriptionTransport:
@@ -104,7 +104,9 @@ class HermesSubscriptionTransport:
                             yield {"type": "completed"}
                             return
                         elif kind in ("error", "response.failed", "response.incomplete"):
-                            raise ApiError("provider_stream_failed", "The selected subscription did not finish the response.", 503, True)
+                            failure = getattr(getattr(event, "response", None), "error", None)
+                            code = getattr(failure, "code", None) or getattr(event, "code", None)
+                            raise stream_failure(code)
                         elif kind == "response.output_item.added" and getattr(event.item, "type", "") not in ("message", "reasoning"):
                             raise ApiError("tools_disabled", "The runtime refused an automation response.", 409)
             else:

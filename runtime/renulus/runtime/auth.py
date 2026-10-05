@@ -5,9 +5,11 @@ import asyncio
 import base64
 from dataclasses import dataclass, field
 import hashlib
+import math
 import secrets
 import time
 from urllib.parse import parse_qs, urlencode, urlsplit
+from uuid import UUID, uuid4
 
 import jwt
 
@@ -22,6 +24,30 @@ JWKS_URL = ISSUER + "/.well-known/jwks.json"
 RESOURCE = "https://api.openai.com/v1"
 PLAN_SCOPE = "chatgpt.tokens.use.direct"
 SCOPES = "openid profile email offline_access resource.invoke " + PLAN_SCOPE
+
+
+def validate_plan_token(tokens: dict, *, previous_scopes: list[str] | None = None) -> dict:
+    """Validate initial and rotated plan tokens before updating protected state."""
+    if not isinstance(tokens, dict):
+        raise ApiError("invalid_token_response", "ChatGPT did not return a supported plan token.", 401, True)
+    raw_scope = tokens.get("scope", " ".join(previous_scopes or []))
+    if not isinstance(raw_scope, str):
+        raise ApiError("invalid_token_response", "ChatGPT did not return a supported plan token.", 401, True)
+    scopes = set(raw_scope.split())
+    if not {PLAN_SCOPE, "resource.invoke"}.issubset(scopes):
+        raise ApiError("plan_permission_required", "Authorize ChatGPT plan usage before connecting Renulus.", 403)
+    try:
+        expiry = float(tokens["expires_in"])
+        access = tokens["access_token"]
+        if (not isinstance(tokens.get("token_type"), str) or tokens["token_type"].lower() != "bearer"
+                or not isinstance(access, str) or not access.strip()
+                or isinstance(tokens["expires_in"], bool) or not math.isfinite(expiry) or expiry <= 0
+                or ("refresh_token" in tokens and (not isinstance(tokens["refresh_token"], str)
+                    or not tokens["refresh_token"].strip()))):
+            raise ValueError("token response")
+    except (KeyError, ValueError, TypeError, OverflowError):
+        raise ApiError("invalid_token_response", "ChatGPT did not return a supported plan token.", 401, True) from None
+    return {"access_token": access, "scopes": sorted(scopes), "expires_at": time.time() + expiry}
 
 
 @dataclass
@@ -39,6 +65,7 @@ class _Attempt:
     error: dict | None = None
     server: asyncio.Server | None = field(default=None, repr=False)
     expiry_task: asyncio.Task | None = field(default=None, repr=False)
+    exchange_task: asyncio.Task | None = field(default=None, repr=False)
 
 
 class CodexLogin:
@@ -46,17 +73,35 @@ class CodexLogin:
         self.manager = manager
         self._attempts: dict[str, _Attempt] = {}
 
+    def _ensure_host_identity(self) -> None:
+        host = self.manager._settings.get("host_id")
+        try:
+            parsed = UUID(host)
+            if parsed.version == 4 and parsed.urn == host:
+                return
+        except (ValueError, TypeError, AttributeError):
+            pass
+        if (self.manager._settings["connections"].get("codex")
+                or self.manager._settings.get("codex_registration")):
+            raise ApiError("host_identity_invalid",
+                           "The saved ChatGPT registration has an unsupported app host identity. Its state was preserved for recovery.", 409)
+        # Legacy development profiles used an opaque hex ID. It can be replaced
+        # only before this profile has a ChatGPT registration or plan tokens.
+        self.manager._settings["host_id"] = uuid4().urn
+
     async def start(self, *, select: bool = False) -> dict:
+        self._ensure_host_identity()
         await self.cancel_all()
         self._attempts.clear()
         login_id = secrets.token_urlsafe(24)
         self.manager._save()
         attempt = _Attempt(login_id, secrets.token_urlsafe(32), secrets.token_urlsafe(32),
                            secrets.token_urlsafe(48), "", time.time() + 600, select)
-        record = self.manager._settings["connections"].get("codex")
+        record = (self.manager._settings["connections"].get("codex")
+                  or self.manager._settings.get("codex_registration"))
         if record:
-            attempt.client_id = record["client_id"]
-            attempt.subject = record["subject"]
+            attempt.client_id = record.get("client_id")
+            attempt.subject = record.get("subject")
 
         async def callback(reader, writer):
             status = 400
@@ -90,7 +135,7 @@ class CodexLogin:
 
         async def expire():
             await asyncio.sleep(600)
-            if attempt.status == "pending":
+            if attempt.status in ("pending", "exchanging"):
                 self._fail(attempt, ApiError("login_expired", "Start Continue with ChatGPT again.", 401, True))
                 await self._stop_listener(attempt)
         attempt.expiry_task = asyncio.create_task(expire())
@@ -113,7 +158,11 @@ class CodexLogin:
         attempt = self._attempts.get(login_id)
         if not attempt:
             raise ApiError("login_not_found", "This login attempt is no longer active.", 404)
-        result = {"login_id": login_id, "status": attempt.status}
+        return self._public_status(attempt)
+
+    @staticmethod
+    def _public_status(attempt: _Attempt) -> dict:
+        result = {"login_id": attempt.id, "status": attempt.status}
         if attempt.error:
             result["error"] = dict(attempt.error)
         return result
@@ -130,9 +179,11 @@ class CodexLogin:
             attempt.server = None
         if attempt.expiry_task and attempt.expiry_task is not asyncio.current_task():
             attempt.expiry_task.cancel()
+        if attempt.exchange_task and attempt.exchange_task is not asyncio.current_task():
+            attempt.exchange_task.cancel()
         attempt.verifier = attempt.nonce = attempt.state = ""
 
-    async def _validate_identity(self, token: str, attempt: _Attempt, client_id: str) -> dict:
+    async def _validate_identity(self, token: str | None, attempt: _Attempt, client_id: str) -> dict:
         try:
             header = jwt.get_unverified_header(token)
             if header.get("alg") != "RS256" or not isinstance(header.get("kid"), str):
@@ -162,6 +213,7 @@ class CodexLogin:
         if not secrets.compare_digest(query.get("state", ""), attempt.state):
             raise ApiError("login_state_mismatch", "This callback does not match the Renulus login.", 403)
         attempt.status = "exchanging"
+        attempt.exchange_task = asyncio.current_task()
         try:
             if time.time() >= attempt.expires_at:
                 raise ApiError("login_expired", "Start Continue with ChatGPT again.", 401, True)
@@ -179,22 +231,17 @@ class CodexLogin:
                     "redirect_uri": attempt.redirect_uri, "resource": RESOURCE})
                 response.raise_for_status()
                 tokens = response.json()
-            scopes = set(tokens.get("scope", "").split())
-            if PLAN_SCOPE not in scopes or "resource.invoke" not in scopes:
-                raise ApiError("plan_permission_required", "Authorize ChatGPT plan usage before connecting Renulus.", 403)
-            if tokens.get("token_type", "").lower() != "bearer" or not isinstance(tokens.get("access_token"), str):
-                raise ApiError("invalid_token_response", "ChatGPT did not return a supported plan token.", 401)
-            claims = await self._validate_identity(tokens["id_token"], attempt, issued)
+            validated = validate_plan_token(tokens)
+            claims = await self._validate_identity(tokens.get("id_token"), attempt, issued)
             catalog = await self.manager._fetch_catalog("codex", tokens["access_token"])
             if attempt.status != "exchanging":
                 raise ApiError("login_cancelled", "The login was cancelled.", 409)
             self.manager._stop_provider_runs("codex")
             self.manager._clear_capabilities("codex")
+            self.manager._connection_versions["codex"] += 1
             self.manager._settings["connections"]["codex"] = {
                 "client_id": issued, "subject": claims["sub"], "issuer": ISSUER,
-                "access_token": tokens["access_token"], "refresh_token": tokens.get("refresh_token"),
-                "id_token": tokens["id_token"], "scopes": sorted(scopes),
-                "expires_at": time.time() + float(tokens["expires_in"]),
+                **validated, "refresh_token": tokens.get("refresh_token"), "id_token": tokens["id_token"],
             }
             self.manager._catalogs["codex"] = catalog
             self.manager._catalog_errors.pop("codex", None)
@@ -205,12 +252,18 @@ class CodexLogin:
                 self.manager._settings["selected_provider"] = "codex"
             self.manager._save()
             attempt.status = "connected"
+        except asyncio.CancelledError:
+            if attempt.status not in ("cancelled", "error"):
+                attempt.status = "cancelled"
+                raise
         except Exception as error:
             if attempt.status != "cancelled":
                 self._fail(attempt, safe_error(error))
         finally:
             await self._stop_listener(attempt)
-        return self.status(login_id)
+            attempt.exchange_task = None
+        # A newer login may have removed this cancelled attempt from the map.
+        return self._public_status(attempt)
 
     async def cancel(self, login_id: str) -> dict:
         attempt = self._attempts.get(login_id)
