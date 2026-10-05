@@ -11,6 +11,7 @@ import { NavigationProvider, useNavigation } from '../../shell/navigation';
 import UpdatesPage from '../updates';
 import AssessmentPage from './index';
 import type { ReviewResult, Session } from './types';
+import { fixturePython, fixtureReady, stopFixture } from '../../testBackend';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../..');
 const testProfile = mkdtempSync(join(tmpdir(), 'renulus-currency-ui-'));
@@ -36,18 +37,16 @@ beforeAll(async () => {
   const port = address.port;
   await new Promise<void>((resolve, reject) => reservation.close(error => error ? reject(error) : resolve()));
   origin = 'http://127.0.0.1:' + port;
-  backend = spawn('python', [join(repositoryRoot, 'tests/assessment/serve_currency_fixture.py'),
+  let startupError = '';
+  backend = spawn(fixturePython(repositoryRoot), [join(repositoryRoot, 'tests/assessment/serve_currency_fixture.py'),
     '--profile', testProfile, '--port', String(port)], {
-    cwd: repositoryRoot, windowsHide: true, stdio: 'ignore',
+    cwd: repositoryRoot, windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'],
     env: { ...process.env, PYTHONPATH: join(repositoryRoot, 'runtime') },
   });
-  let ready = false;
-  for (let attempt = 0; attempt < 100; attempt++) {
-    try { ready = (await originalFetch(origin + '/api/v1/health')).ok; } catch { /* Bounded local startup. */ }
-    if (ready || backend.exitCode !== null) break;
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
-  if (!ready) throw new Error('The isolated currency fixture did not start.');
+  backend.stderr?.on('data', chunk => { startupError = (startupError + String(chunk)).slice(-2000); });
+  backend.on('error', error => { startupError = error.message; });
+  const ready = await fixtureReady(backend, origin, originalFetch);
+  if (!ready) throw new Error('The isolated currency fixture did not start. ' + startupError);
   vi.stubGlobal('fetch', (input: string | URL | Request, init?: RequestInit) => {
     const value = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
     const url = new URL(value, origin);
@@ -56,16 +55,13 @@ beforeAll(async () => {
     headers.set('x-renulus-token', 'currency-fixture-session');
     return originalFetch(url, { ...init, headers });
   });
-}, 20_000);
+}, 75_000);
 
 afterAll(async () => {
   cleanup(); vi.unstubAllGlobals();
-  if (backend && backend.exitCode === null) {
-    const exited = new Promise<void>(resolve => backend.once('exit', () => resolve()));
-    backend.kill(); await exited;
-  }
-  if (testProfile.startsWith(join(tmpdir(), 'renulus-currency-ui-'))) rmSync(testProfile, { recursive: true, force: true });
-});
+  await stopFixture(backend);
+  if (testProfile.startsWith(join(tmpdir(), 'renulus-currency-ui-'))) rmSync(testProfile, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
+}, 20_000);
 
 function Journey() {
   const nav = useNavigation();

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { spawn, type ChildProcess } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -9,10 +9,9 @@ import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import AssessmentPage from './index';
 import { NavigationProvider, useNavigation } from '../../shell/navigation';
+import { fixturePython, fixtureReady, stopFixture } from '../../testBackend';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../..');
-const projectPython = join(repositoryRoot, '.venv', process.platform === 'win32' ? 'Scripts' : 'bin', process.platform === 'win32' ? 'python.exe' : 'python');
-const fixturePython = process.env.RENULUS_TEST_PYTHON || (existsSync(projectPython) ? projectPython : 'python');
 const testProfile = mkdtempSync(join(tmpdir(), 'renulus-assessment-ui-'));
 let origin = '';
 const originalFetch = globalThis.fetch;
@@ -31,18 +30,12 @@ beforeAll(async () => {
   await new Promise<void>((resolve, reject) => reservation.close(error => error ? reject(error) : resolve()));
   origin = 'http://127.0.0.1:' + port;
   let startupError = '';
-  backend = spawn(fixturePython, [join(repositoryRoot, 'tests/assessment/serve_fixture.py'),
+  backend = spawn(fixturePython(repositoryRoot), [join(repositoryRoot, 'tests/assessment/serve_fixture.py'),
     '--profile', testProfile, '--port', String(port), '--generated-provider'], { cwd: repositoryRoot, windowsHide: true,
       stdio: ['ignore', 'ignore', 'pipe'], env: { ...process.env, PYTHONPATH: join(repositoryRoot, 'runtime') } });
   backend.stderr?.on('data', chunk => { startupError = (startupError + String(chunk)).slice(-2000); });
   backend.on('error', error => { startupError = error.message; });
-  let ready = false;
-  for (let attempt = 0; attempt < 100; attempt++) {
-    try { ready = (await originalFetch(origin + '/api/v1/health')).ok; } catch { /* Await bounded startup. */ }
-    if (ready) break;
-    if (backend.exitCode !== null) break;
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
+  const ready = await fixtureReady(backend, origin, originalFetch);
   if (!ready) throw new Error('The isolated assessment test backend did not start. ' + startupError);
   vi.stubGlobal('fetch', async (input: string | URL | Request, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
@@ -62,18 +55,15 @@ beforeAll(async () => {
     }
     return response;
   });
-}, 20_000);
+}, 75_000);
 
 afterEach(() => { cleanup(); simulateLostAcknowledgement = false; simulateLostGenerationCompletion = false; });
 afterAll(async () => {
   vi.unstubAllGlobals();
-  if (backend && backend.exitCode === null) {
-    const exited = new Promise<void>(resolve => backend.once('exit', () => resolve()));
-    backend.kill(); await exited;
-  }
+  await stopFixture(backend);
   // Only remove this test's newly allocated temporary directory.
-  if (testProfile.startsWith(join(tmpdir(), 'renulus-assessment-ui-'))) rmSync(testProfile, { recursive: true, force: true });
-});
+  if (testProfile.startsWith(join(tmpdir(), 'renulus-assessment-ui-'))) rmSync(testProfile, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
+}, 20_000);
 
 function mount() {
   window.location.hash = '#/assessment';
