@@ -108,3 +108,8 @@ owner starts exactly one20-minute loop after checking the old actor is gone.
 The old goal API still reportedpaused despite the textual resume request and
 has no assistant-side resume action. Create the explicitly requested goal in
 the new session; do not assert automatic continuation was re-enabled here.
+# Current continuation
+
+The record below is historical. Read [the October 5 continuation](CONTINUATION_20261005.md)
+for the C checkout, native heartbeat, current leases and unsigned current-PC acceptance.
+
