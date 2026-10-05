@@ -574,3 +574,22 @@ changed segment/original hash, omitted expected row, undeclared member and
 duplicate segment. Both Node modules passed syntax; inspector syntax passed.
 These checks do not constitute native producer execution, restore or multi-GiB
 proof. Actual execution is pending the explicitly frozen matching bundle.
+
+The user reported an actual fresh development .venv server exceeding the old
+30-second listen deadline. A focused regression reproduced that cutoff: an
+owned development child with authenticated readiness at 45 seconds was killed
+before readiness, while the packaged mode passed. Both managed modes now use
+the same finite 300-second cold-helper budget. They warm the same approved CPU
+frameworks; prior real packaged cold startup measured 139.971 seconds, and the
+reported development start also exceeds 30 seconds. Attached development
+backends retain their existing authentication path; no process is adopted or
+stopped by that path.
+
+Four focused virtual-clock lifecycle checks pass: development and packaged
+readiness at 45 seconds, no premature development teardown at 299 seconds with
+owned-child cleanup at the five-minute limit, and cancellation while a late
+readiness request is in flight. They mock only OS process/listener/transport
+boundaries and exercise startBackend itself, without launching helpers. Together
+with the five existing actual-pin native download checks, nine Vitest 4.1.11
+checks passed in 1.07 s. TypeScript passed. This is timeout/cancellation rule
+evidence, not a new measured Windows cold launch. No expensive proof was repeated.

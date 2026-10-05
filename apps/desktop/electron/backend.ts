@@ -54,9 +54,10 @@ export async function startBackend(options: { profile: DesktopProfile; token: st
   const onAbort = () => { void stop().catch(() => {}); };
   signal.addEventListener('abort', onAbort, { once: true });
   try {
-    // First packaged startup provisions and verifies helpers, then warms the
-    // selected CPU frameworks. Measured isolated Windows startup exceeds 120s.
-    const deadline = Date.now() + (packaged ? 300_000 : 30_000);
+    // Both managed launch modes verify helpers and warm the same CPU frameworks.
+    // Cold Windows startup can exceed 30s in development and 120s when packaged.
+    // Keep a finite shared bound; cancellation still releases the owned child.
+    const deadline = Date.now() + 300_000;
     while (Date.now() < deadline) {
       signal.throwIfAborted();
       if (failed || child.exitCode !== null || child.signalCode !== null) throw new Error('The local backend exited during startup.');
