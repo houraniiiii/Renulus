@@ -1,5 +1,8 @@
 """Receipt integrity and guards; these checks are not product acceptance."""
 import importlib.util
+import builtins
+import json
+import os
 from pathlib import Path
 from types import SimpleNamespace
 import sys
@@ -31,6 +34,42 @@ def test_complete_final_junit_with_all_phases_can_be_accepted(tmp_path):
     result = runner.receipt_result(plugin, 0, {"valid": True, "cases": 1}, True)
     assert result["complete"] is True
     assert result["accepted_stage_pass"] is True
+
+
+def test_privacy_guards_stay_strict_while_preopened_receipts_finalize(tmp_path, monkeypatch):
+    plugin = plugin_with_reports(tmp_path, {"synthetic": []})
+    real_open, real_path_open, real_os_open = builtins.open, Path.open, os.open
+
+    def guarded_open(source, mode="r", *args, **kwargs):
+        assert not any(flag in mode for flag in "wax+"), "Application write forbidden"
+        return real_open(source, mode, *args, **kwargs)
+
+    def guarded_path_open(source, mode="r", *args, **kwargs):
+        assert not any(flag in mode for flag in "wax+"), "Application write forbidden"
+        return real_path_open(source, mode, *args, **kwargs)
+
+    def guarded_os_open(source, flags, *args, **kwargs):
+        assert not flags & (os.O_WRONLY | os.O_RDWR | os.O_CREAT | os.O_TRUNC | os.O_APPEND)
+        return real_os_open(source, flags, *args, **kwargs)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(builtins, "open", guarded_open)
+        patch.setattr(Path, "open", guarded_path_open)
+        patch.setattr(os, "open", guarded_os_open)
+        with pytest.raises(AssertionError, match="Application write forbidden"):
+            (tmp_path / "application-payload.txt").write_text("synthetic payload")
+        plugin.resource("synthetic")
+        for when, outcome in PASSED:
+            plugin.pytest_runtest_logreport(SimpleNamespace(
+                nodeid="synthetic", when=when, outcome=outcome,
+                duration=0.01, failed=False, skipped=False))
+        plugin.pytest_sessionfinish(SimpleNamespace(testscollected=1, testsfailed=0), 0)
+        plugin.files.json("result.json", runner.receipt_result(
+            plugin, 0, {"valid": True, "cases": 1}, True))
+    plugin.files.close()
+    assert json.loads((tmp_path / "result.json").read_text())["accepted_stage_pass"] is True
+    assert len((tmp_path / "events.jsonl").read_text().splitlines()) == 3
+    assert not (tmp_path / "application-payload.txt").exists()
 
 
 def test_fourteen_call_dots_without_teardown_or_junit_cannot_pass(tmp_path):

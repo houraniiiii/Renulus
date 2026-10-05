@@ -31,10 +31,9 @@ Tested runner SHA-256:
 `c6f90abf28bc0fe56247db2e8b049495244338929c7aabda58b33ad835b34d40`.
 
 **No completed full application regression exists at this checkpoint.** The
-next action is one fresh application-only run in `C:/rn-finalise-20261005/b2`
-after committing this tested harness/report. Its own inventory, exact selection
-and exclusions, terminal JUnit and result establish its denominator and outcome.
-Harness tests are not added to the application pass total. No heavy slot is used.
+first fresh full attempt used `C:/rn-finalise-20261005/b2` after harness commit
+`30e88174ccde852df0ac7254177222a60e55acc8`. Its recorder conflict and repair are
+recorded below. Harness tests are not added to an application pass total.
 
 ## Method and repaired finalization
 
@@ -63,6 +62,41 @@ CPython 3.14's Windows lookup used by JUnit can execute `cmd /c ver`. Real OS
 metadata is now cached before the restricted test phase, allowing finalization
 without arbitrary shell admission during tests. Nullable Windows subprocess
 executables and command strings are handled explicitly.
+
+## Metadata recording under strict application privacy tests
+
+The full `b2` attempt started at **11:10:32 UTC**, collected **1,146** unique
+identities and selected **1,095** application tests. Its 51 explicit exclusions
+were 13 capacity, 19 actual engine/helper, one external collection, two native
+protection and 16 harness identities. It ended with terminal exit **1** after
+the recorder reopened `events.jsonl` while
+`tests/runtime/test_images_context.py::test_real_hermes_compactor_sdk_selected_route_scope_head_tail_and_no_temp_writes`
+had installed its strict no-filesystem-write guard. The application call had
+passed; the recorder triggered an internal pytest error. No production failure
+or completed-suite pass is attributed to this interrupted attempt. Its original
+inventory, partial events and `C:/rn-finalise-20261005/b2.log` remain preserved.
+Owned process 14116 ended; no unfinished duplicate was launched.
+
+The runner now pre-opens a fixed set of metadata-only receipt files before
+application tests install their privacy guards. It writes events and final
+receipts through those non-inherited handles. Application filesystem APIs and
+the existing privacy assertions remain unchanged. A new harness regression
+rejects an application payload write while setup/call/teardown/session/result
+metadata successfully finalizes; it checks both sides of the boundary.
+
+Changed-harness validation completed **17 of 17**, exit **0**, at **11:15:49 UTC**,
+with valid 17-case JUnit and no guard violations. Evidence: `C:/rn-finalise-20261005/b3h/`
+and `C:/rn-finalise-20261005/b3h.log`. JUnit SHA-256:
+`86ac30b4614b951b251902f0331a58c53ecdae82ed30f3c845aa83fda15b56ea`.
+
+The exact existing compactor privacy regression then completed **one of one**,
+exit **0**, at **11:16:35 UTC**, with final JUnit, source reconciliation and no
+guard violation. Evidence: `C:/rn-finalise-20261005/b3p/` and `C:/rn-finalise-20261005/b3p.log`.
+JUnit SHA-256:
+`12afb91691336278b407b4fc6a544777c3889089e0d43093d7283d001f6941b1`.
+This targeted check is not added to a future full-run denominator. No production
+code or existing test was changed. One fresh full application run will use
+`C:/rn-finalise-20261005/b3` after the recorder-fix commit.
 
 ## Preserved incomplete attempts
 

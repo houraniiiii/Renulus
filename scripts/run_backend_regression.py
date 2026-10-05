@@ -76,6 +76,36 @@ def write_json(path, value):
     path.write_text(json.dumps(value, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
+class ReceiptFiles:
+    """Pre-open only metadata outputs before tests install privacy guards.
+
+    Application writes still use the original guarded APIs. These non-inherited
+    handles belong solely to the recorder and never contain provider payloads.
+    """
+
+    NAMES = ("events.jsonl", "resources.jsonl", "inventory.json", "session.json",
+             "outcomes.json", "module-sources.json", "result.json")
+
+    def __init__(self, directory):
+        self.streams = {name: (directory / name).open("xb") for name in self.NAMES}
+
+    def json(self, name, value):
+        stream = self.streams[name]
+        stream.seek(0)
+        stream.truncate()
+        stream.write(json.dumps(value, indent=2, ensure_ascii=False).encode("utf-8"))
+        stream.flush()
+
+    def append(self, name, value):
+        stream = self.streams[name]
+        stream.write((json.dumps(value, ensure_ascii=False) + "\n").encode("utf-8"))
+        stream.flush()
+
+    def close(self):
+        for stream in self.streams.values():
+            stream.close()
+
+
 def classify(nodeid):
     file, _, name = nodeid.replace("\\", "/").partition("::")
     if file.startswith("tests/regression/"):
@@ -244,10 +274,10 @@ class ReceiptPlugin:
         self.items, self.reports, self.collection_errors = [], [], []
         self.minimum_free = shutil.disk_usage(scratch).free
         self.session = None
+        self.files = ReceiptFiles(scratch)
 
     def append(self, filename, row):
-        with (self.scratch / filename).open("a", encoding="utf-8") as stream:
-            stream.write(json.dumps(row, ensure_ascii=False) + "\n")
+        self.files.append(filename, row)
 
     def resource(self, nodeid=None):
         free = shutil.disk_usage(self.scratch).free
@@ -267,7 +297,7 @@ class ReceiptPlugin:
                                "selected": admitted, "reason": reason})
             (selected if admitted else excluded).append(item)
         selected.sort(key=lambda item: item.nodeid.partition("::")[0] not in PRIORITY_FILES)
-        write_json(self.scratch / "inventory.json", {
+        self.files.json("inventory.json", {
             "collected": len(self.items), "selected": len(selected), "excluded": len(excluded),
             "items": self.items, "execution_order": [item.nodeid for item in selected],
         })
@@ -299,7 +329,7 @@ class ReceiptPlugin:
                         "minimum_free_bytes": self.minimum_free,
                         "collection_errors": self.collection_errors,
                         "guard_violations": self.guard.violations}
-        write_json(self.scratch / "session.json", self.session)
+        self.files.json("session.json", self.session)
 
     def outcomes(self):
         phases = defaultdict(dict)
@@ -458,7 +488,7 @@ def main(argv=None):
         runtime_error = {"type": type(error).__name__, "message": str(error)}
         exit_code = 3
     outcomes = plugin.outcomes()
-    write_json(scratch / "outcomes.json", outcomes)
+    plugin.files.json("outcomes.json", outcomes)
     xml = scratch / "results.xml"
     junit = {"exists": xml.is_file(), "valid": False, "cases": 0}
     if xml.is_file():
@@ -475,14 +505,15 @@ def main(argv=None):
                       if name.startswith("renulus") and getattr(module, "__file__", None)}
     wrong_sources = {name: path for name, path in module_sources.items()
                      if not Path(path).is_relative_to(ROOT / "runtime")}
-    write_json(scratch / "module-sources.json", module_sources)
+    plugin.files.json("module-sources.json", module_sources)
     clean_source = clean_source and not wrong_sources
     result = {"finished_utc": stamp(), "source_commit": head,
               "elapsed_seconds": time.monotonic() - started, "exit_code": exit_code,
               **receipt_result(plugin, exit_code, junit, clean_source),
               "runner_error": runtime_error,
               "minimum_free_bytes": plugin.minimum_free, "guard_violations": guard.violations}
-    write_json(scratch / "result.json", result)
+    plugin.files.json("result.json", result)
+    plugin.files.close()
     print(json.dumps(result), flush=True)
     return exit_code if result["complete"] and clean_source else 2
 
