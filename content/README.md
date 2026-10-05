@@ -1,5 +1,34 @@
 # Original Renulus learning content
 
+The current bundled release is **1.1.2**: 27 topics, 56 objectives, 178 reserved
+assessment questions and 38 staged synthetic teaching cases. It finishes the
+interrupted finite draft with 18 original questions and 12 cases. The eight
+previously empty mapped facets now have small, explicitly partial question/case
+sets: recurrent UTI, Alport-spectrum investigation, PD infection/access, ongoing
+HD access/unit care, BK recipient aftercare, contraception, adolescent transition
+and last-days supportive care. All six previously absent objective-to-case links
+are present. The adopted minimum remains 150; no target is reduced.
+
+The dated `2026-10-05-launch1` ESENeph map selects 170 questions, keeps the
+eight General-only exclusions, and retains the official evidence pins and
+four-choice format limitation. It is partial preparation. Five hyperkalaemia
+questions and one case advance only their citation versions to the already
+present, directly checked July 2026 source. Historical keys, answer choices,
+families, objectives, source snapshots and all earlier packs remain intact.
+The 12 new scoped source records make 47 clinical references; they do not
+clear the 27 update-source cells or the inherited correction holds.
+
+`tools/content/author_launch_gaps.py` reproduces 1.1.2, its mapping and the
+36-row source/key review evidence without network or inference. The new
+`content/required-cells/renulus-foundations-1.1.2.json` receipt can be checked with
+`python tools/content/check_required_cells.py --release content/packs/renulus-foundations/1.1.2 --output content/required-cells/renulus-foundations-1.1.2.json --check`.
+The existing command without `--release` still reproduces the historical 1.1.1
+receipt. See `docs/implementation/finalise-esen-eph.md` for the handoff and
+bounded validation. Further depth, dose algorithms, rare-disease breadth and
+source-wide currency work remain visible; they are not new manufacturing gates.
+
+## Historical 1.1.1 authoring and integration record
+
 `packs/renulus-foundations/1.1.1` is an original, versioned CC BY 4.0 pack: 27
 topic identities, 56 original objectives, 26 staged synthetic cases and 160
 single-best-answer items. It adds dated partial ESENeph mapping to the unchanged

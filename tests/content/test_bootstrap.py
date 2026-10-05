@@ -42,19 +42,20 @@ def private_snapshots(repository):
             for q in repository.list_question_summaries()}
 
 
-@pytest.mark.parametrize("prior", ["1.0.0", "1.0.1", "1.1.0"])
+@pytest.mark.parametrize("prior", ["1.0.0", "1.0.1", "1.1.0", "1.1.1"])
 def test_bootstrap_upgrades_actual_predecessor_and_preserves_every_pin(database, tmp_path, prior):
     repository = ContentRepository(database, PACK.parent.parent)
     repository.install_pack(PACK.parent / prior)
     pinned = private_snapshots(repository)
     repository, outcome = boot(database, tmp_path)
     assert outcome["status"] == "activated" and outcome["reason"] == "newer_bundled_release"
-    assert repository.active_manifest()["version"] == "1.1.1"
-    assert len(repository.list_question_summaries()) == 160
-    assert len(repository.list_cases()) == 26
+    assert repository.active_manifest()["version"] == "1.1.2"
+    assert len(repository.list_question_summaries()) == 178
+    assert len(repository.list_cases()) == 38
     assert database.fetch_one("SELECT COUNT(*) n FROM content_packs")["n"] == 2
     for identity, snapshot in pinned.items():
-        assert repository.get_question_version(identity, 1) == snapshot
+        current = next(q["version"] for q in repository.list_question_summaries() if q["id"] == identity)
+        assert repository.get_question_version(identity, 1) == {**snapshot, "current_version": current}
     before = private_snapshots(repository)
     repository, outcome = boot(database, tmp_path)
     assert outcome["reason"] == "active_version_not_older"
@@ -77,9 +78,11 @@ def test_withdrawn_prior_does_not_become_an_implicitly_fresh_profile(database, t
 @pytest.mark.parametrize("withdraw_target", [False, True])
 def test_installed_inactive_or_withdrawn_target_is_not_reselected(database, tmp_path, withdraw_target):
     repository = ContentRepository(database, PACK.parent.parent)
-    repository.install_pack(PACK.parent / "1.1.1")
+    # Seed historical versions before a release that advances citation pins.
+    repository.install_pack(PACK.parent / "1.0.1")
+    repository.install_pack(PACK.parent / "1.1.2")
     if withdraw_target:
-        repository.withdraw_pack("renulus-foundations", "1.1.1", "Synthetic review hold")
+        repository.withdraw_pack("renulus-foundations", "1.1.2", "Synthetic review hold")
     repository.install_pack(PACK.parent / "1.0.1")
     before = private_snapshots(repository)
     repository, outcome = boot(database, tmp_path)

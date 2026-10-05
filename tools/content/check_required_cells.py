@@ -126,8 +126,8 @@ def required_cells(pack, baseline, review):
     }
 
 
-def build_manifest():
-    baseline, pack = validate_pack(BASELINE), validate_pack(RELEASE)
+def build_manifest(release=RELEASE):
+    baseline, pack = validate_pack(BASELINE), validate_pack(release)
     review_path = ROOT / "content/reviews/renulus-foundations-1.1.0.json"
     predecessors = [validate_pack(BASELINE.parent / version) for version in ("1.0.0", "1.0.1")]
     validate_review_evidence(baseline, review_path, predecessors)
@@ -137,11 +137,12 @@ def build_manifest():
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--release", type=Path, default=RELEASE, help="Selected immutable release; defaults to the historical 1.1.1 receipt")
     parser.add_argument("--output", type=Path, default=MANIFEST)
     parser.add_argument("--check", action="store_true", help="Compare the committed receipt without writing")
     args = parser.parse_args(argv)
     try:
-        report = build_manifest()
+        report = build_manifest(args.release)
         raw = (json.dumps(report, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
         if args.check:
             if args.output.read_bytes() != raw:

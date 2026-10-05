@@ -20,15 +20,15 @@ def client(app):
 
 
 def test_actual_shared_server_activates_real_original_pack(client, app):
-    assert client.get("/api/v1/content/manifest").json()["version"] == "1.1.1"
+    assert client.get("/api/v1/content/manifest").json()["version"] == "1.1.2"
     assert len(client.get("/api/v1/content/topics").json()) == 27
-    assert len(client.get("/api/v1/content/cases").json()) == 26
-    assert len(client.get("/api/v1/content/questions").json()) == 160
+    assert len(client.get("/api/v1/content/cases").json()) == 38
+    assert len(client.get("/api/v1/content/questions").json()) == 178
     assert len(app.state.services.registry["content"].list_questions("T06")) == 10
     assert client.get("/api/v1/content/sources/K10-2012").json()["register_id"] == "K10"
     status = client.get("/api/v1/content/bootstrap").json()
     assert status["status"] == "activated" and status["reason"] == "fresh_profile"
-    assert status["active"] == {"id": "renulus-foundations", "version": "1.1.1"}
+    assert status["active"] == {"id": "renulus-foundations", "version": "1.1.2"}
 
 
 def test_http_question_catalogue_is_metadata_only(client):
@@ -42,7 +42,9 @@ def test_http_question_catalogue_is_metadata_only(client):
 def test_raw_question_http_route_cannot_bypass_exposure_but_private_lookup_survives(client, app, question_id):
     response = client.get(f"/api/v1/content/questions/{question_id}/versions/1")
     assert response.status_code == 404
-    private = app.state.services.registry["content"].get_question_version(question_id, 1)
+    repository = app.state.services.registry["content"]
+    selected = next(q for q in repository.list_question_summaries() if q["id"] == question_id)
+    private = repository.get_question_version(question_id, selected["version"])
     assert private["stem"] and private["options"]
     assert private["correct_option_ids"] == [private["answer"]]
     assert private["source_records"]
@@ -61,7 +63,7 @@ def test_routes_reject_unselected_pack_path_and_user_case_save(client, app):
 
 def test_withdrawn_default_pack_is_not_reactivated_on_restart(app):
     repository = app.state.services.registry["content"]
-    repository.withdraw_pack("renulus-foundations", "1.1.1", "Synthetic pack hold")
+    repository.withdraw_pack("renulus-foundations", "1.1.2", "Synthetic pack hold")
     restarted = create_app(app.state.services.paths.root, token="synthetic-test-token")
     assert restarted.state.services.registry["content"].active_manifest() is None
     assert restarted.state.services.registry["content"].list_questions() == []

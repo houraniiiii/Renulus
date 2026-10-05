@@ -289,14 +289,23 @@ def test_public_http_payload_and_track_selection_use_real_producer(tmp_path, mon
         response = client.get("/api/v1/content/tracks")
         assert response.status_code == 200 and isinstance(response.json(), list)
         assert response.json() == app.state.services.registry["content"].track_metadata()
-        assert len(client.get("/api/v1/content/questions?track=esen_eph").json()) == 152
-        assert len(client.get("/api/v1/content/questions?track=general_nephrology").json()) == 160
+        assert len(client.get("/api/v1/content/questions?track=esen_eph").json()) == 170
+        assert len(client.get("/api/v1/content/questions?track=general_nephrology").json()) == 178
         assert client.get("/api/v1/content/questions/RN-CKD-001/versions/1").status_code == 404
 
 
 def test_mapping_activation_preserves_committed_attempts_and_historical_feedback(tmp_path, monkeypatch):
     monkeypatch.setattr("renulus.server.MODULE_ORDER", ("content", "assessment"))
     profile = tmp_path / "synthetic-assessment-profile"
+    from renulus.content.api import create_router as content_router
+
+    def historical_start(services):
+        services.registry["content_pack_selection"] = {"version": "1.1.0"}
+        return content_router(services)
+
+    # Exercise a real chronological upgrade, rather than installing old item
+    # versions for the first time after a fresh profile already selected 1.1.2.
+    monkeypatch.setattr("renulus.content.api.create_router", historical_start)
     app = create_app(profile)
     content = app.state.services.registry["content"]
     content.install_pack(PRIOR)
@@ -319,7 +328,9 @@ def test_mapping_activation_preserves_committed_attempts_and_historical_feedback
         new = client.post("/api/v1/assessment/start", json={"idempotency_key": "mapped-preparation-session", "count": 2,
                             "selector": {"track": "esen_eph"}})
         assert new.status_code == 200 and new.json()["item_count"] == 2, new.text
+    monkeypatch.setattr("renulus.content.api.create_router", content_router)
     restarted = create_app(profile)
+    assert restarted.state.services.registry["content"].active_manifest()["version"] == "1.1.2"
     with TestClient(restarted) as client:
         assert [dict(r) for r in restarted.state.services.db.fetch_all("SELECT * FROM assessment_attempts")] == before
         assert client.get(f"/api/v1/assessment/sessions/{session['id']}/review").json()["feedback"] == feedback

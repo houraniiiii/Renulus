@@ -1,0 +1,1924 @@
+{
+  "schema_version": 1,
+  "pack_id": "renulus-foundations",
+  "pack_version": "1.1.2",
+  "checked_on": "2026-10-05",
+  "method": "Assistant source/key, plausible-distractor, synthetic case-stage and objective-meaning review of 18 new questions and 12 cases, plus five citation-only question versions and one citation-only case version. Review does not establish educational efficacy, independent human review or source-wide currency.",
+  "independent_human_review": false,
+  "inherited_review": "155 selected prior questions and 25 prior cases remain unchanged. Five questions and one case advance to version 2 solely for the directly checked existing July 2026 hyperkalaemia citation; answer values, choices, families and objective links are unchanged. All 35 source snapshots and all historical release/review bytes are retained.",
+  "access_limits": "Only public primary official/publisher texts and eligible public full-text mirrors were read. No restricted originals, private correspondence, profile or credentials; no source text is bundled. Direct PMC/SAGE/ISPD access errors and initial parallel PDF-extraction errors are retained separately from successful sequential PDF, mirror and public publisher reads. No blanket latest/correction clearance, official item review or independent human endorsement is claimed.",
+  "sources": [
+    {
+      "id": "G07-NG112-2024-launch",
+      "register_id": "G07",
+      "title": "NICE NG112 recurrent urinary tract infection",
+      "edition": "2018; recommendations updated 12 December 2024",
+      "publication_status": "final",
+      "url": "https://www.nice.org.uk/guidance/ng112/chapter/Recommendations",
+      "canonical_topic_url": "https://www.nice.org.uk/guidance/ng112",
+      "checked_on": "2026-10-05",
+      "check_status": "locator_checked",
+      "currency": "dated_final_baseline",
+      "scope": "Specialist evaluation, recurrence prevention and review; supplementary UK context, no antimicrobial dosing.",
+      "rights_note": "NICE copyright/Notice of rights; factual reference only, no licensed connector or source-text redistribution. Original independently expressed Renulus questions/cases only. The cited publication retains its own terms; no primary text, table, figure, algorithm or official question is distributed. This reference is not an AI import, syndication or commercial redistribution permission for the source.",
+      "check_note": "Official 50-page PDF read: 1.1.4 and 1.2.1-1.2.8. SHA256 23d4f73b39d9313ed89a629d10ecff40d151e1be950b85af51aeeccd2e5068eb. The PDF states the 2024 update date. Scoped primary reading on 2026-10-05; this is not a complete latest-edition/corrigendum/retraction clearance."
+    },
+    {
+      "id": "G01-Alport-2024-launch",
+      "register_id": "G01",
+      "title": "ERKNet/ERA/ESPN Alport diagnosis and management guideline",
+      "edition": "2024 guideline; NDT version of record 40(6), 2025, 1091-1106; DOI 10.1093/ndt/gfae265",
+      "publication_status": "final",
+      "url": "https://doi.org/10.1093/ndt/gfae265",
+      "canonical_topic_url": "https://www.era-online.org/era-guidance/",
+      "checked_on": "2026-10-05",
+      "check_status": "locator_checked",
+      "currency": "dated_final_baseline",
+      "scope": "Persistent familial hematuria, COL4A3/4/5 testing and genotype/phenotype interpretation; not ADPKD management.",
+      "rights_note": "Publisher full text states CC BY 4.0; Torra et al., ERKNet/ERA/ESPN, NDT. No source extracts included. Original independently expressed Renulus questions/cases only. The cited publication retains its own terms; no primary text, table, figure, algorithm or official question is distributed. This reference is not an AI import, syndication or commercial redistribution permission for the source.",
+      "check_note": "Version-of-record full text read through Europe PMC PMC12209846: Q4 recommendations 4.1/4.2 and explanation, Q6, Q8, Q9, Q16 and Q19. Recovery corrected the contextual-diagnosis locator from Q7 to Q8; test-sensitivity limits are Q9. XML SHA256 af7f19d41bee5781636a36365c01e79ec5ba19b2b91dd1073b5d6799f7990cb6. Scoped primary reading on 2026-10-05; this is not a complete latest-edition/corrigendum/retraction clearance."
+    },
+    {
+      "id": "L01-ISPD-peritonitis-2022-corrected-launch",
+      "register_id": "L01",
+      "title": "ISPD peritonitis guideline recommendations",
+      "edition": "2022 final; published corrigenda 2023 and 2024 retained",
+      "publication_status": "final",
+      "url": "https://doi.org/10.1177/08968608221080586",
+      "canonical_topic_url": "https://ispd.org/guidelines/",
+      "checked_on": "2026-10-05",
+      "check_status": "locator_checked",
+      "currency": "dated_final_baseline",
+      "scope": "Diagnostic criteria, cloudy effluent evaluation and prompt specimen/treatment reasoning; no dose or refractory-treatment algorithm.",
+      "rights_note": "PDI/SAGE/ISPD publication retains its terms; independent clinical facts and attribution only. Original independently expressed Renulus questions/cases only. The cited publication retains its own terms; no primary text, table, figure, algorithm or official question is distributed. This reference is not an AI import, syndication or commercial redistribution permission for the source.",
+      "check_note": "Public publisher diagnostic passage checked: Identification and initial management of peritonitis. Corrigenda were read on recovery: 2023 DOI 10.1177/08968608231166870 corrects Figure 8 enterococcal treatment; 2024 DOI 10.1177/08968608241251453 corrects the refractory-peritonitis cell-count definition in Table 1. Neither corrected treatment nor refractory definitions are taught here. The initial diagnostic criterion uses >100 cells/microliter after at least two hours with >50% neutrophils. Direct script access failed and a recovery full-text request timed out; indexed publisher diagnostic text and the public correction notices were accessible. No corrected-original-byte identity or source-wide clearance is claimed. Scoped primary reading on 2026-10-05; this is not a complete latest-edition/corrigendum/retraction clearance."
+    },
+    {
+      "id": "L01-ISPD-catheter-2023-launch",
+      "register_id": "L01",
+      "title": "ISPD catheter-related infection recommendations",
+      "edition": "2023 update; DOI 10.1177/08968608231172740",
+      "publication_status": "final",
+      "url": "https://doi.org/10.1177/08968608231172740",
+      "canonical_topic_url": "https://ispd.org/guidelines/",
+      "checked_on": "2026-10-05",
+      "check_status": "locator_checked",
+      "currency": "dated_final_baseline",
+      "scope": "Definitive exit-site infection, redness alone, tunnel involvement and assessment; no antibiotic regimen.",
+      "rights_note": "PDI/SAGE/ISPD publication retains its terms; independent clinical facts and attribution only. Original independently expressed Renulus questions/cases only. The cited publication retains its own terms; no primary text, table, figure, algorithm or official question is distributed. This reference is not an AI import, syndication or commercial redistribution permission for the source.",
+      "check_note": "Public publisher full text read: Definition and diagnosis of catheter-related infection; purulent exit discharge, with or without erythema, differs from erythema alone. Tunnel inflammation calls for assessment including ultrasound. Direct script access failed; public web publisher read succeeded, no local original-byte hash claimed. Scoped primary reading on 2026-10-05; this is not a complete latest-edition/corrigendum/retraction clearance."
+    },
+    {
+      "id": "G02-HD-access-2025-launch",
+      "register_id": "G02",
+      "title": "UK Kidney Association vascular access for haemodialysis guideline",
+      "edition": "Guideline April 2023; peer-reviewed publication August 2025; DOI 10.1186/s12882-025-04374-y",
+      "publication_status": "final",
+      "url": "https://doi.org/10.1186/s12882-025-04374-y",
+      "canonical_topic_url": "https://www.ukkidney.org/health-professionals/guidelines/vascular-access-haemodialysis",
+      "checked_on": "2026-10-05",
+      "check_status": "locator_checked",
+      "currency": "dated_final_baseline",
+      "scope": "Ongoing HD access assessment, aneurysm bleeding risk, clinical stenosis and trained aseptic catheter use.",
+      "rights_note": "Aitken et al., BMC Nephrology 2025, publisher CC BY 4.0. No source extracts included. Original independently expressed Renulus questions/cases only. The cited publication retains its own terms; no primary text, table, figure, algorithm or official question is distributed. This reference is not an AI import, syndication or commercial redistribution permission for the source.",
+      "check_note": "Publisher version read through Europe PMC PMC12351868: guidelines 3.12, 4.1-4.2, 4.6-4.7, 5.4-5.5 and chapter 6 catheter dysfunction/infection rationale. XML SHA256 c44e7aa029ae1c49c48d415514b647e75629a7fa87f2fb5589bce37397a80af3. Scoped primary reading on 2026-10-05; this is not a complete latest-edition/corrigendum/retraction clearance."
+    },
+    {
+      "id": "L01-BK-consensus-2024-launch",
+      "register_id": "L01",
+      "title": "Second international BK polyomavirus consensus guidelines",
+      "edition": "Transplantation 2024; DOI 10.1097/TP.0000000000004976",
+      "publication_status": "final",
+      "url": "https://doi.org/10.1097/TP.0000000000004976",
+      "canonical_topic_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC11335089/",
+      "checked_on": "2026-10-05",
+      "check_status": "locator_checked",
+      "currency": "dated_final_baseline",
+      "scope": "Recipient plasma surveillance, persistent DNAemia, graft dysfunction and coordinated immunosuppression review.",
+      "rights_note": "Kotton et al., Transplantation 2024, article CC BY-NC-ND 4.0; reference to facts only, no derivative/source reproduction. Original independently expressed Renulus questions/cases only. The cited publication retains its own terms; no primary text, table, figure, algorithm or official question is distributed. This reference is not an AI import, syndication or commercial redistribution permission for the source.",
+      "check_note": "Publisher full text read through Europe PMC PMC11335089: Tables 5-7, diagnostics and management. XML SHA256 a193a7d1749e107fecc986f15454700fb0b480c8f1e1e3605aa43fc9213a89ef. Decisions retain assay/context limits and rejection risk. Scoped primary reading on 2026-10-05; this is not a complete latest-edition/corrigendum/retraction clearance."
+    },
+    {
+      "id": "L01-US-MEC-2024-launch",
+      "register_id": "L01",
+      "title": "U.S. Medical Eligibility Criteria for Contraceptive Use",
+      "edition": "CDC MMWR 2024; DOI 10.15585/mmwr.rr7304a1; supplementary US context",
+      "publication_status": "final",
+      "url": "https://www.cdc.gov/mmwr/volumes/73/rr/rr7304a1.htm",
+      "canonical_topic_url": "https://www.cdc.gov/contraception/hcp/usmec/",
+      "checked_on": "2026-10-05",
+      "check_status": "locator_checked",
+      "currency": "dated_final_baseline",
+      "scope": "CKD nephrotic/dialysis contraceptive safety categories, known hyperkalemia and drospirenone, informed choice.",
+      "rights_note": "CDC public guidance; US-government work except separately credited material. No table/extract reproduced. Original independently expressed Renulus questions/cases only. The cited publication retains its own terms; no primary text, table, figure, algorithm or official question is distributed. This reference is not an AI import, syndication or commercial redistribution permission for the source.",
+      "check_note": "Official MMWR and appendices read. Main HTML SHA256 b61c19cf0a113052281f7b5227bc102e25b015a82918dc644aacec654443d319; appendix HTML SHA256 e5c2c946a0c40f15d2e92b4dca3989efcec2600ad818b7cbf9d09ce0cb4c1999. Appendix C and D CKD rows checked; not a European product-authorisation rule. Scoped primary reading on 2026-10-05; this is not a complete latest-edition/corrigendum/retraction clearance."
+    },
+    {
+      "id": "G07-NG43-2016-launch",
+      "register_id": "G07",
+      "title": "NICE NG43 transition from children to adult services",
+      "edition": "2016 final; official 34-page PDF read 2026-10-05",
+      "publication_status": "final",
+      "url": "https://www.nice.org.uk/guidance/ng43/chapter/Recommendations",
+      "canonical_topic_url": "https://www.nice.org.uk/guidance/ng43",
+      "checked_on": "2026-10-05",
+      "check_status": "locator_checked",
+      "currency": "dated_final_baseline",
+      "scope": "Developmental readiness, named coordinator, joint handover and re-engagement; supplementary UK service context.",
+      "rights_note": "NICE copyright/Notice of rights; factual reference only, no licensed connector or source-text redistribution. Original independently expressed Renulus questions/cases only. The cited publication retains its own terms; no primary text, table, figure, algorithm or official question is distributed. This reference is not an AI import, syndication or commercial redistribution permission for the source.",
+      "check_note": "Official PDF: 1.1.2, 1.2.3-1.2.6, 1.3.1 and 1.4.1-1.4.3. SHA256 1ea6d24335861b75ef50e1fd45641a4b02307ec30e8e3d9875ea54d5aae17d7d. Publication year is retained rather than relabelled a 2026 edition. Scoped primary reading on 2026-10-05; this is not a complete latest-edition/corrigendum/retraction clearance."
+    },
+    {
+      "id": "G07-NG31-2015-launch",
+      "register_id": "G07",
+      "title": "NICE NG31 care of dying adults in the last days of life",
+      "edition": "2015 final; official 32-page PDF read 2026-10-05, copyright notice 2024",
+      "publication_status": "final",
+      "url": "https://www.nice.org.uk/guidance/ng31/chapter/Recommendations",
+      "canonical_topic_url": "https://www.nice.org.uk/guidance/ng31",
+      "checked_on": "2026-10-05",
+      "check_status": "locator_checked",
+      "currency": "dated_final_baseline",
+      "scope": "Uncertainty/communication, medicine review, routes and anticipatory symptom care; no kidney-specific drug doses.",
+      "rights_note": "NICE copyright/Notice of rights; factual reference only, no licensed connector or source-text redistribution. Original independently expressed Renulus questions/cases only. The cited publication retains its own terms; no primary text, table, figure, algorithm or official question is distributed. This reference is not an AI import, syndication or commercial redistribution permission for the source.",
+      "check_note": "Official PDF: 1.1.2-1.1.6, 1.2.3-1.2.5, 1.5.1-1.5.5 and 1.6.1-1.6.4. SHA256 da38e12a8d4d200ba213d9abd11927643c223e0b437eca6bf8ecc85a154e521f. Scoped primary reading on 2026-10-05; this is not a complete latest-edition/corrigendum/retraction clearance."
+    },
+    {
+      "id": "K01-2024-launch-locators",
+      "register_id": "K01",
+      "title": "KDIGO CKD evaluation and management: launch case locators",
+      "edition": "2024 final; separately read snapshot, no change to inherited K01 sources",
+      "publication_status": "final",
+      "url": "https://kdigo.org/wp-content/uploads/2026/04/KDIGO-2024-CKD-Guideline.pdf",
+      "canonical_topic_url": "https://kdigo.org/guidelines/ckd-evaluation-and-management/",
+      "checked_on": "2026-10-05",
+      "check_status": "locator_checked",
+      "currency": "dated_final_baseline",
+      "scope": "Muscle mass/filtration markers, symptomatic BP tolerance, frailty/nutrition/activity and supportive care.",
+      "rights_note": "KDIGO/Elsevier rights retained; independently expressed facts, no source excerpts. Original independently expressed Renulus questions/cases only. The cited publication retains its own terms; no primary text, table, figure, algorithm or official question is distributed. This reference is not an AI import, syndication or commercial redistribution permission for the source.",
+      "check_note": "Official 199-page PDF read: recommendation 1.2.2.1; practice points 3.4.1, 3.3.1.3 and 3.3.1.5; recommendation 3.2.2.1 and practice points 5.5.1-5.5.3. SHA256 0b77a9e32ca6c7bbccbddf902be4427bf8bc0d2dd7e3ffbc18042f602f371b27. Scoped primary reading on 2026-10-05; this is not a complete latest-edition/corrigendum/retraction clearance."
+    },
+    {
+      "id": "K02-2026-launch-locators",
+      "register_id": "K02",
+      "title": "KDIGO anemia in CKD: launch case locators",
+      "edition": "2026 final; separately read snapshot, no change to inherited K02 source",
+      "publication_status": "final",
+      "url": "https://kdigo.org/wp-content/uploads/2026/04/KDIGO-2026-Anemia-in-CKD-Guideline.pdf",
+      "canonical_topic_url": "https://kdigo.org/guidelines/anemia-in-ckd/",
+      "checked_on": "2026-10-05",
+      "check_status": "locator_checked",
+      "currency": "dated_final_baseline",
+      "scope": "Anemia workup/correctable causes and adult ESA maintenance goal; no dosing protocol.",
+      "rights_note": "KDIGO/Elsevier rights retained; independently expressed facts, no source excerpts. Original independently expressed Renulus questions/cases only. The cited publication retains its own terms; no primary text, table, figure, algorithm or official question is distributed. This reference is not an AI import, syndication or commercial redistribution permission for the source.",
+      "check_note": "Official 99-page PDF read: practice points 1.2.1 and 3.1.2, recommendation 3.3.1 and practice point 3.3.1. SHA256 5e72c6f6f5f880e5d842fb8a461585770ba7dac3549da4625745b43f8bc131e1. Scoped primary reading on 2026-10-05; this is not a complete latest-edition/corrigendum/retraction clearance."
+    },
+    {
+      "id": "L01-AIN-treatment-review-2025-launch",
+      "register_id": "L01",
+      "title": "A systematic review of treatment for acute interstitial nephritis",
+      "edition": "Kidney International Reports 2025; DOI 10.1016/j.ekir.2025.05.009; systematic review, not a guideline",
+      "publication_status": "final",
+      "url": "https://doi.org/10.1016/j.ekir.2025.05.009",
+      "canonical_topic_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12347843/",
+      "checked_on": "2026-10-05",
+      "check_status": "locator_checked",
+      "currency": "dated_final_baseline",
+      "scope": "Stop a suspected offending exposure, consider alternative causes and discuss limited treatment evidence.",
+      "rights_note": "Yu et al., Kidney International Reports 2025, article CC BY-NC-ND 4.0; reference to facts only, no source reproduction. Original independently expressed Renulus questions/cases only. The cited publication retains its own terms; no primary text, table, figure, algorithm or official question is distributed. This reference is not an AI import, syndication or commercial redistribution permission for the source.",
+      "check_note": "Publisher full text read through Europe PMC PMC12347843: Introduction, Results and Discussion/Conclusion. XML SHA256 f81037a0a19d68d34dccbbeca655f0cf10b72a432802e6be8989f5164d1d3633. Histologically diagnosed studies and heterogeneous steroid regimens do not establish a universal course. Scoped primary reading on 2026-10-05; this is not a complete latest-edition/corrigendum/retraction clearance."
+    }
+  ],
+  "items": [
+    {
+      "id": "RN12-UTI-001",
+      "version": 1,
+      "kind": "question",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G07-NG112-2024-launch",
+          "locator": "NG112 1.1.4: specialist evaluation of recurrent UTI"
+        }
+      ],
+      "key_text": "Seek specialist advice to investigate the recurrence and plan management.",
+      "skill": "interpretation",
+      "checked_claim": "T17.O02: evidence-based evaluation of recurrent suspected/confirmed infection; specialist advice for recurrent male-tract UTI.",
+      "objective_support": [
+        {
+          "objective_id": "T17.O02",
+          "checked_claim": "T17.O02: evidence-based evaluation of recurrent suspected/confirmed infection; specialist advice for recurrent male-tract UTI.",
+          "source_locators": [
+            {
+              "source_id": "G07-NG112-2024-launch",
+              "locator": "NG112 1.1.4: specialist evaluation of recurrent UTI"
+            }
+          ]
+        }
+      ],
+      "distractor_check": "All three alternatives were checked against the scope and conditions in the stem; option rationales state why each is inferior."
+    },
+    {
+      "id": "RN12-UTI-002",
+      "version": 1,
+      "kind": "question",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G07-NG112-2024-launch",
+          "locator": "NG112 1.2.5-1.2.8: trigger-linked prophylaxis and review"
+        }
+      ],
+      "key_text": "Use the identified trigger, previous cultures and preferences to select a trial with planned review.",
+      "skill": "common_reasoning",
+      "checked_claim": "T17.O02: stepwise recurrence prevention with trigger/culture-informed selection and review, within the specified NG112 population.",
+      "objective_support": [
+        {
+          "objective_id": "T17.O02",
+          "checked_claim": "T17.O02: stepwise recurrence prevention with trigger/culture-informed selection and review, within the specified NG112 population.",
+          "source_locators": [
+            {
+              "source_id": "G07-NG112-2024-launch",
+              "locator": "NG112 1.2.5-1.2.8: trigger-linked prophylaxis and review"
+            }
+          ]
+        }
+      ],
+      "distractor_check": "All three alternatives were checked against the scope and conditions in the stem; option rationales state why each is inferior."
+    },
+    {
+      "id": "RN12-ALPORT-001",
+      "version": 1,
+      "kind": "question",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G01-Alport-2024-launch",
+          "locator": "Alport guideline Q4, recommendation 4.1 and genetic-testing explanation"
+        }
+      ],
+      "key_text": "Discuss appropriately counselled testing that includes COL4A3, COL4A4 and COL4A5.",
+      "skill": "interpretation",
+      "checked_claim": "T02.O02: choose a confirmatory genetic test and distinguish a suggestive phenotype from molecular confirmation; no ADPKD objective is claimed.",
+      "objective_support": [
+        {
+          "objective_id": "T02.O02",
+          "checked_claim": "T02.O02: choose a confirmatory genetic test and distinguish a suggestive phenotype from molecular confirmation; no ADPKD objective is claimed.",
+          "source_locators": [
+            {
+              "source_id": "G01-Alport-2024-launch",
+              "locator": "Alport guideline Q4, recommendation 4.1 and genetic-testing explanation"
+            }
+          ]
+        }
+      ],
+      "distractor_check": "All three alternatives were checked against the scope and conditions in the stem; option rationales state why each is inferior."
+    },
+    {
+      "id": "RN12-ALPORT-002",
+      "version": 1,
+      "kind": "question",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G01-Alport-2024-launch",
+          "locator": "Alport guideline Q8 and Q19.2: heterozygous COL4A3/4 variants, contextual diagnosis and unexpected nephrotic syndrome"
+        }
+      ],
+      "key_text": "Assess the phenotype, family segregation and possible additional kidney disease rather than attributing every new finding to the variant.",
+      "skill": "common_reasoning",
+      "checked_claim": "T02.O01: combine chronology and urinary phenotype with genotype; do not replace diagnostic reasoning with an inherited label.",
+      "objective_support": [
+        {
+          "objective_id": "T02.O01",
+          "checked_claim": "T02.O01: combine chronology and urinary phenotype with genotype; do not replace diagnostic reasoning with an inherited label.",
+          "source_locators": [
+            {
+              "source_id": "G01-Alport-2024-launch",
+              "locator": "Alport guideline Q8 and Q19.2: heterozygous COL4A3/4 variants, contextual diagnosis and unexpected nephrotic syndrome"
+            }
+          ]
+        }
+      ],
+      "distractor_check": "All three alternatives were checked against the scope and conditions in the stem; option rationales state why each is inferior."
+    },
+    {
+      "id": "RN12-PD-001",
+      "version": 1,
+      "kind": "question",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "L01-ISPD-peritonitis-2022-corrected-launch",
+          "locator": "ISPD 2022: Identification and initial management, diagnostic criteria"
+        }
+      ],
+      "key_text": "Clinical and effluent-cell criteria already support PD peritonitis; obtain microbiology and arrange prompt treatment without waiting for a positive culture.",
+      "skill": "interpretation",
+      "checked_claim": "T17.O02: interpret infection findings and culture limits; 2022 diagnostic criteria, not corrected dosing or refractory-treatment algorithms.",
+      "objective_support": [
+        {
+          "objective_id": "T17.O02",
+          "checked_claim": "T17.O02: interpret infection findings and culture limits; 2022 diagnostic criteria, not corrected dosing or refractory-treatment algorithms.",
+          "source_locators": [
+            {
+              "source_id": "L01-ISPD-peritonitis-2022-corrected-launch",
+              "locator": "ISPD 2022: Identification and initial management, diagnostic criteria"
+            }
+          ]
+        }
+      ],
+      "distractor_check": "All three alternatives were checked against the scope and conditions in the stem; option rationales state why each is inferior."
+    },
+    {
+      "id": "RN12-PD-002",
+      "version": 1,
+      "kind": "question",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "L01-ISPD-catheter-2023-launch",
+          "locator": "ISPD 2023: Definition and diagnosis of catheter-related infection"
+        }
+      ],
+      "key_text": "This meets the definition of exit-site infection; assess the tunnel and obtain appropriate microbiology.",
+      "skill": "interpretation",
+      "checked_claim": "T22.O02: identify catheter infection/access risk and plan the next assessment without mistaking absence of fever for safety.",
+      "objective_support": [
+        {
+          "objective_id": "T22.O02",
+          "checked_claim": "T22.O02: identify catheter infection/access risk and plan the next assessment without mistaking absence of fever for safety.",
+          "source_locators": [
+            {
+              "source_id": "L01-ISPD-catheter-2023-launch",
+              "locator": "ISPD 2023: Definition and diagnosis of catheter-related infection"
+            }
+          ]
+        }
+      ],
+      "distractor_check": "All three alternatives were checked against the scope and conditions in the stem; option rationales state why each is inferior."
+    },
+    {
+      "id": "RN12-HD-001",
+      "version": 1,
+      "kind": "question",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G02-HD-access-2025-launch",
+          "locator": "UKKA vascular access guidelines 4.6-4.7 and aneurysm rationale"
+        }
+      ],
+      "key_text": "Arrange prompt access-team review, avoid cannulating the compromised skin and plan safe dialysis access.",
+      "skill": "interpretation",
+      "checked_claim": "T22.O02: bleeding-risk access assessment and planning; high-risk skin and bleeding features support referral and safe cannulation planning.",
+      "objective_support": [
+        {
+          "objective_id": "T22.O02",
+          "checked_claim": "T22.O02: bleeding-risk access assessment and planning; high-risk skin and bleeding features support referral and safe cannulation planning.",
+          "source_locators": [
+            {
+              "source_id": "G02-HD-access-2025-launch",
+              "locator": "UKKA vascular access guidelines 4.6-4.7 and aneurysm rationale"
+            }
+          ]
+        }
+      ],
+      "distractor_check": "All three alternatives were checked against the scope and conditions in the stem; option rationales state why each is inferior."
+    },
+    {
+      "id": "RN12-HD-002",
+      "version": 1,
+      "kind": "question",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G02-HD-access-2025-launch",
+          "locator": "UKKA vascular access guideline 3.12: assessment before every cannulation"
+        }
+      ],
+      "key_text": "An appropriately trained cannulator assesses the access by inspection, palpation and auscultation.",
+      "skill": "common_reasoning",
+      "checked_claim": "T20.O02: ongoing dialysis-unit care includes trained access assessment at each cannulation, not a pre-dialysis planning tag.",
+      "objective_support": [
+        {
+          "objective_id": "T20.O02",
+          "checked_claim": "T20.O02: ongoing dialysis-unit care includes trained access assessment at each cannulation, not a pre-dialysis planning tag.",
+          "source_locators": [
+            {
+              "source_id": "G02-HD-access-2025-launch",
+              "locator": "UKKA vascular access guideline 3.12: assessment before every cannulation"
+            }
+          ]
+        }
+      ],
+      "distractor_check": "All three alternatives were checked against the scope and conditions in the stem; option rationales state why each is inferior."
+    },
+    {
+      "id": "RN12-HD-003",
+      "version": 1,
+      "kind": "question",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G02-HD-access-2025-launch",
+          "locator": "UKKA vascular access guideline 4.2: stenosis with clinical dysfunction"
+        }
+      ],
+      "key_text": "Discuss intervention for significant stenosis with clinical access dysfunction and the patient’s access plan.",
+      "skill": "interpretation",
+      "checked_claim": "T20.O02: ongoing HD delivery/access problems support investigation and intervention when a corresponding significant lesion is present.",
+      "objective_support": [
+        {
+          "objective_id": "T20.O02",
+          "checked_claim": "T20.O02: ongoing HD delivery/access problems support investigation and intervention when a corresponding significant lesion is present.",
+          "source_locators": [
+            {
+              "source_id": "G02-HD-access-2025-launch",
+              "locator": "UKKA vascular access guideline 4.2: stenosis with clinical dysfunction"
+            }
+          ]
+        }
+      ],
+      "distractor_check": "All three alternatives were checked against the scope and conditions in the stem; option rationales state why each is inferior."
+    },
+    {
+      "id": "RN12-HD-004",
+      "version": 1,
+      "kind": "question",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G02-HD-access-2025-launch",
+          "locator": "UKKA vascular access guidelines 5.4-5.5: catheter care and aseptic access"
+        }
+      ],
+      "key_text": "Use trained dialysis staff, or a trained/supervised patient or carer, with a strict aseptic approach.",
+      "skill": "common_reasoning",
+      "checked_claim": "T20.O02: safe ongoing HD unit/home catheter care, with trained access and asepsis; not a claim of procedural competence from answering an item.",
+      "objective_support": [
+        {
+          "objective_id": "T20.O02",
+          "checked_claim": "T20.O02: safe ongoing HD unit/home catheter care, with trained access and asepsis; not a claim of procedural competence from answering an item.",
+          "source_locators": [
+            {
+              "source_id": "G02-HD-access-2025-launch",
+              "locator": "UKKA vascular access guidelines 5.4-5.5: catheter care and aseptic access"
+            }
+          ]
+        }
+      ],
+      "distractor_check": "All three alternatives were checked against the scope and conditions in the stem; option rationales state why each is inferior."
+    },
+    {
+      "id": "RN12-BK-001",
+      "version": 1,
+      "kind": "question",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "L01-BK-consensus-2024-launch",
+          "locator": "BK consensus Tables 5 and 7: sustained DNAemia and immunosuppression reduction"
+        }
+      ],
+      "key_text": "Arrange transplant-team review for persistent DNAemia, immunosuppression reduction and serial monitoring in the patient’s immunologic context.",
+      "skill": "interpretation",
+      "checked_claim": "T17.O02: recipient infection surveillance and interpretation of persistent plasma BK DNAemia; this is not candidate-prevention coverage.",
+      "objective_support": [
+        {
+          "objective_id": "T17.O02",
+          "checked_claim": "T17.O02: recipient infection surveillance and interpretation of persistent plasma BK DNAemia; this is not candidate-prevention coverage.",
+          "source_locators": [
+            {
+              "source_id": "L01-BK-consensus-2024-launch",
+              "locator": "BK consensus Tables 5 and 7: sustained DNAemia and immunosuppression reduction"
+            }
+          ]
+        }
+      ],
+      "distractor_check": "All three alternatives were checked against the scope and conditions in the stem; option rationales state why each is inferior."
+    },
+    {
+      "id": "RN12-BK-002",
+      "version": 1,
+      "kind": "question",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "L01-BK-consensus-2024-launch",
+          "locator": "BK consensus Tables 6-7 and management rationale: competing rejection risk"
+        }
+      ],
+      "key_text": "Reassess viral, rejection, medication and other graft causes with the transplant team; a falling viral load alone does not explain the dysfunction.",
+      "skill": "common_reasoning",
+      "checked_claim": "T19.O01: medication benefit/risk tradeoffs after transplant, with the diagnostic uncertainty and rejection risk of reducing immunosuppression.",
+      "objective_support": [
+        {
+          "objective_id": "T19.O01",
+          "checked_claim": "T19.O01: medication benefit/risk tradeoffs after transplant, with the diagnostic uncertainty and rejection risk of reducing immunosuppression.",
+          "source_locators": [
+            {
+              "source_id": "L01-BK-consensus-2024-launch",
+              "locator": "BK consensus Tables 6-7 and management rationale: competing rejection risk"
+            }
+          ]
+        }
+      ],
+      "distractor_check": "All three alternatives were checked against the scope and conditions in the stem; option rationales state why each is inferior."
+    },
+    {
+      "id": "RN12-SEX-001",
+      "version": 1,
+      "kind": "question",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "L01-US-MEC-2024-launch",
+          "locator": "US MEC 2024 Appendix D: CKD receiving hemodialysis, combined hormonal contraception"
+        }
+      ],
+      "key_text": "HD is a category-4 condition for combined hormonal contraception; discuss suitable alternatives and the person’s priorities.",
+      "skill": "interpretation",
+      "checked_claim": "T24.O02: dialysis-specific reproductive treatment tradeoffs; the scope is contraception, not a complete fertility/sexual-dysfunction curriculum.",
+      "objective_support": [
+        {
+          "objective_id": "T24.O02",
+          "checked_claim": "T24.O02: dialysis-specific reproductive treatment tradeoffs; the scope is contraception, not a complete fertility/sexual-dysfunction curriculum.",
+          "source_locators": [
+            {
+              "source_id": "L01-US-MEC-2024-launch",
+              "locator": "US MEC 2024 Appendix D: CKD receiving hemodialysis, combined hormonal contraception"
+            }
+          ]
+        }
+      ],
+      "distractor_check": "All three alternatives were checked against the scope and conditions in the stem; option rationales state why each is inferior."
+    },
+    {
+      "id": "RN12-SEX-002",
+      "version": 1,
+      "kind": "question",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "L01-US-MEC-2024-launch",
+          "locator": "US MEC 2024 Appendix C: CKD, drospirenone POP and known hyperkalemia"
+        }
+      ],
+      "key_text": "Known hyperkalemia makes drospirenone POP use category 4; assess a suitable alternative rather than treating all progestin-only pills as identical.",
+      "skill": "interpretation",
+      "checked_claim": "T19.O01: a kidney-related drug/condition risk; distinguish known hyperkalemia from the different monitoring advice for CKD without known hyperkalemia.",
+      "objective_support": [
+        {
+          "objective_id": "T19.O01",
+          "checked_claim": "T19.O01: a kidney-related drug/condition risk; distinguish known hyperkalemia from the different monitoring advice for CKD without known hyperkalemia.",
+          "source_locators": [
+            {
+              "source_id": "L01-US-MEC-2024-launch",
+              "locator": "US MEC 2024 Appendix C: CKD, drospirenone POP and known hyperkalemia"
+            }
+          ]
+        }
+      ],
+      "distractor_check": "All three alternatives were checked against the scope and conditions in the stem; option rationales state why each is inferior."
+    },
+    {
+      "id": "RN12-TRANS-001",
+      "version": 1,
+      "kind": "question",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G07-NG43-2016-launch",
+          "locator": "NG43 1.1.2 and 1.2.3: developmental readiness and timing"
+        }
+      ],
+      "key_text": "Plan with the young person and both services around development, readiness and support needs, rather than age alone.",
+      "skill": "common_reasoning",
+      "checked_claim": "T24.O02: a supported transition decision with developmental context; no inference that transplant-candidate items cover this facet.",
+      "objective_support": [
+        {
+          "objective_id": "T24.O02",
+          "checked_claim": "T24.O02: a supported transition decision with developmental context; no inference that transplant-candidate items cover this facet.",
+          "source_locators": [
+            {
+              "source_id": "G07-NG43-2016-launch",
+              "locator": "NG43 1.1.2 and 1.2.3: developmental readiness and timing"
+            }
+          ]
+        }
+      ],
+      "distractor_check": "All three alternatives were checked against the scope and conditions in the stem; option rationales state why each is inferior."
+    },
+    {
+      "id": "RN12-TRANS-002",
+      "version": 1,
+      "kind": "question",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G07-NG43-2016-launch",
+          "locator": "NG43 1.2.5-1.2.6 and 1.4.1-1.4.3: named worker and re-engagement"
+        }
+      ],
+      "key_text": "Use the agreed coordinator to contact the young person, identify barriers and reconnect the child/adult teams and medication plan.",
+      "skill": "interpretation",
+      "checked_claim": "T27.O02: specify the continuity uncertainty and coordinate the relevant services; nonattendance needs re-engagement, not an arbitrary nonadherence label.",
+      "objective_support": [
+        {
+          "objective_id": "T27.O02",
+          "checked_claim": "T27.O02: specify the continuity uncertainty and coordinate the relevant services; nonattendance needs re-engagement, not an arbitrary nonadherence label.",
+          "source_locators": [
+            {
+              "source_id": "G07-NG43-2016-launch",
+              "locator": "NG43 1.2.5-1.2.6 and 1.4.1-1.4.3: named worker and re-engagement"
+            }
+          ]
+        }
+      ],
+      "distractor_check": "All three alternatives were checked against the scope and conditions in the stem; option rationales state why each is inferior."
+    },
+    {
+      "id": "RN12-DYING-001",
+      "version": 1,
+      "kind": "question",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G07-NG31-2015-launch",
+          "locator": "NG31 1.1.2-1.1.6 and 1.2.3-1.2.5: uncertainty and communication"
+        }
+      ],
+      "key_text": "Explain the clinical assessment and its uncertainty, revisit preferences and plan continuing supportive care with those the patient wants involved.",
+      "skill": "common_reasoning",
+      "checked_claim": "T26.O01: goals-based advance/supportive care in an actual withdrawal and possible dying context, rather than merely a conservative-care definition.",
+      "objective_support": [
+        {
+          "objective_id": "T26.O01",
+          "checked_claim": "T26.O01: goals-based advance/supportive care in an actual withdrawal and possible dying context, rather than merely a conservative-care definition.",
+          "source_locators": [
+            {
+              "source_id": "G07-NG31-2015-launch",
+              "locator": "NG31 1.1.2-1.1.6 and 1.2.3-1.2.5: uncertainty and communication"
+            }
+          ]
+        }
+      ],
+      "distractor_check": "All three alternatives were checked against the scope and conditions in the stem; option rationales state why each is inferior."
+    },
+    {
+      "id": "RN12-DYING-002",
+      "version": 1,
+      "kind": "question",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G07-NG31-2015-launch",
+          "locator": "NG31 1.5.1-1.5.5 and 1.6.1-1.6.4: medication and anticipatory care"
+        }
+      ],
+      "key_text": "Review benefit and harm of current medicines, choose feasible routes and individualized anticipatory symptom treatment with renal/pharmacy input.",
+      "skill": "interpretation",
+      "checked_claim": "T19.O01: benefits, harms and feasibility of medicines in kidney failure/last days; no unverified renal-specific dosing claim.",
+      "objective_support": [
+        {
+          "objective_id": "T19.O01",
+          "checked_claim": "T19.O01: benefits, harms and feasibility of medicines in kidney failure/last days; no unverified renal-specific dosing claim.",
+          "source_locators": [
+            {
+              "source_id": "G07-NG31-2015-launch",
+              "locator": "NG31 1.5.1-1.5.5 and 1.6.1-1.6.4: medication and anticipatory care"
+            }
+          ]
+        }
+      ],
+      "distractor_check": "All three alternatives were checked against the scope and conditions in the stem; option rationales state why each is inferior."
+    },
+    {
+      "id": "RN12-CASE-UTI",
+      "version": 1,
+      "kind": "case",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G07-NG112-2024-launch",
+          "locator": "NG112 1.1.4 and 1.2.6: recurrence evaluation, underlying cause and prior cultures"
+        },
+        {
+          "source_id": "G07-NG112-2024-launch",
+          "locator": "NG112 1.2.1-1.2.4: vaginal estrogen and limits of systemic HRT"
+        },
+        {
+          "source_id": "G07-NG112-2024-launch",
+          "locator": "NG112 1.2.5-1.2.8: single-dose prophylaxis conditions and review"
+        }
+      ],
+      "key_text": null,
+      "skill": "mixed_domain_reasoning",
+      "checked_claim": "Chronology, urine cultures, response and tract/systemic features frame the problem. Evidence-based evaluation and stepwise prevention of recurrent infection with reviewed follow-up.",
+      "objective_support": [
+        {
+          "objective_id": "T02.O01",
+          "stage_ids": [
+            "stage-1"
+          ],
+          "checked_claim": "Chronology, urine cultures, response and tract/systemic features frame the problem.",
+          "source_locators": [
+            {
+              "source_id": "G07-NG112-2024-launch",
+              "locator": "NG112 1.1.4 and 1.2.6: recurrence evaluation, underlying cause and prior cultures"
+            }
+          ]
+        },
+        {
+          "objective_id": "T17.O02",
+          "stage_ids": [
+            "stage-1",
+            "stage-2",
+            "stage-3"
+          ],
+          "checked_claim": "Evidence-based evaluation and stepwise prevention of recurrent infection with reviewed follow-up.",
+          "source_locators": [
+            {
+              "source_id": "G07-NG112-2024-launch",
+              "locator": "NG112 1.1.4 and 1.2.6: recurrence evaluation, underlying cause and prior cultures"
+            },
+            {
+              "source_id": "G07-NG112-2024-launch",
+              "locator": "NG112 1.2.1-1.2.4: vaginal estrogen and limits of systemic HRT"
+            },
+            {
+              "source_id": "G07-NG112-2024-launch",
+              "locator": "NG112 1.2.5-1.2.8: single-dose prophylaxis conditions and review"
+            }
+          ]
+        }
+      ],
+      "review_limit": "Synthetic open teaching discussion; prompts and cited teaching points are reviewed, no deterministic case key or clinical outcome is invented."
+    },
+    {
+      "id": "RN12-CASE-ALPORT",
+      "version": 1,
+      "kind": "case",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G01-Alport-2024-launch",
+          "locator": "Q4, recommendation 4.1: clinical indications for Alport testing"
+        },
+        {
+          "source_id": "G01-Alport-2024-launch",
+          "locator": "Q4 recommendation 4.1 and explanation; Q9: initial testing and test-sensitivity limits"
+        },
+        {
+          "source_id": "G01-Alport-2024-launch",
+          "locator": "Q8; Q16.2; Q19.2: contextual diagnosis and biopsy considerations in heterozygous COL4A3/4 disease"
+        }
+      ],
+      "key_text": null,
+      "skill": "mixed_domain_reasoning",
+      "checked_claim": "Clinical tempo, urine phenotype and family findings frame an inherited diagnostic problem and a later discrepant course. Choose appropriately counselled confirmatory testing and explain its technical/causal limits; no ADPKD objective is claimed.",
+      "objective_support": [
+        {
+          "objective_id": "T02.O01",
+          "stage_ids": [
+            "stage-1",
+            "stage-3"
+          ],
+          "checked_claim": "Clinical tempo, urine phenotype and family findings frame an inherited diagnostic problem and a later discrepant course.",
+          "source_locators": [
+            {
+              "source_id": "G01-Alport-2024-launch",
+              "locator": "Q4, recommendation 4.1: clinical indications for Alport testing"
+            },
+            {
+              "source_id": "G01-Alport-2024-launch",
+              "locator": "Q8; Q16.2; Q19.2: contextual diagnosis and biopsy considerations in heterozygous COL4A3/4 disease"
+            }
+          ]
+        },
+        {
+          "objective_id": "T02.O02",
+          "stage_ids": [
+            "stage-2",
+            "stage-3"
+          ],
+          "checked_claim": "Choose appropriately counselled confirmatory testing and explain its technical/causal limits; no ADPKD objective is claimed.",
+          "source_locators": [
+            {
+              "source_id": "G01-Alport-2024-launch",
+              "locator": "Q4 recommendation 4.1 and explanation; Q9: initial testing and test-sensitivity limits"
+            },
+            {
+              "source_id": "G01-Alport-2024-launch",
+              "locator": "Q8; Q16.2; Q19.2: contextual diagnosis and biopsy considerations in heterozygous COL4A3/4 disease"
+            }
+          ]
+        }
+      ],
+      "review_limit": "Synthetic open teaching discussion; prompts and cited teaching points are reviewed, no deterministic case key or clinical outcome is invented."
+    },
+    {
+      "id": "RN12-CASE-PD-INFECTION",
+      "version": 1,
+      "kind": "case",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "L01-ISPD-peritonitis-2022-corrected-launch",
+          "locator": "Identification and initial management: diagnostic criteria, specimen collection and prompt treatment"
+        },
+        {
+          "source_id": "L01-ISPD-catheter-2023-launch",
+          "locator": "Definition and diagnosis of catheter-related infection: exit-site and tunnel criteria"
+        },
+        {
+          "source_id": "L01-ISPD-peritonitis-2022-corrected-launch",
+          "locator": "Subsequent management: organism and response review"
+        },
+        {
+          "source_id": "L01-ISPD-catheter-2023-launch",
+          "locator": "Treatment and surgical interventions: catheter-related infection assessment"
+        }
+      ],
+      "key_text": null,
+      "skill": "mixed_domain_reasoning",
+      "checked_claim": "Interpret peritonitis/infection evidence and culture limits with prompt evaluation. Assess catheter infection and access-intervention risks rather than using a dialysis tag alone. Coordinate ongoing PD care, access and follow-up with modality preferences; no complete prescription pathway is claimed.",
+      "objective_support": [
+        {
+          "objective_id": "T17.O02",
+          "stage_ids": [
+            "stage-1",
+            "stage-2",
+            "stage-3"
+          ],
+          "checked_claim": "Interpret peritonitis/infection evidence and culture limits with prompt evaluation.",
+          "source_locators": [
+            {
+              "source_id": "L01-ISPD-peritonitis-2022-corrected-launch",
+              "locator": "Identification and initial management: diagnostic criteria, specimen collection and prompt treatment"
+            },
+            {
+              "source_id": "L01-ISPD-catheter-2023-launch",
+              "locator": "Definition and diagnosis of catheter-related infection: exit-site and tunnel criteria"
+            },
+            {
+              "source_id": "L01-ISPD-peritonitis-2022-corrected-launch",
+              "locator": "Subsequent management: organism and response review"
+            },
+            {
+              "source_id": "L01-ISPD-catheter-2023-launch",
+              "locator": "Treatment and surgical interventions: catheter-related infection assessment"
+            }
+          ]
+        },
+        {
+          "objective_id": "T22.O02",
+          "stage_ids": [
+            "stage-2",
+            "stage-3"
+          ],
+          "checked_claim": "Assess catheter infection and access-intervention risks rather than using a dialysis tag alone.",
+          "source_locators": [
+            {
+              "source_id": "L01-ISPD-catheter-2023-launch",
+              "locator": "Definition and diagnosis of catheter-related infection: exit-site and tunnel criteria"
+            },
+            {
+              "source_id": "L01-ISPD-peritonitis-2022-corrected-launch",
+              "locator": "Subsequent management: organism and response review"
+            },
+            {
+              "source_id": "L01-ISPD-catheter-2023-launch",
+              "locator": "Treatment and surgical interventions: catheter-related infection assessment"
+            }
+          ]
+        },
+        {
+          "objective_id": "T20.O02",
+          "stage_ids": [
+            "stage-1",
+            "stage-3"
+          ],
+          "checked_claim": "Coordinate ongoing PD care, access and follow-up with modality preferences; no complete prescription pathway is claimed.",
+          "source_locators": [
+            {
+              "source_id": "L01-ISPD-peritonitis-2022-corrected-launch",
+              "locator": "Identification and initial management: diagnostic criteria, specimen collection and prompt treatment"
+            },
+            {
+              "source_id": "L01-ISPD-peritonitis-2022-corrected-launch",
+              "locator": "Subsequent management: organism and response review"
+            },
+            {
+              "source_id": "L01-ISPD-catheter-2023-launch",
+              "locator": "Treatment and surgical interventions: catheter-related infection assessment"
+            }
+          ]
+        }
+      ],
+      "review_limit": "Synthetic open teaching discussion; prompts and cited teaching points are reviewed, no deterministic case key or clinical outcome is invented."
+    },
+    {
+      "id": "RN12-CASE-HD-ACCESS",
+      "version": 1,
+      "kind": "case",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G02-HD-access-2025-launch",
+          "locator": "Guidelines 4.6-4.7 and aneurysm rationale: bleeding risk and atrophic skin"
+        },
+        {
+          "source_id": "G02-HD-access-2025-launch",
+          "locator": "Guidelines 4.1-4.2 and 4.6-4.7: shared decisions, symptomatic stenosis and aneurysm treatment"
+        },
+        {
+          "source_id": "G02-HD-access-2025-launch",
+          "locator": "Guidelines 3.12 and 4.1; aneurysm bleeding-risk rationale"
+        }
+      ],
+      "key_text": null,
+      "skill": "mixed_domain_reasoning",
+      "checked_claim": "A focused ongoing-HD access case includes session safety, continuing delivery and patient preferences. Bleeding/access-complication assessment supports intervention planning and safe cannulation decisions.",
+      "objective_support": [
+        {
+          "objective_id": "T20.O02",
+          "stage_ids": [
+            "stage-1",
+            "stage-2",
+            "stage-3"
+          ],
+          "checked_claim": "A focused ongoing-HD access case includes session safety, continuing delivery and patient preferences.",
+          "source_locators": [
+            {
+              "source_id": "G02-HD-access-2025-launch",
+              "locator": "Guidelines 4.6-4.7 and aneurysm rationale: bleeding risk and atrophic skin"
+            },
+            {
+              "source_id": "G02-HD-access-2025-launch",
+              "locator": "Guidelines 4.1-4.2 and 4.6-4.7: shared decisions, symptomatic stenosis and aneurysm treatment"
+            },
+            {
+              "source_id": "G02-HD-access-2025-launch",
+              "locator": "Guidelines 3.12 and 4.1; aneurysm bleeding-risk rationale"
+            }
+          ]
+        },
+        {
+          "objective_id": "T22.O02",
+          "stage_ids": [
+            "stage-1",
+            "stage-2",
+            "stage-3"
+          ],
+          "checked_claim": "Bleeding/access-complication assessment supports intervention planning and safe cannulation decisions.",
+          "source_locators": [
+            {
+              "source_id": "G02-HD-access-2025-launch",
+              "locator": "Guidelines 4.6-4.7 and aneurysm rationale: bleeding risk and atrophic skin"
+            },
+            {
+              "source_id": "G02-HD-access-2025-launch",
+              "locator": "Guidelines 4.1-4.2 and 4.6-4.7: shared decisions, symptomatic stenosis and aneurysm treatment"
+            },
+            {
+              "source_id": "G02-HD-access-2025-launch",
+              "locator": "Guidelines 3.12 and 4.1; aneurysm bleeding-risk rationale"
+            }
+          ]
+        }
+      ],
+      "review_limit": "Synthetic open teaching discussion; prompts and cited teaching points are reviewed, no deterministic case key or clinical outcome is invented."
+    },
+    {
+      "id": "RN12-CASE-HD-SESSION",
+      "version": 1,
+      "kind": "case",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G02-HD-access-2025-launch",
+          "locator": "Guidelines 5.4-5.5; chapter 6 catheter dysfunction rationale"
+        },
+        {
+          "source_id": "G02-HD-access-2025-launch",
+          "locator": "Catheter-related infection rationale: bloodstream infection, cultures and prompt treatment"
+        },
+        {
+          "source_id": "G02-HD-access-2025-launch",
+          "locator": "Chapter 6 catheter-related infection rationale and guideline 5.4"
+        }
+      ],
+      "key_text": null,
+      "skill": "mixed_domain_reasoning",
+      "checked_claim": "Ongoing HD delivery, operational catheter care and a communicated next-session access plan. Evaluate suspected catheter infection using systemic findings and appropriate microbiology. Review access dysfunction/infection and the risks shaping catheter management.",
+      "objective_support": [
+        {
+          "objective_id": "T20.O02",
+          "stage_ids": [
+            "stage-1",
+            "stage-3"
+          ],
+          "checked_claim": "Ongoing HD delivery, operational catheter care and a communicated next-session access plan.",
+          "source_locators": [
+            {
+              "source_id": "G02-HD-access-2025-launch",
+              "locator": "Guidelines 5.4-5.5; chapter 6 catheter dysfunction rationale"
+            },
+            {
+              "source_id": "G02-HD-access-2025-launch",
+              "locator": "Chapter 6 catheter-related infection rationale and guideline 5.4"
+            }
+          ]
+        },
+        {
+          "objective_id": "T17.O02",
+          "stage_ids": [
+            "stage-2",
+            "stage-3"
+          ],
+          "checked_claim": "Evaluate suspected catheter infection using systemic findings and appropriate microbiology.",
+          "source_locators": [
+            {
+              "source_id": "G02-HD-access-2025-launch",
+              "locator": "Catheter-related infection rationale: bloodstream infection, cultures and prompt treatment"
+            },
+            {
+              "source_id": "G02-HD-access-2025-launch",
+              "locator": "Chapter 6 catheter-related infection rationale and guideline 5.4"
+            }
+          ]
+        },
+        {
+          "objective_id": "T22.O02",
+          "stage_ids": [
+            "stage-1",
+            "stage-2",
+            "stage-3"
+          ],
+          "checked_claim": "Review access dysfunction/infection and the risks shaping catheter management.",
+          "source_locators": [
+            {
+              "source_id": "G02-HD-access-2025-launch",
+              "locator": "Guidelines 5.4-5.5; chapter 6 catheter dysfunction rationale"
+            },
+            {
+              "source_id": "G02-HD-access-2025-launch",
+              "locator": "Catheter-related infection rationale: bloodstream infection, cultures and prompt treatment"
+            },
+            {
+              "source_id": "G02-HD-access-2025-launch",
+              "locator": "Chapter 6 catheter-related infection rationale and guideline 5.4"
+            }
+          ]
+        }
+      ],
+      "review_limit": "Synthetic open teaching discussion; prompts and cited teaching points are reviewed, no deterministic case key or clinical outcome is invented."
+    },
+    {
+      "id": "RN12-CASE-BK-AFTERCARE",
+      "version": 1,
+      "kind": "case",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "L01-BK-consensus-2024-launch",
+          "locator": "Tables 5 and 7; diagnostics: surveillance and persistent DNAemia"
+        },
+        {
+          "source_id": "L01-BK-consensus-2024-launch",
+          "locator": "Tables 6-7: practice guidance and management recommendations"
+        },
+        {
+          "source_id": "L01-BK-consensus-2024-launch",
+          "locator": "Diagnostics and management rationale; Tables 6-7: graft dysfunction and rejection risk"
+        }
+      ],
+      "key_text": null,
+      "skill": "mixed_domain_reasoning",
+      "checked_claim": "Serial viral results and graft-function chronology frame a recipient diagnostic problem. Evidence-based recipient infection surveillance and evaluation, not pre-transplant candidate prevention. Medication benefits/risks and exposure review when treating BK replication. Coordinate recipient care with the transplant team and explicitly retain graft-cause uncertainty.",
+      "objective_support": [
+        {
+          "objective_id": "T02.O01",
+          "stage_ids": [
+            "stage-1",
+            "stage-3"
+          ],
+          "checked_claim": "Serial viral results and graft-function chronology frame a recipient diagnostic problem.",
+          "source_locators": [
+            {
+              "source_id": "L01-BK-consensus-2024-launch",
+              "locator": "Tables 5 and 7; diagnostics: surveillance and persistent DNAemia"
+            },
+            {
+              "source_id": "L01-BK-consensus-2024-launch",
+              "locator": "Diagnostics and management rationale; Tables 6-7: graft dysfunction and rejection risk"
+            }
+          ]
+        },
+        {
+          "objective_id": "T17.O02",
+          "stage_ids": [
+            "stage-1",
+            "stage-3"
+          ],
+          "checked_claim": "Evidence-based recipient infection surveillance and evaluation, not pre-transplant candidate prevention.",
+          "source_locators": [
+            {
+              "source_id": "L01-BK-consensus-2024-launch",
+              "locator": "Tables 5 and 7; diagnostics: surveillance and persistent DNAemia"
+            },
+            {
+              "source_id": "L01-BK-consensus-2024-launch",
+              "locator": "Diagnostics and management rationale; Tables 6-7: graft dysfunction and rejection risk"
+            }
+          ]
+        },
+        {
+          "objective_id": "T19.O01",
+          "stage_ids": [
+            "stage-2",
+            "stage-3"
+          ],
+          "checked_claim": "Medication benefits/risks and exposure review when treating BK replication.",
+          "source_locators": [
+            {
+              "source_id": "L01-BK-consensus-2024-launch",
+              "locator": "Tables 6-7: practice guidance and management recommendations"
+            },
+            {
+              "source_id": "L01-BK-consensus-2024-launch",
+              "locator": "Diagnostics and management rationale; Tables 6-7: graft dysfunction and rejection risk"
+            }
+          ]
+        },
+        {
+          "objective_id": "T27.O02",
+          "stage_ids": [
+            "stage-2",
+            "stage-3"
+          ],
+          "checked_claim": "Coordinate recipient care with the transplant team and explicitly retain graft-cause uncertainty.",
+          "source_locators": [
+            {
+              "source_id": "L01-BK-consensus-2024-launch",
+              "locator": "Tables 6-7: practice guidance and management recommendations"
+            },
+            {
+              "source_id": "L01-BK-consensus-2024-launch",
+              "locator": "Diagnostics and management rationale; Tables 6-7: graft dysfunction and rejection risk"
+            }
+          ]
+        }
+      ],
+      "review_limit": "Synthetic open teaching discussion; prompts and cited teaching points are reviewed, no deterministic case key or clinical outcome is invented."
+    },
+    {
+      "id": "RN12-CASE-SEXUAL-HEALTH",
+      "version": 1,
+      "kind": "case",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "L01-US-MEC-2024-launch",
+          "locator": "Using US MEC categories; Appendix D, CKD/hemodialysis row"
+        },
+        {
+          "source_id": "L01-US-MEC-2024-launch",
+          "locator": "Appendix C, CKD and drospirenone POP clarification"
+        },
+        {
+          "source_id": "L01-US-MEC-2024-launch",
+          "locator": "Person-centered contraceptive counselling and medical eligibility categories"
+        }
+      ],
+      "key_text": null,
+      "skill": "mixed_domain_reasoning",
+      "checked_claim": "Kidney-failure-specific reproductive treatment tradeoffs with informed choice. Review exact contraceptive preparation, known potassium risk and interacting conditions/medicines. Coordinate reproductive and kidney-care questions rather than inventing a comprehensive fertility plan.",
+      "objective_support": [
+        {
+          "objective_id": "T24.O02",
+          "stage_ids": [
+            "stage-1",
+            "stage-3"
+          ],
+          "checked_claim": "Kidney-failure-specific reproductive treatment tradeoffs with informed choice.",
+          "source_locators": [
+            {
+              "source_id": "L01-US-MEC-2024-launch",
+              "locator": "Using US MEC categories; Appendix D, CKD/hemodialysis row"
+            },
+            {
+              "source_id": "L01-US-MEC-2024-launch",
+              "locator": "Person-centered contraceptive counselling and medical eligibility categories"
+            }
+          ]
+        },
+        {
+          "objective_id": "T19.O01",
+          "stage_ids": [
+            "stage-2",
+            "stage-3"
+          ],
+          "checked_claim": "Review exact contraceptive preparation, known potassium risk and interacting conditions/medicines.",
+          "source_locators": [
+            {
+              "source_id": "L01-US-MEC-2024-launch",
+              "locator": "Appendix C, CKD and drospirenone POP clarification"
+            },
+            {
+              "source_id": "L01-US-MEC-2024-launch",
+              "locator": "Person-centered contraceptive counselling and medical eligibility categories"
+            }
+          ]
+        },
+        {
+          "objective_id": "T27.O02",
+          "stage_ids": [
+            "stage-3"
+          ],
+          "checked_claim": "Coordinate reproductive and kidney-care questions rather than inventing a comprehensive fertility plan.",
+          "source_locators": [
+            {
+              "source_id": "L01-US-MEC-2024-launch",
+              "locator": "Person-centered contraceptive counselling and medical eligibility categories"
+            }
+          ]
+        }
+      ],
+      "review_limit": "Synthetic open teaching discussion; prompts and cited teaching points are reviewed, no deterministic case key or clinical outcome is invented."
+    },
+    {
+      "id": "RN12-CASE-TRANSITION",
+      "version": 1,
+      "kind": "case",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G07-NG43-2016-launch",
+          "locator": "NG43 1.1.2 and 1.2.3: developmental support and transfer timing"
+        },
+        {
+          "source_id": "G07-NG43-2016-launch",
+          "locator": "NG43 1.2.5-1.2.6 and 1.3.1: named worker and meeting the adult service"
+        },
+        {
+          "source_id": "G07-NG43-2016-launch",
+          "locator": "NG43 1.4.1-1.4.3: nonattendance and re-engagement"
+        }
+      ],
+      "key_text": null,
+      "skill": "mixed_domain_reasoning",
+      "checked_claim": "Adapt assessment to development, support and practical context. Plan and revisit a transition with supported self-management and re-engagement. Make prescription/contact responsibility explicit across child and adult services.",
+      "objective_support": [
+        {
+          "objective_id": "T24.O01",
+          "stage_ids": [
+            "stage-1"
+          ],
+          "checked_claim": "Adapt assessment to development, support and practical context.",
+          "source_locators": [
+            {
+              "source_id": "G07-NG43-2016-launch",
+              "locator": "NG43 1.1.2 and 1.2.3: developmental support and transfer timing"
+            }
+          ]
+        },
+        {
+          "objective_id": "T24.O02",
+          "stage_ids": [
+            "stage-1",
+            "stage-2",
+            "stage-3"
+          ],
+          "checked_claim": "Plan and revisit a transition with supported self-management and re-engagement.",
+          "source_locators": [
+            {
+              "source_id": "G07-NG43-2016-launch",
+              "locator": "NG43 1.1.2 and 1.2.3: developmental support and transfer timing"
+            },
+            {
+              "source_id": "G07-NG43-2016-launch",
+              "locator": "NG43 1.2.5-1.2.6 and 1.3.1: named worker and meeting the adult service"
+            },
+            {
+              "source_id": "G07-NG43-2016-launch",
+              "locator": "NG43 1.4.1-1.4.3: nonattendance and re-engagement"
+            }
+          ]
+        },
+        {
+          "objective_id": "T27.O02",
+          "stage_ids": [
+            "stage-2",
+            "stage-3"
+          ],
+          "checked_claim": "Make prescription/contact responsibility explicit across child and adult services.",
+          "source_locators": [
+            {
+              "source_id": "G07-NG43-2016-launch",
+              "locator": "NG43 1.2.5-1.2.6 and 1.3.1: named worker and meeting the adult service"
+            },
+            {
+              "source_id": "G07-NG43-2016-launch",
+              "locator": "NG43 1.4.1-1.4.3: nonattendance and re-engagement"
+            }
+          ]
+        }
+      ],
+      "review_limit": "Synthetic open teaching discussion; prompts and cited teaching points are reviewed, no deterministic case key or clinical outcome is invented."
+    },
+    {
+      "id": "RN12-CASE-DYING",
+      "version": 1,
+      "kind": "case",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G07-NG31-2015-launch",
+          "locator": "NG31 1.1.2-1.1.6 and 1.2.3-1.2.5: recognizing dying and communication"
+        },
+        {
+          "source_id": "K01-2024-launch-locators",
+          "locator": "Practice points 5.5.1-5.5.3: supportive care and advance planning"
+        },
+        {
+          "source_id": "G07-NG31-2015-launch",
+          "locator": "NG31 1.5.1-1.5.5: medicine review and administration route"
+        },
+        {
+          "source_id": "K01-2024-launch-locators",
+          "locator": "Chapter 4.3: medication management and kidney-function context"
+        },
+        {
+          "source_id": "G07-NG31-2015-launch",
+          "locator": "NG31 1.6.1-1.6.4: individualized anticipatory medicines and review"
+        }
+      ],
+      "key_text": null,
+      "skill": "mixed_domain_reasoning",
+      "checked_claim": "Use the patient’s goals in withdrawal/last-days support and revisited advance care planning. Assess medication benefit/harm, organ-function context and feasible administration; no unverified dose protocol. Coordinate kidney, palliative and pharmacy care, including uncertainty and contact responsibilities.",
+      "objective_support": [
+        {
+          "objective_id": "T26.O01",
+          "stage_ids": [
+            "stage-1",
+            "stage-3"
+          ],
+          "checked_claim": "Use the patient’s goals in withdrawal/last-days support and revisited advance care planning.",
+          "source_locators": [
+            {
+              "source_id": "G07-NG31-2015-launch",
+              "locator": "NG31 1.1.2-1.1.6 and 1.2.3-1.2.5: recognizing dying and communication"
+            },
+            {
+              "source_id": "K01-2024-launch-locators",
+              "locator": "Practice points 5.5.1-5.5.3: supportive care and advance planning"
+            },
+            {
+              "source_id": "G07-NG31-2015-launch",
+              "locator": "NG31 1.6.1-1.6.4: individualized anticipatory medicines and review"
+            }
+          ]
+        },
+        {
+          "objective_id": "T19.O01",
+          "stage_ids": [
+            "stage-2",
+            "stage-3"
+          ],
+          "checked_claim": "Assess medication benefit/harm, organ-function context and feasible administration; no unverified dose protocol.",
+          "source_locators": [
+            {
+              "source_id": "G07-NG31-2015-launch",
+              "locator": "NG31 1.5.1-1.5.5: medicine review and administration route"
+            },
+            {
+              "source_id": "K01-2024-launch-locators",
+              "locator": "Chapter 4.3: medication management and kidney-function context"
+            },
+            {
+              "source_id": "G07-NG31-2015-launch",
+              "locator": "NG31 1.6.1-1.6.4: individualized anticipatory medicines and review"
+            }
+          ]
+        },
+        {
+          "objective_id": "T27.O02",
+          "stage_ids": [
+            "stage-1",
+            "stage-2",
+            "stage-3"
+          ],
+          "checked_claim": "Coordinate kidney, palliative and pharmacy care, including uncertainty and contact responsibilities.",
+          "source_locators": [
+            {
+              "source_id": "G07-NG31-2015-launch",
+              "locator": "NG31 1.1.2-1.1.6 and 1.2.3-1.2.5: recognizing dying and communication"
+            },
+            {
+              "source_id": "K01-2024-launch-locators",
+              "locator": "Practice points 5.5.1-5.5.3: supportive care and advance planning"
+            },
+            {
+              "source_id": "G07-NG31-2015-launch",
+              "locator": "NG31 1.5.1-1.5.5: medicine review and administration route"
+            },
+            {
+              "source_id": "K01-2024-launch-locators",
+              "locator": "Chapter 4.3: medication management and kidney-function context"
+            },
+            {
+              "source_id": "G07-NG31-2015-launch",
+              "locator": "NG31 1.6.1-1.6.4: individualized anticipatory medicines and review"
+            }
+          ]
+        }
+      ],
+      "review_limit": "Synthetic open teaching discussion; prompts and cited teaching points are reviewed, no deterministic case key or clinical outcome is invented."
+    },
+    {
+      "id": "RN12-CASE-FRAILTY-MARKERS",
+      "version": 1,
+      "kind": "case",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "K01-2024-launch-locators",
+          "locator": "Recommendation 1.2.2.1 and Table 8: less accurate eGFRcr/non-GFR determinants"
+        },
+        {
+          "source_id": "K01-2024-launch-locators",
+          "locator": "Practice point 3.4.1: less intensive BP lowering with frailty/falls or symptomatic postural hypotension"
+        },
+        {
+          "source_id": "K01-2024-launch-locators",
+          "locator": "Practice points 3.3.1.3 and 3.3.1.5; recommendation 3.2.2.1 and practice points 3.2.2.1-3.2.2.3"
+        }
+      ],
+      "key_text": null,
+      "skill": "mixed_domain_reasoning",
+      "checked_claim": "Explicitly explain muscle loss and non-GFR creatinine generation, with confirmatory filtration-marker limits. Individualize BP treatment for symptomatic postural hypotension, frailty and fall risk. Tailor nutrition and activity to CKD, unstable intake, sarcopenia and safe physical tolerance.",
+      "objective_support": [
+        {
+          "objective_id": "T01.O02",
+          "stage_ids": [
+            "stage-1"
+          ],
+          "checked_claim": "Explicitly explain muscle loss and non-GFR creatinine generation, with confirmatory filtration-marker limits.",
+          "source_locators": [
+            {
+              "source_id": "K01-2024-launch-locators",
+              "locator": "Recommendation 1.2.2.1 and Table 8: less accurate eGFRcr/non-GFR determinants"
+            }
+          ]
+        },
+        {
+          "objective_id": "T09.O02",
+          "stage_ids": [
+            "stage-2"
+          ],
+          "checked_claim": "Individualize BP treatment for symptomatic postural hypotension, frailty and fall risk.",
+          "source_locators": [
+            {
+              "source_id": "K01-2024-launch-locators",
+              "locator": "Practice point 3.4.1: less intensive BP lowering with frailty/falls or symptomatic postural hypotension"
+            }
+          ]
+        },
+        {
+          "objective_id": "T25.O01",
+          "stage_ids": [
+            "stage-3"
+          ],
+          "checked_claim": "Tailor nutrition and activity to CKD, unstable intake, sarcopenia and safe physical tolerance.",
+          "source_locators": [
+            {
+              "source_id": "K01-2024-launch-locators",
+              "locator": "Practice points 3.3.1.3 and 3.3.1.5; recommendation 3.2.2.1 and practice points 3.2.2.1-3.2.2.3"
+            }
+          ]
+        }
+      ],
+      "review_limit": "Synthetic open teaching discussion; prompts and cited teaching points are reviewed, no deterministic case key or clinical outcome is invented."
+    },
+    {
+      "id": "RN12-CASE-ANEMIA-GOALS",
+      "version": 1,
+      "kind": "case",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "K02-2026-launch-locators",
+          "locator": "Practice point 1.2.1 and Figure 6: initial anemia investigation"
+        },
+        {
+          "source_id": "K02-2026-launch-locators",
+          "locator": "Practice point 3.1.2 and recommendation 3.1.1: correctable causes before anemia drug therapy"
+        },
+        {
+          "source_id": "K02-2026-launch-locators",
+          "locator": "Recommendation 3.3.1 and practice point 3.3.1: adult ESA maintenance target"
+        }
+      ],
+      "key_text": null,
+      "skill": "mixed_domain_reasoning",
+      "checked_claim": "Explicit CBC/reticulocyte/iron assessment and investigation of correctable causes rather than assumed EPO deficiency. Individualize adult ESA goals and avoid excessive Hb targets; the reviewed ceiling is below 115 g/L.",
+      "objective_support": [
+        {
+          "objective_id": "T08.O03",
+          "stage_ids": [
+            "stage-1",
+            "stage-2"
+          ],
+          "checked_claim": "Explicit CBC/reticulocyte/iron assessment and investigation of correctable causes rather than assumed EPO deficiency.",
+          "source_locators": [
+            {
+              "source_id": "K02-2026-launch-locators",
+              "locator": "Practice point 1.2.1 and Figure 6: initial anemia investigation"
+            },
+            {
+              "source_id": "K02-2026-launch-locators",
+              "locator": "Practice point 3.1.2 and recommendation 3.1.1: correctable causes before anemia drug therapy"
+            }
+          ]
+        },
+        {
+          "objective_id": "T08.O04",
+          "stage_ids": [
+            "stage-2",
+            "stage-3"
+          ],
+          "checked_claim": "Individualize adult ESA goals and avoid excessive Hb targets; the reviewed ceiling is below 115 g/L.",
+          "source_locators": [
+            {
+              "source_id": "K02-2026-launch-locators",
+              "locator": "Practice point 3.1.2 and recommendation 3.1.1: correctable causes before anemia drug therapy"
+            },
+            {
+              "source_id": "K02-2026-launch-locators",
+              "locator": "Recommendation 3.3.1 and practice point 3.3.1: adult ESA maintenance target"
+            }
+          ]
+        }
+      ],
+      "review_limit": "Synthetic open teaching discussion; prompts and cited teaching points are reviewed, no deterministic case key or clinical outcome is invented."
+    },
+    {
+      "id": "RN12-CASE-DRUG-AIN",
+      "version": 1,
+      "kind": "case",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "L01-AIN-treatment-review-2025-launch",
+          "locator": "Introduction and Discussion: diagnosis, underlying cause and offending-agent cessation"
+        },
+        {
+          "source_id": "L01-AIN-treatment-review-2025-launch",
+          "locator": "Methods inclusion criteria and Discussion: histologic evidence population and clinical uncertainty"
+        },
+        {
+          "source_id": "L01-AIN-treatment-review-2025-launch",
+          "locator": "Results, Discussion and Conclusion: variable steroid regimens and evidence limits"
+        }
+      ],
+      "key_text": null,
+      "skill": "mixed_domain_reasoning",
+      "checked_claim": "Evaluate a drug-related interstitial injury, stop/review the suspected exposure and discuss alternatives plus diagnostic/treatment limits.",
+      "objective_support": [
+        {
+          "objective_id": "T11.O02",
+          "stage_ids": [
+            "stage-1",
+            "stage-2",
+            "stage-3"
+          ],
+          "checked_claim": "Evaluate a drug-related interstitial injury, stop/review the suspected exposure and discuss alternatives plus diagnostic/treatment limits.",
+          "source_locators": [
+            {
+              "source_id": "L01-AIN-treatment-review-2025-launch",
+              "locator": "Introduction and Discussion: diagnosis, underlying cause and offending-agent cessation"
+            },
+            {
+              "source_id": "L01-AIN-treatment-review-2025-launch",
+              "locator": "Methods inclusion criteria and Discussion: histologic evidence population and clinical uncertainty"
+            },
+            {
+              "source_id": "L01-AIN-treatment-review-2025-launch",
+              "locator": "Results, Discussion and Conclusion: variable steroid regimens and evidence limits"
+            }
+          ]
+        }
+      ],
+      "review_limit": "Synthetic open teaching discussion; prompts and cited teaching points are reviewed, no deterministic case key or clinical outcome is invented."
+    },
+    {
+      "id": "RN-DIAL-004",
+      "version": 2,
+      "kind": "question",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G02-hyperkalemia-2026-07",
+          "locator": "Guidelines 18.1-18.2"
+        }
+      ],
+      "key_text": "Give indicated cardiac protection and arrange urgent dialysis; temporizing treatment does not remove the need for removal.",
+      "skill": "interpretation",
+      "checked_claim": "Selected July 2026 sections 14.1, 16.2, 16.3, 17.1-17.2 and 18.1-18.4 support the existing cardiac protection, redistribution/removal, ECG limits and glucose/potassium monitoring claims. No doses or evidence grades were changed.",
+      "citation_revision": {
+        "previous_version": 1,
+        "previous_source_id": "G02-hyperkalemia-2023",
+        "selected_source_id": "G02-hyperkalemia-2026-07",
+        "answer_choices_unchanged": true,
+        "source_currency_hold": "Selected passages only; the full July/2023 delta and correction/retraction closure remain unproved."
+      }
+    },
+    {
+      "id": "RN-K-001",
+      "version": 2,
+      "kind": "question",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G02-hyperkalemia-2026-07",
+          "locator": "Guideline 16.2a; STEP 1 cardiac protection"
+        }
+      ],
+      "key_text": "Reduce cardiac electrical toxicity while potassium-lowering treatment is arranged.",
+      "skill": "interpretation",
+      "checked_claim": "Selected July 2026 sections 14.1, 16.2, 16.3, 17.1-17.2 and 18.1-18.4 support the existing cardiac protection, redistribution/removal, ECG limits and glucose/potassium monitoring claims. No doses or evidence grades were changed.",
+      "citation_revision": {
+        "previous_version": 1,
+        "previous_source_id": "G02-hyperkalemia-2023",
+        "selected_source_id": "G02-hyperkalemia-2026-07",
+        "answer_choices_unchanged": true,
+        "source_currency_hold": "Selected passages only; the full July/2023 delta and correction/retraction closure remain unproved."
+      }
+    },
+    {
+      "id": "RN-K-002",
+      "version": 2,
+      "kind": "question",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G02-hyperkalemia-2026-07",
+          "locator": "Guidelines 16.3.1-16.3.2; 17.1.1-17.1.2"
+        }
+      ],
+      "key_text": "Insulin shifts potassium intracellularly; rebound can occur as that effect wanes.",
+      "skill": "interpretation",
+      "checked_claim": "Selected July 2026 sections 14.1, 16.2, 16.3, 17.1-17.2 and 18.1-18.4 support the existing cardiac protection, redistribution/removal, ECG limits and glucose/potassium monitoring claims. No doses or evidence grades were changed.",
+      "citation_revision": {
+        "previous_version": 1,
+        "previous_source_id": "G02-hyperkalemia-2023",
+        "selected_source_id": "G02-hyperkalemia-2026-07",
+        "answer_choices_unchanged": true,
+        "source_currency_hold": "Selected passages only; the full July/2023 delta and correction/retraction closure remain unproved."
+      }
+    },
+    {
+      "id": "RN-K-003",
+      "version": 2,
+      "kind": "question",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G02-hyperkalemia-2026-07",
+          "locator": "Guideline 17.2"
+        }
+      ],
+      "key_text": "Serial blood glucose monitoring for several hours, as well as potassium reassessment.",
+      "skill": "interpretation",
+      "checked_claim": "Selected July 2026 sections 14.1, 16.2, 16.3, 17.1-17.2 and 18.1-18.4 support the existing cardiac protection, redistribution/removal, ECG limits and glucose/potassium monitoring claims. No doses or evidence grades were changed.",
+      "citation_revision": {
+        "previous_version": 1,
+        "previous_source_id": "G02-hyperkalemia-2023",
+        "selected_source_id": "G02-hyperkalemia-2026-07",
+        "answer_choices_unchanged": true,
+        "source_currency_hold": "Selected passages only; the full July/2023 delta and correction/retraction closure remain unproved."
+      }
+    },
+    {
+      "id": "RN-K-004",
+      "version": 2,
+      "kind": "question",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G02-hyperkalemia-2026-07",
+          "locator": "Guideline 14.1; rationale on ECG sensitivity"
+        }
+      ],
+      "key_text": "The normal ECG does not exclude dangerous hyperkalemia or remove the need for urgent management.",
+      "skill": "interpretation",
+      "checked_claim": "Selected July 2026 sections 14.1, 16.2, 16.3, 17.1-17.2 and 18.1-18.4 support the existing cardiac protection, redistribution/removal, ECG limits and glucose/potassium monitoring claims. No doses or evidence grades were changed.",
+      "citation_revision": {
+        "previous_version": 1,
+        "previous_source_id": "G02-hyperkalemia-2023",
+        "selected_source_id": "G02-hyperkalemia-2026-07",
+        "answer_choices_unchanged": true,
+        "source_currency_hold": "Selected passages only; the full July/2023 delta and correction/retraction closure remain unproved."
+      }
+    },
+    {
+      "id": "RN-CASE-HYPERK",
+      "version": 2,
+      "kind": "case",
+      "reviewed_on": "2026-10-05",
+      "reviewer_kind": "assistant",
+      "independent_human_review": false,
+      "source_locators": [
+        {
+          "source_id": "G02-hyperkalemia-2026-07",
+          "locator": "Guidelines 16.2 and 18.1-18.2"
+        },
+        {
+          "source_id": "G02-hyperkalemia-2026-07",
+          "locator": "Guidelines 16.3 and 17.1.1-17.1.2-17.2"
+        },
+        {
+          "source_id": "G02-hyperkalemia-2026-07",
+          "locator": "Guidelines 18.1-18.4"
+        }
+      ],
+      "key_text": null,
+      "skill": "mixed_domain_reasoning",
+      "checked_claim": "Selected July 2026 sections 14.1, 16.2, 16.3, 17.1-17.2 and 18.1-18.4 support the existing cardiac protection, redistribution/removal, ECG limits and glucose/potassium monitoring claims. No doses or evidence grades were changed.",
+      "citation_revision": {
+        "previous_version": 1,
+        "previous_source_id": "G02-hyperkalemia-2023",
+        "selected_source_id": "G02-hyperkalemia-2026-07",
+        "answer_choices_unchanged": true,
+        "source_currency_hold": "Selected passages only; the full July/2023 delta and correction/retraction closure remain unproved."
+      }
+    }
+  ],
+  "programme_mapping": {
+    "id": "esen_eph",
+    "version": "2026-10-05-launch1",
+    "checked_on": "2026-10-05",
+    "evidence_sha256": {
+      "C01-linked-blueprint-20261005": "20e0d68613b660c9df1669a0958ec594e5cc317ea4f6e261ad9e994154482d9c",
+      "C01-renal-curriculum-2022": "1723591e724a1d27e40e80648c5c2854a2ac3dad211dcbc7fd077d02b9d74d16"
+    },
+    "excluded_question_ids": [
+      "RN-EVID-001",
+      "RN11-T17-004",
+      "RN11-T20-001",
+      "RN11-T20-003",
+      "RN11-T23-004",
+      "RN11-T26-001",
+      "RN11-T26-003",
+      "RN11-T26-004"
+    ]
+  },
+  "source_currency_holds": {
+    "provenance": "2c383bf8:docs/implementation/finalise-source-currency.md (parent integration 9d8f14f8)",
+    "checked_on": "2026-10-05",
+    "limit": "The report dispositions remain in force. This release is scoped authoring, not a new audit of the 35 inherited sources.",
+    "unverified_correction_incidence": [
+      {
+        "source_ids": [
+          "K13-2017",
+          "K13-2017-expansion"
+        ],
+        "notice_dois": [
+          "10.1016/j.kisu.2017.10.001"
+        ]
+      },
+      {
+        "source_ids": [
+          "K05-2024-amended",
+          "K05-2024-expansion"
+        ],
+        "notice_dois": [
+          "10.1016/j.kint.2024.04.003",
+          "10.1016/j.kint.2024.10.004"
+        ]
+      },
+      {
+        "source_ids": [
+          "G01-hyponatremia-2014",
+          "G01-hyponatremia-2014-expansion"
+        ],
+        "notice_dois": [
+          "10.1530/EJE-13-1020e"
+        ],
+        "hold": "Known July 2014 erratum; corrected-byte/latest-final closure unproved."
+      },
+      {
+        "source_ids": [
+          "L01-urine-eosinophils-2013"
+        ],
+        "notice_dois": [
+          "10.2215/CJN.05270418"
+        ],
+        "hold": "Known 2018 correction; publisher text and corrected-byte incorporation unproved."
+      }
+    ],
+    "hyperkalaemia": "Historical 2023 record retained; selected claims now cite the existing July 2026 record. Full delta unproved; review due 2026-10-19, not overdue on 2026-10-05."
+  },
+  "launch_scope": {
+    "facet_ids": [
+      "urinary_infection_gap",
+      "other_inherited_gap",
+      "pd_infection_gap",
+      "hd_access_gap",
+      "transplant_aftercare_gap",
+      "sexual_health_gap",
+      "transition_gap",
+      "end_of_life_gap"
+    ],
+    "questions_per_facet_minimum": 2,
+    "teaching_cases_per_facet_minimum": 1,
+    "focused_hd_case": {
+      "id": "RN12-CASE-HD-SESSION",
+      "version": 1
+    },
+    "required_objective_ids": [
+      "T01.O02",
+      "T08.O03",
+      "T08.O04",
+      "T09.O02",
+      "T11.O02",
+      "T25.O01"
+    ],
+    "independent_human_review": false,
+    "official_endorsement": false,
+    "limit": "Finite owner-authorised launch additions plus unchanged adopted breadth minima; not full curriculum depth or a complete official examination."
+  }
+}

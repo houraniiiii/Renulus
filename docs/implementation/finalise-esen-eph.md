@@ -1,5 +1,123 @@
 # ESENeph content finalisation
 
+## Current manufacturing handoff — immutable 1.1.2, October 5, 2026
+
+Recovered and finished the existing untracked `tools/content/author_launch_gaps.py`
+in one bounded authoring wave from `9985a4cc`. Current inherited model only; no
+descendants. This follow-up stays within `content/`, `tools/content/`,
+`tests/content/` and this report. The parent owns runtime, renderer, build
+integration, manufacture and its tracker. No GitHub operation or source-register
+edit is included. The completed currency handoff
+`2c383bf8:docs/implementation/finalise-source-currency.md` (integrated by the
+parent at `9d8f14f8`) was read and its holds retained. Parent manufacture steering
+at `b473ecb3`/`6ea2067a` requires a useful functional release, without an expanded
+currency audit or signing/clean-PC prerequisite.
+
+Published pack: `content/packs/renulus-foundations/1.1.2/`. Canonical pack SHA-256:
+`e6342f5c27b71def541585377f8ec35e4b865e6b037612cc00378a6e8d6ab144`.
+The normal latest-bundled selector can activate it. Exact selection remains
+`{id: renulus-foundations, version: 1.1.2}`; no new runtime contract or migration.
+
+| Evidence | Result |
+| --- | --- |
+| Adopted breadth | 27 topic identities, unchanged 56 objectives, minimum 150 retained |
+| Active General bank | 178 questions / families, 38 cases; adds 18 questions and 12 cases |
+| ESENeph | 170 mapped questions, dated `2026-10-05-launch1`, all 11 domains partial |
+| Previously empty facets | Eight now have at least two questions and one case each |
+| Objective-to-case links | All six previously missing links now explicitly supported; 56/56 linked |
+| Sources | 35 immutable inherited snapshots plus 12 new scoped records = 47 |
+| Review evidence | 36 rows: 18 questions, 12 cases, five citation-only question versions, one citation-only case version |
+| Remaining limits | Incomplete depth, four-choice items, eight General-only exclusions, 27 update-source cells awaiting currency review |
+
+The finite additions cover recurrent symptomatic lower UTI prevention,
+Alport-spectrum phenotype/testing, PD peritonitis and catheter infection, HD
+access and operational catheter care, BK recipient surveillance, contraception,
+child/adult transition and actual possible-dying support. The extra cases
+explicitly teach non-GFR creatinine determinants, anemia investigation and ESA
+goals, symptomatic BP tolerance, drug-related interstitial injury, and tailored
+nutrition/activity. Two focused HD cases now address continuing treatment.
+Stable alignment IDs with historical `_gap` suffixes remain stable; their new
+status is partial and their wider gaps are stated. No old question is retagged
+to make a facet count pass. Candidate objectives do not become recipient
+aftercare evidence, and ADPKD objectives do not become Alport evidence.
+
+Original synthetic content was checked against the interrupted wave's dated
+public primary readings and selected public publisher/official passages. Source
+records include editions, locators, access outcomes, rights notes and available
+byte hashes. NICE NG112/NG43/NG31 support their narrow UK service/prevention
+scopes; ERKNet/ERA/ESPN supports Alport; ISPD supports scoped PD diagnosis and
+catheter assessment; UKKA vascular access supports HD; the 2024 BK consensus
+supports recipient aftercare; CDC U.S. MEC is explicitly supplementary US
+contraceptive safety evidence; KDIGO 2024 CKD and 2026 anemia support the missing
+case links; the 2025 AIN systematic review retains treatment uncertainty. Third
+party originals, tables, algorithms and official questions are not bundled.
+
+Recovery fixed the draft's unescaped possessives, the Alport Q7 contextual
+diagnosis locator (Q8, with Q9 test limits and Q16/Q19 biopsy/nephrotic context),
+and the descriptions of the two ISPD corrigenda. The 2023 notice changes Figure
+8 treatment; the 2024 notice changes the refractory-peritonitis definition.
+Those corrected treatment/refractory algorithms are not authored in this pack.
+A failed publisher full-text request is not recorded as successful corrected-byte
+verification. No current-source clearance is inferred from publication.
+
+Direct reading of the already-present UKKA July 2026 revision supports the
+selected cardiac-protection, redistribution/removal, ECG-limit and monitoring
+claims. `RN-DIAL-004`, `RN-K-001` through `RN-K-004` and `RN-CASE-HYPERK` advance
+to version 2 with July-source IDs and relevant locators. Stems, options, answer
+values, families and objective links remain unchanged; no grade or dose is
+changed. Version-1 keys and source records remain available after upgrading
+an installed historical pack. The old source record retains its historical URL.
+The full July/2023 delta remains outside this wave; review is due October 19,
+2026, not overdue on October 5.
+
+The review JSON retains source-currency hold provenance and exact correction
+relationships for both AAV and CKD-MBD records, both hyponatremia records and
+the urine-eosinophil study. It does not reinterpret unavailable correction
+bodies. Generic appraisal and the four objective mismatches stay excluded from
+the ESENeph pool. All earlier pack, mapping, review and required-cell files
+remain byte-for-byte unchanged.
+
+Bounded validation: the release publisher passed pack/revision/review checks,
+the existing pack CLI passed against all four historical predecessors with
+36 review rows, and the new required-cell receipt passed reproduction. The
+single full content-suite run finished with 126 passed and four fixture failures
+in 192.91 seconds. Two fixtures assumed the old latest counts, and two installed
+missing historical version-1 items after a fresh profile had already loaded
+version 2. Those fixtures now use the actual current counts and chronological
+historical installation. Only their four affected cases were rerun: **4 passed
+in 12.63 seconds**. All 130 content test cases are therefore covered by the full
+run plus that focused rerun; no second full suite was run. No runtime guard was
+relaxed. New tests verify exact release/mapping/review reproduction, the actual
+facet and objective links, and unchanged historical key/source/family evidence
+after canonical installation and repository restart. Existing upgrade tests
+exercise all four predecessors; the committed assessment/feedback test now
+continues through automatic 1.1.2 activation on restart.
+
+Both JUnit receipts are ignored local evidence in
+`.local/esen-eph/gap-release/recovery-content-tests.xml` and
+`recovery-content-fixed-fixtures.xml`. `git diff --check` passed. Historical
+pack/mapping/review/required-cell diffs are empty. The handoff commit subject is
+`Finish finite content additions in immutable release 1.1.2`; its exact SHA is
+returned with this report, without creating a self-referential committed hash.
+
+```powershell
+python tools/content/author_launch_gaps.py
+python tools/content/validate_pack.py content/packs/renulus-foundations/1.1.2 --predecessor content/packs/renulus-foundations/1.0.0 --predecessor content/packs/renulus-foundations/1.0.1 --predecessor content/packs/renulus-foundations/1.1.0 --predecessor content/packs/renulus-foundations/1.1.1 --review-evidence content/reviews/renulus-foundations-1.1.2.json
+python tools/content/check_required_cells.py --release content/packs/renulus-foundations/1.1.2 --output content/required-cells/renulus-foundations-1.1.2.json --check
+python -m pytest tests/content -q --junitxml=.local/esen-eph/gap-release/recovery-content-tests.xml
+```
+
+No essential source access blocks this finite release. Wider renal genetics,
+IgA/anti-GBM depth, complete HD/PD prescription or infection algorithms, broad
+recipient aftercare, fertility/sexual dysfunction and renal terminal drug doses
+would materially extend authoring and are deferred with visible partial
+coverage. Functional release does not mean a complete official exam bank or
+clinical/educational efficacy. Human review is accurately absent, without
+becoming a new manufacturing gate. No provider, paid API, private material,
+model/OCR/helper or native application workload was used.
+
+The following sections are preserved historical 1.1.1 and earlier lane evidence.
+
 October 5, 2026. Issue #19; worktree `C:/rn-finalise-20261005/lanes/esen-eph`,
 branch `build/finalise-esen-eph`, starting commit
 `9d26f1eedf31cd488b9aab5837a105ee152d9efa`. Parent owns assessment/Flow
