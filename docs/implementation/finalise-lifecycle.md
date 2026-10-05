@@ -11,8 +11,8 @@ four file hashes and source paths are retained in the ignored metadata.
 The parent supplied accepted source freeze
 035ca7bd07337c65266c17f9b762ca1f97238e11 on October 5. Expected delivery roots are
 C:/Renulus-native-delivery/desktop-20261005/matching-035ca7bd and installed-035ca7bd.
-Package was reported running in parent session 61735; no Package completion,
-Install or native17 receipt was supplied. This lane does not query that process
+At initial preparation, Package was reported running in parent session 61735;
+no Package completion, Install or native17 receipt was supplied. This lane does not query that process
 or credit an unperformed gate. The new migration and UI are integrated at the
 supplied freeze; receipt binding and all actual lifecycle execution remain pending.
 
@@ -34,9 +34,9 @@ base 0618e3fb is not relabelled as the accepted freeze.
 
 | Parent gate | Small executable recipe and required observation |
 | --- | --- |
-| Admission | bind-lifecycle.ps1 requires actual matching Package/Install/native17, passed connected and live journeys with ordinary closes, f316 predecessor receipts and actual NSIS policy-provenance.json. Derive revision, installer, exact compiled target and closed native17 restored-profile from those inputs. Refuse partial/fixture/stale identities; preserve E and both checkpoints. |
+| Admission | bind-lifecycle.ps1 requires actual matching Package/Install/native17 and passed connected proof, plus either passed live journeys or one terminal external-access-blocked selected-account probe with exact source/executable and ordinary physical close. f316 predecessor receipts and actual NSIS policy-provenance.json remain required. Derive revision, installer, exact compiled target and closed native17 restored-profile from those inputs. Refuse partial native/connected or stale identities; preserve E and both checkpoints. |
 | Populated forward migration, interruption and refusal | run-storage.ps1 creates one small owned scratch/profile. Installed f316 Database seeds a saved synthetic case, preference, evidence and deletion marker. Current bundled Database executes actual 002 SQL; one self-owned unclean exit occurs after both DDL statements and before ledger commit. A fresh process must find neither tables nor ledger and unchanged populated rows. Complete/replay migration without changing cases-001; actual installed originals functions save/read a PDF across two base64 parts. Reopen, checksum-drift and schema-99 refusal retain records/integrity. |
-| Installation lifecycle after live proof | run-maintenance.ps1 snapshots only the retired synthetic profile, uninstalls the exact accepted current target once, verifies retention while closed, reinstalls the same installer to the same now-absent target with test-installer.ps1 -InstallOnly, then performs one ordinary reopen/close and canonical/original comparison. The actual new install receipt must match the earlier installer, EXE, ASAR and source identity. |
+| Installation lifecycle after terminal live receipt | run-maintenance.ps1 snapshots only the retired synthetic profile, uninstalls the exact accepted current target once, verifies retention while closed, reinstalls the same installer to the same now-absent target with test-installer.ps1 -InstallOnly, then performs one ordinary reopen/close and canonical/original comparison. The actual new install receipt must match the earlier installer, EXE, ASAR and source identity. |
 | Optional exact old/current compatible opens | run-compatible-open.ps1 opens receipt-bound f316/current on the same closed native17 restored-profile, with ordinary owning main/backend exit and identical canonical/original snapshots after each. No restore/downgrade, imports, models, quizzes or native17 repetition. An old API/content incompatibility remains a failed result; app compatibility does not replace the real migration gate. |
 
 The NSIS policy source in apps/desktop/scripts/restage-nsis.py compiles
@@ -48,6 +48,19 @@ maintenance. Residual handling admits only the observed expected uninstaller
 with unchanged hash and a verified empty exact directory, with literal
 nonrecursive removal. Unexpected residuals stop the run. No broad/forced delete,
 registry bypass, renaming, unowned process termination or checkpoint uninstall.
+
+October 5 bounded amendment to f9b1dabc: a truthful terminal external live blocker
+does not prevent independent local storage/maintenance acceptance. The existing
+bounded-live-provider-acceptance receipt must be mode probe/status blocked, with
+selected-account evidence, an explicit subscription_limit, authentication_required,
+account_unsupported or recognised model-access code, exact source/executable and
+ordinary physical close of its observed current main/backend identities. Both
+shutdown and the live recipe's failureClose receipt are supported. The binding
+retains the actual live receipt/hash and an explicit live_admission.external_blocker;
+live_journeys_passed and live_flow_pass_credited are false. No live flow is promoted
+to passed. Native17, connected, source/artifact and NSIS identities remain intact.
+Driver/local failures, timeouts, generic provider failures, missing selection,
+unconfirmed close and a merely passed probe do not satisfy this amendment.
 
 Maintenance uses f316 bundled Python only as a stdlib read-only snapshot reader
 while current Python is absent. App children use OS-only PATH. Actual migration
@@ -71,7 +84,7 @@ $inputs = @{
     InstallReceipt = $actualCurrentInstallReceipt
     Native17Receipt = $actualCurrentNative17Receipt
     ConnectedReceipt = $actualCurrentConnectedReceipt
-    LiveReceipt = $actualCurrentLiveJourneysReceipt
+    LiveReceipt = $actualCurrentLiveTerminalReceipt
     PredecessorPackageReceipt = $actualF316PackageReceipt
     PredecessorInstallReceipt = $actualF316InstallReceipt
     NsisPolicyReceipt = $actualCurrentPolicyProvenance
@@ -100,10 +113,15 @@ this dedicated worktree. All five PowerShell files parse without AST errors;
 the JavaScript file passes node --check without imports. Python files received
 source inspection only; no interpreter was invoked. No current receipt was
 bound, no scratch/profile was created, and no runtime acceptance is claimed.
+The bounded amendment adds 16 in-memory receipt-metadata checks of the extracted
+admission function: valid pass/blocker branches and refusal of wrong identities,
+driver/timeout/provider errors, missing selection and incomplete physical close.
+All 16 match their expected disposition; every admitted external blocker records
+false live pass credit. This is metadata validation, not actual live/local proof.
 
 | Ignored executable | SHA256 |
 | --- | --- |
-| bind-lifecycle.ps1 | 26b106822611a1a3a10b937d4a06c3f093cbc1dc36cbd9a6ed36a022e6d3be92 |
+| bind-lifecycle.ps1 | 8cb42b43ff5b190265f09772a328bbcc2573e522d71f05911372612b06041f4d |
 | common.ps1 | 792d774f294e13e1b3086963b3a63ee5a0032a6845fe453ca5b775852619ab54 |
 | reopen-synthetic.mjs | 514140b83c51aca407afa1f846062caa0c5e72d705c452567194d2a142d88d0e |
 | run-compatible-open.ps1 | 810cbd3395f65c9279b88ed71c5cf9dd6399a59c314b96cbd3a35118beb3fa6a |
@@ -116,5 +134,7 @@ Remaining acceptance is parent execution on the matching accepted current
 installation. Storage receipts establish the actual coordinator/SQL boundary,
 not native refusal presentation or a physical power-loss event. Same-profile
 opens establish only observed compatibility. Synthetic retention proves only
-the explicit owned profile. Source, artifact, native, connected and live gates
-remain prerequisites; preparation does not close S0/S6 lifecycle requirements.
+the explicit owned profile. Source/artifact, native17 and connected passes remain
+required; live journeys may remain explicitly externally blocked while local
+lifecycle gates proceed. Preparation does not close S0/S6 lifecycle requirements
+or establish a live flow pass.
