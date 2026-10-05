@@ -95,3 +95,55 @@ Cold engine I/O, CPU contention, serialized native search/FTS and metadata volum
 can still increase request time; this patch does not promise a 30-second retrieval
 bound or uninterrupted metadata during explicit backup/restore/index rebuild.
 Native steady-state gates now pass independently of this patch.
+
+## Parent integration and replacement follow-up
+
+October 5, 2026 UTC. The reviewed patch is integrated as `a5488b2d`; the
+matching replacement is explicitly frozen at
+`3ff9b0d6145c8d52f4c9e9b0a3009f0fc351c4cc`. Subsequent heartbeat, evidence,
+packaging-controller and privacy-test commits do not modify its runtime.
+The runtime tree hash is `750d079f79c0326a79e947028129c1d8d3468a96` across
+the worker commit, integration and replacement freeze.
+
+Parent integration passed **38 Library document/page/collection API and exact
+passage-citation checks**, no skips, in 734.39 seconds. The exact command,
+log and JUnit are retained under ignored
+`.local/integration-responsiveness-20261005T0345/`.
+
+Focused compatibility finished with **11 passed / three failed**, no skips,
+in 377.40 seconds. Four backup cases, cancellation/replacement/deletion races,
+physical Lance pruning and interrupted restart passed. The three rebuild
+failures were native LanceDB persistence errors at a 264-character destination
+under a 118-character profile root. Each of those unchanged tests passed at
+compact E scratch (**three passed / 26.84 seconds**). The original failures
+remain recorded; these results support a Windows long-path limitation rather
+than accepting long-profile support. The broad attempt was interrupted after
+two passes and is not a completed result. Pauli's ignored compatibility handoff
+and exact paths are under the lane's
+`.local/verification/20261005-0339-compatibility/`; its workers are stopped.
+
+The bounded actual-engine rerun passed format-2 delivery/recovery (212.76
+seconds call time). Its PDF/PNG cases initially reached ready extraction/OCR
+but failed in the privacy scanner while reading Qdrant's exclusively leased
+13-byte `.lock` marker. A test-only correction closes the synthetic derived
+memory index under its existing lock, retains all files, and scans every
+profile file and canonical row. It leaves the Case controller/API live.
+Three focused checks passed (39.12 seconds), including lazy recall rebuild,
+retained payload/marker detection and unrelated read-error propagation.
+The corrected PDF/PNG journeys both passed (137.43 seconds), completing
+preview/OCR, Apply, temporary handoffs, explicit Save, deletion and privacy
+scans. Reports and JUnit are under ignored
+`.local/backend-final-residual-20261005T0348Z/` and
+`.local/backend-final-lease-20261005T0402Z/`. The original failed run remains
+separate; the interrupted earlier full engine/core results are not repaired
+or summed by these targeted passes. The helper slot was released at 04:06:03 UTC.
+
+The owned old app/backend closed cleanly at 03:44 UTC; its profile and exact
+`ebb2db2e` installation remain preserved. Replacement staging verified all
+39,236 public payload inventory entries and copied/refreshed a 2,169,529,464-byte
+public backend for `3ff9b0d6`. The renderer build then failed at 04:10 UTC:
+Vite received an empty `RENULUS_BACKEND_URL` and rejected it as an invalid URL.
+This packaging-environment failure is retained in the immutable run evidence;
+the packaging lane owns correction and bounded compilation/package recovery.
+Installed replacement acceptance still requires the normal shortcut's
+Library25, search and citation journey with the active learning queue.
