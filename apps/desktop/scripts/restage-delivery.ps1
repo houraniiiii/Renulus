@@ -21,7 +21,9 @@ function Assert-RestageGate([string]$Commit, [string]$Action, [bool]$Accepted, [
 }
 
 function Assert-PublicGeneratedPath([string]$Value, [switch]$Fresh) {
-    if (-not [IO.Path]::IsPathFullyQualified($Value)) { throw 'Use an absolute generated path.' }
+    # Generated delivery paths are local drive paths. This also supports the
+    # Windows PowerShell 5.1 runtime, which lacks Path.IsPathFullyQualified.
+    if ($Value -notmatch '^[A-Za-z]:[\\/]' -or $Value -match '[\x00-\x1f]') { throw 'Use an absolute local generated path.' }
     $absolute = [IO.Path]::GetFullPath($Value)
     if (-not $absolute.StartsWith($renulusExternalRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
         throw 'Generated outputs must stay below the exact authorised E delivery root.'

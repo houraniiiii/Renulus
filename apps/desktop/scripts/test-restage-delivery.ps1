@@ -14,7 +14,7 @@ foreach ($action in @('Package', 'Install', 'Proof')) {
 }
 Expect-Refusal { Assert-RestageGate $newRevision 'Proof' $true $false } 'occupied native slot'
 Assert-RestageGate $newRevision 'Proof' $true $true
-foreach ($path in @('E:/Renulus-native-delivery/desktop-20261005/data/learning', 'E:/Renulus-native-delivery/desktop-20261005/repo/new-output', 'E:/Renulus-native-delivery/desktop-20261005-other/proofs/new', 'C:/unexpected-output', 'E:/Renulus-native-delivery/desktop-20261005/proofs/../../escape')) {
+foreach ($path in @('E:/Renulus-native-delivery/desktop-20261005/data/learning', 'E:/Renulus-native-delivery/desktop-20261005/repo/new-output', 'E:/Renulus-native-delivery/desktop-20261005-other/proofs/new', 'C:/unexpected-output', 'E:/Renulus-native-delivery/desktop-20261005/proofs/../../escape', 'E:relative-output', '\\server\share\output')) {
     Expect-Refusal { Assert-PublicGeneratedPath $path } 'private, source or escaped output'
 }
 $testRoot = Assert-PublicGeneratedPath (Join-Path $renulusExternalRoot ('temporary/restage-tests-' + [Guid]::NewGuid().ToString('N'))) -Fresh
