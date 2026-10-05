@@ -437,12 +437,18 @@ class ProviderManager:
             yield event("started", provider=provider, model=chosen, scope=scope.kind.value,
                         purpose=purpose, input_capability="image" if images else "text",
                         capability_status=capability["image_input" if images else "text_input"])
+            if run.stopped.is_set():
+                yield event("cancelled")
+                return
             if purpose != "compaction":
                 plan = self.context.plan(messages, provider=provider, model=chosen)
                 if plan.turns is not None:
                     identity = self._settings["connections"].get(provider)
                     yield event("progress", stage="compaction", status="started",
                                 estimated_tokens=plan.before, provider=provider, model=chosen)
+                    if run.stopped.is_set():
+                        yield event("cancelled")
+                        return
                     run.pending = asyncio.create_task(self._finish_context(plan, scope=scope,
                         run_id=durable_id("compact"), provider=provider, model=chosen, session_id=session_id))
                     try:
