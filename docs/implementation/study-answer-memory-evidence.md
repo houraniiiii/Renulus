@@ -49,6 +49,22 @@ records without automatic answer capture. Existing extraction bounds remain
 helper retains its 512-token fact/query limit. There is no backfill from
 historical topic-only evidence and no new provider or local model.
 
+These are local implementation budgets, not live account quotas. Automatic
+general-point capture performs additional asynchronous generation through the
+currently selected subscription with `purpose='memory-extraction'`; it uses
+that account's allowance and requires an authenticated, available model.
+The controlled proof does not establish live account capacity or an unlimited
+background allowance. Extraction has an existing 120-second timeout. No
+separate paid API, subscription switch or local generative fallback is used.
+
+Provider/account failures preserve the durable Learn answer and reference job
+without inserting invented facts. Mem0 2.2.1 wraps extraction exceptions in
+`LLMError`, so the memory job can expose the generic `memory_capture_failed`
+code even when the provider's underlying failure is an account usage limit.
+The existing `/api/v1/memory/retry` path retries failed jobs once the selected
+account is usable; it rechecks source eligibility, deletion, version and
+suppression first. This lane did not exercise a live account or measure quota.
+
 ## Verification
 
 `tests/memory/test_study_answer_capture.py` exercises the real Learn producer,
@@ -76,3 +92,18 @@ benchmark, live profile, credential, paid provider or external API was used.
 These checks prove the implemented capture and retention boundaries; the
 controlled generated facts are not evidence of educational or clinical
 accuracy.
+
+## Read-only integration audit
+
+After integration as `d9d2e573`, audited parent `8f6de976` on 2026-10-05
+from 01:30:52 UTC without another test sweep or production edits. `current(job)`
+requires a running unsuppressed job, resolves its original scope/reference
+again, and compares the producer fingerprint. Missing/tombstoned replies or
+runs, deleted threads/evidence, changed reply content, and evidence reclassified
+away from ordinary Study resolve to an `ApiError` and therefore `False`.
+The provider checks this guard before generation and on each returned delta.
+The final canonical commit checks it under SQLite `BEGIN IMMEDIATE`, so a
+source change cannot commit concurrently between that check and fact insertion.
+No concrete deletion/reclassification commit-fence blocker was found. This
+audit concerns queued/in-flight capture; it does not add a policy for deleting
+already committed general learning points when their Study thread is removed.
