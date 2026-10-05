@@ -112,6 +112,16 @@ baseline sources subject to current-evidence review. The canonical
 [GD update page](https://kdigo.org/guidelines/gd/) and linked combined PDF
 provide the replacement provenance.
 
+## October 5, 2026 currency reconciliation
+
+The dated [final source-currency review](implementation/finalise-source-currency.md)
+checks the 35 teaching-pack baselines against primary publication records and
+records correction, replacement and access limits separately. It identifies
+references requiring scoped review in a new immutable content release. It does
+not establish complete corrected-current clearance; blocked publisher bodies
+and unverified changes remain explicit. Historical user imports retain their
+edition, permission and original bytes.
+
 ## Acquisition and currency contract for implementation
 
 For each acquired record, store the register ID, source owner and canonical
