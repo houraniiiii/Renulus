@@ -1,5 +1,4 @@
 /** Packaged viewer/source proof. Library DTO/PDF fixtures are synthetic, not ingestion evidence. */
-import { _electron as electron } from '@playwright/test';
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { randomBytes, createHash } from 'node:crypto';
 import { createServer } from 'node:http';
@@ -10,6 +9,15 @@ import { syntheticPdf } from './synthetic-pdf.mjs';
 import { capturePdfFrames, classifyPdfFrames } from './pdf-viewer-evidence.mjs';
 import { proveNativeProductBackup } from './native-product-backup.mjs';
 import { createNativeEvidence } from './native-evidence-directory.mjs';
+
+export function validateJourneyEntry(args, env) {
+  if (args.length > 1 || args.length === 1 && args[0] !== '--installed-product') throw new Error('Use no argument for declared fixtures, or --installed-product for actual installed acceptance.');
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,79}$/.test(env.RENULUS_NATIVE_SLOT ?? '') || !/^[0-9a-f]{40}$/.test(env.RENULUS_EXPECT_SOURCE_REVISION ?? '')) throw new Error('Native journeys require the parent-assigned slot and exact immutable freeze. Use verify-installed-product.mjs --plan without launching.');
+  return args[0] === '--installed-product' ? 'installed-product' : 'declared-fixtures';
+}
+
+async function runFixtureJourney() {
+const { _electron: electron } = await import('@playwright/test');
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourceDesktop = process.env.RENULUS_SOURCE_DESKTOP;
 const expectedRevision = process.env.RENULUS_EXPECT_SOURCE_REVISION;
@@ -56,7 +64,7 @@ const revision = { id: 'native-pdf-revision', document_id: 'native-pdf-document'
 const document = { id: revision.document_id, title: 'Synthetic two-page PDF viewer fixture', source_id: metadata.source_id, status: 'ready', reserved: false, active_revision: revision.id, latest_revision: revision.id, revisions: [revision], cleanup_pending: false };
 const citation = { document_id: document.id, document_revision: revision.id, title: document.title, page: 2, locators: [{ item_ref: 'synthetic-page-two', page: 2, char_span: [0, 18] }], original_url: '/library/revisions/native-pdf-revision/original' };
 let application;
-const result = { checkedAt: new Date().toISOString(), executable, sourceProvenance, pdfFixture: { sha256: revision.sha256, pages: 2, citationPage: 2 }, limits: ['Library DTO/original requests use declared synthetic fixtures; no parsing/indexing proof', 'No account, provider inference or private original', 'System-browser observation recorded separately'] };
+const result = { kind: 'declared-viewer-source-fixtures', checkedAt: new Date().toISOString(), executable, requestedRevision: expectedRevision, sourceProvenance, pdfFixture: { sha256: revision.sha256, pages: 2, citationPage: 2 }, limits: ['Library DTO/original requests use declared synthetic fixtures; no parsing/indexing proof', 'No account, provider inference or private original', 'System-browser observation recorded separately'] };
 if (sourceDesktop) result.limits.push('Unchanged committed source main/preload/renderer with attached fixture metadata; not an installed app or real backend/Home/module/managed-child readiness proof');
 try {
   const startedAt = Date.now();
@@ -127,3 +135,12 @@ finally {
 }
 console.log(JSON.stringify({ evidence, error: result.error?.message, pdfViewerBlocked: result.pdfViewer?.blocked, publisher: result.publisher }));
 if (result.error) process.exitCode = 1;
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const mode = validateJourneyEntry(process.argv.slice(2), process.env);
+  if (mode === 'installed-product') {
+    const { runInstalledProduct } = await import('./verify-installed-product.mjs');
+    await runInstalledProduct();
+  } else await runFixtureJourney();
+}
