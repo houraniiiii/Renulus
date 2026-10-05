@@ -8,6 +8,8 @@ import { randomUUID } from 'node:crypto';
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const localEvidenceRoot = path.join(desktop, 'test-results');
 export const externalEvidenceRoot = path.resolve('E:/Renulus-native-delivery/desktop-20261005/proofs');
+export const ssdEvidenceRoot = path.resolve('C:/Renulus-native-delivery/desktop-20261005/proofs');
+const authorisedEvidenceRoots = [localEvidenceRoot, externalEvidenceRoot, ssdEvidenceRoot];
 const identity = value => process.platform === 'win32' ? value.toLowerCase() : value;
 
 function rejectReparseAncestors(value) {
@@ -20,7 +22,7 @@ function rejectReparseAncestors(value) {
 export function nativeEvidenceRoot(requested = process.env.RENULUS_NATIVE_EVIDENCE_ROOT) {
   if (requested && !path.isAbsolute(requested)) throw new Error('An absolute synthetic evidence root is required.');
   const root = path.resolve(requested || localEvidenceRoot);
-  if (![localEvidenceRoot, externalEvidenceRoot].some(allowed => identity(allowed) === identity(root))) throw new Error('Use the desktop test-results or exact authorised E proofs root.');
+  if (!authorisedEvidenceRoots.some(allowed => identity(allowed) === identity(root))) throw new Error('Use the desktop test-results or exact authorised C or E proofs root.');
   rejectReparseAncestors(root);
   return root;
 }
@@ -28,7 +30,7 @@ export function nativeEvidenceRoot(requested = process.env.RENULUS_NATIVE_EVIDEN
 export function assertSyntheticEvidenceDirectory(value) {
   if (!path.isAbsolute(value)) throw new Error('An absolute synthetic evidence directory is required.');
   const directory = path.resolve(value);
-  if (![localEvidenceRoot, externalEvidenceRoot].some(root => {
+  if (!authorisedEvidenceRoots.some(root => {
     const relative = path.relative(root, directory);
     return relative && !relative.startsWith('..') && !path.isAbsolute(relative);
   })) throw new Error('The synthetic evidence directory must be a descendant of an owned proof root.');

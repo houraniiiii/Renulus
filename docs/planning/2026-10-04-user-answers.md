@@ -328,3 +328,20 @@ The integration owner relocated the active checkout to
 worktree links. The old E checkout path is a junction for launcher compatibility;
 the learning profile and acquired originals remain on E. This storage change
 does not update the installed product revision.
+
+## October 5 Windows acceptance update
+
+The owner confirmed that only the current PC is available and explicitly asked
+to remove signing and separate clean Windows PC/VM acceptance requirements.
+
+- Deliver an unsigned Windows app and validate it on this PC.
+- Keep matching source/artifact provenance, bundled runtime with developer tools
+  absent from the app PATH, fresh isolated installation, normal shutdown/reopen,
+  recovery and the connected product journeys as acceptance requirements.
+- A second isolated installation/profile on this machine can establish restore
+  and instance isolation; do not call that a separate clean-machine test.
+- Signing and a separate clean-machine test are optional future distribution
+  work and are not blockers or missing inputs for this goal.
+- Preserve historical signed-release/clean-machine planning and observations as
+  dated evidence; the updated DECISIONS and implementation plan govern current
+  acceptance. No subscription, stack, source-use or retention constraint changed.

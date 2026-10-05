@@ -46,9 +46,9 @@ uncertainty does not turn into another questionnaire.
 | Source acquisition/currency | Single SOURCES register; publisher downloads, supported literature datasets/APIs and authorised user imports | Current final edition/corrigenda, chapter replacement, retractions, access/operation records, user import and update journeys |
 | Optional retrieval connections | User-supplied web/literature API keys, separately scoped from generative subscriptions | Reused Hermes tool adapters, protected credentials, explicit activation, quotas/cost caps and honest unavailable-key states |
 | Supermemory | Excluded from adoption | Preserve earlier evaluation and the [selected-stack evidence](../research/2026-10-04-starting-stack-evidence.md); no replacement decision is pending |
-| Distribution | Bundle the selected runtime, native dependencies and helper artifacts | Compatible version lock, hashes/notices, clean Windows installation and no doctor-managed model service |
+| Distribution | Bundle the selected runtime, native dependencies and helper artifacts | Compatible version lock, hashes/notices, fresh isolated Windows installation on the owner's current PC and no doctor-managed model service |
 | Parallel work | One owned vertical slice per branch/worktree, one coordinated shared-contract/migration path | Isolated runtime and installer identities, dependency-first merges, combined real journeys |
-| Release | Working features and a measurable broad-domain coverage manifest | Required capabilities/coverage met; real installer, signed updates, migration/restore and accessibility |
+| Release | Working features and a measurable broad-domain coverage manifest; unsigned delivery on the owner's current PC per October 5 decision | Required capabilities/coverage met; matching installer and artifact provenance, migration/restore, normal shutdown/reopen and accessibility; signing/separate clean-machine checks are optional future distribution work |
 
 These are engineering baselines, not claims of implemented functionality. Exact
 pins, capability evidence and failures belong in the implementation record.
@@ -73,8 +73,10 @@ capability; do not mistake them for permission to incur usage during development
 or to introduce a paid generative fallback.
 
 Operational inputs will be needed at the relevant stage: users connect their own
-accounts; Figma work needs an accessible file/account; public signed releases
-need a publisher identity and signing setup. None requires reopening product
+accounts; Figma work needs an accessible file/account. The owner removed required
+signing and separate clean-machine acceptance on October 5; neither is a missing
+input for the current Windows delivery. A future signed public release may need
+its own publisher setup. None requires reopening product
 scope or reading private account state during planning.
 
 This remains a real-product plan. Prototypes are decision aids; only functioning

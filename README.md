@@ -49,5 +49,7 @@ HybridChunker, FastEmbed and LanceDB OSS** behind Hermes. SQLite holds canonical
 records; engine indexes are derived. Renulus manages CPU helpers in the
 background. Dependencies and public helper artifacts are pinned; actual offline
 extraction, embeddings, retrieval, memory and rebuild evidence is recorded in
-`docs/implementation/`. Live subscription generation, signing and a clean-machine
-release must be established separately from synthetic application checks.
+`docs/implementation/`. Live subscription generation and matching installed
+acceptance on the owner's Windows PC must be established separately from
+synthetic application checks. The owner selected unsigned current-PC delivery
+on October 5; signing and separate clean-machine tests are future options.

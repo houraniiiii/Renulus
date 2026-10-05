@@ -50,6 +50,7 @@ remain proposals unless accepted here.
 | Record authority | Canonical source and learner records stay in local SQLite. Mem0/Qdrant and LanceDB representations are derived and rebuildable. |
 | Supermemory | Excluded from adoption by the user in the later 2026-10-04 research round; the reusable engine itself must be open source. Earlier evaluation remains dated evidence. |
 | Delivery standard | Real working product. Prototypes inform production work; mock screens, hardcoded responses and disconnected modules do not establish completion. |
+| Current Windows acceptance | On October 5, 2026 the owner chose an unsigned build installed and validated on the current Windows PC. A signing identity and a separate clean PC/VM are not required for this delivery. Matching source/artifact provenance, bundled runtime with developer tools absent from the app PATH, installation, shutdown/reopen, recovery and connected journeys remain required. Signing and separate clean-machine tests are optional future distribution work. |
 | Work organisation | Staged vertical implementation slices, clear module ownership, parallel worktree plan and multiple adversarial review waves. |
 | Licensing | MIT for Renulus's own code; CC BY 4.0 for original Renulus teaching content. Permissive commercial reuse with attribution; third-party terms remain independent. |
 | Design workflow | Figma with Impeccable and Interface Design. |
