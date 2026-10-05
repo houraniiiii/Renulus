@@ -47,8 +47,27 @@ full regression started at 02:23 UTC on SSD scratch, with a 2.4 GB free-space
 gate. Synthetic scratch is `C:/Users/karol/.rn-final2`; its child TEMP/TMP is
 `C:/Users/karol/.rn-tmp2`. Final logs and JUnit output stay on E at
 `rn-backend-ssd-20261005.log` and `rn-backend-ssd-20261005.xml`. Its final
-result remains pending until observed. Native build/install/proof outputs
-remain on the authorised E root.
+result is **not accepted**. Capacity fixtures exhausted C at approximately
+02:33 UTC, producing setup failures and an explicit `OSError: [Errno 28] No
+space left on device` during pytest cache/session finalization. The run reached
+100%, but no all-passing total is attributed to it. Its individual failures
+require a clean resource-aware rerun before they can be adjudicated as product
+defects. The earlier complete 807-check baseline and later focused results
+remain separate evidence. Native build/install/proof outputs remain on E.
+
+An attempt to release only completed synthetic capacity files was automatically
+rejected as `blocked by policy`. Explicit owner authorization to remove this
+run's generated `C:/Users/karol/.rn-final2` scratch is pending; the rejected file
+removal was not retried or bypassed. Development has continued in a fresh clone
+of the same Renulus integration branch at the reserved E delivery root, with
+the same sole origin. Original workspaces and source data remain preserved.
+
+The exact matching unsigned Windows installer completed at 02:35 UTC. It is
+965,927,137 bytes, SHA-256
+`8cce7d8a887fbf0ed20cae4315df14ea103224f551a550d5a4ae8efc8d023c42`.
+Native source Save/Cancel/error/partial-file proof passed four cases against the
+frozen application; matching installed lifecycle/PDF/product-backup checks are
+still pending and remain a distinct gate.
 
 The larger data-only snapshot completed supported restore and CPU rebuilding:
 7,307 verified originals, 11,755 searchable passages, 481 ready documents and
