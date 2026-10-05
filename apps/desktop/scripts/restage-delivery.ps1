@@ -4,6 +4,7 @@ param(
     [ValidateSet('Plan', 'Package', 'Install', 'Proof')][string]$Phase = 'Plan',
     [switch]$AcceptedFreeze,
     [switch]$NativeSlotReleased,
+    [string]$ResumeFrom,
     [string]$Source = 'E:/Renulus-native-delivery/desktop-20261005/repo',
     [string]$PreparationRoot = 'E:/Renulus-native-delivery/desktop-20261005/preparation/restage-a5488b2d-20261005'
 )
@@ -47,6 +48,13 @@ function Invoke-RestageCommand([string]$Executable, [string[]]$Arguments, [strin
     if ($LASTEXITCODE -ne 0) { throw ('Command exited ' + $LASTEXITCODE + '; inspect ' + $LogPrefix + '.stderr.log') }
 }
 
+function Set-RestageEnvironment([string]$Name, [AllowNull()][object]$Value) {
+    # PowerShell coerces a null string argument to empty for this .NET API.
+    # Vite distinguishes an absent loopback override from an invalid empty URL.
+    if ($null -eq $Value) { Remove-Item -LiteralPath ('Env:' + $Name) -ErrorAction SilentlyContinue }
+    else { [Environment]::SetEnvironmentVariable($Name, [string]$Value, 'Process') }
+}
+
 # Dot-sourcing is for the boundary tests; it performs no I/O or phase invocation.
 if ($MyInvocation.InvocationName -eq '.') { return }
 Assert-RestageGate $Revision $Phase ([bool]$AcceptedFreeze) ([bool]$NativeSlotReleased)
@@ -60,12 +68,24 @@ $renulusSnapshot = Join-Path $renulusExternalRoot ('source-' + $renulusTag)
 $renulusInstall = Join-Path $renulusExternalRoot ('installed-' + $renulusTag)
 $renulusPython = 'C:/Users/karol/Documents/t3-workspaces/Renulus-wt-integration/.venv/Scripts/python.exe'
 $renulusEnvironment = Split-Path -Parent (Split-Path -Parent $renulusPython)
+if ($ResumeFrom) {
+    if ($Phase -ne 'Package') { throw 'Only the failed pre-package renderer stage may be continued.' }
+    $renulusFailedReceipt = Assert-PublicGeneratedPath $ResumeFrom
+    if (-not $renulusFailedReceipt.StartsWith($renulusPreparation + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Resume requires a failed receipt in this preparation tree.' }
+    $renulusFailed = Get-Content -LiteralPath $renulusFailedReceipt -Raw | ConvertFrom-Json
+    if ($renulusFailed.status -ne 'failed' -or $renulusFailed.phase -ne 'Package' -or $renulusFailed.requested_revision -ne $Revision -or [IO.Path]::GetFullPath($renulusFailed.output) -ne $renulusOutput) { throw 'The failed receipt does not identify this exact package stage.' }
+    $renulusSnapshot = Join-Path $renulusSnapshot ('continued-' + [Guid]::NewGuid().ToString('N').Substring(0, 8))
+}
 if ($Phase -in @('Plan', 'Package')) {
-    foreach ($target in @($renulusOutput, $renulusSnapshot, $renulusInstall,
+    foreach ($target in @($renulusOutput, $renulusSnapshot, $renulusInstall)) {
+        $null = Assert-PublicGeneratedPath $target -Fresh
+    }
+    foreach ($target in @(
         (Join-Path $renulusExternalRoot ('payloads/backend-' + $renulusTag)),
         (Join-Path $renulusExternalRoot ('environment/node-' + $renulusTag)),
         (Join-Path $renulusExternalRoot ('temporary/build-' + $Revision)))) {
-        $null = Assert-PublicGeneratedPath $target -Fresh
+        if ($ResumeFrom) { $null = Assert-PublicGeneratedPath $target }
+        else { $null = Assert-PublicGeneratedPath $target -Fresh }
     }
     if (-not (Test-Path -LiteralPath $renulusArchive -PathType Leaf)) { throw 'The checksum-verified preparation archive is missing.' }
 }
@@ -88,11 +108,12 @@ try {
     }
     foreach ($name in $renulusSettings.Keys) {
         $renulusSavedSettings[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
-        [Environment]::SetEnvironmentVariable($name, $renulusSettings[$name], 'Process')
+        Set-RestageEnvironment $name $renulusSettings[$name]
     }
     $renulusResult = [ordered]@{ phase = $Phase; requested_revision = $Revision; accepted_freeze = [bool]$AcceptedFreeze; source = $Source; public_base_payload = $renulusBasePayload; output = $renulusOutput; install = $renulusInstall; reports = $renulusRun; previous_product = $renulusPreviousRevision; external_launcher_fix = 'parent-owned 4b1d2b71'; controller_sha256 = (Get-FileHash -LiteralPath $PSCommandPath -Algorithm SHA256).Hash.ToLowerInvariant(); stage_driver_sha256 = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot 'stage-delivery.py') -Algorithm SHA256).Hash.ToLowerInvariant(); private_profile_use = $false; status = 'pending' }
     if ($Phase -in @('Plan', 'Package')) {
         $renulusStageArguments = @('-B', (Join-Path $PSScriptRoot 'stage-delivery.py'), '--source', $Source, '--revision', $Revision, '--payload', $renulusBasePayload, '--snapshot', $renulusSnapshot, '--output', $renulusOutput, '--environment', $renulusEnvironment, '--helpers', (Join-Path $renulusBasePayload 'helper-assets'), '--python-archive', $renulusArchive, '--package', 'installer')
+        if ($ResumeFrom) { $renulusStageArguments += '--resume-staged'; $renulusResult['continued_failed_receipt'] = $renulusFailedReceipt }
         if ($Phase -eq 'Plan') { $renulusStageArguments += '--plan-only' }
         Invoke-RestageCommand $renulusPython $renulusStageArguments (Join-Path $renulusRun 'stage')
         if ($Phase -eq 'Plan') {
@@ -132,5 +153,5 @@ try {
     }
     throw
 } finally {
-    foreach ($name in $renulusSavedSettings.Keys) { [Environment]::SetEnvironmentVariable($name, $renulusSavedSettings[$name], 'Process') }
+    foreach ($name in $renulusSavedSettings.Keys) { Set-RestageEnvironment $name $renulusSavedSettings[$name] }
 }
