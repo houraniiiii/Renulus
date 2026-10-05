@@ -10,7 +10,7 @@ import time
 from fastapi.testclient import TestClient
 import pytest
 
-from renulus.knowledge.acquired import EVIDENCE_PREFIX, asset_id, collection_path, version_identity
+from renulus.knowledge.acquired import EVIDENCE_PREFIX, SELECTION, SELECTION_REVIEW, asset_id, collection_path, version_identity
 from renulus.knowledge.collection import MANIFEST
 from renulus.server import create_app
 from renulus.storage.database import utc_now
@@ -35,7 +35,8 @@ def test_actual_selected_acquired_jats_through_offline_api_worker(monkeypatch):
                 if asset_id("L02", relative) in entry_ids:
                     identities.add(version_identity(item))
                     candidates.append(root / relative)
-    allowed = {manifest.resolve(), *(path.resolve() for path in candidates)}
+    allowed = {manifest.resolve(), (root / SELECTION).resolve(), (root / SELECTION_REVIEW).resolve(),
+        *(path.resolve() for path in candidates)}
     with manifest.open(encoding="utf-8-sig") as stream:
         for line in stream:
             item = json.loads(line)

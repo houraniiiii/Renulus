@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from starlette.requests import Request
 
 from renulus.contracts import ApiError, ContextScope, Scope
-from renulus.knowledge.acquired import AcquiredLiterature
+from renulus.knowledge.acquired import AcquiredLiterature, SELECTION
 from renulus.knowledge.collection import MANIFEST
 from renulus.knowledge.worker import IngestionWorker
 from renulus.server import create_app
@@ -68,6 +68,7 @@ def test_bulk_pages_inspect_once_preserve_denials_domains_and_durable_jobs(repos
         batches.append(entry_ids)
         allowed.clear()
         allowed.add((first.root / MANIFEST).resolve())
+        allowed.add((first.root / SELECTION).resolve())
         for identifier in entry_ids:
             entry = repository.db.fetch_one("SELECT * FROM knowledge_catalogue WHERE id=?", (identifier,))
             allowed.add((first.root / entry["collection_path"]).resolve())

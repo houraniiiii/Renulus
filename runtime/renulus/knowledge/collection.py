@@ -11,18 +11,28 @@ from ..storage.database import utc_now
 from .models import Rights, SourceMetadata
 from .repository import MEDIA
 from .acquired import (AcquiredLiterature, AcquisitionCancelled, MARKER, catalogue_policy, collection_path,
-                       version_identity, version_name, acquisition_topic_ids, unique_object)
+                       version_identity, version_name, acquisition_topic_ids, unique_object,
+                       FrozenLiteratureSelection, recorded_file, recorded_licence, component_exceptions, asset_id)
 
 COLLECTION = Path.home() / "Documents" / "Renulus-data"
 MANIFEST = "metadata/acquisition-2026-10-04/acquisition-manifest.jsonl"
 CATALOGUE = "metadata/era-neph-manual-2026-10-04-catalogue.json"
 VERIFICATION = "metadata/era-neph-manual-2026-10-04-file-verification.json"
+SELECTION_FAILURES = {"literature_selection_excluded", "literature_selection_outside",
+    "literature_selection_unavailable", "literature_selection_invalid", "literature_selection_changed",
+    "literature_selection_review_unavailable", "literature_selection_review_invalid", "literature_project_selection_excluded"}
 
 
 class CollectionCatalogue:
     def __init__(self, repository, root=COLLECTION):
         self.repository, self.db = repository, repository.db
         self.root = Path(root).resolve()
+        self._selection = None
+
+    def _literature_selection(self):
+        if self._selection is None or self._selection.root != self.root.resolve():
+            self._selection = FrozenLiteratureSelection(self.root)
+        return self._selection
 
     def _path(self, value):
         return collection_path(self.root, value)
@@ -31,6 +41,10 @@ class CollectionCatalogue:
         relative = path.relative_to(self.root).as_posix()
         identifier = "asset_" + hashlib.sha256((source_id + "\n" + relative).encode()).hexdigest()[:24]
         supported = path.suffix.lower() in MEDIA
+        if source_id == "E07" and "illustration_original_png" in metadata.asset_role:
+            supported = supported and path.suffix.lower() == ".png"
+        if source_id == "L03" and "fulltext_original_PDF" in metadata.asset_role:
+            supported = supported and path.suffix.lower() == ".pdf"
         eligible = supported and not reserved and rights.index and rights.embedding and rights.cache and rights.display
         return {"id": identifier, "collection_path": relative, "source_id": source_id,
                 "title": title, "expected_sha256": digest, "bytes": size, "reserved": reserved,
@@ -102,10 +116,21 @@ class CollectionCatalogue:
                             retracted=item.get("retracted") is True, superseded=item.get("superseded") is True,
                             doi=item.get("doi"), pmid=str(item["pmid"]) if item.get("pmid") else None,
                             pmcid=item.get("pmcid"), notes=["Acquisition does not establish currentness or clinical review"])
+                        if recorded_file(item):
+                            metadata.asset_role = [item["artifact_type"]]
+                            metadata.latest_final_verified = metadata.content_reviewed = False
+                            metadata.original_sha256 = item.get("sha256")
+                            metadata.notes.append("renulus-collection-v1:" + json.dumps({key: item.get(key) for key in
+                                ("licence", "processing_scope", "acquisition_provenance", "frozen_selection_state", "frozen_selection_exclusion")}, ensure_ascii=False))
                         if sid == "L02":
                             metadata.topic_ids = acquisition_topic_ids(item)
                         entry = self._entry(path, sid, item.get("title") or path.stem, item.get("sha256"), item.get("bytes"), metadata, rights, reserved)
                         policy = catalogue_policy(item)
+                        if sid in ("L01", "L02", "L03", "L04", "L05", "L06", "L07", "L08"):
+                            selection_policy = self._literature_selection().policy(item)
+                            policy = selection_policy or catalogue_policy(item, project_selected=True)
+                            if not selection_policy and sid in ("L02", "L03"):
+                                metadata.notes.append("renulus-selection-v1:" + json.dumps(self._literature_selection().observation(item), ensure_ascii=False))
                         if policy:
                             entry["eligibility"], explanation = policy
                             entry["rights"] = Rights(licence=rights.licence).model_dump()
@@ -121,7 +146,7 @@ class CollectionCatalogue:
                             # settle scientific status for acquired literature.
                             metadata.publication_status = "unknown"
                             metadata.latest_final_verified = metadata.content_reviewed = False
-                            entry["metadata"] = metadata.model_dump()
+                        entry["metadata"] = metadata.model_dump()
                         if entry["id"] not in seen:
                             entries.append(entry)
                             seen.add(entry["id"])
@@ -148,14 +173,36 @@ class CollectionCatalogue:
             licence = {"identifier": licence}
         if not isinstance(licence, dict):
             licence = {}
-        identifier = licence.get("identifier", "unverified")
+        identifier = recorded_licence(item)
         open_licence = identifier.upper().replace(" " , "-") in {"CC-BY-4.0", "CC-BY-3.0", "CC0-1.0", "CC0"}
+        supported_record = recorded_file(item)
+        phrases = {
+            "display": {"cc by 4.0 attribution required"},
+            "index": {"eligible under cc by 4.0 subject to attribution and exclusions"},
+            "embedding": {"eligible under cc by 4.0 subject to attribution and exclusions"},
+            "model_input": {"licence allows reuse; no model calls performed"},
+            "derivation": {"permitted; indicate changes"},
+        } if supported_record else {}
         def allowed(name, *aliases):
-            values = [scope.get(key) for key in (name, *aliases)]
-            if any(v is False or (isinstance(v, str) and any(s in v.lower() for s in ("not authorised", "not authorized", "prohibited", "reference verification only"))) for v in values):
+            values = [scope[key] for key in (name, *aliases) if key in scope]
+            if any(v is False or (isinstance(v, str) and re.search(
+                    r"not (?:authori[sz]ed|permitted|allowed|cleared|activated|assessed)|prohibit|denied|unknown|unverified|reading.only|reference verification only", v, re.I)) for v in values):
                 return False
-            return any(v is True for v in values) or (open_licence and any(isinstance(v, str) and ("licence" in v.lower() or "permitted" in v.lower()) for v in values))
-        return Rights(display=allowed("display", "human_reading"), cache=allowed("cache", "caching", "human_reading"),
+            if not supported_record:
+                # Preserve existing separately classified source routes. Only
+                # E07 PNG/L03 PDF aliases and schema are added by this lane.
+                return any(v is True for v in values) or (open_licence and any(
+                    isinstance(v, str) and ("licence" in v.lower() or "permitted" in v.lower()) for v in values))
+            accepted = {"permitted", "permitted under licence", "permitted under license", *phrases.get(name, set())}
+            # Every supplied alias must be understood: a false, denial or
+            # unknown phrase cannot be outweighed by another alias's true.
+            if any(v is not True and not (open_licence and isinstance(v, str) and v.strip().lower() in accepted) for v in values):
+                return False
+            if component_exceptions(item) and name not in ("display", "cache"):
+                return False
+            return bool(values)
+        return Rights(display=allowed("display", "human_reading"),
+            cache=allowed("cache", "caching", *(("human_reading",) if not supported_record else ())),
             index=allowed("index", "indexing", "indexing_embedding"),
             embedding=allowed("embedding", "indexing_embedding"), model_input=allowed("model_input", "ai_processing"),
             derivation=allowed("derivation"), evaluation=allowed("evaluation"),
@@ -167,6 +214,12 @@ class CollectionCatalogue:
         preview = self.preview(source_id=source_id, _all=True)
         with self.db.transaction() as conn:
             for entry in preview["entries"]:
+                if entry["source_id"] in ("L02", "L03"):
+                    policy = self._literature_selection().policy({**entry["metadata"], "sha256": entry["expected_sha256"]})
+                    if policy:
+                        entry["eligibility"] = policy[0]
+                        entry["rights"] = Rights(licence=entry["rights"]["licence"]).model_dump()
+                        entry["metadata"]["notes"].append(policy[1])
                 conn.execute("INSERT INTO knowledge_catalogue(id,collection_path,source_id,title,expected_sha256,bytes,reserved,eligibility,metadata_json,rights_json,checked_at) VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title,expected_sha256=excluded.expected_sha256,bytes=excluded.bytes,eligibility=excluded.eligibility,metadata_json=excluded.metadata_json,rights_json=excluded.rights_json,checked_at=excluded.checked_at",
                     (entry["id"], entry["collection_path"], entry["source_id"], entry["title"], entry["expected_sha256"], entry["bytes"], int(entry["reserved"]), entry["eligibility"], json.dumps(entry["metadata"]), json.dumps(entry["rights"]), preview["checked_at"]))
         return {"catalogued": len(preview["entries"]), "errors": preview["errors"], "status": "catalogued", "indexed": False}
@@ -224,10 +277,11 @@ class CollectionCatalogue:
         # Skip live jobs for the exact edition/original hash. Changed receipts
         # and retries still pass through inspection and canonical deduplication.
         joins = " FROM knowledge_catalogue c LEFT JOIN knowledge_jobs j ON j.id=c.job_id LEFT JOIN knowledge_revisions r ON r.id=j.revision_id LEFT JOIN knowledge_documents d ON d.id=r.document_id"
-        clauses = ["c.source_id=?", "c.reserved=0", "c.eligibility IN ('eligible','inspection_required')",
+        choices = ["eligible", "inspection_required", *sorted(SELECTION_FAILURES)]
+        clauses = ["c.source_id=?", "c.reserved=0", "c.eligibility IN (" + ",".join("?" for _ in choices) + ")",
             "EXISTS (SELECT 1 FROM json_each(c.metadata_json,'$.asset_role') WHERE value=?)",
             "(j.id IS NULL OR j.state NOT IN ('queued','processing','ready') OR d.deleted_at IS NOT NULL OR json_extract(r.metadata_json,'$.original_sha256') IS NOT c.expected_sha256 OR json_extract(r.metadata_json,'$.edition') IS NOT json_extract(c.metadata_json,'$.edition'))"]
-        args = [source_id, MARKER]
+        args = [source_id, *choices, MARKER]
         if query:
             term = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
             clauses.append("c.title LIKE ? ESCAPE '\\'")
@@ -260,6 +314,7 @@ class CollectionCatalogue:
             raise ApiError("batch_limit", "Select at most 250 files per import batch", 413)
         results = []
         acquired_selection = None
+        recorded_receipts = None
         for entry_id in dict.fromkeys(entry_ids):
             if cancelled and cancelled():
                 break
@@ -269,10 +324,15 @@ class CollectionCatalogue:
                 continue
             metadata = json.loads(entry["metadata_json"])
             is_acquired = MARKER in metadata.get("asset_role", [])
-            if entry["reserved"] or (entry["eligibility"] != "eligible" and not (is_acquired and entry["eligibility"] == "inspection_required")):
-                results.append({"entry_id": entry_id, "status": "excluded", "code": entry["eligibility"]})
-                continue
+            is_recorded = ((entry["source_id"] == "E07" and Path(entry["collection_path"]).suffix.lower() == ".png")
+                or (entry["source_id"] == "L03" and "fulltext_original_PDF" in metadata.get("asset_role", [])))
             try:
+                if entry["source_id"] in ("L02", "L03"):
+                    self._literature_selection().require({**metadata, "sha256": entry["expected_sha256"]})
+                recoverable_selection = entry["eligibility"] in SELECTION_FAILURES
+                if entry["reserved"] or (entry["eligibility"] != "eligible" and not (is_acquired and entry["eligibility"] == "inspection_required") and not recoverable_selection):
+                    results.append({"entry_id": entry_id, "status": "excluded", "code": entry["eligibility"]})
+                    continue
                 if is_acquired:
                     # One metadata pass for this deliberate batch, and only its
                     # selected JATS plus exact matching metadata are opened.
@@ -280,10 +340,10 @@ class CollectionCatalogue:
                         candidates = []
                         for identifier in dict.fromkeys(entry_ids):
                             candidate = self.db.fetch_one("SELECT * FROM knowledge_catalogue WHERE id=?", (identifier,))
-                            if candidate and not candidate["reserved"] and candidate["eligibility"] in ("eligible", "inspection_required") and MARKER in json.loads(candidate["metadata_json"]).get("asset_role", []):
+                            if candidate and not candidate["reserved"] and candidate["eligibility"] in ("eligible", "inspection_required", *SELECTION_FAILURES) and MARKER in json.loads(candidate["metadata_json"]).get("asset_role", []):
                                 candidates.append(candidate)
                         try:
-                            acquired_selection = AcquiredLiterature(self.root).selections(candidates, cancelled=cancelled)
+                            acquired_selection = AcquiredLiterature(self.root, self._literature_selection()).selections(candidates, cancelled=cancelled)
                         except (OSError, UnicodeError):
                             acquired_selection = ApiError("acquisition_manifest_unavailable", "The acquisition manifest cannot be read; refresh it before selecting articles", 409)
                         except ApiError as error:
@@ -298,12 +358,22 @@ class CollectionCatalogue:
                         raise ApiError("article_receipt_missing", "Refresh the catalogue; this selected receipt is no longer in the manifest", 409)
                     if item.get("sha256") != entry["expected_sha256"] or item.get("bytes") != entry["bytes"]:
                         raise ApiError("catalogue_receipt_changed", "Refresh the catalogue before selecting this changed receipt", 409)
-                    article = AcquiredLiterature(self.root).inspect(item, matched.get(version_identity(item), {}))
+                    self._literature_selection().require(item)
+                    policy = catalogue_policy(item, project_selected=True)
+                    if policy and policy[0] != "inspection_required":
+                        raise ApiError(*policy, 409)
+                    article = AcquiredLiterature(self.root, self._literature_selection()).inspect(item, matched.get(version_identity(item), {}))
                     if cancelled and cancelled():
                         break
                     result = self._import_acquired(entry, article)
                     if not report_replay:
                         result.pop("replayed", None)
+                    results.append({"entry_id": entry_id, **result})
+                    continue
+                if is_recorded:
+                    if recorded_receipts is None:
+                        recorded_receipts = self._recorded_receipts(entry_ids)
+                    result = self._import_recorded(entry, recorded_receipts.get(entry_id))
                     results.append({"entry_id": entry_id, **result})
                     continue
                 previous = self.db.fetch_one("SELECT j.id,j.state,r.sha256,d.deleted_at FROM knowledge_jobs j JOIN knowledge_revisions r ON r.id=j.revision_id JOIN knowledge_documents d ON d.id=r.document_id WHERE j.id=?", (entry["job_id"],)) if entry["job_id"] else None
@@ -325,18 +395,103 @@ class CollectionCatalogue:
             except AcquisitionCancelled:
                 break
             except ApiError as error:
-                if is_acquired:
-                    metadata["notes"].append("Selected inspection unavailable: " + error.code + " — " + error.message)
+                if is_acquired or is_recorded or error.code in SELECTION_FAILURES:
+                    metadata.setdefault("notes", []).append("Selected inspection unavailable: " + error.code + " — " + error.message)
                     self.db.execute("UPDATE knowledge_catalogue SET eligibility=?,metadata_json=?,rights_json=?,checked_at=? WHERE id=?",
                         (error.code, json.dumps(metadata), Rights().model_dump_json(), utc_now(), entry_id))
                 results.append({"entry_id": entry_id, "status": "failed", "code": error.code, "message": error.message})
         return {"results": results, "queued": len({r["job"]["id"] for r in results if r["status"] == "queued"})}
+
+    def _recorded_receipts(self, entry_ids):
+        selected = {}
+        try:
+            with collection_path(self.root, MANIFEST).open(encoding="utf-8-sig") as stream:
+                for line in stream:
+                    try:
+                        item = json.loads(line, object_pairs_hook=unique_object)
+                        if not isinstance(item, dict) or not recorded_file(item):
+                            continue
+                        path = collection_path(self.root, item.get("local_path") or item.get("path"), must_exist=False)
+                        identifier = asset_id(item["source_id"], path.relative_to(self.root).as_posix())
+                        if identifier in entry_ids:
+                            if identifier in selected and selected[identifier] != item:
+                                raise ApiError("article_receipt_ambiguous", "Conflicting selected file receipts require review", 409)
+                            selected[identifier] = item
+                    except (ValueError, KeyError, TypeError):
+                        continue
+        except (OSError, UnicodeError):
+            raise ApiError("acquisition_manifest_unavailable", "The acquisition manifest cannot be read", 409) from None
+        return selected
+
+    def _import_recorded(self, entry, item):
+        if not item:
+            raise ApiError("article_receipt_missing", "Refresh the catalogue; this selected receipt is no longer in the manifest", 409)
+        if item.get("sha256") != entry["expected_sha256"] or item.get("bytes") != entry["bytes"]:
+            raise ApiError("catalogue_receipt_changed", "Refresh the catalogue before importing a changed file receipt", 409)
+        selection_proof = None
+        metadata = json.loads(entry["metadata_json"])
+        def guard():
+            nonlocal selection_proof
+            if item["source_id"] == "L03":
+                proof = self._literature_selection().require(item)
+                if selection_proof is not None and proof != selection_proof:
+                    raise ApiError("literature_selection_changed", "The batch selection evidence changed during file import; select again", 409)
+                selection_proof = proof
+            policy = catalogue_policy(item, project_selected=item["source_id"] == "L03")
+            if policy:
+                raise ApiError(*policy, 409)
+            effective = self.repository.source_status.effective(SourceMetadata.model_validate(metadata))
+            if any((effective.retracted, effective.superseded, effective.repository_removed, effective.access_changed)):
+                raise ApiError("article_status_unavailable", "A recorded source-status restriction overrides this file receipt", 409)
+            rights = self._rights(item)
+            if not all((rights.display, rights.cache, rights.index, rights.embedding)):
+                raise ApiError("source_permission_required", "The current receipt does not grant the required file operations", 403)
+            return rights
+        rights = guard()
+        metadata["notes"] = [note for note in metadata.get("notes", []) if not note.startswith(("renulus-collection-v1:", "renulus-selection-v1:"))]
+        metadata["notes"].append("renulus-collection-v1:" + json.dumps({key: item.get(key) for key in
+            ("licence", "processing_scope", "acquisition_provenance", "frozen_selection_state", "frozen_selection_exclusion")}, ensure_ascii=False))
+        if item["source_id"] == "L03":
+            metadata["notes"].append("renulus-selection-v1:" + json.dumps(self._literature_selection().observation(item), ensure_ascii=False))
+        # Replays also pass current selection and permission guards.
+        with self.repository._lock:
+            previous = self.db.fetch_one("SELECT j.id,j.state,r.sha256,d.deleted_at FROM knowledge_jobs j JOIN knowledge_revisions r ON r.id=j.revision_id JOIN knowledge_documents d ON d.id=r.document_id WHERE j.id=?", (entry["job_id"],)) if entry["job_id"] else None
+            if previous and not previous["deleted_at"] and previous["sha256"] == entry["expected_sha256"] and previous["state"] in ("queued", "processing", "ready"):
+                guard()
+                return self.repository._result(previous["id"])
+        path = self._path(entry["collection_path"])
+        if path.suffix.lower() != (".png" if item["source_id"] == "E07" else ".pdf"):
+            raise ApiError("unsupported_file", "Choose the recorded E07 PNG or L03 PDF original", 415)
+        if path.stat().st_size > 64 * 1024 * 1024:
+            raise ApiError("document_limit", "The supported selected file must be at most 64 MiB", 413)
+        guard()
+        with path.open("rb") as stream:
+            data = stream.read(64 * 1024 * 1024 + 1)
+        if hashlib.sha256(data).hexdigest() != entry["expected_sha256"]:
+            raise ApiError("source_hash_changed", "The selected file differs from its acquisition receipt", 409)
+        if path.suffix.lower() == ".pdf" and not data.lstrip().startswith(b"%PDF-"):
+            raise ApiError("malformed_pdf", "The selected file has no PDF signature", 422)
+        key = "catalogue:" + entry["id"] + ":" + entry["expected_sha256"]
+        replacement = entry["document_id"] if previous and not previous["deleted_at"] else None
+        if previous:
+            key += (":reimport:" if previous["deleted_at"] else ":retry:") + previous["id"]
+        with self.repository._lock:
+            rights = guard()
+            result = self.repository._import(data, path.suffix.lower(), entry["title"], metadata, rights,
+                ContextScope(kind=Scope.LIBRARY), key, replacement, False, False)
+            self.db.execute("UPDATE knowledge_catalogue SET document_id=?,job_id=? WHERE id=?", (result["document_id"], result["job"]["id"], entry["id"]))
+        return result
 
     def _import_acquired(self, entry, article):
         # Serialize canonical version adoption with journal updates and recovery.
         # import_text(process=False) uses normal import guards; CPU extraction
         # remains serial in the worker and must not block this enqueue path.
         with self.repository._lock:
+            def guard_selection():
+                proof = self._literature_selection().require(article.metadata.model_dump())
+                if proof != article.evidence.get("selection_fingerprint"):
+                    raise ApiError("literature_selection_changed", "The batch selection evidence changed after inspection; inspect again before adoption or replay", 409)
+            guard_selection()
             effective = self.repository.source_status.effective(article.metadata)
             if any((effective.retracted, effective.superseded, effective.repository_removed, effective.access_changed)):
                 raise ApiError("article_status_unavailable", "A recorded source-status restriction overrides the acquired receipt", 409)
@@ -347,6 +502,7 @@ class CollectionCatalogue:
             previous = self.db.fetch_one("SELECT j.id,j.state,j.idempotency_key,r.sha256,r.document_id,d.deleted_at FROM knowledge_jobs j JOIN knowledge_revisions r ON r.id=j.revision_id JOIN knowledge_documents d ON d.id=r.document_id WHERE j.idempotency_key>=? AND j.idempotency_key<? ORDER BY (d.deleted_at IS NOT NULL),j.created_at DESC,r.ordinal DESC,j.id DESC LIMIT 1", (version_prefix, version_prefix + "\uffff"))
             same_proof = previous and (previous["idempotency_key"] == base or previous["idempotency_key"].startswith(base + ":"))
             if same_proof and not previous["deleted_at"] and previous["sha256"] == article.evidence["derivative_sha256"] and previous["state"] in ("queued", "processing", "ready"):
+                guard_selection()
                 result = {**self.repository._result(previous["id"]), "replayed": True}
             else:
                 key, replacement = base, None
@@ -356,6 +512,7 @@ class CollectionCatalogue:
                     else:
                         replacement = previous["document_id"]
                         key += ":retry:" + previous["id"]
+                guard_selection()
                 result = self.repository.import_text(article.text, title=article.title,
                     metadata=article.metadata, rights=article.rights, scope=ContextScope(kind=Scope.LIBRARY),
                     idempotency_key=key, document_id=replacement, process=False)

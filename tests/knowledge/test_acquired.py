@@ -9,7 +9,7 @@ import time
 import pytest
 
 from renulus.contracts import ApiError, ContextScope, Scope
-from renulus.knowledge.acquired import AcquiredLiterature, EVIDENCE_PREFIX, collection_path
+from renulus.knowledge.acquired import AcquiredLiterature, EVIDENCE_PREFIX, SELECTION, collection_path
 from renulus.knowledge.collection import CollectionCatalogue, MANIFEST
 from renulus.knowledge.worker import IngestionWorker
 from test_repository import repository, SyntheticExtractor
@@ -79,6 +79,12 @@ class Case:
         path = self.root / MANIFEST
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("\n".join(json.dumps(x) for x in self.items) + "\n", encoding="utf-8")
+        selection = self.root / SELECTION
+        if not selection.exists():
+            selection.write_text(json.dumps({"frozen": True, "query_scope_frozen": True,
+                "status": "frozen_final_automated_snapshot", "pmcids": ["PMC90001"],
+                "records": [{"pmcid": "PMC90001", "pmid": "90001"}],
+                "excluded_pmcids": [], "excluded_records": []}), encoding="utf-8")
 
     def change_record(self, **patch):
         self.record.update(patch)
@@ -302,7 +308,7 @@ def test_metadata_first_selection_excludes_alternates_media_reserved_and_unrelat
         case.items.append(item)
     reserved = {**case.items[0], "source_id": "E02", "reserved": True}
     case.items.append(reserved)
-    allowed = {(case.root / MANIFEST).resolve()}
+    allowed = {(case.root / MANIFEST).resolve(), (case.root / SELECTION).resolve()}
     opened, original_open = [], Path.open
     def guarded(path, *args, **kwargs):
         resolved = path.resolve()
