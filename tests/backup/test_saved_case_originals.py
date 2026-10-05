@@ -16,8 +16,8 @@ from renulus.contracts import ApiError
 from renulus.server import create_app
 from renulus.storage.backup import export_records, portable_records
 
-from tests.cases.test_saved_originals import (ORIGINAL_SENTINEL, attach,
-                                            canonical_state, synthetic_original)
+from cases.test_saved_originals import (ORIGINAL_SENTINEL, attach,
+                                      canonical_state, synthetic_original)
 from .test_segmented_recovery import download, repack_v2, restore_v2
 
 

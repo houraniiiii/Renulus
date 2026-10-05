@@ -18,7 +18,7 @@ from renulus.cases.repository import CaseRepository
 from renulus.contracts import ApiError
 from renulus.server import create_app
 
-from tests.backup.conftest import text_pdf
+from backup.conftest import text_pdf
 from .conftest import assert_absent_from_profile
 from .test_attachments import ExtractorFixture, finish, scope
 
