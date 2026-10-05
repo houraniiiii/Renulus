@@ -9,6 +9,20 @@ import sys
 import zipfile
 
 
+def owned_synthetic_zip(value: Path) -> Path:
+    roots = (Path(__file__).resolve().parents[1] / "test-results",
+             Path("E:/Renulus-native-delivery/desktop-20261005/proofs"))
+    if not value.is_absolute() or value.suffix != ".zip":
+        raise ValueError("Native backup inspection requires an absolute owned synthetic ZIP")
+    file = value.resolve()
+    if not any(file != root.resolve() and file.is_relative_to(root.resolve()) for root in roots):
+        raise ValueError("Native backup inspection is confined to the lane or exact E synthetic proof root")
+    for ancestor in (value, *value.parents):
+        if ancestor.exists() and (ancestor.is_symlink() or ancestor.is_junction()):
+            raise ValueError("Native backup inspection may not traverse a reparse path")
+    return file
+
+
 def inspect(file: Path, *, expected_id: str, expected_text: str) -> dict:
     with zipfile.ZipFile(file) as archive:
         names = archive.namelist()
@@ -69,8 +83,5 @@ def inspect(file: Path, *, expected_id: str, expected_text: str) -> dict:
 
 if __name__ == "__main__":
     request = json.load(sys.stdin)
-    file = Path(request["file"]).resolve()
-    root = Path(__file__).resolve().parents[1] / "test-results"
-    if not file.is_relative_to(root) or file.suffix != ".zip":
-        raise ValueError("Native backup inspection is confined to this lane's synthetic ZIP outputs")
+    file = owned_synthetic_zip(Path(request["file"]))
     print(json.dumps(inspect(file, expected_id=request["expected_id"], expected_text=request["expected_text"])))

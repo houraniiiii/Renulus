@@ -14,9 +14,18 @@ spec.loader.exec_module(inspector)
 
 
 class NativeArchiveIntegrity(unittest.TestCase):
+    def test_exact_e_proof_root_allows_owned_zip_and_rejects_other_paths(self):
+        allowed = Path("E:/Renulus-native-delivery/desktop-20261005/proofs/synthetic/only.zip")
+        self.assertEqual(inspector.owned_synthetic_zip(allowed), allowed.resolve())
+        for value in (Path("only.zip"), allowed.parents[2] / "outside/only.zip",
+                      Path("E:/Renulus-native-delivery/desktop-20261005/proofs-other/only.zip"),
+                      Path("F:/Renulus-native-delivery/desktop-20261005/proofs/only.zip")):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                inspector.owned_synthetic_zip(value)
+
     def setUp(self):
-        root = Path(__file__).resolve().parents[1] / "test-results"
-        root.mkdir(exist_ok=True)
+        root = Path("E:/Renulus-native-delivery/desktop-20261005/proofs")
+        root.mkdir(parents=True, exist_ok=True)
         self.temporary = tempfile.TemporaryDirectory(prefix="inspect-", dir=root)
         self.addCleanup(self.temporary.cleanup)
         self.archive = Path(self.temporary.name) / "synthetic.zip"
