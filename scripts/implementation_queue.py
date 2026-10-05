@@ -97,7 +97,8 @@ def heartbeat():
     if not state.get("active"):
         return {"status": "inactive"}
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    log = subprocess.run(["git", "log", "-5", "--format=%h %s"], cwd=ROOT,
+    integration_root = Path(state.get("integration_workspace", ROOT)).resolve()
+    log = subprocess.run(["git", "log", "-5", "--format=%h %s"], cwd=integration_root,
                          capture_output=True, text=True).stdout.strip()
     statuses = gh("issue", "list", "--repo", REPO, "--state", "all", "--limit", "100",
                   "--json", "number,title,state", json_output=True)
