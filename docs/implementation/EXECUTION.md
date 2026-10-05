@@ -2,8 +2,8 @@
 
 Started October 4, 2026, 19:21 UTC (21:21 Warsaw). Target work window ends
 October 5, 2026, 03:21 UTC (05:21 Warsaw). The user authorised implementation,
-parallel bounded agents, GitHub tracking and a heartbeat every 15 minutes
-(updated by the owner on 2026-10-04).
+parallel bounded agents, GitHub tracking and a heartbeat every 20 minutes
+(latest owner update on 2026-10-05; the earlier 15-minute setting is historical).
 
 GitHub issues are the live queue. The earlier plans explain product intent;
 they are adjustable engineering baselines, not immutable specifications.
@@ -112,3 +112,22 @@ extraction disabled; their exact app-owned bytes and rights were verified.
 Queued does not mean searchable. No credentials from another application are
 used. The goal and single 15-minute heartbeat continue; the original eight-hour
 target remains recorded above.
+
+## Resumed finalisation wave — October 5
+
+After the owner's explicit pause and resume, seven bounded workers started from
+9d26f1ee in separate short C worktrees under C:/rn-finalise-20261005/lanes.
+Packaging, completed backend regression, Library UI, subscription error/recovery
+flows, formal ESENeph mapping (#19), ingestion performance and exact E06 source
+adoption preparation have disjoint ownership. The integrator owns shared
+contracts, real-profile adoption, live account requests, native/helper scheduling
+and installed acceptance. Current original content is already 160 questions and
+26 staged cases across 27 topics and 56 objectives; formal exam mapping remains
+work, rather than another initial-bank implementation.
+
+One observable heartbeat continues every 20 minutes, per the latest owner
+instruction. The original eight-hour target and pause evidence are preserved;
+no new delivery deadline is invented. The launcher remains on installed
+3ff9b0d6 until a matching final source passes installation, normal-queue
+shutdown/reopen and required connected journeys. Earlier mock, targeted,
+incomplete regression and native observations retain their separate provenance.
