@@ -25,6 +25,7 @@ export default function Updates() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<{ cause: unknown; operation: RetryOperation } | null>(null);
   const [notice, setNotice] = useState('');
+  const [refreshNotice, setRefreshNotice] = useState('');
   const { resource, retry } = useResource(async signal => {
     const [page, sources, publications, topics] = await Promise.all([
       api<EntryPage>('/updates/entries?state=' + filter + '&limit=50&offset=' + offset, { signal }),
@@ -36,7 +37,7 @@ export default function Updates() {
   });
 
   function open(entry: Entry) {
-    setCurrent(entry); setDraft(reviewDraft(entry)); setReviewTopics(entry.topic_ids); setError(null);
+    setCurrent(entry); setDraft(reviewDraft(entry)); setReviewTopics(entry.topic_ids); setError(null); setRefreshNotice('');
     if (entry.review_state === 'reviewed' && !entry.read_at) void markRead(entry.id);
   }
   async function markRead(id: string) {
@@ -69,15 +70,15 @@ export default function Updates() {
   }
   async function refresh() {
     if (!current) return;
-    setBusy('refresh'); setError(null);
+    setBusy('refresh'); setError(null); setRefreshNotice('');
     try {
       const result = await api<{ state: string; error?: { message: string }; latest_entry?: Entry; entry: Entry }>('/updates/entries/' + current.id + '/refresh', { method: 'POST', timeoutMs: 60_000 });
-      if (result.state === 'failed') { setNotice(result.error?.message ?? 'The check failed. Previous metadata and your draft are retained.'); return; }
+      if (result.state === 'failed') { setRefreshNotice(result.error?.message ?? 'The check failed. Previous metadata and your draft are retained.'); return; }
       if (result.latest_entry && result.latest_entry.id !== current.id) {
         open(result.latest_entry); setFilter(result.latest_entry.review_state); setOffset(0);
-        setNotice('Changed article metadata is ready for a new review. The earlier review remains in its history.');
+        setRefreshNotice('Changed article metadata is ready for a new review. The earlier review remains in its history.');
       } else {
-        setCurrent(result.entry); setNotice(checkMessage(result, current.kind === 'publication-change' || !!result.latest_entry));
+        setCurrent(result.entry); setRefreshNotice(checkMessage(result, current.kind === 'publication-change' || !!result.latest_entry));
       }
       retry();
     } catch (cause) { setError({ cause, operation: { kind: 'refresh' } }); } finally { setBusy(null); }
@@ -109,7 +110,7 @@ export default function Updates() {
     <AutomaticChecks key="automatic-checks" onComplete={retry} />
     {showSources && <SourceChecks sources={data.sources} publications={data.publications} done={message => { setNotice(message); retry(); }} />}
     <div className="updates-workspace"><UpdatesQueue page={data.page} filter={filter} selectedId={current?.id} busy={busy !== null} open={open} filterChanged={changeFilter} pageChanged={value => { setOffset(value); retry(); }} />
-      <ReviewDetail entry={current} draft={draft} topics={data.topics} reviewTopics={reviewTopics} busy={busy}
+      <ReviewDetail entry={current} draft={draft} topics={data.topics} reviewTopics={reviewTopics} busy={busy} refreshNotice={refreshNotice}
         change={value => { setDraft(value); setError(null); }} topicsChanged={value => { setReviewTopics(value); setError(null); }}
         review={review} refresh={refresh} sync={sync} />
     </div>

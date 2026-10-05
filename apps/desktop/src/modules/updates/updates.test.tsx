@@ -74,10 +74,11 @@ describe('Updates review and bounded queue', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Reviewed 17' }));
     await waitFor(() => expect(fetch.mock.calls.some(([path]) => path.includes('state=reviewed&limit=50&offset=0'))).toBe(true));
   });
-  it('retains the draft and previous identity when an old article refresh fails', async () => {
+  it('retains the draft and shows a failed refresh beside the selected publication', async () => {
     mockApi([entry()], path => path.endsWith('/refresh') ? json({ state: 'failed', entry: entry(), error: { message: 'Synthetic article check failed' } }) : undefined);
     render(<Updates />); await openFirst(); inspectEvidence();
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh metadata' })); await screen.findByText('Synthetic article check failed');
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh metadata' }));
+    await within(screen.getByRole('complementary', { name: 'Selected publication' })).findByText('Synthetic article check failed');
     expect((screen.getByLabelText('What changes for your learning?') as HTMLTextAreaElement).value).toBe('Synthetic educational implication only');
     expect((screen.getByLabelText('I inspected this evidence and its stated publication status.') as HTMLInputElement).checked).toBe(true);
   });

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { ArrowUpRight, Check, RefreshCw } from 'lucide-react';
-import { Badge, Button } from '../../ui';
+import { Badge, Button, Notice } from '../../ui';
 import AffectedList from './AffectedList';
 import ReviewFields from './ReviewFields';
 import { displayDate as date, reviewProblem } from './types';
@@ -8,10 +8,11 @@ import type { Entry, ReviewDraft, Topic } from './types';
 
 interface Props {
   entry: Entry | null; draft: ReviewDraft | null; topics: Topic[]; reviewTopics: string[]; busy: string | null;
+  refreshNotice: string;
   change: (draft: ReviewDraft) => void; topicsChanged: (ids: string[]) => void;
   review: (state: 'reviewed' | 'dismissed') => void; refresh: () => void; sync: () => void;
 }
-export default function ReviewDetail({ entry, draft, topics, reviewTopics, busy, change, topicsChanged, review, refresh, sync }: Props) {
+export default function ReviewDetail({ entry, draft, topics, reviewTopics, busy, refreshNotice, change, topicsChanged, review, refresh, sync }: Props) {
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     if (entry && window.innerWidth <= 1000) {
@@ -28,6 +29,7 @@ export default function ReviewDetail({ entry, draft, topics, reviewTopics, busy,
     <Badge tone={entry.kind === 'retraction' || entry.kind === 'correction' ? 'warning' : 'neutral'}>{entry.kind.replaceAll('-', ' ')}</Badge><h2 ref={heading} tabIndex={-1}>{entry.title}</h2>
     <p className="muted">{entry.publication_date ? 'Published ' + date(entry.publication_date) : 'Publication date unavailable'} · Discovered {date(entry.discovered_at)}</p>
     <div className="actions"><a className="update-publication" href={entry.url} target="_blank" rel="noreferrer">Open publication<ArrowUpRight size={17} /></a><Button variant="ghost" disabled={busy !== null} busy={busy === 'refresh'} onClick={refresh}><RefreshCw size={15} />Refresh metadata</Button></div>
+    {refreshNotice && <Notice><p role="status">{refreshNotice}</p></Notice>}
     {entry.source_metadata.new_links?.map(link => <a className="update-source-link" href={link.url} target="_blank" rel="noreferrer" key={link.url}>{link.label || 'New publication link'}<ArrowUpRight size={15} /></a>)}
     {entry.source_metadata.reported_publication_status === 'preprint' && <p className="update-status-note">The source reports a preprint. Final publication status requires inspected evidence.</p>}
     {entry.review_state === 'reviewed' && !entry.review?.evidence.length && <p className="update-status-note">This earlier review has no recorded inspected evidence. Add evidence to verify it now.</p>}
