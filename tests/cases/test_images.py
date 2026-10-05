@@ -2,6 +2,7 @@
 import asyncio
 import base64
 from io import BytesIO
+import hashlib
 import json
 import socket
 import time
@@ -74,9 +75,10 @@ def headers(case, *, mode="image"):
             "scope": {"kind": "temporary-case", "entity_id": case["id"]}})}
 
 
-def upload(client, case, raw=None):
+def upload(client, case, raw=None, *, mode="image", filename="synthetic.png", media_type="image/png"):
     path = f"/api/v1/cases/sessions/{case['id']}/attachments"
-    options = headers(case)
+    options = headers(case, mode=mode)
+    options.update({"x-renulus-filename": filename, "content-type": media_type})
     reservation = client.post(path + "/prepare", headers=options)
     assert reservation.status_code == 201, reservation.text
     options["x-renulus-preview-id"] = reservation.json()["id"]
@@ -95,7 +97,7 @@ def no_network(monkeypatch):
     monkeypatch.setattr(socket.socket, "connect", deny)
 
 
-def test_real_cases_api_actual_sdk_image_wire_explicit_save_omits_image(tmp_path):
+def test_real_cases_api_actual_sdk_image_wire_explicit_save_retains_original(tmp_path):
     profile = tmp_path / "image-api"
     app = create_app(profile)
     services = app.state.services
@@ -124,7 +126,12 @@ def test_real_cases_api_actual_sdk_image_wire_explicit_save_omits_image(tmp_path
         assert_absent_from_profile(services, IMAGE_SENTINEL, encoded, QUESTION, ANSWER)
         assert services.registry["case_previews"].jobs[preview["id"]].image is None
         current = client.get(f"/api/v1/cases/sessions/{case['id']}").json()
-        assert "omitted from Save" in current["messages"][0]["content"]
+        assert "omitted from Save" not in current["messages"][0]["content"]
+        attachment = current["attachments"][0]
+        assert attachment["filename"] == "synthetic.png" and attachment["media_type"] == "image/png"
+        assert attachment["bytes"] == len(image()) and attachment["sha256"] == hashlib.sha256(image()).hexdigest()
+        assert not attachment["saved"] and attachment["original_available"]
+        assert encoded not in json.dumps(current)
         # Later text discussion never replays the image.
         client.post(f"/api/v1/cases/sessions/{case['id']}/discuss", json={
             "revision": current["revision"], "request_id": "later-text", "message": "General learning only"})
@@ -132,13 +139,125 @@ def test_real_cases_api_actual_sdk_image_wire_explicit_save_omits_image(tmp_path
         current = client.get(f"/api/v1/cases/sessions/{case['id']}").json()
         saved = client.post(f"/api/v1/cases/sessions/{case['id']}/save", json={"revision": current["revision"]}).json()
         assert saved["saved"] and not saved["dirty"]
-        assert_absent_from_profile(services, IMAGE_SENTINEL, encoded)
+        assert saved["attachments"][0]["saved"] and saved["attachments"][0]["original_available"]
+        binary = client.get(f"/api/v1/cases/sessions/{case['id']}/attachments/{attachment['id']}/original")
+        assert binary.status_code == 200 and binary.content == image()
+        assert binary.headers["cache-control"] == "no-store"
         assert manager.status()["live_provider_verified"] is False
     with TestClient(create_app(profile)) as restarted:
         reopened = restarted.get(f"/api/v1/cases/sessions/{case['id']}").json()
         assert QUESTION in reopened["messages"][0]["content"] and ANSWER in reopened["messages"][1]["content"]
-        assert "omitted from Save" in reopened["messages"][0]["content"]
+        assert "omitted from Save" not in reopened["messages"][0]["content"]
+        assert reopened["attachments"] == saved["attachments"]
         assert encoded not in json.dumps(reopened)
+        binary = restarted.get(f"/api/v1/cases/sessions/{case['id']}/attachments/{attachment['id']}/original")
+        assert binary.status_code == 200 and binary.content == image()
+        assert binary.headers["cache-control"] == "no-store"
+
+
+def test_ready_image_keep_stages_original_without_additional_model_call(tmp_path):
+    app = create_app(tmp_path / "keep-image")
+    services = app.state.services
+    _, bodies = asyncio.run(connect(services))
+    with TestClient(app) as client:
+        case = client.post("/api/v1/cases/sessions", json={"text": "Synthetic kept image"}).json()
+        preview = upload(client, case).json()
+        stale = client.post(f"/api/v1/cases/attachments/{preview['id']}/keep", json={"revision": 99})
+        assert stale.status_code == 409 and len(bodies) == 1
+        kept = client.post(f"/api/v1/cases/attachments/{preview['id']}/keep", json={"revision": case["revision"]})
+        assert kept.status_code == 200 and kept.headers["cache-control"] == "no-store"
+        current = kept.json()
+        attachment = current["attachments"][0]
+        assert not current["saved"] and current["dirty"]
+        assert not attachment["saved"] and attachment["original_available"]
+        assert len(bodies) == 1 and current["messages"] == []
+        assert base64.b64encode(image()).decode() not in json.dumps(current)
+        binary = client.get(f"/api/v1/cases/sessions/{case['id']}/attachments/{attachment['id']}/original")
+        assert binary.status_code == 200 and binary.content == image()
+        assert_absent_from_profile(services, IMAGE_SENTINEL, base64.b64encode(image()).decode())
+        closed = client.post(f"/api/v1/cases/sessions/{case['id']}/close", json={"revision": current["revision"]})
+        assert closed.status_code == 200
+        assert client.get(f"/api/v1/cases/sessions/{case['id']}/attachments/{attachment['id']}/original").status_code == 404
+        assert len(bodies) == 1
+
+
+@pytest.mark.parametrize("kind", ["png", "jpeg"])
+def test_original_image_keep_save_restart_without_helpers_or_provider(tmp_path, kind):
+    profile = tmp_path / ("disconnected-original-" + kind)
+    app = create_app(profile)
+    services = app.state.services
+    services.registry.pop("knowledge", None)
+    calls = []
+    def forbidden(request):
+        calls.append(request.url.path)
+        raise AssertionError("Keeping an original must not call a provider")
+    manager = ProviderManager(services.paths, http_transport=httpx.MockTransport(forbidden))
+    services.registry["provider"] = manager
+    if kind == "jpeg":
+        buffer = BytesIO()
+        Image.new("RGB", (12, 8), "white").save(buffer, format="JPEG")
+        raw, media_type = buffer.getvalue(), "image/jpeg"
+    else:
+        raw, media_type = image(), "image/png"
+    with TestClient(app) as client:
+        case = client.post("/api/v1/cases/sessions", json={"text": "Synthetic disconnected original"}).json()
+        capabilities = client.get("/api/v1/cases/capabilities").json()
+        assert capabilities["originals"]["supported"] is True
+        assert capabilities["originals"]["max_bytes"] == 8 * 1024 * 1024
+        assert capabilities["originals"]["image_pixels"] == 16000000
+        assert capabilities["image_interpretation"]["supported"] is False
+        response = upload(client, case, raw, mode="original", filename="synthetic." + kind,
+                          media_type=media_type)
+        assert response.status_code == 202
+        preview = response.json()
+        assert preview["state"] == "ready" and preview["mode"] == "original"
+        assert not preview["text"] and not preview["ocr"]
+        denied = client.post(f"/api/v1/cases/attachments/{preview['id']}/discuss-image", json={
+            "revision": case["revision"], "request_id": "original-not-discussion", "message": QUESTION, "model": MODEL})
+        assert denied.status_code == 409 and calls == []
+        kept = client.post(f"/api/v1/cases/attachments/{preview['id']}/keep", json={"revision": case["revision"]})
+        assert kept.status_code == 200
+        current = kept.json()
+        attachment = current["attachments"][0]
+        assert not attachment["saved"] and attachment["original_available"]
+        assert attachment["sha256"] == hashlib.sha256(raw).hexdigest()
+        assert base64.b64encode(raw).decode() not in json.dumps(current)
+        assert services.db.fetch_all("SELECT * FROM case_attachment_parts") == []
+        assert_absent_from_profile(services, IMAGE_SENTINEL, base64.b64encode(raw).decode())
+        saved = client.post(f"/api/v1/cases/sessions/{case['id']}/save", json={"revision": current["revision"]})
+        assert saved.status_code == 200 and saved.json()["attachments"][0]["saved"]
+        original_path = f"/api/v1/cases/sessions/{case['id']}/attachments/{attachment['id']}/original"
+        binary = client.get(original_path)
+        assert binary.status_code == 200 and binary.content == raw
+        assert binary.headers["cache-control"] == "no-store"
+        assert binary.headers["content-type"] == media_type
+        assert calls == [] and manager.status()["live_provider_verified"] is False
+    with TestClient(create_app(profile)) as restarted:
+        reopened = restarted.get(f"/api/v1/cases/sessions/{case['id']}").json()
+        assert reopened["attachments"] == saved.json()["attachments"]
+        assert base64.b64encode(raw).decode() not in json.dumps(reopened)
+        assert restarted.get(original_path).content == raw
+
+
+@pytest.mark.parametrize("condition", ["malformed", "too-large"])
+def test_disconnected_original_image_denials_do_not_keep_bytes_or_call_provider(tmp_path, condition):
+    app = create_app(tmp_path / ("original-denial-" + condition))
+    services = app.state.services
+    services.registry.pop("knowledge", None)
+    with TestClient(app) as client:
+        case = client.post("/api/v1/cases/sessions", json={"text": "Synthetic original guard"}).json()
+        if condition == "malformed":
+            response = upload(client, case, b"\x89PNG\r\n\x1a\ninvalid", mode="original")
+            assert response.status_code in (400, 422)
+        else:
+            options = headers(case, mode="original")
+            options["content-length"] = str(8 * 1024 * 1024 + 1)
+            response = client.post(f"/api/v1/cases/sessions/{case['id']}/attachments/extract",
+                                   headers=options, content=image())
+            assert response.status_code == 413
+        assert client.get(f"/api/v1/cases/sessions/{case['id']}").json()["attachments"] == []
+        assert services.db.fetch_all("SELECT * FROM case_attachment_parts") == []
+        assert_absent_from_profile(services, IMAGE_SENTINEL, base64.b64encode(image()).decode())
 
 
 def test_unknown_account_cannot_prepare_or_send_and_no_fallback(tmp_path):

@@ -86,6 +86,11 @@ def services(tmp_path):
     db = Database(paths.database)
     schema = Path(__file__).parents[2] / "runtime/renulus/cases/schema.sql"
     db.apply_migration("cases-001", schema.read_text(encoding="utf-8"))
+    for migration in sorted((schema.parent / "migrations").glob("*.sql")):
+        if not migration.stem[:3].isdigit() or migration.stem[:3] == "001":
+            raise RuntimeError(f"Use a numbered additive migration after 001: {migration.name}")
+        db.apply_migration(f"cases-{migration.stem}",
+                           migration.read_text(encoding="utf-8"))
     result = Services(paths, db)
     result.registry["content"] = ContentFixture()
     # Empty app-owned history/export/cache directories exercise every retention path.

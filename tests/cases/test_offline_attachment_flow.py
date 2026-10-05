@@ -2,6 +2,7 @@
 
 import asyncio
 import builtins
+import hashlib
 import importlib.util
 import io
 from io import BytesIO
@@ -140,6 +141,13 @@ def test_actual_proven_byte_extractor_through_case_preview_apply_save_delete(act
         applied = client.post(f"/api/v1/cases/attachments/{job['id']}/apply",
             json={"revision": 1, "text": job["text"]}).json()
         assert text.lower() in applied["text"].lower() and not applied["saved"]
+        original = applied["attachments"][0]
+        assert not original["saved"] and original["original_available"]
+        assert original["bytes"] == len(raw) and original["sha256"] == hashlib.sha256(raw).hexdigest()
+        original_path = f"/api/v1/cases/sessions/{case['id']}/attachments/{original['id']}/original"
+        binary = client.get(original_path)
+        assert binary.status_code == 200 and binary.content == raw
+        assert binary.headers["cache-control"] == "no-store"
         assert_absent_from_profile(services, text)
         cases = services.registry["cases"]
         for target in ("explain", "generated-practice"):
@@ -157,6 +165,14 @@ def test_actual_proven_byte_extractor_through_case_preview_apply_save_delete(act
             assert_absent_from_profile(services, text)
         saved = client.post(f"/api/v1/cases/sessions/{case['id']}/save", json={"revision": applied["revision"]})
         assert saved.status_code == 200
+        assert saved.json()["attachments"][0]["saved"]
+        closed = client.post(f"/api/v1/cases/sessions/{case['id']}/close", json={"revision": applied["revision"]})
+        assert closed.status_code == 200
+        reopened = client.get(f"/api/v1/cases/sessions/{case['id']}").json()
+        assert reopened["attachments"] == saved.json()["attachments"]
+        binary = client.get(original_path)
+        assert binary.status_code == 200 and binary.content == raw
+        assert binary.headers["cache-control"] == "no-store"
         pending = []
         for target in ("explain", "generated-practice"):
             ticket = client.post(f"/api/v1/cases/sessions/{case['id']}/handoff", json={
@@ -165,6 +181,8 @@ def test_actual_proven_byte_extractor_through_case_preview_apply_save_delete(act
             context = cases.resolve_handoff(ticket["id"], target)
             pending.append((target, ticket, context))
         assert client.delete(f"/api/v1/cases/sessions/{case['id']}").json()["deleted"]
+        assert client.get(original_path).status_code == 410
+        assert not services.db.fetch_all("SELECT * FROM case_attachment_parts WHERE attachment_id=?", (original["id"],))
         for target, ticket, context in pending:
             assert context["cancel"].is_set()
             with pytest.raises(ApiError):
