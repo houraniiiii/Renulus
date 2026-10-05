@@ -4,6 +4,11 @@ const path = require('node:path');
 const bundle = process.env.RENULUS_BACKEND_BUNDLE;
 const renderer = process.env.RENULUS_RENDERER_BUNDLE;
 const native = process.env.RENULUS_NATIVE_BUNDLE;
+const output = process.env.RENULUS_DELIVERY_OUTPUT;
+if (output) {
+  const relative = path.relative(path.join(__dirname, 'release'), output);
+  if (!path.isAbsolute(output) || !relative || relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('A delivery output must be an explicit directory in this desktop lane release tree.');
+}
 if (renderer && (!path.isAbsolute(renderer) || !fs.existsSync(path.join(renderer, 'index.html')) || !fs.existsSync(path.join(renderer, 'renderer-provenance.json')))) throw new Error('An integrated renderer requires its built index and committed source provenance.');
 if (native && (!path.isAbsolute(native) || !fs.existsSync(path.join(native, 'main.cjs')) || !fs.existsSync(path.join(native, 'native-provenance.json')))) throw new Error('An integrated native entry requires its compiled main and source/adoption provenance.');
 if (!bundle || !path.isAbsolute(bundle) || !fs.existsSync(path.join(bundle, 'bundle.json'))) {
@@ -25,7 +30,7 @@ module.exports = {
   asar: true,
   nativeModules: { npmRebuild: false, nodeGypRebuild: false },
   toolsets: { nsis: '1.2.1', sevenZip: '1.0.0' },
-  directories: { output: 'release' },
+  directories: { output: output || 'release' },
   files: [renderer ? { from: renderer, to: 'dist', filter: ['**/*'] } : 'dist/**', native ? { from: native, to: 'dist-electron', filter: ['**/*'] } : 'dist-electron/**', 'licenses/**', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'package.json'],
   extraResources: [{ from: bundle, to: 'backend' }, { from: path.join(__dirname, 'licenses'), to: 'licenses' }, { from: path.join(__dirname, 'THIRD_PARTY_NOTICES.md'), to: 'THIRD_PARTY_NOTICES.md' }],
   publish: null,

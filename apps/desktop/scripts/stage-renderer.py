@@ -61,8 +61,10 @@ if args.include_native:
     native_manifest = {**manifest, "kind": "committed-integrated-native",
                        "electron_version": installed_pin, "backend_adoption": native_adoption,
                        "main_source_sha256": hashlib.sha256((snapshot / "electron/main.ts").read_bytes()).hexdigest(),
+                       "preload_source_sha256": hashlib.sha256((snapshot / "electron/preload.ts").read_bytes()).hexdigest(),
                        "profile_source_sha256": hashlib.sha256((snapshot / "electron/profile.ts").read_bytes()).hexdigest(),
-                       "main_bundle_sha256": hashlib.sha256((native / "main.cjs").read_bytes()).hexdigest()}
+                       "main_bundle_sha256": hashlib.sha256((native / "main.cjs").read_bytes()).hexdigest(),
+                       "preload_bundle_sha256": hashlib.sha256((native / "preload.cjs").read_bytes()).hexdigest()}
     (native / "native-provenance.json").write_text(json.dumps(native_manifest, indent=2), encoding="utf-8")
     (native / "backend-adoption.patch").write_text(patch, encoding="utf-8")
 print(json.dumps({"renderer": str(snapshot / "dist"), **manifest}, indent=2))
