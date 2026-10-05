@@ -44,4 +44,27 @@ does not manufacture an observed result for that page. Clicking Resume
 continued from the last reported cursor. At the next observation it had
 reported 1,200 receipts, 670 additions and 530 attention results with no visible
 error. These are observed scan counters, distinct from persisted totals and
-from CPU indexing. The full traversal is still running.
+from CPU indexing.
+
+At 01:31 UTC on October 5 the retained production view reported a completed
+traversal: **12,210 checked, 6,661 added for processing, 5,549 needing attention
+and zero remaining**. Its completion notice states that passage search becomes
+available after processing. No visible scan error was present. Pause, backend
+restart and resume had already preserved the cursor and durable jobs.
+
+An independent read-only SQLite audit at 01:33:02 UTC found 13,030 unique
+inspected L02 receipts, 7,118 adopted receipts with 7,118 distinct bound jobs,
+and canonical topic tags covering all T01–T27. Rejections were 5,847 processing
+permission refusals, 55 missing acceptable open-access versions and ten
+unavailable text records. These persisted totals include the earlier development
+scan and committed work whose interrupted response never reached the UI; they
+are deliberately distinct from the production view's counters.
+
+The local Library contained 7,307 documents: 641 ready, one processing and
+6,665 queued at that observation. These statuses continue to change as the
+managed CPU worker runs. A clean larger data-only snapshot is being prepared
+through the supported segmented recovery interface. Its successful restore,
+hash verification and retrieval are separate acceptance gates; neither the
+scan nor the queued count establishes an indexed or clinically reviewed corpus.
+Restricted originals and machine-only audit output stay outside Git/public
+application bundles.

@@ -140,13 +140,16 @@ async def test_shared_consumers_present_go_gate_as_unavailable_and_non_retryable
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://127.0.0.1",
             headers={"x-renulus-token": "synthetic-local-token"}) as client:
         capabilities = (await client.get("/api/v1/assessment/practice/capabilities")).json()
+        case = (await client.post("/api/v1/cases/sessions", json={"text": SENTINEL})).json()
+        discussion = flow(await client.post("/api/v1/cases/sessions/" + case["id"] + "/discuss",
+            json={"revision": case["revision"], "request_id": "presentation-gate", "message": "Explain the mechanism"}))
         practice = flow(await client.post("/api/v1/assessment/practice/generate", json={
             "prompt": "Synthetic token exercise", "count": 1, "context": "temporary",
             "idempotency_key": "presentation-practice"}))
         learn = flow(await client.post("/api/v1/learn/ask", json={
             "question": "Synthetic temporary learning", "scope": {"kind": "temporary-case"}}))
     assert requests == [] and not provider.status()["active_runs"]
-    errors = [practice[-1]["payload"], learn[-1]["payload"]]
+    errors = [discussion[-1]["payload"]["error"], practice[-1]["payload"], learn[-1]["payload"]]
     absent(app.state.services.paths.root)
     assert capabilities["available"] is False
     assert capabilities["code"] == "learning_use_unverified" and capabilities["retryable"] is False

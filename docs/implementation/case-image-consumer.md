@@ -120,3 +120,15 @@ text success cannot establish it. Go remains subject to the existing runtime
 learning-use gate. This adds one PNG/JPEG per deliberate image discussion;
 PDF visual interpretation, DICOM, image persistence and automatic case-derived
 general learning are not implemented by this lane.
+
+The integration owner added the shared Runtime prerequisite on October 5:
+image-bearing `case-image-discuss` requests require observed `supported` image
+input after route selection and before credential access or context compaction.
+The independent guard check makes credential access fail if reached, then proves
+the unverified request is rejected with no active run or live-provider claim.
+The integrated Cases, practice and Learn producer check now strictly asserts
+the non-retryable Go gate in all three consumers, with no expected failure.
+The combined focused image/cross-module/practice/Learn error run passed
+**44 checks** in 162.73 seconds. Connections' explicit synthetic image check is
+the final UI bootstrap handoff still being integrated; no live account proof is
+claimed by that controlled-HTTP run.

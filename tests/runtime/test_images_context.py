@@ -123,6 +123,25 @@ async def test_actual_hermes_sdk_image_wire_all_five_models_and_honest_capabilit
             assert image_part()["data"].encode() not in path.read_bytes()
 
 
+@pytest.mark.asyncio
+async def test_case_image_requires_observed_support_before_credentials_or_context(app_paths, monkeypatch):
+    manager = ProviderManager(app_paths)
+    manager._settings["connections"]["codex"] = {"client_id": "synthetic-client",
+        "access_token": "synthetic-plan-token", "expires_at": time.time() + 1200}
+    manager._settings["selected_provider"] = "codex"
+    manager._catalogs["codex"] = {"gpt-6.1-sol"}
+    async def forbidden_credentials(provider):
+        raise AssertionError("Unverified case images must be rejected before credential access")
+    monkeypatch.setattr(manager, "_access_token", forbidden_credentials)
+    with pytest.raises(ApiError) as failure:
+        _ = [part async for part in manager.stream(image_messages(), scope=SCOPE,
+            run_id="unverified-case-image", model="gpt-6.1-sol", purpose="case-image-discuss")]
+    assert failure.value.code == "image_capabilities_unverified" and not failure.value.retryable
+    assert manager.status()["active_runs"] == []
+    assert not manager.status()["live_provider_verified"]
+    await manager.close()
+
+
 @pytest.mark.parametrize("change", ["remote-url", "bad-base64", "wrong-mime", "assistant", "unknown-part", "too-many"])
 def test_image_validation_rejects_remote_files_corruption_roles_and_oversize_counts(change):
     messages = image_messages()

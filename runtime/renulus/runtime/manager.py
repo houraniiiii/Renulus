@@ -413,6 +413,9 @@ class ProviderManager:
             capability = self._model_status(provider, chosen, catalog)
             if images and capability["image_input"] == "account_unsupported":
                 raise ApiError("image_input_unsupported", "This account rejected image input for the selected model. Choose an explicitly available image route.", 409)
+            if images and purpose == "case-image-discuss" and capability["image_input"] != "supported":
+                raise ApiError("image_capabilities_unverified",
+                    "Check image input for this model in Connections before sending a case image.", 409)
             run.pending = asyncio.create_task(self._access_token(provider))
             try:
                 token = await run.pending
