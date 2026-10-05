@@ -47,6 +47,14 @@ if (native) {
   const ui = renderer && JSON.parse(fs.readFileSync(path.join(renderer, 'renderer-provenance.json'), 'utf8'));
   if (provenance.kind !== 'committed-integrated-native' || provenance.electron_version !== require('./package.json').devDependencies.electron || provenance.source_revision !== contract.source_revision || !ui || ui.source_revision !== contract.source_revision) throw new Error('Integrated backend, renderer and native entry must use one committed source revision and the patched Electron pin.');
 }
+// builder-util 27.0.0-alpha.6 walk() drops .gitkeep before consulting any glob.
+// Direct file mappings bypass that walker, limited to the verified inventory.
+const backendPlaceholders = JSON.parse(fs.readFileSync(path.join(bundle, 'inventory.json'), 'utf8'))
+  .filter(({ path: file }) => path.posix.basename(file) === '.gitkeep')
+  .map(({ path: file }) => {
+    if (path.isAbsolute(file) || file.includes(path.win32.sep) || file.includes(':') || file.split('/').some(part => !part || part === '.' || part === '..')) throw new Error('Backend placeholder inventory paths must be relative and confined to the bundle.');
+    return { from: path.join(bundle, file), to: path.posix.join('backend', file) };
+  });
 module.exports = {
   electronVersion: require('./package.json').devDependencies.electron,
   electronDist: path.join(__dirname, 'node_modules', 'electron', 'dist'),
@@ -60,7 +68,7 @@ module.exports = {
   toolsets: { nsis: '1.2.1', sevenZip: '1.0.0' },
   directories: { output: output || 'release' },
   files: [renderer ? { from: renderer, to: 'dist', filter: ['**/*'] } : 'dist/**', native ? { from: native, to: 'dist-electron', filter: ['**/*'] } : 'dist-electron/**', 'licenses/**', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'package.json'],
-  extraResources: [{ from: bundle, to: 'backend' }, { from: path.join(__dirname, 'licenses'), to: 'licenses' }, { from: path.join(__dirname, 'THIRD_PARTY_NOTICES.md'), to: 'THIRD_PARTY_NOTICES.md' }],
+  extraResources: [{ from: bundle, to: 'backend' }, ...backendPlaceholders, { from: path.join(__dirname, 'licenses'), to: 'licenses' }, { from: path.join(__dirname, 'THIRD_PARTY_NOTICES.md'), to: 'THIRD_PARTY_NOTICES.md' }],
   publish: null,
   forceCodeSigning: false,
   win: { executableName: 'Renulus Development', icon: 'public/renulus.ico', target: ['nsis'], sign: false },
