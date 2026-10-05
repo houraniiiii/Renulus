@@ -13,6 +13,11 @@ profile/database, credentials, old message, case, original or other session.
 Only Node syntax, PowerShell parsing and this recipe's read-only plan ran.
 Readiness is separate from matching installed/native acceptance and real replies.
 
+This preparation amendment follows reviewed readiness commit ca4f160f. It replaces
+the short capture snapshot with bounded metadata polling and admits the actual
+approved automatic Codex text model. Astra image capability remains a separate
+gate. The same lane lease, manufacture freeze and parent execution slot apply.
+
 ## Owned files and handoff
 
 The only tracked change is this report. The executable recipe deliberately stays
@@ -24,12 +29,13 @@ dependency, launcher, account configuration or profile was edited.
 | Local file | Role | SHA-256 of prepared bytes |
 | --- | --- | --- |
 | .local/live-acceptance/run-live-acceptance.ps1 | Parent entry point; defaults to plan | 6925c8096f7955ac9e6ac52a43f860f3d093c76bfc7fcec585a2358151f8be4f |
-| .local/live-acceptance/live-acceptance.mjs | UI journeys, source/installation admission, bounded receipts | a7cc603c8d077bb71c39171b9569781a7790f72685c62e627b6b87ff6f520bf6 |
+| .local/live-acceptance/live-acceptance.mjs | UI journeys, source/installation admission, bounded receipts | 1c5ab2b7612ef1e2f420b21fd5955aab8e2e8e9d8e48bf495661232f11638082 |
 | .local/live-acceptance/owned-processes.ps1 | New owned process identities and physical exit; no termination | 5e163a494a755708712bf5f2d023b37eedd137203b92cb144a34f9432d7950ff |
-| .local/live-acceptance/receipts/preparation-final-20261005.json | Final parse/plan receipt and these hashes | Local preparation evidence |
+| .local/live-acceptance/receipts/preparation-amendment-20261005.json | Amendment parse/plan receipt and these hashes | Local preparation evidence |
 
-The earlier preparation-20261005.json is retained with its earlier script hash.
-Use the final receipt for the prepared recipe. Future actual runs create separate
+The earlier preparation-20261005.json and preparation-final-20261005.json remain
+intact with their earlier script hashes. Use the amendment receipt for the current
+prepared recipe. Future actual runs create separate
 receipts/<timestamp>-<random>/live-evidence.json; they never replace preparation
 evidence. Screenshots contain only new synthetic answers/feedback, not the whole
 owner window or its old history. The generated geometry PNG is original synthetic
@@ -85,18 +91,22 @@ python3, py, uv, Node and npm must not resolve on the app PATH.
 
 ## Provider and product bounds
 
-The approved subscription/model policy remains unchanged. This acceptance run
-uses only the app-owned **already selected Codex connection and GPT 6 Astra**.
-It never signs in, disconnects, chooses a different subscription/model, reads a
-protected record, opens an account page or supplies an API key. Sol, Luna,
-OpenCode Go and paid/API fallbacks are not acceptance substitutes.
+The approved subscription/model policy remains unchanged. Text journeys use the
+app-owned **already selected Codex connection** and its actual first available
+model in the exact order **gpt-6.1-sol, gpt-6-astra, gpt-6-luna**. Sol or Luna
+already winning automatic routing is accepted without changing any selection.
+The recipe never signs in, disconnects, chooses a different subscription/model,
+reads a protected record, opens an account page or supplies an API key. OpenCode
+Go and paid/API fallbacks are not acceptance substitutes.
 
 Source-visible routing matters: Learn, generated practice and automatic Mem0
 capture pass no explicit model and the runtime chooses the first available
-allowed model in Sol/Astra/Luna order. Therefore Astra must already be that
-automatic choice. If Sol would win, Astra is absent, or the selection differs,
-the recipe records a blocker before generation. Catalogues are volatile across
-app starts: an already selected, saved Codex connection in configured state
+allowed model in Sol/Astra/Luna order. Read-only connection observations record
+the automatic route before text journeys and at close; they do not select a
+model. Feature answer streams and canonical capture jobs do not persist a model
+field, so the capture receipt does not claim independent per-job model proof.
+An unavailable approved automatic route or changed subscription is a blocker.
+Catalogues are volatile across app starts: a saved Codex connection in configured state
 gets **one real UI Check models action**, then availability is checked. This
 does not change the saved selection; an auth/quota failure stops immediately.
 
@@ -107,13 +117,30 @@ synthetic case. No provider invocation is replayed or repaired. There are four
 foreground generation requests and at most two ordinary answer-extraction
 requests from Mem0. One catalogue check per app and local observation requests
 are separate. With -Image, at most one existing UI synthetic image capability
-check and one temporary geometry discussion are added. Existing supported Astra
-image input skips the capability check. Any unsupported/auth/quota/provider
-failure blocks further journeys rather than switching routes.
+check and one temporary geometry discussion are added. Images remain explicitly
+**gpt-6-astra only** on the current selected Codex connection. Astra must already
+be available, its image input must support the request, and the Cases image UI
+must already default to Astra. No image selector is changed. Existing supported
+Astra image input skips the capability check; unknown support permits one check
+on available Astra. Absent/rejected Astra, unverified support, or a different
+current image default records an image-capability blocker without an alternate
+image request. Completed Explain/guided/capture/practice observations remain
+separately passed in textJourneys; the overall requested run is still blocked.
+The capability check precedes temporary-case creation because navigating to
+Connections would unmount that case's UI. Any actual auth/quota/unsupported
+provider failure stops immediately, with no further provider invocation.
 
-Each request has a 120-second bound. Each answer's automatic capture gets one
-25-second observation window and one source-scoped metadata snapshot; pending
-is a blocker, not a pass. Startup window observation reuses the existing bounded
+Each request has a 120-second bound. Each answer's automatic capture gets an
+immediate metadata sample and read-only polling every **one second**, bounded at
+**180 seconds**. Every poll is confined to that exact new thread and immutable
+learn-answer:<run-id> evidence, its single outbox job and source-linked canonical
+record metadata. It invokes no API, capture, retry, reindex or provider. The
+first observed failed/cancelled state or error_code stops immediately, without
+another polling delay or live journey. Completed acceptance still requires
+**attempts = 1** and a canonical learning-point source link. Pending at the bound
+is an honest blocker. Per-answer captureObservations retain elapsed milliseconds,
+sample count, state and scoped metadata even after final summaries are written.
+Startup window observation reuses the existing bounded
 Flow waiter. Ordinary physical exit has a total 30-second wait budget. There
 is no generation retry loop, reconnect action, repeated capture request,
 memory retry/reindex action, import, corpus traversal or manufactured response.
@@ -139,10 +166,10 @@ and title, then sends only the dependent requests. It does not repeat the probe.
 | --- | --- |
 | Direct Explain | Learn UI /learn/ask; direct default, bounded synthetic filtration/reabsorption output, completed /learn/threads/<new-id> canonical reply and real Hermes runtime completion. |
 | Guided | Teaching style UI and a follow-up through /learn/ask in the same new thread; actual guided output includes a question and is canonically completed. Saved synthetic output requires parent teaching-behaviour review; prefix/keyword checks alone do not prove educational quality. |
-| Automatic capture | Read-only SQLite metadata for this thread's study-answer evidence, immutable answer reference, memory_jobs and memory_sources joined to canonical fact IDs/revisions/kinds/scopes. Completed once, with a learning-point source link; no manual capture or memory text read. |
+| Automatic capture | Read-only SQLite polling of one exact new answer's study-answer evidence, immutable reference, single memory_jobs row and memory_sources joined to fact IDs/revisions/kinds/scopes. One-second interval, 180-second bound, observed elapsed; completed with attempts=1 and a learning-point source link. No manual capture, API retry or memory text read. |
 | Generated practice | Test's Generated practice UI; /assessment/practice/generate, answer and end routes. One real generated-unreviewed feedback item, separate generated count +1, and unchanged reviewed totals. No reviewed-bank answer/key is read or committed. |
 | Temporary case | Cases UI start, discuss and Discard and close; /cases/sessions/<new-id> and its own run. Unsaved synthetic discussion stays temporary. After close/physical exit, scoped counts require zero saved case and learning-evidence rows for that ID. |
-| Optional image | Existing Connections Check image input for gpt-6-astra, then actual temporary attachment prepare/extract/discuss-image UI routes. Original 240×160 PNG contains three blue circles and one red square. Only output matching those known counts establishes the limited geometry observation; neither request acceptance nor this observation proves clinical image interpretation. |
+| Optional image | Available Astra on the selected Codex connection; at most one Connections Check image input for gpt-6-astra; existing Astra image default, then actual temporary attachment prepare/extract/discuss-image UI routes. Capability blockers are separate from successful text observations. Original 240×160 PNG contains three blue circles and one red square. Only matching output establishes that limited geometry observation; it does not prove clinical image interpretation. |
 | Normal queue | Read-only knowledge_jobs counts grouped by state/phase before launch, at ordinary close and after physical exit. Existing jobs run normally; no old title/text/original read, new import, cancellation or requeue is requested. A snapshot does not prove the owner corpus finished indexing. |
 
 Before launch, metadata-only counts refuse older queued/running memory jobs,
@@ -173,9 +200,10 @@ private profile file; no such scan is performed.
 
 ## Readiness verification and source assumptions
 
-Final verification: Node --check passed; both PowerShell files parsed; the
+Amendment verification: Node --check passed; both PowerShell files parsed; the
 PowerShell entry point without -Run delegated to Node --plan and returned the
-bounded plan. Ignored preparation-final-20261005.json records zero app launches,
+180-second/one-second, attempts=1 plan and exact automatic Codex order. Ignored
+preparation-amendment-20261005.json records the current hashes and zero app launches,
 native process queries, helper executions, provider calls, tests, profile opens
 and credential accesses. No broad suite or actual native/provider workload ran.
 
