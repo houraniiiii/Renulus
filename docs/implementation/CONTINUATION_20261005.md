@@ -35,6 +35,23 @@ The native17 controller is now running in session `15174`, with parent evidence
 under `C:/rn-finalise-20261005/parent-native-035ca7bd-01`. Installed journeys,
 three ordinary physical closes, connected/live and maintenance remain pending.
 
+While native17 performs its installed-file audit, the parent admitted the
+independent bundled storage slice under `early-storage-035ca7bd-20261006`.
+Actual controller `93392` exited 0 at 22:09:39 UTC on October 5 (October 6
+locally). All six phases passed: f316 seed, owned interruption before ledger
+commit (exit 86), atomic DDL/ledger rollback recovery, forward migration/replay,
+original retention/reopen/checksum refusal and schema-99 refusal. The saved PDF
+spans two canonical parts. Source functions/SQL and all six prepared phase
+bodies are unchanged; an operational copy only admits the explicit storage-only
+parent binding. No helper/model, renderer, user profile or provider work ran.
+Receipt: `C:/rn-finalise-20261005/parent-lifecycle-035ca7bd/storage-64d7e2c5/storage-evidence.json`,
+SHA256 `81ecaa0d53413646d682246eed6884f5c9474ad935e8da24f9e1e6bbc9bf36a5`.
+Binding SHA256 is `590bc5f846363b54fbedc82135b14c0bcab04c8c8bf81d456fe037d52d009f8c`.
+This closes the actual installed-storage boundary only. A later full lifecycle
+binding must reconcile the unchanged interpreter/source/migration anchors before
+maintenance, preserving this receipt and avoiding a repeat storage run. Native,
+connected/live, app rollback and uninstall/reinstall remain pending.
+
 The saved-original slice has 112 retained individual backend passes plus one
 accepted exact retry at `37dc5384`, and 45 lane-reported renderer checks plus
 TypeScript. All affected product/test paths match the freeze. Keep the collection
