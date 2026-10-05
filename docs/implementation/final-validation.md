@@ -37,12 +37,25 @@ proof confirmed E TEMP/TMP without changing the parent's environment. These
 guards do not establish actual installer or native Save-dialog execution.
 
 The final full backend regression began with 901 collected tests on runtime
-source `45defa9d`, which is unchanged in the frozen application. Its later
-result and optional skips will be recorded separately. Test scratch, final
-generated build output and native proof profiles are on the authorised local
-E drive. The managed larger local data-only snapshot is still rebuilding;
-successful recovery, excluded-state audit and cross-domain retrieval remain
-separate from scan counts or queued ingestion.
+source `45defa9d`, which is unchanged in the frozen application. Slow database
+writes on E made that attempt impractical: it was deliberately interrupted,
+then its exact owned process tree was stopped after command verification. No
+passing full-suite result is attributed to the interrupted run.
+
+After clean-profile preparation released its temporary workspace, a fresh
+full regression started at 02:23 UTC on SSD scratch, with a 2.4 GB free-space
+gate. Synthetic scratch is `C:/Users/karol/.rn-final2`; its child TEMP/TMP is
+`C:/Users/karol/.rn-tmp2`. Final logs and JUnit output stay on E at
+`rn-backend-ssd-20261005.log` and `rn-backend-ssd-20261005.xml`. Its final
+result remains pending until observed. Native build/install/proof outputs
+remain on the authorised E root.
+
+The larger data-only snapshot completed supported restore and CPU rebuilding:
+7,307 verified originals, 11,755 searchable passages, 481 ready documents and
+6,826 durable queued imports. Separate actual API retrieval and excluded-state
+verification passed across CKD, dialysis and transplantation; see
+[complete profile evidence](complete-delivery-profile-live-proof.md). These
+results are distinct from completed acquisition traversal counts.
 
 Live account authorization/catalogue/generation, interpretation quality,
 live automatic learning-point extraction, signing and a clean-machine release

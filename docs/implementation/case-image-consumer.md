@@ -130,5 +130,7 @@ The integrated Cases, practice and Learn producer check now strictly asserts
 the non-retryable Go gate in all three consumers, with no expected failure.
 The combined focused image/cross-module/practice/Learn error run passed
 **44 checks** in 162.73 seconds. Connections' explicit synthetic image check is
-the final UI bootstrap handoff still being integrated; no live account proof is
-claimed by that controlled-HTTP run.
+now integrated in frozen product `ebb2db2e`; see
+[the explicit image-input check](image-capability-check.md). The full renderer
+subsequently passed 407 checks across 33 files. No live account proof is claimed
+by the controlled-HTTP run or renderer suite.

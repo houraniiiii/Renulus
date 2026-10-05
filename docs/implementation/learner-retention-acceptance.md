@@ -126,6 +126,21 @@ node ../Renulus-wt-integration/apps/desktop/node_modules/vite/bin/vite.js build 
 git diff --check
 ~~~
 
+## Later integration status
+
+The historical disclosure and missing-producer findings above were resolved
+before the final application freeze at `ebb2db2e`. The shell now describes
+temporary processing context while acknowledging explicitly saved snapshots and
+the need to save follow-up changes. Cases has its guarded volatile image
+consumer plus the public Connections image-input check. Ordinary durable Study
+replies now produce guarded general-learning capture jobs; see
+[capture evidence](study-answer-memory-evidence.md) and
+[image consumer evidence](case-image-consumer.md). Case material remains
+excluded. These later changes supersede the local implementation holds, while
+live subscription/interpretation/extraction proof remains under Runtime #2.
+The final renderer passed 407 tests; final backend and native acceptance are
+recorded separately in [final validation](final-validation.md).
+
 Owned edits are the Learn renderer/service, its focused lifecycle and retention
 proofs, the expanded existing Learn cancellation proof, and this evidence.
 Cases/Memory implementation, schema, shared shell/platform/runtime/recovery and
