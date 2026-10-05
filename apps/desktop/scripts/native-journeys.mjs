@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { waitForFlowWindow } from './wait-for-flow-window.mjs';
 import { syntheticPdf } from './synthetic-pdf.mjs';
 import { capturePdfFrames, classifyPdfFrames } from './pdf-viewer-evidence.mjs';
+import { proveNativeProductBackup } from './native-product-backup.mjs';
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourceDesktop = process.env.RENULUS_SOURCE_DESKTOP;
 const expectedRevision = process.env.RENULUS_EXPECT_SOURCE_REVISION;
@@ -112,6 +113,10 @@ try {
   result.publisher.rendererStayedLocal = page.url() === result.publisher.rendererUrl;
   if (!result.publisher.dispatch.some(record => record.url === result.publisher.href && record.state === 'OS-open-completed') || result.publisher.rendererWindows !== 1 || !result.publisher.rendererStayedLocal) throw new Error('The publisher link did not complete a system-browser dispatch.');
   if (result.pdfViewer.blocked || !result.pdfViewer.viewerDetected || !result.pdfViewer.citationPageSelected) throw new Error('The native PDF viewer failed to show the requested physical page. Inspect its frame, console and screenshot evidence.');
+  if (process.env.RENULUS_EXPECT_PRODUCT_BACKUP === '1') {
+    if (sourceDesktop) throw new Error('The actual producer archive gate requires a packaged managed backend.');
+    result.productBackup = await proveNativeProductBackup(application, page, evidence, executable, env);
+  }
 } catch (error) { result.error = { message: error.message, stack: error.stack }; }
 finally {
   if (application) await application.close();

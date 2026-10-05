@@ -542,3 +542,25 @@ inspected and shows the cancelled notice and available save button. Node syntax
 passed. Opening was visible at 1.514 s and the loopback renderer at 2.805 s with
 delayed fixture metadata; these are not real backend/Home startup timings. Main
 PID 33884 was confirmed gone. No clean delivery profile or heavy backend was used.
+
+The read-only installer plan also passed against reported parent checkpoint
+54cbeb6d1dc6c4ab537dd7d3aeafcf328ea7d7bc. It verified unchanged dependencies,
+integrated backend adoption, embedded Python/Electron pins and the same trusted
+public helpers. It did not refresh the payload, package, create a delivery
+directory or launch an app. That checkpoint is not an inferred final freeze.
+
+The final packaged journey has an opt-in RENULUS_EXPECT_PRODUCT_BACKUP=1 gate.
+It is confined to the packaged app and the journey's disposable profile. It
+creates one synthetic manual study goal through the real authenticated API,
+uses the unchanged DataManagement button and actual Windows Save dialog, then
+inspects the saved ZIP with that bundle's embedded Python. The inspector checks
+format 2, complete member/table/count inventory, segment/original byte hashes
+and the exact retained synthetic memory row. It also operates actual dialog
+Cancel and checks the prior saved archive is unchanged with no surviving partial.
+This reuses the existing serial native app rather than starting another backend.
+
+Six synthetic archive integrity checks passed in 0.059 s: complete inventory,
+changed segment/original hash, omitted expected row, undeclared member and
+duplicate segment. Both Node modules passed syntax; inspector syntax passed.
+These checks do not constitute native producer execution, restore or multi-GiB
+proof. Actual execution is pending the explicitly frozen matching bundle.
