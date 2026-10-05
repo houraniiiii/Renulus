@@ -583,3 +583,12 @@ boundaries and exercise startBackend itself, without launching helpers. Together
 with the five existing actual-pin native download checks, nine Vitest 4.1.11
 checks passed in 1.07 s. TypeScript passed. This is timeout/cancellation rule
 evidence, not a new measured Windows cold launch. No expensive proof was repeated.
+
+The six archive integrity checks also passed in 0.072 s under the preserved
+actual NSIS-installed embedded CPython 3.14.4 at release/i-e800/resources/backend/
+python/python.exe. The process used -I -B and an OS-only System32 PATH;
+python.exe, uv.exe and node.exe were not discoverable through command lookup.
+This confirms the inspector's standard-library compatibility in the installed
+relocated interpreter. It did not start the native app, warm helpers, modify
+the installed runtime or touch a user/delivery profile. Final matching native
+producer/archive execution remains pending the explicit source freeze.
