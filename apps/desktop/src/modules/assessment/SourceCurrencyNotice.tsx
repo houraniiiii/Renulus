@@ -45,7 +45,7 @@ export default function SourceCurrencyNotice({ currency, item, committed = false
   const title = unavailable ? 'Source currency could not be checked'
     : active.length ? reviewed ? 'Source notice reviewed; question review still needed' : 'Source change needs question review'
       : 'Source notice dismissed';
-  return <div className="assessment-source-currency">
+  return <div className="assessment-source-currency" tabIndex={committed ? undefined : -1}>
     <Notice tone={unavailable || active.length ? 'warning' : 'default'}>
       <strong>{title}</strong>
       <p>Question version {item.question_version} · key {item.key_version} remain pinned.

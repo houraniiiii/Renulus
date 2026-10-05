@@ -96,8 +96,11 @@ describe('assessment UI with real local API responses', () => {
     expect(screen.getByText('Review this answer')).toBeDefined();
     fireEvent.click(screen.getByText('Next question'));
     await screen.findByText('Question 2');
-    fireEvent.click(screen.getByText('View source help'));
+    expect(document.activeElement?.tagName).toBe('LEGEND');
+    const sourceHelp = screen.getByText('View source help'); sourceHelp.focus();
+    fireEvent.click(sourceHelp);
     await screen.findByText('Source help · assisted');
+    expect(document.activeElement).toBe(sourceHelp);
     fireEvent.click(screen.getByText('Pause'));
     await screen.findByText('Quiz paused');
     fireEvent.click(screen.getByText('Resume quiz'));

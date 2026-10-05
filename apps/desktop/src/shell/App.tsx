@@ -13,6 +13,7 @@ function Shell() {
   const [railOpen, setRailOpen] = useState(false);
   const [query, setQuery] = useState('');
   const searchDialog = useRef<HTMLDialogElement>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
   const searchTrigger = useRef<HTMLButtonElement>(null);
   const content = useRef<HTMLElement>(null);
   const { resource } = useResource(signal => api<Health>('/health', { signal }));
@@ -24,7 +25,12 @@ function Shell() {
       ? 'Temporary case context · Only explicitly saved snapshots are kept. New changes require Save.'
       : scope.kind === 'unclassified' ? 'Unclassified context · not saved' : null;
   const temporary = scopeLabel !== null;
-  function openSearch() { if (!searchDialog.current?.open) searchDialog.current?.showModal(); }
+  function openSearch() {
+    if (!searchDialog.current?.open) {
+      searchDialog.current?.showModal();
+      searchInput.current?.focus();
+    }
+  }
   useEffect(() => {
     document.title = 'Renulus · ' + label;
     content.current?.focus({ preventScroll: true });
@@ -54,7 +60,7 @@ function Shell() {
       <main className="workspace-main" id="learning-content" tabIndex={-1} ref={content}><ModuleOutlet /></main>
       <footer className="workspace-footer"><span><img src="./renulus-64.png" width="14" height="14" alt="" />Learning across nephrology</span><span>{temporary ? 'Temporary context' : 'Your learning space'}</span><details className="shortcut-help"><summary>Keyboard</summary><div><strong>Move through Renulus</strong><p><kbd>Ctrl K</kbd> Find a destination</p><p><kbd>Alt 1–8</kbd> Open a destination</p><p><kbd>Esc</kbd> Close destination search</p></div></details></footer>
     </div>
-    <dialog ref={searchDialog} className="destination-dialog" aria-labelledby="search-title" onClose={() => { setQuery(''); searchTrigger.current?.focus(); }}><div className="dialog-heading"><h2 id="search-title">Where would you like to go?</h2><IconButton label="Close destination search" onClick={() => searchDialog.current?.close()}><X size={19} /></IconButton></div><label className="sr-only" htmlFor="destination-search">Search destinations</label><input autoFocus className="input" id="destination-search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Learn, Library, Cases…" /><div className="destination-results">{matches.map(item => <button key={item.id} onClick={() => { searchDialog.current?.close(); navigate(item.id); }}><strong>{item.label}</strong><ArrowRight size={16} aria-hidden="true" /></button>)}{!matches.length && <p role="status">No destinations match. Try Learn or Library.</p>}</div></dialog>
+    <dialog ref={searchDialog} className="destination-dialog" aria-labelledby="search-title" onClose={() => { setQuery(''); searchTrigger.current?.focus(); }}><div className="dialog-heading"><h2 id="search-title">Where would you like to go?</h2><IconButton label="Close destination search" onClick={() => searchDialog.current?.close()}><X size={19} /></IconButton></div><label className="sr-only" htmlFor="destination-search">Search destinations</label><input ref={searchInput} className="input" id="destination-search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Learn, Library, Cases…" /><div className="destination-results">{matches.map(item => <button key={item.id} onClick={() => { searchDialog.current?.close(); navigate(item.id); }}><strong>{item.label}</strong><ArrowRight size={16} aria-hidden="true" /></button>)}{!matches.length && <p role="status">No destinations match. Try Learn or Library.</p>}</div></dialog>
   </div>;
 }
 export function App() { return <NavigationProvider><Shell /></NavigationProvider>; }

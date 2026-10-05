@@ -99,6 +99,8 @@ it('shows real detected/reviewed/dismissed annotations on pinned questions and h
   await screen.findByText('1 question needs source re-review');
   fireEvent.click(screen.getByText('Open session'));
   await screen.findByText('Source change needs question review');
+  const pendingNotice = screen.getByText('Source change needs question review').closest('.assessment-source-currency');
+  expect(document.activeElement).toBe(pendingNotice);
   expect(screen.queryByText('Why this answer')).toBeNull();
   expect(screen.queryByText(pinned.rationale)).toBeNull();
   fireEvent.click(screen.getByText('Source notice details (1)'));
@@ -117,7 +119,9 @@ it('shows real detected/reviewed/dismissed annotations on pinned questions and h
   await screen.findByText('Quiz paused');
   fireEvent.click(screen.getByText('Resume quiz'));
   await screen.findByText('Source change needs question review');
-  fireEvent.click(screen.getByLabelText(pinned.options.find(option => option.id === pinned.answer)!.text));
+  const answerOption = screen.getByLabelText(pinned.options.find(option => option.id === pinned.answer)!.text);
+  answerOption.focus(); fireEvent.click(answerOption);
+  expect(document.activeElement).toBe(answerOption);
   fireEvent.click(screen.getByText('Commit answer'));
   await screen.findByText('Why this answer');
   expect(screen.getByText('Correct')).toBeDefined();

@@ -93,6 +93,8 @@ function AssessmentStudyPage() {
   const pending = useRef<(() => Promise<void>) | null>(null);
   const handoffConsumed = useRef(false);
   const questionHeading = useRef<HTMLLegendElement>(null);
+  const questionForm = useRef<HTMLFormElement>(null);
+  const visibleQuestionId = feedback ? null : session?.current_item?.id;
   const overview = useResource(async signal => {
     const [catalog, history, scores] = await Promise.all([
       api<Catalog>(base + '/catalog', { signal }),
@@ -102,7 +104,14 @@ function AssessmentStudyPage() {
     return { catalog, history: history.sessions, scores };
   });
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-  useEffect(() => { questionHeading.current?.focus(); }, [session?.current_item?.id]);
+  useEffect(() => {
+    if (!visibleQuestionId) return;
+    const notice = questionForm.current?.querySelector<HTMLElement>('.assessment-source-currency');
+    if (notice) {
+      notice.focus({ preventScroll: true });
+      notice.scrollIntoView?.({ block: 'start' });
+    } else questionHeading.current?.focus();
+  }, [visibleQuestionId]);
 
   async function execute() {
     if (!pending.current || busy) return;
@@ -257,7 +266,7 @@ function AssessmentStudyPage() {
         {session.status === 'ended' && <Notice><p>This session ended with {session.answered_count} committed answers.
           Review below includes those answers only.</p></Notice>}
         {!session.current_item && !feedback && <SessionCurrencyNotice currency={session.source_currency} />}
-        {session.current_item && !feedback && <form className="assessment-question" onSubmit={event => { event.preventDefault(); commit(); }}>
+        {session.current_item && !feedback && <form ref={questionForm} className="assessment-question" onSubmit={event => { event.preventDefault(); commit(); }}>
           <SourceCurrencyNotice currency={session.current_item.source_currency} item={session.current_item} />
           <fieldset disabled={locked || session.current_item.content_status?.status !== 'current'}>
             <legend ref={questionHeading} tabIndex={-1}><span className="assessment-question-number">Question {session.current_item.ordinal}</span>
