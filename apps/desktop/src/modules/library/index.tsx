@@ -8,13 +8,15 @@ import type { Capabilities, Catalogue, CatalogueEntry, ImportResult, LibraryDocu
 import { Discovery } from './Discovery';
 import SourceInspector, { isPhysicalPage, type SourceLocation } from './SourceInspector';
 import BulkImportControl from './BulkImportControl';
+import { canImportFile } from './file-formats';
+import { sourceLocationLabel } from './source-locators';
 import './library.css';
 
 const libraryScope = { kind: 'personal-library' as const };
 const permissions: Rights = { display: true, cache: true, index: true, embedding: true, model_input: true,
   derivation: false, evaluation: false, redistribution: false, licence: 'user-supplied permission',
   permission_reference: 'User confirms local library processing for the selected file', attribution: '' };
-const labels: Record<string, string> = { ready: 'Indexed', queued: 'Queued', processing: 'Processing', failed: 'Import failed', cancelled: 'Cancelled', acquired: 'Acquired' };
+const labels: Record<string, string> = { ready: 'Available', queued: 'Queued', processing: 'Processing', failed: 'Import failed', cancelled: 'Cancelled', acquired: 'Acquired' };
 const statusLabel = (value: string) => labels[value] ?? value;
 const statusTone = (value: string): 'default' | 'warning' | 'error' | 'neutral' =>
   value === 'failed' ? 'error' : value === 'ready' ? 'default' : value === 'processing' || value === 'queued' ? 'warning' : 'neutral';
@@ -270,12 +272,12 @@ export default function LibraryPage() {
         </div><div className="library-form">
           <Input label="Title" value={title} onChange={event => setTitle(event.target.value)} maxLength={500} />
           {mode === 'text' ? <Textarea label="Your study note" value={text} onChange={event => setText(event.target.value)} hint="Deliberately added study material is saved in your personal library." /> : <>
-            <Input label="Choose a PDF, image or text file" type="file" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.txt,.md" onChange={event => setFile(event.target.files?.[0] ?? null)} />
+            <Input label="Choose a study document" type="file" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.txt,.md,.docx,.pptx,.xlsx" hint="PDF, image, text, Word (.docx), PowerPoint (.pptx) or Excel (.xlsx)." onChange={event => setFile(event.target.files?.[0] ?? null)} />
             <label className="library-check"><input type="checkbox" checked={allowed} onChange={event => setAllowed(event.target.checked)} />I have permission to read, store, index and use this file for local learning.</label>
             <p className="muted">Maximum 64 MiB. Original terms remain attached to the file.</p>
             <p className="muted">Add teaching material here. Patient material belongs in a temporary case and requires a verified temporary extraction path.</p>
           </>}
-          <div className="actions"><Button busy={busy} disabled={temporary || (mode === 'text' ? !text.trim() || !ready?.text_import : !file || !allowed || !(file.name.endsWith('.txt') || file.name.endsWith('.md') ? ready?.text_import : ready?.pdf_image_import))} onClick={mode === 'text' ? addText : addFile}>Add {mode === 'text' ? 'note' : 'document'}</Button>
+          <div className="actions"><Button busy={busy} disabled={temporary || (mode === 'text' ? !text.trim() || !ready?.text_import : !file || !allowed || !canImportFile(file.name, ready))} onClick={mode === 'text' ? addText : addFile}>Add {mode === 'text' ? 'note' : 'document'}</Button>
             <Button variant="ghost" onClick={() => setMode('browse')}>Close</Button></div>
         </div></Panel>}
         {mode === 'catalogue' && <section className="section library-collection">
@@ -324,7 +326,7 @@ export default function LibraryPage() {
             <Button type="submit" variant="secondary" busy={busy} disabled={!query.trim()}><Search size={18} />Search</Button>
           </div><label className="library-check"><input type="checkbox" checked={currentOnly} onChange={event => setCurrentOnly(event.target.checked)} />Only verified current guidance</label></form>
           {hits !== null && <section className="section"><div className="library-section-title"><h2>Passages</h2><Button variant="ghost" onClick={() => setHits(null)}>Clear results</Button></div>
-            {hits.length === 0 ? <EmptyState title="No eligible passages matched"><p>Try another phrase or check whether the source has finished processing. Current-guidance search excludes sources with unverified currency.</p></EmptyState> : <div className="library-passages">{hits.map(hit => <article className="library-passage" key={hit.id}><h3>{hit.title}</h3><p>{hit.text}</p><div className="library-meta"><span>{hit.source_id}</span><span>{hit.locators.some(l => l.page) ? 'Page ' + [...new Set(hit.locators.filter(l => l.page).map(l => l.page))].join(', ') : 'Original text span'}</span></div><Button disabled={busy} variant="ghost" onClick={() => void act(async () => { const document = await api<LibraryDocument>('/library/documents/' + hit.document_id); await inspect(document, hit); })}>Inspect citation</Button></article>)}</div>}
+            {hits.length === 0 ? <EmptyState title="No eligible passages matched"><p>Try another phrase or check whether the source has finished processing. Current-guidance search excludes sources with unverified currency.</p></EmptyState> : <div className="library-passages">{hits.map(hit => <article className="library-passage" key={hit.id}><h3>{hit.title}</h3><p>{hit.text}</p><div className="library-meta"><span>{hit.source_id}</span><span>{sourceLocationLabel(hit.locators)}</span></div><Button disabled={busy} variant="ghost" onClick={() => void act(async () => { const document = await api<LibraryDocument>('/library/documents/' + hit.document_id); await inspect(document, hit); })}>Inspect citation</Button></article>)}</div>}
           </section>}
           <section className="section library-documents" aria-labelledby="library-documents-title">
             <div className="library-section-title"><h2 id="library-documents-title">Documents</h2><Button variant="ghost" busy={documents.resource.status === 'loading'} onClick={documents.retry}>Refresh documents</Button></div>

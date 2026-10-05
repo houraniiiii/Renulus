@@ -172,9 +172,22 @@ the already observed shared recovery failure, not an untested conversion or
 simulated restore pass. Issue #15 remains open for the parent's recovery/UI/
 selected-acquired integration and real full Office restore gate.
 
-## Shared recovery prerequisite and remaining limits
+## Parent integration and recovery proof
 
-`runtime/renulus/storage/recovery_archive.py:25` has an independent `ORIGINAL`
+The parent integrated this slice at `909d2968` and extended the shared archive's
+exact extension/MIME allowlists to PPTX, DOCX and XLSX. The existing security,
+hash and ownership checks remain active. The previously failed real gate was
+rerun in the combined integration checkout with the same approved tokenizer:
+`test_three_real_office_formats_restore_originals_and_canonical_locators_via_api`
+passed (**one passed, four deselected; 90.34 seconds**). All three Office
+original byte identities and canonical source locators survived full backup
+and restore. The original failed attempt remains retained. This establishes
+application recovery with actual extraction and controlled embedding vectors;
+it is not native installation or acquired supplement adoption evidence.
+
+## Original shared prerequisite and remaining limits
+
+At worker handoff, `runtime/renulus/storage/recovery_archive.py:25` had an independent `ORIGINAL`
 regex excluding PPTX/DOCX/XLSX, and its adjacent `MEDIA` map also lacks their
 standard MIME values. `descriptor_for()` checks both. `recovery_zip.py` and
 `recovery_files.py` import that same regex. Parent must extend those allowlists

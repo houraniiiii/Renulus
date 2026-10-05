@@ -93,10 +93,37 @@ async function mountCollection() {
 }
 
 describe('Library document browser', () => {
+  it.each(['DOCX', 'PPTX', 'XLSX'])('imports a deliberate %s file when Office processing is available without PDF/OCR capability', async extension => {
+    let postedOptions: Record<string, unknown> | null = null;
+    let postedBody: unknown;
+    request.mockImplementation(async (url, options) => {
+      if (String(url) === '/api/v1/library/capabilities') return json({ text_import: true, pdf_image_import: false, office_import: true, temporary_extraction: false });
+      if (String(url) === '/api/v1/library/import/file') {
+        postedOptions = JSON.parse(new Headers(options?.headers).get('x-renulus-import-options')!);
+        postedBody = options?.body;
+        return json({ document_id: 'doc_synthetic_office', revision_id: 'rev_synthetic_office', status: 'queued', job: { id: 'job_synthetic', revision_id: 'rev_synthetic_office', state: 'queued', phase: 'queued', error_code: null, error_message: null } }, 202);
+      }
+      return base(url, options);
+    });
+    await mount();
+    fireEvent.click(screen.getByRole('button', { name: 'Add to library' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Document' }));
+    const file = new File(['Synthetic Office bytes'], 'study.' + extension);
+    fireEvent.change(screen.getByLabelText('Choose a study document'), { target: { files: [file] } });
+    const add = screen.getByRole('button', { name: 'Add document' }) as HTMLButtonElement;
+    expect(add.disabled).toBe(true);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'I have permission to read, store, index and use this file for local learning.' }));
+    await waitFor(() => expect(add.disabled).toBe(false));
+    fireEvent.click(add);
+    await screen.findByText('Queued: follow processing below.');
+    expect(postedBody).toBe(file);
+    expect(postedOptions).toMatchObject({ scope: { kind: 'personal-library' }, title: file.name });
+  });
+
   it('bounds a 156-document library to 25 visible rows and displays global status counts', async () => {
     await mount();
     expect(within(list()).getAllByRole('listitem')).toHaveLength(25);
-    expect(count('Indexed')).toBe('100'); expect(count('Queued')).toBe('40'); expect(count('Processing')).toBe('10'); expect(count('Import failed')).toBe('5'); expect(count('Cancelled')).toBe('1');
+    expect(count('Available')).toBe('100'); expect(count('Queued')).toBe('40'); expect(count('Processing')).toBe('10'); expect(count('Import failed')).toBe('5'); expect(count('Cancelled')).toBe('1');
     expect(screen.getByText('Page 1 of 7')).toBeTruthy();
     expect((screen.getByRole('button', { name: 'Previous documents' }) as HTMLButtonElement).disabled).toBe(true);
     expect(list().tabIndex).toBe(0);
@@ -127,7 +154,7 @@ describe('Library document browser', () => {
     fireEvent.change(screen.getByLabelText('Import status'), { target: { value: 'queued' } });
     await screen.findByText('1–13 of 13 matching documents');
     expect(within(list()).getAllByRole('listitem')).toHaveLength(13);
-    expect(count('Indexed')).toBe('100'); expect(count('Queued')).toBe('40');
+    expect(count('Available')).toBe('100'); expect(count('Queued')).toBe('40');
     expect(String(listCalls().at(-1)![0])).toBe('/api/v1/library/documents?limit=25&offset=0&query=SYNTHETIC-CKD&status=queued');
     expect(JSON.stringify(request.mock.calls)).not.toContain('SYNTHETIC_PRIVATE_SENTINEL');
     expect(request.mock.calls.some(([url]) => url === '/api/v1/library/retrieve' || url === '/api/v1/retrieval/discover')).toBe(false);
@@ -155,7 +182,7 @@ describe('Library document browser', () => {
     await screen.findByText('No documents match these filters');
     expect(screen.getByText('0 matching documents')).toBeTruthy();
     expect(screen.queryByText('Build a library you can return to')).toBeNull();
-    expect(count('Indexed')).toBe('100');
+    expect(count('Available')).toBe('100');
     fireEvent.click(screen.getByRole('button', { name: 'Show all documents' }));
     await screen.findByText('1–25 of 156 documents');
   });
@@ -164,7 +191,7 @@ describe('Library document browser', () => {
     records = []; render(<LibraryPage />);
     await screen.findByText('Build a library you can return to');
     expect(screen.getByText('0 documents')).toBeTruthy();
-    for (const label of ['Indexed', 'Queued', 'Processing', 'Import failed', 'Cancelled']) expect(count(label)).toBe('0');
+    for (const label of ['Available', 'Queued', 'Processing', 'Import failed', 'Cancelled']) expect(count(label)).toBe('0');
     expect(screen.queryByRole('region', { name: 'Library document list' })).toBeNull();
     expect((screen.getByRole('button', { name: 'Next documents' }) as HTMLButtonElement).disabled).toBe(true);
   });
@@ -226,7 +253,7 @@ describe('Library document browser', () => {
     records[100].status = 'ready';
     await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
     expect(listCalls().length).toBe(priorCalls + 1);
-    expect(count('Queued')).toBe('39'); expect(count('Indexed')).toBe('101');
+    expect(count('Queued')).toBe('39'); expect(count('Available')).toBe('101');
     expect(within(list()).getAllByRole('listitem')).toHaveLength(5);
     expect(screen.getByText('1–5 of 5 matching documents')).toBeTruthy();
   });

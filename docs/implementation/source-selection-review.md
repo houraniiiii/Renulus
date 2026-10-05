@@ -59,8 +59,16 @@ project review bound to source ID, PMCID and original SHA-256. A valid selection
 review changes selection only; it cannot grant a denied licence operation,
 ignore a third-party exception, establish currentness or undo a retraction.
 Changed/corrupt evidence and missing reviews retain a truthful blocked/default
-state. Actual review metadata installation and adoption are recorded after the
-reviewed implementation schema is integrated.
+state. The reviewed schema was integrated at `716045f1`. At **05:35:44 UTC** the
+parent wrote and independently verified the actual version-1 metadata file,
+`metadata/renulus-literature-selection-review.json`, outside the checkout. Its
+SHA-256 is `864abfaebfff591c87971b6ba39ce490eb5509fd8df245368c9af54da9543b50`.
+It records all eight includes and seven excludes, each bound to the actual
+source ID, PMCID and original SHA-256. The integrated selection reader verified
+all 15 effective decisions against the existing acquisition baseline. This
+changes selection evidence only; no source rights, currentness or canonical
+Library rows changed. The earlier native cancellations remain the evidence of
+the seven actual holds.
 
 The next concrete coverage candidates are **20 selected E07 PNGs** and **nine
 L03 PDF-only papers**, subject to per-file configuration. Five PDFs have clear

@@ -78,12 +78,28 @@ with the same 15-minute heartbeat loop and concrete remaining work. Matching
 shortcut/Library25/search/citation workload passed with the qualifications in
 `final-validation.md`. Source originals and earlier checkpoints are preserved.
 
-Curie owns #14 in the `collection-coverage` worktree: acquisition selection,
-explicit hash-bound project review and narrow CC BY operation normalization.
-Halley owns #15 in `supplement-inputs`: durable PPTX/DOCX/XLSX support through
-the existing pinned Docling stack, bounded file admission and source locators.
-Their write sets are disjoint; the parent owns API/UI/shared contracts, actual
-profile corrections/adoption, integration and packaging. The normal installed
-app owns the heavy helper slot while its queue runs. Live intentional Codex
-sign-in is pending and is not replaced by another application's credentials.
-Ready work advances independently of that account step.
+Curie's #14 selection patch is integrated at `716045f1`; all 15 exact review
+bindings are installed and verified in the external collection metadata.
+Halley's #15 Office patch is integrated at `909d2968`. Its real Office restore
+failure motivated the parent's shared archive extension/MIME fix; the exact
+three-format originals/locator recovery gate subsequently passed. Ramanujan's
+#16 import priority patch is integrated at `6bac014b`; 20 affected queue/worker
+checks passed in the combined integration checkout. Their installed acceptance
+remains separate from these application checks.
+
+Hegel owns #17 in `image-original-preservation`: preserve successful durable
+no-text images, exclude their empty revisions from retrieval and verify normal
+original/delete behavior. Halley prepares the exact classified Office adoption
+list in `supplement-inputs`, with metadata, hashes and bounded validation. The
+parent owns UI/shared recovery, supported actual adoption, live generation,
+integration and packaging. The normal installed app owns the heavy helper slot.
+
+The user completed intentional Codex sign-in and added the Go key. Native
+Connections on October 5 showed both accounts connected; the parent explicitly
+selected Codex at 05:46:36 UTC. Only `gpt-6-astra` currently exposes an approved
+image-check control. Catalogue availability, successful input requests and
+interpretation quality remain distinct. Go learning remains paused pending
+educational-use eligibility. An active temporary case is preserved; ordinary
+synthetic Learn checks wait for the user to end that context. No credentials
+from another application are used. The goal and single 15-minute heartbeat
+continue; the original eight-hour target remains recorded above.

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { apiResponse, isCancelled } from '../../platform/api';
 import { Button, ErrorState } from '../../ui';
 import type { Citation } from './types';
+import { officeOriginalExtension } from './file-formats';
 
 export default function OriginalViewer({ citation, wholeOriginal }: { citation: Citation; wholeOriginal: boolean }) {
   const [original, setOriginal] = useState<{ url: string; type: string; text?: string } | null>(null);
@@ -9,6 +10,7 @@ export default function OriginalViewer({ citation, wholeOriginal }: { citation: 
   const [error, setError] = useState<unknown>();
   const controller = useRef<AbortController | null>(null);
   const objectUrl = useRef<string | null>(null);
+  const officeExtension = original ? officeOriginalExtension(original.type) : null;
   useEffect(() => () => {
     controller.current?.abort();
     if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
@@ -31,7 +33,8 @@ export default function OriginalViewer({ citation, wholeOriginal }: { citation: 
   return <>
     <div className="actions"><Button variant="secondary" busy={busy} disabled={!!original} onClick={() => void open()}>{wholeOriginal ? 'Open whole original' : 'Open original'}{citation.page !== null ? ' · page ' + citation.page : ''}</Button></div>
     {error !== undefined && <ErrorState title="The original could not be loaded" error={error} onRetry={() => void open()} />}
-    {original && (original.type.startsWith('image/') ? <img className="library-original-image" src={original.url} alt="Original imported document" /> :
+    {original && (officeExtension ? <div className="library-document"><p className="muted">Save this original to view the complete document in an Office-compatible application.</p><div className="actions"><a className="button button-secondary" href={original.url} download={'renulus-original.' + officeExtension}>Save original (.{officeExtension})</a></div></div> :
+      original.type.startsWith('image/') ? <img className="library-original-image" src={original.url} alt="Original imported document" /> :
       original.text !== undefined ? <pre className="library-original-text">{original.text}</pre> :
         <iframe className="library-original" title="Original document viewer" src={original.url + (citation.page !== null ? '#page=' + citation.page : '')} />)}
   </>;

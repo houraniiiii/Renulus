@@ -22,10 +22,13 @@ from .database import SUPPORTED_SCHEMA
 MIB = 1024 * 1024
 BLOCK = MIB
 FULL_FORMAT = "renulus-full-backup"
-ORIGINAL = re.compile(r"library/knowledge/(doc_[a-zA-Z0-9_-]{1,100})/(rev_[a-zA-Z0-9_-]{1,100})/original\.(pdf|png|jpg|jpeg|tif|tiff|txt|md)")
+ORIGINAL = re.compile(r"library/knowledge/(doc_[a-zA-Z0-9_-]{1,100})/(rev_[a-zA-Z0-9_-]{1,100})/original\.(pdf|png|jpg|jpeg|tif|tiff|txt|md|pptx|docx|xlsx)")
 MEDIA = {"pdf": "application/pdf", "png": "image/png", "jpg": "image/jpeg",
          "jpeg": "image/jpeg", "tif": "image/tiff", "tiff": "image/tiff",
-         "txt": "text/plain", "md": "text/markdown"}
+         "txt": "text/plain", "md": "text/markdown",
+         "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+         "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+         "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}
 
 
 @dataclass(frozen=True)

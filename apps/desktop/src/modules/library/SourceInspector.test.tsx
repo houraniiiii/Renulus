@@ -3,8 +3,9 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NavigationProvider, useNavigation } from '../../shell/navigation';
 import LibraryPage from './index';
+import SourceInspector from './SourceInspector';
 import Learn from '../learn';
-import type { Citation, LibraryDocument, Revision } from './types';
+import type { Citation, LibraryDocument, Locator, Revision } from './types';
 
 const metadata = { source_id: 'SYNTHETIC', source_owner: 'Renulus synthetic test', canonical_url: null, edition: 'Cited edition', publication_date: null, received_at: null, checked_at: null, publication_status: 'unverified', latest_final_verified: false, content_reviewed: false, collection_section: null, collection_chapter: null, notes: [] };
 const rights = { display: true, cache: true, index: true, embedding: true, model_input: true, derivation: false, evaluation: false, redistribution: true, licence: 'Synthetic fixture', permission_reference: 'Synthetic test permission', attribution: 'Renulus' };
@@ -59,6 +60,27 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe('Library citation journey', () => {
+  it.each([
+    { media: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', locator: { item_ref: '#/texts/0', page: null, format: 'pptx', slide: 2 }, label: 'Slide 2 · source location in the original presentation.' },
+    { media: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', locator: { item_ref: '#/tables/0', table_ref: '#/tables/0', page: null, format: 'xlsx', sheet: 1, sheet_name: 'Adequacy' }, label: 'Sheet Adequacy · source location in the original workbook.' },
+    { media: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', locator: { item_ref: '#/tables/0', table_ref: '#/tables/0', page: null, format: 'docx' }, label: 'Document table · source location in the original document.' },
+  ])('shows the real Office location for $media without inventing a physical page', async ({ media, locator, label }) => {
+    const value = { ...citation(null), locators: [locator as Locator] };
+    request.mockResolvedValue(json(value));
+    render(<SourceInspector document={{ ...document, revisions: [{ ...oldRevision, media_type: media }] }} location={{ revisionId: oldRevision.id, page: null, passageId: target.passage_id }} />);
+    await screen.findByText(label);
+    expect(screen.queryByText(/Physical page is unknown/)).toBeNull();
+    expect(screen.getByText('Renulus', { selector: 'dd' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open original' })).toBeTruthy();
+  });
+
+  it('keeps a ready no-text image viewable and explains that search has no text', async () => {
+    request.mockResolvedValue(json({ ...citation(null), locators: [] }));
+    render(<SourceInspector document={{ ...document, revisions: [{ ...oldRevision, media_type: 'image/png', passage_count: 0 }] }} location={{ revisionId: oldRevision.id, page: null, passageId: null }} />);
+    await screen.findByRole('button', { name: 'Open original' });
+    expect(screen.getByText('This image is available to view. No searchable text was extracted.')).toBeTruthy();
+  });
+
   it('explains a missing physical page and retains the cited edition for opening the whole original', async () => {
     render(<NavigationProvider><Journey /></NavigationProvider>);
     fireEvent.click(screen.getByRole('button', { name: 'Inspect cited revision' }));

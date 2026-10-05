@@ -20,7 +20,11 @@ export interface LibraryDocument {
 export interface Job { id: string; revision_id: string; state: string; phase: string; error_code: string | null; error_message: string | null }
 export interface ImportResult { document_id: string; revision_id: string; status: string; job: Job }
 export interface Locator {
-  item_ref: string; page: number | null; char_span: number[];
+  item_ref: string; page: number | null; char_span?: number[];
+  format?: 'docx' | 'pptx' | 'xlsx'; table_ref?: string;
+  slide?: number; slide_size?: { width: number; height: number };
+  sheet?: number; sheet_name?: string | null;
+  cell_bbox?: { l: number; t: number; r: number; b: number; coord_origin: string };
   bbox?: { l: number; t: number; r: number; b: number; coord_origin: string };
   page_size?: { width: number; height: number };
 }
@@ -37,4 +41,4 @@ export interface CatalogueEntry {
   processing_status: string; error_code: string | null;
 }
 export interface Catalogue { entries: CatalogueEntry[]; total: number; offset: number }
-export interface Capabilities { text_import: boolean; pdf_image_import: boolean; temporary_extraction: boolean }
+export interface Capabilities { text_import: boolean; pdf_image_import: boolean; office_import?: boolean; temporary_extraction: boolean }
