@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import AsyncIterator
+from contextlib import suppress
 from dataclasses import dataclass, field
 import hashlib
 import inspect
@@ -156,9 +157,9 @@ class LearnService:
             nonlocal sequence
             sequence += 1
             return Event(run_id=run.id, sequence=sequence, type=kind, payload=payload or {})
-        yield event("started", {"thread_id": run.thread_id, "scope": run.scope.kind})
         citations, answer = [], ""
         try:
+            yield event("started", {"thread_id": run.thread_id, "scope": run.scope.kind})
             if run.cancelled.is_set():
                 yield event("cancelled")
                 return
@@ -253,12 +254,18 @@ class LearnService:
             if run.cancelled.is_set():
                 yield event("cancelled")
                 return
-            async for text in provider.stream(history, scope=run.scope, run_id=run.id, model=model,
-                                               system=system, purpose="explain"):
-                if run.cancelled.is_set():
-                    break
-                answer += text
-                yield event("delta", {"text": text})
+            stream = provider.stream(history, scope=run.scope, run_id=run.id, model=model,
+                                     system=system, purpose="explain")
+            try:
+                async for text in stream:
+                    if run.cancelled.is_set():
+                        break
+                    answer += text
+                    yield event("delta", {"text": text})
+            finally:
+                if hasattr(stream, "aclose"):
+                    with suppress(Exception):
+                        await stream.aclose()
             if run.cancelled.is_set():
                 yield event("cancelled")
                 return
@@ -304,6 +311,20 @@ class LearnService:
                 "case_id": case_result["id"] if case_result else None,
                 "case_revision": case_result["revision"] if case_result else None})
         except asyncio.CancelledError:
+            task = asyncio.current_task()
+            # Stop interrupts the provider's read, not the consumer task. A real
+            # consumer cancellation must still propagate, even if Stop raced it.
+            local_stop = run.cancelled.is_set() and (task is None or not task.cancelling())
+            run.cancelled.set()
+            if run.thread_id:
+                self.db.execute("UPDATE learn_runs SET state=?,updated_at=? WHERE id=? AND state='running'",
+                                ("cancelled" if local_stop else "interrupted", utc_now(), run.id))
+            await self._cancel_provider(run.id)
+            if local_stop:
+                yield event("cancelled")
+                return
+            raise
+        except GeneratorExit:
             run.cancelled.set()
             if run.thread_id:
                 self.db.execute("UPDATE learn_runs SET state='interrupted',updated_at=? WHERE id=? AND state='running'",
@@ -311,6 +332,9 @@ class LearnService:
             await self._cancel_provider(run.id)
             raise
         except Exception as error:
+            if run.cancelled.is_set():
+                yield event("cancelled")
+                return
             code = error.code if isinstance(error, ApiError) else "explain_failed"
             message = error.message if isinstance(error, ApiError) else "The explanation could not finish. Retry or check your connection."
             if run.thread_id:

@@ -3,6 +3,9 @@
 Bounded lane: `build/finalise-subscriptions`,
 `C:/rn-finalise-20261005/lanes/subscriptions`, GitHub issue #2.
 Baseline: `9d26f1eedf31cd488b9aab5837a105ee152d9efa`.
+First runtime fix: `8173736394923e578224ff38f5acb57d6c1291eb`, preserved unchanged.
+The subsequent exclusively leased consumer fixes and their separate commit
+are recorded in the final section below.
 This report accompanies the locally committed runtime fix and focused tests;
 the final handoff and issue comment identify its commit SHA for parent cherry-pick.
 No push, merge or native/account acceptance is part of this lane.
@@ -69,10 +72,12 @@ $env:TRANSFORMERS_OFFLINE='1'
 & 'C:/Users/karol/Documents/t3-workspaces/Renulus-wt-integration/.venv/Scripts/python.exe' -m pytest tests/runtime/test_subscription_lifecycle.py tests/runtime/test_provider.py tests/runtime/test_provider_acceptance.py tests/runtime/test_auth_api.py tests/runtime/test_codex_stream.py tests/runtime/test_images_context.py tests/runtime/test_go_eligibility.py tests/learn tests/assessment/test_generated.py tests/memory/test_repository.py -q --basetemp .local/runtime/finalise-subscriptions/regression --tb=short --junitxml .local/runtime/finalise-subscriptions/regression.xml
 ```
 
-## Parent-owned consumer gaps
+## Consumer gaps observed at the first handoff
 
-These observations were sent to issue #2 via `gh --body-file`. No Learn,
-assessment, shared API/contract, migration or renderer source was edited.
+These observations were sent to issue #2 via `gh --body-file`. The first
+commit did not edit Learn, assessment, shared API/contract, migration or renderer
+source. The parent subsequently leased the two consumer files exclusively to
+this lane; their fixes are documented below.
 
 1. **Learn's cancellation presenter:** an actual SDK pending read cancelled
    through `LearnService.cancel` closes correctly, sets both control/canonical
@@ -108,11 +113,99 @@ Astra only; image and text attempts reached `subscription_limit`. Successful
 live generation, cancellation presentation, generated practice, image
 interpretation and automatic end-to-end learning capture remain unproved.
 This lane performs none of those live checks and does not claim installed
-Windows or full end-to-end acceptance from its synthetic fixtures.
+Windows or full end-to-end acceptance from its synthetic fixtures. Later parent
+receipts can establish live acceptance separately from this lane's evidence.
 
 The exact five-model allowlist, Go learning pause, source-operation boundaries,
 Hermes foundation, SQLite record authority and selected document/embedding/memory
 stack remain unchanged. The [prior adapter evidence](provider-acceptance.md)
 and [Go eligibility evidence](go-eligibility.md) retain their dated primary-source
 references; this lane did not re-research or relax those policies. The parent
-owns the two consumer fixes, integration, native/live checks and final acceptance.
+continues to own ConnectionsPage, integration, native/live checks and final acceptance.
+
+## Exclusively leased consumer extension — October 5, 2026
+
+After the central Git checkout relocation/repair, the parent authorised a
+second bounded commit based on `8173736394923e578224ff38f5acb57d6c1291eb`.
+The first commit is not amended. This extension changes only:
+
+- `runtime/renulus/learn/service.py`
+- `runtime/renulus/assessment/generated_streaming.py`
+- `tests/learn/test_subscription_cancel.py`
+- `tests/assessment/test_provider_errors.py`
+- this report
+
+**Learn:** an explicit local Stop interrupts the provider read while the consumer
+task remains alive. The handler checks the local cancel flag and the consumer
+task's cancellation count, emits exactly one ordered `cancelled` terminal for
+that case, and preserves the input without an assistant answer or capture
+evidence. Actual consumer-task cancellation still propagates `CancelledError`,
+including when it races an explicit Stop. An interrupted consumer does not emit
+a synthetic terminal to a departed reader. Conditional state updates preserve
+an already completed/cancelled canonical result.
+
+The initial `started` event now sits inside the cleanup boundary. Closing a
+Learn iterator there or after a delta closes its provider iterator when
+supported, releases both active-run maps, and marks an unfinished persisted run
+`interrupted`. A late provider exception after the local cancel flag is set
+cannot replace cancellation with an error or commit a partial answer. Ordinary
+iterator implementations without `aclose` keep their existing contract.
+
+**Generated practice:** fourteen previously discarded public runtime codes now
+retain their machine identity and retryability. They include quota, catalogue
+verification, account/model rejection, connection change, truncated/failed
+streams, protocol refusal, image gating and context/compaction/tool refusal.
+Messages come from the explicit application-owned whitelist; no provider
+message/body is forwarded even when it claims a recognised code. Unknown
+exceptions/codes remain redacted, and the existing separate storage-failure
+message remains intact. The public error envelope is unchanged.
+
+The first reproduction run exposed the code/terminal/iterator problems; its
+initial study stream also hit a five-second cold-SDK fixture deadline, which
+was increased to fifteen seconds before final verification. No product timeout,
+SDK retry, model route or fallback was relaxed.
+
+Focused verification: **47 passed in 45.09 seconds**, using the actual Hermes
+wire conversion, OpenAI SDK, HTTPX MockTransport, local ASGI routes and canonical
+SQLite. The explicit Stop endpoint now produces one terminal SSE event. Study
+and temporary-case cancellation, consumer cancellation, simultaneous Stop/task
+cancellation, first-event/delta closure and late errors retain no partial answer
+or capture job. Six practice SDK failure/recovery scenarios preserve actionable
+errors, publish no failed practice, and require an explicit fresh request for
+retry; successful synthetic practice stays generated/unreviewed on Astra.
+Unknown and deliberately malicious synthetic error messages remain absent from
+the response.
+
+The combined Learn/assessment regression recorded **127 passed and one failed
+in 246.52 seconds**. Its only failure was a fifteen-second test readiness
+timeout waiting for the synthetic SDK pending read in the first study
+cancellation fixture; no product-state assertion failed. The fixture now
+disables optional literature retrieval and imports the public SDK responses
+resource before its readiness timer. The corrected full Learn suite passed
+**46 checks in 155.14 seconds**, including the previously timed-out case.
+All **82 assessment checks** passed in the combined run; the fixture correction
+does not change assessment code or tests. Together these receipts cover
+**128 distinct passing Learn/assessment checks** without claiming that the
+combined invocation itself was clean. Both regression runs emitted only the
+existing Starlette/httpx TestClient deprecation warning.
+
+Receipts are this worktree's ignored
+`.local/runtime/finalise-subscriptions/consumer-focused.xml`,
+`.local/runtime/finalise-subscriptions/consumer-regression.xml` and
+`.local/runtime/finalise-subscriptions/consumer-learn-final.xml`.
+
+```powershell
+$env:PYTHONDONTWRITEBYTECODE='1'
+$env:HF_HUB_OFFLINE='1'
+$env:TRANSFORMERS_OFFLINE='1'
+& 'C:/Users/karol/Documents/t3-workspaces/Renulus-wt-integration/.venv/Scripts/python.exe' -m pytest tests/learn tests/assessment -q --basetemp .local/runtime/finalise-subscriptions/consumer-regression --tb=short --junitxml .local/runtime/finalise-subscriptions/consumer-regression.xml
+& 'C:/Users/karol/Documents/t3-workspaces/Renulus-wt-integration/.venv/Scripts/python.exe' -m pytest tests/learn -q --basetemp .local/runtime/finalise-subscriptions/consumer-learn-final --tb=short --junitxml .local/runtime/finalise-subscriptions/consumer-learn-final.xml
+```
+
+All new checks block non-loopback sockets, use synthetic grants/catalogues and
+run without helper/native tests, model inference, live providers, account or
+learning-profile reads. No schema/contract or other module source changed.
+This resolves the two consumer gaps from the first handoff at application-test
+level; live app-owned generation, cancellation UI and memory acceptance remain
+with the parent. The second commit's exact SHA is returned in the final handoff
+and the concise issue #2 evidence comment.
