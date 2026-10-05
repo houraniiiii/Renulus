@@ -6,8 +6,17 @@ const renderer = process.env.RENULUS_RENDERER_BUNDLE;
 const native = process.env.RENULUS_NATIVE_BUNDLE;
 const output = process.env.RENULUS_DELIVERY_OUTPUT;
 if (output) {
-  const relative = path.relative(path.join(__dirname, 'release'), output);
-  if (!path.isAbsolute(output) || !relative || relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('A delivery output must be an explicit directory in this desktop lane release tree.');
+  const roots = [path.join(__dirname, 'release'), path.resolve('E:/Renulus-native-delivery/desktop-20261005')];
+  const confined = path.isAbsolute(output) && roots.some(root => {
+    const relative = path.relative(root, output);
+    return relative && !relative.startsWith('..') && !path.isAbsolute(relative);
+  });
+  if (!confined) throw new Error('A delivery output must stay in the desktop release tree or exact authorised E root.');
+  let cursor = path.resolve(output);
+  while (cursor !== path.dirname(cursor)) {
+    if (fs.existsSync(cursor) && fs.lstatSync(cursor).isSymbolicLink()) throw new Error('A delivery output may not traverse a reparse path.');
+    cursor = path.dirname(cursor);
+  }
 }
 if (renderer && (!path.isAbsolute(renderer) || !fs.existsSync(path.join(renderer, 'index.html')) || !fs.existsSync(path.join(renderer, 'renderer-provenance.json')))) throw new Error('An integrated renderer requires its built index and committed source provenance.');
 if (native && (!path.isAbsolute(native) || !fs.existsSync(path.join(native, 'main.cjs')) || !fs.existsSync(path.join(native, 'native-provenance.json')))) throw new Error('An integrated native entry requires its compiled main and source/adoption provenance.');
