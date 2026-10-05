@@ -98,6 +98,17 @@ is unchanged in meaning. Optional publication checking remains a separate parent
 operation on one already tracked permitted public ID, with one real bounded fetch
 and no simulated change or current-edition claim.
 
+The recovered parent checkpoint still assigns Package to slot 61735 with no
+installer/native17 proof. A live auth/quota/provider blocker ends only the live
+mode. The terminal live receipt records finishedAt, terminal, livePassed=false,
+exact sourceRevision/executable, and the public external error code/reason;
+closeOutcome is confirmed only by the actual ordinary physical-close proof.
+Its immutable blocker latch remains binding. The connected synthetic/lifecycle
+slice has no Probe-receipt or live-success dependency: the parent continues it
+separately after matching native17 and ordinary physical exit release the serial
+slot. Dependent live Journeys still requires a passed Probe and is not invoked
+after a blocked Probe. Neither mode repeats imports or native17 correct quizzes.
+
 Safe plans and exact future parent commands (supply actual slot labels and the
 absolute passed native17 receipt when available):
 
@@ -125,7 +136,12 @@ transfer with their synthetic API-fixture limitation; parent reports the rendere
 entire tree unchanged from 49c0fdf7. Parent backend checks remain parent evidence.
 
 The preparation receipt is ignored
-.local/connected-acceptance/preparation-035ca7bd-20261005.json. Historical
+.local/connected-acceptance/preparation-035ca7bd-checkpoint-20261005.json. The
+prior preparation-035ca7bd-20261005.json remains intact. Node syntax and the
+supplied-freeze safe live plan passed again after the terminal-receipt amendment;
+unchanged scripts retain their reverified hashes and earlier parse/plan checks.
+Only own preparation/slot records were read; they show zero execution/imports.
+No parent session, profile or provider was opened. Historical
 preparation receipts and live report remain historical. The commit transports
 only this report. Before worktree cleanup the parent must copy and SHA-verify
 this **five-script allowlist**, preserving the adjacent folder layout so connected
@@ -138,6 +154,6 @@ attempt/blocked latch was created during this preparation.
 | --- | --- |
 | connected-acceptance/connected-acceptance.mjs | 05687acf55cd590d82279125de4ed2b8d1eaf012f14f8c77bfc45c13a077bd76 |
 | connected-acceptance/run-connected-acceptance.ps1 | 5162da7dcd262f6866abdcaf9eb77b972eb2326ad96f92dd0f02e7ebf7f055cf |
-| live-acceptance/live-acceptance.mjs | 609cc20ed024251bdbdee8aedc3b97ed00d7e3272cdabd2e711fdcf01bdfb154 |
+| live-acceptance/live-acceptance.mjs | a280498fee20385c005b47767e1bb0b706ba845199483b1128260e00c63dd142 |
 | live-acceptance/run-live-acceptance.ps1 | 60e2a036d13a9d9b2baf252272329578b20428842ce73b20cdfab4a76ee383f9 |
 | live-acceptance/owned-processes.ps1 | 5e163a494a755708712bf5f2d023b37eedd137203b92cb144a34f9432d7950ff |
