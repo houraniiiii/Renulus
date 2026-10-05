@@ -33,6 +33,7 @@ def safe_error(error):
         "auth_required": "Connect an approved subscription to generate practice",
         "connection_required": "Connect an approved subscription to generate practice",
         "capability_unavailable": "The approved model connection is not ready",
+        "learning_use_unverified": "OpenCode Go learning use is not confirmed. Renulus has paused learning requests.",
         "model_unavailable": "The selected approved model is unavailable",
         "quota_exceeded": "The selected subscription has reached its usage limit",
         "provider_unavailable": "The approved model connection is unavailable",
@@ -166,7 +167,10 @@ async def generate(repo, run, replay=None):
             return
         repo.guard_run(run)
         provider = repo.services.registry.get("provider")
-        if provider is None or not repo.capabilities()["available"]:
+        capabilities = repo.capabilities()
+        if capabilities.get("code") == "learning_use_unverified":
+            raise ApiError("learning_use_unverified", capabilities["reason"], 403, False)
+        if provider is None or not capabilities["available"]:
             raise ApiError("capability_unavailable", "Approved generation is unavailable", 503, True)
         passages = []
         try:

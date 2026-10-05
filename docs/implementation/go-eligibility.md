@@ -218,3 +218,44 @@ There was no live account request, credential acquisition, asset download,
 model inference or native installer claim. Parent should apply its consumer
 fix, rerun the new focused file and refresh the final runtime/renderer package
 capture; live-provider acceptance remains separate.
+
+### Narrow practice/Learn consumer lease — 2026-10-05 01:23 UTC
+
+This follow-up supersedes the pending practice/Learn presentation rows above.
+Generated practice capability now honors the selected connection's learning
+eligibility and fails closed for Go without explicit generation allowance.
+The response reports unavailable, learning_use_unverified and retryable:false;
+its preflight returns that same public gate before source retrieval or model
+I/O. A gate raised during generation also retains its controlled code and
+non-retryable status without exposing an adapter's private message. Normal
+Codex and existing explicit synthetic adapter behavior remain supported.
+
+Learn changes only its streaming exception handler: controlled ApiError
+retryability is preserved, while unknown failures retain the existing generic
+message and retryable:true. Completion and repository logic are untouched.
+The parent/Euler handler lease and separate Cases request to Mendel are recorded
+in parent issue #1 comment5986505695. Cases remains outside this follow-up;
+its safe error mapping requires the independent owner fix described above.
+
+On base 7230899bf0dffdec77380241118782d5b6b15afe plus this patch, using the
+integration CPython3.14.4 environment, 31 focused producer/practice/Learn checks
+passed in 61.42 seconds, and eight additional eligibility/error-boundary checks
+passed in 6.79 seconds. The practice/Learn acceptance is now strict, with no
+expected failure. Existing Cases handoff/scope safety checks remain in the
+producer file. Three Mem0 checks were deliberately deselected because their
+producer proof was already recorded above and their implementation was not
+changed. Both runs emitted only the existing Starlette/httpx deprecation.
+
+Commands, with offline and bytecode variables from the earlier proof:
+
+~~~text
+python -m pytest tests/runtime/test_cross_module_generation.py tests/assessment/test_generated.py tests/learn/test_learning.py -k "not actual_mem0 and not registered_llm" -q --basetemp .local/runtime/cl --tb=short
+python -m pytest tests/assessment/test_learning_gate.py tests/learn/test_stream_errors.py -q --basetemp .local/runtime/ce --tb=short
+~~~
+
+The real producer route used controlled HTTPX transports, performed zero Go
+requests, retained its selected subscription, and created no temporary case
+marker persistence. No live credentials, account requests, inference, helper
+downloads, native proof or large engine benchmark were used. Parent should
+apply this consumer patch alongside the independent Cases mapping fix and
+refresh the final integrated source capture. No runtime policy change is needed.

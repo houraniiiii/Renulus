@@ -50,16 +50,27 @@ class GeneratedPracticeRepository:
     def capabilities(self):
         provider = self.services.registry.get("provider")
         available, verified = False, False
+        blocked = False
         if provider is not None:
             status = provider.status()
             selected = status.get("selected_provider")
-            available = status.get("test_adapter") is True or any(
-                row.get("provider") == selected and row.get("status") == "connected"
-                and any(model.get("availability") == "available" for model in row.get("models", []))
-                for row in status.get("connections", []))
+            connection = next((row for row in status.get("connections", [])
+                               if row.get("provider") == selected), {})
+            learning_use = connection.get("learning_use") or {}
+            blocked = (learning_use.get("generation_allowed") is False or
+                       (selected == "opencode-go" and learning_use.get("generation_allowed") is not True))
+            if status.get("test_adapter") is True:
+                available, blocked = True, False
+            else:
+                available = (not blocked and connection.get("status") == "connected"
+                             and any(model.get("availability") == "available"
+                                     for model in connection.get("models", [])))
             verified = status.get("live_provider_verified") is True
         return {"available": available, "reason": None if available else
-                "Connect an approved subscription before generating practice",
+                "OpenCode Go learning use is not confirmed. Renulus has paused learning requests."
+                if blocked else "Connect an approved subscription before generating practice",
+                "code": "learning_use_unverified" if blocked else None,
+                "retryable": False if blocked else True,
                 "live_provider_verified": verified, "maximum_questions": 5}
 
     def _expire(self):
