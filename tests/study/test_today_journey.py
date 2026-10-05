@@ -13,7 +13,7 @@ def seeded_app(profile):
     app = create_app(profile, source_root=ROOT)
     with TestClient(app) as api:
         initial = api.get("/api/v1/study/home").json()
-        assert len(initial["topics"]) == 27
+        assert len(initial["topics"]) == len(app.state.services.get("content").list_topics())
         started = api.post("/api/v1/assessment/start", json={
             "count": 1, "selector": {"topic_ids": ["T03"]},
             "idempotency_key": "today-final-reviewed-start"})

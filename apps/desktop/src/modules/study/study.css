@@ -29,5 +29,11 @@
 .topic-preferences legend { font-weight: 600; margin-bottom: var(--space-8); font-size: 14px; }
 .topic-preferences label { display: flex; align-items: center; gap: var(--space-8); min-height: 36px; font-size: 14px; }
 .home-update { display: grid; gap: var(--space-8); text-align: left; padding: var(--space-12) 0; border-bottom: 1px solid var(--line); }
+.study-track { display: grid; gap: var(--space-8); padding-bottom: var(--space-16); border-bottom: 1px solid var(--line-subtle); }
+.study-track p { margin: 0; }
+.study-track-details summary { color: var(--renal-teal); cursor: pointer; min-height: 44px; padding: var(--space-8) 0; }
+.study-track-details > ul { padding-left: var(--space-24); display: grid; gap: var(--space-16); }
+.study-track-details li { overflow-wrap: anywhere; }
+.study-topic-choice > small { display: block; margin-left: var(--space-24); }
 @media(max-width: 1000px) { .today-layout { grid-template-columns: 1fr; } .today-support { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media(max-width: 640px) { .today-support, .topic-directory { grid-template-columns: 1fr; } .today-layout { gap: var(--space-32); } }

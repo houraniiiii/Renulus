@@ -40,7 +40,7 @@ def create_router(services):
 
     @router.get("/plan")
     def plan():
-        return {"activities": service.list_activities()}
+        return service.plan()
 
     @router.post("/plan/propose")
     def propose():
