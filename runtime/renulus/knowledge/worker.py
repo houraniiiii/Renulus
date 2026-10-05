@@ -37,6 +37,19 @@ class IngestionWorker:
                 self.prioritize(result["job"]["id"])
             return result
 
+    def import_selected(self, operation):
+        # Explicit collection selections share the direct-import priority.
+        # Bulk import-next keeps its existing FIFO admission. No extraction
+        # starts here, and failed/ready entries cannot acquire a queue hint.
+        with self._queue.admission():
+            result = operation()
+            jobs = [item["job"]["id"] for item in result["results"]
+                    if item["status"] == "queued"]
+            if jobs:
+                self._queue.mark_many(jobs)
+                self.wake()
+            return result
+
     def stop(self, timeout=5):
         self._stop.set()
         self.wake()

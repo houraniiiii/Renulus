@@ -405,8 +405,9 @@ def test_non_library_and_obsolete_revisions_cannot_be_priority_hints(repository)
     assert queue.next_job() == {"id": bulk[0]}
 
 
-def test_collection_route_queues_synthetic_selected_file_without_priority(client, repository):
+def test_collection_route_prioritizes_synthetic_selected_file_ahead_of_bulk(client, repository):
     api, worker = client
+    background = seed_bulk(repository, 2)
     collection = repository.services.registry["knowledge_catalogue"]
     source = collection.root / "raw/R01/synthetic.txt"
     source.parent.mkdir(parents=True)
@@ -422,9 +423,14 @@ def test_collection_route_queues_synthetic_selected_file_without_priority(client
     bulk = api.post("/api/v1/library/collection/import", json={"entry_ids": [entry["id"]],
         "scope": {"kind": "personal-library"}}).json()
     assert bulk["queued"] == 1
-    assert hints(repository) == []
+    selected = bulk["results"][0]["job"]["id"]
+    assert hints(repository) == [selected]
     direct = note(api, "after-collection").json()
+    assert worker._queue.next_job() == {"id": selected}
+    repository.run_job(selected)
     assert worker._queue.next_job() == {"id": direct["job"]["id"]}
+    repository.run_job(direct["job"]["id"])
+    assert worker._queue.next_job() == {"id": background[0]}
 
 
 def test_unsafe_note_and_file_scope_never_creates_hint(client, repository):

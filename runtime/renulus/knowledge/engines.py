@@ -22,6 +22,8 @@ TEMP_MAX_BYTES = 10 * 1024 * 1024
 TEMP_MAX_PAGES = 20
 TEMP_MAX_PIXELS = 12_000_000
 TEMPORARY_EXTRACTION_PROVEN = True
+# Bound rendered-page backpressure while retaining Docling's stage batching.
+DOCLING_QUEUE_PAGES = 8
 
 
 @dataclass
@@ -130,20 +132,32 @@ class DoclingExtractor:
         self._converter = None
         self._office_converter = None
         self._conversion_lock = RLock()
+        self._tokenizer = None
+        self._tokenizer_lock = RLock()
 
     def _chunk(self, document, text_offsets=None, *, office_format=None, allow_empty=False) -> Extracted:
         try:
             from docling_core.transforms.chunker.hybrid_chunker import HybridChunker
+            from docling_core.transforms.chunker.hierarchical_chunker import ChunkingDocSerializer
             from docling_core.transforms.chunker.tokenizer.base import BaseTokenizer
+            from docling_core.types.doc import TableItem
             from pydantic import ConfigDict
+            import semchunk
             from tokenizers import Tokenizer
         except ImportError:
             raise ApiError("helper_package_unavailable", "Docling chunking helpers are not installed", 503, True) from None
-        root = self.assets.validate("fastembed")
-        tokenizer = Tokenizer.from_file(str(root / "tokenizer.json"))
+        with self._tokenizer_lock:
+            if self._tokenizer is None:
+                # As with the loaded embedding model, validate before loading
+                # this process-owned tokenizer, rather than hash all model
+                # weights again for every document (and heading-only retry).
+                root = self.assets.validate("fastembed")
+                tokenizer = Tokenizer.from_file(str(root / "tokenizer.json"))
+                tokenizer.no_truncation()
+                tokenizer.no_padding()
+                self._tokenizer = tokenizer
+            tokenizer = self._tokenizer
         # Chunking must count untruncated tokens, using exactly the embedder vocabulary.
-        tokenizer.no_truncation()
-        tokenizer.no_padding()
 
         class LocalTokenizer(BaseTokenizer):
             model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -171,7 +185,18 @@ class DoclingExtractor:
                 # and the original table/page metadata. No embedding truncation.
                 bounded = self.model_copy(update={"tokenizer": LocalTokenizer(
                     backend=tokenizer, budget=max(1, available_length - 8))})
-                return HybridChunker.segment(bounded, doc_chunk, max(1, available_length - 8), doc_serializer)
+                budget = max(1, available_length - 8)
+                # Keep Docling-core 2.99's maintained table/header splitter.
+                if (self.repeat_table_header and isinstance(doc_serializer, ChunkingDocSerializer)
+                        and len(doc_chunk.meta.doc_items) == 1
+                        and isinstance(doc_chunk.meta.doc_items[0], TableItem)):
+                    return HybridChunker.segment(bounded, doc_chunk, budget, doc_serializer)
+                # HybridChunker's semantic path defaults to semchunk's global,
+                # unbounded text/count memoization. Thousands of documents
+                # retain counters and source text there. Use the same splitter
+                # with its public no-cache option, including temporary input.
+                return semchunk.chunkerify(bounded.tokenizer.get_tokenizer(),
+                    chunk_size=budget, memoize=False)(doc_chunk.text)
 
         chunker = BudgetedHybridChunker(tokenizer=local, merge_peers=True, repeat_table_header=True)
         passages = []
@@ -294,9 +319,6 @@ class DoclingExtractor:
         return result
 
     def _extract_document(self, source, suffix, title, temporary=False) -> Extracted:
-        artifacts = self.assets.validate("docling")
-        ocr_root = self.assets.validate("ocr")
-        helper_config = self.assets.config("docling")
         try:
             if suffix != ".pdf":
                 from PIL import Image
@@ -315,31 +337,39 @@ class DoclingExtractor:
                         image.verify()
                 if temporary:
                     source.stream.seek(0)
-            from docling.datamodel.base_models import ConversionStatus, InputFormat
-            from docling.datamodel.pipeline_options import PdfPipelineOptions, RapidOcrOptions, OcrMode
-            from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
-            from docling.document_converter import DocumentConverter, PdfFormatOption, ImageFormatOption
-            from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
-            rapidocr_params = {**helper_config.get("rapidocr_params", {}),
-                "Global.model_root_dir": str(ocr_root), "Global.log_level": "error",
-                "EngineConfig.onnxruntime.intra_op_num_threads": 2,
-                "EngineConfig.onnxruntime.inter_op_num_threads": 1,
-                "EngineConfig.onnxruntime.use_cuda": False,
-                "EngineConfig.onnxruntime.use_dml": False}
-            options = PdfPipelineOptions(artifacts_path=artifacts, do_ocr=True,
-                do_table_structure=True, do_picture_classification=False,
-                do_picture_description=False, do_code_enrichment=False, do_formula_enrichment=False,
-                generate_page_images=False, generate_picture_images=False,
-                accelerator_options=AcceleratorOptions(device=AcceleratorDevice.CPU, num_threads=2),
-                enable_remote_services=False,
-                ocr_options=RapidOcrOptions(backend="onnxruntime", lang=["en"],
-                    det_model_path=str(ocr_root / "det.onnx"),
-                    rec_model_path=str(ocr_root / "rec.onnx"),
-                    cls_model_path=str(ocr_root / "cls.onnx"),
-                    rapidocr_params=rapidocr_params))
-            image_options = options.model_copy(deep=True)
-            image_options.ocr_options.mode = OcrMode.FULL_PAGE
+            from docling.datamodel.base_models import ConversionStatus
             if self._converter is None:
+                # Conversion stays serial. This already loaded converter owns
+                # its validated pinned assets; rebuilding options and hashing
+                # Docling/OCR weights on every warm job adds only disk work.
+                artifacts = self.assets.validate("docling")
+                ocr_root = self.assets.validate("ocr")
+                helper_config = self.assets.config("docling")
+                from docling.datamodel.base_models import InputFormat
+                from docling.datamodel.pipeline_options import PdfPipelineOptions, RapidOcrOptions, OcrMode
+                from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
+                from docling.document_converter import DocumentConverter, PdfFormatOption, ImageFormatOption
+                from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
+                rapidocr_params = {**helper_config.get("rapidocr_params", {}),
+                    "Global.model_root_dir": str(ocr_root), "Global.log_level": "error",
+                    "EngineConfig.onnxruntime.intra_op_num_threads": 2,
+                    "EngineConfig.onnxruntime.inter_op_num_threads": 1,
+                    "EngineConfig.onnxruntime.use_cuda": False,
+                    "EngineConfig.onnxruntime.use_dml": False}
+                options = PdfPipelineOptions(artifacts_path=artifacts, do_ocr=True,
+                    do_table_structure=True, do_picture_classification=False,
+                    do_picture_description=False, do_code_enrichment=False, do_formula_enrichment=False,
+                    generate_page_images=False, generate_picture_images=False,
+                    queue_max_size=DOCLING_QUEUE_PAGES,
+                    accelerator_options=AcceleratorOptions(device=AcceleratorDevice.CPU, num_threads=2),
+                    enable_remote_services=False,
+                    ocr_options=RapidOcrOptions(backend="onnxruntime", lang=["en"],
+                        det_model_path=str(ocr_root / "det.onnx"),
+                        rec_model_path=str(ocr_root / "rec.onnx"),
+                        cls_model_path=str(ocr_root / "cls.onnx"),
+                        rapidocr_params=rapidocr_params))
+                image_options = options.model_copy(deep=True)
+                image_options.ocr_options.mode = OcrMode.FULL_PAGE
                 self._converter = DocumentConverter(allowed_formats=[InputFormat.PDF, InputFormat.IMAGE],
                     format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=options),
                         InputFormat.IMAGE: ImageFormatOption(pipeline_cls=StandardPdfPipeline, pipeline_options=image_options)})

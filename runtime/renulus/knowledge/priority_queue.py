@@ -70,8 +70,15 @@ class LibraryPriorityQueue:
         """Best effort: import success must survive an advisory write failure."""
         if not isinstance(job_id, str) or not JOB_ID.fullmatch(job_id):
             return False
+        return self.mark_many([job_id])
+
+    def mark_many(self, job_ids):
+        """Persist a bounded deliberate selection in one advisory transaction."""
+        selected = self._bounded(job_ids)
+        if not selected:
+            return False
         with self._lock:
-            self._pending = self._bounded([*self._pending, job_id])
+            self._pending = self._bounded([*self._pending, *selected])
             try:
                 with self.db.transaction() as conn:
                     ids = self._bounded([*self._load(conn), *self._pending])

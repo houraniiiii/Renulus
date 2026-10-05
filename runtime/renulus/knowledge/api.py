@@ -208,10 +208,7 @@ def create_router(services) -> APIRouter:
     @router.post("/collection/import", status_code=202)
     def import_selected(body: SelectedBatch):
         repository._import_scope(body.scope)
-        result = collection.import_selected(body.entry_ids)
-        if result["queued"]:
-            worker.wake()
-        return result
+        return worker.import_selected(lambda: collection.import_selected(body.entry_ids))
 
     @router.post("/collection/import-next", status_code=202)
     async def import_next(body: NextAcquiredBatch, request: Request):
