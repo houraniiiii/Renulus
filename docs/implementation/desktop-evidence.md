@@ -701,3 +701,89 @@ behaviour. Final NSIS install, relocated installed lifecycle, physical PDF
 page two and real format-2 producer gates are still pending. All proof profiles
 and scratch remain on E. The separately reserved restricted delivery-data
 directory is excluded from public packaging and was not inspected or copied.
+
+The final matching stage completed successfully at about 02:35 UTC. Its
+unsigned NSIS installer is matching-ebb2db2e/
+Renulus-Development-0.1.0-windows-x64-setup.exe under the authorised E delivery
+root: 965,927,137 bytes, SHA256
+8cce7d8a887fbf0ed20cae4315df14ea103224f551a550d5a4ae8efc8d023c42.
+matching-ebb2db2e/delivery-provenance.json records the exact frozen source,
+installed dependency pins, 19 public helper files / 483,597,181 bytes, official
+embedded Python archive checksum and separate installer identity.
+
+Fresh actual NSIS installation to installed-ebb2db2e exited zero in 661.2157
+seconds. Authenticode reports NotSigned. The installed Renulus Development.exe
+SHA256 is 9d8463a0212b37fea83226468f757a62530f9871ad2980b09b15e96d6d48d446;
+resources/app.asar SHA256 is
+a609138332032f86fe2111cf29ff1b16177fb1ca9ed12f4c8c70b2cc926d1a7d.
+Both match the completed unpacked package. The installed backend contract is
+embedded-cpython-windows-v1, Python 3.14.4 and exact source
+ebb2db2e5080f4d42eaf31c2eb63711797704df0. Actual extraction evidence is
+proofs/installer-e4aa7d23/installer-evidence.json. The installer and automation
+controllers received child-only E TEMP/TMP; no global environment was changed.
+
+preserved-after-ebb2db2e.json confirms all six retained C public files are byte
+identical to the before-install record: previous installer, installed executable,
+ASAR, backend manifest and original payload inventory/manifest. No previous C
+payload or checkpoint was deleted. The restricted data directory remains
+outside every package input.
+
+Actual installed lifecycle proof passed with two serial independent synthetic
+profiles, then protected opening-window cancellation and same-profile restart.
+proofs/native-066a6df6/native-evidence.json records Electron 44.5.1 and relocated
+embedded CPython 3.14.4 with isolated/no-user-site flags, prefix/base-prefix and
+all interpreter paths inside the E installed runtime. python, python3, py, uv,
+node and npm were absent on the application's OS-only PATH. Developer
+automation runs outside that child PATH; this is not a clean-VM proof.
+
+| Actual installed run | First visible opening | Real Flow renderer | Authenticated backend |
+| --- | ---: | ---: | ---: |
+| Fresh synthetic profile a | 8.102 s | 197.491 s | 197.633 s |
+| Fresh synthetic profile b | 1.331 s | 60.801 s | 60.836 s |
+| Same profile a restart | 0.849 s | 38.307 s | 41.752 s |
+
+These observations are from this Windows machine and E HDD with uncontrolled
+OS caches and contemporaneous C disk pressure. The restart uses provisioned
+helpers; it is not a cold-start benchmark. All ten backend modules and eight
+navigation entries were present. Session isolation, sandbox/context isolation,
+token rejection, authorization URL rejection, destination search and compact
+viewport checks passed. Accounts remained disconnected/unselected; local CPU
+helper bytes/imports were ready with no startup downloads/model instances.
+Screenshots of Today and Connections were reviewed.
+
+Opening-window Cancel was observed at 0.701 seconds with JavaScript disabled,
+no preload/Node integration and a sandboxed, isolated, nonpersistent session.
+Its physically owned Python child exited on close. Both independent instances
+and the restarted instance also left no owned backend after close. This is
+physical Windows process-exit evidence, not a backend shutdown-callback claim.
+
+The final installed journey passed in proofs/journeys-2e053e16. Its opening
+appeared at 0.746 seconds and real renderer/backend readiness was 51.127/51.147
+seconds. The actual Library blob-PDF iframe selected physical page two.
+library-pdf-viewer.png was visually reviewed: RENULUS - PAGE TWO and the large
+2 marker are visible. Browser frames confirm the built-in viewer and page two,
+with no PDF policy blocking; an unrelated Library capabilities request was
+cancelled. Library DTO/original requests are declared
+synthetic fixtures; this does not claim parsing or indexing a real original.
+The real Updates source link and openSource bridge completed original OS
+shell.openExternal calls for the public KDIGO source. Renulus remained on its
+local origin with one renderer window. Browser page loading was not observed.
+
+The same installed app created a synthetic manual study goal through its real
+Memory API and saved a real format-2 producer archive through DataManagement
+and an actual PID/control-scoped Windows Save dialog. The installed embedded
+Python, using -I -B and OS-only PATH, verified all 15 ZIP members, 477 canonical
+records / 743,115 canonical bytes, segment/member inventory hashes and the
+exact synthetic memory marker. The 128,575-byte archive SHA256 is
+7d83bcc493c49aec91f0c0de602f1a8a41462e9c418389af5a5971d4502374cd.
+Actual Save-dialog Cancel preserved that archive and left no sibling partial.
+actual-producer-backup-evidence.json contains the complete inspection. This
+small producer proof complements the paced 64-MiB promotion/transfer-cancel
+proof; it does not establish restore or multi-GiB capacity.
+
+All final proof instances closed, including the final journey's app and Python
+child. No provider login or generative inference was performed. Product source
+remains the explicit freeze; proof-only 4b42bf75 and evidence-only 09489f53
+were separately integrated by the parent. The parent owns delivery.json,
+shortcut wiring and the normal launch of its separately audited private E
+learning profile. This lane did not access either private learning profile.
