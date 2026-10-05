@@ -160,6 +160,28 @@ def validate_date(value):
     return value
 
 
+def validate_record_row(name, row, info):
+    """Shared scalar/scope contract; callers bound rows and enforce identities."""
+    if not isinstance(row, dict) or set(row) != {column["name"] for column in info}:
+        raise ApiError("backup_columns", "The export record schema does not match this app")
+    if any(type(value) not in (str, int, float, type(None)) or
+           (isinstance(value, float) and not math.isfinite(value)) or
+           (type(value) is int and not -(2**63) <= value < 2**63) for value in row.values()):
+        raise ApiError("backup_records", "Canonical record values must be finite SQLite scalars")
+    for column in info:
+        value = row[column["name"]]
+        if value is None and (column["notnull"] or column["pk"]):
+            raise ApiError("backup_records", "A required canonical field is missing")
+        if value is not None and column["type"].upper() == "INTEGER" and type(value) is not int:
+            raise ApiError("backup_records", "An integer canonical field has an invalid value")
+        if value is not None and column["type"].upper() == "TEXT" and not isinstance(value, str):
+            raise ApiError("backup_records", "A text canonical field has an invalid value")
+    if name == "preferences" and row["key"] not in SAFE_PREFERENCES:
+        raise ApiError("backup_preference", "Connection settings and credentials cannot be restored from learning exports")
+    if row.get("scope_kind") in ("temporary-case", "unclassified") or row.get("scope") in ("temporary-case", "unclassified"):
+        raise ApiError("backup_scope", "Temporary and unclassified data cannot be restored")
+
+
 def validate_records(conn, bundle):
     if not isinstance(bundle, dict) or bundle.get("format") != "renulus-canonical-export" or \
             type(bundle.get("format_version")) is not int or bundle["format_version"] != FORMAT_VERSION:
@@ -192,33 +214,14 @@ def validate_records(conn, bundle):
         if count > MAX_RECORDS:
             raise ApiError("backup_limit", "The maximum canonical record count is 100,000", 413)
         info = list(conn.execute(f'PRAGMA table_info("{name}")'))
-        columns = {row["name"] for row in info}
         keys = primary_keys(conn, name)
         seen = set()
         for row in rows:
-            if not isinstance(row, dict) or set(row) != columns:
-                raise ApiError("backup_columns", "The export record schema does not match this app")
-            if any(type(value) not in (str, int, float, type(None)) or
-                   (isinstance(value, float) and not math.isfinite(value)) or
-                   (type(value) is int and not -(2**63) <= value < 2**63) for value in row.values()):
-                raise ApiError("backup_records", "Canonical record values must be finite SQLite scalars")
-            for column in info:
-                value = row[column["name"]]
-                if value is None and (column["notnull"] or column["pk"]):
-                    raise ApiError("backup_records", "A required canonical field is missing")
-                if value is not None and column["type"].upper() == "INTEGER" and type(value) is not int:
-                    raise ApiError("backup_records", "An integer canonical field has an invalid value")
-                if value is not None and column["type"].upper() == "TEXT" and not isinstance(value, str):
-                    raise ApiError("backup_records", "A text canonical field has an invalid value")
+            validate_record_row(name, row, info)
             identity = tuple(row[key] for key in keys)
             if keys and identity in seen:
                 raise ApiError("backup_duplicates", "The export contains duplicate canonical identities")
             seen.add(identity)
-            if name == "preferences" and row["key"] not in SAFE_PREFERENCES:
-                raise ApiError("backup_preference", "Connection settings and credentials cannot be restored from learning exports")
-            if row.get("scope_kind") in ("temporary-case", "unclassified") or \
-                    row.get("scope") in ("temporary-case", "unclassified"):
-                raise ApiError("backup_scope", "Temporary and unclassified data cannot be restored")
     return records
 
 

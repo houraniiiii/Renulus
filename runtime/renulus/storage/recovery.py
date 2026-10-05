@@ -10,11 +10,15 @@ from uuid import uuid4
 
 from ..contracts import ApiError
 from .backup import (apply_records, portable_records, record_references, records_only_bundle,
-                     snapshot_omissions, validate_merge, validate_records)
+                     snapshot_omissions)
 from .database import utc_now
 from .recovery_archive import (DEFAULT_LIMITS, backup_to, descriptor_for, original_path,
-                               owned_path, strict_json, validate_archive, verify_file)
+                               owned_path, strict_json, verify_file)
 from .recovery_files import OriginalTransaction, recover_file_journals, remove_owned_tree
+from .recovery_limits import SEGMENTED_LIMITS
+from .recovery_records import apply_staged, installed_schema
+from .recovery_segmented import (ValidatedRecordStage, ValidatedSegmentedArchive,
+                                 backup_segmented_to, stage_legacy_bundle, stage_record_rows, validate_archive_auto)
 
 PREVIEWS = "cache/recovery/previews"
 EXPORTS = "cache/recovery/exports"
@@ -23,11 +27,12 @@ REBUILD_MODULES = ("knowledge", "memory")
 
 
 class Recovery:
-    def __init__(self, services, *, limits=DEFAULT_LIMITS):
-        self.services, self.limits = services, limits
+    def __init__(self, services, *, limits=DEFAULT_LIMITS, segmented_limits=SEGMENTED_LIMITS):
+        self.services, self.limits, self.segmented_limits = services, limits, segmented_limits
         self._lock, self._mutation, self._upload = RLock(), Lock(), Lock()
         self._pending_recovery = False
         self._preview = None
+        self._preview_leases, self._retired_previews = 0, []
         schema = Path(__file__).with_name("recovery_schema.sql").read_text(encoding="utf-8")
         services.db.apply_migration("storage-recovery-001", schema)
         recover_file_journals(services)
@@ -82,12 +87,33 @@ class Recovery:
             raise
 
     def complete_preview(self, identifier, directory):
-        validated = validate_archive(self.services, directory, self.limits)
+        validated = validate_archive_auto(self.services, directory, self.limits, self.segmented_limits)
+        return self._accept_preview(identifier, validated)
+
+    def _accept_preview(self, identifier, validated):
         expires = datetime.now(timezone.utc) + timedelta(minutes=PREVIEW_MINUTES)
         with self._lock:
             self._discard_locked()
             self._preview = (identifier, expires, validated)
         return {**validated.public(), "preview_token": identifier, "expires_at": expires.isoformat()}
+
+    def preview_records(self, records, *, exported_at, omissions=None, originals=()):
+        """Local developer seam for filtered, iterable records, not an HTTP route.
+
+        Use only a fresh scratch app for packaging. The caller selects tables and
+        verified descriptors; storage validates the complete stage and owns the
+        same confirmation, atomic merge/promotion and rebuild receipt lifecycle.
+        """
+        identifier, directory = self.begin_preview()
+        keep = False
+        try:
+            validated = stage_record_rows(self.services, directory, records, exported_at=exported_at,
+                omissions=omissions, originals=originals, limits=self.segmented_limits)
+            result = self._accept_preview(identifier, validated)
+            keep = True
+            return result
+        finally:
+            self.end_upload(directory, keep=keep)
 
     def end_upload(self, directory, *, keep=False):
         try:
@@ -100,19 +126,50 @@ class Recovery:
         if self._preview:
             preview = self._preview
             self._preview = None
-            remove_owned_tree(self.services.paths, preview[2].directory)
+            if self._preview_leases:
+                self._retired_previews.append(preview[2].directory)
+            else:
+                remove_owned_tree(self.services.paths, preview[2].directory)
 
     def discard_preview(self, identifier):
         with self._lock:
             if self._preview and self._preview[0] == identifier:
                 self._discard_locked()
 
-    def backup(self):
+    @contextmanager
+    def validated_preview(self, identifier):
+        """Local packaging lease for iterable rows and verified descriptors.
+
+        Holds this scratch app's preview lock while a filtered stage consumes
+        it. preview_records() may replace it only after all selected bytes have
+        been copied. Close SQL readers inside this context; retired staging is
+        removed on exit. Do not retain the yielded object beyond this context.
+        """
+        with self._lock:
+            if not self._preview or self._preview[0] != identifier:
+                raise ApiError("backup_preview", "Verify the backup again before selecting its records", 409)
+            if self._preview[1] <= datetime.now(timezone.utc):
+                self._discard_locked()
+                raise ApiError("backup_preview_expired", "The backup preview expired; verify it again", 409, True)
+            self._preview_leases += 1
+            try:
+                yield self._preview[2]
+            finally:
+                self._preview_leases -= 1
+                if not self._preview_leases:
+                    retired, self._retired_previews = self._retired_previews, []
+                    for directory in retired:
+                        remove_owned_tree(self.services.paths, directory)
+
+    def backup(self, *, format_version=1):
+        if type(format_version) is not int or format_version not in (1, 2):
+            raise ApiError("backup_format", "Select supported full backup format 1 or 2")
         directory = owned_path(self.services.paths, EXPORTS + "/" + uuid4().hex)
         directory.mkdir()
         try:
             with self.mutation():
-                manifest = backup_to(self.services, directory / "backup.zip", self.limits)
+                producer, limits = (backup_segmented_to, self.segmented_limits) if format_version == 2 else (backup_to, self.limits)
+                manifest = producer(self.services, directory / "backup.zip", limits)
             return directory, manifest
         except BaseException:
             remove_owned_tree(self.services.paths, directory)
@@ -129,7 +186,8 @@ class Recovery:
             if acknowledge_deletion_limits is not True or confirmed_exported_at != preview[2].bundle["exported_at"]:
                 raise ApiError("restore_confirmation", "Confirm this backup's exact date and its deletion limits", 409)
             try:
-                result = self._restore(preview[2].bundle, preview[2].originals)
+                staged = preview[2] if isinstance(preview[2], (ValidatedSegmentedArchive, ValidatedRecordStage)) else None
+                result = self._restore(preview[2].bundle, preview[2].originals, staged=staged)
             except BaseException as error:
                 # A failed promotion may have consumed a staged file during rollback.
                 # Require complete verification again before granting another restore.
@@ -147,32 +205,48 @@ class Recovery:
         if not confirm_backup_date or (confirmed_exported_at is not None and confirmed_exported_at != bundle.get("exported_at")):
             raise ApiError("restore_confirmation", "Confirm the backup date and its deletion limits before restoring", 409)
         bundle = records_only_bundle(bundle)
-        conn = self.services.db.connect()
+        identifier, directory = self.begin_preview()
         try:
-            records = validate_records(conn, bundle)
+            staged = stage_legacy_bundle(self.services, directory, {**bundle, "data_kind": "records-only"}, self.segmented_limits)
+            return self._restore(staged.bundle, [], staged=staged)
         finally:
-            conn.close()
-        safe = {**bundle, "records": portable_records(records), "data_kind": "records-only"}
-        validate_merge(self.services, safe)
-        return self._restore(safe, [])
+            self.end_upload(directory)
 
-    def _restore(self, bundle, originals):
+    def _restore(self, bundle, originals, *, staged=None):
         identifier, file_transaction = uuid4().hex, None
-        # Rebase only the explicit supported original column. Never use a source path.
-        records = portable_records(bundle["records"], originals=True)
-        descriptors = {entry["revision_id"]: entry for entry in originals}
-        for row in records.get("knowledge_revisions", []):
-            entry = descriptors.get(row["id"])
-            row["original_path"] = str(original_path(self.services.paths, entry)) if entry else None
-        rebased = {**bundle, "records": records}
+        limits = staged.limits if staged else self.limits
+        if staged:
+            rebased = bundle
+        else:
+            # Rebase only the explicit supported original column. Never use a source path.
+            records = portable_records(bundle["records"], originals=True)
+            descriptors = {entry["revision_id"]: entry for entry in originals}
+            for row in records.get("knowledge_revisions", []):
+                entry = descriptors.get(row["id"])
+                row["original_path"] = str(original_path(self.services.paths, entry)) if entry else None
+            rebased = {**bundle, "records": records}
         with self.mutation():
             try:
+                if staged:
+                    # Guard acquisition can wait for CPU ingestion. Recheck
+                    # the exact stage after that wait, before attaching it.
+                    staged.verify_stage(self.services.paths)
                 with self.services.db.transaction() as conn:
-                    result, blocked, current = apply_records(conn, rebased)
+                    if staged:
+                        conn.execute("PRAGMA temp_store=FILE")
+                        conn.execute("PRAGMA cache_size=-2048")
+                        result, removed_revisions = apply_staged(conn, staged.stage, installed_schema(conn, limits), limits, bundle["exported_at"])
+                        current = {"knowledge_revisions": removed_revisions}
+                        def is_blocked(*identifiers):
+                            return bool(conn.execute("SELECT 1 FROM temp.recovery_blocked WHERE id IN (" + ",".join("?" for _ in identifiers) + ") LIMIT 1", identifiers).fetchone())
+                    else:
+                        result, blocked, current = apply_records(conn, rebased)
+                        def is_blocked(*identifiers):
+                            return bool(blocked.intersection(identifiers))
                     promotions, removals, restored = [], [], 0
                     for entry in originals:
                         # The union of newer target and imported markers is already applied.
-                        if entry["revision_id"] in blocked or entry["document_id"] in blocked:
+                        if is_blocked(entry["revision_id"], entry["document_id"]):
                             continue
                         row = conn.execute("SELECT * FROM knowledge_revisions WHERE id=?", (entry["revision_id"],)).fetchone()
                         if not row:
@@ -194,22 +268,24 @@ class Recovery:
                         conn.execute("UPDATE knowledge_revisions SET original_path=? WHERE id=?", (str(target), entry["revision_id"]))
                         restored += 1
                     for row in current.get("knowledge_revisions", []):
-                        if not row["original_path"] or not blocked.intersection(record_references(row)):
+                        if not row["original_path"] or not is_blocked(*record_references(row)):
                             continue
                         try:
                             relative = Path(row["original_path"]).relative_to(self.services.paths.root).as_posix()
                         except ValueError:
                             raise ApiError("backup_path", "A deleted revision references a non-owned original; recovery will not touch it", 409) from None
-                        entry = descriptor_for(row, relative, self.limits)
+                        entry = descriptor_for(row, relative, limits)
                         if original_path(self.services.paths, entry).exists():
                             removals.append(entry)
                     # All file conflicts/bytes are checked while canonical writes remain uncommitted.
-                    file_transaction = OriginalTransaction(self.services, identifier, promotions, removals)
+                    file_transaction = OriginalTransaction(self.services, identifier, promotions, removals,
+                        limits=limits, version=2 if staged else 1)
                     file_transaction.prepare()
                     file_transaction.promote()
                     result.update({"recovery_id": identifier, "restored_originals": restored,
                                    "excluded_originals": len(originals) - restored,
                                    "data_kind": bundle.get("data_kind", "records-only"),
+                                   "format_version": getattr(staged, "archive_version", 2) if staged else 1,
                                    "omissions": bundle.get("omissions", {}), "cleanup_pending": False})
                     rebuild = {"status": "required", "modules": {}, "updated_at": utc_now()}
                     conn.execute("INSERT INTO storage_recovery_runs VALUES(?,?,?,?)", (
@@ -255,7 +331,7 @@ class Recovery:
         last = self._last_run()
         return {"last_restore": json.loads(last["result_json"]) if last else None,
                 "rebuild": json.loads(last["rebuild_json"]) if last else {"status": "idle", "modules": {}},
-                "limits": self.limits.public(), "omissions": omissions,
+                "limits": self.limits.public(), "backup_formats": {"1": self.limits.public(), "2": self.segmented_limits.public()}, "omissions": omissions,
                 "backup_scope": "Retained canonical learning records and app-owned personal-library originals. Acquisition catalogue, external originals, credentials, provider settings, indexes and managed helper weights are excluded."}
 
     def request_rebuild(self):

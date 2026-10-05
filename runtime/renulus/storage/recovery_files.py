@@ -12,9 +12,10 @@ import shutil
 from ..contracts import ApiError
 from .recovery_archive import (DEFAULT_LIMITS, ORIGINAL, canonical_json, original_path,
                                owned_path, strict_json, verify_file)
+from .recovery_limits import SEGMENTED_LIMITS
 
 TRANSACTIONS = "state/recovery/transactions"
-STAGED = re.compile(r"cache/recovery/previews/[0-9a-f]{32}/verified/[0-9]{1,4}")
+STAGED = re.compile(r"cache/recovery/previews/[0-9a-f]{32}/verified/[0-9]{1,5}")
 
 
 def remove_owned_tree(paths, directory):
@@ -38,9 +39,10 @@ def _move_no_replace(source, destination):
 
 
 class OriginalTransaction:
-    def __init__(self, services, identifier, promotions, removals):
+    def __init__(self, services, identifier, promotions, removals, *, limits=DEFAULT_LIMITS, version=1):
         self.services, self.paths = services, services.paths
         self.id, self.promotions, self.removals = identifier, promotions, removals
+        self.limits, self.version = limits, version
         self.directory = owned_path(self.paths, TRANSACTIONS + "/" + identifier)
         self.entries = []
         for action, entries in (("promote", promotions), ("remove", removals)):
@@ -53,7 +55,8 @@ class OriginalTransaction:
 
     def prepare(self):
         # All conflicts and bytes are checked before the first move.
-        if len(self.entries) > 2 * DEFAULT_LIMITS.originals or sum(entry["bytes"] for entry in self.removals) > DEFAULT_LIMITS.total_original_bytes:
+        if self.version not in (1, 2) or any(len(group) > self.limits.originals or sum(entry["bytes"] for entry in group) > self.limits.total_original_bytes
+                for group in (self.promotions, self.removals)):
             raise ApiError("backup_limit", "Reconciled original cleanup exceeds this bounded restore", 413)
         for entry in self.promotions:
             target = original_path(self.paths, entry)
@@ -65,8 +68,8 @@ class OriginalTransaction:
             verify_file(original_path(self.paths, entry), entry)
         self.directory.mkdir(parents=True, exist_ok=False)
         (self.directory / "removed").mkdir()
-        data = canonical_json({"version": 1, "id": self.id, "entries": self.entries})
-        if len(data) > DEFAULT_LIMITS.manifest_bytes:
+        data = canonical_json({"version": self.version, "id": self.id, "entries": self.entries})
+        if len(data) > self.limits.manifest_bytes * (2 if self.version == 2 else 1):
             raise ApiError("backup_limit", "The file recovery journal exceeds its size limit", 413)
         with (self.directory / "journal.json").open("xb") as journal:
             journal.write(data)
@@ -139,27 +142,33 @@ def recover_file_journals(services):
                 raise ApiError("recovery_journal", "An incomplete recovery journal needs inspection", 409)
             remove_owned_tree(services.paths, directory)
             continue
-        if journal.stat().st_size > DEFAULT_LIMITS.manifest_bytes:
+        if journal.stat().st_size > 2 * SEGMENTED_LIMITS.manifest_bytes:
             raise ApiError("recovery_journal", "Recovery journal exceeds its bounded format", 409)
         data = strict_json(journal.read_bytes())
         if not isinstance(data, dict) or set(data) != {"version", "id", "entries"} or \
-                type(data["version"]) is not int or data["version"] != 1 or data["id"] != directory.name or not isinstance(data["entries"], list) or \
-                len(data["entries"]) > 2 * DEFAULT_LIMITS.originals:
+                type(data["version"]) is not int or data["version"] not in (1, 2) or data["id"] != directory.name or not isinstance(data["entries"], list):
             raise ApiError("recovery_journal", "Recovery journal has an invalid format", 409)
+        limits = SEGMENTED_LIMITS if data["version"] == 2 else DEFAULT_LIMITS
+        if journal.stat().st_size > limits.manifest_bytes * (2 if data["version"] == 2 else 1) or len(data["entries"]) > 2 * limits.originals:
+            raise ApiError("recovery_journal", "Recovery journal exceeds its versioned metadata bounds", 409)
         seen = set()
         for entry in data["entries"]:
             if not isinstance(entry, dict) or set(entry) != ({"path", "document_id", "revision_id", "bytes", "sha256", "action"} |
                     ({"staged"} if entry.get("action") == "promote" else set())) or \
                     entry["action"] not in ("promote", "remove") or type(entry["bytes"]) is not int or \
-                    not 0 <= entry["bytes"] <= DEFAULT_LIMITS.original_bytes or \
+                    not 0 <= entry["bytes"] <= limits.original_bytes or \
                     not isinstance(entry["sha256"], str) or not re.fullmatch(r"[0-9a-f]{64}", entry["sha256"]):
                 raise ApiError("recovery_journal", "Recovery journal has an invalid original descriptor", 409)
-            if entry["action"] == "promote" and (not isinstance(entry["staged"], str) or not STAGED.fullmatch(entry["staged"])):
+            if entry["action"] == "promote" and (not isinstance(entry["staged"], str) or not STAGED.fullmatch(entry["staged"]) or int(entry["staged"].rsplit("/", 1)[1]) >= limits.originals):
                 raise ApiError("recovery_journal", "Recovery journal has an invalid staged original path", 409)
             original_path(services.paths, entry)
             if entry["path"] in seen:
                 raise ApiError("recovery_journal", "Recovery journal contains duplicate original paths", 409)
             seen.add(entry["path"])
+        for action in ("promote", "remove"):
+            group = [entry for entry in data["entries"] if entry["action"] == action]
+            if len(group) > limits.originals or sum(entry["bytes"] for entry in group) > limits.total_original_bytes:
+                raise ApiError("recovery_journal", "Recovery journal exceeds its versioned original budget", 409)
         committed = services.db.fetch_one("SELECT 1 FROM storage_recovery_runs WHERE id=?", (data["id"],))
         if not committed:
             _rollback(services.paths, directory, data["entries"])

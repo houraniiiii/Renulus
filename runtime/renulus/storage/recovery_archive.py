@@ -309,6 +309,16 @@ class ValidatedArchive:
     bundle: dict
     originals: list[dict]
 
+    def iter_records(self, services, *, tables=None):
+        """Uniform packaging seam; legacy records retain the 16-MiB bound."""
+        available = self.bundle["records"]
+        names = set(available) if tables is None else set(tables)
+        if not names.issubset(available):
+            raise ApiError("backup_table", "Select only tables present in the validated canonical preview")
+        for name in sorted(names):
+            for row in available[name]:
+                yield name, dict(row)
+
     def public(self):
         return {"format": FULL_FORMAT, "exported_at": self.bundle["exported_at"],
                 "record_count": sum(len(rows) for rows in self.bundle["records"].values()),
@@ -317,7 +327,7 @@ class ValidatedArchive:
                 "deletion_notice": DELETION_NOTICE, "omissions": self.bundle.get("omissions", {})}
 
 
-def validate_archive(services, directory, limits=DEFAULT_LIMITS):
+def validate_archive(services, directory, limits=DEFAULT_LIMITS, *, merge_validator=validate_merge):
     path = directory / "input.zip"
     try:
         owned_path(services.paths, path.relative_to(services.paths.root).as_posix())
@@ -339,7 +349,7 @@ def validate_archive(services, directory, limits=DEFAULT_LIMITS):
             if not isinstance(bundle, dict) or bundle.get("exported_at") != manifest["exported_at"] or \
                     bundle.get("schema_version") != manifest["schema_version"] or bundle.get("data_kind") != "full-backup":
                 raise ApiError("backup_manifest", "The manifest and canonical export do not describe the same backup")
-            validate_merge(services, bundle)
+            merge_validator(services, bundle)
             entries = manifest["originals"]
             if not isinstance(entries, list) or len(entries) > limits.originals:
                 raise ApiError("backup_limit", "The backup has too many original files", 413)

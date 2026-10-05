@@ -1,7 +1,7 @@
 """Explicit records-only JSON and verified full ZIP recovery operations."""
 import asyncio
 
-from fastapi import APIRouter, BackgroundTasks, Request
+from fastapi import APIRouter, BackgroundTasks, Query, Request
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, ValidationError
 from starlette.background import BackgroundTask
@@ -80,20 +80,21 @@ def create_router(services):
         return queue_rebuild(result, tasks)
 
     @router.get("/backup")
-    def backup():
-        directory, manifest = recovery.backup()
+    def backup(format_version: int = Query(default=1, ge=1, le=2)):
+        directory, manifest = recovery.backup(format_version=format_version)
         return FileResponse(directory / "backup.zip", media_type="application/zip",
             filename="renulus-backup-" + manifest["exported_at"][:10] + ".zip",
-            headers={"Cache-Control": "no-store", "X-Renulus-Data-Kind": "full-backup"},
+            headers={"Cache-Control": "no-store", "X-Renulus-Data-Kind": "full-backup", "X-Renulus-Backup-Format": str(format_version)},
             background=BackgroundTask(remove_owned_tree, services.paths, directory))
 
     @router.post("/backup/preview")
-    async def preview(request: Request):
+    async def preview(request: Request, format_version: int = Query(default=1, ge=1, le=2)):
         identifier, directory = recovery.begin_preview()
         keep = False
         try:
             with (directory / "input.zip").open("xb") as output:
-                await read_bounded(request, recovery.limits.archive_bytes, destination=output)
+                upload_limits = recovery.segmented_limits if format_version == 2 else recovery.limits
+                await read_bounded(request, upload_limits.archive_bytes, destination=output)
             result = await asyncio.to_thread(recovery.complete_preview, identifier, directory)
             keep = True
             return result
