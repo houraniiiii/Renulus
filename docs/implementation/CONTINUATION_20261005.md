@@ -6,25 +6,34 @@ historical `SESSION_HANDOFF.md`. Preserve its receipts and observations.
 ## Current manufacture and recovered acceptance preparation
 
 The accepted product manufacture freeze is
-`035ca7bd07337c65266c17f9b762ca1f97238e11`. Its existing Package controller is
-running in parent session `61735`, run `035ca7bd-package-baaed9d1`. NSIS factory
-preflight passed. The public backend/Node trees were staged on C. Its completed
-refreshed backend inventory has 39,253 files / 2,171,018,592 bytes, SHA256
-`ca213687fb3274663617c63827fd42913f7067ddd60ac8f58a4d1ad771167cb2`.
-Matching renderer/native typecheck and build passed; Electron Builder is assembling
-the app and installer. Full packaged inventory/provenance remains pending. Do not start a replacement
-Package or credit success before the terminal/provenance receipts. Later integration
-commits change reports only, retaining the exact product source freeze.
+`035ca7bd07337c65266c17f9b762ca1f97238e11`. Its existing Package controller
+`61735`, run `035ca7bd-package-baaed9d1`, completed with exit 0 at 21:17 UTC.
+NSIS factory preflight, renderer/native typecheck/build and full packaged
+backend inventory passed. The inventory has 39,253 files / 2,171,018,592 bytes,
+SHA256 `ca213687fb3274663617c63827fd42913f7067ddd60ac8f58a4d1ad771167cb2`.
+The installer is 1,010,348,169 bytes, SHA256
+`b4f120e7bd115cca00caf0379d6607e1ae2267d88743490f1b1380c1d8ea29af`.
+Package provenance SHA256 is
+`e21279046bcda19ba3348f82acd4c96b1827b10b48ab96e0fe5e9c506ec4b977`.
+Later integration commits change reports only, retaining the exact product source.
 
-The installer was emitted at 21:06:33 UTC (1,010,348,169 bytes), with its
-blockmap completed at 21:08:36 UTC. The controller remains in final packaged
-inventory verification; these observations do not establish Package acceptance.
-The builder has exited and the owned verifier has no children. The parent
-therefore released only the two changed PDF/PNG case-consumer identities to
-Hegel under `engine-case-consumers-035ca7bd-20261005`, while that small verifier
-finishes. No compression/native/provider operation is concurrent. The observed
-4,346,016 KiB of free RAM is subject to a 2 GiB prelaunch hold; Install/native
-remain held until this bounded engine slot is released.
+The parent released the two changed PDF/PNG case consumers while only the small
+final package verifier remained. Both IDs passed once at this exact freeze, with
+six passing phases, all source checks true, zero guards and actual exit 0. Their
+slot was physically released at 21:18:42 UTC. The report was integrated as
+`05a41eb2`; all 26 public files / 124,484 bytes were verified before and after
+the worktree retirement at 21:29:33 UTC. Retained receipts are under
+`C:/rn-finalise-20261005/preserved-lanes/case-engine-consumers`.
+See [the exact consumer report](finalise-case-engine-consumers.md).
+
+Matching Install controller `93698`, run `035ca7bd-install-15fb116a`, completed
+with exit 0. Its actual unsigned extraction-only receipt is
+`C:/Renulus-native-delivery/desktop-20261005/proofs/installer-52f93aee/installer-evidence.json`,
+SHA256 `2d8b80e46f54459bc4475edc3de7cb6ea1a46ca1a506f1fba3322d9e3b423585`.
+NSIS exit 0, 477.2414153 seconds; installed source, EXE and ASAR match Package.
+The native17 controller is now running in session `15174`, with parent evidence
+under `C:/rn-finalise-20261005/parent-native-035ca7bd-01`. Installed journeys,
+three ordinary physical closes, connected/live and maintenance remain pending.
 
 The saved-original slice has 112 retained individual backend passes plus one
 accepted exact retry at `37dc5384`, and 45 lane-reported renderer checks plus
@@ -54,7 +63,7 @@ The E supplement-inputs/publisher-media hold remains untouched. Finished bounded
 agents are closed; resume only a concrete remaining slice. Exactly one native
 twenty-minute heartbeat remains active.
 
-Next parent serial sequence is matching Install, all actual native17 gates/three
+Current parent serial sequence is all actual native17 gates/three
 ordinary physical closes and screenshot review, connected originals/populated
 recovery/Memory/mistake-to-plan, and the bounded selected-account Probe/Journeys.
 Lifecycle binding admits passed live journeys or one exact terminal external-access
