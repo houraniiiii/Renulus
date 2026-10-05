@@ -1,10 +1,11 @@
 # Final integration validation
 
-October 5, 2026 UTC. The installed application uses the exact source freeze
-`ebb2db2e5080f4d42eaf31c2eb63711797704df0`. Later test-harness, confined proof-tool
-and evidence changes do not change the frozen renderer, managed backend or native
-entry used for packaging. Native matching source and installer checks remain a
-separate acceptance gate until their observed results are recorded.
+October 5, 2026 UTC. The current installed application uses exact source freeze
+`3ff9b0d6145c8d52f4c9e9b0a3009f0fc351c4cc`. Its matching installation and
+normal Library acceptance are recorded in the final section below. Earlier
+`ebb2db2e` observations and failed/interrupted runs remain dated evidence for
+their stated source. Later test-harness, proof-tool and evidence changes do not
+change the frozen renderer, managed backend or native entry used for packaging.
 
 The integrated producer/image/error check passed **44 tests** in 162.73 seconds.
 It strictly checks the non-retryable Go restriction through Cases, Learn and
@@ -250,6 +251,68 @@ refreshed the 2,169,529,464-byte backend for the exact freeze. The first rendere
 build failed at 04:10 UTC on October 5, 2026 because its packaging environment
 contained an empty backend URL. A separate recovery run removed that variable,
 passed TypeScript/Vite/native compilation and produced the matching installer
-at **04:30:34 UTC**. Final hash/provenance, fresh installation, isolated native
-lifecycle and the parent's normal shortcut/Library25/search/citation checks
-remain distinct acceptance gates until observed.
+at **04:30:34 UTC**. The following checkpoint records the subsequently observed
+hash/provenance, fresh installation, isolated native lifecycle and normal
+shortcut/Library25/search/citation acceptance.
+
+## Matching installation and normal Library acceptance
+
+The replacement installer is **965,928,451 bytes**, SHA-256
+`49f82a58b227c3d572747c3b282fdec20c09fe03777e878c9ba8125281460ed2`.
+Fresh installation to `installed-3ff9b0d6` exited zero in **432.751 seconds**.
+Installed executable SHA-256
+`38d56a3887c2acf0e8b0db8d45047e59471723cbf3f557253f5f8a77691b3cb9`
+and ASAR SHA-256
+`8ea2cab31aaefb3ea56ca37ad524307c4c342538421811fbebe6ec80225c66f0`
+match the unpacked package. The exact backend/renderer/native freeze is
+verified. The installer is unsigned. Full provenance is in
+[desktop evidence](desktop-evidence.md#matching-replacement--october-5-2026) and
+ignored `proofs/final-native-3ff9b0d6-fe6d3b53/` under the E delivery root.
+
+One isolated installed synthetic run passed with Electron **44.5.1**, embedded
+CPython **3.14.4** and Python/uv/Node/npm absent from the child OS-only PATH.
+Opening, Flow and authenticated backend were observed at **3.516 / 166.522 /
+166.547 seconds**. Physical shutdown took **8.245 seconds**; app PID 16392 and
+backend PID 2160 were independently verified gone. The Flow screenshot was
+reviewed. These observations have uncontrolled OS caches/load and are not a
+clean-machine performance benchmark. The earlier full navigation/PDF/backup
+matrix remains evidence for its earlier exact freeze and was not relabelled.
+
+The parent then launched the actual owned desktop shortcut at **04:45:07 UTC**,
+using the preserved E learning profile. Current app PID **6488** and backend
+PID **28580** were observed; backend profile binding matched, health returned
+200 with all ten modules and unauthenticated metadata returned 401.
+
+| October 5, 2026 UTC | Actual replacement native observation |
+| --- | --- |
+| 04:47:38 | Visible Today captured; coarse startup visibility bound. |
+| 04:47:41 → 04:47:50 | Library navigation, then 25 documents observed while ingestion continued. |
+| 04:48:08 → 04:48:18 | `dialysis adequacy` search, then eight citation controls with no timeout notice. |
+| 04:48:27 → 04:48:49 | Citation inspected; E01 metadata and **Open original · page 13** observed. |
+| 04:49:47 → 04:50:12 | Original opened from that control and visually rendered. |
+| 04:51:25 | Returned to Today. |
+
+The native PDF accessibility tree warned **“This PDF is inaccessible. Could not
+download text extraction files.”** The physical-page control was not
+independently read. Preserve this qualification: visible original rendering and
+page-13 citation metadata/link passed; full PDF accessibility is not accepted.
+Action/observation windows are coarse bounds, not single-request measurements.
+This is one normal queue workload after competing heavy helpers stopped.
+Private screenshots/source bodies remain ignored and local. Ignored receipt:
+`.local/replacement-shortcut-evidence.json`.
+
+At **04:51:26 UTC**, canonical aggregates showed **7,307 documents, 16,271
+passages, 672 ready jobs, 6,634 queued and one embedding**, plus four historical
+failed revisions and zero Study/case/Test/Memory rows. Queued originals are not
+searchable. A subsequent metadata coverage review held seven imports through
+actual native cancellation; external originals were preserved. Eight human
+renal oncology/transplant titles remain unverified research candidates with an
+explicit project selection review. See [selection review](source-selection-review.md).
+
+The unbundled restaging tooling separately passed **10 Python** boundary checks
+and **14 refusal/environment checks each on Windows PowerShell 5.1 and 7**.
+Those checks did not launch the app, helper models or a native proof. Collection
+and supplement implementation continues in #14/#15; it is not yet part of the
+installed freeze. Live intentional Codex sign-in/catalogue/generation, image
+interpretation, automatic learning-point extraction, signing, clean-machine
+release and full medical/ESENeph review remain unproved.

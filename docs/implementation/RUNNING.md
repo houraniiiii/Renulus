@@ -17,54 +17,63 @@ learning profile:
 
 | Item | Local delivery path |
 | --- | --- |
-| Installed application | `E:/Renulus-native-delivery/desktop-20261005/installed-ebb2db2e/Renulus Development.exe` |
+| Installed application | `E:/Renulus-native-delivery/desktop-20261005/installed-3ff9b0d6/Renulus Development.exe` |
 | Learning profile | `E:/Renulus-native-delivery/desktop-20261005/data/learning` |
-| Installer | `E:/Renulus-native-delivery/desktop-20261005/matching-ebb2db2e/Renulus-Development-0.1.0-windows-x64-setup.exe` |
+| Installer | `E:/Renulus-native-delivery/desktop-20261005/matching-3ff9b0d6/Renulus-Development-0.1.0-windows-x64-setup.exe` |
 
-The installer is 965,927,137 bytes, SHA-256
-`8cce7d8a887fbf0ed20cae4315df14ea103224f551a550d5a4ae8efc8d023c42`.
+The installer is 965,928,451 bytes, SHA-256
+`49f82a58b227c3d572747c3b282fdec20c09fe03777e878c9ba8125281460ed2`.
 The installed product uses the exact source freeze
-`ebb2db2e5080f4d42eaf31c2eb63711797704df0`; later test/proof/evidence commits
+`3ff9b0d6145c8d52f4c9e9b0a3009f0fc351c4cc`; later test/proof/evidence commits
 do not change this installed build. `-CheckOnly`
 checks the launcher without starting the app. A checkout without a delivery
 record uses its prepared contributor build. The original shared C checkout and
 its inherited reference launcher remain separate; use the repaired desktop
 shortcut or this E integration launcher for the new learning application.
 
-The installed app manages its Python process and CPU helpers. Two fresh E
-profiles and a same-profile restart passed with Python, uv, Node and npm absent
-from the app's OS-only PATH. Doctors need no developer runtime, GPU, Docker or
-local inference server. A protected opening window appears while the backend
-and managed helpers prepare; actual first-run Flow readiness on this E HDD
-varied from about 61 to 197 seconds, and the provisioned restart took about
-38 seconds. These are observed development-machine timings, not a clean-machine
-benchmark. Closing the app stops its owned backend. The installer is unsigned;
-signing and clean-machine release acceptance remain separate. The actual normal
-shortcut first launched an invisible app at 03:03:55 UTC on October 5, 2026.
-External launcher fix `4b1d2b71` changed the app's window style from Hidden to
-Normal. The 03:06:14 UTC relaunch had visible Flow by 03:10:56 UTC, a coarse
-upper bound of about 282 seconds on the large profile. Health returned 200 with
-all ten modules; an unauthenticated metadata request returned 401.
+The installed app manages embedded CPython 3.14.4 and CPU helpers. The matching
+fresh NSIS installation exited zero in 432.751 seconds. One isolated installed
+startup passed with Python, uv, Node and npm absent from the child's OS-only
+PATH: protected opening at 3.516 seconds, Flow at 166.522 seconds and
+authenticated backend metadata at 166.547 seconds. Closing physically stopped
+the owned application and backend in 8.245 seconds. These are observations on
+this E HDD/development machine, not a clean-machine benchmark. Doctors need no
+developer runtime, GPU, Docker or local inference server. The installer is
+unsigned; signing and clean-machine release acceptance remain separate.
 
-The GUI Library defaults to **25 documents per page**. Its initial listing and
-passage search hit the 30-second request timeout under cold and overlapping
-helper workers. After heavy test workers stopped at 03:19 UTC, a refresh begun
-at 03:23 UTC was observed by 03:26:49 UTC with 25 items, 547 indexed documents,
-6,759 queued, one processing and zero active failures. A `dialysis adequacy`
-search begun at 03:26:49 UTC showed eight Inspect citation controls and Passages
-by 03:27:33 UTC without a timeout notice; citation inspection and return to
-Today followed. These observation times do not measure individual request
-latency. See [normal shortcut acceptance](final-validation.md#normal-shortcut-and-queued-library-workload).
+The actual desktop shortcut launched this matching replacement at **04:45:07
+UTC on October 5, 2026**. Visible Today was captured at 04:47:38 UTC, a coarse
+visibility bound rather than an event-timed startup measurement. Health
+returned 200 with all ten modules, an unauthenticated metadata request returned
+401, and the embedded backend was bound to the chosen E learning profile. The
+external launcher uses Normal window style for the interactive app; its hidden
+PowerShell wrapper is separate. The earlier hidden-app failure and its repair
+remain in [historical validation](final-validation.md#normal-shortcut-and-queued-library-workload).
 
-The parent has integrated Library patch `a5488b2d` as a candidate product freeze;
-compatible API checks are running. Refreeze, packaging and installed acceptance
-for that candidate remain with the parent and packaging lane. This record
-continues to describe the installed `ebb2db2e` build.
+The GUI Library defaults to **25 documents per page**. On the replacement,
+navigation at 04:47:41 UTC produced 25 observed documents at 04:47:50 UTC while
+the normal ingestion worker continued. A `dialysis adequacy` search at 04:48:08
+UTC produced eight observed citation controls at 04:48:18 UTC with no timeout
+notice. Citation inspection showed E01 source metadata and an **Open original ·
+page 13** control; the original PDF rendered visually. Its native PDF
+accessibility tree reported unavailable text-extraction files, and the physical
+page control was not independently read. This is visual original/citation
+acceptance with that qualification. These action/observation windows do not
+measure individual request latency or prove sustained performance under
+competing helpers. See [matching native acceptance](final-validation.md#matching-installation-and-normal-library-acceptance).
 
-At the separate 02:54 UTC preparation audit, the profile had 7,307 verified
-originals and 11,755 rebuilt passages from 481 ready documents, with another
-6,826 imports queued. Those are dated snapshot counts; the normal worker
-continues indexing. Queued imports are present but are not yet searchable.
+The installed replacement includes Library patch `a5488b2d`. Parent integration
+passed 38 Library API/exact-citation checks. Collection selection and acquired
+supplement additions continue in issues #14 and #15; their source patches are
+not yet claimed as part of this installed freeze.
+
+At the 04:51:26 UTC snapshot, the profile had 7,307 documents, 16,271 passages,
+672 ready jobs, 6,634 queued and one embedding, plus four historical failed
+revisions. The normal worker continues indexing; queued imports are not yet
+searchable. Seven selected-policy holds were subsequently cancelled through
+the native UI, cleaning their app-owned derivative copies and retaining external
+originals. Counts are dated snapshots, not a claim that every acquisition file
+is eligible or indexed. See [source selection](source-selection-review.md).
 Each profile owns its SQLite records, library copies, managed helpers and
 derived indexes.
 Third-party acquired originals stay local and are excluded from the public

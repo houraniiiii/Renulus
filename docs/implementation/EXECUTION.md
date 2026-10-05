@@ -30,7 +30,9 @@ round. Record changes of direction in the ticket that motivated them.
 ## Ownership and delivery
 
 The integration branch is `build/renulus-integration` in the sibling
-`Renulus-wt-integration` worktree. Each worker has a separate branch/worktree
+`Renulus-wt-integration` worktree. Active integration subsequently moved to the
+preserved clone at `E:/Renulus-native-delivery/desktop-20261005/repo` after the
+disk-exhausted check; the original worktree remains preserved. Each worker has a separate branch/worktree
 and runtime profile. The integrator owns contracts, storage, shared build files
 and combined checks. Initial desktop shell ownership includes its local manifest,
 tokens and primitives; after handoff these are reserved shared files.
@@ -67,3 +69,21 @@ Detailed lane evidence lives in `docs/implementation/` and GitHub ticket comment
 Machine-only output, acquired originals, indexes and logs stay outside versioned
 source. The heartbeat reports observed commits/checks, active lanes, blockers and
 the next ready work; it does not imply unseen work succeeded.
+
+## October 5 follow-up wave
+
+The original eight-hour target ended at 03:21 UTC. The active goal continues
+with the same 15-minute heartbeat loop and concrete remaining work. Matching
+`3ff9b0d6` package, fresh installation, isolated native lifecycle and the actual
+shortcut/Library25/search/citation workload passed with the qualifications in
+`final-validation.md`. Source originals and earlier checkpoints are preserved.
+
+Curie owns #14 in the `collection-coverage` worktree: acquisition selection,
+explicit hash-bound project review and narrow CC BY operation normalization.
+Halley owns #15 in `supplement-inputs`: durable PPTX/DOCX/XLSX support through
+the existing pinned Docling stack, bounded file admission and source locators.
+Their write sets are disjoint; the parent owns API/UI/shared contracts, actual
+profile corrections/adoption, integration and packaging. The normal installed
+app owns the heavy helper slot while its queue runs. Live intentional Codex
+sign-in is pending and is not replaced by another application's credentials.
+Ready work advances independently of that account step.

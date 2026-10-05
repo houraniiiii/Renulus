@@ -131,7 +131,36 @@ The later read-only aggregate report
 
 The timeouts do not prove a permanently hung pipeline; subsequent observations
 show continued indexing and successful GUI retries. Sustained responsiveness
-under overlapping workers remains unproved. The parent's later Library patch
-`a5488b2d` is a candidate product freeze with compatible API checks running,
-not a claimed installed update. Parent review/refreeze and matching delivery
-validation remain separate from the old exact `ebb2db2e` installed evidence above.
+under overlapping workers remains unproved. The observations above apply to
+the old exact `ebb2db2e` freeze. The subsequently installed matching replacement
+includes the reviewed Library patch `a5488b2d`, as recorded below.
+
+## Matching replacement and source-selection correction
+
+The current exact freeze is `3ff9b0d6145c8d52f4c9e9b0a3009f0fc351c4cc`. The
+actual owned shortcut opened its fresh matching installation on this E profile
+at **04:45:07 UTC**. Visible Today, ten-module health, correct profile binding
+and unauthenticated metadata rejection passed. Native Library25, `dialysis
+adequacy` search and eight citation controls passed while ingestion continued.
+The E01 page-13 original link opened a visually rendered PDF; native PDF
+accessibility reported unavailable text extraction, and the physical-page
+control was not independently read. Full timings and qualifications are in
+[matching native validation](final-validation.md#matching-installation-and-normal-library-acceptance).
+
+The separate **04:51:26 UTC** canonical snapshot recorded **7,307 documents,
+16,271 passages, 672 ready jobs, 6,634 queued and one embedding**, plus four
+historical failed revisions and zero Study/case/Test/Memory rows. Queued imports
+are not searchable. These are dated counts, not a completed full-corpus index.
+
+A subsequent metadata acquisition audit found zero omitted selected documents
+in the restored cohort, and zero additional current importer admissions. This
+is partial acquired-collection coverage, with source-use/format restrictions
+separate from restore completeness. Seven preclinical/general/veterinary
+imports were held through supported native cancellation at **05:08–05:12 UTC**;
+all seven have cancelled jobs and no active revision. Their app-owned copies
+are cleaned by cancellation; external originals and snapshots remain preserved.
+Eight human renal oncology/transplant titles remain unverified research
+candidates. See [source-selection review](source-selection-review.md) and
+issues #14/#15 for explicit review and the next format/licence coverage wave.
+The older all-originals hash audit remains a dated preparation result and is
+not restated as a current post-cancellation count.

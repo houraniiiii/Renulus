@@ -145,5 +145,28 @@ public backend for `3ff9b0d6`. The renderer build then failed at 04:10 UTC:
 Vite received an empty `RENULUS_BACKEND_URL` and rejected it as an invalid URL.
 This packaging-environment failure is retained in the immutable run evidence;
 the packaging lane owns correction and bounded compilation/package recovery.
-Installed replacement acceptance still requires the normal shortcut's
-Library25, search and citation journey with the active learning queue.
+The separate matching installation and native workload below now establish
+replacement acceptance; the failed packaging attempt remains preserved.
+
+## Matching installed workload
+
+The matching `3ff9b0d6` installation passed fresh NSIS install and isolated native
+startup/owned-shutdown. The actual desktop shortcut then launched at **04:45:07
+UTC on October 5, 2026**, bound to the E learning profile. Library navigation
+at **04:47:41 UTC** produced 25 observed documents at **04:47:50 UTC**. A
+`dialysis adequacy` search at **04:48:08 UTC** produced eight citation controls
+at **04:48:18 UTC**, with no timeout notice, while background ingestion
+continued. Citation inspection showed E01 source metadata and an **Open
+original · page 13** control. The original PDF rendered visually at **04:50:12
+UTC**; its native PDF accessibility tree warned that text extraction files
+were unavailable. The physical-page control was not independently read.
+
+These are action/observation windows, not per-request benchmarks. They prove
+one normal queue workload after competing heavy helpers stopped; they do not
+erase earlier negative responsiveness evidence or establish sustained behaviour
+under contention. At **04:51:26 UTC**, the independent canonical snapshot had
+672 ready jobs, 6,634 queued, one embedding and 16,271 passages among 7,307
+documents, plus four historical failed revisions. Source-selection holds were
+subsequently cancelled and are recorded separately. Ignored native receipt:
+`.local/replacement-shortcut-evidence.json`; source bodies/screenshots remain
+local. See [final matching validation](final-validation.md#matching-installation-and-normal-library-acceptance).
