@@ -1,7 +1,7 @@
 """Isolated synthetic state and test-only providers; never live inference."""
 
 import asyncio
-from contextlib import closing
+from contextlib import closing, nullcontext
 from copy import deepcopy
 from pathlib import Path
 
@@ -100,18 +100,27 @@ def repository(services):
 
 
 def assert_absent_from_profile(services, *sentinels):
-    for path in services.paths.root.rglob("*"):
-        if path.is_file():
-            raw = path.read_bytes()
-            for sentinel in sentinels:
-                assert sentinel.encode() not in raw, f"Synthetic content leaked into {path.name}"
-    with closing(services.db.connect()) as conn:
-        for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'"):
-            table = row[0]
-            # Names come from the app schema, never test/user input.
-            data = repr([tuple(r) for r in conn.execute(f'SELECT * FROM "{table}"')])
-            for sentinel in sentinels:
-                assert sentinel not in data, f"Synthetic content leaked into table {table}"
+    memory = services.registry.get("memory")
+    # Qdrant holds its process marker with an exclusive Windows lease. Close
+    # only this synthetic derived index, retaining all its files for the scan.
+    # The Case controller, API and memory worker stay live; recall rebuilds a
+    # missing engine. Hold the index lock so a rebuild cannot race the scan.
+    with memory._lock if memory is not None else nullcontext():
+        if memory is not None and memory._engine is not None:
+            memory._engine.close()
+            memory._engine = None
+        for path in services.paths.root.rglob("*"):
+            if path.is_file():
+                raw = path.read_bytes()
+                for sentinel in sentinels:
+                    assert sentinel.encode() not in raw, f"Synthetic content leaked into {path.name}"
+        with closing(services.db.connect()) as conn:
+            for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'"):
+                table = row[0]
+                # Names come from the app schema, never test/user input.
+                data = repr([tuple(r) for r in conn.execute(f'SELECT * FROM "{table}"')])
+                for sentinel in sentinels:
+                    assert sentinel not in data, f"Synthetic content leaked into table {table}"
 
 
 def assert_terminals(events, expected):
