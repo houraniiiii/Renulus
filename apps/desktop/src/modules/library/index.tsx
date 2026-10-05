@@ -7,6 +7,7 @@ import { Badge, Button, EmptyState, ErrorState, Input, LoadingState, Notice, Pag
 import type { Capabilities, Catalogue, CatalogueEntry, ImportResult, LibraryDocument, Passage, Rights } from './types';
 import { Discovery } from './Discovery';
 import SourceInspector, { isPhysicalPage, type SourceLocation } from './SourceInspector';
+import BulkImportControl from './BulkImportControl';
 import './library.css';
 
 const libraryScope = { kind: 'personal-library' as const };
@@ -71,7 +72,9 @@ export default function LibraryPage() {
   const [text, setText] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [allowed, setAllowed] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [actionBusy, setBusy] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const busy = actionBusy || bulkBusy;
   const [batchPending, setBatchPending] = useState(false);
   const [error, setError] = useState<unknown>();
   const [message, setMessage] = useState('');
@@ -295,6 +298,9 @@ export default function LibraryPage() {
             return count !== undefined ? <div key={value}><dt>{label}</dt><dd>{count}</dd></div> : null;
           })}</dl>}
           {catalogue.resource.status === 'error' && <ErrorState title="Collected sources could not be loaded" error={catalogue.resource.error} onRetry={catalogue.retry} />}
+          {sourceId === 'L02' && <BulkImportControl key={sourceId + '|' + collectionQuery} query={collectionQuery}
+            disabled={actionBusy || temporary || catalogue.resource.status === 'error' || !cataloguePage}
+            onBusyChange={setBulkBusy} onBatch={() => { documents.retry(); catalogue.retry(); }} />}
           {!cataloguePage ? catalogue.resource.status !== 'error' && <LoadingState label="Loading collected source records" /> : <>
             <div className="library-document-page-heading"><p role="status" aria-live="polite">{cataloguePage.total ? <>{offset + 1}–{Math.min(offset + collectionPageSize, cataloguePage.total)} of {cataloguePage.total} {filteredCollection ? 'matching receipts' : 'receipts'}</> : '0 ' + (filteredCollection ? 'matching receipts' : 'receipts')}</p>
               {catalogue.resource.status === 'loading' && <span className="muted">Refreshing…</span>}
