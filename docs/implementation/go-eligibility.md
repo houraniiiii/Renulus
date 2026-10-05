@@ -140,3 +140,81 @@ Integration needs one scoped cherry-pick and a refreshed runtime/renderer
 package snapshot. There are no new dependencies, schema migrations, module
 registrations, auth protocol changes or shared platform edits. The additive
 `learning_use` field requires no change to existing generation interfaces.
+
+## Integrated cross-module regression, 2026-10-05 UTC
+
+The follow-up ran from fresh isolated branch `build/runtime-cross-module`,
+base **314c0e6e308160d5df0557edc44a4a3b900f64d4**, the integrated Go guard.
+The tested runtime/modules and existing test files were unchanged through
+parent **6abd3ae9b0d0eebe7ba4468290312f3c4286d7f9** when compared at
+**01:09 UTC**. No main, integration, shared consumer, packaging or renderer
+files were edited by this check.
+
+The affected default suite passed **295 checks in 207.53 seconds**, with one
+existing Starlette/httpx deprecation warning. It covers foundation,
+Cases/Learn handoff, reviewed/generated assessment, Cases attachments and
+retention, Memory repositories/API/workers, Learn retention/discovery and the
+runtime/auth/context/provenance boundaries. Existing synthetic Go protocol
+tests retain their explicitly named future-eligibility fixture; the new
+integrated Go tests do not enable that fixture.
+
+```text
+python -m pytest tests/integration/test_foundation.py tests/integration/test_case_learn_handoff.py tests/assessment tests/cases tests/memory tests/learn tests/runtime/test_go_eligibility.py tests/runtime/test_provider.py tests/runtime/test_auth_api.py tests/runtime/test_codex_stream.py tests/runtime/test_images_context.py tests/runtime/test_provider_acceptance.py tests/runtime/test_protected_helpers.py tests/runtime/test_hermes_provenance.py -q --ignore=tests/cases/test_offline_attachment_flow.py --ignore=tests/memory/test_mem0_real.py --basetemp .local/runtime/cross-module/pytest --tb=short
+```
+
+The new `tests/runtime/test_cross_module_generation.py` passed **5 producer
+checks**, with **1 explicit expected failure** for pending shared consumer
+presentation, in 22.86 seconds. The real app factory, module repositories,
+SQLite, runtime ProviderManager, pinned Hermes conversion and actual SDK are
+used with HTTPX MockTransport. External sockets are prohibited, allowing
+Windows asyncio loopback only.
+
+- Controlled Codex completes real Cases discussion, Cases-to-Learn Explain
+  and Cases-to-generated-practice handoffs with the exact selected Sol ID.
+  Those case-derived flows remain temporary; the marker is absent from files,
+  study threads, saved cases, generated persistent sessions and memory jobs.
+- Legacy selected Go denies the same flows with zero provider requests, no
+  subscription switch, no successful terminal and no temporary persistence.
+- The actual registered Mem0 LLM bridge consumes the controlled Codex route
+  and propagates the Go non-retryable gate before model I/O.
+- Actual Mem0 OSS, the pinned Hermes memory backend, local Qdrant and the
+  SQLite outbox leave Go capture failed with no generated facts and no
+  provider calls. Only the vector delegate is synthetic; no FastEmbed model
+  or helper asset is loaded. This is route/outbox evidence, not embedding
+  semantic or model inference proof. Mem0 can wrap the safe gate error, so
+  the existing outbox may report the generic memory_capture_failed code.
+
+```text
+python -m pytest tests/runtime/test_cross_module_generation.py -q -rx --basetemp .local/runtime/cy --junitxml .local/runtime/cross-module/producer.xml --tb=short
+```
+
+Use the offline/bytecode variables above, plus `MEM0_TELEMETRY=false`,
+`OMP_NUM_THREADS=2`, `MKL_NUM_THREADS=2`; do not set asset/source override
+variables for these checks. A short owned native-test profile avoids pytest
+function-name directories pushing Qdrant past Windows path-length limits.
+The actual local Qdrant check emits its expected payload-index warning.
+
+**Pending shared acceptance is not counted as a pass.** Real local route probes
+found four consumer presentation gaps despite the working runtime gate:
+
+| Consumer | Observed result with blocked legacy Go | Required shared-owner change |
+| --- | --- | --- |
+| Generated practice capability | available:true based only on account/catalogue | Honor learning_use and explain paused eligibility |
+| Cases discussion error | case_discussion_failed, retryable:true | Preserve controlled learning_use_unverified and non-retryable status in safe mapping |
+| Generated practice error | practice_generation_failed, retryable:true | Preserve the same controlled gate, including capability preflight |
+| Learn error | learning_use_unverified, retryable:true | Preserve ApiError.retryable instead of hardcoding true |
+
+The requests are recorded on parent issue #1 in
+[comment5986334331](https://github.com/houraniiiii/Renulus/issues/1#issuecomment-5986334331)
+and [comment5986373346](https://github.com/houraniiiii/Renulus/issues/1#issuecomment-5986373346).
+The owned consumer acceptance check first proves zero egress/no temporary
+marker persistence, then explicitly reports the remaining gaps as expected
+failure. It becomes a pass when all four shared behaviors are corrected; it
+does not silently accept their current values. No production runtime
+regression or need to weaken/rewrite the release gate was found.
+
+No backup/portable/native lease or large engine benchmark was repeated.
+There was no live account request, credential acquisition, asset download,
+model inference or native installer claim. Parent should apply its consumer
+fix, rerun the new focused file and refresh the final runtime/renderer package
+capture; live-provider acceptance remains separate.
