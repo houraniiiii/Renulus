@@ -113,4 +113,6 @@ opened the first result through Inspect citation. The request pinned revision
 `passage_c9474735614c478ebba30383f17d82e2` and physical page 9. The reader
 showed one extracted location for this passage, retained the ERA user-owned
 terms, and displayed unknown edition/not verified current rather than
-inferring currency from receipt dates. No retrieved source body was published.
+inferring currency from receipt dates. Open original loaded its owned blob
+viewer with `#page=9` and no reader error. Native physical-page rendering is
+verified separately by the desktop lane. No retrieved source body was published.
