@@ -57,6 +57,7 @@ def dependency_check(source: Path, previous: str, revision: str) -> None:
 
 
 def plan(args) -> dict:
+    resumed = getattr(args, 'resume_staged', False)
     source = args.source.resolve()
     revision = committed_revision(source, args.revision)
     base_payload = generated_path(args.payload)
@@ -64,11 +65,13 @@ def plan(args) -> dict:
     external = output.is_relative_to(EXTERNAL_DELIVERY_ROOT.resolve())
     snapshot = owned_path(args.snapshot, EXTERNAL_DELIVERY_ROOT if external else DESKTOP / "test-results", fresh=True)
     payload = owned_path(EXTERNAL_DELIVERY_ROOT / "payloads" / ("backend-" + revision[:8]),
-                         EXTERNAL_DELIVERY_ROOT, fresh=True) if external else base_payload
+                         EXTERNAL_DELIVERY_ROOT, fresh=not resumed) if external else base_payload
     modules = owned_path(EXTERNAL_DELIVERY_ROOT / "environment" / ("node-" + revision[:8]) / "node_modules",
-                         EXTERNAL_DELIVERY_ROOT, fresh=True) if external else DESKTOP / "node_modules"
+                         EXTERNAL_DELIVERY_ROOT, fresh=not resumed) if external else DESKTOP / "node_modules"
     temporary = owned_path(EXTERNAL_DELIVERY_ROOT / "temporary" / ("build-" + revision),
-                           EXTERNAL_DELIVERY_ROOT, fresh=True)
+                           EXTERNAL_DELIVERY_ROOT, fresh=not resumed)
+    if resumed and not external:
+        raise ValueError('Staged continuation requires the reserved external public tree')
     if snapshot.is_relative_to(payload) or payload.is_relative_to(snapshot):
         raise ValueError("Renderer snapshot and embedded payload must be independent")
     manifest = json.loads((base_payload / "bundle.json").read_text(encoding="utf-8"))
@@ -119,6 +122,7 @@ def plan(args) -> dict:
         build.append("--dir")
     commands.append(build)
     return {"version": 1, "source_revision": revision, "kind": "matching-unsigned-windows-delivery",
+            "resumed_staged_renderer": resumed,
             "base_payload": str(base_payload), "payload": str(payload), "snapshot": str(snapshot), "output": str(output),
             "build_node_modules": str(modules), "build_cwd": str(snapshot / "apps/desktop") if external else str(DESKTOP),
             "temporary_directory": str(temporary),
@@ -141,16 +145,37 @@ def plan(args) -> dict:
                             "PYTHONDONTWRITEBYTECODE": "1"}}
 
 
+def validate_completed_stage(payload: Path, revision: str, electron: str, modules: Path) -> dict:
+    current = json.loads((payload / 'bundle.json').read_text())
+    if current.get('source_revision') != revision or current.get('source_patches'):
+        raise ValueError('Continuation requires this exact completed unpatched source payload')
+    if current.get('format') != 'embedded-cpython-windows-v1' or current['python']['version'] != backend.PYTHON_VERSION:
+        raise ValueError('Continuation requires the admitted embedded Python payload')
+    if json.loads((modules / 'electron/package.json').read_text())['version'] != electron or (modules / 'electron/dist/version').read_text().strip() != electron:
+        raise ValueError('Continuation requires the pinned copied Electron artifact')
+    stored = json.loads((payload / 'inventory.json').read_text())
+    if backend.inventory(payload) != stored:
+        raise ValueError('The completed staged payload differs from its byte inventory')
+    return {'files': len(stored), 'bytes': sum(file['size'] for file in stored),
+            'inventory_sha256': backend.digest(payload / 'inventory.json')}
+
+
 def execute(delivery: dict) -> None:
     base_payload, payload = Path(delivery["base_payload"]), Path(delivery["payload"])
     # Verify the already acquired public wheel/helper bytes before source refresh.
-    stored = json.loads((base_payload / "inventory.json").read_text())
-    if backend.inventory(base_payload) != stored:
-        raise ValueError("The acquired payload changed outside its recorded byte inventory")
-    print(json.dumps({"phase": "public-input-inventory-verified", "files": len(stored)}), flush=True)
-    temporary = owned_path(Path(delivery["temporary_directory"]), EXTERNAL_DELIVERY_ROOT, fresh=True)
-    temporary.mkdir(parents=True, exist_ok=False)
-    if base_payload != payload:
+    resumed = delivery.get('resumed_staged_renderer', False)
+    if resumed:
+        verified = validate_completed_stage(payload, delivery['source_revision'], delivery['electron'], Path(delivery['build_node_modules']))
+        delivery['continued_public_stage'] = verified
+        print(json.dumps({'phase': 'completed-staged-inventory-verified', **verified}), flush=True)
+    else:
+        stored = json.loads((base_payload / "inventory.json").read_text())
+        if backend.inventory(base_payload) != stored:
+            raise ValueError("The acquired payload changed outside its recorded byte inventory")
+        print(json.dumps({"phase": "public-input-inventory-verified", "files": len(stored)}), flush=True)
+    temporary = owned_path(Path(delivery["temporary_directory"]), EXTERNAL_DELIVERY_ROOT, fresh=not resumed)
+    temporary.mkdir(parents=True, exist_ok=resumed)
+    if base_payload != payload and not resumed:
         owned_path(payload, EXTERNAL_DELIVERY_ROOT, fresh=True)
         shutil.copytree(base_payload, payload)
         print(json.dumps({"phase": "public-payload-copied", "target": str(payload)}), flush=True)
@@ -161,7 +186,9 @@ def execute(delivery: dict) -> None:
         delivery["public_inputs"] = {"base_inventory_sha256": backend.digest(base_payload / "inventory.json"),
                                     "node_package_lock_sha256": backend.digest(DESKTOP / "package-lock.json")}
     environment = dict(os.environ, **delivery["environment"])
-    for command in delivery["commands"][:2]:
+    for name in ('RENULUS_BACKEND_URL', 'RENULUS_SESSION_TOKEN', 'RENULUS_PROFILE', 'RENULUS_SOURCE_DESKTOP', 'RENULUS_PDF_FIXTURE_ONLY'):
+        environment.pop(name, None)
+    for command in delivery["commands"][1:2] if resumed else delivery["commands"][:2]:
         subprocess.run(command, cwd=temporary, env=environment, check=True)
     renderer = json.loads((Path(environment["RENULUS_RENDERER_BUNDLE"]) / "renderer-provenance.json").read_text())
     native = json.loads((Path(environment["RENULUS_NATIVE_BUNDLE"]) / "native-provenance.json").read_text())
@@ -193,6 +220,8 @@ def main() -> None:
     parser.add_argument("--revision", required=True)
     parser.add_argument("--package", choices=("directory", "installer"), default="directory")
     parser.add_argument("--plan-only", action="store_true")
+    parser.add_argument('--resume-staged', action='store_true',
+                        help='Revalidate a completed public payload and build a fresh renderer snapshot; preserve failed source staging')
     args = parser.parse_args()
     delivery = plan(args)
     if not args.plan_only:

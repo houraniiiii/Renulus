@@ -1,5 +1,6 @@
 """Delivery refusal checks use real synthetic Git commits and owned folders."""
 import importlib.util
+import json
 from pathlib import Path
 import subprocess
 import tempfile
@@ -66,6 +67,40 @@ class DeliveryBoundaries(unittest.TestCase):
                 delivery.owned_path(root / "outside", release, fresh=True)
             self.assertEqual(sentinel.read_bytes(), b"synthetic-preserved-installer")
             self.assertFalse((root / "outside").exists())
+
+    def completed_stage(self, root):
+        payload, modules = root / 'payload', root / 'node_modules'
+        payload.mkdir(); (modules / 'electron/dist').mkdir(parents=True)
+        (modules / 'electron/package.json').write_text(json.dumps({'version': '44.5.1'}))
+        (modules / 'electron/dist/version').write_text('44.5.1')
+        (payload / 'bundle.json').write_text(json.dumps({'source_revision': '1' * 40,
+            'source_patches': [], 'format': 'embedded-cpython-windows-v1',
+            'python': {'version': delivery.backend.PYTHON_VERSION}}))
+        (payload / 'synthetic-wheel.dll').write_bytes(b'synthetic-reviewed-wheel')
+        (payload / 'inventory.json').write_text(json.dumps(delivery.backend.inventory(payload)))
+        return payload, modules
+
+    def test_continuation_verifies_complete_payload_bytes_before_any_build(self):
+        with tempfile.TemporaryDirectory(dir=self.test_root) as temporary:
+            payload, modules = self.completed_stage(Path(temporary))
+            verified = delivery.validate_completed_stage(payload, '1' * 40, '44.5.1', modules)
+            self.assertEqual(verified['files'], 2)
+            (payload / 'synthetic-wheel.dll').write_bytes(b'synthetic-unreviewed-wheel')
+            with self.assertRaisesRegex(ValueError, 'byte inventory'):
+                delivery.validate_completed_stage(payload, '1' * 40, '44.5.1', modules)
+
+    def test_continuation_refuses_a_different_product_identity(self):
+        with tempfile.TemporaryDirectory(dir=self.test_root) as temporary:
+            payload, modules = self.completed_stage(Path(temporary))
+            with self.assertRaisesRegex(ValueError, 'exact completed'):
+                delivery.validate_completed_stage(payload, '2' * 40, '44.5.1', modules)
+
+    def test_continuation_refuses_a_different_copied_electron_artifact(self):
+        with tempfile.TemporaryDirectory(dir=self.test_root) as temporary:
+            payload, modules = self.completed_stage(Path(temporary))
+            (modules / 'electron/dist/version').write_text('40.10.2')
+            with self.assertRaisesRegex(ValueError, 'pinned copied Electron'):
+                delivery.validate_completed_stage(payload, '1' * 40, '44.5.1', modules)
 
     def test_moving_branch_name_cannot_identify_a_delivery(self):
         with tempfile.TemporaryDirectory(dir=self.test_root) as temporary:

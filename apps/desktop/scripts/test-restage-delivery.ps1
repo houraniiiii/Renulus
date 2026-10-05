@@ -26,4 +26,15 @@ if ([IO.File]::ReadAllText($sentinel) -ne 'synthetic-public-checkpoint') { throw
 $newPath = Join-Path $testRoot 'fresh-output'
 $null = Assert-PublicGeneratedPath $newPath -Fresh
 if (Test-Path -LiteralPath $newPath) { throw 'Path check created an output.' }
+
+$environmentTestName = 'RENULUS_SYNTHETIC_CONTROLLER_ENV_TEST'
+$environmentSaved = [Environment]::GetEnvironmentVariable($environmentTestName, 'Process')
+try {
+    Set-RestageEnvironment $environmentTestName 'synthetic-present'
+    $present = & node.exe -e "process.exit(process.env[process.argv[1]] === 'synthetic-present' ? 0 : 1)" $environmentTestName
+    if ($LASTEXITCODE -ne 0) { throw 'Child did not receive the explicit environment setting.' }
+    Set-RestageEnvironment $environmentTestName $null
+    $absent = & node.exe -e "process.exit(Object.hasOwn(process.env,process.argv[1]) ? 1 : 0)" $environmentTestName
+    if ($LASTEXITCODE -ne 0) { throw 'Removed setting reached the child as an invalid empty value.' }
+} finally { Set-RestageEnvironment $environmentTestName $environmentSaved }
 [pscustomobject]@{Status='passed'; BoundaryRefusals=$renulusRefusals; AcceptedPlan=$true; AcceptedReleasedProof=$true; PreservedSyntheticCheckpoint=$true; NoOutputFromPathCheck=$true; SyntheticFixture=$testRoot; AppOrBuildInvoked=$false} | ConvertTo-Json -Compress
