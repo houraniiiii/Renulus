@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, configure, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { createServer } from 'node:net';
@@ -18,6 +18,8 @@ const testProfile = mkdtempSync(join(tmpdir(), 'renulus-currency-ui-'));
 const originalFetch = globalThis.fetch;
 let backend: ChildProcess;
 let origin = '';
+vi.setConfig({ testTimeout: 30_000 });
+configure({ asyncUtilTimeout: 5_000 });
 
 async function request<T>(path: string, body?: unknown): Promise<T> {
   const response = await originalFetch(origin + '/api/v1' + path, {
@@ -58,6 +60,8 @@ beforeAll(async () => {
 }, 75_000);
 
 afterAll(async () => {
+  configure({ asyncUtilTimeout: 1000 });
+  vi.resetConfig();
   cleanup(); vi.unstubAllGlobals();
   await stopFixture(backend);
   if (testProfile.startsWith(join(tmpdir(), 'renulus-currency-ui-'))) rmSync(testProfile, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });

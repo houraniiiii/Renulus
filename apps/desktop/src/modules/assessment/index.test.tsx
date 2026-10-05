@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, configure, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { createServer } from 'node:net';
@@ -20,6 +20,8 @@ let simulateLostAcknowledgement = false;
 let simulateLostGenerationCompletion = false;
 const answerRequests: string[] = [];
 const generationRequests: string[] = [];
+vi.setConfig({ testTimeout: 30_000 });
+configure({ asyncUtilTimeout: 5_000 });
 
 beforeAll(async () => {
   const reservation = createServer();
@@ -59,6 +61,8 @@ beforeAll(async () => {
 
 afterEach(() => { cleanup(); simulateLostAcknowledgement = false; simulateLostGenerationCompletion = false; });
 afterAll(async () => {
+  configure({ asyncUtilTimeout: 1000 });
+  vi.resetConfig();
   vi.unstubAllGlobals();
   await stopFixture(backend);
   // Only remove this test's newly allocated temporary directory.

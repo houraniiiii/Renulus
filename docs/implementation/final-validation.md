@@ -18,8 +18,18 @@ selects the pinned project Python, allows a finite 60-second cold start with
 bounded health requests, stops the exact spawned Windows process tree, and
 retries cleanup of only its fresh synthetic temporary directory. Both real-API
 suites then passed **all eight tests** in 70.41 seconds, with no skipped test or
-cleanup failure. A final full renderer/build run follows that repair; the mixed
-earlier run is not reported as an all-passing full suite.
+cleanup failure. The subsequent full run exposed one-second UI waits that were
+too short for six real-backend operations. Those two suites now allow a bounded
+five-second asynchronous UI wait and thirty-second test budget, restoring their
+configuration on teardown. No application code changed for either repair.
+
+The final renderer run passed **407 of 407 tests across all 33 files** with no
+skip, in 82.48 seconds. TypeScript checking, the Vite production renderer build
+and Electron entry build then passed. Ignored local logs are
+`E:/rn-renderer-accepted-20261005.log` and
+`E:/rn-build-accepted-20261005.log`. The earlier failed attempts remain distinct
+from this observed all-passing result. The test harness is not bundled into the
+frozen Windows application.
 
 Frozen staging checks passed **seven Python checks and three Node checks**,
 including an actual Windows junction refusal. The Windows PowerShell 5.1 child
