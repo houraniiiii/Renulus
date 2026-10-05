@@ -306,7 +306,8 @@ protected-opening-window.png. This is a nonpackaged early-close source proof,
 not final renderer handoff, helper readiness or backend shutdown-callback proof.
 
 The approved e800affc checkpoint also built a real unsigned NSIS installer.
-Renulus-Development-0.1.0-windows-x64-setup.exe is 965,788,144 bytes with SHA256
+release/checkpoint-e800affc/Renulus-Development-0.1.0-windows-x64-setup.exe is
+965,788,144 bytes with SHA256
 69703a8a6bb61640f25b6b827dec24f20b117c769e65b77d5489f0da75008722 and
 Authenticode NotSigned. Its actual silent installation into a fresh owned
 release/i-e800 directory exited 0 in 578.547 s. Installed source/runtime contracts
@@ -403,3 +404,70 @@ The pending integration chain after already adopted 1fbe78d1 is 06347499,
 bf1c6835, then 81d14dbb. This final proof follow-up changes only its standalone
 script and this evidence document. Parent owns the backup-download helper and
 actual save/cancel IPC wiring; no concurrent native entry edit occurs here.
+
+The explicitly released parent recovery changes a0c15ef6, 32d72e78 and fdc2356d
+were adopted locally as 8f3d7035, fb5037fb and 93f4bb8c. These are prerequisites
+already owned by parent, not new desktop handoff patches. The tracked lane shell
+predates the protected opening window, so the native recovery proof uses a fresh
+untouched git-archive desktop snapshot at exact parent commit
+fdc2356dbd17757101927ba9b07bafc00847622f. That snapshot typechecked and built
+with the actual installed Electron 44.5.1. Its backend.ts source/adoption SHA256
+values are equal; source main and compiled main hashes are checked before launch.
+
+Actual Windows Save dialogs passed four operations in one serial source instance.
+The renderer used the unchanged product preload and main save/cancel handlers.
+The test operated only its PID-owned #32770 dialogs and scoped filename/button
+controls, including the actual overwrite confirmation. No showSaveDialog
+substitution or returned-path override occurred. A test-only Node open guard
+rejects sibling partials outside the synthetic export directory and otherwise
+calls the original I/O unchanged. All recorded partial opens were confined.
+
+At test-results/native-save-99d0e54c/native-save-source-evidence.json the selected
+existing synthetic destination stayed intact while a 196,608-byte sibling partial
+was observed. Completion promoted 67,109,006 bytes with SHA256
+4fc194db694249da152cfedf8d6f2c376d3a3ae26a10a2c877572e56f9d64c5e. This is a
+valid ZIP of 64 MiB synthetic bytes plus container overhead, not a Renulus recovery
+archive or multi-GiB capacity proof. A second transfer was cancelled after
+262,144 bytes: the existing sentinel was unchanged, the partial was removed, and
+the upstream stream closed without finishing. A deliberate bounded 409 API error
+preserved its sentinel and error code. Real native dialog Cancel returned
+cancelled without a fourth transfer. No sibling partial survived any operation.
+
+The visible protected opening window was observed at 2.448 s and the actual
+loopback Flow renderer at 3.317 s; its data-URL predecessor was gone. These timings
+use a declared attached transfer-only server with its first metadata response
+delayed 1.5 s. They do not measure production backend readiness, managed Python
+startup or the Home module. That instance had no Python child; main PID 27820 was
+confirmed gone after close. Source Flow screenshot and control reports are saved
+with the evidence. The filename/button strip could not be captured because the
+dialog was not the foreground window; the positive claim is actual programmatic
+native-control operation and resulting I/O, not a manual visual dialog review.
+
+Earlier negative harness trials found a Windows dialog variant with an
+unnumbered filename ComboBox, unsupported native Edit ValuePattern, and virtual
+overwrite Yes button. WM_SETTEXT changed displayed text without updating the
+dialog's cached filename. One synthetic ZIP reached the dialog's default basename
+renulus-backup-2026-10-05.zip; its location remains unresolved and no positive
+promotion claim uses that run. The negative evidence is retained at
+test-results/native-save-b96f211f. Further trials first installed the output guard
+and typed through owned EM_SETSEL/WM_CHAR events, which selected the expected
+synthetic paths. No private originals were read or transported while diagnosing
+that negative test. The default-location artifact remains a cleanup item for its
+owning workspace once its synthetic hash/location are established.
+
+The parent format-2 route/helper tests pass 5 checks on actual Vitest 4.1.11 in
+2.04 s. The proof scripts pass Node syntax and PowerShell AST parsing. This native
+phase leaves main/preload/Connections/shared UI untouched. The e800affc unsigned
+checkpoint installer and installed/portable folders are preserved, with its
+original 69703a8a...08722 installer checksum rechecked after reservation in
+release/checkpoint-e800affc. Final matching renderer/backend/native staging,
+real producer/segmented recovery semantics, relocated final native journeys and
+matching unsigned installer remain gated on the parent explicit final revision.
+
+A further replay at test-results/native-save-e0b5b46e passed all four operations
+with compiled-main integrity and an explicit server-side assertion that every
+authenticated GET used /api/v1/data/backup?format_version=2. Opening was visible
+at 1.008 s, the loopback renderer at 2.467 s, the observed cancelled partial was
+327,680 bytes and the upstream closed after 393,216 sent bytes. Main PID 35844
+was confirmed gone. The completed ZIP checksum was unchanged. This verifies the
+actual v2 request path, while the archive body remains the declared synthetic ZIP.
