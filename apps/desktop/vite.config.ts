@@ -1,5 +1,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
+const desktopRoot = fileURLToPath(new URL('.', import.meta.url));
+const managedDependencies = realpathSync(fileURLToPath(new URL('./node_modules', import.meta.url)));
 
 function loopbackPort(value: string | undefined, fallback: number): number {
   const port = value === undefined ? fallback : Number(value);
@@ -19,6 +24,8 @@ export default defineConfig({
     host: '127.0.0.1',
     port: loopbackPort(process.env.RENULUS_DESKTOP_PORT, 5190),
     strictPort: true,
+    // Reused managed dependencies can be a Windows junction outside this checkout.
+    fs: { allow: [desktopRoot, managedDependencies] },
     proxy: {
       '/api': {
         target: backendTarget(),
