@@ -24,6 +24,11 @@ def validate_revision(pack, predecessor):
     version = lambda v: tuple(int(n) for n in v.split("."))
     if version(pack.manifest["version"]) <= version(predecessor.manifest["version"]):
         raise PackValidationError("Revision must advance pack version")
+    coverage, previous_coverage = pack.bundle["coverage"], predecessor.bundle["coverage"]
+    if not set(previous_coverage["target_topics"]).issubset(coverage["target_topics"]):
+        raise PackValidationError("Revision must retain every adopted target topic")
+    if coverage["minimum_questions"] < previous_coverage["minimum_questions"]:
+        raise PackValidationError("Revision cannot reduce the adopted question target")
     withdrawals = {(w["question_id"], w["version"]): w for w in pack.manifest["withdrawals"]}
     for kind in ("topics", "cases", "questions"):
         selected = {i["id"]: i for i in pack.bundle[kind]}
@@ -35,6 +40,9 @@ def validate_revision(pack, predecessor):
                 raise PackValidationError(f"Additive revision loses an unwithdrawn {kind} record: {old['id']}")
             if item["version"] < old["version"]:
                 raise PackValidationError(f"Revision selects an older item: {old['id']}")
+            if kind == "topics" and not {o["id"] for o in old["objectives"]}.issubset(
+                    o["id"] for o in item["objectives"]):
+                raise PackValidationError(f"Revision loses an adopted objective: {old['id']}")
             if item["version"] == old["version"]:
                 if canonical_json(item) != canonical_json(old):
                     raise PackValidationError(f"Immutable published record changed: {old['id']}")

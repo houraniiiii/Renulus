@@ -7,7 +7,7 @@ consumers, shared contracts, migrations and native acceptance. This lane changes
 content runtime, authoring, mapping metadata, release/tests and this report.
 No SQLite schema/migration changes.
 
-Status: content producer, immutable release 1.1.1 and content-wide validation
+Original wave status: content producer, immutable release 1.1.1 and content-wide validation
 are ready for parent integration. No end-to-end acceptance claim.
 
 ## Public consumer interface
@@ -206,3 +206,167 @@ this work is tracked in #19. No provider, model/OCR/helper, native application,
 heartbeat or patient/private-data checks were run by this lane.
 Synthetic application tests do not establish full end-to-end, clinical or
 educational acceptance.
+
+## Bounded recovery and required-cell recheck — October 5, 2026
+
+Recovered local commit `604b6d11` was clean at the start of this wave. The
+original logs, synthetic scratch, hub HTML, two PDF snapshots, mapping/review
+records and all published releases remain intact. The parent subsequently
+integrated it as `a6b5d597`, the assessment consumer as `16ad199d`, and reports
+integration `8c6c4b18`. This lane supplies only the follow-up owned patch; no
+prerequisite merge, consumer edit, launcher change or source freeze is performed.
+
+The owner decision on October 5 supersedes the earlier delivery plan. Current
+acceptance is an **unsigned Windows build validated on this PC**, including
+the bundled runtime with OS-only PATH, matching installation, source/artifact
+hashes, normal shutdown/reopen and actual required journeys/recovery. Parent
+records the accepted specification at `793eddb4`. Signing and validation on a
+separate clean PC/VM are optional future distribution work; they do not block
+current completion and are not requested by this lane. The earlier statements
+about unproved signing/clean-machine checks remain historical observations.
+
+### Corrected authoring defect
+
+`validate_revision` previously allowed a new pack to retain every historical
+item while lowering `minimum_questions` or dropping required `target_topics`.
+A higher topic version could also remove an adopted objective identity. The
+checker now rejects all three. Tests include standalone valid snapshots with
+lowered targets, so the rejection comes from the adoption history rather than
+a checksum or JSON-schema error. All predecessor target values are preserved.
+No published pack/item/key/family/source bytes or canonical records change.
+
+### Adopted breadth and remaining cells
+
+`content/required-cells/renulus-foundations-1.1.1.json` is a reproducible authoring
+manifest built by `tools/content/check_required_cells.py`. It pins the canonical
+1.1.0 target baseline and 1.1.1 release hashes, the original 27 target topics,
+56 objectives, minimum 150 reserved assessment questions, four expansion
+questions per topic and at least two reviewed skill types per topic. These
+bank minima are met with 160 questions and 26 cases. The broader plan's
+evidence/question/case/update-source axes remain distinct. No numeric full-exam
+depth target is invented, and the indicative official counts are not promoted
+to required exact exam weights.
+
+Every topic has at least one teaching case with an explicit related objective.
+Tag-only case links are listed separately and cannot satisfy a case/evidence
+cell. The linked evidence consists of cited teaching stages, not a claim of
+complete standalone topic explanations or objective mastery. Four known
+objective-mismatch question versions are excluded from objective-link support
+in this manifest and remain excluded from formal ESENeph selection.
+Their original General records and all historical attempts remain available.
+Objective-level pins expose another limit: all 56 objectives have question
+links, but only 50 have explicit case links. `T01.O02`, `T08.O03`, `T08.O04`,
+`T09.O02`, `T11.O02` and `T25.O01` lack a linked teaching case. In order,
+these concern non-GFR creatinine determinants, CKD-anemia investigation, ESA
+goals, BP treatment tolerance, drug-related interstitial injury and tailored
+nutrition/activity. The per-topic case minimum does not prove that every
+objective has a case. Reserved-question rationales remain unavailable to
+teaching retrieval and are not counted as teaching-mode explanations. This
+records gaps without inventing a new per-objective case quota.
+
+All **35** clinical source records are `dated_final_baseline`. The **27** topic
+update-source cells therefore retain `needs_currency_review`, with exact source
+IDs, register IDs, editions, locators/check notes and check dates. This neither
+declares those sources superseded nor claims a fresh latest-final, chapter
+replacement, corrigendum or retraction clearance. The source register remains
+`docs/SOURCES.md`; this manifest is evidence reconciliation, not another
+acquisition catalogue or a permission grant. The required-cell result is
+`adopted_bank_minima_met: true`, `complete_content_coverage: false`.
+
+Eight mapped curriculum facets have no pinned question or case:
+
+| Facet ID | Missing content scope |
+| --- | --- |
+| `urinary_infection_gap` | Routine/recurrent UTI assessment and teaching case |
+| `other_inherited_gap` | Genetic/metabolic conditions beyond ADPKD, including Alport, Fabry, cystinosis, primary hyperoxaluria and inherited salt-wasting |
+| `pd_infection_gap` | PD peritonitis, exit-site/tunnel infection and access complications |
+| `hd_access_gap` | HD access and unit operation |
+| `transplant_aftercare_gap` | Recipient aftercare, immunosuppression, rejection and post-transplant complications |
+| `sexual_health_gap` | Contraception, fertility and sexual dysfunction |
+| `transition_gap` | Transition and young-adult transplant adherence |
+| `end_of_life_gap` | Terminal symptoms, dialysis withdrawal and medication assessment |
+
+The HD domain also has **zero** pinned focused teaching cases. All 11 domains
+remain partial; other facet notes retain missing IgA/IgAV and anti-GBM
+assessment, hypernatremia/diabetes insipidus, hypokalemia/alkalosis/mixed
+acid-base disorders, comprehensive prescription/complication pathways, and
+procedure competence limits. Four known question-objective mismatches need
+future reviewed metadata versions rather than alteration of published records.
+No broad authoring expansion is attempted in this bounded wave.
+
+### Official evidence and access result
+
+Both preserved official PDFs match their exact published mapping SHA-256 pins:
+the undated two-page SCE-titled blueprint and the 58-page 2022 curriculum.
+The retained blueprint page-1 image was visually rechecked against all 11
+indicative counts and the Other facet list. Curriculum pages 14 and 28–35
+were reread from the preserved PDF, covering generic appraisal, content of
+learning and procedures. No transcription/hash/page-reference defect was
+found in these checked fields. These are the existing official editions,
+not a claimed 2026 blueprint or official review of Renulus's questions.
+
+Fresh public reads of the hub and both exact PDF URLs at **14:35:56 UTC on
+October 5, 2026** returned **HTTP 403 for all three**. The retry read in memory
+and wrote only an ignored metadata/error receipt; it imported no material and
+preserved the originals. Rechecking the live hub links and any newer official
+edition remains an access gate, separate from the successful snapshot/hash
+and page-content checks. Receipt:
+`.local/esen-eph/bounded-recheck/primary-evidence-20261005.json`. No newly
+successful live-source check is claimed.
+
+The track remains available for partial preparation with **152 mapped bank
+items**, four choices each and **zero** best-of-five-format items. Assistant
+review is recorded honestly; no official endorsement, independent human
+review, full exam suitability, psychometric evidence or efficacy is claimed.
+An independent human-review prerequisite is not invented. The mapping's
+original `checked_on` date and successful first-wave evidence are retained.
+
+### Follow-up verification and current-PC checklist
+
+Receipts use the isolated, ignored
+`.local/esen-eph/bounded-recheck/` directory. The initial focused run had
+one failed fixture: it removed a case objective without advancing the
+immutable case version. The test now models a new case version; the failed
+`pytest-new.log` / `pytest-new.xml` are preserved. A one-off PDF text display
+also hit the Windows console encoding limit; rereading with UTF-8 completed.
+No source original or published record was changed to repair either check.
+
+Follow-up results:
+
+| Check | Result | Receipt under `.local/esen-eph/bounded-recheck/` |
+| --- | --- | --- |
+| Full content suite after the target-guard fix | **127 passed**, one existing Starlette/httpx warning, 251.84 seconds | `pytest-all.log`, `pytest-all.xml` |
+| Focused final manifest tests after adding objective-level pins | **6 passed**, 11.45 seconds | `pytest-final.log`, `pytest-final.xml` |
+| Canonical release, three predecessors and inherited mapping review | Pass; unchanged bundle SHA-256 `6cb81e682328252f5980671e91477330117684c9cc22dc921f7e86206e790fcc` | `validate-1.1.1.log` |
+| Final manifest byte reproduction and target reconciliation | Pass; bank minima met, complete coverage false | `required-cells-check-final.log` |
+| All published release/review files against recovered `604b6d11` | **29/29 byte-identical** | `preserved-release-review-bytes.json` |
+| Live official recheck | **3/3 HTTP 403**, not passed | `primary-evidence-20261005.json` |
+
+`git diff --check` passed. No automated test failure remains. The final manifest
+detail changes are authoring receipt fields only; no runtime, consumer, pack
+selection or assessment code is changed. Exact owned paths for this follow-up:
+
+- `content/README.md`.
+- `content/required-cells/renulus-foundations-1.1.1.json`.
+- `tools/content/revision_checks.py`.
+- `tools/content/check_required_cells.py`.
+- `tests/content/test_required_cells.py`.
+- `docs/implementation/finalise-esen-eph.md`.
+
+The follow-up commit is handed back separately from `604b6d11` and the parent's
+prerequisite integrations. The canonical release remains **1.1.1**; no new
+clinical release, question authoring, key correction or source acquisition is
+claimed. The report, manifest and receipts identify the remaining cells and
+source-access/currency limits for the parent to retain through integration.
+
+Current delivery checks remain parent-owned:
+
+- Unsigned matching Windows installation on the owner's current PC.
+- Bundled runtime with OS-only PATH and matching source/artifact hashes.
+- Normal close/reopen, required connected journeys and recovery.
+- Delivered content 1.1.1 and the actual assessment consumer's partial labels.
+
+This follow-up has no provider requests, private profile/credential reads,
+external imports, helper/model/OCR/native-app workload, heartbeat, other-agent
+dispatch or push. Full application acceptance and final source freeze remain
+with the parent.

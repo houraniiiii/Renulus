@@ -34,6 +34,23 @@ shortfalls. Full exam simulation and complete blueprint coverage are unavailable
 Original mappings are in `mappings/esen-eph-2026-10-05.json` and the canonical
 release manifest; source PDFs and official exam questions are not distributed.
 
+`required-cells/renulus-foundations-1.1.1.json` reconciles the adopted 1.1.0
+breadth targets with the immutable release and review evidence. The original
+27 topics, 56 objective links, minimum 150 bank questions, four expansion
+questions per topic and two reviewed skill types per topic remain required.
+Those bank minima are met. Case cells require explicit objective links; secondary
+tags alone cannot satisfy them. Cited teaching stages supply linked evidence,
+not complete explanations of every topic. All 56 objectives have question
+links; 50 have case links. Six objectives have no explicit teaching case,
+including both CKD-anemia objectives. These individual cells remain visible.
+The separate update-source cells
+remain open: all 35 clinical source records are dated final baselines, not a
+new latest-final/correction/retraction clearance. Eight programme facets have
+no pinned items, and the HD domain has no focused staged case. The manifest
+therefore reports `complete_content_coverage: false`. Official indicative
+weights are not newly imposed full-exam minima. Human review is neither
+invented nor added as a new acceptance prerequisite.
+
 The 108 added questions include 36 mechanisms, 34 interpretation and 38 common
 reasoning items, with four per topic and at least two skills per topic. The
 review evidence JSON records this checked matrix. Twelve mixed-domain cases
@@ -58,6 +75,7 @@ Validate without network or inference:
 
 ```powershell
 python tools/content/validate_pack.py content/packs/renulus-foundations/1.1.1 --predecessor content/packs/renulus-foundations/1.0.0 --predecessor content/packs/renulus-foundations/1.0.1 --predecessor content/packs/renulus-foundations/1.1.0 --review-evidence content/reviews/renulus-foundations-1.1.1.json
+python tools/content/check_required_cells.py --check
 python -m pytest tests/content -q
 ```
 
@@ -76,6 +94,8 @@ checks those records and pinned source metadata against the payload and checks
 immutable ancestry against each selected predecessor. It cannot perform the
 medical reading or infer medical truth from a review flag. Source originals and
 ERA bank/manual material are excluded.
+Revision checks also reject reduced adopted topic/question targets or removal
+of an existing objective identity, including after a topic version advances.
 
 `tools/content/author_eseneph.py` reproduces the 1.1.1 release, original mapping
 and mapping-review evidence. Questions, keys, cases, clinical source snapshots
