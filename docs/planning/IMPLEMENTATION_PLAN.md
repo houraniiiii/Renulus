@@ -82,7 +82,8 @@ coverage and integration; it is not the first time earlier features become real.
    controls. Reuse suitable Hermes adapters; literature-source adapters follow
    the supported routes in SOURCES. Do not make a paid tool key a prerequisite
    or invoke billed providers incidentally during verification.
-5. Prove installation and runtime start on a clean personal Windows machine.
+5. Prove unsigned installation and runtime start in a fresh isolated installation
+   on the owner's current Windows PC, with developer tools absent from the app PATH.
    Establish the supported version/CPU baseline. Bundle necessary runtime
    dependencies; do not require doctors to set up a developer environment.
    Probe Docling native-text and local scanned-page OCR paths, FastEmbed offline
