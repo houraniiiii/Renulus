@@ -44,8 +44,9 @@ async function loadCitation(documentId: string, location: SourceLocation, signal
 
 export default function SourceInspector({ document, location }: { document: LibraryDocument; location: SourceLocation }) {
   const { resource, retry } = useResource(signal => loadCitation(document.id, location, signal));
-  const revision = document.revisions.find(value => value.id === location.revisionId);
+  const revision = document.revisions.find(value => value.id === (location.revisionId ?? document.latest_revision));
   const officeFormat = revision ? officeOriginalExtension(revision.media_type) : null;
+  const noTextImage = revision?.status === 'ready' && revision.media_type.startsWith('image/') && revision.passage_count === 0;
   const result = resource.status === 'ready' ? resource.data : null;
   return <>
     {revision && <dl>
@@ -55,17 +56,17 @@ export default function SourceInspector({ document, location }: { document: Libr
       {revision.rights.attribution && <div><dt>Attribution</dt><dd>{revision.rights.attribution}</dd></div>}
       <div><dt>Extracted passages</dt><dd>{revision.passage_count}</dd></div>
     </dl>}
-    {revision?.status === 'ready' && revision.media_type.startsWith('image/') && revision.passage_count === 0 && <Notice><p>This image is available to view. No searchable text was extracted.</p></Notice>}
+    {noTextImage && <Notice><p>This image is available to view. No searchable text was extracted.</p><p>Open the original for visual study. It will not appear in passage search.</p></Notice>}
     {!location.revisionId ? <p className="muted">No available revision is ready to open yet.</p> :
       resource.status === 'loading' ? <LoadingState label="Loading cited source location" /> :
         resource.status === 'error' ? <ErrorState title="The cited source could not be opened" error={resource.error} onRetry={retry} /> :
           result?.citation && <>
             {result.pageMissing ? <Notice tone="warning"><p>Cited page {location.page} is unavailable. You can still open this original without a page jump.</p></Notice> :
               officeFormat ? <p className="muted">{sourceLocationLabel(result.citation.locators)} · source location in the original {officeFormat === 'pptx' ? 'presentation' : officeFormat === 'xlsx' ? 'workbook' : 'document'}.</p> :
-              result.citation.page === null ? <p className="muted">Physical page is unknown. The original opens without a page jump.</p> :
+              result.citation.page === null ? !noTextImage && <p className="muted">Physical page is unknown. The original opens without a page jump.</p> :
                 <p className="muted">Physical page {result.citation.page} · counted from the start of the original, not its printed page label.</p>}
             <OriginalViewer key={result.citation.document_revision + ':' + result.citation.page} citation={result.citation} wholeOriginal={result.pageMissing} />
-            <p className="muted">{result.citation.locators.length} extracted source location{result.citation.locators.length === 1 ? '' : 's'} {location.passageId !== null ? 'for this passage' : result.citation.page === null ? 'in this revision' : 'on this page'}. Exact passage highlighting is unavailable.</p>
+            {result.citation.locators.length > 0 && <p className="muted">{result.citation.locators.length} extracted source location{result.citation.locators.length === 1 ? '' : 's'} {location.passageId !== null ? 'for this passage' : result.citation.page === null ? 'in this revision' : 'on this page'}. Exact passage highlighting is unavailable.</p>}
           </>}
   </>;
 }

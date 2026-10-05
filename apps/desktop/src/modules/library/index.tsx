@@ -8,8 +8,10 @@ import type { Capabilities, Catalogue, CatalogueEntry, ImportResult, LibraryDocu
 import { Discovery } from './Discovery';
 import SourceInspector, { isPhysicalPage, type SourceLocation } from './SourceInspector';
 import BulkImportControl from './BulkImportControl';
-import { canImportFile } from './file-formats';
+import { fileImportProblem, importOptionsHeader } from './file-formats';
 import { sourceLocationLabel } from './source-locators';
+import ImportStatus from './ImportStatus';
+import QueueStatus from './QueueStatus';
 import './library.css';
 
 const libraryScope = { kind: 'personal-library' as const };
@@ -79,6 +81,11 @@ export default function LibraryPage() {
   const busy = actionBusy || bulkBusy;
   const [batchPending, setBatchPending] = useState(false);
   const [error, setError] = useState<unknown>();
+  const [errorImport, setErrorImport] = useState<'text' | 'file' | null>(null);
+  const [replacement, setReplacement] = useState<LibraryDocument | null>(null);
+  const [lastImport, setLastImport] = useState<ImportResult | null>(null);
+  const importAttempt = useRef<{ signature: string; file: File | null; key: string } | null>(null);
+  const actionLock = useRef(false);
   const [message, setMessage] = useState('');
   const [query, setQuery] = useState('');
   const [currentOnly, setCurrentOnly] = useState(false);
@@ -86,6 +93,7 @@ export default function LibraryPage() {
   const [selectedDocument, setSelectedDocument] = useState<LibraryDocument | null>(null);
   const [sourceLocation, setSourceLocation] = useState<SourceLocation>({ revisionId: null, page: null, passageId: null });
   const sourceSelection = useRef(0);
+  const followActiveRevision = useRef(true);
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
   const [sourceId, setSourceId] = useState('E01');
   const [offset, setOffset] = useState(0);
@@ -115,6 +123,9 @@ export default function LibraryPage() {
   const capabilities = useResource(signal => api<Capabilities>('/library/capabilities', { signal }));
   const catalogue = useResource(signal => loadCataloguePage(cataloguePath, offset, signal));
   const ready = capabilities.resource.status === 'ready' ? capabilities.resource.data : null;
+  const fileProblem = file ? fileImportProblem(file, ready) : undefined;
+  const replacementRevision = replacement?.revisions.find(value => value.id === replacement.latest_revision);
+  const canAdd = !temporary && (mode === 'text' ? !!text.trim() && !!ready?.text_import : !!file && allowed && !fileProblem);
   const loadedPage = documents.resource.status === 'ready' && documents.resource.data.path === documentPath
     ? documents.resource.data.page : documentSnapshot?.path === documentPath ? documentSnapshot.page : undefined;
   const documentCounts = documents.resource.status === 'ready' ? documents.resource.data.page.counts : documentSnapshot?.page.counts;
@@ -151,7 +162,12 @@ export default function LibraryPage() {
     if (offset > lastOffset) setOffset(lastOffset);
   }, [catalogue.resource, cataloguePath, offset]);
 
-  useEffect(() => { if (temporary) { setText(''); setTitle(''); setFile(null); setMode('browse'); } }, [temporary]);
+  useEffect(() => { if (temporary) { setText(''); setTitle(''); setFile(null); setAllowed(false); setReplacement(null); importAttempt.current = null; setMode('browse'); } }, [temporary]);
+  useEffect(() => {
+    if (documents.resource.status !== 'ready') return;
+    const current = documents.resource.data.page.documents.find(value => value.id === selectedDocument?.id);
+    if (current) updateSelectedDocument(current);
+  }, [documents.resource]);
   useEffect(() => { if (navigation.handoff?.mode === 'discover') setMode('browse'); }, [navigation.revision]);
   useEffect(() => {
     const documentId = navigation.handoff?.document_id;
@@ -159,6 +175,7 @@ export default function LibraryPage() {
     const passageId = navigation.handoff?.passage_id;
     if (typeof documentId !== 'string') return;
     const selection = ++sourceSelection.current;
+    followActiveRevision.current = typeof revision !== 'string' && passageId == null;
     setMode('browse'); setSelectedDocument(null); setError(undefined);
     if (passageId != null && typeof passageId !== 'string') {
       setError(new ApiError('The cited passage identifier is invalid. Return to the source and try again.', 422, 'invalid_passage_id'));
@@ -178,25 +195,60 @@ export default function LibraryPage() {
     return () => window.clearInterval(timer);
   }, [processing, documents.resource.status, catalogue.resource.status]);
 
-  async function act(action: () => Promise<void>) {
-    setBusy(true); setError(undefined); setMessage('');
-    try { await action(); documents.retry(); catalogue.retry(); } catch (caught) { setError(caught); } finally { setBusy(false); }
+  async function act(action: () => Promise<void>, importMode: 'text' | 'file' | null = null) {
+    if (actionLock.current || bulkBusy) return;
+    actionLock.current = true; setBusy(true); setError(undefined); setErrorImport(null); setMessage('');
+    try { await action(); documents.retry(); catalogue.retry(); } catch (caught) { setError(caught); setErrorImport(importMode); } finally { actionLock.current = false; setBusy(false); }
+  }
+  function importOptions(payload: Record<string, unknown>, selectedFile: File | null) {
+    const signature = JSON.stringify(payload);
+    if (!importAttempt.current || importAttempt.current.signature !== signature || importAttempt.current.file !== selectedFile) {
+      importAttempt.current = { signature, file: selectedFile, key: crypto.randomUUID() };
+    }
+    return { ...payload, idempotency_key: importAttempt.current.key };
+  }
+  function replacementOptions() {
+    return replacement && replacementRevision ? { document_id: replacement.id, metadata: replacementRevision.metadata,
+      rights: replacementRevision.rights, reserved: replacement.reserved, scope: replacement.scope ?? libraryScope } : { scope: libraryScope };
+  }
+  function beginReimport(document: LibraryDocument) {
+    if (temporary || busy || !document.latest_revision) return;
+    const metadata = document.revisions.find(value => value.id === document.latest_revision)?.metadata;
+    if (metadata?.original_sha256 || metadata?.asset_role?.includes('acquired-jats')) {
+      // Acquired copies must repeat their receipt/version/permission checks.
+      // A raw-file replacement would skip those operation-specific guards.
+      setReplacement(null); setFile(null); setText(''); setTitle(''); setAllowed(false); importAttempt.current = null;
+      setError(undefined); setErrorImport(null); setSourceId(document.source_id);
+      const query = document.title.slice(0, 200);
+      setCollectionQueryInput(query); setCollectionQuery(query); setCollectionEligibility(''); setOffset(0); setSelectedEntries(new Set()); setMode('catalogue');
+      setMessage('Find the matching receipt in Collected sources, then queue it again. The original file, version and permission checks will run again.');
+      return;
+    }
+    setReplacement(document); setTitle(document.title); setText(''); setFile(null); setAllowed(false);
+    importAttempt.current = null; setError(undefined); setErrorImport(null); setMode('file');
+    setMessage('Choose the original again, or paste the study note. The existing source details and permissions will be retained.');
+  }
+  function updateSelectedDocument(document: LibraryDocument) {
+    if (document.id !== selectedDocument?.id) return;
+    setSelectedDocument(document);
+    if (followActiveRevision.current) setSourceLocation(previous => previous.revisionId === document.active_revision ? previous : { revisionId: document.active_revision, page: null, passageId: null });
   }
   async function addText() {
+    if (temporary || !text.trim() || !ready?.text_import) return;
     await act(async () => {
       const result = await api<ImportResult>('/library/import/text', { method: 'POST', body: {
-        title: title.trim() || 'Personal study note', text, scope: libraryScope, idempotency_key: crypto.randomUUID() } });
-      setMessage(statusLabel(result.status) + ': your note has an import job.'); setText(''); setTitle(''); setMode('browse');
-    });
+        ...importOptions({ title: title.trim() || 'Personal study note', text, ...replacementOptions() }, null) } });
+      setLastImport(result); setMessage(statusLabel(result.status) + ': your note has an import job.'); setText(''); setTitle(''); setReplacement(null); importAttempt.current = null; setMode('browse');
+    }, 'text');
   }
   async function addFile() {
-    if (!file) return;
+    if (temporary || !file || !allowed || fileImportProblem(file, ready)) return;
     await act(async () => {
-      const options = { title: title.trim() || file.name, scope: libraryScope, rights: permissions, idempotency_key: crypto.randomUUID() };
+      const options = importOptions({ title: title.trim() || file.name, rights: permissions, ...replacementOptions() }, file);
       const result = await api<ImportResult>('/library/import/file', { method: 'POST', body: file,
-        headers: { 'x-renulus-filename': encodeURIComponent(file.name), 'x-renulus-import-options': JSON.stringify(options) } });
-      setMessage(statusLabel(result.status) + ': follow processing below.'); setFile(null); setTitle(''); setAllowed(false); setMode('browse');
-    });
+        headers: { 'x-renulus-filename': encodeURIComponent(file.name), 'x-renulus-import-options': importOptionsHeader(options) } });
+      setLastImport(result); setMessage(statusLabel(result.status) + ': follow processing below.'); setFile(null); setTitle(''); setAllowed(false); setReplacement(null); importAttempt.current = null; setMode('browse');
+    }, 'file');
   }
   async function search() {
     await act(async () => {
@@ -206,6 +258,7 @@ export default function LibraryPage() {
   }
   async function inspect(document: LibraryDocument, passage?: Passage) {
     ++sourceSelection.current;
+    followActiveRevision.current = !passage;
     const revision = passage?.document_revision ?? document.active_revision;
     setSourceLocation({ revisionId: revision, page: passage?.locators.find(locator => isPhysicalPage(locator.page))?.page ?? null, passageId: passage?.id ?? null });
     setSelectedDocument(document);
@@ -231,10 +284,10 @@ export default function LibraryPage() {
     await act(async () => {
       setBatchPending(true);
       try {
-        const result = await api<{ queued: number; results?: { status: string; message?: string }[] }>('/library/collection/import', { method: 'POST', timeoutMs: 600_000, body: { entry_ids: [...selectedEntries], scope: libraryScope } });
+        const result = await api<{ queued: number; results?: { entry_id?: string; status: string; message?: string }[] }>('/library/collection/import', { method: 'POST', timeoutMs: 600_000, body: { entry_ids: [...selectedEntries], scope: libraryScope } });
         const rejected = result.results?.filter(item => item.status === 'failed' || item.status === 'excluded') ?? [];
         const reasons = [...new Set(rejected.flatMap(item => item.message ? [item.message] : []))].slice(0, 2).join(' ');
-        setSelectedEntries(new Set());
+        setSelectedEntries(previous => new Set([...previous].filter(id => rejected.some(item => item.entry_id === id || item.entry_id === undefined))));
         setMessage(result.queued + ' imports queued. ' + (rejected.length ? rejected.length + (rejected.length === 1 ? ' selected entry needs attention. ' : ' selected entries need attention. ') + reasons : 'Processing states appear beside each source.'));
       } finally { setBatchPending(false); }
     });
@@ -252,14 +305,16 @@ export default function LibraryPage() {
 
   return <>
     <PageHeader title="Your library" description="Read, search and return to the sources behind your learning." actions={<>
-      <Button variant="secondary" onClick={() => setMode('catalogue')}>Collected sources</Button>
-      <Button disabled={temporary} onClick={() => setMode('text')}><FileText size={18} />Add to library</Button>
+      <Button variant="secondary" disabled={busy} onClick={() => setMode('catalogue')}>Collected sources</Button>
+      <Button disabled={temporary || busy} onClick={() => setMode('text')}><FileText size={18} />Add to library</Button>
     </>} />
     {temporary && <Notice tone="warning"><p>You are in a temporary context. Browse existing sources here; adding a document requires ending that context.</p></Notice>}
-    {ready && !ready.text_import && <Notice tone="warning"><p>Document processing is unavailable in this build. You can inspect the collection catalogue while the bundled helpers are completed.</p></Notice>}
+    {capabilities.resource.status === 'error' && <ErrorState title="Document processing availability could not be checked" error={capabilities.resource.error} onRetry={capabilities.retry} />}
+    {ready && !ready.text_import && !ready.pdf_image_import && !ready.office_import && <Notice tone="warning"><p>Document processing is unavailable. Browse existing sources or check Connections, then refresh processing availability.</p></Notice>}
     {message && <Notice><p>{message}</p></Notice>}
+    {lastImport && <div className="actions"><Button variant="secondary" disabled={busy} onClick={() => void act(async () => inspect(await api<LibraryDocument>('/library/documents/' + encodeURIComponent(lastImport.document_id))))}>View import details</Button></div>}
     {batchPending && <Notice><p>Checking selected files. This may wait for the current document to finish. Acquired article text is saved only after matching version, file hash and licence checks pass.</p></Notice>}
-    {error !== undefined && <ErrorState error={error} title="The library action could not finish" />}
+    {error !== undefined && <ErrorState error={error} title="The library action could not finish" onRetry={errorImport === mode && canAdd && !busy ? () => void (mode === 'text' ? addText() : addFile()) : undefined} />}
     <div className="library-layout">
       <div className="library-main">
         {mode === 'browse' && <Discovery key={discoveryVersion} blocked={navigation.scope.kind !== 'study' && navigation.scope.kind !== 'personal-library'}
@@ -267,23 +322,27 @@ export default function LibraryPage() {
           handoffRevision={navigation.revision}
           onLibraryChange={documents.retry} onInspect={document => void act(() => inspect(document))} />}
         {(mode === 'text' || mode === 'file') && <Panel><div className="library-mode">
-          <Button variant={mode === 'text' ? 'primary' : 'ghost'} onClick={() => setMode('text')}>Study note</Button>
-          <Button variant={mode === 'file' ? 'primary' : 'ghost'} onClick={() => setMode('file')}><Upload size={16} />Document</Button>
+          <Button disabled={busy} variant={mode === 'text' ? 'primary' : 'ghost'} onClick={() => setMode('text')}>Study note</Button>
+          <Button disabled={busy} variant={mode === 'file' ? 'primary' : 'ghost'} onClick={() => setMode('file')}><Upload size={16} />Document</Button>
         </div><div className="library-form">
-          <Input label="Title" value={title} onChange={event => setTitle(event.target.value)} maxLength={500} />
-          {mode === 'text' ? <Textarea label="Your study note" value={text} onChange={event => setText(event.target.value)} hint="Deliberately added study material is saved in your personal library." /> : <>
-            <Input label="Choose a study document" type="file" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.txt,.md,.docx,.pptx,.xlsx" hint="PDF, image, text, Word (.docx), PowerPoint (.pptx) or Excel (.xlsx)." onChange={event => setFile(event.target.files?.[0] ?? null)} />
-            <label className="library-check"><input type="checkbox" checked={allowed} onChange={event => setAllowed(event.target.checked)} />I have permission to read, store, index and use this file for local learning.</label>
+          {replacement && <Notice><p>Retrying {replacement.title}. Edition and original terms will be retained.</p></Notice>}
+          <Input label="Title" value={title} disabled={busy} onChange={event => setTitle(event.target.value)} maxLength={500} />
+          {mode === 'text' ? <Textarea label="Your study note" value={text} disabled={busy} onChange={event => setText(event.target.value)} hint="Deliberately added study material is saved in your personal library." /> : <>
+            <Input label="Choose a study document" type="file" disabled={busy} accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.txt,.md,.docx,.pptx,.xlsx" hint="PDF, image, text, Word (.docx), PowerPoint (.pptx) or Excel (.xlsx)." error={fileProblem} onChange={event => { setFile(event.target.files?.[0] ?? null); setAllowed(false); }} />
+            {file && <p className="field-hint">Selected: {file.name} · {(file.size / 1024 / 1024).toFixed(2)} MiB</p>}
+            <label className="library-check"><input type="checkbox" checked={allowed} disabled={busy} onChange={event => setAllowed(event.target.checked)} />I have permission to read, store, index and use this file for local learning.</label>
             <p className="muted">Maximum 64 MiB. Original terms remain attached to the file.</p>
             <p className="muted">Add teaching material here. Patient material belongs in a temporary case and requires a verified temporary extraction path.</p>
           </>}
-          <div className="actions"><Button busy={busy} disabled={temporary || (mode === 'text' ? !text.trim() || !ready?.text_import : !file || !allowed || !canImportFile(file.name, ready))} onClick={mode === 'text' ? addText : addFile}>Add {mode === 'text' ? 'note' : 'document'}</Button>
-            <Button variant="ghost" onClick={() => setMode('browse')}>Close</Button></div>
+          <div className="actions"><Button busy={busy} disabled={!canAdd} onClick={mode === 'text' ? addText : addFile}>Add {mode === 'text' ? 'note' : 'document'}</Button>
+            <Button variant="ghost" disabled={busy} onClick={() => setMode('browse')}>Close</Button>
+            <Button variant="ghost" disabled={busy} onClick={capabilities.retry}>Refresh processing availability</Button></div>
         </div></Panel>}
         {mode === 'catalogue' && <section className="section library-collection">
           <div className="library-section-title"><h2>Collected sources</h2><Button variant="ghost" onClick={() => setMode('browse')}>Back to library</Button></div>
           <div className="library-tools"><Select label="Source register" value={sourceId} disabled={busy} onChange={event => { setSourceId(event.target.value); setOffset(0); setSelectedEntries(new Set()); }}>
             <option value="">All collected sources</option><option value="E01">ERA Neph-Manual</option><option value="K01">KDIGO CKD</option><option value="K02">KDIGO anemia</option><option value="E06">Educational reviews</option><option value="L02">PMC full text</option>
+            {sourceId && !['E01', 'K01', 'K02', 'E06', 'L02'].includes(sourceId) && <option value={sourceId}>{sourceId}</option>}
           </Select><Button variant="secondary" busy={busy} onClick={catalogueSources}>Read collection catalogue</Button></div>
           <p className="muted">Acquired files appear immediately. Only completed imports enter search. The manual receipt date does not establish an edition.</p>
           <form className="library-collection-filters" onSubmit={event => { event.preventDefault(); if (busy || collectionQueryInput.trim().length > 200) return; setCollectionQuery(collectionQueryInput.trim()); setOffset(0); setSelectedEntries(new Set()); }}>
@@ -331,6 +390,7 @@ export default function LibraryPage() {
           <section className="section library-documents" aria-labelledby="library-documents-title">
             <div className="library-section-title"><h2 id="library-documents-title">Documents</h2><Button variant="ghost" busy={documents.resource.status === 'loading'} onClick={documents.retry}>Refresh documents</Button></div>
             {documentCounts && <dl className="library-counts" aria-label="Library processing summary">{documentStatuses.map(status => <div key={status}><dt>{statusLabel(status)}</dt><dd>{documentCounts[status] ?? 0}</dd></div>)}</dl>}
+            {processing && <QueueStatus />}
             <form className="library-document-filters" onSubmit={event => { event.preventDefault(); setDocumentQuery(documentQueryInput.trim()); setDocumentOffset(0); }}>
               <Input label="Find a document" placeholder="Title or source ID" value={documentQueryInput} maxLength={200} onChange={event => setDocumentQueryInput(event.target.value)} />
               <Select label="Import status" value={documentStatus} onChange={event => { setDocumentStatus(event.target.value as DocumentStatus | ''); setDocumentOffset(0); }}>
@@ -349,7 +409,7 @@ export default function LibraryPage() {
               {documentPage.documents.length === 0 ? filteredDocuments ? <EmptyState title="No documents match these filters"><p>Try a different title or source ID, or show all import states.</p><Button variant="secondary" onClick={clearDocumentFilters}>Show all documents</Button></EmptyState> : <EmptyState title="Build a library you can return to"><p>Add a study note or an authorised document. Once processing finishes, passages keep their link to your original source.</p></EmptyState> : <div className="library-document-list-region" ref={listRegion} role="region" aria-label="Library document list" tabIndex={0}><ul className="library-list">{documentPage.documents.map(document => <li key={document.id} className="library-document">
               <button disabled={busy} className="library-document-title" onClick={() => void act(() => inspect(document))}>{document.title}</button><div className="library-meta"><Badge tone={statusTone(document.status)}>{statusLabel(document.status)}</Badge><span>{document.source_id}</span>
                 {document.active_revision && document.active_revision !== document.latest_revision && <span>Earlier indexed revision is available</span>}{document.reserved && <span>Reserved</span>}{document.cleanup_pending && <span>Storage cleanup pending</span>}</div>
-              {(document.status === 'queued' || document.status === 'processing') && <Button variant="ghost" onClick={() => void act(async () => { const job = await api<ImportResult>('/library/documents/' + document.id + '/import-status'); await api('/library/jobs/' + job.job.id + '/cancel', { method: 'POST' }); })}>Cancel import</Button>}
+              {(document.status === 'queued' || document.status === 'processing') && <Button variant="ghost" disabled={busy || temporary} onClick={() => void act(async () => { const job = await api<ImportResult>('/library/documents/' + encodeURIComponent(document.id) + '/import-status'); if (job.document_id !== document.id || job.revision_id !== document.latest_revision || job.job.revision_id !== job.revision_id) throw new ApiError('The import changed. Refresh documents before cancelling.', 0, 'import_status_mismatch', true); await api('/library/jobs/' + encodeURIComponent(job.job.id) + '/cancel', { method: 'POST' }); })}>Cancel import</Button>}
             </li>)}</ul></div>}
               <nav className="library-pagination" aria-label="Document pages"><Button variant="secondary" disabled={documentOffset === 0} onClick={() => setDocumentOffset(value => Math.max(0, value - documentPageSize))}>Previous documents</Button>
                 <span className="muted">Page {Math.floor(documentOffset / documentPageSize) + 1} of {Math.max(1, Math.ceil(documentPage.total / documentPageSize))}</span>
@@ -360,6 +420,7 @@ export default function LibraryPage() {
       </div>
       <aside className="library-reader" aria-label="Source reader">{selectedDocument ? <>
         <h2>{selectedDocument.title}</h2><div className="library-meta"><Badge tone={statusTone(selectedDocument.status)}>{statusLabel(selectedDocument.status)}</Badge><span>{selectedDocument.source_id}</span></div>
+        {selectedDocument.latest_revision && (selectedDocument.status !== 'ready' || selectedDocument.active_revision !== selectedDocument.latest_revision) && <ImportStatus key={selectedDocument.id + ':' + selectedDocument.latest_revision} document={selectedDocument} disabled={busy || temporary} onDocument={updateSelectedDocument} onLibraryChange={() => { documents.retry(); catalogue.retry(); }} onReimport={beginReimport} />}
         <SourceInspector key={selectedDocument.id + ':' + sourceLocation.revisionId + ':' + sourceLocation.page + ':' + sourceLocation.passageId} document={selectedDocument} location={sourceLocation} />
         <Button variant="danger" busy={busy} onClick={() => void remove(selectedDocument)}>Remove from library</Button>
       </> : <><FileText size={26} aria-hidden="true" /><h2>Keep the source in view</h2><p>Select a document or a passage to inspect its edition, permissions and original location.</p></>}</aside>

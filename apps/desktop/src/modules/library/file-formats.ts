@@ -17,6 +17,23 @@ export function canImportFile(filename: string, capabilities: Capabilities | nul
   return false;
 }
 
+export function fileImportProblem(file: File, capabilities: Capabilities | null): string | undefined {
+  if (file.size > 64 * 1024 * 1024) return 'This file exceeds 64 MiB. Choose a smaller document.';
+  if (file.size === 0) return 'This file is empty. Choose a file with study material.';
+  const extension = file.name.split('.').at(-1)?.toLowerCase() ?? '';
+  if (!textExtensions.has(extension) && !imageExtensions.has(extension) && !officeExtensions.has(extension) && extension !== 'pdf') {
+    return 'Choose a PDF, PNG, JPEG, TIFF, text, DOCX, PPTX or XLSX file.';
+  }
+  if (!capabilities) return 'Check document processing availability before importing this file.';
+  if (!canImportFile(file.name, capabilities)) return 'Processing this file format is unavailable. Check Connections, then refresh processing availability.';
+  return undefined;
+}
+
+/** HTTP headers accept byte strings. JSON escapes preserve non-Latin source metadata. */
+export function importOptionsHeader(options: unknown): string {
+  return JSON.stringify(options).replace(/[\u007f-\uffff]/g, character => '\\u' + character.charCodeAt(0).toString(16).padStart(4, '0'));
+}
+
 export function officeOriginalExtension(mediaType: string): string | null {
   return officeMedia[mediaType.split(';')[0].trim().toLowerCase()] ?? null;
 }

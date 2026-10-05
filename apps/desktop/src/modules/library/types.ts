@@ -3,6 +3,7 @@ export interface SourceMetadata {
   publication_date: string | null; received_at: string | null; checked_at: string | null;
   publication_status: string; latest_final_verified: boolean; content_reviewed: boolean;
   collection_section: string | null; collection_chapter: string | null; notes: string[];
+  asset_role?: string[]; original_sha256?: string | null;
 }
 export interface Rights {
   display: boolean; cache: boolean; index: boolean; embedding: boolean; model_input: boolean;
@@ -15,6 +16,7 @@ export interface Revision {
 }
 export interface LibraryDocument {
   id: string; title: string; source_id: string; status: string; reserved: boolean;
+  scope?: { kind: 'personal-library'; entity_id?: string | null };
   active_revision: string | null; latest_revision: string | null; revisions: Revision[]; cleanup_pending: boolean;
 }
 export interface Job { id: string; revision_id: string; state: string; phase: string; error_code: string | null; error_message: string | null }

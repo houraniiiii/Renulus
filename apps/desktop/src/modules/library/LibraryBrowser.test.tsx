@@ -48,6 +48,11 @@ function receiptPageFor(url: string) {
 const base = async (url: RequestInfo | URL, options?: RequestInit): Promise<Response> => {
   const path = String(url);
   if (path.startsWith('/api/v1/library/documents?')) return json(pageFor(path));
+  if (path === '/api/v1/library/queue') return json({ running: true, cpu_workers: 1, active_job: null, error_code: null, queued: records.filter(value => value.status === 'queued').length });
+  if (path.endsWith('/import-status')) {
+    const document = records.find(row => row.id === path.split('/').at(-2))!;
+    return json({ document_id: document.id, revision_id: document.latest_revision, status: document.status, job: { id: 'job_' + document.id, revision_id: document.latest_revision, state: document.status, phase: document.status, error_code: document.status === 'failed' ? 'extraction_failed' : null, error_message: document.status === 'failed' ? 'Synthetic extraction failed. Choose the original again.' : null } });
+  }
   if (path.startsWith('/api/v1/library/documents/')) {
     const id = path.split('/').at(-1);
     const document = records.find(row => row.id === id);
@@ -553,5 +558,141 @@ describe('Collection receipt filters', () => {
     expect(screen.getByText('1–1 of 1 matching receipts')).toBeTruthy();
     expect((screen.getByRole('checkbox', { name: 'Select Synthetic receipt 001' }) as HTMLInputElement).checked).toBe(false);
     expect(request.mock.calls.some(([url]) => url === '/api/v1/library/collection/import')).toBe(false);
+  });
+});
+
+describe('Deliberate import recovery', () => {
+  it('retains a failed note request and reuses its import key on retry', async () => {
+    const posted: Record<string, unknown>[] = [];
+    request.mockImplementation(async (url, options) => {
+      if (String(url) === '/api/v1/library/import/text') {
+        posted.push(JSON.parse(options!.body as string));
+        return posted.length === 1 ? json({ error: { code: 'unavailable', message: 'Synthetic note request unavailable.', retryable: true } }, 503) : json({ document_id: 'doc_note', revision_id: 'rev_note', status: 'queued', job: { id: 'job_note', revision_id: 'rev_note', state: 'queued', phase: 'queued', error_code: null, error_message: null } }, 202);
+      }
+      return base(url, options);
+    });
+    await mount(); fireEvent.click(screen.getByRole('button', { name: 'Add to library' }));
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Synthetic dialysis note' } });
+    fireEvent.change(screen.getByLabelText('Your study note'), { target: { value: 'Synthetic dialysis study text.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add note' }));
+    await screen.findByText('Synthetic note request unavailable.');
+    expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('Synthetic dialysis note');
+    expect((screen.getByLabelText('Your study note') as HTMLTextAreaElement).value).toBe('Synthetic dialysis study text.');
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await screen.findByText('Queued: your note has an import job.');
+    expect(posted).toHaveLength(2); expect(posted[1]).toEqual(posted[0]);
+    expect(posted[0]).toMatchObject({ scope: { kind: 'personal-library' }, title: 'Synthetic dialysis note' });
+    expect(screen.getByRole('button', { name: 'View import details' })).toBeTruthy();
+  });
+
+  it('retains selected bytes, title and permission after file failure and preserves Unicode metadata in the header', async () => {
+    const posted: { body: unknown; options: Record<string, unknown>; header: string }[] = [];
+    request.mockImplementation(async (url, options) => {
+      if (String(url) === '/api/v1/library/import/file') {
+        const header = new Headers(options!.headers).get('x-renulus-import-options')!;
+        posted.push({ body: options!.body, options: JSON.parse(header), header });
+        return posted.length === 1 ? json({ error: { code: 'unavailable', message: 'Synthetic file request unavailable.', retryable: true } }, 503) : json({ document_id: 'doc_file', revision_id: 'rev_file', status: 'queued', job: { id: 'job_file', revision_id: 'rev_file', state: 'queued', phase: 'queued', error_code: null, error_message: null } }, 202);
+      }
+      return base(url, options);
+    });
+    await mount(); fireEvent.click(screen.getByRole('button', { name: 'Add to library' })); fireEvent.click(screen.getByRole('button', { name: 'Document' }));
+    const file = new File(['Synthetic transplant text.'], 'Synthetic Łódź study.txt', { type: 'text/plain' });
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Synthetic λ study 腎 📖' } });
+    fireEvent.change(screen.getByLabelText('Choose a study document'), { target: { files: [file] } });
+    const permission = screen.getByRole('checkbox', { name: 'I have permission to read, store, index and use this file for local learning.' }) as HTMLInputElement;
+    fireEvent.click(permission); fireEvent.click(screen.getByRole('button', { name: 'Add document' }));
+    await screen.findByText('Synthetic file request unavailable.');
+    expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('Synthetic λ study 腎 📖');
+    expect(permission.checked).toBe(true); expect(screen.getByText(/Selected: Synthetic Łódź study.txt/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await screen.findByText('Queued: follow processing below.');
+    expect(posted).toHaveLength(2); expect(posted[1].body).toBe(file); expect(posted[1].options).toEqual(posted[0].options);
+    expect(posted[0].options.title).toBe('Synthetic λ study 腎 📖');
+    expect([...posted[0].header].every(character => character.charCodeAt(0) < 127)).toBe(true);
+  });
+
+  it('requires a new permission confirmation when the selected file changes and explains unsupported input', async () => {
+    await mount(); fireEvent.click(screen.getByRole('button', { name: 'Add to library' })); fireEvent.click(screen.getByRole('button', { name: 'Document' }));
+    const input = screen.getByLabelText('Choose a study document');
+    fireEvent.change(input, { target: { files: [new File(['Synthetic note'], 'first.txt')] } });
+    const permission = screen.getByRole('checkbox', { name: 'I have permission to read, store, index and use this file for local learning.' }) as HTMLInputElement;
+    fireEvent.click(permission);
+    expect((screen.getByRole('button', { name: 'Add document' }) as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.change(input, { target: { files: [new File(['Synthetic file'], 'second.exe')] } });
+    expect(permission.checked).toBe(false); expect((screen.getByRole('button', { name: 'Add document' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText('Choose a PDF, PNG, JPEG, TIFF, text, DOCX, PPTX or XLSX file.')).toBeTruthy();
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(request.mock.calls.some(([url]) => String(url).includes('/library/import/'))).toBe(false);
+  });
+
+  it('rejects an oversized file without allocating large fixture bytes or posting it', async () => {
+    await mount(); fireEvent.click(screen.getByRole('button', { name: 'Add to library' })); fireEvent.click(screen.getByRole('button', { name: 'Document' }));
+    const file = new File(['Synthetic size boundary'], 'large.txt');
+    Object.defineProperty(file, 'size', { value: 64 * 1024 * 1024 + 1 });
+    fireEvent.change(screen.getByLabelText('Choose a study document'), { target: { files: [file] } });
+    expect(screen.getByText('This file exceeds 64 MiB. Choose a smaller document.')).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Add document' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(request.mock.calls.some(([url]) => String(url).includes('/library/import/'))).toBe(false);
+  });
+
+  it('reimports a failed source into the same document while retaining its original metadata and operation rights', async () => {
+    const source = records[150];
+    source.scope = { kind: 'personal-library', entity_id: null };
+    source.revisions[0].metadata.edition = 'Synthetic verified edition';
+    source.revisions[0].rights = { ...source.revisions[0].rights, model_input: false, licence: 'Synthetic retained licence', attribution: 'Synthetic retained author' };
+    let posted: Record<string, unknown> | undefined;
+    request.mockImplementation(async (url, options) => {
+      if (String(url) === '/api/v1/library/import/file') {
+        posted = JSON.parse(new Headers(options!.headers).get('x-renulus-import-options')!);
+        return json({ document_id: source.id, revision_id: 'rev_retry', status: 'queued', job: { id: 'job_retry', revision_id: 'rev_retry', state: 'queued', phase: 'queued', error_code: null, error_message: null } }, 202);
+      }
+      return base(url, options);
+    });
+    await mount(); fireEvent.change(screen.getByLabelText('Import status'), { target: { value: 'failed' } });
+    fireEvent.click(await screen.findByRole('button', { name: source.title }));
+    await screen.findByText('Synthetic extraction failed. Choose the original again.');
+    expect(screen.getByText('Synthetic retained licence', { selector: 'dd' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry import' }));
+    expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe(source.title);
+    fireEvent.change(screen.getByLabelText('Choose a study document'), { target: { files: [new File(['Synthetic replacement bytes'], 'retry.txt')] } });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'I have permission to read, store, index and use this file for local learning.' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add document' }));
+    await screen.findByText('Queued: follow processing below.');
+    expect(posted).toMatchObject({ document_id: source.id, title: source.title, scope: source.scope, metadata: source.revisions[0].metadata, rights: source.revisions[0].rights, reserved: false });
+    expect((posted!.rights as Record<string, unknown>).model_input).toBe(false);
+    expect(request.mock.calls.some(([url]) => String(url).includes('/jobs/') && String(url).includes('/retry'))).toBe(false);
+  });
+
+  it('retains rejected receipt selection after a partial batch without automatically submitting it again', async () => {
+    catalogueEntries = [receiptFor(1, 'eligible'), receiptFor(2, 'eligible')];
+    request.mockImplementation(async (url, options) => String(url) === '/api/v1/library/collection/import'
+      ? json({ queued: 1, results: [{ entry_id: 'receipt_1', status: 'queued' }, { entry_id: 'receipt_2', status: 'failed', message: 'Synthetic permission needs review.' }] }, 202) : base(url, options));
+    await mountCollection();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Synthetic receipt 001' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Synthetic receipt 002' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Queue selected (2)' }));
+    await screen.findByText(/1 imports queued. 1 selected entry needs attention/);
+    expect((screen.getByRole('checkbox', { name: 'Select Synthetic receipt 001' }) as HTMLInputElement).checked).toBe(false);
+    expect((screen.getByRole('checkbox', { name: 'Select Synthetic receipt 002' }) as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByRole('button', { name: 'Queue selected (1)' })).toBeTruthy();
+    expect(request.mock.calls.filter(([url]) => String(url) === '/api/v1/library/collection/import')).toHaveLength(1);
+  });
+
+  it('returns an acquired article retry to its receipt checks without a raw-file replacement or automatic selection', async () => {
+    const source = records[150]; source.source_id = 'L02';
+    source.title = ('Synthetic acquired article with a long title ' + 'study '.repeat(40)).trim();
+    source.revisions[0].metadata = { ...source.revisions[0].metadata, source_id: 'L02', asset_role: ['acquired-jats'], original_sha256: 'a'.repeat(64) };
+    catalogueEntries = [receiptFor(1, 'eligible', { title: source.title, document_id: source.id, processing_status: 'failed' })];
+    await mount(); fireEvent.change(screen.getByLabelText('Import status'), { target: { value: 'failed' } });
+    fireEvent.click(await screen.findByRole('button', { name: source.title }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Retry import' }));
+    await screen.findByRole('region', { name: 'Collected source receipts' });
+    expect((screen.getByLabelText('Source register') as HTMLSelectElement).value).toBe('L02');
+    expect((screen.getByLabelText('Find a source') as HTMLInputElement).value).toBe(source.title.slice(0, 200));
+    const path = String(collectionCalls().at(-1)![0]);
+    expect(new URL(path, 'http://127.0.0.1').searchParams.get('query')).toBe(source.title.slice(0, 200));
+    expect((screen.getByRole('checkbox', { name: 'Select ' + source.title }) as HTMLInputElement).checked).toBe(false);
+    expect(screen.queryByLabelText('Choose a study document')).toBeNull();
+    expect(request.mock.calls.some(([url]) => String(url).includes('/library/import/') || String(url) === '/api/v1/library/collection/import')).toBe(false);
   });
 });

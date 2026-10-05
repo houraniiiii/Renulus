@@ -66,19 +66,75 @@ describe('Library citation journey', () => {
     { media: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', locator: { item_ref: '#/tables/0', table_ref: '#/tables/0', page: null, format: 'docx' }, label: 'Document table · source location in the original document.' },
   ])('shows the real Office location for $media without inventing a physical page', async ({ media, locator, label }) => {
     const value = { ...citation(null), locators: [locator as Locator] };
-    request.mockResolvedValue(json(value));
+    request.mockImplementation(async url => String(url).endsWith('/original') ? new Response('Synthetic Office bytes', { headers: { 'Content-Type': media } }) : json(value));
     render(<SourceInspector document={{ ...document, revisions: [{ ...oldRevision, media_type: media }] }} location={{ revisionId: oldRevision.id, page: null, passageId: target.passage_id }} />);
     await screen.findByText(label);
     expect(screen.queryByText(/Physical page is unknown/)).toBeNull();
     expect(screen.getByText('Renulus', { selector: 'dd' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Open original' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Open original' }));
+    const extension = locator.format;
+    const original = await screen.findByRole('link', { name: 'Save original (.' + extension + ')' });
+    expect(original.getAttribute('download')).toBe('renulus-original.' + extension);
+    expect(screen.queryByTitle('Original document viewer')).toBeNull();
   });
 
   it('keeps a ready no-text image viewable and explains that search has no text', async () => {
-    request.mockResolvedValue(json({ ...citation(null), locators: [] }));
+    request.mockImplementation(async url => String(url).endsWith('/original') ? new Response('Synthetic no-text image bytes', { headers: { 'Content-Type': 'image/png' } }) : json({ ...citation(null), locators: [] }));
     render(<SourceInspector document={{ ...document, revisions: [{ ...oldRevision, media_type: 'image/png', passage_count: 0 }] }} location={{ revisionId: oldRevision.id, page: null, passageId: null }} />);
     await screen.findByRole('button', { name: 'Open original' });
     expect(screen.getByText('This image is available to view. No searchable text was extracted.')).toBeTruthy();
+    expect(screen.getByText('Open the original for visual study. It will not appear in passage search.')).toBeTruthy();
+    expect(screen.queryByText(/Physical page is unknown/)).toBeNull();
+    expect(screen.queryByText(/0 extracted source locations/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Open original' }));
+    expect((await screen.findByRole('img', { name: 'Original imported document' })).getAttribute('src')).toBe('blob:synthetic-original-1');
+    expect(screen.getByRole('link', { name: 'Save original (.png)' })).toBeTruthy();
+  });
+
+  it('updates the selected reader after a queued no-text image becomes available', async () => {
+    let ready = false;
+    const imageDocument = () => ({ ...document, status: ready ? 'ready' : 'queued', active_revision: ready ? oldRevision.id : null, latest_revision: oldRevision.id, revisions: [{ ...oldRevision, status: ready ? 'ready' : 'queued', media_type: 'image/png', passage_count: 0 }] });
+    request.mockImplementation(async url => {
+      const path = String(url);
+      if (path.startsWith('/api/v1/library/documents?')) return json({ documents: [imageDocument()], total: 1, counts: ready ? { ready: 1 } : { queued: 1 }, offset: 0, limit: 25 });
+      if (path === '/api/v1/library/documents/' + document.id) return json(imageDocument());
+      if (path.endsWith('/import-status')) return json({ document_id: document.id, revision_id: oldRevision.id, status: ready ? 'ready' : 'queued', job: { id: 'job_image', revision_id: oldRevision.id, state: ready ? 'ready' : 'queued', phase: ready ? 'complete' : 'queued', error_code: null, error_message: null } });
+      if (path === '/api/v1/library/queue') return json({ running: true, cpu_workers: 1, queued: 1, active_job: null, error_code: null });
+      if (path.includes('/' + oldRevision.id + '/citation')) return json({ ...citation(null), passage_id: undefined, locators: [] });
+      return base(url);
+    });
+    render(<NavigationProvider><LibraryPage /></NavigationProvider>);
+    fireEvent.click(await screen.findByRole('button', { name: document.title }));
+    const reader = screen.getByRole('complementary', { name: 'Source reader' });
+    await within(reader).findByText(/This import is waiting/);
+    expect(within(reader).queryByRole('button', { name: 'Open original' })).toBeNull();
+    ready = true; fireEvent.click(screen.getByRole('button', { name: 'Refresh documents' }));
+    await within(reader).findByText('This image is available to view. No searchable text was extracted.');
+    expect(await within(reader).findByRole('button', { name: 'Open original' })).toBeTruthy();
+    expect(within(reader).queryByText(/waiting for document processing/)).toBeNull();
+  });
+
+  it('keeps an earlier ready original open while a replacement job reports failure', async () => {
+    const failed = { ...document, status: 'failed', active_revision: oldRevision.id, revisions: [{ ...oldRevision, id: document.latest_revision!, status: 'failed', metadata: { ...metadata, edition: 'Failed replacement edition' } }, oldRevision] };
+    request.mockImplementation(async url => {
+      const path = String(url);
+      if (path.startsWith('/api/v1/library/documents?')) return json({ documents: [failed], total: 1, counts: { failed: 1 }, offset: 0, limit: 25 });
+      if (path === '/api/v1/library/documents/' + document.id) return json(failed);
+      if (path.endsWith('/import-status')) return json({ document_id: document.id, revision_id: document.latest_revision, status: 'failed', job: { id: 'job_failed', revision_id: document.latest_revision, state: 'failed', phase: 'failed', error_code: 'extraction_failed', error_message: 'Synthetic replacement failed.' } });
+      return base(url);
+    });
+    render(<NavigationProvider><LibraryPage /></NavigationProvider>);
+    fireEvent.click(await screen.findByRole('button', { name: document.title }));
+    const reader = screen.getByRole('complementary', { name: 'Source reader' });
+    await within(reader).findByText('Synthetic replacement failed.');
+    expect(await within(reader).findByRole('button', { name: 'Open original' })).toBeTruthy();
+    expect(within(reader).getByText('Cited edition')).toBeTruthy();
+    expect(within(reader).queryByText('Failed replacement edition', { selector: 'dd' })).toBeNull();
+    fireEvent.click(within(reader).getByRole('button', { name: 'Open original' }));
+    await within(reader).findByTitle('Original document viewer');
+    expect(request.mock.calls.some(([url]) => String(url) === citation(null).original_url)).toBe(true);
+    expect(request.mock.calls.some(([url]) => String(url).includes('/' + document.latest_revision + '/original'))).toBe(false);
   });
 
   it('explains a missing physical page and retains the cited edition for opening the whole original', async () => {
