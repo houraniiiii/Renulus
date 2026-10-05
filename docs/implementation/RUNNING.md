@@ -38,7 +38,12 @@ and managed helpers prepare; actual first-run Flow readiness on this E HDD
 varied from about 61 to 197 seconds, and the provisioned restart took about
 38 seconds. These are observed development-machine timings, not a clean-machine
 benchmark. Closing the app stops its owned backend. The installer is unsigned;
-signing and clean-machine release acceptance remain separate.
+signing and clean-machine release acceptance remain separate. The actual
+normal shortcut required an external wrapper fix from Hidden to Normal;
+visible Flow was then observed within about 282 seconds on the large profile.
+Current Library listing/search responsiveness under its queued ingestion
+workload is being fixed in reopened issue #6. Standalone CPU/API validation
+does not establish this native workload gate.
 
 The prepared profile has 7,307 verified originals and 11,755 rebuilt passages
 from 481 ready documents. Another 6,826 imports are queued; they are present

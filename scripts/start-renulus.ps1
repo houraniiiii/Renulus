@@ -64,7 +64,7 @@ try {
         $env:RENULUS_PROFILE = $UserDataDirectory
     }
     Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
-    $renulusLaunch = @{ FilePath = $renulusExecutable; WorkingDirectory = $renulusWorkspace; WindowStyle = 'Hidden'; PassThru = $true }
+    $renulusLaunch = @{ FilePath = $renulusExecutable; WorkingDirectory = $renulusWorkspace; WindowStyle = 'Normal'; PassThru = $true }
     if ($renulusArguments.Count) { $renulusLaunch.ArgumentList = $renulusArguments }
     $renulusProcess = Start-Process @renulusLaunch
     Write-Output ('Opened Renulus learning app (process ' + $renulusProcess.Id + ').')

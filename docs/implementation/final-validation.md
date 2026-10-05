@@ -125,3 +125,58 @@ chosen-profile launch remains its own observation.
 A fresh bounded resource-aware backend verification lane is adjudicating the
 disk-exhausted final run without changing product source or retrying rejected
 cleanup. Current free C space does not turn the failed run into a pass.
+
+## Resource-aware backend adjudication and eight-hour checkpoint
+
+The follow-up lane completed three disjoint focused selections on frozen
+runtime source, with no skips: **39 priority image/provider/compaction checks**
+in 55.06 seconds, **44 integrated API journeys** in 124.81 seconds, and
+**13 capacity checks** in 776.34 seconds. All three exited zero. These establish
+96 distinct targeted passes; they are not a completed 901-test regression.
+A separate compact actual-engine format-1 delivery check passed in 99.21
+seconds. Its single pass is reported separately from the main selections.
+
+The ordinary 836-test selection was stopped at 03:19 UTC with 332 passed calls
+and one setup skip, without finalization. Its overlap with the integrated
+selection is not added. The first 13-test actual-engine attempt was stopped
+with one passed call and four failed calls; final assertions and JUnit were
+not produced. The retained 120-second faulthandler trace shows Docling loading
+TableFormer through safetensors/torch storage. It does not establish disk
+exhaustion or explain the four assertion causes. Format-1 subsequently passed
+on compact scratch. Format-2 and temporary PDF/PNG checks remain unadjudicated
+in this attempt, distinct from their previous passing engine evidence.
+All processes owned by this lane stopped; it changed only ignored proof tools.
+
+The earlier disk-full run retained 390 passes, 166 failures, 331 errors and
+14 skips before pytest finalization failed. Clean completed checks now pass
+62 of its failed/error node IDs. No total from that failed run, an unfinished
+run or the earlier 807-check baseline is added to the focused acceptance.
+Sampled scratch peaks were 0.721 GiB on fresh C, 1.227 GiB on fresh E and
+0.003 GiB for the compact diagnostic. Sampled free-space minima were 10.306 GiB
+on C and 270.176 GiB on E. The capacity selection exercised the 265 MiB originals
+round trip and a measured 156-document/12,000-passage backup with 40,772,616
+canonical bytes. Per-scope commands, timestamps, exits, logs and JUnit are in
+ignored `.local/backend-final-20261005T0301Z/acceptance-summary.json` and its
+named scope directories. Interrupted attempts retain partial events.
+
+The actual normal desktop shortcut found a separate external wrapper bug:
+`Start-Process` launched the interactive executable with `WindowStyle Hidden`.
+The window existed but was invisible. The wrapper now uses `Normal`; the exact
+owned hidden app/backend were closed before a second actual shortcut launch
+at 03:06:14 UTC. Visible Flow was observed by 03:10:56 UTC, a coarse upper
+bound of approximately 282 seconds on the E HDD. Health returned 200 with all
+ten modules; an unauthenticated metadata request returned 401. The real Library
+navigation was invoked through Windows UI Automation. This wrapper is outside
+the installer/main assets; installed artifact hashes and freeze are unchanged.
+
+That workload check **has not passed Library acceptance**. With the real
+background worker and 6,826 queued imports, both the 100-document listing and
+local passage search reported their request timeout. The earlier successful
+CPU/API audit used ASGI transport without starting worker lifespans. At
+03:20:59 UTC, a read-only aggregate audit showed 516 ready jobs, 6,790 queued,
+one processing at embedding, four historical failures, 7,307 documents and
+12,610 passages, with zero Study/case/Test/Memory rows. The native pipeline had
+completed 35 more imports, but the interactive workload remained a separate
+failing gate. Library #6 is reopened for a bounded responsiveness fix in an
+isolated lane. The eight-hour target was reached at 03:21 UTC; the 15-minute
+heartbeat continues while that concrete remediation is active.
