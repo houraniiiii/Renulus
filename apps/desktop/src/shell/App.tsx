@@ -17,7 +17,13 @@ function Shell() {
   const content = useRef<HTMLElement>(null);
   const { resource } = useResource(signal => api<Health>('/health', { signal }));
   const label = routes.find(item => item.id === route)!.label;
-  const temporary = scope.kind === 'temporary-case' || scope.kind === 'unclassified';
+  // Privacy scope survives Save; Cases owns the live saved/dirty snapshot cue.
+  const scopeLabel = scope.kind === 'saved-case'
+    ? 'Saved case snapshot · New changes stay temporary until you Save again.'
+    : scope.kind === 'temporary-case'
+      ? 'Temporary case context · Only explicitly saved snapshots are kept. New changes require Save.'
+      : scope.kind === 'unclassified' ? 'Unclassified context · not saved' : null;
+  const temporary = scopeLabel !== null;
   function openSearch() { if (!searchDialog.current?.open) searchDialog.current?.showModal(); }
   useEffect(() => {
     document.title = 'Renulus · ' + label;
@@ -44,7 +50,7 @@ function Shell() {
     </aside>
     <div className="workspace">
       <header className="workspace-header"><div className="workspace-breadcrumb"><IconButton className="mobile-rail-toggle" label={railOpen ? 'Close navigation' : 'Open navigation'} aria-expanded={railOpen} aria-controls="main-navigation" onClick={() => setRailOpen(value => !value)}><PanelLeft size={20} /></IconButton><span>Learning space</span><ChevronRight size={14} aria-hidden="true" /><strong>{label}</strong></div><button className="search-trigger" ref={searchTrigger} onClick={openSearch}><Search size={17} aria-hidden="true" /><span>Find a destination</span><kbd>Ctrl K</kbd></button></header>
-      {temporary && <div className="scope-banner" role="status"><Shield size={17} aria-hidden="true" /><p>Temporary case · not saved</p><Button variant="ghost" onClick={startFreshStudy}>End temporary context</Button></div>}
+      {temporary && <div className="scope-banner" role="status"><Shield size={17} aria-hidden="true" /><p>{scopeLabel}</p><Button variant="ghost" onClick={startFreshStudy}>End temporary context</Button></div>}
       <main className="workspace-main" id="learning-content" tabIndex={-1} ref={content}><ModuleOutlet /></main>
       <footer className="workspace-footer"><span><img src="./renulus-64.png" width="14" height="14" alt="" />Learning across nephrology</span><span>{temporary ? 'Temporary context' : 'Your learning space'}</span><details className="shortcut-help"><summary>Keyboard</summary><div><strong>Move through Renulus</strong><p><kbd>Ctrl K</kbd> Find a destination</p><p><kbd>Alt 1–8</kbd> Open a destination</p><p><kbd>Esc</kbd> Close destination search</p></div></details></footer>
     </div>
