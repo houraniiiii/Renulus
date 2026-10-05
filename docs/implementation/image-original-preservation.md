@@ -112,3 +112,28 @@ successful conversion, zero canonical passages, genuine exported metadata,
 preserved/viewable original, retrieval exclusion and deletion. The parent will
 also deliver the Available/no-searchable-text UI state and integrate/package the
 change. Issue #17 remains open for that combined acceptance.
+
+## Parent actual CPU proof — October 5, 2026
+
+After the owner authorised the temporary-context end and the old normal
+app/backend were physically gone, one serial actual CPU proof ran against the
+freeze55 runtime. It started at **06:36:48 UTC** and passed in **102.085 seconds**
+in a fresh short E profile with the verified public helper assets. No app
+lifespan or background worker, provider call, patient input or credential read
+was involved. External socket connections were prohibited; no new download or
+dependency was used.
+
+A valid synthetic blank PNG completed actual pinned Docling/RapidOCR
+conversion with no OCR text. It became ready with **zero canonical passages**,
+genuine DoclingDocument export and the exact preserved 1,878-byte original.
+The supported original route returned the same PNG bytes. Document citation
+returned empty locators; a fabricated physical page was refused. Retrieval
+returned zero passages without constructing an embedding model. Supported
+delete removed its app-owned original and refused subsequent original access.
+The worker stayed stopped.
+
+Ignored receipt and log: `.local/actual-no-text-image-55.json` and
+`.local/actual-no-text-image-55.log`. This resolves the real no-text engine/API
+proof prerequisite, separately from installed renderer/original viewing and
+actual selected-data readiness. The parent's Available/no-searchable-text UI
+and manufacturing/native acceptance remain separately attributed.

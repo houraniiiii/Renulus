@@ -87,19 +87,28 @@ three-format originals/locator recovery gate subsequently passed. Ramanujan's
 checks passed in the combined integration checkout. Their installed acceptance
 remains separate from these application checks.
 
-Hegel owns #17 in `image-original-preservation`: preserve successful durable
-no-text images, exclude their empty revisions from retrieval and verify normal
-original/delete behavior. Halley prepares the exact classified Office adoption
-list in `supplement-inputs`, with metadata, hashes and bounded validation. The
-parent owns UI/shared recovery, supported actual adoption, live generation,
-integration and packaging. The normal installed app owns the heavy helper slot.
+Hegel's #17 patch is integrated at `55d553d1`. The parent subsequently passed
+one actual pinned CPU no-text image/original/citation/retrieval/delete proof in
+102.085 seconds. Halley's classified Office preview and component review are
+report-integrated; a bounded primary publisher-policy follow-up addresses the
+remaining E06 supplement scope question. Dirac owns the serial application-only
+backend regression on freeze55, excluding real helper and capacity workloads.
+The parent owns shared recovery/UI, actual adoption, native checks and #18.
+Peirce's manufactured freeze55 remains a preserved checkpoint while the parent
+corrects the concrete normal-queue shutdown failure.
 
 The user completed intentional Codex sign-in and added the Go key. Native
 Connections on October 5 showed both accounts connected; the parent explicitly
 selected Codex at 05:46:36 UTC. Only `gpt-6-astra` currently exposes an approved
 image-check control. Catalogue availability, successful input requests and
 interpretation quality remain distinct. Go learning remains paused pending
-educational-use eligibility. An active temporary case is preserved; ordinary
-synthetic Learn checks wait for the user to end that context. No credentials
-from another application are used. The goal and single 15-minute heartbeat
-continue; the original eight-hour target remains recorded above.
+educational-use eligibility. The owner subsequently authorised ending the
+temporary context; it was ended at 06:27:44 UTC without reading case details.
+A synthetic text attempt was truncated by the native typing harness and its run
+failed with subscription_limit; no further request or successful generation is
+claimed. The actual normal app/backend are now stopped. Twenty-nine classified
+originals were admitted to the learning profile through the supported API with
+extraction disabled; their exact app-owned bytes and rights were verified.
+Queued does not mean searchable. No credentials from another application are
+used. The goal and single 15-minute heartbeat continue; the original eight-hour
+target remains recorded above.

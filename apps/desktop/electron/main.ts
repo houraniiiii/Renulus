@@ -123,7 +123,7 @@ app.on('before-quit', event => {
     if (frontend) { frontend.server.closeAllConnections(); await new Promise<void>(resolve => frontend!.server.close(() => resolve())); }
     await backend?.stop();
   })();
-  void stopPromise.then(() => { stopping = true; app.quit(); }, () => { dialog.showErrorBox('Renulus could not finish stopping', 'The owned backend did not exit cleanly. Close this development instance and inspect its lifecycle evidence.'); });
+  void stopPromise.then(() => { stopping = true; app.quit(); }, () => { stopPromise = undefined; dialog.showErrorBox('Renulus could not finish stopping', 'The owned backend did not exit cleanly. Close this development instance and inspect its lifecycle evidence.'); });
 });
 if (ownsInstance) void app.whenReady().then(async () => {
   try {

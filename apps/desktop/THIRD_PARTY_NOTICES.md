@@ -14,7 +14,8 @@ renulus.ico. The original brand provenance remains in assets/brand/README.md.
 
 Nous Research Hermes source is MIT, copyright (c) 2025 Nous Research; the full
 upstream licence is licenses/hermes-MIT.txt. The following exact source files
-are copied unchanged into electron/upstream/ and used by Renulus lifecycle:
+were imported into electron/upstream/ and are used by Renulus lifecycle. The
+table records their original imported hashes; the scoped patch below is separate:
 
 | Upstream source under apps/desktop/electron/ | SHA256 |
 | --- | --- |
@@ -29,7 +30,13 @@ c1ee01756a755a4d5ee670f7a671e658359423355545b32fc908a413c6abdb4f.
 Acquisition was supplied by the runtime lane in its owned upstream/hermes;
 this lane reads it and keeps source-path provenance. The upstream head reported
 by the runtime lane is 32172d4622195697e4f077976140d0ed0738318a, 27 commits newer;
-it is not the imported baseline. No upstream patches were made by this lane.
+it is not the imported baseline. The initial desktop lane imported these files
+unchanged. On October 5, 2026, the parent patched `backend-child.ts` to accept an
+explicit Windows kernel absence observation when Node exit fields are delayed.
+Unknown/access errors retain ownership, and the POSIX group contract is unchanged.
+Original licence, source attribution and imported hashes are preserved. The
+patch and physical-child evidence are recorded in
+`docs/implementation/windows-shutdown-physical-proof.md`.
 
 Electron packaging follows upstream apps/desktop/package.json and
 electron-builder.config.cjs's build-before-pack, whitelist, asar and Windows

@@ -33,3 +33,23 @@ live-connections-20261005.json, live-image-check-observed.json and
 live-image-check-full-public.json. This record covers installed 3ff9b0d6.
 It is dated local product evidence, separate from clean-machine/signing or
 medical-content review.
+
+## Owner-ready follow-up
+
+The owner confirmed the temporary context was only a check and authorised
+proceeding. End temporary context passed at **06:27:44 UTC**, and ordinary Learn
+was opened without reading case details. One synthetic text attempt was
+submitted at **06:28:25 UTC**. The native SendKeys helper truncated its marked
+input; it is not a successful full-prompt or educational-answer proof. The
+exact synthetic run's read-only canonical metadata nevertheless records
+**failed / subscription_limit** at **06:28:56 UTC**. No assistant completion or
+automatic learning capture was accepted. No further provider request or
+subscription fallback followed.
+
+The typing helper now uses the edit control's ValuePattern with exact input
+verification before submission, replacing unverified SendKeys delivery. That
+harness correction does not itself establish a new live request. The owner
+connection is deliberate and retained; quota availability still blocks
+generation acceptance. The old app's subsequent normal-close failure is
+tracked in #18 and `windows-shutdown-physical-proof.md`, separate from provider
+quota and the offline data/image checks.

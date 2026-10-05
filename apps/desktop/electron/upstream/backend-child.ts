@@ -25,6 +25,8 @@ export interface StopBackendChildDeps {
   isWindows?: boolean
   /** Windows tree-kill implementation (real: taskkill /T /F via execFileSync). */
   forceKillProcessTree: (pid: number) => void
+  /** Windows kernel existence probe. Unknown/access errors must remain undefined. */
+  isProcessAlive?: (pid: number) => boolean | undefined
   /**
    * POSIX group-signal implementation. Real: process.kill(-pgid, signal).
    * Injectable so the negative-pid group send is asserted in tests without a
@@ -59,7 +61,16 @@ export async function waitForBackendExit(
     return
   }
 
-  const exited = (): boolean => child.exitCode !== null || child.signalCode !== null
+  const exited = (): boolean => {
+    if (child.exitCode !== null || child.signalCode !== null) return true
+    // A loaded Windows process can disappear before Node reports its exit.
+    // Accept only an explicit absent result for our root; a failed query is
+    // not proof, and POSIX retains the existing process-group exit contract.
+    if ((deps.isWindows ?? process.platform === 'win32') && Number.isInteger(child.pid) && deps.isProcessAlive) {
+      try { return deps.isProcessAlive(child.pid as number) === false } catch { return false }
+    }
+    return false
+  }
 
   const wait = (delay: number): Promise<void> =>
     new Promise<void>((resolve: () => void): void => {
@@ -99,7 +110,7 @@ export async function waitForBackendExit(
       child.kill('SIGKILL')
     }
   } catch {
-    // A failed signal may mean the child is gone, but only exit proves it.
+    // A failed signal may mean the child is gone; recheck exit/physical proof.
   }
 
   await wait(1000)

@@ -37,7 +37,13 @@ export async function startBackend(options: { profile: DesktopProfile; token: st
   if (!path.isAbsolute(command) || !existsSync(command)) throw new Error('The Renulus Python runtime is not available. Set RENULUS_PYTHON for development.');
   const port = await runBackendStartStep(signal, freeLoopbackPort);
   const args = [...(packaged ? ['-I', '-B', '-X', 'utf8', path.join(bundleRoot, 'bootstrap.py')] : ['-m', 'renulus.server']), '--profile', profile.root, '--port', String(port), ...(packaged ? ['--source-root', bundleRoot] : [])];
-  const deps = { forceKillProcessTree: (pid: number) => { execFileSync('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' }); } };
+  const deps = {
+    forceKillProcessTree: (pid: number) => { execFileSync('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore', timeout: 10000 }); },
+    isProcessAlive: (pid: number): boolean | undefined => {
+      try { process.kill(pid, 0); return true; }
+      catch (error) { return (error as NodeJS.ErrnoException).code === 'ESRCH' ? false : undefined; }
+    },
+  };
   signal.throwIfAborted();
   const source = packaged ? bundleRoot : workspace;
   const child = spawn(command, args, { cwd: source, env: backendEnvironment(profile, token, path.join(source, 'runtime'), path.join(source, 'upstream', 'hermes')), windowsHide: true, detached: process.platform !== 'win32', stdio: ['ignore', 'ignore', 'ignore'] });
@@ -45,7 +51,10 @@ export async function startBackend(options: { profile: DesktopProfile; token: st
   let failed = false;
   child.once('error', () => { failed = true; });
   const stop = () => {
-    if (!stopped) stopped = (async () => { if (child.pid && child.exitCode === null && child.signalCode === null) { stopBackendChild(child, deps); await waitForBackendExit(child, deps); } })();
+    if (!stopped) {
+      stopped = (async () => { if (child.pid && child.exitCode === null && child.signalCode === null) { stopBackendChild(child, deps); await waitForBackendExit(child, deps, 15000); } })();
+      stopped.catch(() => { stopped = undefined; });
+    }
     return stopped;
   };
   const handle: ManagedBackend = { port, child, owned: true, stop };
