@@ -14,6 +14,9 @@ import httpx
 from PIL import Image, PngImagePlugin
 import pytest
 
+# Actual SDK protocol checks use synthetic HTTP and simulated future eligibility.
+pytestmark = pytest.mark.usefixtures("synthetic_go_approval")
+
 from renulus.contracts import ApiError, ContextScope, Scope
 from renulus.runtime.context import SUMMARY_INSTRUCTIONS
 from renulus.runtime.inputs import validate_inputs
@@ -228,6 +231,9 @@ async def test_real_hermes_compactor_sdk_selected_route_scope_head_tail_and_no_t
     assert events[1].payload["stage"] == "compaction" and events[2].payload["persisted"] is False
     assert events[2].payload["estimated_tokens_after"] < events[2].payload["estimated_tokens_before"]
     assert len(requests) == 3 and all(body["model"] == "mimo-v2.6-pro" for body in bodies)
+    assert requests[1].headers["x-opencode-session"] == requests[2].headers["x-opencode-session"]
+    assert requests[0].headers["x-opencode-session"] != requests[1].headers["x-opencode-session"]
+    assert all(request.headers["user-agent"] == "Renulus/0.1.0" for request in requests)
     assert bodies[-1]["messages"][1]["content"].startswith(messages[0]["content"])
     assert bodies[-1]["messages"][-1]["content"] == messages[-1]["content"]
     assert "RENULUS CONTEXT SUMMARY" in json.dumps(bodies[-1])

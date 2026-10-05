@@ -4,6 +4,9 @@ import json
 import httpx
 import pytest
 
+# Synthetic wire/lifecycle checks assume future eligibility, not release approval.
+pytestmark = pytest.mark.usefixtures("synthetic_go_approval")
+
 from renulus.contracts import ApiError, ContextScope, Scope
 from renulus.runtime.hermes import HermesSubscriptionTransport
 from renulus.runtime.manager import ProviderManager

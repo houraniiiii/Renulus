@@ -6,13 +6,15 @@ from pathlib import Path
 import logging
 import sys
 from typing import AsyncIterator
+from uuid import uuid4
 
 import httpx
 from openai import AsyncOpenAI
 
 from renulus.contracts import ApiError
+from renulus import __version__
 from .inputs import to_hermes_messages
-from .policy import ALLOWED_MODELS, BASE_URLS, INSTRUCTIONS, require_provider, stream_failure
+from .policy import ALLOWED_MODELS, BASE_URLS, INSTRUCTIONS, require_provider, require_learning_route, stream_failure
 
 
 class HermesSubscriptionTransport:
@@ -48,10 +50,24 @@ class HermesSubscriptionTransport:
             providers.reset_provider_discovery_disabled(guard_token)
             hermes_constants.reset_hermes_home_override(home_token)
 
+    def request_headers(self, provider: str, session_id: str | None = None) -> dict:
+        require_provider(provider)
+        headers = {"User-Agent": "Renulus/" + __version__}
+        if provider == "opencode-go":
+            session_id = session_id or str(uuid4())
+            with self.controlled():
+                from agent.opencode_affinity import opencode_session_headers
+                affinity = opencode_session_headers(provider, BASE_URLS[provider], session_id)
+            if affinity.get("x-opencode-session") != session_id:
+                raise ApiError("session_identity_changed", "The runtime refused a changed conversation identity.", 503)
+            headers.update(affinity)
+        return headers
+
     def build_request(self, provider: str, model: str, messages: list[dict]) -> dict:
         require_provider(provider)
         if model not in ALLOWED_MODELS[provider]:
             raise ApiError("model_not_allowed", "The transport refused an unapproved model.")
+        require_learning_route(provider)
         messages = to_hermes_messages(messages)
         with self.controlled():
             if provider == "codex":
@@ -81,12 +97,14 @@ class HermesSubscriptionTransport:
                 raise ApiError("route_policy_violation", "The runtime refused a changed model identity.", 503)
             kwargs.pop("tools", None)
             kwargs.pop("tool_choice", None)
+            kwargs.pop("extra_headers", None)
             kwargs["stream"] = True
             return kwargs
 
     async def stream(self, provider: str, model: str, access_token: str,
-                     messages: list[dict]) -> AsyncIterator[dict]:
+                     messages: list[dict], *, session_id: str | None = None) -> AsyncIterator[dict]:
         request = self.build_request(provider, model, messages)
+        request["extra_headers"] = self.request_headers(provider, session_id)
         # An explicitly supplied key and endpoint only; no environment credentials,
         # SDK retries, alternate subscription, proxy credentials or debug dumps.
         http = httpx.AsyncClient(transport=self.http_transport, trust_env=False,

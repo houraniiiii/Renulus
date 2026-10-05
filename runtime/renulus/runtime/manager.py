@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import aclosing, suppress
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 import time
 from typing import TYPE_CHECKING, AsyncIterator
+from uuid import NAMESPACE_URL, uuid4, uuid5
 
 import httpx
 
@@ -13,11 +15,13 @@ from renulus.contracts import ApiError, ContextScope, Event, durable_id
 from .context import CONTEXT_BUDGET, OUTPUT_RESERVATION, SUMMARY_MAX_CHARS, HermesContextAdapter
 from .hermes import HermesSubscriptionTransport
 from .inputs import has_images
-from .policy import ALLOWED_MODELS, BASE_URLS, rejection_kind, require_provider, require_run_id, safe_error, validate_messages
+from .policy import ALLOWED_MODELS, BASE_URLS, learning_usage, rejection_kind, require_learning_route, require_provider, require_run_id, safe_error, validate_messages
 from .protected import ConnectionStore
 
 if TYPE_CHECKING:
     from renulus.storage import AppPaths
+
+_GO_CONVERSATION = ContextVar("renulus_go_conversation", default=None)
 
 
 @dataclass
@@ -67,6 +71,7 @@ class ProviderManager:
             if provider in self._catalog_errors:
                 status = self._catalog_errors[provider]
             rows.append({"provider": provider, "status": status,
+                         "learning_use": learning_usage(provider),
                          "allowed_models": list(allowed),
                          "models": [self._model_status(provider, model, catalog) for model in allowed]})
         return {"selected_provider": self._settings["selected_provider"], "connections": rows}
@@ -122,6 +127,7 @@ class ProviderManager:
 
     def select(self, provider: str) -> dict:
         require_provider(provider)
+        require_learning_route(provider)
         if provider not in self._settings["connections"]:
             raise ApiError("connection_required", "Connect this subscription before selecting it.", 409)
         previous = self._settings["selected_provider"]
@@ -132,6 +138,8 @@ class ProviderManager:
         return self.connections()
 
     async def connect_go(self, api_key: str, *, select: bool = False) -> dict:
+        if select:
+            require_learning_route("opencode-go")
         if not isinstance(api_key, str) or not api_key.strip() or len(api_key) > 8192:
             raise ApiError("invalid_connection", "Enter your OpenCode Go subscription key.")
         async with self._credential_locks["opencode-go"]:
@@ -157,7 +165,7 @@ class ProviderManager:
         try:
             async with self._client() as client:
                 result = await client.get(BASE_URLS[provider] + "/models",
-                                          headers={"Authorization": "Bearer " + token})
+                    headers={**self.context.transport.request_headers(provider), "Authorization": "Bearer " + token})
                 result.raise_for_status()
                 data = result.json()
             # ChatGPT plan access has models[].slug/visibility; compatible APIs
@@ -283,6 +291,7 @@ class ProviderManager:
         require_provider(provider)
         if model is not None and model not in ALLOWED_MODELS[provider]:
             raise ApiError("model_not_allowed", "Choose an allowed model in the selected subscription.")
+        require_learning_route(provider)
         catalog = self._catalogs.get(provider)
         if catalog is None:
             raise ApiError("capabilities_unverified", "Refresh the selected connection before generation.", 409, True)
@@ -292,6 +301,15 @@ class ProviderManager:
         if (provider, chosen) in self._unsupported_models:
             raise ApiError("account_model_unsupported", "The selected account cannot use this model. Refresh the connection to retry.", 409)
         return provider, chosen
+
+    def _go_session(self, scope: ContextScope) -> str:
+        inherited = _GO_CONVERSATION.get()
+        if inherited and inherited[0] is self and inherited[1] is scope:
+            return inherited[2]
+        if scope.persistent and scope.entity_id:
+            namespace = uuid5(NAMESPACE_URL, "Renulus.profile:" + self._settings["host_id"])
+            return str(uuid5(namespace, scope.kind.value + ":" + scope.entity_id))
+        return str(uuid4())
 
     async def compact(self, messages: list[dict], *, scope: ContextScope, run_id: str,
                       model: str | None = None, system: str | None = None, force: bool = True) -> dict:
@@ -315,7 +333,7 @@ class ProviderManager:
         return {**result, "provider": provider, "model": chosen, "scope": scope.model_dump(mode="json"),
                 "engine": "hermes-context-compressor", "persisted": False}
 
-    async def _finish_context(self, plan, *, scope: ContextScope, run_id: str, provider: str, model: str) -> dict:
+    async def _finish_context(self, plan, *, scope: ContextScope, run_id: str, provider: str, model: str, session_id: str | None = None) -> dict:
         if plan.turns is None:
             return self.context.finish(plan)
         if self._settings["selected_provider"] != provider:
@@ -323,6 +341,7 @@ class ProviderManager:
         identity = self._settings["connections"].get(provider)
         summary = []
         size = 0
+        session_token = _GO_CONVERSATION.set((self, scope, session_id)) if session_id else None
         try:
             async with aclosing(self.stream(self.context.summary_messages(plan), scope=scope,
                 run_id=run_id, model=model, purpose="compaction")) as stream:
@@ -335,6 +354,8 @@ class ProviderManager:
                 raise ApiError("connection_changed", "The selected account changed during compaction. Input was preserved.", 409, True)
             return self.context.finish(plan, "".join(summary))
         finally:
+            if session_token is not None:
+                _GO_CONVERSATION.reset(session_token)
             summary.clear()
 
     async def stream(self, messages: list[dict], *, scope: ContextScope, run_id: str,
@@ -380,9 +401,12 @@ class ProviderManager:
         iterator = None
         provider = chosen = None
         version = None
+        session_id = None
         images = has_images(messages)
         try:
             provider, chosen = self._route(model)
+            if provider == "opencode-go":
+                session_id = self._go_session(scope)
             run.provider = provider
             version = self._connection_versions[provider]
             catalog = self._catalogs.get(provider)
@@ -417,7 +441,7 @@ class ProviderManager:
                     yield event("progress", stage="compaction", status="started",
                                 estimated_tokens=plan.before, provider=provider, model=chosen)
                     run.pending = asyncio.create_task(self._finish_context(plan, scope=scope,
-                        run_id=durable_id("compact"), provider=provider, model=chosen))
+                        run_id=durable_id("compact"), provider=provider, model=chosen, session_id=session_id))
                     try:
                         result = await run.pending
                     except asyncio.CancelledError:
@@ -441,7 +465,9 @@ class ProviderManager:
             if run.stopped.is_set():
                 yield event("cancelled")
                 return
-            iterator = transport.stream(provider, chosen, token, messages).__aiter__()
+            iterator = (transport.stream(provider, chosen, token, messages, session_id=session_id)
+                        if isinstance(transport, HermesSubscriptionTransport) else
+                        transport.stream(provider, chosen, token, messages)).__aiter__()
             while not run.stopped.is_set():
                 run.pending = asyncio.create_task(anext(iterator))
                 try:

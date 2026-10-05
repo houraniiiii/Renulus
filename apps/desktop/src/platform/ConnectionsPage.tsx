@@ -11,7 +11,7 @@ type Provider = 'codex' | 'opencode-go';
 type Availability = 'unknown' | 'available' | 'unavailable' | 'account_unsupported';
 type Capability = 'unknown' | 'supported' | 'account_unsupported';
 interface Model { id: string; availability: Availability; text_input?: Capability; image_input?: Capability; image_interpretation_verified?: boolean }
-interface Connection { provider: Provider; status: string; allowed_models: string[]; models: Model[] }
+interface Connection { provider: Provider; status: string; allowed_models: string[]; models: Model[]; learning_use?: { status: string; generation_allowed: boolean; message?: string | null } }
 interface Connections { selected_provider: Provider | null; connections: Connection[]; revocation?: 'failed'; recovery?: string }
 interface Login {
   login_id: string; status: 'pending' | 'exchanging' | 'connected' | 'error' | 'cancelled';
@@ -27,6 +27,12 @@ const approvedModels: Record<Provider, string[]> = {
   'opencode-go': ['mimo-v2.6-pro', 'deepseek-v4.1-flash'],
 };
 const goAccount = 'https://opencode.ai/auth';
+const goPolicy = 'https://opencode.ai/docs/go/';
+function learningEnabled(connection: Connection): boolean {
+  return connection.provider === 'opencode-go'
+    ? connection.learning_use?.status === 'confirmed' && connection.learning_use.generation_allowed === true
+    : connection.learning_use?.generation_allowed !== false;
+}
 const loginPath = (id: string) => '/connections/codex/login/' + encodeURIComponent(id);
 const loginActive = (login?: Login) => login?.status === 'pending' || login?.status === 'exchanging';
 
@@ -193,7 +199,9 @@ export function ConnectionsPage() {
       const result = await api<Connections>('/connections/opencode-go', { method: 'POST', body: { api_key: entered, select: false }, signal });
       if (signal.aborted) return;
       const connection = result.connections.find(item => item.provider === 'opencode-go');
-      setNotice(connection?.status === 'connected'
+      setNotice(connection && !learningEnabled(connection)
+        ? { text: 'OpenCode Go key saved and catalogue checked. Learning requests remain paused until educational use is confirmed. No learning prompt was sent.', tone: 'warning' }
+        : connection?.status === 'connected'
         ? { text: 'OpenCode Go access saved. Explicitly select it when you want to use this subscription.' }
         : { text: 'OpenCode Go access saved, but this account lists none of the approved models. Check models or disconnect this account.', tone: 'warning' });
     });
@@ -282,12 +290,14 @@ export function ConnectionsPage() {
         <section className="connection-list" aria-label="Learning subscriptions">
           {resource.data.connections.connections.map(connection => {
             const models = modelRows(connection);
-            const ready = connection.status === 'connected' && models.some(model => model.availability === 'available');
+            const learningAllowed = learningEnabled(connection);
+            const ready = learningAllowed && connection.status === 'connected' && models.some(model => model.availability === 'available');
             const saved = !['disconnected', 'connection_required'].includes(connection.status);
             return <section className="connection-row" key={connection.provider} aria-label={names[connection.provider] + ' subscription'}>
               <div className="connection-heading"><h2>{names[connection.provider]}</h2><Badge tone={connection.status === 'connected' ? 'default' : saved ? 'warning' : 'neutral'}>{statusLabel(connection.status)}</Badge>{resource.data.connections.selected_provider === connection.provider && <Badge><Check size={14} />Selected</Badge>}</div>
-              <p>{connection.provider === 'codex' ? 'Connect your own account through Continue with ChatGPT.' : 'Enter a key from your OpenCode Go subscription account.'}</p>
-              {connection.provider === 'opencode-go' && <p><a href={goAccount} target="_blank" rel="noopener noreferrer" aria-disabled={!!busy || signingIn || undefined} tabIndex={busy || signingIn ? -1 : undefined} className={busy || signingIn ? 'muted' : undefined} onClick={openGoAccount}>Open OpenCode Go account to get your subscription key</a></p>}
+              <p>{connection.provider === 'codex' ? 'Connect your own account through Continue with ChatGPT.' : 'A Go key can check account model listings. It does not enable learning requests.'}</p>
+              {!learningAllowed && <Notice tone="warning"><p><strong>Learning requests paused.</strong> OpenCode Go documents coding-agent use. Renulus educational use has not been confirmed.</p><p>Checking a key or listed model does not grant eligibility. <a href={goPolicy} target="_blank" rel="noopener noreferrer">Read the Go usage policy</a>.</p></Notice>}
+              {connection.provider === 'opencode-go' && <p><a href={goAccount} target="_blank" rel="noopener noreferrer" aria-disabled={!!busy || signingIn || undefined} tabIndex={busy || signingIn ? -1 : undefined} className={busy || signingIn ? 'muted' : undefined} onClick={openGoAccount}>Open OpenCode Go account</a></p>}
               {connection.status === 'configured' && <p>Your account is saved in this Renulus profile. Check models to confirm its current availability.</p>}
               {connection.status === 'no_allowed_models' && <p>This account lists none of the approved models. Check models again or disconnect. Renulus will not substitute a different model or subscription.</p>}
               <ul className="connection-models" aria-label={names[connection.provider] + ' model availability'}>{models.map(model => <li key={model.id}>
@@ -296,7 +306,7 @@ export function ConnectionsPage() {
               </li>)}</ul>
               {connection.provider === 'opencode-go' && connection.status !== 'connected' && <form className="connection-key" onSubmit={connectGo}>
                 <Input label="OpenCode Go key" type="password" value={key} onChange={event => setKey(event.target.value)} autoComplete="off" spellCheck={false} disabled={!!busy || signingIn} maxLength={8192} hint="Stored by Renulus in its protected app profile. Never imported from another application." />
-                <div><Button type="submit" busy={busy?.kind === 'go'} disabled={!key.trim() || !!busy || signingIn}>Connect OpenCode Go<ArrowRight size={16} /></Button></div>
+                <div><Button type="submit" busy={busy?.kind === 'go'} disabled={!key.trim() || !!busy || signingIn}>Check and save Go key<ArrowRight size={16} /></Button></div>
               </form>}
               <div className="actions">
                 {connection.provider === 'codex' && connection.status !== 'connected' && <Button onClick={connectCodex} disabled={!!busy || signingIn} busy={busy?.kind === 'start-login'}>Continue with ChatGPT<ArrowRight size={16} /></Button>}
@@ -307,7 +317,11 @@ export function ConnectionsPage() {
           })}
         </section>
         <aside className="section" style={{ alignSelf: 'start' }}><section className="section"><h2>Your learning connection</h2>
-          <p>{resource.data.connections.selected_provider ? names[resource.data.connections.selected_provider] + ' is selected. Its account and model availability are shown here.' : 'No subscription selected. Connect an account, check its models, then choose Use Codex or Use OpenCode Go.'}</p>
+          <p>{resource.data.connections.selected_provider
+            ? names[resource.data.connections.selected_provider] + (resource.data.connections.connections.some(item => item.provider === resource.data.connections.selected_provider && !learningEnabled(item))
+              ? ' remains selected, but learning requests are paused pending educational eligibility confirmation.'
+              : ' is selected. Its account and model availability are shown here.')
+            : 'No subscription selected. Connect an eligible account, check its models, then explicitly select it.'}</p>
           <p>Only the five approved models are used. Model listing does not verify a successful request. Input capability reflects observed requests; image interpretation quality remains unverified.</p>
         </section><Notice><p>Reviewed tests and your saved study material are available without a model connection.</p></Notice><p className="muted">Renulus {resource.data.health.version} · Connecting and checking models do not send a learning prompt.</p></aside>
       </div>}

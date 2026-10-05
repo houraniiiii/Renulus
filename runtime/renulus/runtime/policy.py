@@ -15,6 +15,30 @@ BASE_URLS = {
     "codex": "https://api.openai.com/v1",
     "opencode-go": "https://opencode.ai/zen/go/v1",
 }
+# Release decision: Go documents coding-agent traffic, not confirmed learning use.
+# No environment, request, credential or model choice can grant this eligibility.
+GO_LEARNING_ELIGIBILITY = "unresolved"
+GO_POLICY_URL = "https://opencode.ai/docs/go/"
+
+
+def learning_usage(provider: str) -> dict:
+    status = GO_LEARNING_ELIGIBILITY if provider == "opencode-go" else "app_approved"
+    allowed = status in {"confirmed", "app_approved"}
+    return {"status": status, "generation_allowed": allowed,
+            "code": None if allowed else "learning_use_unverified",
+            "message": None if allowed else (
+                "OpenCode Go learning use is not confirmed. Renulus has paused learning requests. "
+                "Checking your key or models does not enable this route."),
+            "source_url": GO_POLICY_URL if provider == "opencode-go" else None,
+            "reviewed_at": "2026-10-05" if provider == "opencode-go" else None}
+
+
+def require_learning_route(provider: str) -> None:
+    usage = learning_usage(provider)
+    if not usage["generation_allowed"]:
+        raise ApiError(usage["code"], usage["message"], 403, False)
+
+
 INSTRUCTIONS = (
     "You are Renulus, an English-language nephrology learning assistant. "
     "Explain educational reasoning clearly. Distinguish retrieved evidence from "

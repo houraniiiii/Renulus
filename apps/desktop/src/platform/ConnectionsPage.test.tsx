@@ -7,7 +7,7 @@ type Provider = 'codex' | 'opencode-go';
 type Availability = 'unknown' | 'available' | 'unavailable' | 'account_unsupported';
 type Capability = 'unknown' | 'supported' | 'account_unsupported';
 interface Model { id: string; availability: Availability; text_input: Capability; image_input: Capability }
-interface Connection { provider: Provider; status: string; allowed_models: string[]; models: Model[] }
+interface Connection { provider: Provider; status: string; allowed_models: string[]; models: Model[]; learning_use?: { status: string; generation_allowed: boolean } }
 interface Connections { selected_provider: Provider | null; connections: Connection[] }
 const approved = { codex: ['gpt-6.1-sol', 'gpt-6-astra', 'gpt-6-luna'], 'opencode-go': ['mimo-v2.6-pro', 'deepseek-v4.1-flash'] };
 const authorization = 'https://auth.openai.com/api/accounts/authorize?state=SYNTHETIC';
@@ -160,46 +160,77 @@ describe('subscription status and explicit model selection', () => {
 });
 
 describe('explicit OpenCode Go access', () => {
+  it.each([
+    undefined,
+    { status: 'unresolved', generation_allowed: false },
+    { status: 'unsupported', generation_allowed: false },
+    { status: 'confirmed', generation_allowed: false },
+  ])('keeps account availability separate from learning eligibility: %j', async learning_use => {
+    setConnection('opencode-go', 'connected'); current.selected_provider = 'opencode-go';
+    current.connections[1].learning_use = learning_use;
+    await mount();
+    const section = subscription('opencode-go');
+    expect(section.getByText('Account connected')).toBeTruthy();
+    expect(section.getByText('Selected')).toBeTruthy();
+    expect(section.getByText('Learning requests paused.')).toBeTruthy();
+    expect(screen.getByText(/remains selected, but learning requests are paused/)).toBeTruthy();
+    expect(section.queryByRole('button', { name: 'Use OpenCode Go' })).toBeNull();
+    expect(section.getByRole('button', { name: 'Check models' })).toBeTruthy();
+    expect(section.getByRole('button', { name: 'Disconnect' })).toBeTruthy();
+    expect(section.getByRole('link', { name: 'Read the Go usage policy' }).getAttribute('href')).toBe('https://opencode.ai/docs/go/');
+    expect(calls('/api/v1/connections/select', 'POST')).toHaveLength(0);
+    expect(openSource).not.toHaveBeenCalled();
+  });
+  it('requires explicit selection even with hypothetical confirmed learning eligibility', async () => {
+    setConnection('opencode-go', 'connected');
+    current.connections[1].learning_use = { status: 'confirmed', generation_allowed: true };
+    await mount();
+    expect(subscription('opencode-go').getByRole('button', { name: 'Use OpenCode Go' })).toBeTruthy();
+    expect(subscription('opencode-go').queryByText('Learning requests paused.')).toBeNull();
+    expect(current.selected_provider).toBeNull();
+    expect(calls('/api/v1/connections/select', 'POST')).toHaveLength(0);
+  });
   it('clears the entered key immediately, saves nothing in browser storage, and never auto-selects', async () => {
     const storage = vi.spyOn(Storage.prototype, 'setItem'); const held = deferred<Response>(); go = () => held.promise;
     await mount(); const field = screen.getByLabelText('OpenCode Go key') as HTMLInputElement;
     fireEvent.change(field, { target: { value: '  SYNTHETIC_KEY_ONLY  ' } });
-    fireEvent.click(screen.getByRole('button', { name: /Connect OpenCode Go/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Check and save Go key/ }));
     expect(field.value).toBe('');
     expect(JSON.parse(calls('/api/v1/connections/opencode-go', 'POST')[0][1]!.body as string)).toEqual({ api_key: 'SYNTHETIC_KEY_ONLY', select: false });
     setConnection('opencode-go', 'connected'); await act(async () => { held.resolve(json(current)); });
-    await screen.findByRole('button', { name: 'Use OpenCode Go' });
+    await screen.findByText(/OpenCode Go key saved and catalogue checked/);
+    expect(subscription('opencode-go').queryByRole('button', { name: 'Use OpenCode Go' })).toBeNull();
     expect(storage).not.toHaveBeenCalled(); expect(current.selected_provider).toBeNull();
   });
   it('requires fresh key entry after failure, with no retry closure or subscription fallback', async () => {
     setConnection('codex', 'connected'); current.selected_provider = 'codex'; go = () => failure('authentication_required', 'The synthetic subscription key was rejected.', 401);
     await mount(); const field = screen.getByLabelText('OpenCode Go key') as HTMLInputElement;
-    fireEvent.change(field, { target: { value: 'SYNTHETIC_REJECTED_KEY' } }); fireEvent.click(screen.getByRole('button', { name: /Connect OpenCode Go/ }));
+    fireEvent.change(field, { target: { value: 'SYNTHETIC_REJECTED_KEY' } }); fireEvent.click(screen.getByRole('button', { name: /Check and save Go key/ }));
     await screen.findByText('The synthetic subscription key was rejected.');
     expect(screen.getByText(/The previous entry has been cleared/)).toBeTruthy(); expect(field.value).toBe('');
     expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
-    expect((screen.getByRole('button', { name: /Connect OpenCode Go/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: /Check and save Go key/ }) as HTMLButtonElement).disabled).toBe(true);
     expect(calls('/api/v1/connections/opencode-go', 'POST')).toHaveLength(1); expect(current.selected_provider).toBe('codex');
   });
   it('reports a saved key with no approved catalogue as unavailable for learning', async () => {
     go = () => { setConnection('opencode-go', 'no_allowed_models'); return json(current); };
     await mount(); fireEvent.change(screen.getByLabelText('OpenCode Go key'), { target: { value: 'SYNTHETIC_EMPTY_CATALOGUE' } });
-    fireEvent.click(screen.getByRole('button', { name: /Connect OpenCode Go/ }));
-    await screen.findByText(/OpenCode Go access saved, but this account lists none/);
+    fireEvent.click(screen.getByRole('button', { name: /Check and save Go key/ }));
+    await screen.findByText(/OpenCode Go key saved and catalogue checked/);
     expect(await subscription('opencode-go').findByText('No approved models')).toBeTruthy();
     expect(subscription('opencode-go').queryByRole('button', { name: 'Use OpenCode Go' })).toBeNull();
     expect(subscription('opencode-go').getByRole('button', { name: 'Disconnect' })).toBeTruthy();
   });
   it('opens the official account page only on an explicit click through the source bridge', async () => {
     await mount(); expect(openSource).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('link', { name: /get your subscription key/ }));
+    fireEvent.click(screen.getByRole('link', { name: /Open OpenCode Go account/ }));
     await waitFor(() => expect(openSource).toHaveBeenCalledWith('https://opencode.ai/auth'));
     expect(request.mock.calls).toHaveLength(2);
   });
   it('does not let the Go account link interrupt an in-flight Codex login start', async () => {
     const held = deferred<Response>(); start = () => held.promise; await mount();
     fireEvent.click(screen.getByRole('button', { name: /Continue with ChatGPT/ }));
-    const account = screen.getByRole('link', { name: /get your subscription key/ });
+    const account = screen.getByRole('link', { name: /Open OpenCode Go account/ });
     expect(account.getAttribute('aria-disabled')).toBe('true'); fireEvent.click(account);
     expect(openSource).not.toHaveBeenCalled();
     expect(calls('/api/v1/connections/codex/login', 'POST')[0][1]!.signal!.aborted).toBe(false);
