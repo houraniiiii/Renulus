@@ -294,6 +294,9 @@ def apply_records(conn, bundle):
             if existing and name == "knowledge_revisions" and any(
                     existing[key] != row[key] for key in ("document_id", "sha256", "bytes", "media_type")):
                 raise ApiError("backup_original_conflict", "A document revision differs from this profile; no records were restored", 409)
+            if existing and name in ('case_attachments', 'case_attachment_parts') and any(
+                    existing[key] != value for key, value in row.items()):
+                raise ApiError('backup_case_original_conflict', 'A saved case original differs from this profile; no records were restored', 409)
             if existing:
                 continue
             names = list(row)

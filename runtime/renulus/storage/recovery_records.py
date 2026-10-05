@@ -251,6 +251,8 @@ def apply_staged(conn, stage, definitions, limits, exported_at):
             conflicts = [column for column in table.columns if column != "installed_at"]
         if name == "knowledge_revisions":
             conflicts, code = ["document_id", "sha256", "bytes", "media_type"], "backup_original_conflict"
+        if name in ('case_attachments', 'case_attachment_parts'):
+            conflicts, code = list(table.columns), 'backup_case_original_conflict'
         if conflicts:
             changed = " OR ".join(f'target.{quoted(column)} IS NOT source.{quoted(column)}' for column in conflicts)
             if conn.execute(f'SELECT 1 FROM recovery_incoming.{quoted(name)} AS source JOIN main.{quoted(name)} AS target ON {match} '
