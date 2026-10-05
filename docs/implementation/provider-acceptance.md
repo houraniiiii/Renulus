@@ -45,12 +45,17 @@ distinguishes auth, plan budget, unavailable models and transient service errors
 includes direct `error` and nested `response.failed` errors.
 
 Official [OpenCode Go documentation](https://opencode.ai/docs/go/) lists both
-selected models and compatible chat-completions routes. It also limits typical
-usage to coding with compatible coding agents, identifies non-coding use as a
-policy issue, and specifies request headers. **Renulus learning-use eligibility
-is unresolved.** No OpenCode client/version identity was fabricated and no
-alternative provider/model was introduced. Transport/schema tests do not prove
-Go subscription acceptance for this product. This finding was relayed to parent
+selected models and compatible chat-completions routes. The final fresh page
+describes coding-agent traffic and asks for an app-specific User-Agent plus a
+stable `x-opencode-session` header per conversation; it does not explicitly ban
+non-coding use. It identifies newer Hermes builds containing a session-header
+fix as validated clients. **Renulus learning-use eligibility is unresolved.**
+The controlled Renulus Go adapter still needs its own identity/session-header
+integration after that eligibility review; the upstream validation cannot be
+claimed for this adapter. No client identity was fabricated and no alternative
+provider/model was introduced. Transport/schema tests do not prove Go
+subscription acceptance for this product. The earlier coding-policy summary
+was relayed to parent and this narrower final reading corrects it:
 [#1](https://github.com/houraniiiii/Renulus/issues/1#issuecomment-5985964094).
 
 ## Fixes and offline evidence
@@ -94,7 +99,8 @@ keeps `live_provider_verified=false`; production contains no canned response.
 
 Unproved: real user-owned registration/consent/refresh/revocation, account model
 availability, actual streamed response/cancel for either subscription, live
-image interpretation, plan budget behavior, and Go learning-use eligibility.
+image interpretation, plan budget behavior, and Go learning-use eligibility
+with truthful client/session headers.
 Existing registered legacy host identities need deliberate recovery rather than
 automatic rebinding. Multiple ChatGPT accounts and published plan-gate recovery
 paths have not been fully accepted. **#2/#5 must not be closed as live-provider
