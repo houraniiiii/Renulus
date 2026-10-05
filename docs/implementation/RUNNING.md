@@ -7,23 +7,55 @@ not establish clinical accuracy or live account access.
 
 ## Windows delivery
 
-Windows bundle/installer assembly is in progress. The normal workspace launcher
-is `Start-Renulus.cmd`. It uses the explicitly recorded local executable/profile
-from ignored `.local/delivery.json`, or the prepared contributor Electron build.
-`-CheckOnly` checks the launcher without starting the app. Each learning profile
-owns its SQLite records, library copies, helper cache and derived indexes.
+The matching unsigned Windows installer and fresh installation completed on
+October 5, 2026. On the delivery machine, the owned **Renulus** desktop shortcut
+now targets the integration launcher at
+`E:/Renulus-native-delivery/desktop-20261005/repo/scripts/start-renulus.ps1`.
+The same integration checkout has `Start-Renulus.cmd`. Its ignored
+`.local/delivery.json` identifies the installed executable and prepared local
+learning profile:
 
-The assembled app manages its Python process and CPU helpers. Doctors should not
-need Python, uv, Node, Docker, a GPU or a local model service. The delivered
-bundle's relocation/native evidence must pass before this is claimed as a
-verified installed capability. Third-party acquired originals are local imports;
-they are excluded from the public bundle.
+| Item | Local delivery path |
+| --- | --- |
+| Installed application | `E:/Renulus-native-delivery/desktop-20261005/installed-ebb2db2e/Renulus Development.exe` |
+| Learning profile | `E:/Renulus-native-delivery/desktop-20261005/data/learning` |
+| Installer | `E:/Renulus-native-delivery/desktop-20261005/matching-ebb2db2e/Renulus-Development-0.1.0-windows-x64-setup.exe` |
 
-In Connections, choose Codex or OpenCode Go and authenticate deliberately. Only
-the selected model allowlist is exposed. Account/model availability and image
-capability are reported independently. No paid API fallback is supplied. Test,
-staged teaching cases, the local library and manual study planning remain useful
-without a generative connection.
+The installer is 965,927,137 bytes, SHA-256
+`8cce7d8a887fbf0ed20cae4315df14ea103224f551a550d5a4ae8efc8d023c42`.
+Product source is frozen at `ebb2db2e5080f4d42eaf31c2eb63711797704df0`; later
+test/proof/evidence commits do not change this installed build. `-CheckOnly`
+checks the launcher without starting the app. A checkout without a delivery
+record uses its prepared contributor build. The original shared C checkout and
+its inherited reference launcher remain separate; use the repaired desktop
+shortcut or this E integration launcher for the new learning application.
+
+The installed app manages its Python process and CPU helpers. Two fresh E
+profiles and a same-profile restart passed with Python, uv, Node and npm absent
+from the app's OS-only PATH. Doctors need no developer runtime, GPU, Docker or
+local inference server. A protected opening window appears while the backend
+and managed helpers prepare; actual first-run Flow readiness on this E HDD
+varied from about 61 to 197 seconds, and the provisioned restart took about
+38 seconds. These are observed development-machine timings, not a clean-machine
+benchmark. Closing the app stops its owned backend. The installer is unsigned;
+signing and clean-machine release acceptance remain separate.
+
+The prepared profile has 7,307 verified originals and 11,755 rebuilt passages
+from 481 ready documents. Another 6,826 imports are queued; they are present
+but are not yet searchable. The normal worker resumes the queue. Each profile
+owns its SQLite records, library copies, managed helpers and derived indexes.
+Third-party acquired originals stay local and are excluded from the public
+bundle and Git repository.
+
+In Connections, choose Codex and authenticate deliberately to enable generation.
+The delivered profile starts disconnected with no provider selected. Only the
+approved model allowlist is exposed. Account/model availability and image
+capability are reported independently; the original synthetic image-input check
+is deliberate. OpenCode Go learning requests remain paused while learning-use
+eligibility is unresolved. No alternate provider or paid API fallback is supplied.
+Reviewed Test, staged teaching cases, the local library and manual study planning
+remain useful without a generative connection. Live account/generation and
+clinical image interpretation have not yet been accepted.
 
 ## Contributor startup
 

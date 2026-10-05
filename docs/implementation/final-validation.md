@@ -80,3 +80,48 @@ Live account authorization/catalogue/generation, interpretation quality,
 live automatic learning-point extraction, signing and a clean-machine release
 remain unproved. No host credentials, paid provider calls or patient records
 were used for these checks.
+
+## Later installed delivery checkpoint
+
+This observed checkpoint supersedes the earlier pending installer/lifecycle
+status above, while preserving the failed regression attempt. The actual
+matching NSIS installation passed at approximately **02:47 UTC** (exit 0,
+661.2157 seconds). Retained C checkpoint/public-input files were hash-verified
+unchanged. The installed executable SHA-256 is
+`9d8463a0212b37fea83226468f757a62530f9871ad2980b09b15e96d6d48d446`;
+the ASAR SHA-256 is
+`a609138332032f86fe2111cf29ff1b16177fb1ca9ed12f4c8c70b2cc926d1a7d`.
+The unsigned status was observed.
+
+Installed lifecycle proof passed with exact frozen Electron 44.5.1 and
+relocated embedded CPython 3.14.4, two serial fresh E synthetic profiles, and
+Python/python3/py/uv/Node/npm absent from the child OS-only PATH. All ten backend
+modules and eight navigation entries were present. The unauthenticated API
+returned 401, untrusted authorization URLs were refused, sandbox/context
+isolation and nonpersistent sessions passed, and a compact 640-pixel viewport
+had no horizontal overflow. Managed public helper imports/assets were ready
+without startup model instances or downloads. Subscriptions remained
+disconnected and unselected. The exact owned backend stopped after closing.
+
+Actual protected-window/Flow timings were 8.102/197.491 seconds for the first
+profile, 1.331/60.801 seconds for the second, and 0.849/38.307 seconds for a
+provisioned same-profile restart. Opening cancellation passed with JavaScript
+disabled in the protected window and the observed child gone after close.
+These are actual E HDD/development-machine observations under varying C disk
+pressure and uncontrolled OS caches, not a benchmark or clean-VM proof.
+Report: `E:/Renulus-native-delivery/desktop-20261005/proofs/native-066a6df6/native-evidence.json`.
+Installed PDF/product-backup and the chosen-profile shortcut launch remain
+distinct pending feature gates at this checkpoint.
+
+The reserved E learning profile completed supported recovery/reindex at
+**02:50:47 UTC**, reusing exact checked prior passage vectors through the
+existing developer embedder seam. Normal FastEmbed was restored before a
+separate actual CPU query/API audit passed at approximately **02:54 UTC**.
+The same data and excluded-state checks passed; the preparation cache is not
+bundled. The E integration delivery record is configured, launcher CheckOnly
+passed and the exact owned Renulus desktop shortcut was repaired. A normal
+chosen-profile launch remains its own observation.
+
+A fresh bounded resource-aware backend verification lane is adjudicating the
+disk-exhausted final run without changing product source or retrying rejected
+cleanup. Current free C space does not turn the failed run into a pass.

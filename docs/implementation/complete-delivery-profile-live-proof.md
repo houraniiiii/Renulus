@@ -61,3 +61,34 @@ During final preparation, a manual attempt to release a closed validator copy
 was automatically rejected as blocked by policy. It was not retried. The
 preparer later completed and removed its own temporary workspace normally; the
 successful result above is independent of that rejected action.
+
+## Reserved E delivery profile
+
+The final local delivery profile is
+`E:/Renulus-native-delivery/desktop-20261005/data/learning`. Its supported
+preview/restore/rebuild completed at **02:50:47.566 UTC**. A separate API audit
+using actual FastEmbed CPU query embeddings and the rebuilt hybrid index
+passed at approximately **02:54 UTC**. It confirmed the same 7,307 document
+and 7,311 revision counts, all 7,307 size/hash/path-verified originals,
+11,755 passages, 481 ready documents and 6,826 queued imports. The older C
+profiles remain preserved.
+
+The one-off developer preparation reused the previous verified generation
+of 11,755 FastEmbed passage vectors through the existing embedder seam. Each
+passage/revision/document identity, canonical context text, finite 384-component
+vector and duplicate-text consistency was checked. Source and target helper
+fingerprints matched
+`25b40d98b74669a55bb1cc39fb0c53564deede37b1e221b24683dfd8f48455ba`.
+Canonical SQLite records were restored through the supported interface; the
+database was not copied. The normal real FastEmbed embedder was restored
+before the independent audit and is used by normal app launches. This
+preparation cache/tool is not bundled into the product.
+
+The E audit again returned four located passages each for CKD, dialysis and
+transplantation, with the source/page counts above. Current-only retrieval
+excluded unreviewed sources. Excluded learner/history/configuration tables
+were empty, no credentials file existed, subscriptions were disconnected and
+unselected, and automatic source checking was off. Ignored reports are
+`E:/Renulus-native-delivery/desktop-20261005/data/e-profile-preparation.json`
+and `data/e-profile-verification.json`; private passage bodies remain local.
+The normal installed launch of this chosen profile is a separate observation.
