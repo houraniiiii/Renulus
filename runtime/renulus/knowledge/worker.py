@@ -1,6 +1,8 @@
 """One bounded local CPU worker over the existing canonical SQLite queue."""
 from threading import Event, Thread
 
+from .priority_queue import LibraryPriorityQueue
+
 
 class IngestionWorker:
     def __init__(self, repository):
@@ -10,6 +12,7 @@ class IngestionWorker:
         self._thread = None
         self.active_job = None
         self.error_code = None
+        self._queue = LibraryPriorityQueue(repository)
 
     def start(self):
         if self._thread and self._thread.is_alive():
@@ -22,6 +25,17 @@ class IngestionWorker:
 
     def wake(self):
         self._wake.set()
+
+    def prioritize(self, job_id):
+        self._queue.mark(job_id)
+        self.wake()
+
+    def import_interactive(self, operation):
+        with self._queue.admission():
+            result = operation()
+            if result["status"] == "queued":
+                self.prioritize(result["job"]["id"])
+            return result
 
     def stop(self, timeout=5):
         self._stop.set()
@@ -39,7 +53,7 @@ class IngestionWorker:
     def _run(self):
         while not self._stop.is_set():
             try:
-                job = self.repository.next_queued_job()
+                job = self._queue.next_job()
                 if job:
                     self.active_job = job["id"]
                     self.repository.run_job(job["id"])

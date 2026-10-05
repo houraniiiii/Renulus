@@ -111,10 +111,7 @@ def create_router(services) -> APIRouter:
 
     @router.post("/import/text", status_code=202)
     def import_text(body: TextImport):
-        result = repository.import_text(**body.model_dump(), process=False)
-        if result["status"] == "queued":
-            worker.wake()
-        return result
+        return worker.import_interactive(lambda: repository.import_text(**body.model_dump(), process=False))
 
     @router.post("/import/file", status_code=202)
     async def import_file(request: Request):
@@ -129,7 +126,7 @@ def create_router(services) -> APIRouter:
         scope = repository._import_scope(body.scope)
         suffix = Path(unquote(request.headers.get("x-renulus-filename", ""))).suffix.lower()
         if suffix not in MEDIA:
-            raise ApiError("unsupported_file", "Choose a PDF, image or text file", 415)
+            raise ApiError("unsupported_file", "Choose a PDF, image, text or supported Office file", 415)
         parts, size = [], 0
         async for block in request.stream():
             size += len(block)
@@ -139,11 +136,8 @@ def create_router(services) -> APIRouter:
         data = b"".join(parts)
         if suffix == ".pdf" and not data.lstrip().startswith(b"%PDF-"):
             raise ApiError("malformed_pdf", "The selected file has no PDF signature", 422)
-        result = repository._import(data, suffix, body.title, body.metadata, body.rights,
-            scope, body.idempotency_key, body.document_id, body.reserved, False)
-        if result["status"] == "queued":
-            worker.wake()
-        return result
+        return worker.import_interactive(lambda: repository._import(data, suffix, body.title, body.metadata, body.rights,
+            scope, body.idempotency_key, body.document_id, body.reserved, False))
 
     @router.post("/retrieve")
     def retrieve(body: Retrieve):
