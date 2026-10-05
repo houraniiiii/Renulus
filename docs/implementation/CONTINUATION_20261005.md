@@ -16,6 +16,16 @@ the app and installer. Full packaged inventory/provenance remains pending. Do no
 Package or credit success before the terminal/provenance receipts. Later integration
 commits change reports only, retaining the exact product source freeze.
 
+The installer was emitted at 21:06:33 UTC (1,010,348,169 bytes), with its
+blockmap completed at 21:08:36 UTC. The controller remains in final packaged
+inventory verification; these observations do not establish Package acceptance.
+The builder has exited and the owned verifier has no children. The parent
+therefore released only the two changed PDF/PNG case-consumer identities to
+Hegel under `engine-case-consumers-035ca7bd-20261005`, while that small verifier
+finishes. No compression/native/provider operation is concurrent. The observed
+4,346,016 KiB of free RAM is subject to a 2 GiB prelaunch hold; Install/native
+remain held until this bounded engine slot is released.
+
 The saved-original slice has 112 retained individual backend passes plus one
 accepted exact retry at `37dc5384`, and 45 lane-reported renderer checks plus
 TypeScript. All affected product/test paths match the freeze. Keep the collection
