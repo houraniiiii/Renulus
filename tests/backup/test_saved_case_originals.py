@@ -145,3 +145,32 @@ def test_tampered_case_part_segment_rejects_before_any_target_changes(tmp_path):
         restore_v2(target, forged)
     assert ORIGINAL_SENTINEL not in str(rejected.value)
     assert canonical_state(target) == before
+
+
+@pytest.mark.parametrize("table", ["case_attachments", "case_attachment_parts"])
+def test_resealed_same_id_original_collision_is_atomic(tmp_path, table):
+    app, case, original, raw = saved_source(tmp_path)
+    archived, _ = download(app.state.services)
+    target = create_app(tmp_path / "original-collision-target").state.services
+    restore_v2(target, archived)
+    before = canonical_state(target)
+    def change(manifest, members):
+        segment = next(row for row in manifest["canonical"]["segments"] if row["table"] == table)
+        rows = [json.loads(line) for line in members[segment["path"]].splitlines()]
+        if table == "case_attachments":
+            rows[0]["filename"] = "synthetic-changed-original.pdf"
+        else:
+            rows[0]["data"] = base64.b64encode(b"x" * 49152).decode()
+        changed = b"".join(json.dumps(row, ensure_ascii=False, sort_keys=True,
+                                      separators=(",", ":")).encode() + b"\n" for row in rows)
+        manifest["canonical"]["bytes"] += len(changed) - segment["bytes"]
+        segment["bytes"] = len(changed)
+        segment["sha256"] = hashlib.sha256(changed).hexdigest()
+        members[segment["path"]] = changed
+    forged = repack_v2(archived, change)
+    with pytest.raises(ApiError) as rejected:
+        restore_v2(target, forged)
+    assert rejected.value.code == "backup_case_original_conflict"
+    assert ORIGINAL_SENTINEL not in str(rejected.value)
+    assert canonical_state(target) == before
+    assert target.registry["cases"].original(case["id"], original["id"])[1] == raw
