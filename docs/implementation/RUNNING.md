@@ -7,29 +7,39 @@ not establish clinical accuracy or live account access.
 
 ## Windows delivery
 
-The matching unsigned Windows installer and fresh installation completed on
-October 5, 2026. On the delivery machine, the owned **Renulus** desktop shortcut
-now targets the integration launcher at
-`E:/Renulus-native-delivery/desktop-20261005/repo/scripts/start-renulus.ps1`.
-The same integration checkout has `Start-Renulus.cmd`. Its ignored
-`.local/delivery.json` identifies the installed executable and prepared local
-learning profile:
+The matching unsigned installer and fresh installation for product source
+`035ca7bd07337c65266c17f9b762ca1f97238e11` completed on October 5, 2026.
+The active checkout is on C:. Raw collection files and the normal learning
+profile remain on the second drive. Current matching artifacts are:
 
 | Item | Local delivery path |
 | --- | --- |
-| Installed application | `E:/Renulus-native-delivery/desktop-20261005/installed-3ff9b0d6/Renulus Development.exe` |
+| Installed candidate | `C:/Renulus-native-delivery/desktop-20261005/installed-035ca7bd/Renulus Development.exe` |
 | Learning profile | `E:/Renulus-native-delivery/desktop-20261005/data/learning` |
-| Installer | `E:/Renulus-native-delivery/desktop-20261005/matching-3ff9b0d6/Renulus-Development-0.1.0-windows-x64-setup.exe` |
+| Matching installer | `C:/Renulus-native-delivery/desktop-20261005/matching-035ca7bd/Renulus-Development-0.1.0-windows-x64-setup.exe` |
 
-The installer is 965,928,451 bytes, SHA-256
-`49f82a58b227c3d572747c3b282fdec20c09fe03777e878c9ba8125281460ed2`.
-The installed product uses the exact source freeze
-`3ff9b0d6145c8d52f4c9e9b0a3009f0fc351c4cc`; later test/proof/evidence commits
-do not change this installed build. `-CheckOnly`
-checks the launcher without starting the app. A checkout without a delivery
-record uses its prepared contributor build. The original shared C checkout and
-its inherited reference launcher remain separate; use the repaired desktop
-shortcut or this E integration launcher for the new learning application.
+The installer is 1,010,348,169 bytes, SHA256
+`b4f120e7bd115cca00caf0379d6607e1ae2267d88743490f1b1380c1d8ea29af`.
+Package and extraction-only Install passed with matching source, executable,
+ASAR and bundled-runtime identities. Installed UI, connected journeys and
+maintenance remain under acceptance. The six actual bundled-storage phases
+have passed independently, including interrupted migration recovery and saved
+original retention. See [the continuation](CONTINUATION_20261005.md),
+[lifecycle evidence](finalise-lifecycle.md) and [requirement audit](finalise-audit.md).
+Later documentation commits do not change this manufactured product.
+
+The owned **Renulus** desktop shortcut and `Start-Renulus.cmd` use
+`scripts/start-renulus.ps1`. The ignored `.local/delivery.json` still selects
+the previously accepted `installed-3ff9b0d6` executable and the same E learning
+profile. Promote it only after matching installed acceptance and maintenance;
+an extracted candidate is not a substitute for those journeys. `-CheckOnly`
+checks the selected launcher without opening an app. A checkout without a
+delivery record uses its prepared contributor build.
+
+The observations below concern the earlier accepted E installation at
+`3ff9b0d6`, including its historical queue counts. They do not establish
+acceptance of the current C candidate. Preserve their detailed receipts in
+[historical validation](final-validation.md).
 
 The installed app manages embedded CPython 3.14.4 and CPU helpers. The matching
 fresh NSIS installation exited zero in 432.751 seconds. One isolated installed
@@ -39,7 +49,8 @@ authenticated backend metadata at 166.547 seconds. Closing physically stopped
 the owned application and backend in 8.245 seconds. These are observations on
 this E HDD/development machine, not a clean-machine benchmark. Doctors need no
 developer runtime, GPU, Docker or local inference server. The installer is
-unsigned; signing and clean-machine release acceptance remain separate.
+unsigned. The owner chose current-PC unsigned acceptance on October 5;
+signing and a separate clean PC/VM are optional future distribution checks.
 
 The actual desktop shortcut launched this matching replacement at **04:45:07
 UTC on October 5, 2026**. Visible Today was captured at 04:47:38 UTC, a coarse
@@ -116,8 +127,12 @@ currency metadata, rather than merely a downloadable file.
 Daily cases and attachments stay temporary until explicit Save. A handoff into
 Learn/generated practice retains that scope. Learner Memory records study
 evidence and preferences, with correction, deletion and rebuild controls; case
-facts are excluded. Backup/restore and derived-index recovery are being validated
-as a combined delivery flow, with exact dates and deletion limits presented.
+facts are excluded. Explicitly saved case PDF/image originals have authenticated
+View original controls. Full backups include eligible saved originals;
+records-only exports omit their bytes. Backup/restore and derived-index recovery
+are being validated as a combined installed flow. Review the displayed backup
+date and deletion reconciliation; an older backup alone cannot know about later
+deletions.
 
 Detailed evidence lives beside this file and in the module tickets. Do not infer
 passed live generation, clinical image interpretation, signing or clean-machine
