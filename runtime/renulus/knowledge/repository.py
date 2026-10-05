@@ -119,7 +119,8 @@ class KnowledgeRepository:
                                 for row, vector in zip(batch, vectors, strict=True)]
                         candidate.stage(rows, create_fts=False)
                         identities.update((row["passage_id"], row["revision_id"], row["document_id"]) for row in rows)
-                candidate.build_fts()
+                if identities:
+                    candidate.build_fts()
                 candidate.validate_passages(identities)
                 with self.db.transaction() as conn:
                     conn.execute("INSERT INTO preferences VALUES('knowledge.index_generation',?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at", (json.dumps(generation), utc_now()))
@@ -344,7 +345,7 @@ class KnowledgeRepository:
             with self._lock, self.db.transaction() as conn:
                 if not self._guard(conn, job_id):
                     return
-            if not document["reserved"]:
+            if passages and not document["reserved"]:
                 self.index.build_fts()
             with self._lock, self.db.transaction() as conn:
                 if not self._guard(conn, job_id):
@@ -574,7 +575,8 @@ class KnowledgeRepository:
         sql = ("SELECT " + REVISION_SUMMARY + ",d.title,d.source_id FROM knowledge_revisions r "
                "JOIN knowledge_documents d ON d.active_revision=r.id WHERE d.deleted_at IS NULL "
                "AND d.reserved=0 AND r.status='ready' AND d.scope_kind='personal-library' "
-               "AND (d.scope_entity IS NULL OR d.scope_entity=?)")
+               "AND (d.scope_entity IS NULL OR d.scope_entity=?) "
+               "AND EXISTS (SELECT 1 FROM knowledge_passages p WHERE p.revision_id=r.id)")
         rows = ([dict(row) for row in conn.execute(sql, (scope.entity_id,))]
                 if conn is not None else self.db.fetch_all(sql, (scope.entity_id,)))
         return {r["id"]: r for r in rows if self._eligible(

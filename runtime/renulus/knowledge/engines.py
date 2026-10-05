@@ -131,7 +131,7 @@ class DoclingExtractor:
         self._office_converter = None
         self._conversion_lock = RLock()
 
-    def _chunk(self, document, text_offsets=None, *, office_format=None) -> Extracted:
+    def _chunk(self, document, text_offsets=None, *, office_format=None, allow_empty=False) -> Extracted:
         try:
             from docling_core.transforms.chunker.hybrid_chunker import HybridChunker
             from docling_core.transforms.chunker.tokenizer.base import BaseTokenizer
@@ -214,9 +214,10 @@ class DoclingExtractor:
                     body.texts[position] = TextItem.model_validate(payload)
                     changed = True
             if changed:
-                fallback = self._chunk(body, text_offsets, office_format=office_format)
+                fallback = self._chunk(body, text_offsets, office_format=office_format, allow_empty=allow_empty)
                 return Extracted(fallback.passages, document.export_to_dict())
-            raise ApiError("empty_extraction", "No readable document text was extracted", 422)
+            if not allow_empty:
+                raise ApiError("empty_extraction", "No readable document text was extracted", 422)
         return Extracted(passages, document.export_to_dict())
 
     def extract_text(self, text: str, title: str) -> Extracted:
@@ -346,7 +347,11 @@ class DoclingExtractor:
                 max_file_size=TEMP_MAX_BYTES if temporary else MAX_BYTES, raises_on_error=False)
             if result.status != ConversionStatus.SUCCESS:
                 raise ApiError("extraction_failed", "Docling could not completely extract this document; it may be malformed, encrypted or over the page limit", 422)
-            return self._chunk(result.document)
+            # A successful durable image remains a useful original even without
+            # OCR text. Keep the actual Docling export; other input paths still
+            # require readable passages, including temporary image bytes.
+            return self._chunk(result.document, allow_empty=not temporary and
+                suffix in (".png", ".jpg", ".jpeg", ".tif", ".tiff"))
         except ImportError:
             raise ApiError("helper_package_unavailable", "Docling CPU extraction is not installed", 503, True) from None
         except ApiError:
@@ -383,9 +388,10 @@ class LanceIndex:
         return self._table
 
     def stage(self, rows: list[dict], *, create_fts=True):
+        if not rows:
+            return
         table = self._open()
-        if rows:
-            table.add(rows)
+        table.add(rows)
         if create_fts:
             self.build_fts()
 
