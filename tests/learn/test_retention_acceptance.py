@@ -114,9 +114,15 @@ def test_committed_study_produces_reference_only_idempotent_memory_and_correctio
     assert asyncio.run(memory.process_pending())["processed"] == 1
     facts = api.get("/api/v1/memory/facts").json()["records"]
     assert len(facts) == 1 and facts[0]["text"] == "I explored T21 in Explain."
-    job = services.db.fetch_one("SELECT * FROM memory_jobs")
+    job = services.db.fetch_one("SELECT * FROM memory_jobs WHERE evidence_id LIKE 'learn:%'")
     assert "Compare transplantation" not in str(job)
     assert job["evidence_id"].startswith("learn:")
+    # General-answer capture is also durable, but this fixture deliberately has
+    # no offline helpers. Its retryable job must retain only a reference.
+    answer_job = services.db.fetch_one("SELECT * FROM memory_jobs WHERE evidence_id LIKE 'learn-answer:%'")
+    assert answer_job["state"] == "failed"
+    assert "Compare transplantation" not in str(answer_job)
+    assert "Synthetic ordinary learning explanation" not in str(answer_job)
     replay = events(api.post("/api/v1/learn/ask", json=body, headers={"Idempotency-Key": "retention-study"}))
     assert replay[-1]["payload"]["replayed"]
     assert asyncio.run(memory.process_pending())["processed"] == 0

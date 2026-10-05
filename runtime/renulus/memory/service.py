@@ -215,7 +215,10 @@ class MemoryService:
                     raise
                 except Exception as error:
                     code = error.code if isinstance(error, ApiError) else 'memory_capture_failed'
-                    self.repository.fail(job['id'], code)
+                    if not self.repository.current(job):
+                        self.repository.cancel(job['id'])
+                    else:
+                        self.repository.fail(job['id'], code)
                 finally:
                     with self._capture_state:
                         self._active_runs.discard(job['id'])

@@ -82,11 +82,28 @@ def hermes_backend(services):
         return module.OSSBackend
 
 
+class _CaptureEmbedding:
+    """Use the selected embedder for a single empty transient-index lookup."""
+    empty_query = 'General educational learning points.'
+
+    def __init__(self, delegate):
+        self.delegate, self.config = delegate, delegate.config
+
+    def embed(self, text, memory_action='add'):
+        return self.delegate.embed(
+            self.empty_query if memory_action == 'search' else text, memory_action)
+
+    def embed_batch(self, texts, memory_action='add'):
+        return self.delegate.embed_batch(
+            [self.empty_query for _ in texts] if memory_action == 'search' else texts, memory_action)
+
+
 class Mem0Index:
     collection = 'renulus_learner_facts'
     user_id, agent_id = 'local-learner', 'renulus-learning'
 
     def __init__(self, services, path, embedding, *, transient=False):
+        self.transient, self._capture_used = transient, False
         self.path = Path(path).resolve()
         boundary = (services.paths.indexes / 'learner-memory').resolve()
         if self.path == boundary or not self.path.is_relative_to(boundary):
@@ -122,7 +139,11 @@ class Mem0Index:
             def __init__(backend, memory_config):
                 backend._memory = mem0.Memory(memory_config)
 
-        token = embedding_binding.set(embedding)
+        # Mem0 embeds the full input for an existing-memory lookup before LLM
+        # extraction. A fresh disposable index has no existing memories: use a
+        # bounded query for that lookup, while extraction receives the exact
+        # full answer and each extracted fact uses the selected embedder normally.
+        token = embedding_binding.set(_CaptureEmbedding(embedding) if transient else embedding)
         try:
             self.backend = ProfileBackend(config)
         finally:
@@ -156,6 +177,9 @@ class Mem0Index:
             generation_binding.reset(token)
 
     def extract(self, text, binding):
+        if not self.transient or self._capture_used:
+            raise ApiError('memory_capture_isolation', 'Extraction needs a fresh disposable memory index', 409)
+        self._capture_used = True
         with self.generation(binding):
             response = self.backend.add([{'role': 'user', 'content': text}],
                 user_id=self.user_id, agent_id=self.agent_id, infer=True)

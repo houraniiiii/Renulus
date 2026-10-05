@@ -1,6 +1,7 @@
 import asyncio
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
+import hashlib
 import inspect
 import json
 
@@ -272,8 +273,9 @@ class LearnService:
                         yield event("cancelled")
                         return
                     now = utc_now()
+                    message_id = durable_id("message")
                     conn.execute("INSERT INTO learn_messages VALUES(?,?,?,?,?,?,?)",
-                        (durable_id("message"), run.thread_id, run.id, "assistant", answer,
+                        (message_id, run.thread_id, run.id, "assistant", answer,
                          json.dumps(citations), now))
                     conn.execute("UPDATE learn_runs SET state='completed',updated_at=? WHERE id=?", (now, run.id))
                     conn.execute("UPDATE learn_threads SET updated_at=? WHERE id=?", (now, run.thread_id))
@@ -281,6 +283,13 @@ class LearnService:
                         (f"learn:{run.id}", "study-interest", topic_id, run.thread_id,
                          json.dumps({"topic_id": topic_id, "activity": "explain",
                              "scope": {"kind": "study", "entity_id": run.thread_id}}), now))
+                    if run.scope.kind == Scope.STUDY and not run.case_handoff_id and not run.context:
+                        conn.execute("INSERT OR IGNORE INTO learning_evidence VALUES(?,?,?,?,?,?)",
+                            (f"learn-answer:{run.id}", "study-answer", topic_id, run.thread_id,
+                             json.dumps({"scope": {"kind": "study", "entity_id": run.thread_id},
+                                 "answer_reference": {"message_id": message_id, "run_id": run.id,
+                                     "sha256": hashlib.sha256(answer.encode("utf-8")).hexdigest(),
+                                     "version": 1}}), now))
                 if memory:
                     try:
                         memory.notify()

@@ -5,6 +5,7 @@ from renulus.contracts import ApiError, ContextScope, Scope, durable_id
 from renulus.storage import utc_now
 
 from .models import ManualFact, clean_text, digest, require_eligible
+from .study_answers import answer_text
 
 
 class MemoryRepository:
@@ -174,8 +175,10 @@ class MemoryRepository:
             'FROM learning_evidence WHERE id=?', (evidence_id,))
         if not metadata:
             raise ApiError('memory_evidence_missing', 'This learning evidence is no longer available', 404)
-        if metadata['kind'] not in ('study-interest', 'assessment-answer', 'learning-point'):
+        if metadata['kind'] not in ('study-interest', 'assessment-answer', 'learning-point', 'study-answer'):
             raise ApiError('memory_evidence_ineligible', 'This evidence type is not eligible for learner memory', 409)
+        if metadata['kind'] == 'study-answer' and (scope.kind != Scope.STUDY or metadata['scope_kind'] != 'study'):
+            raise ApiError('memory_scope_excluded', 'Answer capture requires ordinary Study scope', 409)
         if (not metadata['payload_valid'] or (metadata['scope_kind'] is None and
                 (metadata['kind'] != 'study-interest' or metadata['scope_type'] is not None))):
             raise ApiError('memory_evidence_invalid', 'Learning evidence needs a classified scope', 409)
@@ -224,6 +227,10 @@ class MemoryRepository:
             kind = 'study-interest' if payload['correct'] else 'mistake'
             text = ('Answered correctly' if payload['correct'] else 'Review needed after an incorrect answer')
             text += ' on ' + objective + ' in reviewed assessment (' + payload['score_bucket'] + ').'
+        elif row['kind'] == 'study-answer':
+            if declared is None:
+                raise ApiError('memory_evidence_invalid', 'Study answers need their original classified scope', 409)
+            text, kind, infer = answer_text(self.db, row, payload, scope), 'learning-point', True
         elif row['kind'] == 'learning-point':
             if (declared is None or payload.get('general_learning') is not True or
                     set(payload) - {'scope', 'general_learning', 'text'}):
@@ -268,7 +275,7 @@ class MemoryRepository:
             rows = self.db.fetch_all(
                 "SELECT e.id,e.kind,e.entity_id,json_extract(e.payload_json,'$.scope') AS declared_scope "
                 "FROM learning_evidence e WHERE e.id>? AND json_valid(e.payload_json) "
-                "AND e.kind IN ('study-interest','assessment-answer','learning-point') "
+                "AND e.kind IN ('study-interest','assessment-answer','learning-point','study-answer') "
                 "AND (json_extract(e.payload_json,'$.scope.kind') IN ('study','personal-library','generated-practice','reviewed-assessment') "
                 "OR (e.kind='study-interest' AND json_extract(e.payload_json,'$.scope') IS NULL)) "
                 'AND NOT EXISTS (SELECT 1 FROM memory_jobs j WHERE j.evidence_id=e.id) '
