@@ -17,17 +17,19 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 const frame = (sequence: number, type: string, payload: unknown) => 'event: ' + type + '\ndata: ' + JSON.stringify({
   id: 'image_event_' + sequence, run_id: 'image_run_ui', sequence, type, payload }) + '\n\n';
 
-function fixture({ supported = true, pause = false, reject = false } = {}) {
+function fixture({ supported = true, pause = false, reject = false, originalsSupported = true, keepReject = false } = {}) {
   let current = caseItem;
   let readerCancelled = false;
   const fetch = vi.fn((path: string, options: RequestInit) => {
     if (path.endsWith('/capabilities')) return Promise.resolve(json({
       inputs: { text: { supported: true }, pdf: { supported: false }, image: { supported: false } },
       extraction: { supported: false, max_bytes: 10 * 1024 * 1024, formats: [], scope: 'temporary-case' },
-      image_interpretation: { supported, models: supported ? [MODEL] : [], provider: 'codex',
+      originals: { supported: originalsSupported, max_bytes: 8 * 1024 * 1024, image_pixels: 16000000,
+        formats: ['.png', '.jpg', '.jpeg'], scope: 'temporary-case' },
+      image_interpretation: { supported, models: supported ? [MODEL] : [], provider: supported ? 'codex' : null,
         interpretation_verified: false, max_bytes: 8 * 1024 * 1024, image_pixels: 16000000,
         reason: supported ? null : 'The selected account has no verified image-input model. Check Connections.' },
-      discussion: { adapter_installed: true, scope: 'temporary-case' }, teaching: { content_installed: false },
+      discussion: { adapter_installed: supported, scope: 'temporary-case' }, teaching: { content_installed: false },
       handoffs: {}, memory_capture: false }));
     if (path.endsWith('/saved') || path.endsWith('/teaching')) return Promise.resolve(json({ cases: [] }));
     if (path.endsWith('/sessions') && options.method === 'POST') return Promise.resolve(json(caseItem));
@@ -37,12 +39,16 @@ function fixture({ supported = true, pause = false, reject = false } = {}) {
       return Promise.resolve(json(current));
     }
     if (path.endsWith('/keep')) {
+      if (keepReject) return Promise.resolve(json({ error: { code: 'case_attachment_limit',
+        message: 'A case can keep up to 16 originals totalling 32 MiB. Remove an attachment before adding another.', retryable: false } }, 413));
       current = { ...caseItem, revision: 2, attachments: [{ id: 'kept_image', filename: 'synthetic.png', title: 'Temporary image',
         media_type: 'image/png', bytes: 21, sha256: 'a'.repeat(64), saved: false, original_available: true }] };
       return Promise.resolve(json(current));
     }
-    if (path.endsWith('/prepare')) return Promise.resolve(json({ ...preview, image: null, state: 'reading' }));
-    if (path.endsWith('/extract')) return Promise.resolve(json(preview));
+    if (path.endsWith('/prepare') || path.endsWith('/extract')) {
+      const mode = JSON.parse((options.headers as Headers).get('x-renulus-case-options')!).mode as AttachmentPreview['mode'];
+      return Promise.resolve(json(path.endsWith('/prepare') ? { ...preview, mode, image: null, state: 'reading' } : { ...preview, mode }));
+    }
     if (options.method === 'DELETE') return Promise.resolve(json({ state: 'cancelled' }));
     if (path.endsWith('/discuss-image')) {
       if (reject) return Promise.resolve(json({ error: { code: 'image_capabilities_unverified',
@@ -66,12 +72,15 @@ function fixture({ supported = true, pause = false, reject = false } = {}) {
   return { fetch, cancelled: () => readerCancelled };
 }
 
-async function reviewImage() {
+async function startCase() {
   render(<NavigationProvider><CasesPage /></NavigationProvider>);
   fireEvent.change(screen.getByLabelText('What would you like to discuss?'), { target: { value: caseItem.text } });
   await waitFor(() => expect((screen.getByRole('button', { name: 'Start temporary case' }) as HTMLButtonElement).disabled).toBe(false));
   fireEvent.click(screen.getByRole('button', { name: 'Start temporary case' }));
   await waitFor(() => expect(screen.getByLabelText('Use this file for')).toBeTruthy());
+}
+async function reviewImage() {
+  await startCase();
   fireEvent.change(screen.getByLabelText('Use this file for'), { target: { value: 'image' } });
   fireEvent.change(screen.getByLabelText('Image to review before sending'), {
     target: { files: [new File(['synthetic image bytes'], 'synthetic.png', { type: 'image/png' })] } });
@@ -82,6 +91,72 @@ async function reviewImage() {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); window.history.replaceState(null, '', '#'); });
 
 describe('actual Cases renderer image consumer', () => {
+  it('keeps an original image and explicitly saves it with no model or extraction capability', async () => {
+    const { fetch } = fixture({ supported: false });
+    const store = vi.spyOn(Storage.prototype, 'setItem');
+    await startCase();
+    expect((screen.getByRole('option', { name: 'Keep original image' }) as HTMLOptionElement).disabled).toBe(false);
+    expect((screen.getByRole('option', { name: 'Image discussion with selected subscription' }) as HTMLOptionElement).disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText('Use this file for'), { target: { value: 'original' } });
+    fireEvent.change(screen.getByLabelText('Image to keep in case'), {
+      target: { files: [new File(['synthetic image bytes'], 'synthetic.png', { type: 'image/png' })] } });
+    await screen.findByAltText('Selected image original');
+    expect(screen.queryByLabelText('Selected account image model')).toBeNull();
+    expect(screen.queryByLabelText('Question about this image')).toBeNull();
+    expect(screen.queryByLabelText('Review extracted text')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Send image for discussion' })).toBeNull();
+    const upload = fetch.mock.calls.find(([path]) => path.endsWith('/extract'))!;
+    expect(JSON.parse((upload[1].headers as Headers).get('x-renulus-case-options')!)).toEqual({
+      revision: 1, scope: caseItem.scope, title: 'Temporary image', mode: 'original',
+    });
+    expect(upload[1].body).toBeInstanceOf(Blob);
+    expect(fetch.mock.calls.some(([path]) => path.endsWith('/keep') || path.endsWith('/save'))).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Keep image in case' }));
+    await screen.findByRole('region', { name: 'Case originals' });
+    expect(JSON.parse(fetch.mock.calls.find(([path]) => path.endsWith('/keep'))![1].body as string)).toEqual({ revision: 1 });
+    expect(fetch.mock.calls.some(([path]) => path.endsWith('/save'))).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Save case' }));
+    await screen.findByRole('button', { name: 'Saved' });
+    expect(fetch.mock.calls.filter(([path]) => path.endsWith('/save'))).toHaveLength(1);
+    expect(fetch.mock.calls.some(([path]) => path.endsWith('/apply') || path.endsWith('/discuss-image') || path.endsWith('/discuss') || path.endsWith('/original'))).toBe(false);
+    expect(store).not.toHaveBeenCalled();
+  });
+
+  it('uses the original-image eight-MiB limit before preparing any upload', async () => {
+    const { fetch } = fixture({ supported: false });
+    await startCase();
+    fireEvent.change(screen.getByLabelText('Use this file for'), { target: { value: 'original' } });
+    const file = new File(['synthetic'], 'synthetic.png', { type: 'image/png' });
+    Object.defineProperty(file, 'size', { value: 8 * 1024 * 1024 + 1 });
+    fireEvent.change(screen.getByLabelText('Image to keep in case'), { target: { files: [file] } });
+    await screen.findByText('Choose a PNG or JPEG image up to 8 MiB and 16 MP.');
+    expect(fetch.mock.calls.some(([path]) => path.endsWith('/prepare') || path.endsWith('/extract'))).toBe(false);
+  });
+
+  it('keeps a rejected original review visible without replaying Keep or saving', async () => {
+    const { fetch } = fixture({ supported: false, keepReject: true });
+    await startCase();
+    fireEvent.change(screen.getByLabelText('Use this file for'), { target: { value: 'original' } });
+    fireEvent.change(screen.getByLabelText('Image to keep in case'), {
+      target: { files: [new File(['synthetic image bytes'], 'synthetic.png', { type: 'image/png' })] } });
+    await screen.findByAltText('Selected image original');
+    fireEvent.click(screen.getByRole('button', { name: 'Keep image in case' }));
+    await screen.findByText('A case can keep up to 16 originals totalling 32 MiB. Remove an attachment before adding another.');
+    expect(screen.getByAltText('Selected image original')).toBeTruthy();
+    expect(fetch.mock.calls.filter(([path]) => path.endsWith('/keep'))).toHaveLength(1);
+    expect(fetch.mock.calls.some(([path]) => path.endsWith('/save') || path.endsWith('/discuss-image'))).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Discard image' }));
+    await waitFor(() => expect(screen.queryByAltText('Selected image original')).toBeNull());
+    expect(fetch.mock.calls.some(([path, options]) => path.endsWith('/image_preview') && options.method === 'DELETE')).toBe(true);
+  });
+
+  it('does not offer original retention when its own capability is unavailable', async () => {
+    const { fetch } = fixture({ originalsSupported: false });
+    await startCase();
+    expect((screen.getByRole('option', { name: 'Keep original image' }) as HTMLOptionElement).disabled).toBe(true);
+    expect(fetch.mock.calls.some(([path]) => path.endsWith('/prepare'))).toBe(false);
+  });
+
   it('reviews without inference, sends only explicitly with the selected model and explains explicit Save', async () => {
     const { fetch } = fixture();
     const store = vi.spyOn(Storage.prototype, 'setItem');

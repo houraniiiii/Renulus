@@ -47,11 +47,12 @@ export interface CaseCapabilities {
   handoffs: Record<'explain' | 'generated-practice', string>; memory_capture: boolean;
   extraction?: { supported: boolean; max_bytes: number; max_text_characters?: number; max_pages?: number; image_pixels?: number;
     formats: string[]; scope: 'temporary-case'; code?: string | null; reason?: string | null };
+  originals?: { supported: boolean; max_bytes: number; image_pixels: number; formats: string[]; scope: 'temporary-case' };
   image_interpretation?: { supported: boolean; code: string | null; reason: string | null; models?: string[];
     provider?: string | null; interpretation_verified?: boolean; max_bytes?: number; image_pixels?: number };
 }
 export interface AttachmentPreview {
-  mode?: 'text' | 'image'; image?: { media_type: string; data: string } | null; image_retained?: false;
+  mode?: 'text' | 'image' | 'original'; image?: { media_type: string; data: string } | null; image_retained?: false;
   id: string; case_id: string; revision: number; scope: ContextScope;
   state: 'reading' | 'processing' | 'ready' | 'failed' | 'cancelled' | 'applied';
   filename: string; title: string; text: string;
