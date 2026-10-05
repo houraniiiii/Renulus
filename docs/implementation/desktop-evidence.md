@@ -787,3 +787,20 @@ remains the explicit freeze; proof-only 4b42bf75 and evidence-only 09489f53
 were separately integrated by the parent. The parent owns delivery.json,
 shortcut wiring and the normal launch of its separately audited private E
 learning profile. This lane did not access either private learning profile.
+
+Normal-shortcut follow-up on 2026-10-05: the parent reported that its external
+scripts/start-renulus.ps1 wrapper launched the interactive packaged executable
+with Start-Process WindowStyle Hidden at 03:03:55 UTC. Parent-owned PID 3936
+created window handle 51708302, but EnumWindows reported Visible:false and
+GetProcessMainWindow returned zero. This is a concrete failure of the normal
+shortcut entry path; the earlier direct Electron native proofs remain separate.
+The serial-proof release notification did not establish shortcut acceptance.
+
+The parent changed that external wrapper's packaged-app launch arguments to
+WindowStyle Normal; a read-only check of its E delivery repository confirmed
+the Normal argument. Parent owns graceful closure of the exact hidden instance,
+actual shortcut relaunch and visible-window acceptance. These actions and their
+wrapper commit are separate from the installed application and bundled main
+assets. Product revision ebb2db2e5080f4d42eaf31c2eb63711797704df0 and the
+recorded installer/executable/ASAR hashes remain unchanged. Normal-shortcut
+acceptance is pending that relaunch evidence; no native proof was rerun.
