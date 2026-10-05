@@ -671,3 +671,43 @@ child-only E TEMP/TMP. No helper-heavy app launch occurred. The real dialog
 tool accepted E output paths then correctly stopped at an intentionally missing
 owner PID; a sibling-prefix path rejected before owner lookup. This is a guard
 check, not a fresh GUI Save proof. Actual native execution remains pending.
+
+The parent explicitly froze product source at
+ebb2db2e5080f4d42eaf31c2eb63711797704df0. Final staging started on
+2026-10-05 at 01:48 UTC under the authorised E delivery root. It verified the
+preserved 39,219-file public input inventory, copied the payload and pinned Node
+environment to E, and refreshed only the new E backend source. The refreshed
+inventory completed at about 02:17 UTC: 39,236 files / 2,169,524,794 bytes.
+TypeScript, the Vite production build and native compilation passed for that
+exact committed snapshot. Native provenance records identical source/adopted
+backend hashes and Electron 44.5.1; no adoption override was applied.
+
+Proof-only tool commit 4b42bf75a90e1c0660868a060b6173c681b7539a admits the exact
+frozen E snapshot for the paced source Save test and supplies E TEMP/TMP to its
+fixture interpreter, Electron and Windows dialog helper. It does not alter the
+frozen bundled application. Its actual execution passed at about 02:19 UTC in
+proofs/native-save-9a3272e0. native-save-source-evidence.json records unchanged
+committed main/preload/renderer, real DataManagement Download/Cancel buttons,
+PID/executable/control-scoped Windows dialogs and authenticated fixed-route
+transfers. The protected opening window appeared at 1.336 seconds; the Flow
+renderer was ready at 2.628 seconds with deliberately delayed fixture metadata.
+These are fixture handoff observations, not real helper startup measurements.
+
+All four cases passed: completed promotion, cancellation during transfer, a
+deliberate HTTP 409, and actual Save-dialog Cancel. A 131,072-byte sibling partial
+was observed before successful promotion; a 65,536-byte partial was observed
+before transfer cancellation. Existing destinations remained intact until
+successful promotion and after failed/cancelled saves. No owned partial survived.
+The saved 67,109,006-byte synthetic ZIP matched its fixture SHA256
+4fc194db694249da152cfedf8d6f2c376d3a3ae26a10a2c877572e56f9d64c5e. Renderer notices
+were observed directly; no dialog path/result was substituted. The captured
+source-flow-after-dialogs.png was reviewed and shows the actual Connections
+study-data page with its Cancel notice.
+
+This source transfer proof uses declared synthetic metadata/account/recovery
+reads and a ZIP of synthetic bytes. It is not a Renulus recovery archive or
+proof of the packaged managed backend, module readiness, restore or multi-GiB
+behaviour. Final NSIS install, relocated installed lifecycle, physical PDF
+page two and real format-2 producer gates are still pending. All proof profiles
+and scratch remain on E. The separately reserved restricted delivery-data
+directory is excluded from public packaging and was not inspected or copied.
