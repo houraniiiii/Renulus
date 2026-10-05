@@ -7,6 +7,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import tarfile
+from delivery_paths import generated_path
 
 DESKTOP = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser(description=__doc__)
@@ -15,10 +16,16 @@ parser.add_argument("--revision", default="HEAD")
 parser.add_argument("--target", type=Path, required=True)
 parser.add_argument("--include-native", action="store_true",
                     help="Compile the integrated native entry with this lane's packaged backend adoption")
+parser.add_argument("--node-modules", type=Path,
+                    help="An explicit copied build environment in the same owned generated tree")
 args = parser.parse_args()
-source, target = args.source.resolve(), args.target.resolve()
-if not target.is_relative_to(DESKTOP / "test-results") or target.exists():
-    raise ValueError("Use a fresh scratch target within this desktop lane test-results")
+source, target = args.source.resolve(), generated_path(args.target, fresh=True)
+modules = generated_path(args.node_modules) if args.node_modules else DESKTOP / "node_modules"
+if not modules.is_dir():
+    raise ValueError("The selected installed build environment is missing")
+node = shutil.which("node")
+if not node:
+    raise ValueError("Developer build tooling requires Node; the portable app does not")
 revision = subprocess.check_output(["git", "rev-parse", args.revision], cwd=source, text=True).strip()
 target.mkdir(parents=True)
 archive = target / "desktop-source.tar"
@@ -27,6 +34,9 @@ subprocess.run(["git", "archive", "--format=tar", "--output", str(archive), revi
 with tarfile.open(archive) as contents:
     contents.extractall(target, filter="data")
 snapshot = target / "apps/desktop"
+if args.node_modules:
+    subprocess.run([node, "-e", "require('node:fs').symlinkSync(process.argv[1], process.argv[2], 'junction')",
+                    str(modules), str(snapshot / "node_modules")], check=True)
 native_adoption = None
 if args.include_native:
     backend = snapshot / "electron/backend.ts"
@@ -40,12 +50,9 @@ if args.include_native:
                   fromfile="a/apps/desktop/electron/backend.ts",
                   tofile="b/apps/desktop/electron/backend.ts"))
     backend.write_bytes(adopted)
-node = shutil.which("node")
-if not node:
-    raise ValueError("Developer build tooling requires Node; the portable app does not")
-subprocess.run([node, str(DESKTOP / "node_modules/typescript/bin/tsc"), "--noEmit"],
+subprocess.run([node, str(modules / "typescript/bin/tsc"), "--noEmit"],
                cwd=snapshot, check=True)
-subprocess.run([node, str(DESKTOP / "node_modules/vite/bin/vite.js"), "build"],
+subprocess.run([node, str(modules / "vite/bin/vite.js"), "build"],
                cwd=snapshot, check=True)
 manifest = {"version": 1, "source_revision": revision,
             "kind": "committed-integrated-renderer", "typecheck": "passed",
@@ -53,7 +60,7 @@ manifest = {"version": 1, "source_revision": revision,
 (snapshot / "dist/renderer-provenance.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 if args.include_native:
     source_pin = json.loads((snapshot / "package.json").read_text())["devDependencies"]["electron"]
-    installed_pin = json.loads((DESKTOP / "node_modules/electron/package.json").read_text())["version"]
+    installed_pin = json.loads((modules / "electron/package.json").read_text())["version"]
     if source_pin != installed_pin:
         raise ValueError("The integrated native Electron pin differs from this lane's installed artifact")
     subprocess.run([node, str(snapshot / "scripts/build-electron.mjs")], cwd=snapshot, check=True)

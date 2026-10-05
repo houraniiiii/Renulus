@@ -13,6 +13,7 @@ import sys
 import tarfile
 import tempfile
 import zipfile
+from delivery_paths import generated_path
 
 DESKTOP = Path(__file__).resolve().parents[1]
 PYTHON_VERSION = "3.14.4"
@@ -55,9 +56,7 @@ def helper_contract(contract: Path, acquired: Path) -> dict:
 
 def refresh_snapshot(repo: Path, before: str, after: str, payload: Path) -> None:
     """Refresh only generated public source when the selected wheel lock is unchanged."""
-    payload = payload.resolve()
-    if not payload.is_relative_to(DESKTOP / "test-results"):
-        raise ValueError("A source refresh must stay inside this lane's generated test-results")
+    payload = generated_path(payload)
     changes = subprocess.check_output(["git", "diff", "--name-only", before, after,
                                       "--", "uv.lock", "pyproject.toml"], cwd=repo, text=True)
     if changes.strip():
@@ -154,10 +153,9 @@ def main():
     args = parser.parse_args()
     if bool(args.runtime_patch_repo) != bool(args.runtime_patch_revision):
         raise ValueError("A runtime patch requires its explicit source repository and revision")
-    source, environment, helpers, archive, target = (value.resolve() for value in
-        (args.source, args.environment, args.helpers, args.python_archive, args.target))
-    if not target.is_relative_to(DESKTOP / "test-results") or (target.exists() and not args.refresh_source_only):
-        raise ValueError("Use a fresh target under this desktop lane test-results directory")
+    source, environment, helpers, archive = (value.resolve() for value in
+        (args.source, args.environment, args.helpers, args.python_archive))
+    target = generated_path(args.target, fresh=not args.refresh_source_only)
     if any(target == item or target.is_relative_to(item) or item.is_relative_to(target)
            for item in (source, environment, helpers)):
         raise ValueError("Payload sources and destination must be independent")

@@ -36,7 +36,7 @@ if (-not (Test-Path -LiteralPath $installerPath -PathType Leaf)) { throw 'The co
 if (Test-Path -LiteralPath $targetPath) { throw 'Refusing an existing install directory; preserve previous output and use a fresh target.' }
 if ($SourceRevision -notmatch '^[0-9a-f]{40}$') { throw 'An exact committed source revision is required.' }
 $developerNode = (Get-Command node.exe -ErrorAction Stop).Source
-$evidence = Join-Path $desktopRoot ('test-results/installer-' + [Guid]::NewGuid().ToString('N').Substring(0, 8))
+$evidence = Assert-OwnedReleasePath (Join-Path $externalRoot ('proofs/installer-' + [Guid]::NewGuid().ToString('N').Substring(0, 8)))
 New-Item -ItemType Directory -Path $evidence | Out-Null
 $report = [ordered]@{
     checkedAt = [DateTime]::UtcNow.ToString('o')
@@ -76,6 +76,7 @@ try {
     $env:RENULUS_PACKAGED_EXECUTABLE = $installedExe
     $env:RENULUS_INSTALLED_PROOF = '1'
     $env:RENULUS_EXPECT_SOURCE_REVISION = $SourceRevision
+    $env:RENULUS_NATIVE_EVIDENCE_ROOT = Join-Path $externalRoot 'proofs'
     foreach ($setting in @(@('RENULUS_EXPECT_STARTUP_WINDOW', $ExpectStartupWindow), @('RENULUS_EXPECT_SOURCE_BRIDGE', $ExpectSourceBridge), @('RENULUS_PROVE_WARM_RESTART', $WarmRestart), @('RENULUS_NATIVE_SERIAL', $SerialNative))) {
         if ($setting[1]) { Set-Item -Path ('Env:' + $setting[0]) -Value '1' } else { Remove-Item -LiteralPath ('Env:' + $setting[0]) -ErrorAction SilentlyContinue }
     }
