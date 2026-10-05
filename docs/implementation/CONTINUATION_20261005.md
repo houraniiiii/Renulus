@@ -31,9 +31,36 @@ with exit 0. Its actual unsigned extraction-only receipt is
 `C:/Renulus-native-delivery/desktop-20261005/proofs/installer-52f93aee/installer-evidence.json`,
 SHA256 `2d8b80e46f54459bc4475edc3de7cb6ea1a46ca1a506f1fba3322d9e3b423585`.
 NSIS exit 0, 477.2414153 seconds; installed source, EXE and ASAR match Package.
-The native17 controller is now running in session `15174`, with parent evidence
-under `C:/rn-finalise-20261005/parent-native-035ca7bd-01`. Installed journeys,
-three ordinary physical closes, connected/live and maintenance remain pending.
+The original native17 setup `15174` / PID 37744 ran its serial installed-file
+and ancestor audit for 83 minutes without reaching a gate or app launch. Parent
+verified the exact executable/creation identity, empty stdout/stderr/evidence,
+only an owned console child and zero current installed app processes, then
+stopped that setup at **22:53:45 UTC**. Its controller exit -1 and unfinished
+inventory stay nonaccepted under `C:/rn-finalise-20261005/parent-native-035ca7bd-01`;
+`parent-preflight-abort.json` confirms physical exit and zero substantive app
+checks, helper/provider work or imports. Partial inventory setup is restarted;
+no completed app check is repeated or credited. PID 38448 remains preserved.
+
+Actual installed acceptance now runs in controller **51051**, PID **22376**,
+from **22:54:05 UTC**, with parent receipts in
+`C:/rn-finalise-20261005/parent-native-035ca7bd-02` and app evidence in
+`repo/apps/desktop/test-results/installed-product-27dd62a2`. Its reviewed parent
+operational copy checks inventory entries in batches of 16. Every original
+path/duplicate/leaf/ancestor/size/SHA and Git-source check remains; all 17 actual
+UI gates, isolation, retention and ordinary-close/cleanup bodies are unchanged.
+Parent source comparison and independent source review passed; neither grants
+runtime acceptance. The actual entry is explicitly identified; frozen stock
+native-journeys/verifier entries are source-verified and **not claimed executed**.
+Controller metadata pins copy SHA256
+`921a271e5c55997c2ae7f402dd8d03c6b7a1a838f7070f6a280312cef78d4a92`,
+stock verifier `9d8ad6b37347ef1dde91b83003295871307fdba1424522291619a9c9ecfdbe59`,
+preparation `1d365f056a78decdd271608e7fe12e83949cf22f2553ff425562be217e03d032`
+and diff `d9563f464204b145bae9d5a8449559ad3c008f525c37f23a7b4597b59493dead`.
+The recipe is ignored under `apps/desktop/.local/installed-preflight-035ca7bd`;
+its wrapper refuses intervening shadow packages. Product freeze/manufacture
+remain unchanged. Do not start another native attempt. Installed journeys,
+three ordinary physical closes, screenshot review, connected/live and
+maintenance still require their actual terminal receipts.
 
 While native17 performs its installed-file audit, the parent admitted the
 independent bundled storage slice under `early-storage-035ca7bd-20261006`.
@@ -49,7 +76,12 @@ SHA256 `81ecaa0d53413646d682246eed6884f5c9474ad935e8da24f9e1e6bbc9bf36a5`.
 Binding SHA256 is `590bc5f846363b54fbedc82135b14c0bcab04c8c8bf81d456fe037d52d009f8c`.
 This closes the actual installed-storage boundary only. A later full lifecycle
 binding must reconcile the unchanged interpreter/source/migration anchors before
-maintenance, preserving this receipt and avoiding a repeat storage run. Native,
+maintenance, preserving this receipt and avoiding a repeat storage run. The
+reviewed carry amendment `2518cee2` is integrated as `f456edd3`; its six ignored
+files are parent SHA-verified under the audit preservation checkpoint. Parent
+applied the operational maintenance patch and parsed it without execution:
+`parent-lifecycle-035ca7bd/parent-storage-carry-applied.json`. Full
+native/connected/terminal-live/NSIS admission remains unchanged. Native,
 connected/live, app rollback and uninstall/reinstall remain pending.
 
 The saved-original slice has 112 retained individual backend passes plus one
