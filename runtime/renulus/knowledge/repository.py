@@ -1,6 +1,6 @@
 """SQLite authority with staged, cancellable derived revisions."""
 from datetime import datetime, timezone
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 import hashlib
 import json
 from pathlib import Path
@@ -15,6 +15,11 @@ from .models import Rights, SourceMetadata, own_text_rights
 from .source_status import SourceStatusJournal
 
 TERMINAL = {"ready", "failed", "cancelled"}
+INDEX_BATCH = 64
+# Metadata routes must not load the extracted document or original file path.
+REVISION_SUMMARY = ("r.id,r.document_id,r.ordinal,r.status,r.sha256,r.media_type,r.bytes,"
+                    "r.metadata_json,r.rights_json,r.embedding_model,r.chunk_tokens,"
+                    "r.created_at,r.activated_at")
 MEDIA = {".pdf": "application/pdf", ".png": "image/png", ".jpg": "image/jpeg",
          ".jpeg": "image/jpeg", ".tif": "image/tiff", ".tiff": "image/tiff",
          ".txt": "text/plain", ".md": "text/markdown"}
@@ -33,6 +38,7 @@ class KnowledgeRepository:
         self.index = index or LanceIndex(self._selected_index_path())
         self._lock = RLock()
         self._ingest_lock = RLock()
+        self._index_lock = RLock()
         self.source_status = SourceStatusJournal(self)
 
     def update_source_status(self, event):
@@ -43,7 +49,7 @@ class KnowledgeRepository:
         if not self._ingest_lock.acquire(timeout=90):
             raise ApiError("recovery_busy", "The library is finishing an import. Retry backup or restore after this file completes", 409, True)
         try:
-            with self._lock:
+            with self._index_lock, self._lock:
                 yield
         finally:
             self._ingest_lock.release()
@@ -86,7 +92,7 @@ class KnowledgeRepository:
 
     def rebuild_index(self):
         """Stage canonical eligible passages, validate, then atomically select them."""
-        with self._ingest_lock, self._lock:
+        with self._ingest_lock, self._index_lock, self._lock:
             # A restore can bring an older active row beside a newer tombstone.
             deleted = self.db.fetch_all("SELECT d.id FROM knowledge_documents d JOIN deletion_ledger l ON l.entity_id=d.id AND l.entity_type='knowledge-document' WHERE d.deleted_at IS NULL")
             for row in deleted:
@@ -260,8 +266,9 @@ class KnowledgeRepository:
                 "status": job["state"], "job": job}
 
     def _guard(self, conn, job_id):
-        row = conn.execute("SELECT j.state,r.id,r.document_id,d.latest_revision,d.deleted_at FROM knowledge_jobs j JOIN knowledge_revisions r ON r.id=j.revision_id JOIN knowledge_documents d ON d.id=r.document_id WHERE j.id=?", (job_id,)).fetchone()
-        return row and row["state"] == "processing" and row["deleted_at"] is None and row["latest_revision"] == row["id"]
+        row = conn.execute("SELECT j.state,r.id,r.document_id,d.latest_revision,d.deleted_at,d.scope_kind FROM knowledge_jobs j JOIN knowledge_revisions r ON r.id=j.revision_id JOIN knowledge_documents d ON d.id=r.document_id WHERE j.id=?", (job_id,)).fetchone()
+        return (row and row["state"] == "processing" and row["deleted_at"] is None
+                and row["latest_revision"] == row["id"] and row["scope_kind"] == Scope.LIBRARY.value)
 
     def _phase(self, job_id, phase):
         with self._lock, self.db.transaction() as conn:
@@ -295,28 +302,7 @@ class KnowledgeRepository:
             passages = extracted.passages
             for item in passages:
                 item["id"] = durable_id("passage")
-            vectors = [] if document["reserved"] else self.embedder.embed([p["context_text"] for p in passages])
-            with self._lock:
-                with self.db.transaction() as conn:
-                    if not self._guard(conn, job_id):
-                        return self.get_job(job_id)
-                if not document["reserved"]:
-                    self.index.stage([{"passage_id": p["id"], "revision_id": revision["id"],
-                        "document_id": document["id"], "text": p["context_text"], "vector": v}
-                        for p, v in zip(passages, vectors, strict=True)])
-                with self.db.transaction() as conn:
-                    if not self._guard(conn, job_id):
-                        self._schedule_cleanup(conn, revision["id"], True)
-                    else:
-                        previous = conn.execute("SELECT active_revision FROM knowledge_documents WHERE id=?", (document["id"],)).fetchone()[0]
-                        for i, p in enumerate(passages):
-                            conn.execute("INSERT INTO knowledge_passages VALUES(?,?,?,?,?,?,?)", (p["id"], revision["id"], i, p["text"], p["context_text"], dumps(p["locators"]), dumps(p["headings"])))
-                        now = utc_now()
-                        conn.execute("UPDATE knowledge_revisions SET status='ready',extraction_json=?,embedding_model=?,chunk_tokens=?,activated_at=? WHERE id=?", (dumps(extracted.document), self.embedder.model_id, self.embedder.max_tokens, now, revision["id"]))
-                        conn.execute("UPDATE knowledge_documents SET active_revision=?,updated_at=? WHERE id=?", (revision["id"], now, document["id"]))
-                        conn.execute("UPDATE knowledge_jobs SET state='ready',phase='complete',finished_at=? WHERE id=?", (now, job_id))
-                        if previous and previous != revision["id"]:
-                            self._schedule_cleanup(conn, previous, False)
+            self._stage_import(job_id, revision, document, extracted)
         except Exception as error:
             code = error.code if isinstance(error, ApiError) else "ingestion_failed"
             message = error.message if isinstance(error, ApiError) else "Document ingestion failed; check offline helpers and file integrity"
@@ -327,6 +313,48 @@ class KnowledgeRepository:
                     self._schedule_cleanup(conn, revision["id"], True)
         self.cleanup()
         return self.get_job(job_id)
+
+    def _stage_import(self, job_id, revision, document, extracted):
+        # Bound native work and recheck cancellation/replacement between batches.
+        # No engine operation or wait for an engine lock owns the metadata lock.
+        passages = extracted.passages
+        for offset in range(0, len(passages), INDEX_BATCH):
+            if not self._phase(job_id, "embedding"):
+                return
+            batch = passages[offset:offset + INDEX_BATCH]
+            if document["reserved"]:
+                continue
+            vectors = self.embedder.embed([p["context_text"] for p in batch])
+            rows = [{"passage_id": p["id"], "revision_id": revision["id"],
+                     "document_id": document["id"], "text": p["context_text"], "vector": v}
+                    for p, v in zip(batch, vectors, strict=True)]
+            with self._index_lock:
+                with self._lock, self.db.transaction() as conn:
+                    if not self._guard(conn, job_id):
+                        return
+                self.index.stage(rows, create_fts=False)
+        # Prepare potentially large JSON before entering the publication lock.
+        stored = [(p["id"], revision["id"], i, p["text"], p["context_text"],
+                   dumps(p["locators"]), dumps(p["headings"])) for i, p in enumerate(passages)]
+        extraction_json = dumps(extracted.document)
+        with self._index_lock:
+            with self._lock, self.db.transaction() as conn:
+                if not self._guard(conn, job_id):
+                    return
+            if not document["reserved"]:
+                self.index.build_fts()
+            with self._lock, self.db.transaction() as conn:
+                if not self._guard(conn, job_id):
+                    self._schedule_cleanup(conn, revision["id"], True)
+                    return
+                previous = conn.execute("SELECT active_revision FROM knowledge_documents WHERE id=?", (document["id"],)).fetchone()[0]
+                conn.executemany("INSERT INTO knowledge_passages VALUES(?,?,?,?,?,?,?)", stored)
+                now = utc_now()
+                conn.execute("UPDATE knowledge_revisions SET status='ready',extraction_json=?,embedding_model=?,chunk_tokens=?,activated_at=? WHERE id=?", (extraction_json, self.embedder.model_id, self.embedder.max_tokens, now, revision["id"]))
+                conn.execute("UPDATE knowledge_documents SET active_revision=?,updated_at=? WHERE id=?", (revision["id"], now, document["id"]))
+                conn.execute("UPDATE knowledge_jobs SET state='ready',phase='complete',finished_at=? WHERE id=?", (now, job_id))
+                if previous and previous != revision["id"]:
+                    self._schedule_cleanup(conn, previous, False)
 
     def _schedule_cleanup(self, conn, revision_id, remove_original):
         conn.execute("INSERT INTO knowledge_cleanup(revision_id,remove_original,created_at) VALUES(?,?,?) ON CONFLICT(revision_id) DO UPDATE SET remove_original=MAX(remove_original,excluded.remove_original)", (revision_id, int(remove_original), utc_now()))
@@ -347,7 +375,11 @@ class KnowledgeRepository:
         return self.get_job(job_id)
 
     def cleanup(self):
-        with self._lock:
+        # Canonical exclusion is immediate; physical cleanup may wait for a
+        # running native search/stage. Never wait for that work with _lock held.
+        if not self._index_lock.acquire(blocking=False):
+            return self.db.fetch_all("SELECT revision_id,error_code FROM knowledge_cleanup")
+        try:
             for task in self.db.fetch_all("SELECT c.*,r.document_id FROM knowledge_cleanup c JOIN knowledge_revisions r ON r.id=c.revision_id"):
                 try:
                     self.index.remove(task["revision_id"])
@@ -355,14 +387,20 @@ class KnowledgeRepository:
                         folder = self._folder(task["document_id"], task["revision_id"])
                         if folder.exists():
                             shutil.rmtree(folder)
-                        self.db.execute("UPDATE knowledge_revisions SET original_path=NULL,extraction_json=NULL WHERE id=?", (task["revision_id"],))
-                    self.db.execute("DELETE FROM knowledge_cleanup WHERE revision_id=?", (task["revision_id"],))
+                    with self._lock, self.db.transaction() as conn:
+                        if task["remove_original"]:
+                            conn.execute("UPDATE knowledge_revisions SET original_path=NULL,extraction_json=NULL WHERE id=?", (task["revision_id"],))
+                        # A delete can upgrade a superseded-revision task while
+                        # its index removal is running. Preserve that new task.
+                        conn.execute("DELETE FROM knowledge_cleanup WHERE revision_id=? AND remove_original=?", (task["revision_id"], task["remove_original"]))
                 except Exception:
                     self.db.execute("UPDATE knowledge_cleanup SET error_code='cleanup_pending' WHERE revision_id=?", (task["revision_id"],))
             pending = self.db.fetch_all("SELECT revision_id,error_code FROM knowledge_cleanup")
             pending += [{"generation": name, "error_code": "index_cleanup_pending"}
                         for name in self._cleanup_index_generations()]
             return pending
+        finally:
+            self._index_lock.release()
 
     def recover(self):
         """Resume durable jobs, discard partial index rows and retain stored originals."""
@@ -408,34 +446,52 @@ class KnowledgeRepository:
             parameters.append(status)
         where = " WHERE " + " AND ".join(filtered) if filtered else ""
         count_where = " WHERE " + " AND ".join(base) if base else ""
-        with self._lock:
-            counts = {row["status"]: row["n"] for row in self.db.fetch_all(
+        with self._lock, closing(self.db.connect()) as conn:
+            # One read snapshot/connection for counts and the selected page.
+            conn.execute("BEGIN")
+            counts = {row["status"]: row["n"] for row in conn.execute(
                 "SELECT " + state + " AS status,COUNT(*) AS n" + source + count_where + " GROUP BY " + state)}
-            total = self.db.fetch_one("SELECT COUNT(*) AS n" + source + where, tuple(parameters))["n"]
+            total = conn.execute("SELECT COUNT(*) AS n" + source + where, tuple(parameters)).fetchone()["n"]
             paging = " LIMIT ? OFFSET ?" if limit is not None else " LIMIT -1 OFFSET ?"
             page_parameters = parameters + ([limit, offset] if limit is not None else [offset])
-            rows = self.db.fetch_all("SELECT d.id" + source + where +
-                                    " ORDER BY d.updated_at DESC,d.id" + paging, tuple(page_parameters))
-            return {"documents": [self.get_document(row["id"], include_deleted=include_deleted) for row in rows],
+            rows = [dict(row) for row in conn.execute("SELECT d.*" + source + where +
+                    " ORDER BY d.updated_at DESC,d.id" + paging, tuple(page_parameters))]
+            return {"documents": self._document_summaries(conn, rows),
                     "total": total, "counts": counts, "offset": offset, "limit": limit}
 
     def get_document(self, document_id, *, include_deleted=False):
-        row = self.db.fetch_one("SELECT * FROM knowledge_documents WHERE id=?", (document_id,))
-        if row is None or (row["deleted_at"] and not include_deleted):
-            raise ApiError("document_missing", "Document was not found", 404)
-        row["scope"] = {"kind": row.pop("scope_kind"), "entity_id": row.pop("scope_entity")}
-        row["reserved"] = bool(row["reserved"])
-        row["revisions"] = []
-        for revision in self.db.fetch_all("SELECT * FROM knowledge_revisions WHERE document_id=? ORDER BY ordinal DESC", (document_id,)):
-            revision["metadata"] = json.loads(revision.pop("metadata_json"))
-            revision["rights"] = json.loads(revision.pop("rights_json"))
-            revision.pop("extraction_json")
-            revision.pop("original_path")
-            revision["passage_count"] = self.db.fetch_one("SELECT COUNT(*) AS n FROM knowledge_passages WHERE revision_id=?", (revision["id"],))["n"]
-            row["revisions"].append(revision)
-        row["status"] = "deleted" if row["deleted_at"] else (row["revisions"][0]["status"] if row["revisions"] else "empty")
-        row["cleanup_pending"] = bool(self.db.fetch_one("SELECT 1 FROM knowledge_cleanup c JOIN knowledge_revisions r ON r.id=c.revision_id WHERE r.document_id=?", (document_id,)))
-        return row
+        with self._lock, closing(self.db.connect()) as conn:
+            conn.execute("BEGIN")
+            row = conn.execute("SELECT * FROM knowledge_documents WHERE id=?", (document_id,)).fetchone()
+            if row is None or (row["deleted_at"] and not include_deleted):
+                raise ApiError("document_missing", "Document was not found", 404)
+            return self._document_summaries(conn, [dict(row)])[0]
+
+    def _document_summaries(self, conn, documents):
+        for offset in range(0, len(documents), 100):
+            batch = documents[offset:offset + 100]
+            by_id = {row["id"]: row for row in batch}
+            for row in batch:
+                row["scope"] = {"kind": row.pop("scope_kind"), "entity_id": row.pop("scope_entity")}
+                row["reserved"] = bool(row["reserved"])
+                row["revisions"] = []
+                row["cleanup_pending"] = False
+            placeholders = ",".join("?" for _ in batch)
+            identifiers = tuple(by_id)
+            sql = ("SELECT " + REVISION_SUMMARY +
+                   ",(SELECT COUNT(*) FROM knowledge_passages p WHERE p.revision_id=r.id) AS passage_count "
+                   "FROM knowledge_revisions r WHERE r.document_id IN (" + placeholders + ") ORDER BY r.ordinal DESC")
+            for stored in conn.execute(sql, identifiers):
+                revision = dict(stored)
+                revision["metadata"] = json.loads(revision.pop("metadata_json"))
+                revision["rights"] = json.loads(revision.pop("rights_json"))
+                by_id[revision["document_id"]]["revisions"].append(revision)
+            for pending in conn.execute(
+                    "SELECT DISTINCT r.document_id FROM knowledge_cleanup c JOIN knowledge_revisions r ON r.id=c.revision_id WHERE r.document_id IN (" + placeholders + ")", identifiers):
+                by_id[pending["document_id"]]["cleanup_pending"] = True
+            for row in batch:
+                row["status"] = "deleted" if row["deleted_at"] else (row["revisions"][0]["status"] if row["revisions"] else "empty")
+        return documents
 
     def _eligible(self, metadata, rights, topic_id, current_only):
         if not rights.get("model_input") or not rights.get("index") or not rights.get("embedding"):
@@ -471,18 +527,28 @@ class KnowledgeRepository:
             raise ApiError("query_limit", "The retrieval query is too long", 413)
         limit = max(1, min(int(limit), 50))
         with self._lock:
-            rows = self.db.fetch_all("SELECT r.*,d.title,d.source_id FROM knowledge_revisions r JOIN knowledge_documents d ON d.active_revision=r.id WHERE d.deleted_at IS NULL AND d.reserved=0 AND r.status='ready' AND d.scope_kind='personal-library' AND (d.scope_entity IS NULL OR d.scope_entity=?)", (scope.entity_id,))
-            eligible = {r["id"]: r for r in rows if self._eligible(json.loads(r["metadata_json"]), json.loads(r["rights_json"]), topic_id, current_only)}
+            eligible = self._retrievable_revisions(scope, topic_id, current_only)
             if not eligible:
                 return {"passages": [], "status": "no_eligible_documents", "current_only": current_only}
-            vector = self.embedder.embed([query], query=True)[0]
+        vector = self.embedder.embed([query], query=True)[0]
+        with self._index_lock:
+            # Embedding may have waited for a cold model or an import batch.
+            with self._lock:
+                eligible = self._retrievable_revisions(scope, topic_id, current_only)
+            if not eligible:
+                return {"passages": [], "status": "no_eligible_documents", "current_only": current_only}
             matches = self.index.search(query, vector, list(eligible), limit * 3)
+        with self._lock, closing(self.db.connect()) as conn:
+            conn.execute("BEGIN")
+            # Search is also expensive: recheck active version, deletion, source
+            # status, permissions and page exclusions against the same snapshot.
+            eligible = self._retrievable_revisions(scope, topic_id, current_only, conn=conn)
             passages = []
             for hit in matches:
                 revision = eligible.get(hit["revision_id"])
                 if revision is None:
                     continue
-                passage = self.db.fetch_one("SELECT * FROM knowledge_passages WHERE id=? AND revision_id=?", (hit["passage_id"], revision["id"]))
+                passage = conn.execute("SELECT * FROM knowledge_passages WHERE id=? AND revision_id=?", (hit["passage_id"], revision["id"])).fetchone()
                 if not passage:
                     continue
                 locators = json.loads(passage["locators_json"])
@@ -501,12 +567,22 @@ class KnowledgeRepository:
                     break
             return {"passages": passages, "status": "ready", "current_only": current_only}
 
+    def _retrievable_revisions(self, scope, topic_id, current_only, *, conn=None):
+        sql = ("SELECT " + REVISION_SUMMARY + ",d.title,d.source_id FROM knowledge_revisions r "
+               "JOIN knowledge_documents d ON d.active_revision=r.id WHERE d.deleted_at IS NULL "
+               "AND d.reserved=0 AND r.status='ready' AND d.scope_kind='personal-library' "
+               "AND (d.scope_entity IS NULL OR d.scope_entity=?)")
+        rows = ([dict(row) for row in conn.execute(sql, (scope.entity_id,))]
+                if conn is not None else self.db.fetch_all(sql, (scope.entity_id,)))
+        return {r["id"]: r for r in rows if self._eligible(
+            json.loads(r["metadata_json"]), json.loads(r["rights_json"]), topic_id, current_only)}
+
     def citation(self, document_revision, page=None, *, passage_id=None):
         if passage_id is not None and (not isinstance(passage_id, str) or
                 not re.fullmatch(r"passage_[0-9a-f]{32}", passage_id)):
             raise ApiError("invalid_passage_id", "Choose a valid cited passage identifier", 422)
         with self._lock:
-            revision = self.db.fetch_one("SELECT r.*,d.title,d.source_id,d.deleted_at,d.reserved,d.scope_kind FROM knowledge_revisions r JOIN knowledge_documents d ON d.id=r.document_id WHERE r.id=?", (document_revision,))
+            revision = self.db.fetch_one("SELECT " + REVISION_SUMMARY + ",d.title,d.source_id,d.deleted_at,d.reserved,d.scope_kind FROM knowledge_revisions r JOIN knowledge_documents d ON d.id=r.document_id WHERE r.id=?", (document_revision,))
             if not revision or revision["deleted_at"] or revision["status"] != "ready":
                 raise ApiError("citation_missing", "The cited document revision is unavailable", 404)
             if passage_id is None:
@@ -539,7 +615,7 @@ class KnowledgeRepository:
             return result
 
     def original(self, revision_id):
-        row = self.db.fetch_one("SELECT r.*,d.deleted_at FROM knowledge_revisions r JOIN knowledge_documents d ON d.id=r.document_id WHERE r.id=?", (revision_id,))
+        row = self.db.fetch_one("SELECT r.id,r.document_id,r.status,r.original_path,r.rights_json,r.media_type,d.deleted_at FROM knowledge_revisions r JOIN knowledge_documents d ON d.id=r.document_id WHERE r.id=?", (revision_id,))
         if not row or row["deleted_at"] or row["status"] != "ready" or not row["original_path"]:
             raise ApiError("original_missing", "The original is no longer available", 404)
         if not json.loads(row["rights_json"])["display"]:

@@ -1,8 +1,9 @@
 from fastapi.testclient import TestClient
+import sqlite3
 
 from renulus.knowledge.models import SourceMetadata
 from renulus.server import create_app
-from test_repository import import_note, repository
+from test_repository import STUDY, import_note, repository
 
 
 def test_pages_deserialize_only_selected_documents_with_stable_ties(repository, monkeypatch):
@@ -10,12 +11,12 @@ def test_pages_deserialize_only_selected_documents_with_stable_ties(repository, 
                          process=False) for n in range(9)]
     repository.db.execute("UPDATE knowledge_documents SET updated_at=?", ("2026-10-04T18:00:00+00:00",))
     expected = sorted(note["document_id"] for note in notes)
-    actual_get = repository.get_document
+    actual_summaries = repository._document_summaries
     inspected = []
-    def inspect(identifier, **options):
-        inspected.append(identifier)
-        return actual_get(identifier, **options)
-    monkeypatch.setattr(repository, "get_document", inspect)
+    def inspect(conn, documents):
+        inspected.extend(row["id"] for row in documents)
+        return actual_summaries(conn, documents)
+    monkeypatch.setattr(repository, "_document_summaries", inspect)
     first = repository.list_documents(limit=4)
     second = repository.list_documents(limit=4, offset=4)
     assert [row["id"] for row in first["documents"] + second["documents"]] == expected[:8]
@@ -43,6 +44,33 @@ def test_filters_follow_latest_revision_and_keep_global_counts(repository):
     legacy = repository.list_documents()
     assert len(legacy["documents"]) == 3 and legacy["limit"] is None
     assert repository.list_documents(include_deleted=True)["counts"] == {"deleted": 1, "queued": 3}
+
+
+def test_metadata_and_retrieval_do_not_read_structured_extraction_or_original_path(repository, monkeypatch):
+    note = import_note(repository, "Synthetic dialysis adequacy source")
+    # A large extraction is canonical, but never needed to render Library rows
+    # or retrieve their already stored passages. Deny those column reads rather
+    # than relying on a timing threshold or merely checking the response shape.
+    repository.db.execute("UPDATE knowledge_revisions SET extraction_json=? WHERE id=?",
+                          ('{"synthetic":"' + "x" * (2 * 1024 * 1024) + '"}', note["revision_id"]))
+    actual_connect = repository.db.connect
+
+    def connect():
+        conn = actual_connect()
+        def authorize(action, table, column, database, trigger):
+            if (action == sqlite3.SQLITE_READ and table == "knowledge_revisions"
+                    and column in ("extraction_json", "original_path")):
+                return sqlite3.SQLITE_DENY
+            return sqlite3.SQLITE_OK
+        conn.set_authorizer(authorize)
+        return conn
+
+    monkeypatch.setattr(repository.db, "connect", connect)
+    assert repository.list_documents(limit=25)["documents"][0]["id"] == note["document_id"]
+    assert repository.list_documents(limit=100)["documents"][0]["id"] == note["document_id"]
+    assert repository.get_document(note["document_id"])["revisions"][0]["passage_count"] == 1
+    assert repository.citation(note["revision_id"])["document_revision"] == note["revision_id"]
+    assert repository.retrieve("dialysis adequacy", scope=STUDY)["passages"][0]["document_revision"] == note["revision_id"]
 
 
 def test_production_document_route_bounds_and_filter_contract(tmp_path):

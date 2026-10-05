@@ -87,11 +87,14 @@ class FastEmbedEngine:
     def __init__(self, assets: OfflineAssets):
         self.assets = assets
         self._model = None
+        self._model_lock = RLock()
 
     def _load(self):
-        root = self.assets.validate("fastembed")
-        config = self.assets.config("fastembed")
         if self._model is None:
+            # The loaded model belongs to this profile/process. Validate pinned
+            # artifacts on construction, not again for every bounded batch.
+            root = self.assets.validate("fastembed")
+            config = self.assets.config("fastembed")
             try:
                 from fastembed import TextEmbedding
                 self._model = TextEmbedding(model_name=MODEL_ID, specific_model_path=str(root),
@@ -102,9 +105,12 @@ class FastEmbedEngine:
         return self._model
 
     def embed(self, texts: list[str], *, query: bool = False) -> list[list[float]]:
-        model = self._load()
-        values = model.query_embed(texts) if query else model.passage_embed(texts)
-        vectors = [[float(x) for x in vector] for vector in values]
+        # Query and ingestion share one lazy model. Serialize construction and
+        # complete iterator consumption without holding the repository lock.
+        with self._model_lock:
+            model = self._load()
+            values = model.query_embed(texts) if query else model.passage_embed(texts)
+            vectors = [[float(x) for x in vector] for vector in values]
         if len(vectors) != len(texts) or any(len(v) != DIMENSIONS or not all(math.isfinite(x) for x in v) for v in vectors):
             raise ApiError("invalid_embedding", "The offline helper returned incompatible vectors", 503)
         return vectors
