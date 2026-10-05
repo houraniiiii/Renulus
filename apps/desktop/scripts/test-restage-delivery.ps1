@@ -13,10 +13,17 @@ foreach ($action in @('Package', 'Install', 'Proof')) {
     Expect-Refusal { Assert-RestageGate $newRevision $action $false $true } 'unaccepted freeze'
 }
 Expect-Refusal { Assert-RestageGate $newRevision 'Proof' $true $false } 'occupied native slot'
+Expect-Refusal { Assert-RestageGate $newRevision 'Package' $true $false } 'occupied serial manufacture slot'
+Expect-Refusal { Assert-RestageGate '55d553d1d18026a0a490f4292c033ac1aadd2595' 'Package' $true $true } 'preserved freeze55'
+Expect-Refusal { Assert-RestageGate '3ff9b0d6145c8d52f4c9e9b0a3009f0fc351c4cc' 'Package' $true $true } 'preserved earlier delivery'
+Assert-RestageGate $newRevision 'Package' $true $true
 Assert-RestageGate $newRevision 'Proof' $true $true
 foreach ($path in @('E:/Renulus-native-delivery/desktop-20261005/data/learning', 'E:/Renulus-native-delivery/desktop-20261005/repo/new-output', 'E:/Renulus-native-delivery/desktop-20261005-other/proofs/new', 'C:/unexpected-output', 'E:/Renulus-native-delivery/desktop-20261005/proofs/../../escape', 'E:relative-output', '\\server\share\output')) {
     Expect-Refusal { Assert-PublicGeneratedPath $path } 'private, source or escaped output'
 }
+# Confine synthetic writes to this assigned worktree after exercising the real
+# preserved-root refusals above. This test-only override does not change the controller.
+$renulusExternalRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../test-results'))
 $testRoot = Assert-PublicGeneratedPath (Join-Path $renulusExternalRoot ('temporary/restage-tests-' + [Guid]::NewGuid().ToString('N'))) -Fresh
 New-Item -ItemType Directory -Path $testRoot | Out-Null
 $sentinel = Join-Path $testRoot 'synthetic-checkpoint.txt'

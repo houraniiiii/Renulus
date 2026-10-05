@@ -3,6 +3,7 @@ param(
     [Parameter(Mandatory = $true)][string]$Installer,
     [Parameter(Mandatory = $true)][string]$Target,
     [Parameter(Mandatory = $true)][string]$SourceRevision,
+    [string]$DeliveryRoot = 'C:/Renulus-native-delivery/desktop-20261005',
     [switch]$ExpectStartupWindow,
     [switch]$ExpectSourceBridge,
     [switch]$WarmRestart,
@@ -13,12 +14,17 @@ param(
 $ErrorActionPreference = 'Stop'
 $desktopRoot = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $releaseRoot = [IO.Path]::GetFullPath((Join-Path $desktopRoot 'release'))
-$externalRoot = [IO.Path]::GetFullPath('E:/Renulus-native-delivery/desktop-20261005')
+. (Join-Path $PSScriptRoot 'restage-delivery.ps1') -DeliveryRoot $DeliveryRoot
+$externalRoot = Assert-DeliveryRoot $DeliveryRoot
 . (Join-Path $PSScriptRoot 'installer-child.ps1')
 function Assert-OwnedReleasePath([string]$Value) {
     if (-not [IO.Path]::IsPathFullyQualified($Value)) { throw 'An explicit absolute release path is required.' }
     $absolute = [IO.Path]::GetFullPath($Value)
-    if (-not ($absolute.StartsWith($releaseRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -or $absolute.StartsWith($externalRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase))) { throw 'Installer and install target must stay in the desktop release tree or exact authorised E root.' }
+    if (-not ($absolute.StartsWith($releaseRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -or $absolute.StartsWith($externalRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase))) { throw 'Installer and install target must stay in the desktop release tree or exact authorised C root; E checkpoints are preserved.' }
+    if ($absolute.StartsWith($externalRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+        $first = $absolute.Substring($externalRoot.Length + 1).Split([char[]]@([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar))[0]
+        if ($first -notmatch '^(matching-[0-9a-f]{8}|installed-[0-9a-f]{8}|temporary|proofs)$') { throw 'Installer paths exclude repositories, data and other application state.' }
+    }
     $cursor = $absolute
     while ($cursor) {
         if (Test-Path -LiteralPath $cursor) {

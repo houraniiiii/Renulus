@@ -1,23 +1,54 @@
 [CmdletBinding()]
 param(
-    [string]$Revision = 'a5488b2df636d5b45d945e611e6c6a61436a92c2',
+    [string]$Revision,
     [ValidateSet('Plan', 'Package', 'Install', 'Proof')][string]$Phase = 'Plan',
     [switch]$AcceptedFreeze,
     [switch]$NativeSlotReleased,
     [string]$ResumeFrom,
-    [string]$Source = 'E:/Renulus-native-delivery/desktop-20261005/repo',
-    [string]$PreparationRoot = 'E:/Renulus-native-delivery/desktop-20261005/preparation/restage-a5488b2d-20261005'
+    [string]$Source = 'C:/Renulus-native-delivery/desktop-20261005/repo',
+    [string]$DeliveryRoot = 'C:/Renulus-native-delivery/desktop-20261005',
+    [string]$PublicBasePayload = 'E:/Renulus-native-delivery/desktop-20261005/payloads/backend-55d553d1',
+    [string]$PublicPythonArchive = 'E:/Renulus-native-delivery/desktop-20261005/preparation/restage-office-image-20261005/inputs/python-3.14.4-embed-amd64.zip',
+    [string]$PublicNodeModules = 'C:/Renulus-native-delivery/desktop-20261005/environment/node-3ff9b0d6/node_modules',
+    [string]$PublicBuildCache = 'E:/Renulus-native-delivery/desktop-20261005/preparation/restage-office-image-20261005/public-build-cache/electron-builder',
+    [string]$PreparationRoot
 )
 $ErrorActionPreference = 'Stop'
-$renulusExternalRoot = [IO.Path]::GetFullPath('E:/Renulus-native-delivery/desktop-20261005')
+$renulusAuthorizedRoot = [IO.Path]::GetFullPath('C:/Renulus-native-delivery/desktop-20261005')
+$renulusExternalRoot = $renulusAuthorizedRoot
 $renulusPreviousRevision = 'ebb2db2e5080f4d42eaf31c2eb63711797704df0'
 
 function Assert-RestageGate([string]$Commit, [string]$Action, [bool]$Accepted, [bool]$SlotReleased) {
-    if ($Commit -notmatch '^[0-9a-f]{40}$' -or $Commit -eq $renulusPreviousRevision) {
+    if ($Commit -notmatch '^[0-9a-f]{40}$') {
         throw 'Supply a new exact parent revision; preserve the previous frozen delivery.'
     }
+    if ($Action -ne 'Plan' -and $Commit -in @($renulusPreviousRevision, '3ff9b0d6145c8d52f4c9e9b0a3009f0fc351c4cc', '55d553d1d18026a0a490f4292c033ac1aadd2595')) { throw 'Historical checkpoints are preserved; manufacture must use the integrator final freeze.' }
     if ($Action -ne 'Plan' -and -not $Accepted) { throw 'Only Plan is available until the parent accepts this exact freeze.' }
-    if ($Action -eq 'Proof' -and -not $SlotReleased) { throw 'Parent must release the native app slot before serial proof.' }
+    if ($Action -in @('Package', 'Install', 'Proof') -and -not $SlotReleased) { throw 'Parent must release the serial manufacture/native slot before this phase.' }
+}
+
+function Assert-DeliveryRoot([string]$Value) {
+    if ($Value -notmatch '^[Cc]:[\\/]' -or $Value -match '[\x00-\x1f]') { throw 'DeliveryRoot requires an absolute local C SSD path.' }
+    # .NET can trim a trailing dot before GetFullPath returns; reject aliases
+    # before that normalisation so all three packaging guards agree.
+    foreach ($part in ($Value -split '[\\/]+')) {
+        if ($part -in @('.', '..') -or $part.EndsWith('.') -or $part.EndsWith(' ')) { throw 'DeliveryRoot may not use Windows path aliases or traversal.' }
+    }
+    $absolute = [IO.Path]::GetFullPath($Value)
+    if ($absolute -ne $renulusAuthorizedRoot) {
+        if (-not $absolute.StartsWith($renulusAuthorizedRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'DeliveryRoot must stay below the exact authorised C SSD root.' }
+        $relative = $absolute.Substring($renulusAuthorizedRoot.Length + 1)
+        if ($relative -cnotmatch '^deliveries[\\/][a-z0-9][a-z0-9._-]{0,63}$' -or $relative.EndsWith('.') -or (Split-Path -Leaf $absolute) -match '^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$') { throw 'DeliveryRoot may only use a named deliveries child; repository/data/profile/credential roots are excluded.' }
+    }
+    $cursor = $absolute
+    while ($cursor) {
+        if (Test-Path -LiteralPath $cursor) {
+            if (((Get-Item -LiteralPath $cursor -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'DeliveryRoot may not traverse a reparse path.' }
+        }
+        $cursor = Split-Path -Parent $cursor
+    }
+    if ((Test-Path -LiteralPath $absolute) -and -not (Test-Path -LiteralPath $absolute -PathType Container)) { throw 'DeliveryRoot must be a directory.' }
+    return $absolute
 }
 
 function Assert-PublicGeneratedPath([string]$Value, [switch]$Fresh) {
@@ -26,7 +57,7 @@ function Assert-PublicGeneratedPath([string]$Value, [switch]$Fresh) {
     if ($Value -notmatch '^[A-Za-z]:[\\/]' -or $Value -match '[\x00-\x1f]') { throw 'Use an absolute local generated path.' }
     $absolute = [IO.Path]::GetFullPath($Value)
     if (-not $absolute.StartsWith($renulusExternalRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
-        throw 'Generated outputs must stay below the exact authorised E delivery root.'
+        throw 'Generated outputs must stay below the exact authorised C delivery root; E inputs remain preserved.'
     }
     $relative = $absolute.Substring($renulusExternalRoot.Length + 1)
     $first = $relative.Split([char[]]@([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar))[0]
@@ -59,12 +90,14 @@ function Set-RestageEnvironment([string]$Name, [AllowNull()][object]$Value) {
 
 # Dot-sourcing is for the boundary tests; it performs no I/O or phase invocation.
 if ($MyInvocation.InvocationName -eq '.') { return }
+$renulusExternalRoot = Assert-DeliveryRoot $DeliveryRoot
 Assert-RestageGate $Revision $Phase ([bool]$AcceptedFreeze) ([bool]$NativeSlotReleased)
 $renulusDesktop = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $renulusTag = $Revision.Substring(0, 8)
+if (-not $PreparationRoot) { $PreparationRoot = Join-Path $renulusExternalRoot 'preparation/restage-finalise-20261005' }
 $renulusPreparation = Assert-PublicGeneratedPath $PreparationRoot
-$renulusArchive = Join-Path $renulusPreparation 'inputs/python-3.14.4-embed-amd64.zip'
-$renulusBasePayload = Join-Path $renulusExternalRoot 'payloads/backend-ebb2db2e'
+$renulusArchive = $PublicPythonArchive
+$renulusBasePayload = $PublicBasePayload
 $renulusOutput = Join-Path $renulusExternalRoot ('matching-' + $renulusTag)
 $renulusSnapshot = Join-Path $renulusExternalRoot ('source-' + $renulusTag)
 $renulusInstall = Join-Path $renulusExternalRoot ('installed-' + $renulusTag)
@@ -100,7 +133,7 @@ $renulusSavedSettings = @{}
 try {
     # These values belong only to this controller process and its children.
     # Never attach proof to a caller's real app/profile or print session tokens.
-    foreach ($name in @('RENULUS_SOURCE_DESKTOP', 'RENULUS_BACKEND_URL', 'RENULUS_SESSION_TOKEN', 'RENULUS_PROFILE', 'RENULUS_PDF_FIXTURE_ONLY')) { $renulusSettings[$name] = $null }
+    foreach ($name in @('RENULUS_SOURCE_DESKTOP', 'RENULUS_BACKEND_URL', 'RENULUS_SESSION_TOKEN', 'RENULUS_PROFILE', 'RENULUS_PDF_FIXTURE_ONLY', 'ELECTRON_RUN_AS_NODE')) { $renulusSettings[$name] = $null }
     if ($Phase -eq 'Proof') {
         $renulusSettings['RENULUS_PACKAGED_EXECUTABLE'] = Join-Path $renulusInstall 'Renulus Development.exe'
         $renulusSettings['RENULUS_INSTALLED_PROOF'] = '1'
@@ -112,9 +145,9 @@ try {
         $renulusSavedSettings[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
         Set-RestageEnvironment $name $renulusSettings[$name]
     }
-    $renulusResult = [ordered]@{ phase = $Phase; requested_revision = $Revision; accepted_freeze = [bool]$AcceptedFreeze; source = $Source; public_base_payload = $renulusBasePayload; output = $renulusOutput; install = $renulusInstall; reports = $renulusRun; previous_product = $renulusPreviousRevision; external_launcher_fix = 'parent-owned 4b1d2b71'; controller_sha256 = (Get-FileHash -LiteralPath $PSCommandPath -Algorithm SHA256).Hash.ToLowerInvariant(); stage_driver_sha256 = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot 'stage-delivery.py') -Algorithm SHA256).Hash.ToLowerInvariant(); private_profile_use = $false; status = 'pending' }
+    $renulusResult = [ordered]@{ phase = $Phase; requested_revision = $Revision; accepted_freeze = [bool]$AcceptedFreeze; source = $Source; delivery_root = $renulusExternalRoot; public_base_payload = $renulusBasePayload; public_node_modules = $PublicNodeModules; output = $renulusOutput; install = $renulusInstall; reports = $renulusRun; previous_product = $renulusPreviousRevision; external_launcher_fix = 'parent-owned 4b1d2b71'; controller_sha256 = (Get-FileHash -LiteralPath $PSCommandPath -Algorithm SHA256).Hash.ToLowerInvariant(); stage_driver_sha256 = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot 'stage-delivery.py') -Algorithm SHA256).Hash.ToLowerInvariant(); private_profile_use = $false; status = 'pending' }
     if ($Phase -in @('Plan', 'Package')) {
-        $renulusStageArguments = @('-B', (Join-Path $PSScriptRoot 'stage-delivery.py'), '--source', $Source, '--revision', $Revision, '--payload', $renulusBasePayload, '--snapshot', $renulusSnapshot, '--output', $renulusOutput, '--environment', $renulusEnvironment, '--helpers', (Join-Path $renulusBasePayload 'helper-assets'), '--python-archive', $renulusArchive, '--package', 'installer')
+        $renulusStageArguments = @('-B', (Join-Path $PSScriptRoot 'stage-delivery.py'), '--source', $Source, '--revision', $Revision, '--delivery-root', $renulusExternalRoot, '--payload', $renulusBasePayload, '--snapshot', $renulusSnapshot, '--output', $renulusOutput, '--environment', $renulusEnvironment, '--helpers', (Join-Path $renulusBasePayload 'helper-assets'), '--python-archive', $renulusArchive, '--package', 'installer', '--node-modules', $PublicNodeModules, '--build-cache', $PublicBuildCache)
         if ($ResumeFrom) { $renulusStageArguments += '--resume-staged'; $renulusResult['continued_failed_receipt'] = $renulusFailedReceipt }
         if ($Phase -eq 'Plan') { $renulusStageArguments += '--plan-only' }
         Invoke-RestageCommand $renulusPython $renulusStageArguments (Join-Path $renulusRun 'stage')
@@ -127,7 +160,7 @@ try {
         $null = Assert-PublicGeneratedPath $renulusInstall -Fresh
         $renulusInstaller = Join-Path $renulusOutput 'Renulus-Development-0.1.0-windows-x64-setup.exe'
         $renulusPowerShell = (Get-Command pwsh.exe -ErrorAction Stop).Source
-        Invoke-RestageCommand $renulusPowerShell @('-NoProfile', '-File', (Join-Path $PSScriptRoot 'test-installer.ps1'), '-Installer', $renulusInstaller, '-Target', $renulusInstall, '-SourceRevision', $Revision, '-InstallOnly') (Join-Path $renulusRun 'install')
+        Invoke-RestageCommand $renulusPowerShell @('-NoProfile', '-File', (Join-Path $PSScriptRoot 'test-installer.ps1'), '-Installer', $renulusInstaller, '-Target', $renulusInstall, '-DeliveryRoot', $renulusExternalRoot, '-SourceRevision', $Revision, '-InstallOnly') (Join-Path $renulusRun 'install')
         $renulusPackage = Get-Content -LiteralPath (Join-Path $renulusOutput 'delivery-provenance.json') -Raw | ConvertFrom-Json
         if ($renulusPackage.source_revision -ne $Revision -or
             (Get-FileHash -LiteralPath (Join-Path $renulusInstall 'Renulus Development.exe') -Algorithm SHA256).Hash.ToLowerInvariant() -ne $renulusPackage.executable_sha256 -or

@@ -16,11 +16,11 @@ spec.loader.exec_module(delivery)
 class DeliveryBoundaries(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.test_root = delivery.EXTERNAL_DELIVERY_ROOT / "temporary" / ("delivery-tests-" + uuid4().hex)
+        cls.test_root = delivery.DESKTOP / "test-results" / ("delivery-tests-" + uuid4().hex)
         cls.test_root.mkdir(parents=True)
 
     def test_backend_and_renderer_staging_are_confined_to_exact_generated_roots(self):
-        target = delivery.EXTERNAL_DELIVERY_ROOT / "source-only-test-not-created"
+        target = delivery.EXTERNAL_DELIVERY_ROOT / "source-cafe1234/not-created"
         self.assertEqual(delivery.generated_path(target, fresh=True), target.resolve())
         self.assertFalse(target.exists())
         for escaped in (target / "../../outside", delivery.EXTERNAL_DELIVERY_ROOT,
@@ -29,7 +29,7 @@ class DeliveryBoundaries(unittest.TestCase):
                 delivery.generated_path(escaped, fresh=True)
 
     def test_exact_authorised_external_root_accepts_fresh_output_without_writes(self):
-        target = delivery.EXTERNAL_DELIVERY_ROOT / "preflight-only-synthetic-fresh"
+        target = delivery.EXTERNAL_DELIVERY_ROOT / "matching-cafe1234/preflight-only-synthetic-fresh"
         self.assertFalse(target.exists())
         self.assertEqual(delivery.delivery_output(target), target.resolve())
         self.assertFalse(target.exists())
@@ -50,8 +50,9 @@ class DeliveryBoundaries(unittest.TestCase):
             sentinel = target / "installer.exe"
             sentinel.write_bytes(b"synthetic-checkpoint")
             with patch.object(delivery, "EXTERNAL_DELIVERY_ROOT", root):
-                with self.assertRaisesRegex(ValueError, "checkpoint"):
-                    delivery.delivery_output(target)
+                with patch.object(delivery, "checked_delivery_root", return_value=root):
+                    with self.assertRaisesRegex(ValueError, "checkpoint"):
+                        delivery.delivery_output(target)
             self.assertEqual(sentinel.read_bytes(), b"synthetic-checkpoint")
 
     def test_existing_checkpoint_and_path_escape_are_rejected_without_changes(self):
