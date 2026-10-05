@@ -10,11 +10,13 @@ param(
 $ErrorActionPreference = 'Stop'
 $desktopRoot = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $testRoot = [IO.Path]::GetFullPath((Join-Path $desktopRoot 'test-results'))
+$externalProofRoot = [IO.Path]::GetFullPath('E:/Renulus-native-delivery/desktop-20261005/proofs')
 foreach ($outputPath in @($Target, $EvidencePath)) {
     $absolute = [IO.Path]::GetFullPath($outputPath)
-    if (-not [IO.Path]::IsPathRooted($outputPath) -or -not $absolute.StartsWith($testRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Dialog output must stay in this lane test-results.' }
+    $confined = @($testRoot, $externalProofRoot) | Where-Object { $absolute.StartsWith($_ + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) }
+    if (-not [IO.Path]::IsPathRooted($outputPath) -or -not $confined) { throw 'Dialog output must stay in this lane test-results or the exact authorised E proofs root.' }
     $cursor = Split-Path -Parent $absolute
-    while ($cursor.Length -ge $testRoot.Length) {
+    while ($cursor) {
         if ((Test-Path -LiteralPath $cursor) -and ((Get-Item -LiteralPath $cursor).Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Dialog target may not traverse a reparse path.' }
         $cursor = Split-Path -Parent $cursor
     }

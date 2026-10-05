@@ -660,3 +660,14 @@ IDs and rejected HEAD as a moving identity. This protects retained checkpoint
 install directories from an automatic upgrade uninstall; preservation remains
 an explicit post-install check. Product filename and the executable layout stay
 Renulus Development.exe. Final native and NSIS execution remain pending freeze.
+
+The real producer Save gate also had two older C-only tool guards. The actual
+Windows dialog operator and standalone isolated ZIP inspector now admit only
+the same exact E proofs root alongside the existing assigned test-results root;
+other drives/sibling prefixes/relative ZIP inputs and reparse paths reject.
+Seven archive integrity/boundary tests passed on E, and again in 0.288 s under
+the retained installed embedded Python with -I -B, System32-only PATH and
+child-only E TEMP/TMP. No helper-heavy app launch occurred. The real dialog
+tool accepted E output paths then correctly stopped at an intentionally missing
+owner PID; a sibling-prefix path rejected before owner lookup. This is a guard
+check, not a fresh GUI Save proof. Actual native execution remains pending.
