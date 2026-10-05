@@ -6,6 +6,8 @@ import { Badge, Button, ErrorState, Input, LoadingState, Notice, PageHeader } fr
 import type { Health } from './contracts';
 import { DataManagement } from './DataManagement';
 import { RetrievalConnections } from './RetrievalConnections';
+import { cancelRun, runEvents } from './runs';
+import { imageCapabilityRequest } from './imageCapability';
 
 type Provider = 'codex' | 'opencode-go';
 type Availability = 'unknown' | 'available' | 'unavailable' | 'account_unsupported';
@@ -18,7 +20,16 @@ interface Login {
   authorization_url?: string; expires_at?: number; error?: { code: string; message: string; retryable: boolean };
 }
 type Action = { kind: 'start-login' | 'open-login' | 'check-login' | 'cancel-login' | 'go' | 'go-account' }
-  | { kind: 'select' | 'refresh' | 'disconnect'; provider: Provider };
+  | { kind: 'select' | 'refresh' | 'disconnect'; provider: Provider }
+  | { kind: 'check-image'; model: string };
+interface ImageAttempt {
+  id: string; model: string; controller: AbortController; stopped: boolean; terminal: boolean;
+  cancellation?: ReturnType<typeof cancelRun>;
+}
+function cancelImage(attempt: ImageAttempt) {
+  attempt.cancellation ??= cancelRun('/runtime/runs/' + encodeURIComponent(attempt.id), 'DELETE');
+  return attempt.cancellation;
+}
 interface Failure { error: unknown; action?: Action }
 interface Message { text: string; tone?: 'warning' }
 const names: Record<Provider, string> = { codex: 'Codex', 'opencode-go': 'OpenCode Go' };
@@ -96,6 +107,7 @@ export function ConnectionsPage() {
   const loginRef = useRef<Login | undefined>(undefined);
   const pendingLogin = useRef<string | undefined>(undefined);
   const releasedLogins = useRef(new Set<string>());
+  const imageAttempt = useRef<ImageAttempt | undefined>(undefined);
 
   const releaseLogin = useCallback((id: string) => {
     if (releasedLogins.current.has(id)) return;
@@ -108,6 +120,11 @@ export function ConnectionsPage() {
     return () => {
       mounted.current = false; active.current?.abort(); polling.current?.abort();
       if (pendingLogin.current) releaseLogin(pendingLogin.current);
+      const attempt = imageAttempt.current;
+      if (attempt && !attempt.terminal) {
+        attempt.stopped = true;
+        void cancelImage(attempt).catch(() => {});
+      }
     };
   }, [releaseLogin]);
 
@@ -232,6 +249,69 @@ export function ConnectionsPage() {
       catch { throw new ApiError('The OpenCode Go account page could not be opened. Try opening it again.', 0, 'account_open_failed', true); }
     }, false);
   }
+  async function checkImage(model: string) {
+    if (busy || imageAttempt.current || loginActive(loginRef.current) || resource.status !== 'ready') return;
+    const connection = resource.data.connections.connections.find(item => item.provider === 'codex');
+    if (resource.data.connections.selected_provider !== 'codex' || connection?.status !== 'connected'
+      || !learningEnabled(connection) || !approvedModels.codex.includes(model)
+      || !connection.models.some(item => item.id === model && item.availability === 'available' && item.image_input !== 'account_unsupported')) return;
+    const attempt: ImageAttempt = { id: crypto.randomUUID(), model, controller: new AbortController(), stopped: false, terminal: false };
+    imageAttempt.current = attempt; active.current = attempt.controller;
+    setBusy({ kind: 'check-image', model }); setFailure(undefined); setNotice(undefined);
+    try {
+      for await (const event of runEvents('/runtime/runs', { method: 'POST',
+        body: imageCapabilityRequest(attempt.id, model), runId: attempt.id, signal: attempt.controller.signal })) {
+        if (!mounted.current || attempt.stopped || attempt.controller.signal.aborted || imageAttempt.current !== attempt) break;
+        if (event.type === 'error') {
+          attempt.terminal = true;
+          const payload = event.payload;
+          throw new ApiError(typeof payload.message === 'string' ? payload.message : 'Image input could not be checked.',
+            typeof payload.status === 'number' ? payload.status : 503,
+            typeof payload.code === 'string' ? payload.code : 'image_check_failed', payload.retryable === true);
+        }
+        if (event.type === 'cancelled') {
+          attempt.terminal = true; setNotice({ text: 'Image input check cancelled.' });
+        }
+        if (event.type === 'completed') {
+          attempt.terminal = true;
+          setNotice({ text: model + ' accepted the Renulus test image. Refreshing observed input support; interpretation quality remains unverified.' });
+          retry();
+        }
+      }
+    } catch (error) {
+      if (mounted.current && !attempt.stopped && !attempt.controller.signal.aborted && !isCancelled(error)) {
+        setFailure({ error, action: { kind: 'check-image', model } });
+        // Account/quota failures may update the public runtime capability report.
+        retry();
+      }
+    } finally {
+      if (!attempt.terminal && !attempt.stopped) {
+        attempt.controller.abort();
+        void cancelImage(attempt).catch(() => {});
+      }
+      if (mounted.current && imageAttempt.current === attempt && !attempt.stopped) {
+        imageAttempt.current = undefined; active.current = null; setBusy(undefined);
+      }
+    }
+  }
+  async function stopImageCheck() {
+    const attempt = imageAttempt.current; if (!attempt || attempt.terminal || attempt.stopped) return;
+    attempt.stopped = true; attempt.controller.abort();
+    setNotice({ text: 'Stopping the image input check…' });
+    try {
+      await cancelImage(attempt);
+      if (mounted.current && imageAttempt.current === attempt) setNotice({ text: 'Image input check stopped.' });
+    } catch (error) {
+      if (mounted.current && imageAttempt.current === attempt) {
+        setNotice({ text: 'The local check was stopped, but server cancellation could not be confirmed. Refresh status before another check.', tone: 'warning' });
+        setFailure({ error, action: { kind: 'refresh', provider: 'codex' } });
+      }
+    } finally {
+      if (mounted.current && imageAttempt.current === attempt) {
+        imageAttempt.current = undefined; active.current = null; setBusy(undefined);
+      }
+    }
+  }
   function retryFailure() {
     const action = failure?.action; if (!action) return;
     switch (action.kind) {
@@ -240,6 +320,7 @@ export function ConnectionsPage() {
       case 'cancel-login': void cancelLogin(); break;
       case 'open-login': void operation(action, openLogin, false); break;
       case 'go-account': void openGoAccount(); break;
+      case 'check-image': void checkImage(action.model); break;
       case 'select': case 'refresh': case 'disconnect': void providerAction(action); break;
     }
   }
@@ -273,8 +354,9 @@ export function ConnectionsPage() {
         <Button key={item.id} variant={section === item.id ? 'secondary' : 'ghost'} aria-pressed={section === item.id} disabled={!!busy || signingIn} onClick={() => setSection(item.id)}>{item.label}</Button>)}
     </nav>
     {section === 'subscriptions' && <>
-      {failure && <div className="section"><ErrorState error={failure.error} title="The connection could not be updated" onRetry={failure.action && !busy ? retryFailure : undefined} />{!failure.action && <p>Enter your OpenCode Go key again to retry. The previous entry has been cleared.</p>}</div>}
+      {failure && <div className="section"><ErrorState error={failure.error} title={failure.action?.kind === 'check-image' ? 'Image input could not be checked' : 'The connection could not be updated'} onRetry={failure.action && !busy && !(failure.action.kind === 'check-image' && failure.error instanceof ApiError && !failure.error.retryable) ? retryFailure : undefined} />{!failure.action && <p>Enter your OpenCode Go key again to retry. The previous entry has been cleared.</p>}</div>}
       {notice && <div className="section"><Notice tone={notice.tone}><p>{notice.text}</p></Notice></div>}
+      {busy?.kind === 'check-image' && <section className="section" aria-label="Image input check"><Notice><p>Checking image input for {busy.model} using the synthetic Renulus test image.</p></Notice><Button variant="secondary" disabled={imageAttempt.current?.stopped} onClick={stopImageCheck}>Stop image check</Button></section>}
       {signingIn && login && <section className="section" aria-label="Codex sign-in"><Notice><div className="section">
         <p>{login.status === 'exchanging' ? 'ChatGPT sign-in received. Renulus is finishing the account connection.' : 'Finish sign-in in your browser. Renulus is waiting for your account to connect.'}</p>
         {typeof login.expires_at === 'number' && <p className="muted">Sign-in expires at {new Date(login.expires_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.</p>}
@@ -303,7 +385,10 @@ export function ConnectionsPage() {
               <ul className="connection-models" aria-label={names[connection.provider] + ' model availability'}>{models.map(model => <li key={model.id}>
                 <strong>{model.id}</strong><Badge tone={model.availability === 'available' ? 'default' : 'neutral'}>{({ unknown: 'Availability not checked', available: 'Listed for this account', unavailable: 'Not listed for this account', account_unsupported: 'Account rejected this model' })[model.availability] ?? 'Availability not checked'}</Badge>
                 <span className="muted">{capabilityLabel('Text', model.text_input)} · {capabilityLabel('Images', model.image_input)}</span>
+                {connection.provider === 'codex' && ready && resource.data.connections.selected_provider === 'codex' && model.availability === 'available' &&
+                  <Button variant="secondary" aria-label={'Check image input for ' + model.id} disabled={!!busy || signingIn || model.image_input === 'account_unsupported'} busy={busy?.kind === 'check-image' && busy.model === model.id} onClick={() => checkImage(model.id)}>Check image input</Button>}
               </li>)}</ul>
+              {connection.provider === 'codex' && ready && resource.data.connections.selected_provider === 'codex' && <p className="muted">Check image input sends one original synthetic Renulus test image to the model you choose and uses your subscription. It does not upload your files or verify interpretation quality. If image input was rejected, check models before retrying.</p>}
               {connection.provider === 'opencode-go' && connection.status !== 'connected' && <form className="connection-key" onSubmit={connectGo}>
                 <Input label="OpenCode Go key" type="password" value={key} onChange={event => setKey(event.target.value)} autoComplete="off" spellCheck={false} disabled={!!busy || signingIn} maxLength={8192} hint="Stored by Renulus in its protected app profile. Never imported from another application." />
                 <div><Button type="submit" busy={busy?.kind === 'go'} disabled={!key.trim() || !!busy || signingIn}>Check and save Go key<ArrowRight size={16} /></Button></div>
