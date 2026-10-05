@@ -1,6 +1,6 @@
 """Approved Provider text deltas -> validated practice, ordered SSE, one terminal."""
 import asyncio
-from contextlib import suppress
+from contextlib import aclosing, suppress
 import inspect
 import json
 import sqlite3
@@ -259,5 +259,6 @@ async def generate(repo, run, replay=None):
 
 
 async def sse_events(repo, run, replay=None):
-    async for event in generate(repo, run, replay):
-        yield f"id: {event.id}\nevent: {event.type}\ndata: {event.model_dump_json()}\n\n"
+    async with aclosing(generate(repo, run, replay)) as stream:
+        async for event in stream:
+            yield f"id: {event.id}\nevent: {event.type}\ndata: {event.model_dump_json()}\n\n"
