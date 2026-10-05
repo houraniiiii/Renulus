@@ -131,3 +131,28 @@ no new delivery deadline is invented. The launcher remains on installed
 3ff9b0d6 until a matching final source passes installation, normal-queue
 shutdown/reopen and required connected journeys. Earlier mock, targeted,
 incomplete regression and native observations retain their separate provenance.
+
+## Recovered delivery session and SSD relocation — October 5
+
+The current integration checkout is
+`C:/Renulus-native-delivery/desktop-20261005/repo` on `build/renulus-integration`.
+The exact 458.03 MiB checkout relocation completed at 11:05:35 UTC, moving
+19,483 files with zero reported mismatches or failures. Tracked source matches
+the pre-move HEAD. All existing C and E Git worktree links were repaired. A
+junction at the former E checkout path preserves the old launcher target while
+the installed freeze remains unchanged. Acquired originals and the E learning
+profile were not moved or reimported.
+
+The integration owner recovered the existing packaging, regression, Library,
+subscription, content and ingestion lane contexts and receipts before resuming
+work. The completed E06 admission plan and 28-file import retain their earlier
+receipts. A separate bounded lane connects the formal ESENeph metadata to
+assessment selection; an audit lane records actual requirement evidence.
+Shared contracts, native scheduling, live accounts and acceptance remain owned
+by the integrator. Exactly one mutex-protected 20-minute heartbeat actor is
+active, with original target and pause history preserved in the local queue.
+
+The first recovered runtime fix is integrated as `da726ac1`: Stop at either
+public compaction boundary prevents a further model request. Its synthetic
+evidence remains separately attributed; it does not establish live generation,
+automatic memory extraction or matching installed acceptance.

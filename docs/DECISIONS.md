@@ -57,7 +57,7 @@ remain proposals unless accepted here.
 | Brand | C — Renal flow, with the selected teal treatment; modern medical, calm, precise and approachable, with a subtle renal reference. |
 | Separation | Preserve the inherited clinical MVP and batch/research project outside the active repository. The normal desktop launcher opens Renulus; the optional legacy reference launcher stays separate. |
 | Current scope | Complete the backend, Flow frontend and connected Windows app in bounded parallel lanes and worktrees. GitHub issues hold the adjustable execution queue and evidence. |
-| Heartbeat | Report implementation progress every 15 minutes, superseding the original 30-minute interval. |
+| Heartbeat | Exactly one implementation heartbeat every 20 minutes, per the October 5 owner instruction; earlier 15- and 30-minute settings remain historical. |
 
 ## Unresolved work
 

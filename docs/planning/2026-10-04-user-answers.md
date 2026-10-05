@@ -300,3 +300,31 @@ This supersedes the earlier planning-only implementation status.
 
 Live execution and delivery evidence belong in GitHub issue #1 and
 `docs/implementation/`, not in an assertion that the old planning gates passed.
+
+## October 5 finalisation and storage instruction
+
+The owner renewed the same end-to-end delivery goal on October 5, 2026.
+
+- Move the active delivery checkout from E to the C SSD now that the earlier
+  storage shortage is resolved. Preserve the raw collection on the second SSD,
+  original files, other sessions and app-owned credentials.
+- Recover existing worktrees, commits, incomplete checks and receipts before
+  assigning replacement work. Continue autonomously with Ultra reasoning and
+  up to eight bounded parallel lanes in separate worktrees.
+- Use the existing GitHub issues and draft PR #13 as the live queue, with
+  exactly one heartbeat every **20 minutes**. This is the current interval.
+- Complete backend regression, matching packaging/installation, normal-queue
+  shutdown/reopen, Library originals and citations, ESENeph mapping, approved
+  subscription generation and learning capture, recovery and connected flows.
+- Preserve Flow, the selected engines and exact subscription/model boundaries,
+  source permissions and temporary-case retention. Update the launcher only
+  after acceptance of the matching installed source.
+- Finish with a requirement-by-requirement evidence audit, runnable delivery
+  and honest external blockers. Partial or synthetic evidence does not establish
+  completed release acceptance.
+
+The integration owner relocated the active checkout to
+`C:/Renulus-native-delivery/desktop-20261005/repo` and repaired the existing Git
+worktree links. The old E checkout path is a junction for launcher compatibility;
+the learning profile and acquired originals remain on E. This storage change
+does not update the installed product revision.
