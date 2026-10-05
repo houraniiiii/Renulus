@@ -125,7 +125,7 @@ scroll region and the existing responsive Flow layout is preserved.
 Live subscription behaviour, installed/native acceptance and content efficacy
 are outside this bounded consumer check.
 
-## Bounded focus assertion repair — October 5, 2026
+## Focus-only checkpoint — October 5, 2026
 
 The integration owner's actual renderer run at `8c6c4b18` failed 1 of the 10
 tests: `commits, shows actual source feedback, pauses, resumes and reviews
@@ -183,9 +183,56 @@ provenance, bundled runtime without developer tools in the app PATH, fresh
 isolated installation, shutdown/reopen, recovery and connected journeys remain
 required. This renderer receipt does not establish installed acceptance.
 
-The focus-fix commit owns exactly
+The focus-only checkpoint commit `f8207735` owns exactly
 `apps/desktop/src/modules/assessment/index.test.tsx` and this report. Its hash
 and final changed paths are recorded in
 `.local/assessment-focus-repair/receipt.json` and the final handoff. No new
 backend, GeneratedPractice, shared-module, CSS or type edits; no agents, push
-or native-slot work. The bounded repair ends with that local commit.
+or native-slot work. The owner extended the request after this checkpoint with
+the selector prerequisite below. Its original receipt remains preserved.
+
+## Study-to-Test selector repair and final combined receipt
+
+The owner's additional narrow prerequisite references the published Study/Home
+commit `e3d74e3078ed6514ebc20fcd710137e0460de011`. Its Open Test action emits
+`nav.handoff.track` as `general_nephrology` or `esen_eph`; the activity handoff
+can also retain its topic. Assessment previously initialised only the topic and
+always selected General nephrology, losing an ESENeph handoff. The producer
+source was inspected read-only; parent owns its review and integration.
+
+Assessment now initialises its selected track from either allowed value.
+Missing, unknown or non-string values fall back to `general_nephrology`. Topic
+initialisation, later manual track changes, availability guards, temporary
+scope and all original focus/keyboard behaviour are preserved. The production
+change is confined to this initial state in `index.tsx`.
+
+Three added cases pass the published handoff shape through the real
+`NavigationProvider`, launch a reviewed quiz through the isolated real local
+API, and inspect the actual POST selector. They cover ESENeph, General
+nephrology and an unknown value falling back to General nephrology. They also
+assert one start request and the expected empty topic selection for Home's
+track-only handoff. This is consumer/navigation-contract evidence; the parent
+continues to own the complete Study UI integration.
+
+| Final combined check | Observed result / receipt in this worktree |
+| --- | --- |
+| Full `src/modules/assessment/index.test.tsx`, once after both fixes | 13 passed, 0 failed, 0 errors, 0 skipped; `.local/assessment-focus-selector-repair/final.junit.xml` |
+| Renderer TypeScript check after the production selector change | `node node_modules/typescript/bin/tsc --noEmit`, passed; `.local/assessment-focus-selector-typecheck.log` |
+| Patch whitespace | `git diff --check`, passed |
+
+The combined file run took 22.28 seconds, with JUnit timestamp
+`2026-10-05T14:53:58.974Z` and SHA-256
+`db08b3070be7ff6ed822ac3ab9def32d288a3e7a3e20e9acced21f0a6c0e5092`.
+The earlier 10-test run belongs to the focus-only checkpoint before the owner
+added this prerequisite. No other suites or full-file reruns followed the
+combined 13-test pass. The same synthetic fixture boundaries and own-process
+teardown apply. Windows acceptance remains unsigned current-PC delivery as
+recorded above; this check establishes no installed/native acceptance.
+
+The final selector commit follows `f8207735` without rewriting that checkpoint.
+Together the owned repair changes exactly `index.tsx`, `index.test.tsx` and
+this report. Both commit IDs, cumulative changed paths, source hashes and final
+evidence are recorded in `.local/assessment-focus-selector-repair/receipt.json`
+and the final handoff. No backend, GeneratedPractice, shared-module, CSS or type
+writes, agents, live providers, actual helpers, native work or push were added.
+The extended bounded task ends with that local commit.

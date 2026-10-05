@@ -171,6 +171,29 @@ describe('assessment UI with real local API responses', () => {
     expect(screen.getByText('3 reviewed questions in 2 item families available.')).toBeDefined();
   });
 
+  it.each([
+    { handoffTrack: 'esen_eph', expectedTrack: 'esen_eph' },
+    { handoffTrack: 'general_nephrology', expectedTrack: 'general_nephrology' },
+    { handoffTrack: 'unknown_track', expectedTrack: 'general_nephrology' },
+  ])('starts the Study handoff $handoffTrack with the actual $expectedTrack selector', async ({ handoffTrack, expectedTrack }) => {
+    function StudyEntry() {
+      const nav = useNavigation();
+      return <button onClick={() => nav.navigate('assessment', { payload: { track: handoffTrack } })}>Open Test from Study</button>;
+    }
+    window.location.hash = '#/study';
+    render(<NavigationProvider><StudyEntry /><AssessmentPage /></NavigationProvider>);
+    await screen.findByText('Choose a focused quiz');
+    fireEvent.click(screen.getByText('Open Test from Study'));
+    await waitFor(() => expect((screen.getByLabelText('Track') as HTMLSelectElement).value).toBe(expectedTrack));
+    expect((screen.getByLabelText('Topic') as HTMLSelectElement).value).toBe('');
+    fireEvent.change(screen.getByLabelText('Questions'), { target: { value: '1' } });
+    const before = startRequests.length;
+    fireEvent.click(screen.getByText('Start reviewed quiz'));
+    await screen.findByText('Question 1');
+    expect(startRequests.length - before).toBe(1);
+    expect(JSON.parse(startRequests[before]).selector).toEqual({ track: expectedTrack, topic_ids: [] });
+  });
+
   it('commits, shows actual source feedback, pauses, resumes and reviews without prototype scores', async () => {
     mount();
     await screen.findByText('Choose a focused quiz');

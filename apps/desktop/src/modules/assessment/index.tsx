@@ -110,7 +110,9 @@ export default function AssessmentPage() {
 function AssessmentStudyPage() {
   const nav = useNavigation();
   const [mode, setMode] = useState<'reviewed' | 'generated'>('reviewed');
-  const [track, setTrack] = useState('general_nephrology');
+  const handoffTrack = nav.handoff?.track;
+  const [track, setTrack] = useState<string>(
+    handoffTrack === 'general_nephrology' || handoffTrack === 'esen_eph' ? handoffTrack : 'general_nephrology');
   const [topic, setTopic] = useState(typeof nav.handoff?.topic_id === 'string' ? nav.handoff.topic_id : '');
   const [count, setCount] = useState('10');
   const [session, setSession] = useState<Session | null>(null);
