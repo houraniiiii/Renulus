@@ -3,6 +3,47 @@
 This record supersedes the location, heartbeat and lane instructions in the
 historical `SESSION_HANDOFF.md`. Preserve its receipts and observations.
 
+## Current manufacture and recovered acceptance preparation
+
+The accepted product manufacture freeze is
+`035ca7bd07337c65266c17f9b762ca1f97238e11`. Its existing Package controller is
+running in parent session `61735`, run `035ca7bd-package-baaed9d1`. NSIS factory
+preflight passed. The public backend/Node trees were staged on C, and the backend
+manifest now names the freeze; its full refreshed byte inventory and the remaining
+renderer/native/installer manufacture are still running. Do not start a replacement
+Package or credit success before the terminal/provenance receipts. Later integration
+commits change reports only, retaining the exact product source freeze.
+
+The saved-original slice has 112 retained individual backend passes plus one
+accepted exact retry at `37dc5384`, and 45 lane-reported renderer checks plus
+TypeScript. All affected product/test paths match the freeze. Keep the collection
+failure, failed 113-ID run and failed earlier retry separate; no green aggregate
+was manufactured. The renderer raw output is not a standalone file in its retired
+lane; the reviewed transfer summary remains in preserved preparation metadata.
+
+The 64-row audit and connected/lifecycle preparation reports are integrated and
+pushed through `a7a47dac`. The live-acceptance and lifecycle-acceptance worktrees
+were retired after verifying all 22 public preparation files, 264,941 bytes, before
+and after removal. Their branches/commits remain. Execute recipes from:
+
+- `C:/rn-finalise-20261005/preserved-lanes/live-acceptance/recipes/connected-acceptance`
+- `C:/rn-finalise-20261005/preserved-lanes/live-acceptance/recipes/live-acceptance`
+- `C:/rn-finalise-20261005/preserved-lanes/lifecycle-acceptance/recipes`
+
+Each lane's adjacent `preservation-035ca7bd.json` and `retirement-035ca7bd.json`
+records exact file identities. The audit worktree remains for final reconciliation.
+The E supplement-inputs/publisher-media hold remains untouched. Finished bounded
+agents are closed; resume only a concrete remaining slice. Exactly one native
+twenty-minute heartbeat remains active.
+
+Next parent serial sequence is matching Install, all actual native17 gates/three
+ordinary physical closes and screenshot review, connected originals/populated
+recovery/Memory/mistake-to-plan, and the bounded selected-account Probe/Journeys.
+Lifecycle binding admits passed live journeys or one exact terminal external-access
+blocked Probe with ordinary physical close, crediting no live pass for blockage.
+Actual native17 and connected passes remain required for migration/maintenance.
+The normal launcher still selects 3ff9b0d6 until matching installed acceptance.
+
 ## Later continuation at the installed checkpoint
 
 The repaired unsigned `f3160c596eb3132fc7599c08d5973c3f7ddd9acb` installer
