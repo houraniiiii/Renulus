@@ -10,8 +10,9 @@ from threading import RLock
 
 from ..contracts import ApiError, ContextScope, Scope, durable_id
 from ..storage.database import utc_now
-from .engines import DoclingExtractor, FastEmbedEngine, LanceIndex, MAX_BYTES, OfflineAssets
+from .engines import DoclingExtractor, FastEmbedEngine, LanceIndex, MAX_BYTES, MAX_PAGES, OfflineAssets
 from .models import Rights, SourceMetadata, own_text_rights
+from .office import OFFICE_MEDIA, validate_office
 from .source_status import SourceStatusJournal
 
 TERMINAL = {"ready", "failed", "cancelled"}
@@ -22,7 +23,7 @@ REVISION_SUMMARY = ("r.id,r.document_id,r.ordinal,r.status,r.sha256,r.media_type
                     "r.created_at,r.activated_at")
 MEDIA = {".pdf": "application/pdf", ".png": "image/png", ".jpg": "image/jpeg",
          ".jpeg": "image/jpeg", ".tif": "image/tiff", ".tiff": "image/tiff",
-         ".txt": "text/plain", ".md": "text/markdown"}
+         ".txt": "text/plain", ".md": "text/markdown", **OFFICE_MEDIA}
 
 
 def dumps(value) -> str:
@@ -175,7 +176,7 @@ class KnowledgeRepository:
             raise ApiError("file_missing", "The selected file is no longer available", 404, True)
         suffix = path.suffix.lower()
         if suffix not in MEDIA:
-            raise ApiError("unsupported_file", "Choose a PDF, image or UTF-8 text file", 415)
+            raise ApiError("unsupported_file", "Choose a PDF, image, UTF-8 text, PPTX, DOCX or XLSX file", 415)
         if path.stat().st_size > MAX_BYTES:
             raise ApiError("document_limit", "The maximum file size is 64 MiB", 413)
         # Bounded read from the explicit selection only; never discover siblings.
@@ -197,6 +198,8 @@ class KnowledgeRepository:
             reserved = True
         if not rights.cache or not rights.display or (not reserved and (not rights.index or not rights.embedding)):
             raise ApiError("source_permission_required", "Confirm display, local caching, indexing and embedding permission for this source", 403)
+        if suffix in OFFICE_MEDIA:
+            validate_office(data, suffix, max_bytes=MAX_BYTES, max_pages=MAX_PAGES)
         digest = hashlib.sha256(data).hexdigest()
         request_metadata = metadata.model_dump()
         if request_metadata.get("original_sha256") is None:

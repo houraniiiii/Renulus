@@ -2,6 +2,7 @@
 from dataclasses import dataclass, field
 from datetime import timedelta
 import importlib.util
+from importlib.metadata import PackageNotFoundError, version
 import math
 from io import BytesIO
 from pathlib import Path
@@ -65,9 +66,16 @@ class OfflineAssets:
             except ApiError as error:
                 result[kind] = {"ready": False, "code": error.code, "message": error.message}
         result["packages"] = {name: importlib.util.find_spec(name) is not None
-                              for name in ("docling", "docling_core", "fastembed", "lancedb")}
+                              for name in ("docling", "docling_core", "fastembed", "lancedb", "pptx", "docx", "openpyxl")}
         result["text_import"] = result["fastembed"]["ready"] and all(
             result["packages"][x] for x in ("docling_core", "fastembed", "lancedb"))
+        from .office import DOCLING_VERSION, DOCLING_CORE_VERSION
+        try:
+            office_versions = version("docling") == DOCLING_VERSION and version("docling-core") == DOCLING_CORE_VERSION
+        except PackageNotFoundError:
+            office_versions = False
+        result["office_import"] = bool(result["text_import"] and office_versions and all(
+            result["packages"][name] for name in ("docling", "pptx", "docx", "openpyxl")))
         result["pdf_image_import"] = result["text_import"] and result["docling"]["ready"] and result["ocr"]["ready"] and result["packages"]["docling"]
         helpers = self.services.registry.get("helpers")
         startup = getattr(helpers, "startup", None)
@@ -120,9 +128,10 @@ class DoclingExtractor:
     def __init__(self, assets: OfflineAssets):
         self.assets = assets
         self._converter = None
+        self._office_converter = None
         self._conversion_lock = RLock()
 
-    def _chunk(self, document, text_offsets=None) -> Extracted:
+    def _chunk(self, document, text_offsets=None, *, office_format=None) -> Extracted:
         try:
             from docling_core.transforms.chunker.hybrid_chunker import HybridChunker
             from docling_core.transforms.chunker.tokenizer.base import BaseTokenizer
@@ -172,6 +181,10 @@ class DoclingExtractor:
                 raise ApiError("chunk_budget_exceeded", "A structured chunk exceeds the shared embedding budget", 422)
             locators = []
             for item in chunk.meta.doc_items:
+                if office_format:
+                    from .office import item_locators
+                    locators.extend(item_locators(item, document, office_format))
+                    continue
                 ref = item.self_ref
                 if text_offsets and ref in text_offsets:
                     locators.append({"item_ref": ref, "page": None, "char_span": text_offsets[ref]})
@@ -201,7 +214,7 @@ class DoclingExtractor:
                     body.texts[position] = TextItem.model_validate(payload)
                     changed = True
             if changed:
-                fallback = self._chunk(body, text_offsets)
+                fallback = self._chunk(body, text_offsets, office_format=office_format)
                 return Extracted(fallback.passages, document.export_to_dict())
             raise ApiError("empty_extraction", "No readable document text was extracted", 422)
         return Extracted(passages, document.export_to_dict())
@@ -221,6 +234,10 @@ class DoclingExtractor:
         return self._chunk(document, offsets)
 
     def extract_file(self, path: Path, title: str) -> Extracted:
+        from .office import OFFICE_MEDIA
+        if path.suffix.lower() in OFFICE_MEDIA:
+            with self._conversion_lock:
+                return self._extract_office(path)
         if path.suffix.lower() in (".txt", ".md"):
             try:
                 return self.extract_text(path.read_text(encoding="utf-8-sig"), title)
@@ -228,6 +245,29 @@ class DoclingExtractor:
                 raise ApiError("invalid_text_encoding", "Use a UTF-8 text file", 422) from None
         with self._conversion_lock:
             return self._extract_document(path, path.suffix.lower(), title)
+
+    def _extract_office(self, path: Path) -> Extracted:
+        from .office import office_converter, validate_office
+        try:
+            with path.open("rb") as source:
+                validate_office(source.read(MAX_BYTES + 1), path.suffix.lower(),
+                    max_bytes=MAX_BYTES, max_pages=MAX_PAGES)
+            from docling.datamodel.base_models import ConversionStatus
+            if self._office_converter is None:
+                self._office_converter = office_converter()
+            result = self._office_converter.convert(path, max_file_size=MAX_BYTES,
+                max_num_pages=MAX_PAGES, raises_on_error=False)
+            if result.status != ConversionStatus.SUCCESS:
+                raise ApiError("extraction_failed", "Docling could not completely extract this Office document", 422)
+            extracted = self._chunk(result.document, office_format=path.suffix.lower())
+            extracted.ocr["used"] = False
+            return extracted
+        except ImportError:
+            raise ApiError("helper_package_unavailable", "Docling Office extraction is not installed", 503, True) from None
+        except ApiError:
+            raise
+        except Exception:
+            raise ApiError("extraction_failed", "Docling could not extract this Office document", 422) from None
 
     def extract_bytes(self, data: bytes, filename: str, title: str) -> Extracted:
         """Docling input remains a BytesIO stream; this method never creates a file."""
