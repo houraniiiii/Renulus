@@ -602,3 +602,29 @@ This confirms the inspector's standard-library compatibility in the installed
 relocated interpreter. It did not start the native app, warm helpers, modify
 the installed runtime or touch a user/delivery profile. Final matching native
 producer/archive execution remains pending the explicit source freeze.
+
+On 2026-10-05 the parent reserved exactly E:/Renulus-native-delivery/
+desktop-20261005 for fresh final public outputs. Delivery, electron-builder and
+installer guards now admit descendants of that root as well as the existing
+desktop release tree. They reject the root itself, sibling prefixes, other
+drives and parent escapes; existing output and install targets still refuse
+replacement, and reparse ancestors remain forbidden. All C checkpoints and
+the earlier installer are preserved. No rejected deletion was repeated.
+
+Build commands and NSIS receive fresh E scratch directories through their own
+child environments. Host TEMP/TMP remain unchanged. A real lightweight child
+under PowerShell 7.6.6 and Windows PowerShell 5.1.26100.9444 separately observed
+the reserved E TEMP/TMP, used GetTempPath and wrote its synthetic marker there.
+Both exited zero, with evidence under the exact E temporary root. These are
+child-environment checks; they do not claim a new NSIS install. Six delivery
+boundary/dependency tests pass. Five direct electron-builder configuration
+loads also accepted the authorised descendant and rejected four external/root
+escapes. Node syntax and PowerShell parser checks passed.
+
+The read-only installer plan passed against immutable parent
+6abd3ae9b0d0eebe7ba4468290312f3c4286d7f9 with E output and temporary paths,
+Electron 44.5.1, embedded CPython 3.14.4 and the same 19 public helpers
+(483,597,181 bytes). test-results/plan-6abd3ae9-e.json records it. This did not
+refresh source, create the planned package directories, start a backend or
+access either clean delivery profile. Final matching package/install/native
+producer proof remains pending the explicit final frozen revision.

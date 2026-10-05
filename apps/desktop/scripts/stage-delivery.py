@@ -18,6 +18,7 @@ import subprocess
 import sys
 
 DESKTOP = Path(__file__).resolve().parents[1]
+EXTERNAL_DELIVERY_ROOT = Path("E:/Renulus-native-delivery/desktop-20261005")
 spec = importlib.util.spec_from_file_location("stage_backend", Path(__file__).with_name("stage-backend.py"))
 backend = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(backend)
@@ -50,6 +51,14 @@ def owned_path(value: Path, root: Path, *, fresh: bool = False) -> Path:
     return resolved
 
 
+def delivery_output(value: Path, *, fresh: bool = True) -> Path:
+    # This exact external root was reserved by the parent on 2026-10-05.
+    for root in (DESKTOP / "release", EXTERNAL_DELIVERY_ROOT):
+        if value.absolute().is_relative_to(root.absolute()):
+            return owned_path(value, root, fresh=fresh)
+    raise ValueError("Delivery output must stay in the desktop release tree or exact authorised E root")
+
+
 def dependency_check(source: Path, previous: str, revision: str) -> None:
     changed = git(source, "diff", "--name-only", previous, revision, "--",
                   "uv.lock", "pyproject.toml").decode().strip()
@@ -66,7 +75,9 @@ def plan(args) -> dict:
     revision = committed_revision(source, args.revision)
     payload = owned_path(args.payload, DESKTOP / "test-results")
     snapshot = owned_path(args.snapshot, DESKTOP / "test-results", fresh=True)
-    output = owned_path(args.output, DESKTOP / "release", fresh=True)
+    output = delivery_output(args.output)
+    temporary = owned_path(EXTERNAL_DELIVERY_ROOT / "temporary" / ("build-" + revision),
+                           EXTERNAL_DELIVERY_ROOT, fresh=True)
     if snapshot.is_relative_to(payload) or payload.is_relative_to(snapshot):
         raise ValueError("Renderer snapshot and embedded payload must be independent")
     manifest = json.loads((payload / "bundle.json").read_text(encoding="utf-8"))
@@ -116,6 +127,7 @@ def plan(args) -> dict:
     commands.append(build)
     return {"version": 1, "source_revision": revision, "kind": "matching-unsigned-windows-delivery",
             "payload": str(payload), "snapshot": str(snapshot), "output": str(output),
+            "temporary_directory": str(temporary),
             "executable": str(output / "win-unpacked/Renulus Development.exe"),
             "package": args.package, "electron": pin, "python": backend.PYTHON_VERSION,
             "helper_files": len(helper_files), "helper_bytes": sum(file["size"] for file in helper_files),
@@ -123,7 +135,8 @@ def plan(args) -> dict:
             "environment": {"RENULUS_BACKEND_BUNDLE": str(payload),
                             "RENULUS_RENDERER_BUNDLE": str(renderer),
                             "RENULUS_NATIVE_BUNDLE": str(native),
-                            "RENULUS_DELIVERY_OUTPUT": str(output)}}
+                            "RENULUS_DELIVERY_OUTPUT": str(output),
+                            "TEMP": str(temporary), "TMP": str(temporary)}}
 
 
 def execute(delivery: dict) -> None:
@@ -132,6 +145,8 @@ def execute(delivery: dict) -> None:
     stored = json.loads((payload / "inventory.json").read_text())
     if backend.inventory(payload) != stored:
         raise ValueError("The acquired payload changed outside its recorded byte inventory")
+    temporary = owned_path(Path(delivery["temporary_directory"]), EXTERNAL_DELIVERY_ROOT, fresh=True)
+    temporary.mkdir(parents=True, exist_ok=False)
     environment = dict(os.environ, **delivery["environment"])
     for command in delivery["commands"][:2]:
         subprocess.run(command, cwd=DESKTOP, env=environment, check=True)

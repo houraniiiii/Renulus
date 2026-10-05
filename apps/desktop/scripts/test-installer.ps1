@@ -13,12 +13,14 @@ param(
 $ErrorActionPreference = 'Stop'
 $desktopRoot = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $releaseRoot = [IO.Path]::GetFullPath((Join-Path $desktopRoot 'release'))
+$externalRoot = [IO.Path]::GetFullPath('E:/Renulus-native-delivery/desktop-20261005')
+. (Join-Path $PSScriptRoot 'installer-child.ps1')
 function Assert-OwnedReleasePath([string]$Value) {
     if (-not [IO.Path]::IsPathFullyQualified($Value)) { throw 'An explicit absolute release path is required.' }
     $absolute = [IO.Path]::GetFullPath($Value)
-    if (-not $absolute.StartsWith($releaseRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Installer and install target must stay within this desktop lane release directory.' }
+    if (-not ($absolute.StartsWith($releaseRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -or $absolute.StartsWith($externalRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase))) { throw 'Installer and install target must stay in the desktop release tree or exact authorised E root.' }
     $cursor = $absolute
-    while ($cursor -and $cursor.Length -ge $releaseRoot.Length) {
+    while ($cursor) {
         if (Test-Path -LiteralPath $cursor) {
             $item = Get-Item -LiteralPath $cursor -Force
             if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'A release path must not traverse a junction or symbolic link.' }
@@ -29,6 +31,7 @@ function Assert-OwnedReleasePath([string]$Value) {
 }
 $installerPath = Assert-OwnedReleasePath $Installer
 $targetPath = Assert-OwnedReleasePath $Target
+$temporaryPath = Assert-OwnedReleasePath (Join-Path $externalRoot ('temporary/install-' + [Guid]::NewGuid().ToString('N').Substring(0,8)))
 if (-not (Test-Path -LiteralPath $installerPath -PathType Leaf)) { throw 'The completed installer is missing.' }
 if (Test-Path -LiteralPath $targetPath) { throw 'Refusing an existing install directory; preserve previous output and use a fresh target.' }
 if ($SourceRevision -notmatch '^[0-9a-f]{40}$') { throw 'An exact committed source revision is required.' }
@@ -43,14 +46,17 @@ $report = [ordered]@{
     installerBytes = (Get-Item -LiteralPath $installerPath).Length
     signature = (Get-AuthenticodeSignature -LiteralPath $installerPath).Status.ToString()
     target = $targetPath
+    installerTemporaryDirectory = $temporaryPath
     expectedSourceRevision = $SourceRevision
     limits = @('This actual Windows machine; no signed or clean-VM proof', 'Synthetic independent native profiles only', 'No provider login or inference', 'No uninstaller or callback-cleanup claim')
 }
 $failure = $null
 try {
     $startedAt = [DateTime]::UtcNow
+    New-Item -ItemType Directory -Path $temporaryPath | Out-Null
     # NSIS requires /D last. Target is guarded, absolute and intentionally fresh.
-    $process = Start-Process -FilePath $installerPath -ArgumentList @('/S', ('/D=' + $targetPath)) -WindowStyle Hidden -PassThru -Wait
+    $childInfo = New-InstallerChildInfo $installerPath ('/S /D=' + $targetPath) $temporaryPath
+    $process = [Diagnostics.Process]::Start($childInfo)
     $process.WaitForExit(); $process.Refresh()
     $report.installSeconds = ([DateTime]::UtcNow - $startedAt).TotalSeconds
     $report.installExitCode = $process.ExitCode

@@ -4,6 +4,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location("stage_delivery", Path(__file__).with_name("stage-delivery.py"))
 delivery = importlib.util.module_from_spec(spec)
@@ -11,6 +12,32 @@ spec.loader.exec_module(delivery)
 
 
 class DeliveryBoundaries(unittest.TestCase):
+    def test_exact_authorised_external_root_accepts_fresh_output_without_writes(self):
+        target = delivery.EXTERNAL_DELIVERY_ROOT / "preflight-only-synthetic-fresh"
+        self.assertFalse(target.exists())
+        self.assertEqual(delivery.delivery_output(target), target.resolve())
+        self.assertFalse(target.exists())
+
+    def test_external_sibling_prefix_and_parent_escape_are_rejected(self):
+        for target in (delivery.EXTERNAL_DELIVERY_ROOT.parent / "desktop-20261005-other/new",
+                       delivery.EXTERNAL_DELIVERY_ROOT / "../outside/new",
+                       Path("F:/Renulus-native-delivery/desktop-20261005/new"),
+                       delivery.EXTERNAL_DELIVERY_ROOT):
+            with self.subTest(target=target), self.assertRaises(ValueError):
+                delivery.delivery_output(target)
+
+    def test_external_root_existing_checkpoint_is_preserved(self):
+        with tempfile.TemporaryDirectory(dir=delivery.DESKTOP / "test-results") as temporary:
+            root = Path(temporary)
+            target = root / "existing"
+            target.mkdir()
+            sentinel = target / "installer.exe"
+            sentinel.write_bytes(b"synthetic-checkpoint")
+            with patch.object(delivery, "EXTERNAL_DELIVERY_ROOT", root):
+                with self.assertRaisesRegex(ValueError, "checkpoint"):
+                    delivery.delivery_output(target)
+            self.assertEqual(sentinel.read_bytes(), b"synthetic-checkpoint")
+
     def test_existing_checkpoint_and_path_escape_are_rejected_without_changes(self):
         with tempfile.TemporaryDirectory(dir=delivery.DESKTOP / "test-results") as temporary:
             root = Path(temporary)
