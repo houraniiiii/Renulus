@@ -521,3 +521,34 @@ source Flow renderer at 2.377 s with delayed fixture metadata, independently of
 real backend readiness. The source instance closed before further native work.
 Final matching installed Library/source-link and producer recovery journeys still
 require the explicitly frozen parent revision.
+
+The actual committed DataManagement consumer then passed the same four native
+dialog operations at that exact 35f874b5 source. In
+test-results/native-save-bdd5df8f/native-save-source-evidence.json, the tool
+navigated Connections to Your study data and clicked Download full backup (ZIP).
+The unchanged renderer chose its real preload/main native bridge; the proof did
+not call saveBackup/cancelBackup directly for these positive operations or
+replace their results. Its recovery, empty-account and health reads are explicit
+synthetic fixtures, separate from real producer/recovery semantics.
+
+The UI disabled duplicate saves while pending. A 131,072-byte sibling partial
+was observed with the existing synthetic destination intact; completion promoted
+67,109,006 bytes with the same 4fc194db...64c5e checksum and displayed
+Full backup saved: promotion.zip (64 MiB). Cancel download stopped the second
+transfer after an observed 262,144-byte partial, preserved its existing sentinel,
+removed the partial and displayed Backup save cancelled. Upstream closed
+unfinished after 589,824 sent bytes. The deliberate 409 displayed its bounded
+message and preserved its sentinel. Actual native dialog Cancel displayed the
+cancelled notice without starting a fourth transfer. Each operation re-enabled
+the download button and left no sibling partial. All three authenticated
+transfers again requested /api/v1/data/backup?format_version=2.
+
+These notices are recorded as renderer observations, never intercepted IPC
+return objects. Real PID/control-scoped Windows dialogs and the existing
+synthetic-output guard were reused; no path-result substitution occurred.
+Source and compiled preload hashes matched their recorded provenance, alongside
+the existing main/renderer/backend checks. The final Connections screenshot was
+inspected and shows the cancelled notice and available save button. Node syntax
+passed. Opening was visible at 1.514 s and the loopback renderer at 2.805 s with
+delayed fixture metadata; these are not real backend/Home startup timings. Main
+PID 33884 was confirmed gone. No clean delivery profile or heavy backend was used.
