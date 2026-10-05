@@ -481,3 +481,43 @@ at 1.008 s, the loopback renderer at 2.467 s, the observed cancelled partial was
 327,680 bytes and the upstream closed after 393,216 sent bytes. Main PID 35844
 was confirmed gone. The completed ZIP checksum was unchanged. This verifies the
 actual v2 request path, while the archive body remains the declared synthetic ZIP.
+
+The matching delivery driver now requires an exact parent commit and fresh owned
+renderer/output directories. It refuses changed Windows wheel locks, desktop
+manifest/lock divergence, missing integrated backend/bootstrap adoption, helper
+anchor changes, a different Python archive or an installed Electron mismatch.
+Before execution it verifies the complete acquired public payload inventory,
+then refreshes only public committed source, compiles renderer/main/preload and
+requires all three revisions and the native adoption hash to match. It packages
+to a separate release/matching-<revision8> directory, preserving checkpoints, and
+records hashes with native-launch evidence explicitly pending. The launcher can
+use that directory's win-unpacked/Renulus Development.exe; unsigned NSIS output
+uses the same directory when --package installer is selected.
+
+A read-only --plan-only run against 35f874b52eb86fe71aa94949b0c8c69b482c8f18
+passed with the unchanged selected locks, actual Electron 44.5.1 artifact,
+official embedded CPython 3.14.4 checksum and trusted 19-file/483,597,181-byte
+helper contract. It did not refresh/package or launch a backend. Twelve real
+synthetic boundary checks passed in 7.245 s, covering the existing source/wheel/
+helper inventory boundaries plus moving-ref, checkpoint, escape and changed-lock
+refusals. No final delivery revision was inferred from the moving parent branch.
+
+That exact 35f874b5 desktop source was separately archived, typechecked and built
+with unchanged main/preload/backend plus recorded source/bundle hashes. The
+existing native journey tool can now exercise this immutable source entry with
+declared synthetic Library/original fixtures before installed packaging. In
+test-results/journeys-95450eb4/journey-evidence.json the real Library inspector
+loaded a blob PDF at physical page 2 under the committed CSP/request policy, with
+zero failed requests, a detected built-in viewer and a selected page 2. The
+library-pdf-viewer.png screenshot was inspected and visibly reads RENULUS - PAGE
+TWO with the large 2 marker. No acquired/private original was used.
+
+The actual openSource preload/main IPC called the original OS shell.openExternal
+for the public KDIGO guidelines HTTPS reference. Dispatch completed, the renderer
+stayed at its local Library URL and one renderer window remained. The test only
+observes the original OS dispatch, not browser page load, and does not operate
+the parent's tabs. The first protected opening was visible at 0.791 s and the
+source Flow renderer at 2.377 s with delayed fixture metadata, independently of
+real backend readiness. The source instance closed before further native work.
+Final matching installed Library/source-link and producer recovery journeys still
+require the explicitly frozen parent revision.
