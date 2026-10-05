@@ -56,6 +56,40 @@ function HandoffHarness({ observe }: { observe: (payload: Record<string, unknown
 }
 
 describe('cases UI retention and run guards', () => {
+  it('removes only a current own original using its case revision, then requires Save changes', async () => {
+    const original = { id: 'own_original', filename: 'synthetic.pdf', title: 'Synthetic chart', media_type: 'application/pdf',
+      bytes: 100, sha256: 'a'.repeat(64), saved: true, original_available: true };
+    const opened = { ...snapshot, revision: 7, attachments: [original] };
+    const removed = { ...opened, revision: 8, dirty: true, attachments: [] };
+    const fetch = mockApi((path, options) => path.endsWith('/' + temporary.id) ? json(opened) :
+      path.endsWith('/attachments/own_original?revision=7') && options.method === 'DELETE' ? json(removed) :
+      path.endsWith('/save') ? json({ ...removed, dirty: false }) : undefined);
+    const { result } = renderHook(() => useCases());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => { await result.current.open(temporary.id); });
+    await act(async () => { await result.current.removeAttachment('unrelated_id'); });
+    expect(fetch.mock.calls.some(([, options]) => options.method === 'DELETE')).toBe(false);
+    await act(async () => { await result.current.removeAttachment(original.id); });
+    expect(result.current.session?.attachments).toEqual([]); expect(result.current.session?.dirty).toBe(true);
+    expect(fetch.mock.calls.some(([path]) => path.endsWith('/save'))).toBe(false);
+    await act(async () => { await result.current.save(); });
+    expect(JSON.parse(fetch.mock.calls.find(([path]) => path.endsWith('/save'))![1].body as string)).toEqual({ revision: 8 });
+    expect(result.current.session?.dirty).toBe(false);
+  });
+
+  it('does not apply a late kept image after the case has been deleted', async () => {
+    let finish!: (response: Response) => void;
+    mockApi(path => path.endsWith('/keep') ? new Promise<Response>(resolve => { finish = resolve; }) : undefined);
+    const { result } = renderHook(() => useCases());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => { await result.current.start({ kind: 'daily', title: 'Daily case', text: SENTINEL }); });
+    let pending!: Promise<unknown>;
+    act(() => { pending = result.current.keepImage('own_preview') as Promise<unknown>; });
+    await act(async () => { await result.current.remove(); });
+    await act(async () => { finish(json({ ...temporary, revision: 2, attachments: [] })); await pending; });
+    expect(result.current.session).toBeNull();
+  });
+
   it('calls Save only on explicit action and keeps all case data out of browser storage', async () => {
     const fetch = mockApi();
     const store = vi.spyOn(Storage.prototype, 'setItem');

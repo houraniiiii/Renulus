@@ -153,6 +153,18 @@ export function useCases(resumeCaseId?: string) {
     return change('apply-preview', () => request<CaseSession>('/cases/attachments/' + encodeURIComponent(id) + '/apply',
       { method: 'POST', body: { revision: item.revision, text } }));
   }
+  function keepImage(id: string) {
+    const item = current.current;
+    if (!item || active.current) return;
+    return change('keep-image', () => request<CaseSession>('/cases/attachments/' + encodeURIComponent(id) + '/keep',
+      { method: 'POST', body: { revision: item.revision } }));
+  }
+  function removeAttachment(id: string) {
+    const item = current.current;
+    if (!item || active.current || !item.attachments?.some(attachment => attachment.id === id)) return;
+    return change('remove-attachment', () => request<CaseSession>(casePath(item.id) + '/attachments/' + encodeURIComponent(id) +
+      '?revision=' + item.revision, { method: 'DELETE' }));
+  }
   function close() {
     const item = current.current;
     if (!item || active.current) return;
@@ -255,5 +267,5 @@ export function useCases(resumeCaseId?: string) {
   return { session, capabilities, saved, teaching, loading, busy, error, catalogueError,
     discussImage: (id: string, model: string, question: string) => send(question, undefined, { id, model }),
     running, partial, pendingQuestion, purgePending, reload, start, open, save, reveal,
-    close, remove, retryPurge, stop, send, handoff, applyPreview, refreshCurrency };
+    close, remove, retryPurge, stop, send, handoff, applyPreview, keepImage, removeAttachment, refreshCurrency };
 }

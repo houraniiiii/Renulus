@@ -2,6 +2,10 @@
 import type { ContextScope } from '../../platform/contracts';
 
 export interface CaseMessage { id: string; role: 'user' | 'assistant'; content: string; created_at: string }
+export interface CaseAttachment {
+  id: string; filename: string; title: string; media_type: string; bytes: number; sha256: string;
+  saved: boolean; original_available: boolean;
+}
 export interface SourceLocator { source_id: string; locator: string }
 export interface CaseCurrency {
   kind: 'case'; id: string | null; version: number | null;
@@ -24,6 +28,7 @@ export interface CaseSession {
   scope: ContextScope; saved: boolean; dirty: boolean; saved_at: string | null;
   created_at: string; updated_at: string; active_run_id: string | null;
   messages: CaseMessage[]; teaching: TeachingView | null;
+  attachments?: CaseAttachment[];
 }
 export interface CaseSummary {
   id: string; kind: 'daily' | 'teaching'; title: string; revision: number;

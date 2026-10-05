@@ -5,6 +5,7 @@ import { Badge, Button, EmptyState, ErrorState, Input, LoadingState, Notice, Pag
 import { useNavigation } from '../../shell/navigation';
 import { useCases } from './useCases';
 import { CaseAttachments } from './CaseAttachments';
+import { CaseOriginals } from './CaseOriginals';
 import { CaseCurrencyLabel, CaseCurrencyNotice } from './CaseCurrency';
 import './cases.css';
 
@@ -102,7 +103,8 @@ export default function CasesPage() {
                 {item.teaching.revealed_count < item.teaching.stage_count ? 'Reveal next stage' : 'Reveal debrief'}<ArrowRight size={17} aria-hidden="true" /></Button>}
             </section></> : <details className="case-details" open><summary>Case details</summary><p className="case-text prose">{item.text}</p></details>}
           </div>
-          {item.kind === 'daily' && <CaseAttachments session={item} capabilities={cases.capabilities} disabled={disabled} apply={cases.applyPreview} discussImage={cases.discussImage} />}
+          <CaseOriginals session={item} disabled={disabled} remove={cases.removeAttachment} />
+          {item.kind === 'daily' && <CaseAttachments session={item} capabilities={cases.capabilities} disabled={disabled} apply={cases.applyPreview} keepImage={cases.keepImage} discussImage={cases.discussImage} />}
           <section className="case-discussion" aria-label="Case discussion">
             {item.messages.map(message => <article className={'case-message case-message-' + message.role} key={message.id}>
               <h3>{message.role === 'user' ? 'Your question' : 'Discussion'}</h3><p className="case-text prose">{message.content}</p>
@@ -151,9 +153,9 @@ export default function CasesPage() {
 
     <dialog ref={dialog} className="case-confirm" aria-labelledby="case-confirm-title">
       <h2 id="case-confirm-title">{confirmation === 'delete' ? 'Delete this case?' : 'Discard temporary changes?'}</h2>
-      <p>{confirmation === 'delete' ? 'This removes the case and its saved discussion from Renulus. You cannot reopen it.' :
+      <p>{confirmation === 'delete' ? 'This removes the case, its saved discussion and originals from Renulus. You cannot reopen it.' :
         item?.saved ? 'The last saved snapshot remains available. Changes since that Save will be discarded.' :
-          'This case has not been saved. Closing it discards its text and discussion.'}</p>
+          'This case has not been saved. Closing it discards its text, discussion and added files.'}</p>
       <div className="actions"><Button variant="secondary" onClick={() => dialog.current?.close()}>Keep case open</Button>
         <Button variant="danger" onClick={() => { dialog.current?.close(); void (confirmation === 'delete' ? cases.remove() : cases.close()); }}>
           {confirmation === 'delete' ? 'Delete case' : 'Discard and close'}</Button></div>

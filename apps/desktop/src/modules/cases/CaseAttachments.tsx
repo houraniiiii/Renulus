@@ -18,9 +18,10 @@ function pause(signal: AbortSignal) {
   });
 }
 
-export function CaseAttachments({ session, capabilities, disabled, apply, discussImage }: {
+export function CaseAttachments({ session, capabilities, disabled, apply, keepImage, discussImage }: {
   session: CaseSession; capabilities?: CaseCapabilities; disabled: boolean;
   apply: (id: string, text: string) => Promise<CaseSession | null | undefined> | undefined;
+  keepImage?: (id: string) => Promise<CaseSession | null | undefined> | undefined;
   discussImage?: (id: string, model: string, question: string) => Promise<void>;
 }) {
   const [preview, setPreview] = useState<AttachmentPreview>();
@@ -128,9 +129,17 @@ export function CaseAttachments({ session, capabilities, disabled, apply, discus
     finally { if (alive.current) setApplying(false); }
   }
 
+  async function keep() {
+    if (!preview || !keepImage) return;
+    setApplying(true);
+    try { await keepImage(preview.id); }
+    catch (failure) { if (alive.current && !isCancelled(failure)) setError(failure); }
+    finally { if (alive.current) setApplying(false); }
+  }
+
   return <section className="case-attachments section" aria-label="Temporary attachments">
     <h2><FileText size={20} aria-hidden="true" />Bring a file into your case</h2>
-    <p className="muted">Review extracted text or select an image for discussion. Save keeps the case text and completed discussion; image bytes and original files are omitted.</p>
+    <p className="muted">Review extracted text or select an image. Save keeps the case text, completed discussion and PDF, PNG or JPEG originals you explicitly add. A case can keep up to 16 originals totalling 32 MiB.</p>
     <Select label="Use this file for" value={mode} disabled={disabled || processing || !!preview} onChange={event => setMode(event.target.value as 'text' | 'image')}>
       <option value="text">Local text extraction</option><option value="image" disabled={!imageCapability?.supported || !discussImage}>Image discussion with selected subscription</option></Select>
     {!canRead ? <p className="muted">Temporary attachment extraction is unavailable in this installation. Paste relevant text into your learning question.</p> :
@@ -144,11 +153,12 @@ export function CaseAttachments({ session, capabilities, disabled, apply, discus
       <Button variant="secondary" onClick={() => void discard()}><Square size={15} aria-hidden="true" />{mode === 'image' ? 'Stop image preparation' : 'Stop extraction'}</Button></Notice>}
     {preview?.mode === 'image' && preview.image && <div className="case-extraction-preview">
       <img src={'data:' + preview.image.media_type + ';base64,' + preview.image.data} alt="Selected image for temporary case discussion" style={{ maxWidth: '100%', maxHeight: 360, objectFit: 'contain' }} />
-      <Notice><p>Image bytes are temporary and omitted from Save. Save keeps your question and completed discussion. Reselect the image after reopening. Clinical accuracy and live image interpretation are unverified.</p></Notice>
-      <Select label="Selected account image model" value={model} disabled={disabled} onChange={event => setModel(event.target.value)}>{imageCapability?.models?.map(value => <option key={value}>{value}</option>)}</Select>
-      <Textarea label="Question about this image" value={question} maxLength={11800} disabled={disabled} onChange={event => setQuestion(event.target.value)} />
-      <div className="actions"><Button disabled={disabled || !question.trim() || !imageCapability?.models?.includes(model)} onClick={() => { if (discussImage) void discussImage(preview.id, model, question.trim()); }}>Send image for discussion</Button>
-        <Button variant="ghost" disabled={disabled} onClick={() => void discard()}>Discard image</Button></div>
+      <Notice><p>This preview is temporary. Keep image in case or send it for discussion to add its original. Choose Save case or Save changes to retain it after closing. Keeping an image does not send it to a model. Clinical accuracy and live image interpretation are unverified.</p></Notice>
+      {keepImage && <div className="actions"><Button variant="secondary" busy={applying} disabled={disabled} onClick={() => void keep()}>Keep image in case</Button></div>}
+      <Select label="Selected account image model" value={model} disabled={disabled || applying} onChange={event => setModel(event.target.value)}>{imageCapability?.models?.map(value => <option key={value}>{value}</option>)}</Select>
+      <Textarea label="Question about this image" value={question} maxLength={11800} disabled={disabled || applying} onChange={event => setQuestion(event.target.value)} />
+      <div className="actions"><Button disabled={disabled || applying || !question.trim() || !imageCapability?.models?.includes(model)} onClick={() => { if (discussImage) void discussImage(preview.id, model, question.trim()); }}>Send image for discussion</Button>
+        <Button variant="ghost" disabled={disabled || applying} onClick={() => void discard()}>Discard image</Button></div>
     </div>}
     {preview && preview.mode !== 'image' && <div className="case-extraction-preview">
       <p className="muted">{preview.filename} · {typeof preview.ocr.confidence === 'number' ?
@@ -157,7 +167,7 @@ export function CaseAttachments({ session, capabilities, disabled, apply, discus
         onChange={event => setText(event.target.value)} />
       <div className="actions"><Button variant="secondary" busy={applying} disabled={disabled || !text.trim()} onClick={() => void useText()}>Use extracted text</Button>
         <Button variant="ghost" disabled={applying} onClick={() => void discard()}><X size={16} aria-hidden="true" />Discard preview</Button></div>
-      <p className="muted">Using this text does not save it. Choose Save case to keep it.</p>
+      <p className="muted">Using this text adds the reviewed text and its original to this case. Choose Save case or Save changes to keep both after closing.</p>
     </div>}
     {capabilities?.image_interpretation && !capabilities.image_interpretation.supported &&
       <p className="muted">Image discussion is unavailable: {capabilities.image_interpretation.reason} Text extraction reads labels and words; it does not interpret clinical images.</p>}

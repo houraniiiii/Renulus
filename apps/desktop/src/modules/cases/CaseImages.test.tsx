@@ -32,7 +32,13 @@ function fixture({ supported = true, pause = false, reject = false } = {}) {
     if (path.endsWith('/saved') || path.endsWith('/teaching')) return Promise.resolve(json({ cases: [] }));
     if (path.endsWith('/sessions') && options.method === 'POST') return Promise.resolve(json(caseItem));
     if (path.endsWith('/save')) {
-      current = { ...current, saved: true, dirty: false, saved_at: '2026-10-05', scope: { kind: 'saved-case', entity_id: caseItem.id } };
+      current = { ...current, saved: true, dirty: false, saved_at: '2026-10-05', scope: { kind: 'saved-case', entity_id: caseItem.id },
+        attachments: current.attachments?.map(attachment => ({ ...attachment, saved: true })) };
+      return Promise.resolve(json(current));
+    }
+    if (path.endsWith('/keep')) {
+      current = { ...caseItem, revision: 2, attachments: [{ id: 'kept_image', filename: 'synthetic.png', title: 'Temporary image',
+        media_type: 'image/png', bytes: 21, sha256: 'a'.repeat(64), saved: false, original_available: true }] };
       return Promise.resolve(json(current));
     }
     if (path.endsWith('/prepare')) return Promise.resolve(json({ ...preview, image: null, state: 'reading' }));
@@ -42,7 +48,7 @@ function fixture({ supported = true, pause = false, reject = false } = {}) {
       if (reject) return Promise.resolve(json({ error: { code: 'image_capabilities_unverified',
         message: 'The selected account changed. Review the image and check Connections.', retryable: true } }, 409));
       current = { ...caseItem, revision: pause ? 2 : 3, messages: pause ? [] : [
-        { id: 'image-question', role: 'user', content: 'Synthetic image question [Image bytes are omitted from Save.]', created_at: '2026-10-05' },
+        { id: 'image-question', role: 'user', content: 'Synthetic image question', created_at: '2026-10-05' },
         { id: 'image-answer', role: 'assistant', content: 'Synthetic image response', created_at: '2026-10-05' }] };
       return Promise.resolve(new Response(new ReadableStream<Uint8Array>({
         start(controller) {
@@ -76,11 +82,11 @@ async function reviewImage() {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); window.history.replaceState(null, '', '#'); });
 
 describe('actual Cases renderer image consumer', () => {
-  it('reviews without inference, sends only explicitly with the selected model and discloses Save omissions', async () => {
+  it('reviews without inference, sends only explicitly with the selected model and explains explicit Save', async () => {
     const { fetch } = fixture();
     const store = vi.spyOn(Storage.prototype, 'setItem');
     await reviewImage();
-    expect(screen.getByText(/Image bytes are temporary and omitted from Save/)).toBeTruthy();
+    expect(screen.getByText(/Keeping an image does not send it to a model/)).toBeTruthy();
     expect((screen.getByAltText('Selected image for temporary case discussion') as HTMLImageElement).src).toBe('data:image/png;base64,' + DATA);
     expect(fetch.mock.calls.some(([path]) => path.endsWith('/discuss-image'))).toBe(false);
     expect((screen.getByLabelText('Selected account image model') as HTMLSelectElement).value).toBe(MODEL);
@@ -93,6 +99,23 @@ describe('actual Cases renderer image consumer', () => {
     expect(fetch.mock.calls.some(([path]) => path.endsWith('/save'))).toBe(false);
     expect(store).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.queryByAltText('Selected image for temporary case discussion')).toBeNull());
+  });
+
+  it('keeps a ready image original with revision only and persists it only on explicit Save', async () => {
+    const { fetch } = fixture();
+    await reviewImage();
+    fireEvent.click(screen.getByRole('button', { name: 'Keep image in case' }));
+    await screen.findByRole('region', { name: 'Case originals' });
+    expect(screen.getByRole('button', { name: 'View original' })).toBeTruthy();
+    const keep = fetch.mock.calls.find(([path]) => path.endsWith('/keep'))!;
+    expect(keep[0]).toBe('/api/v1/cases/attachments/image_preview/keep');
+    expect(JSON.parse(keep[1].body as string)).toEqual({ revision: 1 });
+    expect(fetch.mock.calls.some(([path]) => path.endsWith('/save') || path.endsWith('/discuss-image') || path.endsWith('/original'))).toBe(false);
+    await waitFor(() => expect(screen.queryByAltText('Selected image for temporary case discussion')).toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: 'Save case' }));
+    await screen.findByRole('button', { name: 'Saved' });
+    expect(screen.getAllByText('Saved')).toHaveLength(2);
+    expect(fetch.mock.calls.filter(([path]) => path.endsWith('/save'))).toHaveLength(1);
   });
 
   it('uses the normal real run cancellation route and clears the image preview', async () => {
