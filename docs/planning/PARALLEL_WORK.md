@@ -1,6 +1,8 @@
 # Parallel implementation and worktrees
 
-2026-10-04 · Planning only; no worktrees or implementation branches created.
+Original baseline 2026-10-04; active lanes, worktrees and handoffs are tracked in
+GitHub issues and `../implementation/EXECUTION.md`. Sequencing below is flexible
+when actual integration evidence changes a dependency.
 **Every branch contributes real product behaviour.** Parallel mock screens do
 not establish parallel progress if their contracts, state and integrations
 cannot work together.

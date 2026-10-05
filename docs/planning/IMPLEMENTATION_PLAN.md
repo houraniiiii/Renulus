@@ -1,6 +1,8 @@
 # Renulus staged implementation plan
 
-2026-10-04 · Planning only. **Renulus is a real product. Every stage builds
+Original baseline 2026-10-04; implementation is now authorised and active.
+GitHub issues and `../implementation/EXECUTION.md` track the adjustable queue
+and observed acceptance. **Renulus is a real product. Every stage builds
 working software that remains useful in the final application.** Figma concepts,
 test fixtures and prototypes support decisions; none substitutes for working
 connections, persistence, retrieval or assessment.

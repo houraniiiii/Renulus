@@ -287,7 +287,8 @@ This supersedes the earlier planning-only implementation status.
 - Use GitHub issues as the dynamic work queue and record decisions and evidence.
   Start unblocked work in available lanes. Prioritise working product flows and
   maintained reusable components over redundant infrastructure or trivial tests.
-- Work autonomously over the next eight hours with a heartbeat every 30 minutes.
+- Work autonomously over the next eight hours. The later explicit goal instruction
+  sets the heartbeat to **15 minutes**, superseding the initial 30-minute request.
   The UI session is `7cc53cdb-4edb-4770-b48e-b1cf925f0021`; source acquisition
   continues separately in `33c2315f-f369-42d0-bf80-818205301d18`. Preserve their
   work and integrate available artifacts through explicit ownership boundaries.

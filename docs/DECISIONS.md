@@ -1,6 +1,6 @@
 # Renulus decisions
 
-Updated on 2026-10-04. The [recorded user answers](planning/2026-10-04-user-answers.md)
+Updated on 2026-10-05. The [recorded user answers](planning/2026-10-04-user-answers.md)
 are the evidence for the new product decisions. Earlier assistant suggestions
 remain proposals unless accepted here.
 
@@ -55,10 +55,17 @@ remain proposals unless accepted here.
 | Design workflow | Figma with Impeccable and Interface Design. |
 | Review | User and assistant lead review and validation using concrete evidence; no external-panel prerequisite. |
 | Brand | C — Renal flow, with the selected teal treatment; modern medical, calm, precise and approachable, with a subtle renal reference. |
-| Separation | Preserve the inherited clinical MVP and batch/research project outside the active repository. The desktop launcher opens that baseline explicitly as a reference. |
-| Current scope | Finalise the source/acquisition register and align planning with ERA user downloads, source currency and optional retrieval API keys. Application implementation and provider usage are separate work. |
+| Separation | Preserve the inherited clinical MVP and batch/research project outside the active repository. The normal desktop launcher opens Renulus; the optional legacy reference launcher stays separate. |
+| Current scope | Complete the backend, Flow frontend and connected Windows app in bounded parallel lanes and worktrees. GitHub issues hold the adjustable execution queue and evidence. |
+| Heartbeat | Report implementation progress every 15 minutes, superseding the original 30-minute interval. |
 
 ## Unresolved work
+
+Implementation is authorised and active. The stage/architecture documents remain
+adjustable engineering baselines; product choices above stay confirmed. Current
+working flows, actual acquired-data checks, selected-engine verification and
+remaining delivery/account gates are recorded in `docs/implementation/` and
+GitHub issues #1–#12. Earlier planning descriptions are not completion claims.
 
 Hermes integration and Windows packaging, source/content acquisition, curriculum
 mapping detail, attachment processing, memory deletion semantics and content
