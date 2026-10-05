@@ -3,6 +3,7 @@ import { api } from '../../platform/api';
 import { Button, ErrorState, Select } from '../../ui';
 
 type RouteKind = 'source' | 'publication' | 'literature';
+type Action = 'save' | 'check' | 'cancel' | 'reload';
 type Selection = { kind: RouteKind; id: string };
 type Option = Selection & { source_id: string; title: string; route: string };
 type Job = { kind: RouteKind; target_id: string; title: string; available: boolean; state: string;
@@ -27,7 +28,7 @@ export default function AutomaticChecks({ onComplete }: { onComplete: () => void
   const [cadence, setCadence] = useState(24);
   const [selection, setSelection] = useState<Selection[]>([]);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<unknown>(null);
+  const [error, setError] = useState<{ cause: unknown; action: Action } | null>(null);
   const [message, setMessage] = useState('');
   const completed = useRef(onComplete); completed.current = onComplete;
   const observedRun = useRef<string | null>(null);
@@ -42,7 +43,7 @@ export default function AutomaticChecks({ onComplete }: { onComplete: () => void
   useEffect(() => {
     const controller = new AbortController();
     api<Schedule>('/updates/schedule', { signal: controller.signal }).then(result => accept(result, true))
-      .catch(caught => { if (!controller.signal.aborted) setError(caught); });
+      .catch(cause => { if (!controller.signal.aborted) setError({ cause, action: 'reload' }); });
     return () => controller.abort();
   }, []);
   useEffect(() => {
@@ -54,29 +55,31 @@ export default function AutomaticChecks({ onComplete }: { onComplete: () => void
       inFlight = true;
       try {
         const result = await api<Schedule>('/updates/schedule', { signal: controller.signal });
-        setSchedule(result); setError(null);
+        setSchedule(result); setError(previous => previous?.action === 'reload' ? null : previous);
         const run = result.last_run;
         const token = run?.finished_at ? run.id + ':' + run.finished_at : null;
         if (token && token !== observedRun.current) { observedRun.current = token; completed.current(); }
-      } catch (caught) { if (!controller.signal.aborted) setError(caught); }
+      } catch (cause) {
+        if (!controller.signal.aborted) setError(previous => previous && previous.action !== 'reload' ? previous : { cause, action: 'reload' });
+      }
       finally { inFlight = false; }
     }, schedule?.running ? 1000 : 15_000);
     return () => { controller.abort(); window.clearInterval(timer); };
   }, [schedule?.enabled, schedule?.running]);
 
-  async function action(kind: 'save' | 'check' | 'cancel' | 'reload') {
+  async function action(kind: Action) {
     setBusy(true); setError(null); setMessage('');
     try {
       const result = await api<Schedule>('/updates/schedule' + (kind === 'check' || kind === 'cancel' ? '/' + kind : ''),
         kind === 'save' ? { method: 'PUT', body: { enabled, cadence_hours: cadence, selection } } :
           kind === 'reload' ? {} : { method: 'POST' });
-      accept(result, kind === 'save' || kind === 'reload');
+      accept(result, kind === 'save' || kind === 'reload' && !schedule);
       if (kind === 'save') setMessage(result.enabled ? 'Automatic checks saved. Discoveries will wait for your review.' : 'Automatic checks are off. Your source selection is saved.');
       if (kind === 'cancel') {
         observedRun.current = result.last_run?.finished_at ? result.last_run.id + ':' + result.last_run.finished_at : null;
         setMessage('Checks stopped. Completed observations are retained.'); completed.current();
       }
-    } catch (caught) { setError(caught); } finally { setBusy(false); }
+    } catch (cause) { setError({ cause, action: kind }); } finally { setBusy(false); }
   }
   function toggle(option: Option) {
     setSelection(previous => previous.some(item => key(item) === key(option)) ? previous.filter(item => key(item) !== key(option)) :
@@ -91,7 +94,7 @@ export default function AutomaticChecks({ onComplete }: { onComplete: () => void
   return <details className="updates-automatic">
     <summary>Automatic checks <span>{summary}{failed && !schedule?.running ? ' · ' + last.state : ''}</span></summary>
     <p className="updates-automatic-help">Check selected public sources while Renulus is open. New discoveries wait for your review.</p>
-    {error !== null && <ErrorState error={error} title="Source check settings are unavailable" onRetry={() => action('reload')} />}
+    {error !== null && <ErrorState error={error.cause} title="Source check settings could not be confirmed" onRetry={busy ? undefined : () => void action(error.action)} />}
     {!schedule && error === null && <p role="status">Loading automatic check settings…</p>}
     {schedule && <>
       <div className="updates-automatic-controls">

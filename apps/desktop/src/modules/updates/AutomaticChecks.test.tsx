@@ -85,4 +85,54 @@ describe('Automatic public source checks', () => {
     expect(JSON.parse(fetch.mock.calls.find(([, options]) => options?.method === 'PUT')![1]!.body as string)).toEqual({
       enabled: false, cadence_hours: 168, selection: [{ kind: 'source', id: 'K01' }] });
   });
+  it('retries a failed opt-in save with its selected sources and cadence, retaining the unsaved settings', async () => {
+    let attempts = 0;
+    const fetch = vi.fn(async (_path: string, options: RequestInit = {}) => options.method === 'PUT'
+      ? ++attempts === 1
+        ? response({ error: { code: 'synthetic_offline', message: 'Synthetic settings unavailable.', retryable: true } }, 503)
+        : response({ ...initial, ...JSON.parse(options.body as string) })
+      : response(initial));
+    vi.stubGlobal('fetch', fetch);
+    render(<AutomaticChecks onComplete={() => {}} />); await openSettings();
+    fireEvent.click(screen.getByLabelText('Check my selected sources automatically'));
+    fireEvent.click(screen.getByLabelText(/KDIGO CKD/));
+    fireEvent.change(screen.getByLabelText('Check interval'), { target: { value: '168' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save automatic checks' }));
+    await screen.findByText('Synthetic settings unavailable.');
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await screen.findByText('Automatic checks saved. Discoveries will wait for your review.');
+    const saved = fetch.mock.calls.filter(([, options]) => options?.method === 'PUT');
+    expect(saved).toHaveLength(2);
+    expect(saved.map(([, options]) => JSON.parse(options!.body as string))).toEqual([
+      { enabled: true, cadence_hours: 168, selection: [{ kind: 'source', id: 'K01' }] },
+      { enabled: true, cadence_hours: 168, selection: [{ kind: 'source', id: 'K01' }] },
+    ]);
+  });
+  it('keeps a failed disabling action retryable across successful and failed status polls', async () => {
+    vi.useFakeTimers();
+    const persisted = { ...initial, enabled: true, selection: [{ kind: 'source', id: 'K01' }] };
+    let attempts = 0;
+    let pollFails = false;
+    const fetch = vi.fn(async (_path: string, options: RequestInit = {}) => options.method === 'PUT'
+      ? ++attempts === 1
+        ? response({ error: { code: 'synthetic_offline', message: 'Synthetic disable response unavailable.', retryable: true } }, 503)
+        : response({ ...persisted, ...JSON.parse(options.body as string) })
+      : pollFails ? response({ error: { code: 'synthetic_offline', message: 'Synthetic poll unavailable.', retryable: true } }, 503)
+        : response(persisted));
+    vi.stubGlobal('fetch', fetch);
+    await act(async () => { render(<AutomaticChecks onComplete={() => {}} />); });
+    fireEvent.click(screen.getByText('Automatic checks'));
+    fireEvent.click(screen.getByLabelText('Check my selected sources automatically'));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save automatic checks' })); });
+    expect(screen.getByText('Synthetic disable response unavailable.')).toBeTruthy();
+    await act(async () => { await vi.advanceTimersByTimeAsync(15_000); });
+    expect(screen.getByText('Synthetic disable response unavailable.')).toBeTruthy();
+    pollFails = true;
+    await act(async () => { await vi.advanceTimersByTimeAsync(15_000); });
+    expect(screen.getByText('Synthetic disable response unavailable.')).toBeTruthy();
+    expect((screen.getByLabelText('Check my selected sources automatically') as HTMLInputElement).checked).toBe(false);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Try again' })); });
+    expect(screen.getByText('Automatic checks are off. Your source selection is saved.')).toBeTruthy();
+    expect(attempts).toBe(2);
+  });
 });

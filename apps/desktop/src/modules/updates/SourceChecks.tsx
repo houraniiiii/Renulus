@@ -6,6 +6,8 @@ import { displayDate as date } from './types';
 import type { Candidate, Publication, Source } from './types';
 
 export interface CheckResult { state: string; cached?: boolean; error?: { message: string } }
+type RetryOperation = { kind: 'check'; id: string; publication: boolean } |
+  { kind: 'choose'; id: string } | { kind: 'track' } | { kind: 'stop'; item: Publication };
 export function checkMessage(result: CheckResult, publication = false) {
   if (result.error) return result.error.message;
   if (result.state === 'failed') return 'The check failed. The last successful check has not advanced.';
@@ -17,7 +19,7 @@ export function checkMessage(result: CheckResult, publication = false) {
 
 export default function SourceChecks({ sources, publications, done }: { sources: Source[]; publications: Publication[]; done: (message: string) => void }) {
   const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<unknown>(null);
+  const [error, setError] = useState<{ cause: unknown; operation: RetryOperation } | null>(null);
   const [sourceId, setSourceId] = useState('');
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [url, setUrl] = useState('');
@@ -27,12 +29,12 @@ export default function SourceChecks({ sources, publications, done }: { sources:
     try {
       const result = await api<CheckResult>('/updates/' + (publication ? 'publications/' : 'sources/') + encodeURIComponent(id) + '/check?force=true', { method: 'POST', timeoutMs: 60_000 });
       done(checkMessage(result, publication));
-    } catch (caught) { setError(caught); } finally { setBusy(null); }
+    } catch (cause) { setError({ cause, operation: { kind: 'check', id, publication } }); } finally { setBusy(null); }
   }
   async function choose(id: string) {
     setSourceId(id); setCandidates([]); setUrl(''); setBusy('candidates'); setError(null);
     try { if (id) setCandidates((await api<{ candidates: Candidate[] }>('/updates/sources/' + id + '/publications')).candidates); }
-    catch (caught) { setError(caught); } finally { setBusy(null); }
+    catch (cause) { setError({ cause, operation: { kind: 'choose', id } }); } finally { setBusy(null); }
   }
   async function track() {
     setBusy('tracking'); setError(null);
@@ -40,15 +42,21 @@ export default function SourceChecks({ sources, publications, done }: { sources:
       const item = await api<Publication>('/updates/publications', { method: 'POST', body: { source_id: sourceId, url, permission_reference: permission.trim() } });
       const result = await api<CheckResult>('/updates/publications/' + item.id + '/check?force=true', { method: 'POST', timeoutMs: 60_000 });
       setPermission(''); setUrl(''); done(checkMessage(result, true));
-    } catch (caught) { setError(caught); } finally { setBusy(null); }
+    } catch (cause) { setError({ cause, operation: { kind: 'track' } }); } finally { setBusy(null); }
   }
   async function stop(item: Publication) {
     setBusy(item.id); setError(null);
     try { await api('/updates/publications/' + item.id, { method: 'DELETE' }); done('Tracking stopped. Previous discoveries and reviews are retained.'); }
-    catch (caught) { setError(caught); } finally { setBusy(null); }
+    catch (cause) { setError({ cause, operation: { kind: 'stop', item } }); } finally { setBusy(null); }
+  }
+  function retryOperation(operation: RetryOperation) {
+    if (operation.kind === 'check') void check(operation.id, operation.publication);
+    else if (operation.kind === 'choose') void choose(operation.id);
+    else if (operation.kind === 'track') void track();
+    else if (operation.kind === 'stop') void stop(operation.item);
   }
   return <section className="section updates-sources"><h2>Source checks</h2><p className="muted">Publication links and tracked file changes are discovery evidence. Publication status, access and reviewed currency remain separate.</p>
-    {error !== null && <ErrorState error={error} onRetry={() => setError(null)} />}
+    {error !== null && <ErrorState error={error.cause} onRetry={busy !== null ? undefined : () => retryOperation(error.operation)} />}
     <div className="source-check-list">{sources.map(source => <article key={source.source_id}><div><a href={source.url} target="_blank" rel="noreferrer">{source.title}<ArrowUpRight size={15} /></a><div className="source-check-meta"><Badge tone={source.state === 'failed' || source.freshness === 'stale' ? 'warning' : 'neutral'}>{source.state === 'failed' ? 'Check failed' : source.freshness.replaceAll('-', ' ')}</Badge><span>Last success {date(source.last_success_at)}</span>{source.last_checked_at && <span>Attempt {date(source.last_checked_at)}</span>}</div></div><Button variant="ghost" disabled={busy !== null} busy={busy === source.source_id} onClick={() => check(source.source_id, false)}>Check now</Button></article>)}</div>
     <div className="updates-tracked"><h3>Tracked publications</h3><p className="muted">These checks detect changed published content at the same URL.</p>
       {publications.length ? <div className="source-check-list">{publications.map(item => <article key={item.id}><div><a href={item.url} target="_blank" rel="noreferrer">{item.title}<ArrowUpRight size={15} /></a><div className="source-check-meta"><Badge tone={item.state === 'failed' || item.freshness === 'stale' ? 'warning' : 'neutral'}>{item.state === 'failed' ? 'Check failed' : item.state.replaceAll('-', ' ')}</Badge><span>{item.freshness.replaceAll('-', ' ')}</span><span>Last success {date(item.last_success_at)}</span></div></div><div className="actions"><Button variant="ghost" disabled={busy !== null} busy={busy === item.id} onClick={() => check(item.id, true)}>Check now</Button><Button variant="ghost" disabled={busy !== null} onClick={() => stop(item)}>Stop tracking</Button></div></article>)}</div> : <p className="muted">Choose an eligible public publication to start tracking its content.</p>}

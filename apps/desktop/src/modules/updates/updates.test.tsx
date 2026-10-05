@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import Updates from './index';
 import { literatureMessage } from './types';
 import type { Entry } from './types';
@@ -10,7 +10,7 @@ const entry = (id = 'synthetic-update'): Entry => ({ id, source_id: 'L03', title
   discovered_at: '2026-10-04T12:00:00Z', reviewed_at: null, review_state: 'pending', summary: '', topic_ids: [],
   read_at: null, source_metadata: {}, review: null });
 const json = (body: unknown) => new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } });
-function mockApi(rows = [entry()], extra?: (path: string, options: RequestInit) => Response | undefined) {
+function mockApi(rows = [entry()], extra?: (path: string, options: RequestInit) => Response | Promise<Response> | undefined) {
   const fetch = vi.fn(async (path: string, options: RequestInit = {}) => {
     const overridden = extra?.(path, options); if (overridden) return overridden;
     if (path.startsWith('/api/v1/updates/entries?')) {
@@ -73,6 +73,56 @@ describe('Updates review and bounded queue', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Refresh metadata' })); await screen.findByText('Synthetic article check failed');
     expect((screen.getByLabelText('What changes for your learning?') as HTMLTextAreaElement).value).toBe('Synthetic educational implication only');
     expect((screen.getByLabelText('I inspected this evidence and its stated publication status.') as HTMLInputElement).checked).toBe(true);
+  });
+  it('retries an unconfirmed review with the retained inspected evidence instead of only clearing its error', async () => {
+    let attempts = 0;
+    const fetch = mockApi([entry()], path => path.endsWith('/review') && ++attempts === 1
+      ? new Response(JSON.stringify({ error: { code: 'synthetic_offline', message: 'Synthetic review response unavailable.', retryable: true } }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } }) : undefined);
+    render(<Updates />); await openFirst(); inspectEvidence();
+    fireEvent.click(screen.getByRole('button', { name: 'Save reviewed update' }));
+    await screen.findByText('Synthetic review response unavailable.');
+    expect((screen.getByLabelText('I inspected this evidence and its stated publication status.') as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await screen.findByText('Your evidence and reviewed update are saved.');
+    const submissions = fetch.mock.calls.filter(([path]) => path.endsWith('/review'));
+    expect(submissions).toHaveLength(2);
+    expect(JSON.parse(submissions[1][1]!.body as string)).toEqual(JSON.parse(submissions[0][1]!.body as string));
+  });
+  it('uses the visible newer review draft when an older submitted review fails late', async () => {
+    let rejectFirst!: (reason: Error) => void;
+    const first = new Promise<Response>((_resolve, reject) => { rejectFirst = reject; });
+    let attempts = 0;
+    const fetch = mockApi([entry()], path => path.endsWith('/review') && ++attempts === 1
+      ? first : undefined);
+    render(<Updates />); await openFirst(); inspectEvidence();
+    fireEvent.click(screen.getByRole('button', { name: 'Save reviewed update' }));
+    fireEvent.change(screen.getByLabelText('What changes for your learning?'), {
+      target: { value: 'Synthetic newer inspected implication' } });
+    await act(async () => rejectFirst(new Error('Synthetic connection lost')));
+    await screen.findByRole('button', { name: 'Try again' });
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await screen.findByText('Your evidence and reviewed update are saved.');
+    const submissions = fetch.mock.calls.filter(([path]) => path.endsWith('/review'));
+    expect(submissions).toHaveLength(2);
+    expect(JSON.parse(submissions[1][1]!.body as string).summary).toBe('Synthetic newer inspected implication');
+  });
+  it('retries marking a reviewed publication read and clears the error once confirmed', async () => {
+    let attempts = 0;
+    const row: Entry = { ...entry(), review_state: 'reviewed' };
+    const fetch = mockApi([], path => path.includes('/updates/entries?state=reviewed')
+      ? json({ entries: [row], offset: 0, limit: 50, total: 1, next_offset: null, counts: { pending: 0, reviewed: 1, dismissed: 0 } })
+      : path.endsWith('/read') && ++attempts === 1
+        ? new Response(JSON.stringify({ error: { code: 'synthetic_offline', message: 'Synthetic read confirmation unavailable.', retryable: true } }),
+          { status: 503, headers: { 'Content-Type': 'application/json' } }) : undefined);
+    render(<Updates />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Reviewed 17' }));
+    await openFirst();
+    await screen.findByText('Synthetic read confirmation unavailable.');
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(attempts).toBe(2));
+    expect(screen.queryByText('Synthetic read confirmation unavailable.')).toBeNull();
+    expect(fetch.mock.calls.filter(([path]) => path.endsWith('/read'))).toHaveLength(2);
   });
   it('requires the original article identity and selected replacement scope before publishing metadata', async () => {
     const fetch = mockApi(); render(<Updates />); await openFirst(); inspectEvidence();
