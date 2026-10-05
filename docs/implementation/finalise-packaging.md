@@ -1,8 +1,10 @@
 # Finalise packaging machinery — October 5, 2026
 
-**The scoped NSIS factory correction and C delivery planning checks pass. Product
-manufacture, Install and Proof remain held for the parent's final exact freeze
-and serial slot release.** This report establishes packaging machinery only.
+**Recovered packaging machinery is ready for the parent's final exact freeze
+and serial slot release. The current target is an unsigned Windows build
+validated on the owner's PC.** Factory and read-only Plan evidence establish
+packaging readiness; product manufacture, Install and required journeys remain
+held. Signing and separate clean-PC/VM testing are optional future work.
 
 Owned worktree: `C:/rn-finalise-20261005/lanes/packaging`, branch
 `build/finalise-packaging`, baseline
@@ -166,13 +168,16 @@ The following is a proposed recipe, not an executed manufacture. The parent
 must first integrate this machinery and all product lane patches and supply
 the accepted full SHA. Use PowerShell 7. Build tools come from a fresh Git
 archive of that same SHA, so the native adoption guard compares exact frozen
-source. The named C root separates new manufacture from existing public inputs.
+source. Use the canonical C root for the complete recipe: the parent's native
+evidence guard admits its exact `proofs` directory. A named deliveries child
+still supports Plan/Package/Install, but its `proofs` directory is not admitted
+by that guard. Existing public inputs remain separate from fresh output paths.
 
 ```powershell
 $renulusFinalRevision = '<parent released full 40-character SHA>'
 if ($renulusFinalRevision -notmatch '^[0-9a-f]{40}$') { throw 'Final parent freeze required.' }
 $renulusSource = 'C:/Renulus-native-delivery/desktop-20261005/repo'
-$renulusRoot = 'C:/Renulus-native-delivery/desktop-20261005/deliveries/finalise-20261005'
+$renulusRoot = 'C:/Renulus-native-delivery/desktop-20261005'
 $renulusTag = $renulusFinalRevision.Substring(0, 8)
 
 # Load only the integrated boundary functions, without invoking a phase.
@@ -201,10 +206,20 @@ $renulusArguments = @{
 }
 & $renulusController -Phase Plan @renulusArguments
 
+# Optional cheap factory check before any product copying or manufacture.
+# It compiles synthetic fixtures only and never executes either output.
+$renulusNsisCheck = Assert-PublicGeneratedPath (Join-Path $renulusPreparation ('nsis-preflight-' + $renulusTag + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8))) -Fresh
+& 'C:/Users/karol/Documents/t3-workspaces/Renulus-wt-integration/.venv/Scripts/python.exe' -B `
+    (Join-Path $renulusTools 'apps/desktop/scripts/restage-nsis.py') `
+    --node-modules $renulusArguments.PublicNodeModules `
+    --cache $renulusArguments.PublicBuildCache `
+    --target $renulusNsisCheck --revision $renulusFinalRevision `
+    --install (Join-Path $renulusRoot ('installed-' + $renulusTag))
+if ($LASTEXITCODE -ne 0) { throw 'Factory preflight failed; preserve its receipts and hold manufacture.' }
+
 # Each remaining phase needs the parent's explicit release at execution time.
 & $renulusController -Phase Package -AcceptedFreeze -NativeSlotReleased @renulusArguments
 & $renulusController -Phase Install -AcceptedFreeze -NativeSlotReleased @renulusArguments
-# Proof additionally needs the parent-owned C proof-root correction below.
 & $renulusController -Phase Proof -AcceptedFreeze -NativeSlotReleased @renulusArguments
 ```
 
@@ -240,16 +255,102 @@ The only additional code file is the packaging guard in
 `docs/implementation/finalise-packaging.md`. Parent Vite, native, product,
 schema and migration files were not edited.
 
-The parent-owned `native-evidence-directory.mjs` in the relocated integration
-source still admits only the E external proofs root at this handoff. Before
-final freeze/Proof, the parent must admit the selected C `DeliveryRoot/proofs`
-with equivalent confinement/reparse guards; merely changing the canonical
-E string would not support the named root in this recipe. This lane leaves
-that ownership intact.
+The original handoff preceded the parent's C proof-root correction. At the
+bounded resume, parent commit `793eddb4` admits the exact canonical C `proofs`
+root with its existing reparse guards. The parent reports its five confinement
+tests passing; this lane did not repeat them. The recipe above now uses that
+canonical root, so it does not depend on admitting a named delivery child's
+proofs directory. Parent native evidence/proof files remain outside this lane's
+write scope.
 
-Remaining acceptance: final exact freeze admission, one actual Package, fresh
-Install, serial matching-installed native/helper/product verification and
-parent final acceptance. No live provider calls, signing setup, installer/native
-execution, profile/account access, data movement, shortcut change, deployment,
-push or merge occurred. Synthetic/targeted checks do not establish product
-end-to-end acceptance, a signed release or a clean-machine result.
+Remaining current acceptance: final exact freeze admission, one actual Package,
+fresh Install, serial matching-installed native/helper/product verification on
+this PC and parent final acceptance. The checks below apply the owner's October
+5 acceptance change; historical observations above remain dated evidence.
+
+## Bounded recovery and source review
+
+The lane recovered clean commit `2d923a43011e946483991185dbc3d366e6756ef8`
+and its existing receipts before making changes. The parent subsequently adopted
+that patch as `c9d145afbf6424db39875d41e6c62fabda619c6f` and released integration
+`8c6c4b181281a0d5a6057ff032ab504f82f4e20e`. Those prerequisites were merged into
+this unpublished lane without conflicts or changes to another owner's work.
+The only new tracked change in this bounded wave is this report.
+
+Review checked the generated include's ordering against the pinned builder's
+actual shared-header/compiler path, compile-directory precedence, cache macro,
+local toolset resolver and configuration schema. The recovered source files
+match `2d923a43`; the PowerShell checkout has its declared line-ending
+conversion, recorded separately from committed-byte hashes. No additional
+manufacture blocker was found within the owned code. The concrete recipe
+correction is use of the canonical C root for installed Proof. This is source
+readiness, not a manufactured installer claim.
+
+New read-only Plans passed for `50aac06c` with a named C root and, after the
+parent's prerequisite integration, `8c6c4b18` with the canonical C root. Both used
+the C source checkout and C public Node copy, with the existing E public
+backend/Python/tool archives. The requested source/backend/environment/temp/
+matching output directories remain absent. These revisions are planning
+candidates; neither is asserted to be the parent's accepted final freeze.
+
+The recovery audit rehashed 417 receipt/source/generated-tool files, including
+both compile-only executables, seven factory copies, adapted macro/header/patch,
+extracted toolset inventory and saved logs. The recovered NSIS evidence hash
+still matches `c8ba3ea61d627eee7e03eb0337eb69b30e3ce13e1eb5f2c41bc069f5db225370`.
+The factory, earlier regression/relocation suites and native confinement tests
+were not rerun. No helper/model/OCR work or application compression ran.
+
+All new receipts are under
+`apps/desktop/test-results/recovery-50aac06c/` in this worktree:
+
+| Receipt | Observed result |
+| --- | --- |
+| `plan.stdout.json`, `plan.stderr.log` | Named-root `50aac06c` Plan; exit 0 |
+| `plan-8c6c4b18.stdout.json`, `plan-8c6c4b18.stderr.log` | Canonical-root `8c6c4b18` Plan; exit 0 |
+| `receipt-inventory.json` | 417 file hashes and source/receipt checks; passed |
+| `audit-attempt03.stdout.log`, `audit-attempt03.stderr.log` | Final receipt audit; exit 0 |
+| `report-checks.json` | PowerShell recipe parsed with zero errors; whitespace check passed; no execution |
+| `audit-recovery.py` | Local recovery procedure; no compiler/build/application invocation |
+| `audit.stderr.log`, `audit-attempt02.stderr.log` | Preserved recovery-audit failures described below |
+
+Inventory SHA256:
+`1eab2eea6df2e98a4b550abb6b47da421349eed40c6efdfe4ba2c4b1c6785cf9`.
+
+The first audit inspected only stderr for a warning that NSIS emitted on stdout.
+The second compared PowerShell checkout bytes without applying its Git
+line-ending conversion. The recovery procedure now checks both compiler
+streams and records raw hashes alongside normalised source equality. These
+were receipt-audit errors, not failed factory compiles or new product failures;
+both failed logs remain intact. The final audit passed.
+
+## Current-PC unsigned acceptance checklist
+
+The owner's October 5 decision is recorded in `793eddb4`,
+`docs/DECISIONS.md`, the implementation plan and the user answers. Completion
+requires an unsigned Windows delivery validated on this PC. Signing and a
+separate clean PC/VM are optional future distribution work and do not block
+the current delivery.
+
+- Parent selects the final exact source SHA after integrating owned changes and
+  releases the serial manufacture/native slot. Archive tooling from that SHA,
+  then admit the Plan and cheap factory checks before large copying/building.
+- Manufacture one fresh matching installer with recorded source, executable,
+  ASAR, backend, helper and installer hashes. Keep all inventory/provenance
+  gates and offline artifact pins; earlier failed application archives/ASARs
+  remain historical evidence.
+- Install into its fresh revision-owned directory and verify installed bytes
+  against the matching package. Exercise the bundled runtime on this PC with
+  an OS-only app PATH, excluding developer Python/Node tools.
+- Under the parent's slot, verify normal shutdown/reopen and the actual required
+  connected learning, import/original/citation, assessment, memory, recovery/
+  restore and selected-helper journeys, using isolated synthetic state where
+  appropriate. Preserve source-use permissions and temporary-case retention.
+  Record the observed hardware/OS limits and any failed required journey.
+- Parent owns normal launcher/queue acceptance and any deliberately authorised
+  account/provider evidence. This lane's synthetic compiler evidence does not
+  establish those outcomes. The controller's one-opening Proof is only part of
+  the required installed acceptance.
+
+No Package, Install or Proof, provider request, private profile/credential read,
+external import, heartbeat, other-agent dispatch, push or launcher change occurred
+in this bounded wave.
