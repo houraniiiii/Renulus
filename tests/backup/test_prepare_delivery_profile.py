@@ -21,7 +21,9 @@ import uvicorn
 
 from renulus import server
 
-from .test_content_release_compatibility import learner_records, assert_learner_records
+from .test_content_release_compatibility import (
+    learner_records, assert_learner_records, current_bank_snapshot, assert_current_bank,
+)
 from .test_offline_engine_round_trip import offline_profiles, succeeded, wait_ready
 
 
@@ -101,6 +103,7 @@ def test_guarded_http_library_delivery_retains_originals_journal_and_queue_witho
         "queued.md": b"# SYNTHETIC approved dialysis Library source\nFistula flow and stenosis mechanisms.",
     }
     with offline_profiles("s") as (client, services):
+        source_bank = current_bank_snapshot(client, services)
         helper_root = services.paths.helpers
         rights = {"display": True, "cache": True, "index": True, "embedding": True,
             "model_input": True, "derivation": True, "licence": "CC BY 4.0",
@@ -209,7 +212,7 @@ def test_guarded_http_library_delivery_retains_originals_journal_and_queue_witho
         # Do not enter the lifespan: queued imports belong to native app startup.
         delivered = TestClient(target_app)
         try:
-            assert succeeded(delivered.get("/api/v1/content/manifest"))["version"] == "1.1.0"
+            assert_current_bank(delivered, source_bank)
             documents = succeeded(delivered.get("/api/v1/library/documents"))["documents"]
             assert {row["id"] for row in documents} == {ready["document_id"], queued["document_id"]}
             assert delivered.get(f"/api/v1/library/documents/{reserved['document_id']}").status_code == 404
