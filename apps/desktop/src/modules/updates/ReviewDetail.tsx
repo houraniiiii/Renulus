@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { ArrowUpRight, Check, RefreshCw } from 'lucide-react';
 import { Badge, Button } from '../../ui';
 import AffectedList from './AffectedList';
@@ -11,13 +12,20 @@ interface Props {
   review: (state: 'reviewed' | 'dismissed') => void; refresh: () => void; sync: () => void;
 }
 export default function ReviewDetail({ entry, draft, topics, reviewTopics, busy, change, topicsChanged, review, refresh, sync }: Props) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (entry && window.innerWidth <= 1000) {
+      heading.current?.focus({ preventScroll: true });
+      heading.current?.scrollIntoView?.({ block: 'start' });
+    }
+  }, [entry?.id]);
   if (!entry || !draft) return <aside className="update-detail"><div className="update-detail-empty"><h2>Read, then review.</h2><p>Select a discovery to inspect the publication and keep its implications for your learning.</p></div></aside>;
   const problem = reviewProblem(draft);
   const jobs = entry.library_changes ?? [];
   const outstanding = jobs.filter(job => job.state !== 'applied');
   const syncState = outstanding.length ? [...new Set(outstanding.map(job => job.state))].join(', ') : jobs.length ? 'applied' : entry.review?.library_sync_state;
   return <aside className="update-detail" aria-label="Selected publication">
-    <Badge tone={entry.kind === 'retraction' || entry.kind === 'correction' ? 'warning' : 'neutral'}>{entry.kind.replaceAll('-', ' ')}</Badge><h2>{entry.title}</h2>
+    <Badge tone={entry.kind === 'retraction' || entry.kind === 'correction' ? 'warning' : 'neutral'}>{entry.kind.replaceAll('-', ' ')}</Badge><h2 ref={heading} tabIndex={-1}>{entry.title}</h2>
     <p className="muted">{entry.publication_date ? 'Published ' + date(entry.publication_date) : 'Publication date unavailable'} · Discovered {date(entry.discovered_at)}</p>
     <div className="actions"><a className="update-publication" href={entry.url} target="_blank" rel="noreferrer">Open publication<ArrowUpRight size={17} /></a><Button variant="ghost" disabled={busy !== null} busy={busy === 'refresh'} onClick={refresh}><RefreshCw size={15} />Refresh metadata</Button></div>
     {entry.source_metadata.new_links?.map(link => <a className="update-source-link" href={link.url} target="_blank" rel="noreferrer" key={link.url}>{link.label || 'New publication link'}<ArrowUpRight size={15} /></a>)}

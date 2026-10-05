@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import Updates from './index';
 import { literatureMessage } from './types';
 import type { Entry } from './types';
@@ -42,6 +42,13 @@ function inspectEvidence() {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe('Updates review and bounded queue', () => {
+  it('moves keyboard focus into the selected publication in a compact window', async () => {
+    vi.stubGlobal('innerWidth', 620);
+    mockApi(); render(<Updates />); await openFirst();
+    const selected = screen.getByRole('complementary', { name: 'Selected publication' });
+    const heading = within(selected).getByRole('heading', { name: entry().title });
+    await waitFor(() => expect(document.activeElement).toBe(heading));
+  });
   it('requires inspected evidence and submits the actual evidence with the educational summary', async () => {
     const fetch = mockApi(); render(<Updates />); await openFirst();
     const save = screen.getByRole('button', { name: 'Save reviewed update' }) as HTMLButtonElement;
