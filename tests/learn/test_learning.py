@@ -72,13 +72,18 @@ def test_temporary_case_and_validation_errors_leave_no_durable_sentinel(tmp_path
 
 
 @pytest.mark.asyncio
-async def test_cancel_before_commit_does_not_persist_partial_answer(tmp_path):
+@pytest.mark.parametrize("adapter_failure", [False, True])
+async def test_cancel_before_commit_does_not_persist_partial_answer(tmp_path, adapter_failure, caplog):
     app = create_app(tmp_path)
     service = app.state.services.registry["learn"]
     class SlowProvider(TestProvider):
+        async def cancel(self, run_id):
+            if adapter_failure:
+                raise RuntimeError("SYNTHETIC_CANCELLATION_ERROR_8234")
+            return True
         async def stream(self, messages, **kwargs):
             yield "partial answer"
-            await service.cancel(kwargs["run_id"])
+            assert (await service.cancel(kwargs["run_id"]))["state"] == "cancelled"
             yield "late answer"
     app.state.services.registry["provider"] = SlowProvider()
     _, run = service.prepare("Explain transplantation", ContextScope(kind=Scope.STUDY),
@@ -88,6 +93,7 @@ async def test_cancel_before_commit_does_not_persist_partial_answer(tmp_path):
     thread = service.get_thread(run.thread_id)
     assert len(thread["messages"]) == 1
     assert thread["runs"][0]["state"] == "cancelled"
+    assert "SYNTHETIC_CANCELLATION_ERROR_8234" not in caplog.text
 
 
 @pytest.mark.asyncio

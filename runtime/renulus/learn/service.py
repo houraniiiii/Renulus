@@ -113,13 +113,21 @@ class LearnService:
         if not run:
             return {"run_id": run_id, "state": saved["state"] if saved else "missing"}
         run.cancelled.set()
-        provider = self.services.registry.get("provider")
-        if provider:
-            await provider.cancel(run_id)
         if run.thread_id:
             self.db.execute("UPDATE learn_runs SET state='cancelled',updated_at=? WHERE id=? AND state='running'",
                             (utc_now(), run_id))
+        await self._cancel_provider(run_id)
         return {"run_id": run_id, "state": "cancelled"}
+
+    async def _cancel_provider(self, run_id):
+        # The local guard/state wins even when the connection cannot cancel.
+        # Adapter bodies can echo prompts; never expose or log these failures.
+        provider = self.services.registry.get("provider")
+        if provider:
+            try:
+                await asyncio.wait_for(provider.cancel(run_id), timeout=2)
+            except Exception:
+                pass
 
     async def _discover_literature(self, retrieval, topic_id, run):
         # The registered service resolves this canonical ID to an installed label.
@@ -291,9 +299,7 @@ class LearnService:
             if run.thread_id:
                 self.db.execute("UPDATE learn_runs SET state='interrupted',updated_at=? WHERE id=? AND state='running'",
                                 (utc_now(), run.id))
-            provider = self.services.registry.get("provider")
-            if provider:
-                await provider.cancel(run.id)
+            await self._cancel_provider(run.id)
             raise
         except Exception as error:
             code = error.code if isinstance(error, ApiError) else "explain_failed"

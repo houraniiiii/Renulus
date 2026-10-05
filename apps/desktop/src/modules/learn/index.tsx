@@ -11,7 +11,7 @@ import './learn.css';
 // Shared Source Sans, teal, paper, quiet borders and 4px rhythm govern every state.
 interface Citation { id?: string; passage_id?: string; document_id?: string; revision_id?: string; document_revision?: string; title?: string; page?: number; page_number?: number; source_id?: string; section?: string; locators?: { page?: number | null }[] }
 interface Message { id: string; role: 'user' | 'assistant'; content: string; citations?: Citation[] }
-interface Thread { id: string; title: string; topic_id?: string; teaching_style: 'direct' | 'guided'; messages: Message[]; updated_at: string }
+interface Thread { id: string; title: string; topic_id?: string; teaching_style: 'direct' | 'guided'; messages: Message[]; updated_at: string; runs?: { id: string; state: string }[] }
 interface Topic { id: string; label?: string; title?: string }
 interface LiteratureRecord { id: string; title: string; url: string; authors?: string | null; publication_date?: string | null; doi?: string | null; retracted?: boolean | null }
 type LiteratureDisclosure = { kind: 'ready'; topic_id: string; topic_label: string; queried_at: string; records: LiteratureRecord[] } | { kind: 'unavailable'; topic_id: string; topic_label: string; message: string };
@@ -37,6 +37,7 @@ export default function Learn() {
   const [partial, setPartial] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [retryThread, setRetryThread] = useState<string | null>(null);
   const [status, setStatus] = useState('');
   const [evidenceStatus, setEvidenceStatus] = useState('');
   const [memoryRecall, setMemoryRecall] = useState<MemoryRecall | null>(null);
@@ -46,33 +47,46 @@ export default function Learn() {
   const abort = useRef<AbortController | null>(null);
   const runId = useRef<string | null>(null);
   const runCompleted = useRef(false);
+  const alive = useRef(true);
+  const viewEpoch = useRef(0);
+  const threadIdRef = useRef<string | undefined>(undefined);
+  const resumeRequest = useRef<AbortController | null>(null);
+  const removedThreads = useRef(new Set<string>());
   const ticketId = useRef(typeof handoff?.case_handoff_id === 'string' ? handoff.case_handoff_id : undefined);
   const { resource: history, retry: reloadHistory } = useResource(signal => api<{ threads: Thread[] }>('/learn/threads', { signal }));
   const { resource: topics } = useResource(signal => api<Topic[]>('/content/topics', { signal }));
 
   useEffect(() => {
+    alive.current = true;
     if (typeof handoff?.thread_id === 'string' && !temporary) void resume(handoff.thread_id);
-    return () => { abort.current?.abort(); if (runId.current) void api('/learn/runs/' + runId.current + '/cancel', { method: 'POST' }).catch(() => {}); if (ticketId.current) void api('/cases/handoffs/' + ticketId.current, { method: 'DELETE' }).catch(() => {}); };
+    return () => { alive.current = false; viewEpoch.current++; resumeRequest.current?.abort(); abort.current?.abort(); if (runId.current) void api('/learn/runs/' + runId.current + '/cancel', { method: 'POST' }).catch(() => {}); if (ticketId.current) void api('/cases/handoffs/' + ticketId.current, { method: 'DELETE' }).catch(() => {}); };
   }, []);
   function clearStatuses() { setStatus(''); setEvidenceStatus(''); setMemoryRecall(null); setMemoryCaptureMessage(''); setLiterature(null); setSourceLinkError(''); }
+  function invalidateResume() { resumeRequest.current?.abort(); resumeRequest.current = null; return ++viewEpoch.current; }
+  function displayThread(value: Thread) { threadIdRef.current = value.id; setThread(value); setMessages(value.messages); setTopic(value.topic_id ?? ''); setStyle(value.teaching_style); }
   async function resume(id: string) {
-    if (temporary || busy) return;
-    setError(null); clearStatuses();
-    try { const value = await api<Thread>('/learn/threads/' + encodeURIComponent(id)); setThread(value); setMessages(value.messages); setTopic(value.topic_id ?? ''); setStyle(value.teaching_style); setPartial(''); }
-    catch (caught) { setError(caught); }
+    if (temporary || busy || removedThreads.current.has(id)) return;
+    const epoch = invalidateResume(), controller = new AbortController();
+    resumeRequest.current = controller;
+    setError(null); setRetryThread(null); clearStatuses();
+    try { const value = await api<Thread>('/learn/threads/' + encodeURIComponent(id), { signal: controller.signal }); if (alive.current && viewEpoch.current === epoch && !removedThreads.current.has(id)) { displayThread(value); setPartial(''); } }
+    catch (caught) { if (alive.current && viewEpoch.current === epoch && !isCancelled(caught)) { setRetryThread(id); setError(caught); } }
   }
-  function fresh() { setThread(null); setMessages([]); setPartial(''); setError(null); clearStatuses(); }
+  function fresh() { invalidateResume(); threadIdRef.current = undefined; setThread(null); setMessages([]); setPartial(''); setError(null); setRetryThread(null); clearStatuses(); }
   async function remove(id: string) {
-    try { await api('/learn/threads/' + id, { method: 'DELETE' }); if (thread?.id === id) fresh(); reloadHistory(); }
-    catch (caught) { setError(caught); }
+    const epoch = invalidateResume();
+    try { await api('/learn/threads/' + id, { method: 'DELETE' }); removedThreads.current.add(id); if (!alive.current) return; if (threadIdRef.current === id) fresh(); reloadHistory(); }
+    catch (caught) { if (alive.current && viewEpoch.current === epoch) setError(caught); }
   }
   async function ask(event?: FormEvent) {
     event?.preventDefault(); const text = question.trim(); if (!text || busy) return;
+    const epoch = invalidateResume();
+    const current = () => alive.current && viewEpoch.current === epoch;
     const controller = new AbortController(); abort.current = controller; runId.current = null;
     runCompleted.current = false;
-    setBusy(true); setError(null); setPartial(''); clearStatuses(); setQuestion('');
+    setBusy(true); setError(null); setRetryThread(null); setPartial(''); clearStatuses(); setQuestion('');
     setMessages(previous => [...previous, { id: crypto.randomUUID(), role: 'user', content: text }]);
-    let output = '', sequence = 0, threadId = thread?.id; let references: Citation[] = []; let retrievalFailed = false;
+    let output = '', sequence = 0, threadId = threadIdRef.current; let references: Citation[] = []; let retrievalFailed = false, terminal = false;
     try {
       let caseHandoffId: string | undefined;
       if (temporary && caseId) {
@@ -82,10 +96,11 @@ export default function Learn() {
         const ticket = await api<{ id: string }>('/cases/sessions/' + encodeURIComponent(caseId) + '/handoff', { method: 'POST', signal: controller.signal, body: { revision: currentCase.revision, target: 'explain', question: text } });
         caseHandoffId = ticket.id; ticketId.current = ticket.id;
       }
-      for await (const item of stream<RunEvent>('/learn/ask', { method: 'POST', signal: controller.signal, headers: { 'Idempotency-Key': crypto.randomUUID() }, body: { question: text, scope: temporary ? { kind: 'temporary-case', entity_id: caseId ?? scope.entity_id } : { kind: 'study' }, thread_id: temporary ? null : thread?.id, topic_id: topic || null, teaching_style: style, case_handoff_id: caseHandoffId } })) {
+      for await (const item of stream<RunEvent>('/learn/ask', { method: 'POST', signal: controller.signal, headers: { 'Idempotency-Key': crypto.randomUUID() }, body: { question: text, scope: temporary ? { kind: 'temporary-case', entity_id: caseId ?? scope.entity_id } : { kind: 'study' }, thread_id: temporary ? null : threadId, topic_id: topic || null, teaching_style: style, case_handoff_id: caseHandoffId } })) {
+        if (!current()) break;
         if (controller.signal.aborted || item.data.sequence <= sequence) continue;
         const data = item.data; sequence = data.sequence; runId.current = data.run_id;
-        if (data.type === 'started') threadId = data.payload.thread_id ?? threadId;
+        if (data.type === 'started') { threadId = data.payload.thread_id ?? threadId; if (!temporary) threadIdRef.current = threadId; }
         if (data.type === 'delta') { output += data.payload.text ?? ''; setPartial(output); }
         if (data.type === 'sources') { references = data.payload.citations ?? []; setEvidenceStatus(references.length ? 'Retrieved evidence' : retrievalFailed ? 'Evidence retrieval unavailable · answer not source-verified' : 'No evidence retrieved · answer not source-verified'); }
         if (data.type === 'retrieval-failed') { retrievalFailed = true; setEvidenceStatus('Evidence retrieval unavailable · answer not source-verified'); }
@@ -96,13 +111,30 @@ export default function Learn() {
         if (!temporary && data.type === 'memory' && typeof data.payload.count === 'number' && Number.isSafeInteger(data.payload.count) && data.payload.count >= 0) setMemoryRecall({ kind: 'recalled', count: data.payload.count });
         if (!temporary && data.type === 'memory-unavailable') setMemoryRecall({ kind: 'unavailable', message: data.payload.message ?? 'Learner memory could not be recalled for this explanation.' });
         if (!temporary && data.type === 'memory-capture-unavailable') setMemoryCaptureMessage(data.payload.message ?? 'The explanation was saved. Learner memory capture will retry later.');
-        if (data.type === 'completed') { runCompleted.current = true; output = data.payload.replayed ? data.payload.text ?? output : output; setMessages(previous => [...previous, { id: data.run_id, role: 'assistant', content: output, citations: references }]); setPartial(''); }
-        if (data.type === 'cancelled') setStatus('Stopped · partial explanation not saved');
-        if (data.type === 'error') { setError(new ApiError(data.payload.message ?? 'The explanation could not finish.', 0, data.payload.code ?? 'explain_failed', true)); setQuestion(text); }
+        if (data.type === 'completed') { terminal = true; runCompleted.current = true; output = data.payload.replayed ? data.payload.text ?? output : output; setMessages(previous => [...previous, { id: data.run_id, role: 'assistant', content: output, citations: references }]); setPartial(''); }
+        if (data.type === 'cancelled') { terminal = true; setStatus('Stopped · partial explanation not saved'); setQuestion(text); }
+        if (data.type === 'error') { terminal = true; setError(new ApiError(data.payload.message ?? 'The explanation could not finish.', 0, data.payload.code ?? 'explain_failed', true)); setQuestion(text); }
       }
-      if (threadId && !temporary) { const value = await api<Thread>('/learn/threads/' + threadId); setThread(value); setMessages(value.messages); reloadHistory(); }
-    } catch (caught) { if (!isCancelled(caught)) { setError(caught); setQuestion(text); } else setStatus(runCompleted.current ? 'Complete' : 'Stopped · partial explanation not saved'); }
-    finally { if (abort.current === controller) { setBusy(false); runId.current = null; } }
+      if (!terminal && !controller.signal.aborted && current()) throw new ApiError('The connection ended before the explanation finished. Your question is still available to retry.', 0, 'explain_stream_interrupted', true);
+    } catch (caught) { if (current()) { if (!isCancelled(caught)) { setError(caught); setQuestion(text); } else { setStatus(runCompleted.current ? 'Complete' : 'Stopped · partial explanation not saved'); if (!runCompleted.current) setQuestion(text); } } }
+    finally {
+      const activeRunId = runId.current;
+      if (!terminal && !runCompleted.current && activeRunId) await api('/learn/runs/' + activeRunId + '/cancel', { method: 'POST', timeoutMs: 5000 }).catch(() => {});
+      // Even after Stop or a lost terminal event, SQLite owns the thread/run
+      // outcome. Keep its identity for deliberate retry; never start a new
+      // thread merely because transport ended before history could reload.
+      if (threadId && !temporary && current() && !removedThreads.current.has(threadId)) {
+        const reload = new AbortController(); resumeRequest.current = reload;
+        try {
+          const value = await api<Thread>('/learn/threads/' + encodeURIComponent(threadId), { signal: reload.signal });
+          if (current() && !removedThreads.current.has(threadId)) {
+            displayThread(value); reloadHistory();
+            if (value.runs?.some(run => run.id === activeRunId && run.state === 'completed')) { runCompleted.current = true; setPartial(''); setQuestion(''); setError(null); setStatus('Complete'); }
+          }
+        } catch { if (current() && runCompleted.current) setStatus('Explanation complete · study history could not reload'); }
+      }
+      if (current() && abort.current === controller) { setBusy(false); runId.current = null; }
+    }
   }
   async function stop() {
     if (runId.current) { try { const result = await api<{ state: string }>('/learn/runs/' + runId.current + '/cancel', { method: 'POST' }); runCompleted.current = result.state === 'completed'; setStatus(runCompleted.current ? 'Complete' : 'Stopped · partial explanation not saved'); if (runCompleted.current) return; } catch (caught) { setError(caught); } }
@@ -123,7 +155,7 @@ export default function Learn() {
     <div className="learn-layout"><section className="learn-main">
       {!messages.length && <div className="learning-invitation"><p>Start with a question, a mechanism or a decision you would like to reason through.</p><div className="question-starters">{['How should I reason through AKI?', 'Explain kidney transplant rejection.', 'How do dialysis modalities differ?'].map(value => <button key={value} onClick={() => setQuestion(value)}>{value}</button>)}</div></div>}
       <div className="conversation" aria-label="Learning discussion">{messages.map(message => <article key={message.id} className={'learning-message message-' + message.role}><strong className="message-author">{message.role === 'user' ? 'Your question' : 'Renulus'}</strong><div className="prose learning-answer">{message.content}</div>{message.citations?.length ? <div className="citation-row">{message.citations.map((value, index) => <button key={value.id ?? index} onClick={() => citation(value)}><BookOpen size={14} />Source {index + 1}{value.page ?? value.page_number ? ' · p. ' + (value.page ?? value.page_number) : ''}</button>)}</div> : null}</article>)}{partial && <article className="learning-message"><strong className="message-author">Renulus <Badge tone="neutral">{busy ? 'Explaining' : 'Partial'}</Badge></strong><div className="prose learning-answer">{partial}</div></article>}</div>
-      {error !== null && <ErrorState error={error} title="The explanation could not finish" onRetry={() => { void ask(); }} />}
+      {error !== null && <ErrorState error={error} title={retryThread ? 'The study thread could not load' : 'The explanation could not finish'} onRetry={() => { if (retryThread) void resume(retryThread); else void ask(); }} />}
       {evidenceStatus && <p className="muted" role="status" aria-label="Scientific evidence"><strong>Scientific evidence:</strong> {evidenceStatus}</p>}
       {!temporary && literature && <section aria-label="Discovered literature" className="learn-literature"><Notice tone={literature.kind === 'unavailable' ? 'warning' : 'default'}>
         <p><strong>Discovered literature · discovery only</strong></p>
