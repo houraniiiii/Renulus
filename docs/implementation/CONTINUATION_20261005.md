@@ -8,9 +8,11 @@ historical `SESSION_HANDOFF.md`. Preserve its receipts and observations.
 The accepted product manufacture freeze is
 `035ca7bd07337c65266c17f9b762ca1f97238e11`. Its existing Package controller is
 running in parent session `61735`, run `035ca7bd-package-baaed9d1`. NSIS factory
-preflight passed. The public backend/Node trees were staged on C, and the backend
-manifest now names the freeze; its full refreshed byte inventory and the remaining
-renderer/native/installer manufacture are still running. Do not start a replacement
+preflight passed. The public backend/Node trees were staged on C. Its completed
+refreshed backend inventory has 39,253 files / 2,171,018,592 bytes, SHA256
+`ca213687fb3274663617c63827fd42913f7067ddd60ac8f58a4d1ad771167cb2`.
+Matching renderer/native typecheck and build passed; Electron Builder is assembling
+the app and installer. Full packaged inventory/provenance remains pending. Do not start a replacement
 Package or credit success before the terminal/provenance receipts. Later integration
 commits change reports only, retaining the exact product source freeze.
 
@@ -28,7 +30,13 @@ and after removal. Their branches/commits remain. Execute recipes from:
 
 - `C:/rn-finalise-20261005/preserved-lanes/live-acceptance/recipes/connected-acceptance`
 - `C:/rn-finalise-20261005/preserved-lanes/live-acceptance/recipes/live-acceptance`
-- `C:/rn-finalise-20261005/preserved-lanes/lifecycle-acceptance/recipes`
+- `C:/rn-finalise-20261005/parent-lifecycle-035ca7bd`
+
+Lifecycle's original recipes remain immutable under its preservation root. The
+parent operational copy relocates only four identical exact-root guards after
+the source worktree retirement. `parent-relocation-complete.json` records each
+original/current hash, syntax checks and no runtime execution; receipt SHA256 is
+`4ae2e7f8a01505e5f8b10ecb957a0641a6eade21a1cafbf0f5c36bfc59d3e1b6`.
 
 Each lane's adjacent `preservation-035ca7bd.json` and `retirement-035ca7bd.json`
 records exact file identities. The audit worktree remains for final reconciliation.
