@@ -177,16 +177,20 @@ describe('assessment UI with real local API responses', () => {
     fireEvent.change(screen.getByLabelText('Questions'), { target: { value: '2' } });
     fireEvent.click(screen.getByText('Start reviewed quiz'));
     await screen.findByText('Question 1');
-    expect(document.activeElement?.tagName).toBe('LEGEND');
+    await waitFor(() => expect(document.activeElement?.tagName).toBe('LEGEND'));
     fireEvent.click(screen.getByLabelText('Token b'));
     fireEvent.click(screen.getByText('Commit answer'));
     await screen.findByText('PRIVATE_REVIEWED_KEY_SENTINEL');
-    expect(document.activeElement?.tagName).toBe('H2');
+    await waitFor(() => expect(document.activeElement?.tagName).toBe('H2'));
     expect(screen.getByText('Fixture section 1')).toBeDefined();
     expect(screen.getByText('Review this answer')).toBeDefined();
     fireEvent.click(screen.getByText('Next question'));
-    await screen.findByText('Question 2');
-    expect(document.activeElement?.tagName).toBe('LEGEND');
+    const nextQuestion = await screen.findByText('Question 2');
+    // Finding the rendered question can precede its focus effect.
+    await waitFor(() => {
+      expect(document.activeElement?.tagName).toBe('LEGEND');
+      expect(document.activeElement).toBe(nextQuestion.closest('legend'));
+    });
     const sourceHelp = screen.getByText('View source help'); sourceHelp.focus();
     fireEvent.click(sourceHelp);
     await screen.findByText('Source help · assisted');

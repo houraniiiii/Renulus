@@ -124,3 +124,68 @@ private/native browser fallback was attempted. The domain table has a bounded
 scroll region and the existing responsive Flow layout is preserved.
 Live subscription behaviour, installed/native acceptance and content efficacy
 are outside this bounded consumer check.
+
+## Bounded focus assertion repair — October 5, 2026
+
+The integration owner's actual renderer run at `8c6c4b18` failed 1 of the 10
+tests: `commits, shows actual source feedback, pauses, resumes and reviews
+without prototype scores`. After Next question and awaiting Question 2, the
+assertion at the original `index.test.tsx:189` expected `LEGEND` but observed
+`BODY`. The other nine tests and the parent's post-integration TypeScript check
+passed. This reported failure supersedes the earlier isolated 10-pass result
+as evidence about that integration run.
+
+This follow-up started from the clean `71420716` assessment lane on
+`build/finalise-assessment-track`. Prerequisite merge `54187513` incorporates
+the specified integration `8c6c4b18`, including the assessment slice integrated
+as `16ad199d` and content release 1.1.1. The merge had no conflicts and its tree
+matched `8c6c4b18`; no working edits were reset or copied from other lanes. The
+missing-producer note above describes the first handoff, before this merge.
+
+No persistent production focus failure was reproduced in the bounded local
+checks. The unchanged journey passed alone and after its three preceding
+tests. The existing renderer focuses the newly visible question in an effect
+keyed by `visibleQuestionId`, prioritises a source-currency notice when present,
+and focuses the feedback heading on commitment. Finding the question text
+does not synchronise the test with completion of that focus effect.
+
+The repair waits for the original actual `LEGEND` and `H2` focus assertions.
+For Question 2 it also requires `document.activeElement` to be that question's
+own legend. The source-help focus-preservation assertion remains in place.
+These checks use the existing `waitFor` timeout and continue to fail if actual
+focus never arrives; they add no forced focus, sleeps, mocks or weaker fallback.
+The production renderer, Flow styles, keyboard rules and focus priorities are
+unchanged.
+
+| Check | Observed result / receipt in this worktree |
+| --- | --- |
+| Unchanged failing journey alone | 1 passed, 9 skipped; `.local/assessment-focus-repair/reproduce.junit.xml` |
+| Unchanged journey with preceding suite sequence | 4 passed, 6 skipped; `.local/assessment-focus-repair/reproduce-sequence.junit.xml` |
+| Full repaired `src/modules/assessment/index.test.tsx`, run once | 10 passed, 0 failed, 0 errors, 0 skipped; `.local/assessment-focus-repair/final.junit.xml` |
+| Patch whitespace | `git diff --check`, passed |
+
+The full run took 52.47 seconds; its JUnit timestamp is
+`2026-10-05T14:46:57.308Z`. The final JUnit SHA-256 is
+`1b5eb3f20c0596586eb9585aabb9284be444c6f1aa3944fa3a601293049e324b`.
+Matching verbose logs and a source/hash/commit receipt are in the same ignored
+directory. The fixture asserts this lane's runtime import path, uses an
+allocated local port and disposable synthetic profile, and stops its own API
+process tree during teardown. It uses synthetic content/generation adapters;
+no live provider, actual helper, native workload or installed profile was used.
+No unrelated suites, build or TypeScript rerun was performed; the parent
+TypeScript pass above is the owner's supplied evidence.
+
+Current Windows acceptance follows the owner's October 5 decision recorded in
+`docs/DECISIONS.md`: an unsigned build installed and validated on the current
+Windows PC. Mandatory signing and a separate clean PC/VM were removed; they
+remain optional future distribution checks. Matching source/artifact
+provenance, bundled runtime without developer tools in the app PATH, fresh
+isolated installation, shutdown/reopen, recovery and connected journeys remain
+required. This renderer receipt does not establish installed acceptance.
+
+The focus-fix commit owns exactly
+`apps/desktop/src/modules/assessment/index.test.tsx` and this report. Its hash
+and final changed paths are recorded in
+`.local/assessment-focus-repair/receipt.json` and the final handoff. No new
+backend, GeneratedPractice, shared-module, CSS or type edits; no agents, push
+or native-slot work. The bounded repair ends with that local commit.
