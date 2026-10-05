@@ -63,7 +63,7 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
     @app.exception_handler(ApiError)
     async def product_error(request: Request, error: ApiError):
         return JSONResponse({"error": {"code": error.code, "message": error.message,
-            "retryable": error.retryable}}, status_code=error.status)
+            "retryable": error.retryable}}, status_code=error.status, headers={"Cache-Control": "no-store"})
 
     @app.exception_handler(RequestValidationError)
     async def invalid_request(request: Request, error: RequestValidationError):
@@ -71,7 +71,7 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
         fields = [".".join(str(x) for x in item["loc"]) for item in error.errors()]
         return JSONResponse({"error": {"code": "invalid_request",
             "message": "Check the submitted fields: " + ", ".join(fields),
-            "retryable": False}}, status_code=422)
+            "retryable": False}}, status_code=422, headers={"Cache-Control": "no-store"})
 
     @app.get("/api/v1/health")
     def health():
