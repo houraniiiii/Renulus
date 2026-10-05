@@ -5,7 +5,7 @@ import asyncio
 import json
 from pathlib import PurePath
 import sqlite3
-from urllib.parse import unquote
+from urllib.parse import quote, unquote
 
 from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import StreamingResponse
@@ -96,6 +96,18 @@ def create_router(services) -> APIRouter:
     @router.post("/sessions/{case_id}/reveal")
     async def reveal(case_id: str, body: RevisionInput):
         return repository.reveal(case_id, body.revision)
+
+    @router.get('/sessions/{case_id}/attachments/{attachment_id}/original')
+    async def original(case_id: str, attachment_id: str):
+        metadata, data = repository.original(case_id, attachment_id)
+        return Response(data, media_type=metadata['media_type'], headers={
+            'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
+            'Content-Disposition': "inline; filename*=UTF-8''" + quote(metadata['filename'], safe=''),
+            'X-Renulus-SHA256': metadata['sha256']})
+
+    @router.delete('/sessions/{case_id}/attachments/{attachment_id}')
+    async def remove_original(case_id: str, attachment_id: str, revision: int = Query(ge=1)):
+        return repository.remove_attachment(case_id, attachment_id, revision)
 
     @router.post("/sessions/{case_id}/handoff", status_code=201)
     async def handoff(case_id: str, body: HandoffCase):
@@ -197,6 +209,10 @@ def create_router(services) -> APIRouter:
     @router.post("/attachments/{preview_id}/apply")
     async def apply_preview(preview_id: str, body: ApplyPreview):
         return previews.apply(preview_id, body.revision, body.text)
+
+    @router.post('/attachments/{preview_id}/keep')
+    async def keep_original(preview_id: str, body: RevisionInput):
+        return previews.keep(preview_id, body.revision)
 
     @router.post("/sessions/{case_id}/discuss")
     async def discuss(case_id: str, body: DiscussCase):

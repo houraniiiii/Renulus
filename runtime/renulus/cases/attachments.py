@@ -11,8 +11,8 @@ from typing import Any
 
 from renulus.contracts import ApiError, ContextScope, Scope, durable_id
 
-from .models import EditCase
 from .images import image_capabilities, require_image_model
+from .originals import accepted_original
 
 MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
 MAX_PREVIEW_CHARACTERS = 50000
@@ -41,6 +41,7 @@ class Preview:
     upload_started: bool = False
     mode: str = 'text'
     image: dict | None = field(default=None, repr=False)
+    original: bytes | None = field(default=None, repr=False)
 
 
 class AttachmentPreviews:
@@ -153,6 +154,7 @@ class AttachmentPreviews:
             self._guard(job)
             if job.state != "reading":
                 raise ApiError("case_upload_already_started", "This attachment upload has already started", 409)
+            job.original = data
             if job.mode == 'image':
                 from renulus.runtime.inputs import validate_inputs
                 part = {'type': 'image', 'media_type': MEDIA[PurePath(job.filename).suffix.lower()],
@@ -222,6 +224,7 @@ class AttachmentPreviews:
     def _clear(job: Preview):
         job.text = ""
         job.image = None
+        job.original = None
         job.ocr = {}
         job.filename = ""
         job.title = ""
@@ -271,8 +274,24 @@ class AttachmentPreviews:
             merged = session.text + "\n\nReviewed attachment text:\n" + reviewed_text.strip()
             if not reviewed_text.strip() or len(merged) > MAX_PREVIEW_CHARACTERS:
                 raise ApiError("case_text_limit", "Keep the combined case text within 50,000 characters", 413)
-            result = self.repository.edit(job.case_id, EditCase(revision=revision, text=merged))
+            attachment = self._original(job)
+            result = self.repository.attach(job.case_id, revision, attachment, text=merged)
             job.state = "applied"
+            return result
+
+    @staticmethod
+    def _original(job: Preview):
+        return accepted_original(job.filename, job.title, MEDIA[PurePath(job.filename).suffix.lower()], job.original)
+
+    def keep(self, job_id: str, revision: int) -> dict:
+        with self.repository._lock:
+            job = self.jobs.get(job_id)
+            if job is None or job.state != 'ready' or job.mode != 'image':
+                raise ApiError('case_preview_not_ready', 'Review an image before keeping its original', 409)
+            session = self._guard(job)
+            self.repository._check_revision(session, revision)
+            result = self.repository.attach(job.case_id, revision, self._original(job))
+            job.state = 'applied'
             return result
 
     def discuss_image(self, job_id, request):
@@ -285,9 +304,10 @@ class AttachmentPreviews:
             self.repository._check_revision(session, request.revision)
             require_image_model(self.services, request.model)
             image = dict(job.image)
-            message = request.message + '\n[Image input requested. Image bytes are omitted from Save; reselect the image for later image discussion.]'
+            attachment = self._original(job)
+            message = request.message + '\n[Image input requested. The original stays temporary until you explicitly save this case.]'
             run, messages = self.repository.begin_discussion(job.case_id, DiscussCase(
-                revision=request.revision, message=message, request_id=request.request_id))
+                revision=request.revision, message=message, request_id=request.request_id), attachment=attachment)
             run.mode, run.model = 'image', request.model
             messages[-1]['content'] = [{'type': 'text', 'text': request.message}, image]
             self.cancel(job.id)

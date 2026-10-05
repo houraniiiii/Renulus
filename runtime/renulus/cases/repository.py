@@ -19,6 +19,8 @@ from renulus.storage.database import utc_now
 
 from .currency import pinned_currency
 from .models import DiscussCase, EditCase, HandoffCase, StartCase
+from .originals import (METADATA, check_capacity, load_metadata, read_original,
+                        save_originals)
 
 MAX_SESSIONS = 64
 MAX_MESSAGES = 128
@@ -43,6 +45,7 @@ class Session:
     saved_at: str | None = None
     saved_revision: int | None = None
     active_run_id: str | None = None
+    attachments: list[dict] = field(default_factory=list, repr=False)
 
     @property
     def dirty(self) -> bool:
@@ -125,6 +128,7 @@ class CaseRepository:
             revealed_count=row["revealed_count"], debriefed=bool(row["debriefed"]),
             created_at=row["created_at"], updated_at=row["updated_at"],
             saved_at=row["saved_at"], saved_revision=row["revision"],
+            attachments=load_metadata(self.db, case_id),
         )
         self._sessions[case_id] = session
         return session
@@ -178,6 +182,8 @@ class CaseRepository:
                 "saved_at": session.saved_at, "created_at": session.created_at,
                 "updated_at": session.updated_at, "active_run_id": session.active_run_id,
                 "messages": deepcopy(session.messages),
+                "attachments": [{key: a[key] for key in (*METADATA, 'saved', 'original_available')}
+                                for a in session.attachments],
                 "teaching": self._teaching_view(session)}
 
     def get(self, case_id: str) -> dict:
@@ -262,6 +268,41 @@ class CaseRepository:
             self._changed(session)
             return self._view(session)
 
+    def attach(self, case_id: str, revision: int, attachment: dict, *, text: str | None = None) -> dict:
+        with self._lock:
+            session = self._load(case_id)
+            self._check_revision(session, revision)
+            self._check_idle(session)
+            check_capacity(session.attachments, attachment)
+            session.attachments.append(attachment)
+            if text is not None:
+                session.text = text
+            self._changed(session)
+            return self._view(session)
+
+    def original(self, case_id: str, attachment_id: str) -> tuple[dict, bytes]:
+        with self._lock:
+            session = self._load(case_id)
+            attachment = next((a for a in session.attachments if a['id'] == attachment_id), None)
+            if attachment is None:
+                raise ApiError('case_attachment_not_found', 'This original is not attached to the current case', 404)
+            if attachment['saved']:
+                row = self.db.fetch_one('SELECT revision FROM case_sessions WHERE id=?', (case_id,))
+                if row is None or row['revision'] != session.saved_revision:
+                    raise ApiError('case_revision_conflict', 'The saved case changed; reopen it', 409, True)
+            return {key: attachment[key] for key in METADATA}, read_original(self.db, attachment)
+
+    def remove_attachment(self, case_id: str, attachment_id: str, revision: int) -> dict:
+        with self._lock:
+            session = self._load(case_id)
+            self._check_revision(session, revision)
+            self._check_idle(session)
+            if not any(a['id'] == attachment_id for a in session.attachments):
+                raise ApiError('case_attachment_not_found', 'This original is not attached to the current case', 404)
+            session.attachments[:] = [a for a in session.attachments if a['id'] != attachment_id]
+            self._changed(session)
+            return self._view(session)
+
     def save(self, case_id: str, revision: int) -> dict:
         with self._lock:
             session = self._load(case_id)
@@ -294,8 +335,12 @@ class CaseRepository:
                     "teaching_json=excluded.teaching_json, revealed_count=excluded.revealed_count, "
                     "debriefed=excluded.debriefed, updated_at=excluded.updated_at, saved_at=excluded.saved_at",
                     values)
+                save_originals(conn, case_id, session.attachments)
             session.saved_revision = session.revision
             session.saved_at = now
+            for attachment in session.attachments:
+                attachment['saved'] = True
+                attachment['data'] = None
             self._changed_scope(session)
             return self._view(session)
 
@@ -336,6 +381,7 @@ class CaseRepository:
             session.messages.clear()
             session.text = ""
             session.teaching = None
+            session.attachments.clear()
             return {"id": case_id, "deleted": True, "purge_pending": not self._checkpoint()}
 
     def _checkpoint(self) -> bool:
@@ -357,6 +403,7 @@ class CaseRepository:
             self._invalidate_runs(session)
             self._changed_scope(session)
             self._sessions.pop(case_id, None)
+            session.attachments.clear()
             return {"id": case_id, "closed": True, "saved": session.saved_at is not None}
 
     def _invalidate_runs(self, session: Session):
@@ -464,7 +511,7 @@ class CaseRepository:
             self._append_assistant(session, content)
             return self._view(session)
 
-    def begin_discussion(self, case_id: str, request: DiscussCase) -> tuple[Run, list[dict]]:
+    def begin_discussion(self, case_id: str, request: DiscussCase, *, attachment: dict | None = None) -> tuple[Run, list[dict]]:
         with self._lock:
             session = self._load(case_id)
             fingerprint = hashlib.sha256(json.dumps(
@@ -481,6 +528,8 @@ class CaseRepository:
             self._check_revision(session, request.revision)
             self._check_idle(session)
             self._check_message_capacity(session, request.message)
+            if attachment is not None:
+                check_capacity(session.attachments, attachment)
             if len(self._runs) >= MAX_RUNS:
                 # Evict only terminal replay buffers, never an active operation.
                 oldest = next((r.id for r in self._runs.values() if r.terminal), None)
@@ -489,6 +538,8 @@ class CaseRepository:
                 del self._runs[oldest]
             session.messages.append({"id": durable_id("case_message"), "role": "user",
                                      "content": request.message, "created_at": utc_now()})
+            if attachment is not None:
+                session.attachments.append(attachment)
             self._changed(session)
             run = Run(id=durable_id("case_run"), case_id=case_id, revision=session.revision,
                       request_id=request.request_id, fingerprint=fingerprint,

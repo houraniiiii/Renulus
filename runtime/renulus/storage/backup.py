@@ -53,13 +53,16 @@ def record_references(row):
             if (key == "id" or key.endswith("_id")) and isinstance(value, str)]
 
 
-def snapshot_in(conn):
+def snapshot_in(conn, *, originals=True):
     """Read only canonical tables; never read provider settings or credentials."""
     names = [row[0] for row in conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
         if eligible_table(row[0])]
     records, count, size = {}, 0, 0
     for name in names:
+        if name == 'case_attachment_parts' and not originals:
+            records[name] = []
+            continue
         if name == "preferences":
             placeholders = ",".join("?" for _ in SAFE_PREFERENCES)
             rows = conn.execute(f'SELECT * FROM preferences WHERE key IN ({placeholders})',
@@ -88,10 +91,10 @@ def snapshot_in(conn):
     return {"format": "renulus-canonical-export", "format_version": FORMAT_VERSION,
             "schema_version": SUPPORTED_SCHEMA, "exported_at": utc_now(),
             "data_kind": "records-only", "records": records, "artifacts": {},
-            "limits": DELETION_NOTICE, "omissions": snapshot_omissions(conn)}
+            "limits": DELETION_NOTICE, "omissions": snapshot_omissions(conn, originals=originals)}
 
 
-def snapshot_omissions(conn):
+def snapshot_omissions(conn, *, originals=True):
     exists = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='knowledge_catalogue'").fetchone()
     count = conn.execute("SELECT COUNT(*) FROM knowledge_catalogue").fetchone()[0] if exists else 0
     result = {"knowledge_catalogue": {"records": count, "reason": CATALOGUE_OMISSION}}
@@ -99,6 +102,12 @@ def snapshot_omissions(conn):
     if exists:
         count = conn.execute("SELECT COUNT(*) FROM knowledge_revisions WHERE extraction_json IS NOT NULL").fetchone()[0]
         result["knowledge_extractions"] = {"records": count, "reason": EXTRACTION_OMISSION}
+    if not originals:
+        exists = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='case_attachments'").fetchone()
+        if exists:
+            count = conn.execute('SELECT COUNT(*) FROM case_attachments').fetchone()[0]
+            result['case_originals'] = {'records': count,
+                'reason': 'Records-only export retains case attachment metadata. Original bytes require a full backup including originals.'}
     return result
 
 
@@ -107,6 +116,8 @@ def portable_records(records, *, originals=False):
     result = {}
     for name, rows in records.items():
         result[name] = []
+        if name == 'case_attachment_parts' and not originals:
+            continue
         for row in rows:
             copied = dict(row)
             if name == "knowledge_revisions" and "extraction_json" in copied:
@@ -124,7 +135,7 @@ def export_records(services):
     conn = services.db.connect()
     try:
         conn.execute("BEGIN")
-        bundle = snapshot_in(conn)
+        bundle = snapshot_in(conn, originals=False)
         bundle["records"] = portable_records(bundle["records"])
         return bundle
     finally:
