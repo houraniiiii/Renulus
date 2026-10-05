@@ -114,7 +114,10 @@ try {
     } else {
         if (-not (Test-Path -LiteralPath $renulusSettings['RENULUS_PACKAGED_EXECUTABLE'] -PathType Leaf)) { throw 'The fresh matching installation is missing.' }
         $renulusNode = (Get-Command node.exe -ErrorAction Stop).Source
-        foreach ($script in @('native-evidence.mjs', 'native-journeys.mjs')) {
+        # Lifecycle/helper baselines are already dated in the retained ebb2db2e
+        # reports. The parent requested a focused matching-install journey.
+        $renulusResult['proof_scope'] = 'matching-installed opening/Flow, PDF physical page 2, source bridge and real format-2 Save/Cancel; prior lifecycle/helper baseline retained separately'
+        foreach ($script in @('native-journeys.mjs')) {
             Invoke-RestageCommand $renulusNode @((Join-Path $PSScriptRoot $script)) (Join-Path $renulusRun ([IO.Path]::GetFileNameWithoutExtension($script)))
         }
     }
