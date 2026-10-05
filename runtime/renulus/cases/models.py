@@ -59,7 +59,7 @@ class AttachmentInput(RevisionInput):
 
 class ExtractionOptions(RevisionInput):
     scope: ContextScope
-    mode: Literal["text", "image"] = "text"
+    mode: Literal["text", "image", "original"] = "text"
     title: str = Field(default="Attachment", min_length=1, max_length=120)
 
 

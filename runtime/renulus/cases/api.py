@@ -39,6 +39,7 @@ def create_router(services) -> APIRouter:
             "text": {"supported": True, "max_characters": 50000},
             "image": dict(extraction), "pdf": dict(extraction)},
             "extraction": extraction,
+            "originals": previews.original_capabilities(),
             "image_interpretation": image_capabilities(services),
             "discussion": {"adapter_installed": "provider" in services.registry,
                            "scope": "temporary-case"},
@@ -158,8 +159,8 @@ def create_router(services) -> APIRouter:
         # No UploadFile, multipart parser, original-copy path, disk staging or
         # spooled file. Scope and safety are checked before the first body read.
         body, filename, suffix = attachment_headers(request)
-        byte_limit = MAX_IMAGE_BYTES if body.mode == "image" else MAX_ATTACHMENT_BYTES
-        limit_message = "Images must be between 1 byte and 8 MiB" if body.mode == "image" else "Attachments must be between 1 byte and 10 MiB"
+        byte_limit = MAX_IMAGE_BYTES if body.mode in ("image", "original") else MAX_ATTACHMENT_BYTES
+        limit_message = "Images must be between 1 byte and 8 MiB" if body.mode in ("image", "original") else "Attachments must be between 1 byte and 10 MiB"
         length = request.headers.get("content-length")
         if length is not None:
             try:

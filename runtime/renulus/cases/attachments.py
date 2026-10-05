@@ -52,6 +52,18 @@ class AttachmentPreviews:
         self.tasks: set[asyncio.Task] = set()
         repository._attachment_invalidator = self.invalidate
 
+    @staticmethod
+    def original_capabilities() -> dict:
+        from renulus.runtime.inputs import MAX_IMAGE_BYTES, MAX_IMAGE_PIXELS
+        return {'supported': True, 'max_bytes': MAX_IMAGE_BYTES,
+                'image_pixels': MAX_IMAGE_PIXELS, 'formats': ['.png', '.jpg', '.jpeg'],
+                'scope': 'temporary-case'}
+
+    def _capability(self, mode):
+        if mode == 'original':
+            return self.original_capabilities()
+        return image_capabilities(self.services) if mode == 'image' else self.capabilities()
+
     def capabilities(self) -> dict:
         knowledge = self.services.registry.get("knowledge")
         limits = {}
@@ -107,9 +119,9 @@ class AttachmentPreviews:
             self.repository._check_idle(session)
             if session.kind != "daily":
                 raise ApiError("teaching_case_immutable", "Original teaching cases use their installed material", 409)
-            if mode == 'image' and PurePath(filename).suffix.lower() not in ('.png', '.jpg', '.jpeg'):
+            if mode in ('image', 'original') and PurePath(filename).suffix.lower() not in ('.png', '.jpg', '.jpeg'):
                 raise ApiError('unsupported_attachment', 'Image discussion accepts PNG or JPEG; PDFs use text extraction', 415)
-            capability = image_capabilities(self.services) if mode == 'image' else self.capabilities()
+            capability = self._capability(mode)
             if not capability["supported"]:
                 raise ApiError(capability["code"], capability["reason"],
                     403 if capability["code"] == "learning_use_unverified" else 409,
@@ -140,7 +152,7 @@ class AttachmentPreviews:
             self._guard(job)
             if job.state != "reading" or job.upload_started:
                 raise ApiError("case_upload_already_started", "This attachment upload has already started", 409)
-            capability = image_capabilities(self.services) if mode == 'image' else self.capabilities()
+            capability = self._capability(mode)
             if not capability["supported"]:
                 self.cancel(job.id)
                 raise ApiError(capability["code"], capability["reason"],
@@ -155,7 +167,7 @@ class AttachmentPreviews:
             if job.state != "reading":
                 raise ApiError("case_upload_already_started", "This attachment upload has already started", 409)
             job.original = data
-            if job.mode == 'image':
+            if job.mode in ('image', 'original'):
                 from renulus.runtime.inputs import validate_inputs
                 part = {'type': 'image', 'media_type': MEDIA[PurePath(job.filename).suffix.lower()],
                         'data': base64.b64encode(data).decode('ascii'), 'detail': 'auto'}
@@ -286,7 +298,7 @@ class AttachmentPreviews:
     def keep(self, job_id: str, revision: int) -> dict:
         with self.repository._lock:
             job = self.jobs.get(job_id)
-            if job is None or job.state != 'ready' or job.mode != 'image':
+            if job is None or job.state != 'ready' or job.mode not in ('image', 'original'):
                 raise ApiError('case_preview_not_ready', 'Review an image before keeping its original', 409)
             session = self._guard(job)
             self.repository._check_revision(session, revision)

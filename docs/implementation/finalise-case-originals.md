@@ -27,6 +27,9 @@ before their JSON size check and explicitly describe the omission. Such a
 restore can show attachment metadata while the original remains unavailable.
 Originals retain the bounds of the input routes; a case has at most 16 originals
 totalling 32 MiB. Original source files are preserved.
+Keeping an original image uses the existing bounded in-memory image validator
+and needs no subscription, OCR or provider call. Image discussion retains its
+existing approved-model/account eligibility checks.
 
 The backend implementation is ready for scoped regression and the renderer
 integration. No successful test, installed original journey, populated recovery
