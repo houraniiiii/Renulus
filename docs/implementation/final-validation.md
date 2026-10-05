@@ -211,10 +211,45 @@ historical failures are separate from the GUI's earlier zero active failures.
 This snapshot shows continued ingestion and is separate from the earlier native
 acceptance times; see [profile evidence](complete-delivery-profile-live-proof.md).
 
-The parent has integrated Library patch `a5488b2d` as a candidate product freeze,
-with compatible API checks running. That candidate is not claimed installed.
-Parent review/refreeze and matching packaging/native acceptance remain pending;
-the installed observations above apply to the old exact `ebb2db2e` freeze. The
-earlier 807-check evidence, failed/incomplete 901-test regression and
-unadjudicated full actual-engine attempt retain the limits recorded above;
-these native observations do not establish a full regression pass.
+The installed observations above apply to the exact `ebb2db2e` freeze. The
+later replacement and targeted checks below remain separate from that native
+evidence and from the failed or interrupted full backend runs.
+
+## Replacement freeze and targeted engine acceptance
+
+The reviewed Library fix is integrated as `a5488b2d`. The matching replacement
+is explicitly frozen at `3ff9b0d6145c8d52f4c9e9b0a3009f0fc351c4cc`;
+later controller, heartbeat, evidence and privacy-test commits do not change
+its runtime. The parent passed **38 Library document/page/collection API and
+exact-citation checks**, without skips, in 734.39 seconds. Metadata reads use
+one SQLite snapshot and exclude large extraction JSON; native index work has
+a separate lock, with bounded ingestion batches and canonical eligibility
+checks after search. See [Library evidence](library-responsiveness.md).
+
+Focused compatibility retained its original **11 passes / three failures**.
+The three LanceDB rebuild failures occurred at a 264-character destination;
+all three unchanged tests passed at compact E scratch. Four backup cases,
+cancellation/deletion/replacement, physical pruning and restart passed in
+the original selection. Long-profile support remains unverified. These
+overlapping selections are not added to the earlier acceptance totals.
+
+The later serial real-engine check passed format-2 delivery/recovery
+(212.76 seconds call time). The PDF and PNG journeys initially failed when
+their privacy scanner tried to read Qdrant's live exclusive lock. The accepted
+test-only repair releases only that synthetic derived-memory lease under
+its existing lock, retains every file and scans every file and canonical
+row, including the lock marker. Three focused lease/scanner checks passed
+in 39.12 seconds. Both complete PDF/PNG journeys then passed in 137.43 seconds,
+covering preview/OCR, Apply, temporary handoffs, explicit Save, deletion and
+privacy scans. Original failure logs remain retained. These passes do not
+reconstruct the earlier interrupted engine assertions or establish a full
+regression pass.
+
+Replacement staging verified all 39,236 public payload inventory entries and
+refreshed the 2,169,529,464-byte backend for the exact freeze. The first renderer
+build failed at 04:10 UTC on October 5, 2026 because its packaging environment
+contained an empty backend URL. A separate recovery run removed that variable,
+passed TypeScript/Vite/native compilation and produced the matching installer
+at **04:30:34 UTC**. Final hash/provenance, fresh installation, isolated native
+lifecycle and the parent's normal shortcut/Library25/search/citation checks
+remain distinct acceptance gates until observed.
