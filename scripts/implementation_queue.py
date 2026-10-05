@@ -111,8 +111,11 @@ def heartbeat():
     path = STATE.parent / "heartbeat.md"
     path.write_text("\n".join(lines), encoding="utf-8")
     gh("issue", "comment", str(state["parent"]["number"]), "--repo", REPO, "--body-file", str(path))
-    state["last_heartbeat_utc"] = now
-    save(state)
+    # A checkpoint can change while the GitHub calls are in flight. Retain the
+    # latest queue/active state instead of publishing that earlier snapshot.
+    latest = json.loads(STATE.read_text(encoding="utf-8-sig"))
+    latest["last_heartbeat_utc"] = now
+    save(latest)
     return {"status": "recorded", "at": now, "issue": state["parent"]["url"]}
 
 
