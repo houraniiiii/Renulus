@@ -50,11 +50,15 @@ describes coding-agent traffic and asks for an app-specific User-Agent plus a
 stable `x-opencode-session` header per conversation; it does not explicitly ban
 non-coding use. It identifies newer Hermes builds containing a session-header
 fix as validated clients. **Renulus learning-use eligibility is unresolved.**
-The controlled Renulus Go adapter still needs its own identity/session-header
-integration after that eligibility review; the upstream validation cannot be
-claimed for this adapter. No client identity was fabricated and no alternative
-provider/model was introduced. Transport/schema tests do not prove Go
-subscription acceptance for this product. The earlier coding-policy summary
+At this assessment the controlled Renulus Go adapter still needed its own
+identity/session-header integration. Later commit `314c0e6e` implements the
+truthful `Renulus/0.1.0` identity and stable conversation headers through Hermes;
+see [the subsequent eligibility and header evidence](go-eligibility.md).
+Learning requests remain gated before model I/O while eligibility is unresolved.
+Upstream validation cannot be claimed as Renulus subscription acceptance. No
+client identity was fabricated and no alternative provider/model was introduced.
+Transport/schema tests do not prove Go subscription acceptance for this product.
+The earlier coding-policy summary
 was relayed to parent and this narrower final reading corrects it:
 [#1](https://github.com/houraniiiii/Renulus/issues/1#issuecomment-5985964094).
 
