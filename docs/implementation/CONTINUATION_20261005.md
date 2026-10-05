@@ -3,6 +3,46 @@
 This record supersedes the location, heartbeat and lane instructions in the
 historical `SESSION_HANDOFF.md`. Preserve its receipts and observations.
 
+## Later continuation at the installed checkpoint
+
+The repaired unsigned `f3160c596eb3132fc7599c08d5973c3f7ddd9acb` installer
+completed installation on October 5 at the isolated
+`C:/Renulus-native-delivery/desktop-20261005/installed-f3160c59` target.
+Installer SHA256 is
+`bb48b1fb7a1e18129794642d8307c82ace34f534e752a6d0f1f41555ffdfa438`;
+installation receipt is `proofs/installer-b802877f/installer-evidence.json`.
+The executable, ASAR and source identities match the repaired manufacture.
+This is extraction-only evidence: no app/native journey is credited. Preserve
+the failed initial Package and successful installer-only repair separately.
+
+The exact 19 engine exclusions and 13 capacity exclusions have now been
+reconciled by individual receipts. `finalise-engines.md` records accepted r3
+8/8 and preserves failed r1/r2/b4; it does not invent a green full sweep.
+Completed imports and checks must not be repeated without changed-source need.
+Retired worktree receipts are preserved under `C:/rn-finalise-20261005/preserved-lanes`.
+The E supplement-inputs worktree remains held; its publisher-media directory is
+outside cleanup authorization and must stay untouched.
+
+Connected preparation identified a production gap: f316 omitted original case
+attachment/image bytes from explicit Save. The integrator's backend commits
+`a943030e` and `e823c15a` add canonical original retention and independent
+offline image keeping. The metadata/parts migration is additive. See
+`finalise-case-originals.md`. Temporary files remain volatile until Save; full
+backup retains originals and records-only export explicitly omits their bytes.
+The next final freeze must include reviewed renderer integration and affected
+retention/recovery checks, then undergo matching manufacture, installation and
+actual installed acceptance. Do not relabel the f316 artifact as newer source.
+
+Current bounded owners are Beauvoir (case renderer and prepared connected/live
+recipes), Parfit (affected case/recovery tests and the 64-row audit), Nash
+(public receipt preservation and finished-worktree retirement). The integrator
+owns backend, migrations, integration and the serial manufacture/native/live
+slot. The engine lane is finished. The launcher still selects the old
+3ff9b0d6 installation and E learning profile until matching acceptance.
+
+The remainder of this file records the earlier same-day continuation. Its
+historical sources, failed receipts and lane identities are preserved.
+
 ## Accepted target and checkout
 
 The owner has one PC and explicitly removed mandatory code signing and
