@@ -212,3 +212,31 @@ source preservation and target exclusion proofs remain intact without structured
 extraction in the snapshot. The existing TestClient warning remains. The CLI help
 and `git diff --check` also passed. No actual live ZIP export/preparation was run;
 live/backend/final corpus capacity gates remain as described above.
+
+## Segmented delivery preparation, October 5
+
+The integration tool now explicitly supports both archive formats. The CLI
+defaults to `--format-version 2`; the existing callable default remains format 1.
+Format 2 validates the complete source archive through the guarded API, selects
+content and personal Library rows using the trusted disk stage, verifies retained
+originals, restores a scratch profile and exports a new segmented archive. It
+clears the scratch's reviewed source-check defaults before export, then uses
+the normal target preview, confirmed restore and actual CPU index rebuild.
+Learner records, source configuration, credentials, discovery receipts and
+native application state remain excluded. Source/profile originals are preserved.
+
+The selection streams rows and reference joins from the verified SQLite stage;
+it does not build whole-corpus identity sets or open the source database.
+Knowledge tombstones include the deployed `passage_` and `ingest_` prefixes
+and the earlier compatible prefixes. The format-2 report records canonical
+bytes and segment count instead of inventing an aggregate JSON hash.
+
+The real helper-backed integration checks passed **4 tests in 114.03 seconds**,
+including complete format-1 and format-2 restore/rebuild, corrupted source
+rejection, retained originals/queue/locators and excluded learner state. A
+separate read-only review found no production blocker in the adapter against
+the integrated recovery contract. Its test independence finding led to direct
+assertions for retained passage/job tombstones and an excluded learner tombstone.
+Full format-2 engineering limits and scale observations remain in
+`recovery-format2-evidence.md`; these checks do not benchmark its full ceilings
+or establish the larger live collection's final prepared profile.

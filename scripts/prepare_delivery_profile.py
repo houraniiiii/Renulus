@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import sqlite3
 import stat
 import sys
 import tempfile
@@ -36,8 +37,8 @@ KNOWLEDGE_TABLES = frozenset({
     "knowledge_passages", "knowledge_cleanup", "knowledge_source_status_events",
 })
 CANONICAL_TABLES = CONTENT_TABLES | KNOWLEDGE_TABLES | {"deletion_ledger", "retrieval_imports"}
-TOMBSTONES = {"knowledge-document": "doc_", "document": "doc_",
-    "knowledge-revision": "rev_", "knowledge-passage": "pass_", "knowledge-job": "job_"}
+TOMBSTONES = {"knowledge-document": ("doc_",), "document": ("doc_",),
+    "knowledge-revision": ("rev_",), "knowledge-passage": ("passage_", "pass_"), "knowledge-job": ("ingest_", "job_")}
 FRESH_APP_SEEDS = frozenset({"update_source_checks", "update_schedule"})
 BLOCK = 1024 * 1024
 
@@ -136,7 +137,7 @@ def download_backup(url, path, limits, timeout):
         with client.stream("GET", url, headers={"Accept": "application/zip"}) as response:
             if response.status_code != 200:
                 raise DeliveryError(f"Source backup API refused export (HTTP {response.status_code}). "
-                    "The source must fit its current ZIP, 16-MiB JSON and 100,000-record bounds before trimming.")
+                    "The source must fit the explicitly selected format bounds before trimming.")
             if response.headers.get("content-type", "").split(";")[0] != "application/zip":
                 raise DeliveryError("Source API did not return a supported ZIP backup.")
             declared = response.headers.get("content-length")
@@ -153,6 +154,11 @@ def download_backup(url, path, limits, timeout):
     if declared is not None and size != int(declared):
         raise DeliveryError("Source ZIP download is incomplete.")
     return {"bytes": size, "sha256": digest.hexdigest()}
+
+
+def delivery_tombstone(row):
+    return any(re.fullmatch(re.escape(prefix) + r"[A-Za-z0-9_-]{1,100}", row["entity_id"])
+        for prefix in TOMBSTONES.get(row["entity_type"], ()))
 
 
 def delivery_records(bundle):
@@ -172,9 +178,7 @@ def delivery_records(bundle):
     for name in ("knowledge_jobs", "knowledge_passages", "knowledge_cleanup"):
         selected[name] = [row for row in records.get(name, []) if row["revision_id"] in revision_ids]
     selected["knowledge_source_status_events"] = records.get("knowledge_source_status_events", [])
-    selected["deletion_ledger"] = [row for row in records.get("deletion_ledger", [])
-        if row["entity_type"] in TOMBSTONES and re.fullmatch(
-            re.escape(TOMBSTONES[row["entity_type"]]) + r"[A-Za-z0-9_-]{1,100}", row["entity_id"])]
+    selected["deletion_ledger"] = [row for row in records.get("deletion_ledger", []) if delivery_tombstone(row)]
     # The current producer omits this table. If a coordinated future producer
     # includes it, retain only complete bindings to documents kept by this slice.
     if "retrieval_imports" in records:
@@ -282,7 +286,7 @@ def write_delivery_archive(validated, path, limits):
     return bundle, manifest
 
 
-async def restore_through_api(app, archive):
+async def restore_through_api(app, archive, *, format_version=1):
     import httpx
     def checked(response):
         if response.status_code != 200:
@@ -294,7 +298,7 @@ async def restore_through_api(app, archive):
             while block := source.read(BLOCK):
                 yield block
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app), base_url="http://testserver", trust_env=False) as client:
-        preview = checked(await client.post("/api/v1/data/backup/preview", content=blocks(),
+        preview = checked(await client.post("/api/v1/data/backup/preview?format_version=" + str(format_version), content=blocks(),
             headers={"content-type": "application/zip", "content-length": str(archive.stat().st_size)}))
         restored = checked(await client.post("/api/v1/data/backup/restore", json={
             "preview_token": preview["preview_token"], "confirmed_exported_at": preview["exported_at"],
@@ -305,6 +309,101 @@ async def restore_through_api(app, archive):
     if report["rebuild"]["modules"]["memory"].get("rebuilt_records") != 0:
         raise DeliveryError("Delivery unexpectedly rebuilt learner memories.")
     return restored, report["rebuild"]
+
+
+DELIVERY_DOCUMENT = "d.scope_kind='personal-library' AND d.scope_entity IS NULL AND d.reserved=0 AND d.deleted_at IS NULL"
+
+
+@contextmanager
+def delivery_stage(validated, services):
+    """Read a verified owned stage; archive SQL and source databases are unused."""
+    validated.verify_stage(services.paths)
+    with closing(sqlite3.connect(validated.stage.as_uri() + "?mode=ro", uri=True)) as conn:
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA query_only=ON")
+        conn.execute("PRAGMA cache_size=-2048")
+        conn.execute("BEGIN")
+        yield conn
+    validated.verify_stage(services.paths)
+
+
+def selected_stage_rows(validated, services):
+    available = validated.manifest["canonical"]["tables"]
+    with delivery_stage(validated, services) as conn:
+        for pointer in ("active_revision", "latest_revision"):
+            missing = conn.execute(f"SELECT d.id FROM knowledge_documents d LEFT JOIN knowledge_revisions r ON r.id=d.{pointer} WHERE " + DELIVERY_DOCUMENT +
+                f" AND d.{pointer} IS NOT NULL AND (r.id IS NULL OR r.document_id<>d.id OR r.original_path IS NULL) LIMIT 1").fetchone()
+            if missing:
+                raise DeliveryError("A retained active/latest Library revision has no verified original; repair the source first.")
+        for name in sorted(CANONICAL_TABLES & available.keys()):
+            # The table inventory and SQL below are installed selection policy.
+            # References are joined on disk, without whole-corpus identity sets.
+            if name in CONTENT_TABLES or name == "knowledge_source_status_events":
+                sql = f'SELECT * FROM "{name}" ORDER BY rowid'
+            elif name == "knowledge_documents":
+                sql = "SELECT d.* FROM knowledge_documents d WHERE " + DELIVERY_DOCUMENT + " ORDER BY d.rowid"
+            elif name == "knowledge_revisions":
+                sql = "SELECT r.* FROM knowledge_revisions r JOIN knowledge_documents d ON d.id=r.document_id WHERE " + DELIVERY_DOCUMENT + " ORDER BY r.rowid"
+            elif name in {"knowledge_jobs", "knowledge_passages", "knowledge_cleanup"}:
+                sql = f'SELECT v.* FROM "{name}" v JOIN knowledge_revisions r ON r.id=v.revision_id JOIN knowledge_documents d ON d.id=r.document_id WHERE ' + DELIVERY_DOCUMENT + " ORDER BY v.rowid"
+            elif name == "retrieval_imports":
+                sql = "SELECT v.* FROM retrieval_imports v JOIN knowledge_documents d ON d.id=v.document_id JOIN knowledge_revisions r ON r.id=v.revision_id AND r.document_id=d.id JOIN knowledge_jobs j ON j.id=v.job_id AND j.revision_id=r.id WHERE " + DELIVERY_DOCUMENT + " ORDER BY v.rowid"
+            elif name == "deletion_ledger":
+                sql = "SELECT * FROM deletion_ledger ORDER BY rowid"
+            else:
+                raise DeliveryError("An unreviewed delivery table needs an explicit selection policy.")
+            for raw in conn.execute(sql):
+                row = dict(raw)
+                if name == "deletion_ledger" and not delivery_tombstone(row):
+                    continue
+                yield name, row
+
+
+def selected_stage_originals(validated, services):
+    with delivery_stage(validated, services) as conn:
+        for entry in validated.originals:
+            if conn.execute("SELECT d.id FROM knowledge_documents d WHERE d.id=? AND " + DELIVERY_DOCUMENT, (entry["document_id"],)).fetchone():
+                yield entry
+
+
+def prepare_segmented_archive(validator, url, work, timeout):
+    """Verify all source bytes, select on disk, restore a scratch, re-export 2."""
+    from renulus.storage.recovery_files import remove_owned_tree
+    from renulus.storage.recovery_limits import SEGMENTED_LIMITS
+    recovery = validator.registry["data_recovery"]
+    identifier, directory = recovery.begin_preview()
+    keep = False
+    try:
+        downloaded = download_backup(url + "?format_version=2", directory / "input.zip", SEGMENTED_LIMITS, timeout)
+        checked = recovery.complete_preview(identifier, directory)
+        keep = True
+    finally:
+        recovery.end_upload(directory, keep=keep)
+    with recovery.validated_preview(identifier) as validated:
+        if checked.get("format_version") != 2:
+            raise DeliveryError("The source did not supply the requested segmented backup format.")
+        source_counts = validated.manifest["canonical"]["tables"]
+        selected = recovery.preview_records(selected_stage_rows(validated, validator),
+            exported_at=checked["exported_at"], omissions=checked["omissions"],
+            originals=selected_stage_originals(validated, validator))
+    # This scratch does not run learners, providers, workers or derived rebuild.
+    restored = recovery.restore_preview(selected["preview_token"], selected["exported_at"], True)
+    if restored.get("cleanup_pending") or restored.get("restored_originals") != selected["original_count"]:
+        raise DeliveryError("Filtered scratch originals were not promoted completely.")
+    # The scratch constructor creates reviewed public source-check defaults.
+    # Leave the final target to seed its own fresh values instead of importing
+    # this scratch profile's timestamps/configuration through the re-export.
+    with validator.db.transaction() as conn:
+        for name in FRESH_APP_SEEDS:
+            conn.execute(f'DELETE FROM "{name}"')
+    directory, manifest = recovery.backup(format_version=2)
+    try:
+        if any(count for name, count in manifest["canonical"]["tables"].items() if name not in CANONICAL_TABLES):
+            raise DeliveryError("Filtered scratch re-export contains non-delivery canonical records.")
+        shutil.copyfile(directory / "backup.zip", work / "delivery.zip")
+    finally:
+        remove_owned_tree(validator.paths, directory)
+    return downloaded, manifest, source_counts
 
 
 def fresh_app_seeds(services):
@@ -332,7 +431,7 @@ def audit_target(services, manifest, seeds):
         if any(row[0] != "knowledge.index_generation" for row in conn.execute("SELECT key FROM preferences")):
             raise DeliveryError("Learner/config preferences appeared in the delivery profile.")
         for row in conn.execute("SELECT * FROM deletion_ledger"):
-            if row["entity_type"] not in TOMBSTONES:
+            if not delivery_tombstone(row):
                 raise DeliveryError("Non-knowledge deletion history appeared in the delivery profile.")
         queued = conn.execute("SELECT COUNT(*) FROM knowledge_jobs WHERE state='queued'").fetchone()[0]
         for entry in manifest["originals"]:
@@ -346,11 +445,13 @@ def audit_target(services, manifest, seeds):
     return queued
 
 
-def prepare_delivery_profile(*, source_url, output_profile, helper_root, source_root, timeout=300):
+def prepare_delivery_profile(*, source_url, output_profile, helper_root, source_root, timeout=300, format_version=1):
     output = checked_directory(output_profile, fresh=True)
     url = backup_url(source_url)
     helpers = checked_directory(helper_root)
     source = checked_directory(source_root)
+    if type(format_version) is not int or format_version not in (1, 2):
+        raise DeliveryError("Choose the explicit supported backup format 1 or 2.")
     if not 1 <= timeout <= 1800:
         raise DeliveryError("Choose a source download timeout between 1 and 1800 seconds.")
     for other in (helpers, source):
@@ -359,6 +460,7 @@ def prepare_delivery_profile(*, source_url, output_profile, helper_root, source_
     server = runtime_from(source)
     from renulus.runtime.helpers import HelperAssets
     from renulus.storage.recovery_archive import DEFAULT_LIMITS, validate_archive
+    from renulus.storage.recovery_limits import SEGMENTED_LIMITS
     from renulus.contracts import ApiError
     assets = HelperAssets(public_helper_paths(output, source, helpers))
     try:
@@ -370,30 +472,39 @@ def prepare_delivery_profile(*, source_url, output_profile, helper_root, source_
     created = False
     try:
         with local_app(server, work / "v", source, helpers) as (_, validator):
-            directory = validator.paths.cache / "delivery-source"
-            directory.mkdir()
-            downloaded = download_backup(url, directory / "input.zip", DEFAULT_LIMITS, timeout)
-            validated = validate_archive(validator, directory, DEFAULT_LIMITS)
-            filtered, manifest = write_delivery_archive(validated, work / "delivery.zip", DEFAULT_LIMITS)
-            # The entire original source archive was checked before trimming.
-            (directory / "input.zip").unlink()
+            if format_version == 2:
+                downloaded, manifest, source_counts = prepare_segmented_archive(validator, url, work, timeout)
+                counts = {name: count for name, count in manifest["canonical"]["tables"].items() if name in CANONICAL_TABLES}
+                canonical = {"format_version": 2, "canonical_bytes": manifest["canonical"]["bytes"],
+                    "canonical_segments": len(manifest["canonical"]["segments"])}
+                limits = SEGMENTED_LIMITS
+            else:
+                directory = validator.paths.cache / "delivery-source"
+                directory.mkdir()
+                downloaded = download_backup(url, directory / "input.zip", DEFAULT_LIMITS, timeout)
+                validated = validate_archive(validator, directory, DEFAULT_LIMITS)
+                filtered, manifest = write_delivery_archive(validated, work / "delivery.zip", DEFAULT_LIMITS)
+                source_counts = {name: len(rows) for name, rows in validated.bundle["records"].items()}
+                counts = {name: len(rows) for name, rows in filtered["records"].items()}
+                canonical = {"format_version": 1, "canonical_json_bytes": manifest["records"]["bytes"], "canonical_json_sha256": manifest["records"]["sha256"]}
+                limits = DEFAULT_LIMITS
+                # The entire original source archive was checked before trimming.
+                (directory / "input.zip").unlink()
         checked_directory(output, fresh=True)
         output.mkdir(exist_ok=False)  # Atomic refusal if another owner won the path.
         created = True
         with local_app(server, output, source, helpers, configure=True) as (app, target):
             seeds = fresh_app_seeds(target)
-            restored, rebuild = asyncio.run(restore_through_api(app, work / "delivery.zip"))
+            restored, rebuild = asyncio.run(restore_through_api(app, work / "delivery.zip", format_version=format_version))
             queued = audit_target(target, manifest, seeds)
             if restored["restored_originals"] != len(manifest["originals"]):
                 raise DeliveryError("The fresh delivery did not restore every selected original.")
         return {"status": "ready", "profile": str(output), "exported_at": manifest["exported_at"],
-            "source_archive": downloaded, "canonical_json_bytes": manifest["records"]["bytes"],
-            "canonical_json_sha256": manifest["records"]["sha256"],
-            "tables": {name: len(rows) for name, rows in filtered["records"].items()},
-            "omitted_tables": {name: len(rows) for name, rows in validated.bundle["records"].items() if name not in CANONICAL_TABLES},
+            "source_archive": downloaded, **canonical, "tables": counts,
+            "omitted_tables": {name: count for name, count in source_counts.items() if name not in CANONICAL_TABLES},
             "originals": len(manifest["originals"]), "verified_originals": len(manifest["originals"]),
             "original_bytes": sum(row["bytes"] for row in manifest["originals"]),
-            "queued_jobs": queued, "rebuild": rebuild, "limits": DEFAULT_LIMITS.public(),
+            "queued_jobs": queued, "rebuild": rebuild, "limits": limits.public(),
             "helper_policy": "Verified public assets were used read-only; the native package supplies managed helpers separately.",
             "retrieval_imports_policy": "Current source ZIP omits replay bindings; retained Library publication metadata/originals remain canonical."}
     except ApiError as error:
@@ -415,6 +526,7 @@ def main(argv=None):
     parser.add_argument("--source-root", required=True, type=Path, help="Explicit app source/bundle root containing runtime, content and trusted helper contract")
     parser.add_argument("--report-only", action="store_true", help="Measure bounded records-only metadata; do not download originals, load helpers or create a profile")
     parser.add_argument("--timeout", type=float, default=300, help="Bounded source download timeout in seconds (default 300)")
+    parser.add_argument("--format-version", type=int, choices=(1, 2), default=2, help="Full backup format for preparation; default segmented 2, legacy 1 remains supported")
     args = parser.parse_args(argv)
     if not args.report_only and (args.output_profile is None or args.helper_root is None):
         parser.error("Preparation requires --output-profile and --helper-root; use --report-only for metadata capacity.")

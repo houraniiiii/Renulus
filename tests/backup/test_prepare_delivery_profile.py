@@ -93,7 +93,8 @@ def test_metadata_report_exposes_source_capacity_refusal_without_creating_a_prof
     assert list(tmp_path.iterdir()) == []
 
 
-def test_guarded_http_library_delivery_retains_originals_journal_and_queue_without_learner_history(offline_profiles, tmp_path):
+@pytest.mark.parametrize("format_version", [1, 2])
+def test_guarded_http_library_delivery_retains_originals_journal_and_queue_without_learner_history(offline_profiles, tmp_path, format_version):
     tool = delivery_tool()
     payloads = {
         "ready.txt": b"SYNTHETIC approved CKD Library source: albuminuria and eGFR learning concepts.",
@@ -118,6 +119,11 @@ def test_guarded_http_library_delivery_retains_originals_journal_and_queue_witho
         reserved = add("reserved.txt", reserved=True)
         removed = add("removed.txt")
         succeeded(client.delete(f"/api/v1/library/documents/{removed['document_id']}"))
+        # Preserve deployed passage/job identity prefixes as well as the older
+        # compatible fixtures; unrelated learner tombstones stay excluded.
+        services.db.mark_deleted("knowledge-passage", "passage_deleted_synthetic")
+        services.db.mark_deleted("knowledge-job", "ingest_deleted_synthetic")
+        services.db.mark_deleted("memory-fact", "mem_deleted_synthetic")
         # An acquisition receipt is discovery metadata, not an imported Library
         # original. It must never cause the tool to open/copy its external XML.
         from renulus.knowledge.collection import MANIFEST
@@ -152,7 +158,7 @@ def test_guarded_http_library_delivery_retains_originals_journal_and_queue_witho
         assert not output.exists()
         # Validate every source member before applying the delivery filter, even
         # when the tampered original belongs to a reserved document to be dropped.
-        source_backup = client.get("/api/v1/data/backup")
+        source_backup = client.get("/api/v1/data/backup?format_version=" + str(format_version))
         assert source_backup.status_code == 200
         damaged = io.BytesIO()
         with zipfile.ZipFile(io.BytesIO(source_backup.content)) as archive:
@@ -169,7 +175,7 @@ def test_guarded_http_library_delivery_retains_originals_journal_and_queue_witho
         with loopback_proxy(Response(damaged.getvalue(), media_type="application/zip")) as url:
             with pytest.raises(tool.DeliveryError, match="backup_integrity"):
                 tool.prepare_delivery_profile(source_url=url, output_profile=bad_target,
-                    helper_root=helper_root, source_root=ROOT)
+                    helper_root=helper_root, source_root=ROOT, format_version=format_version)
         assert not bad_target.exists()
         assert not list(output.parent.glob(".rnl-dp-*"))
         with loopback_proxy(client.app) as url:
@@ -182,8 +188,9 @@ def test_guarded_http_library_delivery_retains_originals_journal_and_queue_witho
             assert capacity["discovery_omission"] == 1 and capacity["catalogue_present"] is False
             assert capacity["originals_verified"] is False and capacity["zip_bytes"] is None
             report = tool.prepare_delivery_profile(source_url=url, output_profile=output,
-                helper_root=helper_root, source_root=ROOT)
+                helper_root=helper_root, source_root=ROOT, format_version=format_version)
         assert report["status"] == "ready"
+        assert report["format_version"] == format_version
         assert report["originals"] == 2 and report["verified_originals"] == 2
         assert report["original_bytes"] == sum(map(len, payloads.values()))
         assert report["rebuild"]["status"] == "complete"
@@ -234,7 +241,12 @@ def test_guarded_http_library_delivery_retains_originals_journal_and_queue_witho
                 assert target.db.fetch_one(f'SELECT COUNT(*) AS n FROM "{table}"')["n"] == 0, table
             assert target.db.fetch_all("SELECT * FROM knowledge_source_status_events") == before["knowledge_source_status_events"]
             assert target.db.fetch_all("SELECT * FROM deletion_ledger") == [
-                row for row in before["deletion_ledger"] if row["entity_type"] == "knowledge-document"]
+                row for row in before["deletion_ledger"] if tool.delivery_tombstone(row)]
+            delivered_tombstones = {(row["entity_type"], row["entity_id"])
+                for row in target.db.fetch_all("SELECT * FROM deletion_ledger")}
+            assert ("knowledge-passage", "passage_deleted_synthetic") in delivered_tombstones
+            assert ("knowledge-job", "ingest_deleted_synthetic") in delivered_tombstones
+            assert ("memory-fact", "mem_deleted_synthetic") not in delivered_tombstones
             assert not (output / "state/synthetic-native-state.bin").exists()
             assert not (output / "state/runtime/connections.dpapi").exists()
             assert not list((output / "helpers").rglob("*"))
