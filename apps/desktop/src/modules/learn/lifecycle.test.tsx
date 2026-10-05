@@ -123,3 +123,35 @@ it('keeps the started thread and question after Stop for deliberate continuation
   expect((await ask(fetch)).thread_id).toBe(first.id);
   await act(async () => { next.emit('completed'); next.close(); });
 });
+
+it.each([
+  ['learning_use_unverified', false, false],
+  ['account_model_unsupported', false, false],
+  ['subscription_limit', true, true],
+  ['legacy_stream_error', undefined, true],
+] as const)('preserves streamed recovery policy for %s', async (code, retryable, canRetry) => {
+  const source = events(), retry = events('run-retry');
+  const canonical = { ...first, messages: [{ id: 'question', role: 'user', content: question }], runs: [{ id: 'run-a', state: 'failed' }] };
+  const fetch = transport([source, retry], () => json(canonical));
+  await ask(fetch);
+  await act(async () => {
+    source.emit('started', { thread_id: first.id });
+    source.emit('error', { code, retryable, message: 'Synthetic connection recovery required.' });
+    source.close();
+  });
+  await screen.findByRole('heading', { name: 'The explanation could not finish' });
+  await waitFor(() => expect(screen.queryByRole('button', { name: 'Stop' })).toBeNull());
+  expect((screen.getByRole('textbox', { name: 'Your follow-up' }) as HTMLTextAreaElement).value).toBe(question);
+  expect(fetch.mock.calls.filter(([path]) => path.endsWith('/ask'))).toHaveLength(1);
+  expect(screen.getByRole('button', { name: 'Open Connections' })).toBeTruthy();
+  const button = screen.queryByRole('button', { name: 'Try again' });
+  expect(!!button).toBe(canRetry);
+  if (button) {
+    fireEvent.click(button);
+    await waitFor(() => expect(fetch.mock.calls.filter(([path]) => path.endsWith('/ask'))).toHaveLength(2));
+    const attempts = fetch.mock.calls.filter(([path]) => path.endsWith('/ask'));
+    expect(JSON.parse(String(attempts[1][1].body)).thread_id).toBe(first.id);
+    expect(new Headers(attempts[1][1].headers).get('Idempotency-Key')).not.toBe(new Headers(attempts[0][1].headers).get('Idempotency-Key'));
+    await act(async () => { retry.emit('delta', { text: 'Synthetic recovered explanation.' }); retry.emit('completed'); retry.close(); });
+  }
+});

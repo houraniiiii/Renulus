@@ -233,3 +233,45 @@ async def test_local_cancel_wins_over_late_provider_failure(tmp_path):
     assert_retained_input_only(services, learn, run, memory, state="cancelled")
     await provider.close()
     await memory.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("scope", [Scope.STUDY, Scope.TEMPORARY_CASE])
+@pytest.mark.parametrize("close_at", ["started", "delta"])
+async def test_closing_public_response_body_closes_inner_learn_run(tmp_path, scope, close_at):
+    from renulus.learn.api import Ask, create_router
+
+    app, provider, memory, body, requests = setup_app(tmp_path)
+    services = app.state.services
+    router = create_router(services)
+    endpoint = next(route.endpoint for route in router.routes if route.path == "/learn/ask")
+    learn = services.registry["learn"]
+    stream = None
+    try:
+        response = await endpoint(Ask(question=PROMPT, scope=ContextScope(kind=scope)),
+                                  idempotency_key="response-close")
+        stream = response.body_iterator
+        while True:
+            chunk = await anext(stream)
+            event = json.loads(next(line[6:] for line in chunk.splitlines()
+                                    if line.startswith("data: ")))
+            if event["type"] == close_at:
+                break
+        run = learn.active[event["run_id"]]
+        await stream.aclose()
+        # Closing the public response must await inner cleanup, without relying
+        # on async-generator garbage collection or an event-loop turn.
+        assert provider.status()["active_runs"] == []
+        assert body.closed.is_set() is (close_at == "delta")
+        assert len(requests) == (1 if close_at == "delta" else 0)
+        assert_retained_input_only(services, learn, run, memory, state="interrupted")
+        if scope == Scope.TEMPORARY_CASE:
+            for path in tmp_path.rglob("*"):
+                if path.is_file():
+                    assert PROMPT.encode() not in path.read_bytes()
+                    assert PARTIAL.encode() not in path.read_bytes()
+    finally:
+        if stream:
+            await stream.aclose()
+        await provider.close()
+        await memory.close()

@@ -15,7 +15,7 @@ interface Thread { id: string; title: string; topic_id?: string; teaching_style:
 interface Topic { id: string; label?: string; title?: string }
 interface LiteratureRecord { id: string; title: string; url: string; authors?: string | null; publication_date?: string | null; doi?: string | null; retracted?: boolean | null }
 type LiteratureDisclosure = { kind: 'ready'; topic_id: string; topic_label: string; queried_at: string; records: LiteratureRecord[] } | { kind: 'unavailable'; topic_id: string; topic_label: string; message: string };
-interface RunEvent { run_id: string; sequence: number; type: string; payload: { text?: string; thread_id?: string; citations?: Citation[]; message?: string; code?: string; replayed?: boolean; count?: number; topic_id?: string; topic_label?: string; queried_at?: string; records?: LiteratureRecord[] } }
+interface RunEvent { run_id: string; sequence: number; type: string; payload: { text?: string; thread_id?: string; citations?: Citation[]; message?: string; code?: string; retryable?: boolean; replayed?: boolean; count?: number; topic_id?: string; topic_label?: string; queried_at?: string; records?: LiteratureRecord[] } }
 type MemoryRecall = { kind: 'recalled'; count: number } | { kind: 'unavailable'; message: string };
 
 function literatureLink(value: string): string | undefined {
@@ -113,7 +113,7 @@ export default function Learn() {
         if (!temporary && data.type === 'memory-capture-unavailable') setMemoryCaptureMessage(data.payload.message ?? 'The explanation was saved. Learner memory capture will retry later.');
         if (data.type === 'completed') { terminal = true; runCompleted.current = true; output = data.payload.replayed ? data.payload.text ?? output : output; setMessages(previous => [...previous, { id: data.run_id, role: 'assistant', content: output, citations: references }]); setPartial(''); }
         if (data.type === 'cancelled') { terminal = true; setStatus('Stopped · partial explanation not saved'); setQuestion(text); }
-        if (data.type === 'error') { terminal = true; setError(new ApiError(data.payload.message ?? 'The explanation could not finish.', 0, data.payload.code ?? 'explain_failed', true)); setQuestion(text); }
+        if (data.type === 'error') { terminal = true; setError(new ApiError(data.payload.message ?? 'The explanation could not finish.', 0, data.payload.code ?? 'explain_failed', data.payload.retryable !== false)); setQuestion(text); }
       }
       if (!terminal && !controller.signal.aborted && current()) throw new ApiError('The connection ended before the explanation finished. Your question is still available to retry.', 0, 'explain_stream_interrupted', true);
     } catch (caught) { if (current()) { if (!isCancelled(caught)) { setError(caught); setQuestion(text); } else { setStatus(runCompleted.current ? 'Complete' : 'Stopped · partial explanation not saved'); if (!runCompleted.current) setQuestion(text); } } }
@@ -155,7 +155,7 @@ export default function Learn() {
     <div className="learn-layout"><section className="learn-main">
       {!messages.length && <div className="learning-invitation"><p>Start with a question, a mechanism or a decision you would like to reason through.</p><div className="question-starters">{['How should I reason through AKI?', 'Explain kidney transplant rejection.', 'How do dialysis modalities differ?'].map(value => <button key={value} onClick={() => setQuestion(value)}>{value}</button>)}</div></div>}
       <div className="conversation" aria-label="Learning discussion">{messages.map(message => <article key={message.id} className={'learning-message message-' + message.role}><strong className="message-author">{message.role === 'user' ? 'Your question' : 'Renulus'}</strong><div className="prose learning-answer">{message.content}</div>{message.citations?.length ? <div className="citation-row">{message.citations.map((value, index) => <button key={value.id ?? index} onClick={() => citation(value)}><BookOpen size={14} />Source {index + 1}{value.page ?? value.page_number ? ' · p. ' + (value.page ?? value.page_number) : ''}</button>)}</div> : null}</article>)}{partial && <article className="learning-message"><strong className="message-author">Renulus <Badge tone="neutral">{busy ? 'Explaining' : 'Partial'}</Badge></strong><div className="prose learning-answer">{partial}</div></article>}</div>
-      {error !== null && <ErrorState error={error} title={retryThread ? 'The study thread could not load' : 'The explanation could not finish'} onRetry={() => { if (retryThread) void resume(retryThread); else void ask(); }} />}
+      {error !== null && <ErrorState error={error} title={retryThread ? 'The study thread could not load' : 'The explanation could not finish'} onRetry={error instanceof ApiError && !error.retryable ? undefined : () => { if (retryThread) void resume(retryThread); else void ask(); }} />}
       {evidenceStatus && <p className="muted" role="status" aria-label="Scientific evidence"><strong>Scientific evidence:</strong> {evidenceStatus}</p>}
       {!temporary && literature && <section aria-label="Discovered literature" className="learn-literature"><Notice tone={literature.kind === 'unavailable' ? 'warning' : 'default'}>
         <p><strong>Discovered literature · discovery only</strong></p>

@@ -1,4 +1,5 @@
 import json
+from contextlib import aclosing
 from typing import Literal
 
 from fastapi import APIRouter, Header
@@ -63,8 +64,10 @@ def create_router(services):
                 event = Event(run_id=replay["id"], sequence=1, type="completed", payload=payload)
                 yield f"id: {event.id}\nevent: completed\ndata: {event.model_dump_json()}\n\n"
                 return
-            async for event in service.answer(run, body.question, body.teaching_style, body.topic_id, body.model):
-                yield f"id: {event.id}\nevent: {event.type}\ndata: {event.model_dump_json()}\n\n"
+            async with aclosing(service.answer(run, body.question, body.teaching_style,
+                                              body.topic_id, body.model)) as stream:
+                async for event in stream:
+                    yield f"id: {event.id}\nevent: {event.type}\ndata: {event.model_dump_json()}\n\n"
         return StreamingResponse(events(), media_type="text/event-stream",
                                  headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})
 
