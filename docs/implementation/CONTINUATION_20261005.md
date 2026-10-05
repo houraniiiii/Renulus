@@ -41,7 +41,7 @@ inventory stay nonaccepted under `C:/rn-finalise-20261005/parent-native-035ca7bd
 checks, helper/provider work or imports. Partial inventory setup is restarted;
 no completed app check is repeated or credited. PID 38448 remains preserved.
 
-Actual installed acceptance now runs in controller **51051**, PID **22376**,
+The next installed acceptance attempt ran in controller **51051**, PID **22376**,
 from **22:54:05 UTC**, with parent receipts in
 `C:/rn-finalise-20261005/parent-native-035ca7bd-02` and app evidence in
 `repo/apps/desktop/test-results/installed-product-27dd62a2`. Its reviewed parent
@@ -58,9 +58,38 @@ preparation `1d365f056a78decdd271608e7fe12e83949cf22f2553ff425562be217e03d032`
 and diff `d9563f464204b145bae9d5a8449559ad3c008f525c37f23a7b4597b59493dead`.
 The recipe is ignored under `apps/desktop/.local/installed-preflight-035ca7bd`;
 its wrapper refuses intervening shadow packages. Product freeze/manufacture
-remain unchanged. Do not start another native attempt. Installed journeys,
-three ordinary physical closes, screenshot review, connected/live and
-maintenance still require their actual terminal receipts.
+remain unchanged. This attempt completed every raw inventory check but exited
+1 at **23:06:14 UTC** before any app/helper/provider launch: its Git-source
+comparison rejected `upstream/hermes/activate.ps1`. All 17 gates remain not-run.
+The raw installed script has 6,874 bytes; normalising its explicitly declared
+Windows CRLF checkout endings produces the exact 6,718-byte frozen Git blob
+`e58ed04c91a3e61d1dac481a8642f6ded946d056`. This is a validator comparison
+failure; the installed payload was not changed or remanufactured. The failed
+receipt and terminal remain immutable and nonaccepted.
+
+After parent and independent source review, controller **64306**, PID **13648**,
+started the bounded source resume at **23:36:30 UTC on October 5** (**01:36:30
+Warsaw on October 6**). Parent receipts are in
+`C:/rn-finalise-20261005/parent-native-035ca7bd-03`; app evidence is
+`repo/apps/desktop/test-results/installed-product-eac814d8`. The actual entry is
+`apps/desktop/.local/installed-source-resume-035ca7bd/verify-installed-product-resume.mjs`,
+SHA256 `3a8a1a5fb7f8706617b34fb309b35a8ea7fdbf6e64e79b61c32976abbb844659`.
+It carries only the observed completed raw inventory boundary from the failed
+pre-UI run, with seven immutable anchors and 77 monotonic successful reports
+ending at 39,253. It freshly checks four artifact hashes and all frozen source
+files, canonically comparing only `.ps1`/`.cmd` under the frozen explicit CRLF
+rules. All 17 actual app gates, isolation, retention and normal-close bodies
+are unchanged; stock entry execution is not claimed. No completed app check or
+import is repeated. Do not start another attempt while this controller owns
+the slot. App, connected/live and maintenance acceptance remain pending.
+
+The independent review and final binder preparation were copied and verified
+outside the audit worktree at
+`C:/rn-finalise-20261005/preserved-lanes/final-acceptance-audit/checkpoints/2518cee2/native-source-resume-review`.
+Its five files total 43,236 bytes; the parent transfer receipt SHA256 is
+`915589915b1496f3bd8a2f73909f579a6feda7f35adc57b2d9998eb2c3dc5294`.
+The old operational binder amendment stays historical. The final reviewed
+amendment is preparation only and grants no native, connected or lifecycle pass.
 
 While native17 performs its installed-file audit, the parent admitted the
 independent bundled storage slice under `early-storage-035ca7bd-20261006`.
