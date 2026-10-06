@@ -103,16 +103,74 @@ describes retained source headers, but neither it nor METADATA contains the
 complete project BSD conditions/disclaimer. Headers alone do not supply the
 missing referenced text.
 
-The minimal parent repair is to retain the original ANTLR 4.9.3 BSD 3-clause
-copyright/licence text from the already recorded public sdist (source SHA256
+The minimal parent repair is to retain the original ANTLR 4.9.3 project BSD
+3-clause copyright/licence text associated with the recorded public sdist (SHA256
 `f224469b4168294902bb1efa80a8bf7855f24c99aef99cbefc1bcd3cce77881b`) as a
-scoped notice, for example
+scoped notice. A recorded sdist digest does not establish that its archive
+contains LICENSE.txt; obtain the original text from retained public source
+material, or the exact official upstream release licence if that file is absent.
+For a future source-packaging update, the scoped notice can be
 `apps/desktop/licenses/runtime-helpers/ANTLR4-BSD-3-Clause.txt`, with its exact
 text/source digest in helper provenance. The existing `licenses/**` and
 licence-directory resource mappings already carry such a file; no dependency,
 model, runtime or UI change is needed. Parent owns any distribution supplement
 or later manufacture and its identity record. This lane performs no repair or
 repackaging and leaves the tested freeze and installed sources unchanged.
+
+### Practical companion disposition for the current frozen app
+
+**A public companion notices folder is the minimum current-delivery repair;
+manufacture and app tests need not be repeated for this documentation addition.**
+Parent can supply `matching-699938f2/notices-699938f2/` beside the original
+installer, containing these three small files:
+
+1. `ANTLR4-4.9.3-BSD-3-Clause.txt`: the verbatim original project copyright,
+   all three licence conditions and disclaimer, with no placeholder owner/year.
+   A generic BSD template or the wheel's short METADATA field is insufficient.
+2. `README.md`: identify the library and wheel version 4.9.3, the full app
+   freeze `699938f20efb6bbc2cf8df684cc5c6c3450e6eaf`, unchanged installer
+   filename and SHA256 from the identity table above, and the exact public
+   source/release identity for the supplied licence. State that this folder
+   supplements the installed ANTLR header and does not replace the other
+   already-shipped scoped notices. Include the existing developer-wheel pin
+   `d234a2e0a26cf1f0a1ae5b727d8c71c1c3305ef183f962f729a0b4b915bd20e7`.
+3. `manifest.json`: record the same app/installer binding, licence source
+   identifier, and the measured byte counts and SHA256 values of the actual
+   companion licence and README. These companion hashes are pending actual
+   preparation; none is invented or reported as performed here.
+
+Distribute the unchanged installer **together with** the companion folder,
+preferably in one public delivery ZIP/directory containing the original
+installer bytes and this notices folder. A separate notices asset must be
+clearly paired and supplied to the same recipients, including the owner of the
+existing installation. An undelivered file remaining in a developer worktree
+does not repair notice delivery. Keep the folder outside the installed/payload
+trees, ASAR and executable: all previously accepted app hashes and inventory
+remain valid. Adding documents beside the installer is not remanufacturing it.
+The original standalone installer still has the omission if subsequently
+redistributed without its companion; record closure for the combined delivery
+unit only, and require redistributors to carry the notice with it.
+
+The already-shipped BSD-3-Clause reference text at backend
+`dependencies/pypdfium2-5.14.0.dist-info/licenses/LICENSES/BSD-3-Clause.txt`
+(SHA256 `ad9a9e823df025f42389c1812eae28019f657d1ed7b3a4ebfd5010b0736a0da4`)
+states that binary notices may be reproduced in accompanying documentation or
+other distribution materials. It is a template with placeholder owner/year,
+so it supplies that condition's evidence, not the missing ANTLR attribution.
+Parent need only verify the exact original ANTLR text and the small companion
+files/binding; no runtime, helper, model or provider execution is required by
+this repair. Until the companion is actually supplied, the ANTLR gap remains
+open. This lane has created no companion folder and changed no delivery input.
+
+No other missing file is established in this targeted audit. Original teaching
+content already carries its CC BY licence link and attribution; font, Hermes
+and the selected helper full texts already reach the installation. The stock
+FastEmbed NOTICE also names Jina/Gemma catalogue models: preserve that upstream
+notice, but distinguish it from the frozen app's actual embedding/Docling/OCR
+helper manifest. Catalogue mentions alone do not establish those other weights
+are shipped or add a licence gate for them. The public contributor-directory
+minimisation suggestion below is optional future packaging hygiene, not a
+missing-notice obligation or prerequisite for current local use.
 
 ## Acquired/private-data boundary
 
@@ -161,6 +219,13 @@ metadata/licence inspector; it imports no app runtime and invokes no helper.
 Its console-only dictionary projection was corrected after receipt generation;
 receipt bytes above were preserved. Parent must retain these ignored receipts
 before worktree retirement.
+
+This practical-disposition follow-up reread only the existing report/receipts,
+retained helper/package notices and one already-shipped BSD reference text.
+The original two receipt hashes remain unchanged. Only this report was amended;
+there was no second inventory inspection, runtime/native/installer execution,
+payload mutation, companion preparation or licence acquisition. Parent's
+existing-profile reader slice remains independent on freeze699938f2.
 
 Verification is scoped text/path/hash comparison, ignored-output validation,
 explicit Git changed-file review and `git diff --check`. No tests, builds,
