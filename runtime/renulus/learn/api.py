@@ -25,6 +25,7 @@ class Ask(BaseModel):
     topic_id: str | None = None
     teaching_style: Literal["direct", "guided"] = "direct"
     model: str | None = None
+    freshness: bool | None = None
     case_handoff_id: str | None = Field(default=None, max_length=120)
 
 
@@ -60,12 +61,13 @@ def create_router(services):
                     "SELECT content,citations_json FROM learn_messages WHERE run_id=? AND role='assistant'",
                     (replay["id"],))
                 payload = {"thread_id": replay["thread_id"], "replayed": True,
-                           "text": assistant["content"] if assistant else ""}
+                           "text": assistant["content"] if assistant else "",
+                           "citations": json.loads(assistant["citations_json"]) if assistant else []}
                 event = Event(run_id=replay["id"], sequence=1, type="completed", payload=payload)
                 yield f"id: {event.id}\nevent: completed\ndata: {event.model_dump_json()}\n\n"
                 return
             async with aclosing(service.answer(run, body.question, body.teaching_style,
-                                              body.topic_id, body.model)) as stream:
+                                              body.topic_id, body.model, freshness=body.freshness)) as stream:
                 async for event in stream:
                     yield f"id: {event.id}\nevent: {event.type}\ndata: {event.model_dump_json()}\n\n"
         return StreamingResponse(events(), media_type="text/event-stream",

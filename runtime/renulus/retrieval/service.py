@@ -230,6 +230,38 @@ class RetrievalService:
         async with self._import_lock:
             return await self._import_article(topic, pmcid, scope, idempotency_key, knowledge)
 
+    async def evidence(self, topic_id: str, *, scope: ContextScope) -> dict:
+        from .evidence import acquire_evidence
+        return await acquire_evidence(self, topic_id, scope=scope)
+
+    async def fetch_article(self, pmcid: str) -> dict:
+        """Shared rights/identity gateway; fetching does not import or index."""
+        if not isinstance(pmcid, str) or not PMCID.fullmatch(pmcid):
+            raise ApiError("invalid_article_id", "Choose a canonical PMC article identifier.")
+        self._reserve("europe-pmc", 1, 0)
+        metadata = await self.http.json("GET", EUROPE + "/search", params={"query": "PMCID:" + pmcid,
+            "format": "json", "resultType": "core", "pageSize": 5})
+        europe_records(metadata, 5)
+        rows = metadata["resultList"]["result"]
+        matches = [row for row in rows if row.get("pmcid") == pmcid]
+        if len(matches) != 1 or len(rows) != 1:
+            raise ApiError("article_identity_mismatch", "The selected article could not be uniquely resolved.", 409)
+        match = matches[0]
+        if match.get("isOpenAccess") != "Y" or not isinstance(match.get("license"), str) or not re.fullmatch(r"cc[ -]?by(?: [234]\.0)?|cc0(?: 1\.0)?", match["license"].strip().lower()):
+            raise ApiError("article_permission_required", "This article is not available as eligible open-access full text.", 403)
+        status = europe_status(match)
+        if status["retracted"]:
+            raise ApiError("article_retracted", "Retracted articles are excluded from new evidence imports.", 409)
+        self._reserve("europe-pmc", 1, 0)
+        raw = await self.http.request("GET", EUROPE + "/" + pmcid + "/fullTextXML", max_bytes=6 * 1024 * 1024)
+        article = licensed_article(raw, pmcid)
+        for identifier in ("pmid", "doi"):
+            expected, observed = match.get(identifier), article.get(identifier)
+            equal = isinstance(expected, str) and isinstance(observed, str) and (expected.casefold() == observed.casefold() if identifier == "doi" else expected == observed)
+            if expected and not equal:
+                raise ApiError("article_identity_mismatch", "Full text and metadata have different article identifiers.", 409)
+        return {"article": article, "record": match, "status": status, "sha256": hashlib.sha256(raw).hexdigest()}
+
     def _import_response(self, binding: dict, knowledge, *, replayed=False) -> dict:
         document = knowledge.get_document(binding["document_id"])
         job = knowledge.get_job(binding["job_id"])
@@ -255,31 +287,10 @@ class RetrievalService:
         if binding["job_id"]:
             return self._import_response(binding, knowledge, replayed=True)
         try:
-            self._reserve("europe-pmc", 1, 0)
-            metadata = await self.http.json("GET", EUROPE + "/search", params={"query": "PMCID:" + pmcid,
-                "format": "json", "resultType": "core", "pageSize": 5})
-            europe_records(metadata, 5)  # Validate the primary envelope and rows.
-            rows = metadata["resultList"]["result"]
-            matches = [row for row in rows if row.get("pmcid") == pmcid]
-            if len(matches) != 1 or len(rows) != 1:
-                raise ApiError("article_identity_mismatch", "The selected article could not be uniquely resolved.", 409)
-            match = matches[0]
-            if match.get("isOpenAccess") != "Y" or not isinstance(match.get("license"), str) or not re.fullmatch(r"cc[ -]?by(?: [234]\.0)?|cc0(?: 1\.0)?", match["license"].strip().lower()):
-                raise ApiError("article_permission_required", "This article is not available as eligible open-access full text.", 403)
-            article_status = europe_status(match)
-            if article_status["retracted"]:
-                raise ApiError("article_retracted", "Retracted articles are excluded from new evidence imports.", 409)
-            self._reserve("europe-pmc", 1, 0)
-            raw = await self.http.request("GET", EUROPE + "/" + pmcid + "/fullTextXML", max_bytes=6 * 1024 * 1024)
-            digest = hashlib.sha256(raw).hexdigest()
+            fetched = await self.fetch_article(pmcid)
+            article, match, article_status, digest = (fetched[key] for key in ("article", "record", "status", "sha256"))
             if binding["xml_sha256"] and binding["xml_sha256"] != digest:
                 raise ApiError("article_revision_changed", "The source article changed during this import. Review it and start a new import.", 409)
-            article = licensed_article(raw, pmcid)
-            for identifier in ("pmid", "doi"):
-                expected, observed = match.get(identifier), article.get(identifier)
-                equal = isinstance(expected, str) and isinstance(observed, str) and (expected.casefold() == observed.casefold() if identifier == "doi" else expected == observed)
-                if expected and not equal:
-                    raise ApiError("article_identity_mismatch", "Full text and metadata have different article identifiers.", 409)
             self.db.execute("UPDATE retrieval_imports SET xml_sha256=? WHERE key_hash=?", (digest, key_hash))
             from renulus.knowledge.models import Rights, SourceMetadata
             corrections = article_status["comment_corrections"]

@@ -591,6 +591,69 @@ class KnowledgeRepository:
         return {r["id"]: r for r in rows if self._eligible(
             json.loads(r["metadata_json"]), json.loads(r["rights_json"]), topic_id, current_only)}
 
+    def check_evidence(self, citations, *, scope, topic_id=None, current_only=False):
+        """Read-only source projection for Learn; no body/index/import work."""
+        scope = self._scope(scope)
+        if scope.kind != Scope.STUDY:
+            raise ApiError("retrieval_scope_denied", "Evidence checks require ordinary study scope", 403)
+        if not isinstance(citations, list) or len(citations) > 20:
+            raise ApiError("evidence_limit", "Check at most twenty source references", 422)
+        eligible_ids, metadata_by_id = [], {}
+        with self._lock, closing(self.db.connect()) as conn:
+            conn.execute("BEGIN")
+            revisions = self._retrievable_revisions(scope, topic_id, current_only, conn=conn)
+            for citation in citations:
+                identifier = citation.get("id") if isinstance(citation, dict) else None
+                if not isinstance(identifier, str):
+                    continue
+                if citation.get("source_kind") == "public-article":
+                    try:
+                        metadata = SourceMetadata.model_validate(citation["metadata"])
+                        rights = Rights.model_validate(citation["rights"])
+                        if (metadata.source_id != "L03" or not metadata.pmcid
+                                or not re.fullmatch(r"PMC[1-9][0-9]*", metadata.pmcid)
+                                or metadata.canonical_url != "https://europepmc.org/articles/" + metadata.pmcid
+                                or citation.get("canonical_url") != metadata.canonical_url
+                                or citation.get("publication_date") != metadata.publication_date
+                                or not metadata.original_sha256 or not metadata.publication_date
+                                or not citation.get("locators") or not citation.get("text")
+                                or not all((rights.display, rights.model_input, rights.derivation, rights.cache))
+                                or rights.licence not in ("CC-BY-2.0", "CC-BY-3.0", "CC-BY-4.0", "CC0-1.0")):
+                            continue
+                        effective = self.source_status.effective(metadata,
+                            self.source_status.events(metadata.source_id, conn)).model_dump()
+                        if (any(effective[key] for key in ("retracted", "superseded", "repository_removed", "access_changed", "replaced_topics"))
+                                or effective["publication_status"] in ("draft", "preprint")
+                                or effective["correction"] and not effective["content_reviewed"]
+                                or topic_id and effective["topic_ids"] and topic_id not in effective["topic_ids"]
+                                or effective["review_due"] and effective["review_due"][:10] < datetime.now(timezone.utc).date().isoformat()):
+                            continue
+                        if current_only and (effective["publication_status"] != "final"
+                                or not effective["latest_final_verified"] or not effective["content_reviewed"]):
+                            continue
+                    except (ValueError, TypeError, KeyError):
+                        continue
+                else:
+                    revision_id = citation.get("document_revision") or citation.get("revision_id")
+                    revision = revisions.get(revision_id)
+                    if not revision or revision["document_id"] != citation.get("document_id"):
+                        continue
+                    passage = conn.execute("SELECT locators_json FROM knowledge_passages WHERE id=? AND revision_id=?",
+                        (citation.get("passage_id") or identifier, revision_id)).fetchone()
+                    if not passage:
+                        continue
+                    effective = json.loads(revision["metadata_json"])
+                    rights = json.loads(revision["rights_json"])
+                    if (not all(rights.get(operation) for operation in ("display", "cache", "model_input", "derivation"))
+                            or effective.get("repository_removed")
+                            or effective.get("correction") and not effective.get("content_reviewed")):
+                        continue
+                    if any(locator.get("page") in effective.get("excluded_pages", []) for locator in json.loads(passage["locators_json"])):
+                        continue
+                eligible_ids.append(identifier)
+                metadata_by_id[identifier] = effective
+        return {"state": "available", "eligible_ids": eligible_ids, "metadata": metadata_by_id}
+
     def citation(self, document_revision, page=None, *, passage_id=None):
         if passage_id is not None and (not isinstance(passage_id, str) or
                 not re.fullmatch(r"passage_[0-9a-f]{32}", passage_id)):

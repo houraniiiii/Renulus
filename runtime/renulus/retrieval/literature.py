@@ -163,6 +163,28 @@ def licensed_article(raw: bytes, expected_pmcid: str) -> dict:
     for section in (front.find("abstract"), root.find("body")):
         if section is not None:
             collect(section)
+    # Preserve body paragraph provenance for automatic evidence. Abstract and
+    # heading metadata alone are never promoted to full-text passage evidence.
+    passages = []
+    def body_passages(node, path, section="Body"):
+        if node.tag in skipped or "third-party" in node.get("specific-use", "").lower():
+            return
+        if node.tag == "sec":
+            section = text(node.find("title")) or section
+        if node.tag == "p":
+            if not any(item.tag in skipped or "third-party" in item.get("specific-use", "").lower() for item in node.iter()):
+                value = text(node)
+                if value:
+                    passages.append({"text": value, "locator": {"kind": "jats", "item_id": path,
+                        "section": section, "char_start": 0, "char_end": len(value)}})
+            return
+        counts = {}
+        for child in node:
+            counts[child.tag] = counts.get(child.tag, 0) + 1
+            body_passages(child, path + "/" + child.tag + "[" + str(counts[child.tag]) + "]", section)
+    body = root.find("body")
+    if body is not None:
+        body_passages(body, "/article/body")
     content = "\n\n".join(blocks)
     if len(content) > 1_000_000 or len(blocks) < 2:
         raise ApiError("article_text_unavailable", "A bounded, eligible article body could not be extracted.", 422)
@@ -175,7 +197,8 @@ def licensed_article(raw: bytes, expected_pmcid: str) -> dict:
                 publication_date += "-" + day.zfill(2)
             break
     licence, licence_url = next(iter(accepted))
-    return {"title": title or expected_pmcid, "text": content, "pmcid": pmcid,
+    return {"title": title or expected_pmcid, "text": content, "passages": passages, "pmcid": pmcid,
+            "article_type": root.get("article-type", ""),
             "pmid": ids.get("pmid"), "doi": ids.get("doi"), "licence": licence,
             "licence_url": licence_url, "licence_statement": text(licences[0]),
             "authors": authors, "copyright_statement": copyright_statement,
