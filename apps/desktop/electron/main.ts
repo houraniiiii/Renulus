@@ -13,14 +13,41 @@ import { activateWindow, ensureMainWindow } from './upstream/main-window-lifecyc
 
 app.setName('Renulus');
 const workspace = path.resolve(__dirname, '../../..');
+// Opt-in automation owns a separate profile and never uses desktop input.
+const backgroundTest = process.env.RENULUS_BACKGROUND_TEST === '1';
+function recordTestEvent(kind: string, details: Record<string, string> = {}) {
+  process.stderr.write('RENULUS_BACKGROUND_EVENT ' + JSON.stringify({ kind, ...details, at: new Date().toISOString() }) + '\n');
+}
+function reportNativeError(title: string, message: string) {
+  if (backgroundTest) recordTestEvent('error', { title, message });
+  else dialog.showErrorBox(title, message);
+}
+async function openExternal(url: string, target: 'source' | 'authorization') {
+  if (backgroundTest) {
+    // Authorization URLs can contain account-specific state. Never log them.
+    const source = new URL(url);
+    recordTestEvent('external-blocked', { target, ...(target === 'source' ? { url: source.origin + source.pathname } : {}) });
+    throw new Error('External windows are disabled in Renulus background tests.');
+  }
+  await shell.openExternal(url);
+}
 let profile: DesktopProfile;
-try { profile = resolveProfile(process.env.RENULUS_PROFILE, app.isPackaged, process.env.LOCALAPPDATA); }
-catch (error) { dialog.showErrorBox('Renulus could not start', (error as Error).message); app.exit(1); throw error; }
+try {
+  if (backgroundTest && (!process.env.RENULUS_PROFILE || !path.isAbsolute(process.env.RENULUS_PROFILE))) throw new Error('Background tests require an explicit absolute synthetic RENULUS_PROFILE.');
+  if (backgroundTest && process.env.RENULUS_BACKEND_URL) throw new Error('Background tests must launch their own managed backend.');
+  profile = resolveProfile(process.env.RENULUS_PROFILE, app.isPackaged, process.env.LOCALAPPDATA);
+}
+catch (error) { reportNativeError('Renulus could not start', (error as Error).message); app.exit(1); throw error; }
 mkdirSync(profile.desktop, { recursive: true }); mkdirSync(profile.session, { recursive: true });
 app.setPath('userData', profile.desktop); app.setPath('sessionData', profile.session);
 app.setAppUserModelId('org.renulus.desktop.' + (app.isPackaged ? 'app' : 'dev.' + profile.instance));
 const ownsInstance = app.requestSingleInstanceLock({ instance: profile.instance });
 if (!ownsInstance) app.exit(0);
+if (backgroundTest) app.on('browser-window-created', (_event, owner) => {
+  recordTestEvent('window-created');
+  owner.on('show', () => recordTestEvent('window-shown'));
+  owner.on('focus', () => recordTestEvent('window-focused'));
+});
 let window: BrowserWindow | null = null;
 let openingWindow: BrowserWindow | null = null;
 let backend: ManagedBackend | undefined;
@@ -34,7 +61,7 @@ let stopPromise: Promise<void> | undefined;
 function createWindow() {
   if (!frontend) return;
   const isolated = session.fromPartition('renulus-' + profile.instance); // No persist: prefix.
-  window = new BrowserWindow({ title: app.isPackaged ? 'Renulus' : 'Renulus — Development', width: 1400, height: 960, minWidth: 640, minHeight: 540, show: false, backgroundColor: '#faf9f6', icon: path.join(__dirname, '../dist/renulus.ico'), autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), session: isolated, nodeIntegration: false, contextIsolation: true, sandbox: true, webSecurity: true, v8CacheOptions: 'none', spellcheck: false } });
+  window = new BrowserWindow({ title: app.isPackaged ? 'Renulus' : 'Renulus — Development', width: 1400, height: 960, minWidth: 640, minHeight: 540, show: false, focusable: !backgroundTest, skipTaskbar: backgroundTest, backgroundColor: '#faf9f6', icon: path.join(__dirname, '../dist/renulus.ico'), autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), session: isolated, nodeIntegration: false, contextIsolation: true, sandbox: true, webSecurity: true, v8CacheOptions: 'none', spellcheck: false, backgroundThrottling: !backgroundTest } });
   const owner = window;
   const origin = frontend.origin;
   isolated.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
@@ -45,15 +72,16 @@ function createWindow() {
   });
   isolated.webRequest.onBeforeSendHeaders({ urls: [origin + '/api/v1/*'] }, ownedApiHeaders(owner, token));
   owner.webContents.setWindowOpenHandler(({ url }) => {
-    if (allowedSourceUrl(url)) void shell.openExternal(url).catch(() => {
-      dialog.showErrorBox('The source could not open', 'Try the source link again after checking your default browser.');
+    if (allowedSourceUrl(url)) void openExternal(url, 'source').catch(() => {
+      if (!backgroundTest) reportNativeError('The source could not open', 'Try the source link again after checking your default browser.');
     });
     return { action: 'deny' };
   });
   owner.webContents.on('will-navigate', (event, url) => { if (new URL(url).origin !== origin) event.preventDefault(); });
   owner.webContents.on('will-attach-webview', event => event.preventDefault());
   owner.once('ready-to-show', () => {
-    owner.show();
+    if (!backgroundTest) owner.show();
+    else recordTestEvent('renderer-ready');
     if (openingWindow && !openingWindow.isDestroyed()) openingWindow.destroy();
     openingWindow = null;
   });
@@ -66,11 +94,11 @@ function createWindow() {
 ipcMain.handle('renulus:version', event => { if (event.sender !== window?.webContents) throw new Error('Invalid sender'); return app.getVersion(); });
 ipcMain.handle('renulus:open-authorization', async (event, url: unknown) => {
   if (event.sender !== window?.webContents || typeof url !== 'string' || !allowedAuthorizationUrl(url)) throw new Error('The sign-in URL is not permitted.');
-  await shell.openExternal(url);
+  await openExternal(url, 'authorization');
 });
 ipcMain.handle('renulus:open-source', async (event, url: unknown) => {
   if (event.sender !== window?.webContents || typeof url !== 'string' || !allowedSourceUrl(url)) throw new Error('The source URL is not permitted.');
-  await shell.openExternal(url);
+  await openExternal(url, 'source');
 });
 function ownsBackupSender(event: IpcMainInvokeEvent): boolean {
   return !!window && !window.isDestroyed() && event.sender === window.webContents &&
@@ -81,6 +109,10 @@ ipcMain.handle('renulus:save-backup', async (event, kind: unknown, operation: un
     return { status: 'error', code: 'invalid_backup_request', message: 'This backup must be saved from the current Renulus window.' };
   }
   if (backupDownloads.size) return { status: 'error', code: 'backup_busy', message: 'Wait for the current backup or cancel it before saving another.' };
+  if (backgroundTest) {
+    recordTestEvent('native-dialog-blocked', { target: 'save-backup', format: kind });
+    return { status: 'cancelled' };
+  }
   const format = kind as 'zip' | 'json';
   const controller = new AbortController(); backupDownloads.set(operation, controller);
   const stop = () => controller.abort(); lifetime.signal.addEventListener('abort', stop, { once: true });
@@ -111,8 +143,8 @@ ipcMain.handle('renulus:cancel-backup', (event, operation: unknown) => {
   if (!ownsBackupSender(event) || !validBackupOperation(operation)) throw new Error('This cancellation must come from the current Renulus window.');
   backupDownloads.get(operation)?.abort();
 });
-app.on('second-instance', () => ensureMainWindow(window ?? openingWindow, { isReady: app.isReady(), createWindow, focusWindow: activateWindow }));
-app.on('activate', () => ensureMainWindow(window ?? openingWindow, { isReady: app.isReady(), createWindow, focusWindow: activateWindow }));
+app.on('second-instance', () => ensureMainWindow(window ?? openingWindow, { isReady: app.isReady(), createWindow, focusWindow: activateWindow, focusExisting: !backgroundTest }));
+app.on('activate', () => ensureMainWindow(window ?? openingWindow, { isReady: app.isReady(), createWindow, focusWindow: activateWindow, focusExisting: !backgroundTest }));
 app.on('window-all-closed', () => app.quit());
 app.on('before-quit', event => {
   if (stopping) return;
@@ -121,11 +153,11 @@ app.on('before-quit', event => {
     if (frontend) { frontend.server.closeAllConnections(); await new Promise<void>(resolve => frontend!.server.close(() => resolve())); }
     await backend?.stop();
   })();
-  void stopPromise.then(() => { stopping = true; app.quit(); }, () => { stopPromise = undefined; dialog.showErrorBox('Renulus could not finish stopping', 'The owned backend did not exit cleanly. Close this development instance and inspect its lifecycle evidence.'); });
+  void stopPromise.then(() => { stopping = true; app.quit(); }, () => { stopPromise = undefined; reportNativeError('Renulus could not finish stopping', 'The owned backend did not exit cleanly. Close this development instance and inspect its lifecycle evidence.'); });
 });
 if (ownsInstance) void app.whenReady().then(async () => {
   try {
-    openingWindow = createStartupWindow(profile.instance, path.join(__dirname, '../dist/renulus.ico'), lifetime.signal);
+    openingWindow = createStartupWindow(profile.instance, path.join(__dirname, '../dist/renulus.ico'), lifetime.signal, backgroundTest);
     const openingOwner = openingWindow;
     openingOwner.on('closed', () => { if (openingWindow === openingOwner) openingWindow = null; });
     backend = await startBackend({ profile, token, workspace, resources: process.resourcesPath, packaged: app.isPackaged, signal: lifetime.signal, onOwnedChild: handle => { backend = handle; } });
@@ -133,7 +165,7 @@ if (ownsInstance) void app.whenReady().then(async () => {
     frontend = await startFrontend(path.join(__dirname, '../dist'), backend.port, token);
     lifetime.signal.throwIfAborted(); createWindow();
   } catch (error) {
-    if (!lifetime.signal.aborted) dialog.showErrorBox('Renulus could not start', error instanceof Error ? error.message : 'The local runtime could not start.');
+    if (!lifetime.signal.aborted) reportNativeError('Renulus could not start', error instanceof Error ? error.message : 'The local runtime could not start.');
     app.quit();
   }
 });

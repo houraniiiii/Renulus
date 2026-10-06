@@ -20,19 +20,19 @@ p{margin:0 0 12px;color:var(--ink-secondary)}.hint{font-size:14px;margin-top:24p
 <p>The first start can take a few minutes.</p><div class="progress" aria-hidden="true"></div>
 <p class="hint">You can close this window to stop.</p></main></body></html>`;
 
-export function createStartupWindow(instance: string, icon: string, signal: AbortSignal): BrowserWindow {
+export function createStartupWindow(instance: string, icon: string, signal: AbortSignal, backgroundTest = false): BrowserWindow {
   const isolated = session.fromPartition('renulus-opening-' + instance);
   isolated.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
   isolated.setPermissionCheckHandler(() => false);
   isolated.webRequest.onBeforeRequest((details, callback) => callback({ cancel: !details.url.startsWith('data:') }));
   const owner = new BrowserWindow({ title: 'Renulus', width: 700, height: 430, show: false,
-    resizable: false, backgroundColor: '#faf9f6', icon, autoHideMenuBar: true,
+    resizable: false, focusable: !backgroundTest, skipTaskbar: backgroundTest, backgroundColor: '#faf9f6', icon, autoHideMenuBar: true,
     webPreferences: { session: isolated, nodeIntegration: false, contextIsolation: true,
-      sandbox: true, webSecurity: true, javascript: false, spellcheck: false } });
+      sandbox: true, webSecurity: true, javascript: false, spellcheck: false, backgroundThrottling: !backgroundTest } });
   owner.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   owner.webContents.on('will-navigate', event => event.preventDefault());
   owner.webContents.on('will-attach-webview', event => event.preventDefault());
-  owner.once('ready-to-show', () => { if (!signal.aborted && !owner.isDestroyed()) owner.show(); });
+  owner.once('ready-to-show', () => { if (!backgroundTest && !signal.aborted && !owner.isDestroyed()) owner.show(); });
   void owner.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(openingPage)).catch(() => {});
   return owner;
 }
