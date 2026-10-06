@@ -5,6 +5,27 @@ historical `SESSION_HANDOFF.md`. Preserve its receipts and observations.
 
 ## Current October 6 recovery delivery wave
 
+Latest recovery at09:21UTC: matching699938f2 Package session47784 is active,
+run `699938f2-package-01daddc9`, begun07:47:47UTC. Backend source refresh,
+renderer build/typecheck and native compile finished. The apparent builder
+stall was slow per-file ASAR path validation; it has produced app.asar and is
+copying backend/licences. Preserve this attempt and all completed stages.
+Matching Install is queued in session82750 through the parent-owned ignored
+`.local/install-after-package-699938f2.ps1`; it waits for the exact completed
+Package controller/provenance and refuses an existing installation. Recover
+both sessions/receipts before starting replacements. No6999 native/live acceptance
+exists yet. Native/helper/model work stays serial.
+
+The final next-installed/freshness follow-on lane is integrated, its47 ignored
+files preserved outside the clean worktree, and that tree removed after agent
+closure. Deployment remains in `apps/desktop/.local/next-installed-20261006` and
+`apps/desktop/.local/freshness-correction-followon-20261006`; source/state review
+pins remain under `C:/rn-finalise-20261005/parent-source-review-699938f2`. The
+active bounded audit lane is report-only in
+`C:/rn-finalise-20261005/lanes/audit-acceptance-20261006`. Keep the held E supplement
+tree, PID38448/port18765, E raw/profile and all failed historical receipts.
+See [the wave record](finalise-recovery-freshness-20261006.md) for current limits.
+
 The parent now accepts production freeze
 `699938f20efb6bbc2cf8df684cc5c6c3450e6eaf` for matching manufacture. Recovery
 format2 parsing, public citation projection, automatic dated body retrieval and
@@ -12,8 +33,8 @@ correction invalidation are integrated. Bounded validation passed48 freshness
 backend cases,11 correction cases,6 affected final public renderer cases and
 2 Updates renderer cases, with integrated typecheck0. Counts retain overlap and
 source scope; see [the new wave record](finalise-recovery-freshness-20261006.md).
-The two6599 native attempts have finished and failed, as detailed below; no
-current native job is running. Recover the next matching job before replacements.
+The two6599 native attempts have finished and failed, as detailed below.
+Recover the currently running matching job above before replacements.
 
 Report-only commits91a233e1/ec826214 preserve freshness gaps and all64 requirement
 dispositions. Production commitsabbf098c/859b001f/9b5410ce and fixture-only699938f2
