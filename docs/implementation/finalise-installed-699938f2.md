@@ -77,13 +77,27 @@ preserved there before the narrowly reviewed inventory admission adaptation.
 
 ## Current continuation
 
-One Connected invocation began10:32:12UTC in session97216, driver37364, against
-the receipt-owned C restored profile. It owns the native/helper slot. Preserve
-its latch, controller and actual receipt; completion and supported flows must be
-read back before selected Codex Probe/capture. Journeys/image depend on successful
-Probe. The prepared freshness/correction and scanned-PDF/Flow/single-K01 slices
-and matching uninstall/retention/reinstall follow those admission rules. Go is
-paused and no provider/account/model fallback or quota retry loop is permitted.
+Connected01 ended exit1 at10:35:05.754UTC after adding its single owned Memory
+record; its Edit locator followed text replaced by the editor. No completed stage
+or ordinary-close credit is claimed. Connected02 ran10:46:42–10:53:30UTC, exit1,
+and passed three individual stages: Memory correction/real recall, saved PDF and
+offline-image original/reopen, and reviewed mistake→plan producer/manual override.
+Its populated252959-byte format2 ZIP is preserved. The first ordinary close
+exceeded30seconds; both owned processes were later absent. It earns no aggregate
+or close credit. Driver event-loop interference is a hypothesis, not a proven
+application defect.
+
+Connected03 began11:07:30UTC, session27882/driver28664. A reviewed asynchronous
+Exit observer preserves the same30second budget and ordinary close. It retains
+the three passed stages with origin pins/executedHere=false, and runs only the
+remaining fresh restore/rebuild/reconciliation, three owned deletions, older-ZIP
+deletion/raw-part suppression and close. Actual receipt/terminal review precedes
+admission. See [the continuation](finalise-connected-continuation-699938f2.md).
+
+Selected Codex Probe/capture follows admitted Connected; Journeys/image depend on
+successful Probe. Prepared freshness/correction, scanned-PDF/Flow/single-K01 and
+matching uninstall/retention/reinstall retain their admission rules. Go is paused;
+no provider/account/model fallback or quota retry loop is permitted.
 
 All times are October6,2026UTC. The [64-row audit](finalise-audit-699938f2.md) keeps
 every original requirement and distinguishes local, actual-engine, installed and

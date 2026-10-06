@@ -28,9 +28,16 @@ newer deletion reconciled, and three ordinary closes/two reopens completed.
 Parent reviewed all seven captures, including the actual PDF physical page2.
 The parent admitted an honest five-current/twelve-historical composite at
 10:31:41UTC; there is no full current sweep or repeated initial restore/import.
-Connected session97216, driver37364, started10:32:12UTC on the closed C restored
-profile and now owns the serial native/helper slot. Recover it before another
-native, model or live operation. See [the installed record](finalise-installed-699938f2.md).
+Connected01/session97216 ended exit1 at10:35:05.754UTC. Connected02/session73927
+ended exit1 at10:53:30UTC after three passed stages and a populated format2 backup,
+then an unconfirmed ordinary close. Both failures remain failed with zero close
+credit; their owned processes were later absent. Connected03/session27882,
+driver28664, started11:07:30UTC and owns the serial native/helper slot. It retains
+the three passed02 stages explicitly and executes only remaining restore,
+reconciliation/deletion/close operations from the existing backup with a reviewed
+asynchronous observer. Recover its invocation/latch before another native, model
+or live operation. See [the installed record](finalise-installed-699938f2.md) and
+[Connected continuation](finalise-connected-continuation-699938f2.md).
 
 The final next-installed/freshness follow-on lane is integrated, its47 ignored
 files preserved outside the clean worktree, and that tree removed after agent
@@ -43,7 +50,9 @@ is optional refinement, not an additional release gate. The guide lane is
 integrated as7297c513 and its clean tree retired. The contracts report is
 integrated as7e1bae7b; its first three ignored files are preserved in the parent
 admission root. That same bounded lane now owns only the remaining gap-driver
-binding adaptation. A separate audit lane owns the current64-row report update.
+binding adaptation. The current64-row audit is integrated asf491b0ab and its clean
+tree retired. One bounded Ultra live-driver-preflight lane reviews actual
+Probe/Journeys file hashes and nonblocking exit observation in its separate tree.
 Neither lane may execute native/helper/provider/data work. Keep the held E supplement tree,
 PID38448/port18765, E raw/profile and all failed historical receipts.
 See [the wave record](finalise-recovery-freshness-20261006.md) for current limits.
