@@ -463,21 +463,6 @@ export class RenulusController {
     await budget.wait(this.application.evaluate(installObservation));
     const context = this.application.context();
     context.setDefaultTimeout(Math.min(this.operationTimeout, 10_000));
-    await budget.wait(context.route('**/*', async route => {
-      const request = route.request();
-      if (!this.origin) {
-        const known = this.application.windows().find(page => !page.isClosed() && isFlowUrl(page.url()));
-        if (known) this.origin = new URL(known.url()).origin;
-        else if (isFlowUrl(request.url()) && request.method() === 'GET' && request.isNavigationRequest() && new URL(request.url()).pathname === '/') {
-          const frame = request.frame();
-          if (!frame.parentFrame() && this.application.windows().includes(frame.page())) this.origin = new URL(request.url()).origin;
-        }
-      }
-      if (requestAllowed(request.url(), request.method(), this.origin)) return route.continue();
-      this.log('request-blocked', request.method() + ' ' + request.url());
-      if (isFlowUrl(request.url()) && new URL(request.url()).pathname.startsWith('/api/')) return route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ error: { code: 'controller_scope', message: 'This operation is outside the synthetic controller scope.', retryable: false } }) });
-      return route.abort('blockedbyclient');
-    }));
     this.attachPages();
     this.observer = setInterval(() => {
       if (!this.observing && this.application && !this.fault) {
@@ -499,6 +484,23 @@ export class RenulusController {
           this.page = page; this.origin = origin;
           check(this.owners.some(owner => owner.kind === 'backend'), 'backend_unverified', 'The managed backend child must be physically verified before Flow is accepted.');
           await budget.wait(this.observe());
+          // The initial navigation can precede its Playwright Frame. The app's
+          // own session filter covers startup; add our exact-origin filter only
+          // after Flow and its managed backend have been verified.
+          await budget.wait(context.route('**/*', async route => {
+            try {
+              const request = route.request();
+              if (requestAllowed(request.url(), request.method(), this.origin)) return await route.continue();
+              this.log('request-blocked', request.method() + ' ' + request.url());
+              if (isFlowUrl(request.url()) && new URL(request.url()).pathname.startsWith('/api/')) return await route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ error: { code: 'controller_scope', message: 'This operation is outside the synthetic controller scope.', retryable: false } }) });
+              await route.abort('blockedbyclient');
+            } catch (error) {
+              if (!this.application || this.stopping) return;
+              this.log('route-error', error.message);
+              this.fault = new ControlError('route_failed', 'The owned renderer request filter failed. Inspect the external logs.');
+              void this.application.close().catch(() => {});
+            }
+          }));
           const receipt = { profile: this.session.profile, mainSha256: contract.mainSha256, readySeconds: (Date.now() - started) / 1_000, origin: this.origin, hidden: true,
             seenWindows: this.lastObservation.seen, ownedPids: this.owners.map(owner => ({ pid: owner.pid, kind: owner.kind })), ownedProcesses: this.owners.map(owner => ({ ...owner })) };
           this.launches.push(receipt); this.log('ready', 'Hidden loopback Flow navigation and owned backend are ready.');
