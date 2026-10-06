@@ -42,7 +42,7 @@ async function fixture(overrides = {}) {
   };
   const page = new EventEmitter();
   page.isClosed = () => closed;
-  page.url = () => 'http://127.0.0.1:43123/';
+  page.url = () => overrides.earlyNavigation && !calls.includes('observe') ? 'data:startup' : 'http://127.0.0.1:43123/';
   page.locator = selector => getElement(selector);
   page.getByRole = (role, opts) => { assert.equal(opts.exact, true); return getElement(role + ':' + opts.name); };
   page.evaluate = async fn => { calls.push(fn.name); if (overrides.failFrame) throw new Error('No fresh frame'); };
@@ -58,7 +58,10 @@ async function fixture(overrides = {}) {
     rows.set(backendPid, { pid: backendPid, parentPid: mainPid, executable: python, created: 'synthetic-backend-' + applicationNumber });
     app.process = () => child;
     app.windows = () => [page];
-    app.context = () => ({ setDefaultTimeout: timeout => assert.ok(timeout <= LIMITS.operation), route: async (_pattern, handler) => { calls.push('route'); app.route = handler; } });
+    app.context = () => ({ setDefaultTimeout: timeout => assert.ok(timeout <= LIMITS.operation), route: async (_pattern, handler) => {
+      calls.push('route'); app.route = handler;
+      if (overrides.earlyNavigation) await handler({ request: () => ({ url: () => 'http://127.0.0.1:43123/', method: () => 'GET', isNavigationRequest: () => true, frame: () => { throw new Error('Navigation frame does not exist yet'); } }), continue: async () => calls.push('early-navigation-continued') });
+    } });
     app.evaluate = async fn => {
       if (fn.name === 'installObservation') { calls.push('observer'); return; }
       assert.equal(fn.name, 'readObservation'); calls.push('observe');
@@ -88,6 +91,14 @@ test('Windows shell launcher validates controller to cmd to Electron to backend 
   assert.notEqual(ready.ownedPids[0].pid, ready.ownedPids[1].pid);
   assert.equal((await f.controller.run('renulus_close')).normal, true);
   assert.equal(f.rows.size, 0);
+});
+
+test('initial Electron navigation needs no unavailable request frame', async t => {
+  const f = await fixture({ earlyNavigation: true }); t.after(() => f.controller.shutdown());
+  const ready = await f.controller.run('renulus_start');
+  assert.equal(ready.hidden, true);
+  assert.ok(f.calls.indexOf('route') > f.calls.indexOf('observe'));
+  assert.ok(f.calls.includes('early-navigation-continued'));
 });
 
 test('Windows shell launcher rejects an unrelated launcher parent', async () => {
