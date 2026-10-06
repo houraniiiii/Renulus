@@ -105,3 +105,31 @@ original/citation and deletion reconciliation, ordinary closes/reopens, Connecte
 the deliberately selected Codex flow and installation maintenance. Go stays
 paused. Raw collection/account profile stay on E; credentials stay outside Git.
 Launcher promotion and complete delivery acceptance remain pending actual proof.
+
+## Manufacture recovery and final lane preservation
+
+At09:03:35UTC on October6 the existing699938f2 Package process was confirmed
+active in ASAR file preparation: lucide-react file3435 of4300. Earlier unchanged
+read/write byte counters and a buffered4096-byte stdout log had suggested a stall;
+owned-process debugger/CPU sampling instead located per-file path safety and
+realpath checks. Electron copy and cleanup had finished. No factory/source patch,
+process replacement, duplicate payload copy or renderer rebuild was performed.
+Session47784 and the original package attempt01daddc9 continue; completed matching
+provenance, Install and native acceptance are still required. Diagnostic receipts
+remain outside Git under C:/rn-finalise-20261005/packager699938f2-*.json.
+
+Gibbs's final report commits17aee792/389ec5a4 are integrated asfb1b3ef2/73656404.
+Ten freshness/correction recipe files,70874bytes, were preserved and deployed,
+manifest8d50f08ebb1e9d57bf73851ee6811c7ed6a903ecfb8b5b4572515e61fd3f3f67.
+The earlier37-file installed handoff remains separately preserved. After
+verifying all47 ignored files, clean status and agent closure, the completed
+next-installed worktree was removed at09:08:45UTC. Commits/branch and all receipts
+remain; the held E supplement worktree and private/raw E state are unchanged.
+Transfer/retirement records are in
+C:/rn-finalise-20261005/preserved-lanes/next-installed-20261006.
+
+The freshness follow-on resumes only the admitted synthetic E Codex study after
+actual Probe/Journeys. Correction is confined to an owned C synthetic profile
+and needs actual eligible entry/revision/evidence/history identities. Neither
+recipe has executed. The new bounded audit lane owns its report only while the
+parent retains the serial manufacture/native/provider slot and final acceptance.
