@@ -3,7 +3,67 @@
 This record supersedes the location, heartbeat and lane instructions in the
 historical `SESSION_HANDOFF.md`. Preserve its receipts and observations.
 
-## October 6 installed continuation
+## October 6 shutdown correction and matching rebuild
+
+The accepted product freeze is now
+`c7b3b5dea9258845273a8df95ca24f5da5bf1ca5`. The narrow owned-renderer
+authorization correction captures the live renderer ID and cancels late
+requests after destruction. Four focused regressions and desktop TypeScript
+passed; see [the actual failure and correction](finalise-owned-api-headers.md).
+Runtime, content, Hermes, dependency/model locks and the Flow renderer are
+unchanged from 035ca7bd. Completed unaffected checks and imports are preserved.
+
+Matching Package is running in controller `72410`, run
+`c7b3b5de-package-8121cbe0`. Recover this controller and its receipts before
+starting Install; no package, installation or normal-close pass is credited
+before actual terminal and evidence review. The normal launcher still selects
+the previous 3ff9b0d6 installation and E learning profile.
+
+Native05 at 035ca7bd ended exit 1 at 00:57:33 UTC on October 6. All remaining
+Library format journeys individually passed: PDF with physical page 2, no-text
+PNG original, DOCX, PPTX and XLSX, with citations/downloaded original hashes.
+Its backup assertion incorrectly required custom headers which the native
+proxy does not forward. Receipt
+`installed-product-journey-resume-evidence.json` SHA256 is
+`af46d0c89e5eb3194f6e769e1b9f6568964d794bc45663780a9d805543aaf98a`.
+The failed invocation remains failed.
+
+Native06 reused the same owned synthetic profile and six originals, verified
+the populated format-2 ZIP and every canonical segment/original size and hash,
+then observed a real processing PDF job before normal close. Electron threw
+`TypeError: Object has been destroyed` in the authorization callback, leaving
+the main process on an error dialog after the backend disappeared. Controller
+exit 1 at 01:15:53 UTC and the captured error remain immutable. Cleanup of the
+owned dialog is not ordinary-close acceptance. Preserve the six originals,
+four queued stress PDFs, existing ZIP and all native04/05/06 receipts under
+`apps/desktop/test-results/installed-product-4c73b819`; do not repeat the format
+matrix, imports, quiz or native Save/Cancel.
+
+The accepted six-phase installed storage receipt remains evidence at 035ca7bd.
+The audit lane is preparing an explicit unchanged-source compatibility transfer
+to c7b3b5de; do not relabel it or rerun those phases. New installed payload
+identity/raw inventory and remaining actual shutdown, reopen, temporary
+retention, restore and deletion gates must be established on c7b3b5de.
+
+Response-observation preparation report `c662c932` is integrated as `fe08dc12`.
+All thirteen ignored preparation files, 235,781 bytes, are parent SHA-verified
+outside its worktree at
+`C:/rn-finalise-20261005/preserved-lanes/response-observation/checkpoints/c662c932`.
+The manifest records individual sizes/hashes; its top-level byte total is null
+and the stated total was calculated from the parsed thirteen file entries.
+Parent c7 follow-on preparation uses copies under
+`C:/rn-finalise-20261005/parent-follow-on-c7b3b5de/preparation/recipes`, changing
+only sequential file-hash buffers to 1 MiB. The new controller is
+`.local/finalise-run-follow-on-c7b3b5de.ps1`. Parse checks passed; native,
+connected and provider execution is not claimed by preparation.
+
+Next: matching Install, fresh installed identity/inventory and the remaining
+native gates/three ordinary physical closes, connected saved-original/recovery/
+Memory/mistake-to-plan journeys, one selected-account Probe and admitted
+dependent journeys/maintenance. Keep one twenty-minute heartbeat and preserve
+unrelated PID 38448 and the held E supplement-inputs worktree.
+
+## Historical October 6 installed continuation at 035ca7bd
 
 The manufacture freeze and installed payload remain 035ca7bd. Native03 ended
 exit 1 before any app launch: its isolation predicate excluded the configured
@@ -41,7 +101,7 @@ retained receipts do not require cherry-picking or execution again. The parent
 owns native execution and GitHub tracking; the audit lane continues bounded
 source review and truthful requirement reconciliation.
 
-## Current manufacture and recovered acceptance preparation
+## Historical manufacture and recovered acceptance preparation at 035ca7bd
 
 The accepted product manufacture freeze is
 `035ca7bd07337c65266c17f9b762ca1f97238e11`. Its existing Package controller
