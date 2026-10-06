@@ -44,7 +44,8 @@ function noBrowserSave() {
   expect(request.mock.calls.every(([url]) => url === '/api/v1/data/recovery')).toBe(true);
 }
 function advertiseSegmented(overrides: Record<string, unknown> = {}) {
-  const formats = { '1': { ...recovery.limits }, '2': { ...recovery.limits, archive_bytes: 8 * 1024 * MiB, canonical_bytes: 2 * 1024 * MiB,
+  const { json_bytes: _jsonLimit, ...zipLimits } = recovery.limits;
+  const formats = { '1': { ...recovery.limits }, '2': { ...zipLimits, original_bytes: 64 * MiB, total_original_bytes: 8 * 1024 * MiB, originals: 20_000, archive_bytes: 8 * 1024 * MiB, canonical_bytes: 2 * 1024 * MiB,
     records: 1_000_000, segments: 4096, row_bytes: 16 * MiB, segment_bytes: 32 * MiB, ...overrides } };
   Object.assign(recovery, { backup_formats: formats }); return formats;
 }
@@ -281,6 +282,22 @@ describe('Bounded browser backup streaming', () => {
 });
 
 describe('Advertised full-backup routes and limits', () => {
+  it('enables retry for the actual format-2 recovery response without a legacy JSON budget', async () => {
+    const formats = advertiseSegmented();
+    expect('json_bytes' in formats['2']).toBe(false);
+    recovery.rebuild = rebuildState('failed');
+    recovery.last_restore = restored();
+    reply('/data/rebuild', json(rebuildState('complete')));
+    render(<DataManagement />);
+    const retry = await screen.findByRole('button', { name: 'Retry local rebuild' });
+    expect((retry as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(retry);
+    await screen.findByText('The local rebuild has finished. See each module result below.');
+    expect(calls('/data/rebuild')).toHaveLength(1);
+    expect(calls('/data/rebuild')[0][1]?.method).toBe('POST');
+    expect(calls('/data/backup/restore')).toHaveLength(0);
+    expect(screen.queryByText(/unsupported full-backup limits/)).toBeNull();
+  });
   it.each([1, 2])('uploads the original ZIP File through the advertised route and restores validated archive version %s', async version => {
     advertiseSegmented(); reply('/data/backup/preview?format_version=2', json(zipPreview({ format_version: version })));
     render(<DataManagement />); await screen.findByText(/ZIP up to 8,192 MiB; records-only JSON up to 16 MiB/);

@@ -72,6 +72,72 @@ async function finish(source: ReturnType<typeof events>) {
 }
 afterEach(() => { cleanup(); delete window.renulus; vi.unstubAllGlobals(); window.localStorage.clear(); window.sessionStorage.clear(); });
 
+describe('Learn dated public passages', () => {
+  const publicPassage = { id: 'public_0123456789abcdef0123456789abcdef', source_kind: 'public-article', source_id: 'L03',
+    title: 'Synthetic public CKD article', text: 'An exact synthetic body paragraph with fictional study findings.',
+    canonical_url: 'https://europepmc.org/articles/PMC10001', publication_date: '2026-09-01', retrieved_at: '2026-10-06T07:00:00Z',
+    locators: [{ kind: 'jats', item_id: '/article/body/sec[1]/p[1]', section: 'Synthetic results', char_start: 0, char_end: 79 }],
+    metadata: { content_reviewed: false }, latest_final_verified: false, verification: 'dated-research',
+    rights: { licence: 'CC-BY-4.0', attribution: 'Synthetic Author, Synthetic public CKD article.', permission_reference: 'Synthetic explicit licence' } };
+
+  it('opens actual public citations through the source bridge with passage dates, locator and rights', async () => {
+    const openSource = vi.fn(async (_url: string) => {});
+    window.renulus = { openAuthorization: async () => {}, version: async () => 'synthetic', openSource };
+    const source = events(); const fetch = transport([source]); open(); await ask(fetch);
+    await act(async () => { source.emit('sources', { verification: 'dated-research', freshness_requested: true, citations: [publicPassage] }); });
+    await finish(source);
+    const link = screen.getByRole('link', { name: 'Source 1 · Synthetic public CKD article' });
+    expect(link.getAttribute('href')).toBe(publicPassage.canonical_url);
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(screen.getByText('Published 2026-09-01 · Retrieved 2026-10-06T07:00:00Z')).toBeDefined();
+    expect(screen.getByText('Dated research · latest final guidance unverified · content not reviewed')).toBeDefined();
+    expect(screen.getByText(publicPassage.text)).toBeDefined();
+    expect(screen.getByText('/article/body/sec[1]/p[1]')).toBeDefined();
+    expect(screen.getByText('Licence: CC-BY-4.0')).toBeDefined();
+    expect(screen.getByText(publicPassage.rights.attribution)).toBeDefined();
+    fireEvent.click(link);
+    await waitFor(() => expect(openSource).toHaveBeenCalledWith(publicPassage.canonical_url));
+    expect(window.location.hash).toBe('#/learn');
+    expect(screen.queryByRole('button', { name: /^Source / })).toBeNull();
+    expect(fetch.mock.calls.some(([route]) => route.includes('/library/'))).toBe(false);
+  });
+
+  it('rejects unsupported public citation URLs without inventing a Library handoff', async () => {
+    const source = events(); const fetch = transport([source]); open(); await ask(fetch);
+    await act(async () => { source.emit('sources', { verification: 'dated-research', citations: [{ ...publicPassage, canonical_url: 'file:///C:/synthetic-unapproved.txt' }] }); });
+    await finish(source);
+    expect(screen.getByText('Source 1 · Synthetic public CKD article · link unavailable')).toBeDefined();
+    expect(screen.queryByRole('link', { name: /^Source / })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Source / })).toBeNull();
+    expect(window.location.hash).toBe('#/learn');
+    expect(fetch.mock.calls.some(([route]) => route.includes('/library/'))).toBe(false);
+  });
+
+  it('preserves dated public citations supplied by a completed answer replay', async () => {
+    const source = events(); const fetch = transport([source]); open(); await ask(fetch);
+    await act(async () => { source.emit('completed', { replayed: true, text: answer, citations: [publicPassage] }); source.close(); });
+    await screen.findByText(answer);
+    expect(screen.getByRole('link', { name: 'Source 1 · Synthetic public CKD article' }).getAttribute('href')).toBe(publicPassage.canonical_url);
+    expect(screen.getByText(publicPassage.text)).toBeDefined();
+    expect(screen.getByText('Published 2026-09-01 · Retrieved 2026-10-06T07:00:00Z')).toBeDefined();
+    expect(fetch.mock.calls.filter(([route]) => route === '/api/v1/learn/ask')).toHaveLength(1);
+    expect(fetch.mock.calls.some(([route]) => route.startsWith('https:') || route.includes('/retrieval/'))).toBe(false);
+  });
+
+  it('keeps Library passage navigation and shows native link failures for public sources', async () => {
+    window.renulus = { openAuthorization: async () => {}, version: async () => 'synthetic', openSource: vi.fn(async () => { throw new Error('Synthetic source opening failure'); }) };
+    const source = events(); const fetch = transport([source]); open(); await ask(fetch);
+    const library = { id: 'passage-synthetic', document_id: 'document-synthetic', revision_id: 'revision-synthetic', page: 2 };
+    await act(async () => { source.emit('sources', { verification: 'dated-research', citations: [publicPassage, library] }); });
+    await finish(source);
+    fireEvent.click(screen.getByRole('link', { name: 'Source 1 · Synthetic public CKD article' }));
+    expect((await screen.findByRole('alert')).textContent).toContain('The source link could not open.');
+    fireEvent.click(screen.getByRole('button', { name: 'Source 2 · p. 2' }));
+    const handoff = JSON.parse((await screen.findByRole('status', { name: 'Library handoff' })).textContent!);
+    expect(handoff.handoff).toEqual({ document_id: library.document_id, passage_id: library.id, revision_id: library.revision_id, page: 2 });
+  });
+});
+
 describe('Learn literature discovery stays separate from evidence and memory', () => {
   it.each(['before', 'after'] as const)('discloses metadata without turning it into citations when memory arrives %s discovery', async order => {
     const source = events(); const fetch = transport([source]); open(); await ask(fetch);

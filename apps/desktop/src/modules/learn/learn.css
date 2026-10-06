@@ -17,7 +17,12 @@
 .composer-selects { display: flex; gap: var(--space-16); flex-wrap: wrap; max-width: 100%; }
 .composer-selects .field { flex: 1; min-width: 160px; }
 .learning-next, .citation-row { display: flex; gap: var(--space-12); flex-wrap: wrap; }
-.citation-row button { display: inline-flex; align-items: center; gap: var(--space-8); min-height: 44px; color: var(--renal-teal); background: var(--renal-teal-soft); border-radius: var(--radius-control); padding: var(--space-8) var(--space-12); font-size: 14px; }
+.citation-row button, .learn-source-link { display: inline-flex; align-items: center; gap: var(--space-8); min-height: 44px; color: var(--renal-teal); background: var(--renal-teal-soft); border-radius: var(--radius-control); padding: var(--space-8) var(--space-12); font-size: 14px; }
+.learn-public-source { display: grid; gap: var(--space-4); min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.learn-public-source p { margin: 0; font-size: 13px; }
+.learn-public-source details { display: grid; gap: var(--space-8); }
+.learn-public-source summary { min-height: 44px; padding: var(--space-8) 0; cursor: pointer; color: var(--renal-teal); }
+.learn-source-passage { margin: var(--space-8) 0; border-left: 2px solid var(--line-emphasis); padding-left: var(--space-12); white-space: pre-wrap; }
 .thread-list { display: grid; gap: var(--space-4); }
 .thread-row { display: flex; align-items: center; border-radius: var(--radius-control); }
 .thread-row.selected, .thread-row:hover { background: var(--rail); }

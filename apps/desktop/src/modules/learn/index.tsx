@@ -9,13 +9,13 @@ import './learn.css';
 
 // Flow: the question leads, the reading area stays open, history supports continuation.
 // Shared Source Sans, teal, paper, quiet borders and 4px rhythm govern every state.
-interface Citation { id?: string; passage_id?: string; document_id?: string; revision_id?: string; document_revision?: string; title?: string; page?: number; page_number?: number; source_id?: string; section?: string; locators?: { page?: number | null }[] }
+interface Citation { id?: string; passage_id?: string; document_id?: string; revision_id?: string; document_revision?: string; title?: string; page?: number; page_number?: number; source_id?: string; section?: string; source_kind?: string; canonical_url?: string; text?: string; publication_date?: string; retrieved_at?: string; verification?: string; latest_final_verified?: boolean; metadata?: { content_reviewed?: boolean }; rights?: { licence?: string; attribution?: string; permission_reference?: string }; locators?: { page?: number | null; kind?: string; item_id?: string; section?: string; char_start?: number; char_end?: number }[] }
 interface Message { id: string; role: 'user' | 'assistant'; content: string; citations?: Citation[] }
 interface Thread { id: string; title: string; topic_id?: string; teaching_style: 'direct' | 'guided'; messages: Message[]; updated_at: string; runs?: { id: string; state: string }[] }
 interface Topic { id: string; label?: string; title?: string }
 interface LiteratureRecord { id: string; title: string; url: string; authors?: string | null; publication_date?: string | null; doi?: string | null; retracted?: boolean | null }
 type LiteratureDisclosure = { kind: 'ready'; topic_id: string; topic_label: string; queried_at: string; records: LiteratureRecord[] } | { kind: 'unavailable'; topic_id: string; topic_label: string; message: string };
-interface RunEvent { run_id: string; sequence: number; type: string; payload: { text?: string; thread_id?: string; citations?: Citation[]; message?: string; code?: string; retryable?: boolean; replayed?: boolean; count?: number; topic_id?: string; topic_label?: string; queried_at?: string; records?: LiteratureRecord[] } }
+interface RunEvent { run_id: string; sequence: number; type: string; payload: { text?: string; thread_id?: string; citations?: Citation[]; verification?: string; freshness_requested?: boolean; message?: string; code?: string; retryable?: boolean; replayed?: boolean; count?: number; topic_id?: string; topic_label?: string; queried_at?: string; records?: LiteratureRecord[] } }
 type MemoryRecall = { kind: 'recalled'; count: number } | { kind: 'unavailable'; message: string };
 
 function literatureLink(value: string): string | undefined {
@@ -102,8 +102,8 @@ export default function Learn() {
         const data = item.data; sequence = data.sequence; runId.current = data.run_id;
         if (data.type === 'started') { threadId = data.payload.thread_id ?? threadId; if (!temporary) threadIdRef.current = threadId; }
         if (data.type === 'delta') { output += data.payload.text ?? ''; setPartial(output); }
-        if (data.type === 'sources') { references = data.payload.citations ?? []; setEvidenceStatus(references.length ? 'Retrieved evidence' : retrievalFailed ? 'Evidence retrieval unavailable · answer not source-verified' : 'No evidence retrieved · answer not source-verified'); }
-        if (data.type === 'retrieval-failed') { retrievalFailed = true; setEvidenceStatus('Evidence retrieval unavailable · answer not source-verified'); }
+        if (data.type === 'sources') { references = data.payload.citations ?? []; setEvidenceStatus(references.length ? data.payload.verification === 'dated-research' ? 'Dated research passage retrieved · latest final guidance unverified' : 'Retrieved evidence' : retrievalFailed ? 'Evidence retrieval unavailable · answer not source-verified' : data.payload.freshness_requested ? 'No current evidence retrieved · answer not source-verified' : 'No evidence retrieved · answer not source-verified'); }
+        if (data.type === 'retrieval-failed') { retrievalFailed = true; setEvidenceStatus(data.payload.message ? 'Evidence retrieval unavailable · ' + data.payload.message : 'Evidence retrieval unavailable · answer not source-verified'); }
         if (!temporary && data.payload.topic_id && data.payload.topic_label) {
           if (data.type === 'discovered-literature' && Array.isArray(data.payload.records)) setLiterature({ kind: 'ready', topic_id: data.payload.topic_id, topic_label: data.payload.topic_label, queried_at: data.payload.queried_at ?? '', records: data.payload.records.slice(0, 5) });
           if (data.type === 'literature-discovery-unavailable') setLiterature({ kind: 'unavailable', topic_id: data.payload.topic_id, topic_label: data.payload.topic_label, message: data.payload.message ?? 'Europe PMC topic discovery was unavailable. Try topic discovery in Library.' });
@@ -111,7 +111,7 @@ export default function Learn() {
         if (!temporary && data.type === 'memory' && typeof data.payload.count === 'number' && Number.isSafeInteger(data.payload.count) && data.payload.count >= 0) setMemoryRecall({ kind: 'recalled', count: data.payload.count });
         if (!temporary && data.type === 'memory-unavailable') setMemoryRecall({ kind: 'unavailable', message: data.payload.message ?? 'Learner memory could not be recalled for this explanation.' });
         if (!temporary && data.type === 'memory-capture-unavailable') setMemoryCaptureMessage(data.payload.message ?? 'The explanation was saved. Learner memory capture will retry later.');
-        if (data.type === 'completed') { terminal = true; runCompleted.current = true; output = data.payload.replayed ? data.payload.text ?? output : output; setMessages(previous => [...previous, { id: data.run_id, role: 'assistant', content: output, citations: references }]); setPartial(''); }
+        if (data.type === 'completed') { terminal = true; runCompleted.current = true; references = data.payload.citations ?? references; output = data.payload.replayed ? data.payload.text ?? output : output; setMessages(previous => [...previous, { id: data.run_id, role: 'assistant', content: output, citations: references }]); setPartial(''); }
         if (data.type === 'cancelled') { terminal = true; setStatus('Stopped · partial explanation not saved'); setQuestion(text); }
         if (data.type === 'error') { terminal = true; setError(new ApiError(data.payload.message ?? 'The explanation could not finish.', 0, data.payload.code ?? 'explain_failed', data.payload.retryable !== false)); setQuestion(text); }
       }
@@ -149,14 +149,33 @@ export default function Learn() {
     try { await bridge.openSource(url); }
     catch { setSourceLinkError('The source link could not open. Try again or discover this topic in Library.'); }
   }
+  function source(value: Citation, index: number) {
+    if (value.source_kind !== 'public-article') return <button key={value.id ?? index} onClick={() => citation(value)}><BookOpen size={14} />Source {index + 1}{value.page ?? value.page_number ? ' · p. ' + (value.page ?? value.page_number) : ''}</button>;
+    const url = value.canonical_url ? literatureLink(value.canonical_url) : undefined;
+    const locator = value.locators?.find(location => location.kind === 'jats');
+    return <div className="learn-public-source" key={value.id ?? index}>
+      {url ? <a className="learn-source-link" href={url} target="_blank" rel="noopener noreferrer" onClick={event => { void openLiteratureSource(event, url); }}><BookOpen size={14} />Source {index + 1} · {value.title ?? 'Public article'}</a> : <span className="muted">Source {index + 1} · {value.title ?? 'Public article'} · link unavailable</span>}
+      <p className="muted">Published {value.publication_date ?? 'date unavailable'} · Retrieved {value.retrieved_at ?? 'date unavailable'}</p>
+      <p className="muted">Dated research · latest final guidance unverified{value.metadata?.content_reviewed !== true && ' · content not reviewed'}</p>
+      <details><summary>Read retrieved passage and rights</summary>
+        {locator?.section && <p><strong>{locator.section}</strong></p>}
+        {locator?.item_id && <p className="muted">Paragraph locator: <code>{locator.item_id}</code>{typeof locator.char_start === 'number' && typeof locator.char_end === 'number' && <> · characters {locator.char_start}–{locator.char_end}</>}</p>}
+        {value.text && <blockquote className="learn-source-passage">{value.text}</blockquote>}
+        <p className="muted">Licence: {value.rights?.licence ?? 'not recorded'}</p>
+        {value.rights?.attribution && <p className="muted">{value.rights.attribution}</p>}
+        {value.rights?.permission_reference && <p className="muted">Permission reference: {value.rights.permission_reference}</p>}
+      </details>
+    </div>;
+  }
 
   return <>
     <PageHeader title={temporary ? 'Explore your case question' : 'What would you like to understand?'} description={temporary ? 'This explanation shares your temporary case context.' : 'Ask freely across nephrology, then explore the explanation and its evidence.'} actions={temporary && caseId ? <Button variant="secondary" disabled={busy} onClick={() => navigate('cases', { scope: { kind: 'temporary-case', entity_id: caseId }, payload: { case_id: caseId } })}><ArrowLeft size={17} />Return to case</Button> : !temporary && <Button variant="secondary" disabled={busy} onClick={fresh}><Plus size={17} />New study</Button>} />
     <div className="learn-layout"><section className="learn-main">
       {!messages.length && <div className="learning-invitation"><p>Start with a question, a mechanism or a decision you would like to reason through.</p><div className="question-starters">{['How should I reason through AKI?', 'Explain kidney transplant rejection.', 'How do dialysis modalities differ?'].map(value => <button key={value} onClick={() => setQuestion(value)}>{value}</button>)}</div></div>}
-      <div className="conversation" aria-label="Learning discussion">{messages.map(message => <article key={message.id} className={'learning-message message-' + message.role}><strong className="message-author">{message.role === 'user' ? 'Your question' : 'Renulus'}</strong><div className="prose learning-answer">{message.content}</div>{message.citations?.length ? <div className="citation-row">{message.citations.map((value, index) => <button key={value.id ?? index} onClick={() => citation(value)}><BookOpen size={14} />Source {index + 1}{value.page ?? value.page_number ? ' · p. ' + (value.page ?? value.page_number) : ''}</button>)}</div> : null}</article>)}{partial && <article className="learning-message"><strong className="message-author">Renulus <Badge tone="neutral">{busy ? 'Explaining' : 'Partial'}</Badge></strong><div className="prose learning-answer">{partial}</div></article>}</div>
+      <div className="conversation" aria-label="Learning discussion">{messages.map(message => <article key={message.id} className={'learning-message message-' + message.role}><strong className="message-author">{message.role === 'user' ? 'Your question' : 'Renulus'}</strong><div className="prose learning-answer">{message.content}</div>{message.citations?.length ? <div className="citation-row">{message.citations.map(source)}</div> : null}</article>)}{partial && <article className="learning-message"><strong className="message-author">Renulus <Badge tone="neutral">{busy ? 'Explaining' : 'Partial'}</Badge></strong><div className="prose learning-answer">{partial}</div></article>}</div>
       {error !== null && <ErrorState error={error} title={retryThread ? 'The study thread could not load' : 'The explanation could not finish'} onRetry={error instanceof ApiError && !error.retryable ? undefined : () => { if (retryThread) void resume(retryThread); else void ask(); }} />}
       {evidenceStatus && <p className="muted" role="status" aria-label="Scientific evidence"><strong>Scientific evidence:</strong> {evidenceStatus}</p>}
+      {sourceLinkError && <p role="alert">{sourceLinkError}</p>}
       {!temporary && literature && <section aria-label="Discovered literature" className="learn-literature"><Notice tone={literature.kind === 'unavailable' ? 'warning' : 'default'}>
         <p><strong>Discovered literature · discovery only</strong></p>
         <p>{literature.topic_label}</p>
@@ -172,7 +191,6 @@ export default function Learn() {
           })}</ul> : <p>No literature records were found for this topic.</p>}
         </>}
         <p>Topic search results do not verify this explanation. Article text, publication status and permissions have not been reviewed here.</p>
-        {sourceLinkError && <p role="alert">{sourceLinkError}</p>}
         <Button variant="secondary" disabled={busy} onClick={() => navigate('library', { scope: { kind: 'personal-library' }, payload: { mode: 'discover', topic_id: literature.topic_id } })}>Discover this topic in Library<BookOpen size={16} /></Button>
       </Notice></section>}
       {!temporary && memoryRecall && <section aria-label="Retained learner context"><Notice tone={memoryRecall.kind === 'unavailable' ? 'warning' : 'default'}><p><strong>Retained learner context</strong></p><p>{memoryRecall.kind === 'unavailable' ? memoryRecall.message : memoryRecall.count === 0 ? 'No retained learning was used for this explanation.' : 'Using ' + memoryRecall.count + ' retained learning ' + (memoryRecall.count === 1 ? 'record' : 'records') + ' to personalize this explanation.'}</p><p>Retained learning personalizes study; it does not verify scientific support.</p></Notice></section>}

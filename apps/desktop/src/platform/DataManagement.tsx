@@ -9,8 +9,9 @@ const MiB = 1024 * 1024;
 const recoveryOperationMs = 30 * 60 * 1000;
 const defaultLimits = { archive_bytes: 288 * MiB, json_bytes: 16 * MiB, original_bytes: 64 * MiB, total_original_bytes: 256 * MiB, originals: 1000 };
 type Limits = typeof defaultLimits;
+type ZipLimits = Omit<Limits, 'json_bytes'>;
 const segmentedCaps = { archive_bytes: 8 * 1024 * MiB, canonical_bytes: 2 * 1024 * MiB, records: 1_000_000, segments: 4096, row_bytes: 16 * MiB, segment_bytes: 32 * MiB };
-type SegmentedLimits = Limits & Omit<typeof segmentedCaps, 'archive_bytes'>;
+type SegmentedLimits = ZipLimits & Omit<typeof segmentedCaps, 'archive_bytes'>;
 interface BackupFormats { '1'?: Limits; '2'?: SegmentedLimits }
 type BackupKind = 'zip' | 'json';
 type DownloadRequest =
@@ -78,12 +79,12 @@ function readRecovery(value: unknown): Recovery {
 }
 function validLimits(value: unknown): value is Limits { return object(value) && Object.keys(defaultLimits).every(key => count(value[key])); }
 function validSegmentedLimits(value: unknown): value is SegmentedLimits {
-  return validLimits(value) && Object.entries(segmentedCaps).every(([key, cap]) => {
-    const limit = (value as unknown as Record<string, unknown>)[key];
+  return object(value) && ['original_bytes', 'total_original_bytes', 'originals'].every(key => count(value[key])) && Object.entries(segmentedCaps).every(([key, cap]) => {
+    const limit = value[key];
     return count(limit) && limit > 0 && limit <= cap;
   });
 }
-function fullBackupLimits(recovery?: Recovery): Limits { return recovery?.backup_formats?.['2'] ?? recovery?.limits ?? defaultLimits; }
+function fullBackupLimits(recovery?: Recovery): ZipLimits { return recovery?.backup_formats?.['2'] ?? recovery?.limits ?? defaultLimits; }
 function fullBackupPath(path: string, recovery?: Recovery) { return path + (recovery?.backup_formats?.['2'] ? '?format_version=2' : ''); }
 function readZipPreview(value: unknown, fileName: string): Preview {
   if (!object(value) || value.format !== 'renulus-full-backup' || typeof value.preview_token !== 'string' || !value.preview_token.trim() ||
@@ -359,9 +360,9 @@ export function DataManagement() {
       const mime = kind === 'zip' ? 'application/zip' : 'application/json';
       const knownRecovery = lastRecovery.current;
       const response = await apiResponse(kind === 'zip' ? fullBackupPath('/data/backup', knownRecovery) : '/data/export', { headers: { Accept: mime }, signal: controller.signal, timeoutMs: 0 });
-      const limits = kind === 'zip' ? fullBackupLimits(knownRecovery) : knownRecovery?.limits ?? defaultLimits;
-      const key = kind === 'zip' ? 'archive_bytes' : 'json_bytes';
-      const blob = await readDownload(response, mime, Math.min(limits[key], defaultLimits[key]), controller.signal);
+      const limit = kind === 'zip' ? Math.min(fullBackupLimits(knownRecovery).archive_bytes, defaultLimits.archive_bytes)
+        : Math.min(knownRecovery?.limits?.json_bytes ?? defaultLimits.json_bytes, defaultLimits.json_bytes);
+      const blob = await readDownload(response, mime, limit, controller.signal);
       if (controller.signal.aborted || !current()) return;
       const url = URL.createObjectURL(blob); objectUrls.current.add(url);
       const anchor = document.createElement('a'); anchor.href = url;
