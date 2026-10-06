@@ -205,6 +205,7 @@ function installObservation({ app, BrowserWindow }) {
   const state = { violations: [], seen: 0, watched: new Set(), children: new Map() };
   function violation(kind, id) {
     if (state.violations.length < 64) state.violations.push({ kind, id });
+    console.error('RENULUS_CONTROL_VIOLATION ' + JSON.stringify({ kind, id }));
     app.quit();
   }
   function watch(window) {
@@ -213,7 +214,9 @@ function installObservation({ app, BrowserWindow }) {
     window.on('show', () => violation('window-shown', window.id));
     window.on('focus', () => violation('window-focused', window.id));
     const preferences = window.webContents.getLastWebPreferences();
-    if (window.isVisible() || window.isFocused() || window.isFocusable() || preferences.backgroundThrottling !== false) violation('unsafe-window', window.id);
+    const backgroundThrottling = window.webContents.getBackgroundThrottling();
+    console.error('RENULUS_CONTROL_WINDOW ' + JSON.stringify({ id: window.id, visible: window.isVisible(), focused: window.isFocused(), focusable: window.isFocusable(), backgroundThrottling, preferenceBackgroundThrottling: preferences.backgroundThrottling ?? null }));
+    if (window.isVisible() || window.isFocused() || window.isFocusable() || backgroundThrottling !== false) violation('unsafe-window', window.id);
   }
   state.watch = watch; globalThis[key] = state;
   app.on('browser-window-created', (_event, window) => watch(window));
@@ -229,7 +232,7 @@ function readObservation({ app, BrowserWindow }) {
     state.watch(w);
     const url = w.webContents.getURL(); const prefs = w.webContents.getLastWebPreferences();
     return { id: w.id, url: url.startsWith('data:') ? 'data:startup' : url.split(/[?#]/)[0], visible: w.isVisible(), focused: w.isFocused(), focusable: w.isFocusable(),
-      backgroundThrottling: prefs.backgroundThrottling, sandbox: prefs.sandbox, contextIsolation: prefs.contextIsolation, nodeIntegration: prefs.nodeIntegration };
+      backgroundThrottling: w.webContents.getBackgroundThrottling(), sandbox: prefs.sandbox, contextIsolation: prefs.contextIsolation, nodeIntegration: prefs.nodeIntegration };
   });
   return { name: app.getName(), pid: process.pid, parentPid: process.ppid, ownerPid: process.env.RENULUS_BACKGROUND_OWNER_PID, executable: process.execPath, background: process.env.RENULUS_BACKGROUND_TEST === '1',
     attachedBackend: !!process.env.RENULUS_BACKEND_URL, profile: process.env.RENULUS_PROFILE, userData: app.getPath('userData'), packaged: app.isPackaged,
