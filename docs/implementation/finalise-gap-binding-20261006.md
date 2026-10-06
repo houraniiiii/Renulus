@@ -8,6 +8,9 @@ shared parent admission helper, repairs the admitted field mapping, and fixes th
 observed identity-array parsing defect in a gap-local physical-close helper.
 Exit observation also uses asynchronous execFile and is awaited by close, keeping
 the Node/Playwright event loop responsive during the existing bounded wait.
+The missing noLinks binding is now resolved with the original reviewed function
+declaration and its Node lstat import; the already-existing launch call remains
+unchanged.
 Only this report and the ignored [gap-binding-20261006](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006) directory were
 written. No parent files, production code, schema, renderer or tests were edited.
 The completed Connected contracts report and all three original sidecars remain
@@ -123,10 +126,14 @@ run.ps1 and owned-processes.ps1 without executing them. Read-only git apply
 --check passed against the actual parent deployed files. Source comparisons
 confirmed the unchanged gap journey and that the latest stable-flow changes
 reverse exactly to the previously sealed candidate when the Exit adaptation is
-removed. The PowerShell helper still differs only by its one identity-array
+removed. The latest noLinks revision reverses exactly to the preceding async
+candidate when only the added lstat import and reviewed declaration are removed.
+The PowerShell helper still differs only by its one identity-array
 assignment. Read-only applicability checks passed both for the current
 consolidated patch against original deployed files and the observer delta against
-the complete preserved prior candidate. These are syntax and
+the complete preserved prior candidate. The final no-links-binding delta also
+passed read-only applicability against its exact preserved async candidate.
+These are syntax and
 applicability results; they supply no acceptance or physical-close evidence.
 
 The parent subsequently reported that Connected02 passed Memory, PDF/PNG
@@ -156,33 +163,61 @@ The current manifest records all 18 preserved files with exact paths/bytes/hash.
 | [previous handoff manifest](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/sealed-before-nonblocking-exit/manifest.json) | 13831 | `338ff4bed69bfe71baa52c7817be109c0f102441c250acb50916830f0871059a` |
 | [previous operational manifest](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/sealed-before-nonblocking-exit/replacement/manifest.json) | 15091 | `b1a3d8a5b856e6d0ec53b13693e811366bda927d0a51ba61f4de200cd74d6c1d` |
 
-The current sealed transfer artifacts are:
+The parent authorised resolving the missing binding inside this same candidate
+lease. The new local noLinks declaration is copied verbatim from the already
+reviewed and pinned Connected source at
+C:/rn-finalise-20261005/parent-release-continuation-6599/recipes/connected-acceptance/connected-acceptance.mjs, SHA256
+c56cf3f92386ec970df060457688adc878dcf52d883ca521e1d04d0c316ba0b6. The declaration is
+340 UTF-8 bytes, SHA256
+b89a515e14152d39a2ec3c4ca37a0ec09a7686a51c935d547b95182dffda8ba8. Importing lstat from
+node:fs/promises supplies its existing dependency. Containment at the existing
+launch call, ancestor reparse rejection and ENOENT handling retain that reviewed
+pattern; no new gate or launch step was introduced. All existing stable-flow
+function bodies, including the async Exit adaptation, are unchanged by this
+latest binding repair. The helper was not executed or used to traverse paths.
+
+The preceding async candidate and all its direct seals, including the historical
+observer delta, are preserved as 19 exact files in
+[sealed-before-no-links-binding](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/sealed-before-no-links-binding).
+The earlier sealed-before-nonblocking-exit preservation remains untouched.
+Report commit be8959edc25b0e3dbb897a8e8e64b10e86c3a08d remains intact.
 
 | File | Bytes | SHA256 |
 | --- | ---: | --- |
-| [installed-gap-binding.patch](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/installed-gap-binding.patch) | 44547 | `c5515e19adebc55cec8fe0ec5e74a77e6be64394aaaf8204b664996777f2ba13` |
-| [nonblocking-exit.patch (previous-candidate delta)](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/nonblocking-exit.patch) | 10333 | `20ef5e62a3c3d709494244d9128117f25efaed475b3247e12772da4c09389d43` |
-| [manifest.json (handoff)](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/manifest.json) | 26791 | `3229a226c9cce0e93bb013635e273e97e548fcf1b4281e5dc43ac0a0f11e9d4c` |
-| [manifest.sha256 (handoff)](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/manifest.sha256) | 80 | `244387fbae8d0f770f21fca7ca583694a5f40991c72ad50005c7960a17d2fc20` |
+| [preceding installed-gap-binding.patch](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/sealed-before-no-links-binding/installed-gap-binding.patch) | 44547 | `c5515e19adebc55cec8fe0ec5e74a77e6be64394aaaf8204b664996777f2ba13` |
+| [preceding nonblocking-exit.patch](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/sealed-before-no-links-binding/nonblocking-exit.patch) | 10333 | `20ef5e62a3c3d709494244d9128117f25efaed475b3247e12772da4c09389d43` |
+| [preceding manifest.json](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/sealed-before-no-links-binding/manifest.json) | 26791 | `3229a226c9cce0e93bb013635e273e97e548fcf1b4281e5dc43ac0a0f11e9d4c` |
+| [preceding manifest.json](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/sealed-before-no-links-binding/replacement/manifest.json) | 15634 | `7c8da94bfc6448ed201eb24955ada34ae45538d11f7a87d4a6ce372cbc1dd282` |
+
+The final sealed transfer artifacts are:
+
+| File | Bytes | SHA256 |
+| --- | ---: | --- |
+| [installed-gap-binding.patch](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/installed-gap-binding.patch) | 46897 | `13b4f2cc70e4cab3d122d54b2e7d8d5fdce042bca93d46d44c59a3a36b7faa1b` |
+| [no-links-binding.patch (preceding async-candidate delta)](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/no-links-binding.patch) | 8146 | `f69c710962cba65aab91286c1c58b8f1f74657637ce2704ea66da1b787dedeb1` |
+| [manifest.json (handoff)](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/manifest.json) | 39515 | `7817dc061eb7d8d8f2d8adf7e15d0677bfc8872175da8220580561be56b21e28` |
+| [manifest.sha256 (handoff)](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/manifest.sha256) | 80 | `5c01e516e44ce82cd0109ec994cf6760be19ae497c099ebced23648a4801d91d` |
 | [replacement/slice.mjs](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/replacement/slice.mjs) | 37460 | `66fc787d004726b2f1a3300046ff5ed2f8e42d78630d8322b677070011eef3ee` |
 | [replacement/run.ps1](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/replacement/run.ps1) | 1187 | `3d6b3ab8553a5f8353a3065aa66cc9a9c23ae286a76feef960f68a1c349cc139` |
 | [replacement/parent-binding.template.json](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/replacement/parent-binding.template.json) | 2374 | `b93b67b1e747003efeed42ad11cb13f0b23b910945cbcc0af19756ad39c188ee` |
-| [replacement/README.md](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/replacement/README.md) | 10555 | `27b3bcd575f1aaea56d75127f7b264630de051c6f5e96b076f85afd34a0af715` |
+| [replacement/README.md](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/replacement/README.md) | 11049 | `fa6832a8242d710a81d0c72555428b90579ba195f9e0c9f42b3225b783ed2230` |
 | [replacement/source-pins.json](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/replacement/source-pins.json) | 9247 | `501935130ba463120eebef76e996b4cc1e262e63ffeca75d19bb14a75c27f22a` |
-| [replacement/reuse.json](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/replacement/reuse.json) | 923 | `09236b07387c49b33262b1055fc1fd254a5bb6c49a5a8b5c6dacded54c136795` |
-| [replacement/stable-flow.mjs](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/replacement/stable-flow.mjs) | 9533 | `48c109d92661ca80a1101f678df938a9744796afe445ec923e7367d766b2bdaf` |
+| [replacement/reuse.json](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/replacement/reuse.json) | 1116 | `7008a0ed45d57aeb575c43c4179e792bf238a96569c149082151e29d2b3355de` |
+| [replacement/stable-flow.mjs](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/replacement/stable-flow.mjs) | 9916 | `4b85faa24d2bcce392c6683ff354d25ba1e0fcef6774c795b078f2889a6e97fe` |
 | [replacement/owned-processes.ps1](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/replacement/owned-processes.ps1) | 3252 | `ef269920b423905cd5807cfd3bb7693119efcfdcc15ca27800b9d4109e0246a3` |
-| [replacement/manifest.json](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/replacement/manifest.json) | 15634 | `7c8da94bfc6448ed201eb24955ada34ae45538d11f7a87d4a6ce372cbc1dd282` |
-| [replacement/manifest.sha256](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/replacement/manifest.sha256) | 80 | `c27e0e26cdb860252c426f194e823e9f7e3e8d35871c4e884ad9949c49ad3bdf` |
+| [replacement/manifest.json](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/replacement/manifest.json) | 16293 | `7a033b6c9e52555fab446319632facb18f39e2bb409f21c75e4107b0450ca215` |
+| [replacement/manifest.sha256](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/replacement/manifest.sha256) | 80 | `86b14b052974c4b38149bb8772fcfa5b5b3208334b2fed3461970b7daa55bfb5` |
 
 The consolidated patch touches ten ignored parent-sidecar paths, with
-298 insertions and 83 deletions, including the new gap-local helper and updated
-reuse provenance. The optional nonblocking-exit.patch contains only the Exit
-adaptation and its preparation metadata changes against the preserved preceding
-candidate. The two patches are alternatives: use the consolidated patch against
-original deployed6599 files, or the delta against the exact prior sealed candidate.
-Do not apply both or apply the prior6999 adaptation separately. The replacement operational
-manifest lists 11 prepared files totaling 80119 bytes
+323 insertions and 83 deletions, including the new gap-local helper and updated
+reuse provenance. The optional no-links-binding.patch contains only the lexical
+binding repair and its preparation metadata changes against the preceding async
+candidate. The two current patches are alternatives: use the consolidated patch
+against original deployed6599 files, or the binding delta against the exact
+preceding async candidate. Do not apply both or apply the prior6999 adaptation
+separately. nonblocking-exit.patch remains byte-preserved historical evidence;
+it does not produce this final noLinks-bound candidate. The replacement operational
+manifest lists 11 prepared files totaling 81189 bytes
 and 29 public source/dependency/origin pins. Its excluded
 self files are manifest.json and manifest.sha256. The handoff manifest records
 absolute base/replacement paths, byte counts and SHA256 for every patch target,
@@ -193,7 +228,7 @@ is unchanged; it is not relabelled as a current execution result.
 Parent integration still requires preserving the old deployed preparation,
 reviewing and integrating this single consolidated patch, checking exact
 replacement bytes against the handoff manifest, and supplying the replacement
-operational manifest SHA256 `7c8da94bfc6448ed201eb24955ada34ae45538d11f7a87d4a6ce372cbc1dd282` externally.
+operational manifest SHA256 `7a033b6c9e52555fab446319632facb18f39e2bb409f21c75e4107b0450ca215` externally.
 Parent then selects reviewer/date, a unique unused attempt, the exclusive slot
 and the deliberate K01 free check in a separate actual approved binding and
 seals its external SHA256. Parent owns the urgent Connected fix, close readback,
@@ -202,10 +237,10 @@ The present preparation does not assert that a slot has been released or any
 gap check accepted. The report-only commit disables hooks and signing; no
 additional subagents or production changes were made.
 
-A remaining source-only consumer blocker was found in the pre-existing copied
-[stable-flow launch](C:/rn-finalise-20261005/lanes/connected-contracts-20261006/.local/gap-binding-20261006/replacement/stable-flow.mjs:57):
-it calls noLinks(profile) without declaring or importing noLinks in that module.
-The local function in slice.mjs does not provide that lexical binding to the
-imported stable-flow module. Parent should resolve this missing helper seam
-before the actual gap run. It was left outside the requested scalar-decoding
-and Exit-observation adaptation, and no launch was executed to probe it.
+The previously reported noLinks launch blocker is resolved in this candidate;
+there is no deferred missing-binding repair for parent to duplicate. Parent
+reported Connected03 passed with seven current and three retained stages and a
+normal main/backend close in 5.72 seconds. That progress is parent-owned and does
+not supply a gap result. No gap run or K01 check occurred in this lane. Parent
+retains concrete candidate review, binding approval, the serial slot, all
+execution and final acceptance.
