@@ -30,14 +30,30 @@ historical, with their actual sources and explicit qualifications. New-target
 identity, complete inventory, runtime, retry, original/citation inspection,
 deletion reconciliation and ordinary closes must execute on the matching app.
 
-Ohm owns bounded connected/live/lifecycle preparation in
-`C:/rn-finalise-20261005/lanes/release-continuation-20261006`; Dewey owns a small
-honest composite-acceptance binder in
-`C:/rn-finalise-20261005/lanes/native-reconcile-20261006`. Neither is authorised
-to execute native/helper/provider/install work. The parent owns the serial
-manufacture/install/native/live slot and actual acceptance. Keep the held E
-supplement-inputs worktree, raw collection, learning profile and unrelated
-PID38448/port18765. Exactly one twenty-minute heartbeat remains active.
+Ohm and Dewey completed their bounded preparation. Their report-only commits
+are integrated as `b362b297` and `184932dc`. Both agents are closed and both
+clean C worktrees removed after full ignored-file preservation and verified
+deployment. Only the active integration and held E supplement worktrees remain.
+The release sidecar has 25 files/361,185 bytes, preservation receipt SHA256
+`f0130f2885e82161fe2ce57712665bbc0d966bbce89ac6bad29fbfc5472638d6`,
+and is deployed at `C:/rn-finalise-20261005/parent-release-continuation-6599`.
+The native reconciliation has five files/78,461 bytes, preservation receipt
+SHA256 `35caa8f64be85110e01abb6d65b8effa5ff737e22361224c4efea5587b2de55a`,
+and is deployed under the parent desktop `.local/native-acceptance-reconciliation-6599`.
+Both corresponding `parent-retirement.json` files retain their original report
+branches and record physical removal. These are preparation/retirement records,
+with no native, provider or maintenance acceptance.
+
+The honest binder keeps five current operations, twelve source-qualified
+historical origins and three fresh closes in a separate composite kind; no old
+failed invocation is relabelled. The release preparation retains the actual035
+six storage phases and eight anchors, with separate semantic qualification for
+changed Win32 import paths. Its older-app open helper is refused for new compact
+index generations; that preparation is not proof of a product rollback. The
+parent owns actual matching manufacture/install/native/live/maintenance and
+final audit. Keep the held E supplement-inputs worktree, raw collection, learning
+profile and unrelated PID38448/port18765. Exactly one twenty-minute heartbeat
+remains active.
 
 Capacity commits are already integrated by cherry-pick as `00fd4d55` and
 `698fb2c0`; the original lane IDs are not ancestors under those new IDs. Its
