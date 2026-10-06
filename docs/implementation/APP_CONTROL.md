@@ -49,6 +49,12 @@ and shutdown errors go to stderr rather than a foreground message box. These
 checks establish app control and suppression, not successful native dialogs or
 external handoffs.
 
+The controller supplies its own process ID as the background owner. Renulus
+checks that it is the launcher, observes owner loss and requests its ordinary
+shutdown independently. A closed diagnostic pipe does not interrupt backend
+cleanup. This covers Windows stdio clients that terminate their MCP server
+before a longer app shutdown finishes.
+
 The native [evidence script](../../apps/desktop/scripts/background-control-evidence.mjs)
 requires absolute RENULUS_PYTHON and RENULUS_CONTROL_EVIDENCE values and a fresh
 receipt directory. Default runs use its synthetic profile. For a narrow missing

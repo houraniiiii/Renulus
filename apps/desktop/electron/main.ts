@@ -15,6 +15,10 @@ app.setName('Renulus');
 const workspace = path.resolve(__dirname, '../../..');
 // Opt-in automation owns a separate profile and never uses desktop input.
 const backgroundTest = process.env.RENULUS_BACKGROUND_TEST === '1';
+const backgroundOwner = backgroundTest && process.env.RENULUS_BACKGROUND_OWNER_PID ? Number(process.env.RENULUS_BACKGROUND_OWNER_PID) : undefined;
+// A Windows MCP client can terminate its stdio server before app cleanup ends.
+// Losing the diagnostic pipe must not interrupt the owned backend shutdown.
+if (backgroundTest) process.stderr.on('error', () => {});
 function recordTestEvent(kind: string, details: Record<string, string> = {}) {
   process.stderr.write('RENULUS_BACKGROUND_EVENT ' + JSON.stringify({ kind, ...details, at: new Date().toISOString() }) + '\n');
 }
@@ -35,6 +39,7 @@ let profile: DesktopProfile;
 try {
   if (backgroundTest && (!process.env.RENULUS_PROFILE || !path.isAbsolute(process.env.RENULUS_PROFILE))) throw new Error('Background tests require an explicit absolute synthetic RENULUS_PROFILE.');
   if (backgroundTest && process.env.RENULUS_BACKEND_URL) throw new Error('Background tests must launch their own managed backend.');
+  if (backgroundOwner !== undefined && (!Number.isSafeInteger(backgroundOwner) || backgroundOwner <= 0 || backgroundOwner !== process.ppid)) throw new Error('The background owner must be this app launcher.');
   profile = resolveProfile(process.env.RENULUS_PROFILE, app.isPackaged, process.env.LOCALAPPDATA);
 }
 catch (error) { reportNativeError('Renulus could not start', (error as Error).message); app.exit(1); throw error; }
@@ -155,6 +160,19 @@ app.on('before-quit', event => {
   })();
   void stopPromise.then(() => { stopping = true; app.quit(); }, () => { stopPromise = undefined; reportNativeError('Renulus could not finish stopping', 'The owned backend did not exit cleanly. Close this development instance and inspect its lifecycle evidence.'); });
 });
+if (backgroundOwner !== undefined) {
+  const watchOwner = setInterval(() => {
+    try { process.kill(backgroundOwner, 0); }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ESRCH') return;
+      clearInterval(watchOwner);
+      recordTestEvent('controller-disconnected');
+      app.quit();
+    }
+  }, 750);
+  watchOwner.unref();
+  app.once('will-quit', () => clearInterval(watchOwner));
+}
 if (ownsInstance) void app.whenReady().then(async () => {
   try {
     openingWindow = createStartupWindow(profile.instance, path.join(__dirname, '../dist/renulus.ico'), lifetime.signal, backgroundTest);
