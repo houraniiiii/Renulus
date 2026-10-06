@@ -65,7 +65,14 @@ class KnowledgeRepository:
             generation = None
         if not isinstance(generation, str) or not re.fullmatch(r"index_[0-9a-f]{32}", generation):
             raise ApiError("invalid_index_generation", "The library index selector needs recovery", 503, True)
-        return self.paths.indexes / "knowledge-generations" / generation
+        compact = self._generation_path(generation)
+        legacy = self.paths.indexes / "knowledge-generations" / generation
+        # Existing selected generations remain readable. New generations use a
+        # shorter local path so Lance's Windows atomic writer stays below MAX_PATH.
+        return legacy if legacy.is_dir() and not compact.is_dir() else compact
+
+    def _generation_path(self, generation):
+        return self.paths.indexes / "k" / generation.removeprefix("index_")
 
     def _remove_index_folder(self, path):
         path = Path(path)
@@ -78,10 +85,12 @@ class KnowledgeRepository:
     def _cleanup_index_generations(self):
         active = self.index.path.resolve()
         candidates = [self.paths.indexes / "knowledge"]
-        generations = self.paths.indexes / "knowledge-generations"
-        if generations.is_dir():
-            candidates += [path for path in generations.iterdir()
-                           if re.fullmatch(r"index_[0-9a-f]{32}", path.name)]
+        for folder, pattern in (("knowledge-generations", r"index_[0-9a-f]{32}"),
+                                ("k", r"[0-9a-f]{32}")):
+            generations = self.paths.indexes / folder
+            if generations.is_dir():
+                candidates += [path for path in generations.iterdir()
+                               if re.fullmatch(pattern, path.name)]
         pending = []
         for path in candidates:
             if path.resolve() != active:
@@ -101,7 +110,7 @@ class KnowledgeRepository:
             if self.cleanup():
                 raise ApiError("knowledge_cleanup_pending", "Finish deleted-document cleanup before rebuilding the library", 503, True)
             generation = durable_id("index")
-            candidate = LanceIndex(self.paths.indexes / "knowledge-generations" / generation, self.embedder.dimensions)
+            candidate = LanceIndex(self._generation_path(generation), self.embedder.dimensions)
             previous = self.index
             activated = False
             try:

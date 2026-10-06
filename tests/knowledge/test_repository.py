@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+import json
 from pathlib import Path
 from threading import Event
 
@@ -154,7 +155,7 @@ def test_failed_rebuild_keeps_active_index_and_retries_cleanly(repository, monke
     assert repository.index is previous
     assert repository.db.fetch_one("SELECT value FROM preferences WHERE key='knowledge.index_generation'") == selector
     assert repository.retrieve("immunology", scope=STUDY)["passages"][0]["document_revision"] == note["revision_id"]
-    assert not list((repository.paths.indexes / "knowledge-generations").glob("index_*"))
+    assert not list((repository.paths.indexes / "k").glob("*"))
     assert repository.rebuild_index()["passages"] == 1
 
 
@@ -162,7 +163,7 @@ def test_empty_rebuild_and_abandoned_generation_cleanup(repository):
     first = repository.rebuild_index()
     assert first["passages"] == 0
     abandoned = repository.paths.indexes / "knowledge-generations" / ("index_" + "f" * 32)
-    abandoned.mkdir()
+    abandoned.mkdir(parents=True)
     (abandoned / "partial.txt").write_text("Synthetic abandoned index")
     assert repository.cleanup() == []
     assert not abandoned.exists()
@@ -195,7 +196,50 @@ def test_delete_during_rebuild_cannot_leave_a_retrievable_or_retained_passage(re
     assert repository.retrieve("anemia", scope=STUDY)["passages"] == []
     assert repository.index._open().count_rows() == 0
     assert len(repository.index._open().list_versions()) == 1
-    assert len(list((repository.paths.indexes / "knowledge-generations").glob("index_*"))) == 1
+    assert len(list((repository.paths.indexes / "k").glob("*"))) == 1
+
+
+def test_legacy_selected_generation_reopens_and_promotes_without_removing_unknown_folders(repository):
+    note = import_note(repository, "Legacy renal anemia study note")
+    first = repository.rebuild_index()
+    previous = repository.index.path
+    repository.index.close()
+    legacy = repository.paths.indexes / "knowledge-generations" / first["generation"]
+    legacy.parent.mkdir(parents=True, exist_ok=True)
+    previous.rename(legacy)
+    unrelated = legacy.parent / "other-session"
+    unrelated.mkdir()
+    (unrelated / "sentinel.txt").write_text("Retained unrelated state")
+    reopened = KnowledgeRepository(repository.services, extractor=SyntheticExtractor(), embedder=SyntheticEmbedder())
+    assert reopened.index.path == legacy
+    assert reopened.retrieve("anemia", scope=STUDY)["passages"][0]["document_revision"] == note["revision_id"]
+    assert reopened.rebuild_index()["passages"] == 1
+    assert reopened.index.path.parent == repository.paths.indexes / "k"
+    assert not legacy.exists()
+    assert (unrelated / "sentinel.txt").read_text() == "Retained unrelated state"
+    reopened.index.close()
+
+
+def test_real_lance_rebuild_at_118_character_profile_path(tmp_path_factory):
+    base = tmp_path_factory.mktemp("lance-long")
+    assert len(str(base)) < 116
+    paths = AppPaths.create(base / ("p" * (118 - len(str(base)) - 1)))
+    assert len(str(paths.root)) == 118
+    db = Database(paths.database)
+    schema = Path(__file__).parents[2] / "runtime/renulus/knowledge/schema.sql"
+    db.apply_migration("knowledge-001", schema.read_text())
+    for migration in sorted((schema.parent / "migrations").glob("*.sql")):
+        db.apply_migration("knowledge-" + migration.stem, migration.read_text())
+    repository = KnowledgeRepository(Services(paths, db), extractor=SyntheticExtractor(), embedder=SyntheticEmbedder())
+    note = import_note(repository, "Long-path nephrology learning and recovery")
+    outcome = repository.rebuild_index()
+    assert outcome["status"] == "ready" and outcome["passages"] == 1 and not outcome["cleanup_pending"]
+    selected = db.fetch_one("SELECT value FROM preferences WHERE key='knowledge.index_generation'")
+    assert json.loads(selected["value"]) == outcome["generation"]
+    reopened = KnowledgeRepository(repository.services, extractor=SyntheticExtractor(), embedder=SyntheticEmbedder())
+    assert reopened.retrieve("recovery", scope=STUDY)["passages"][0]["document_revision"] == note["revision_id"]
+    reopened.index.close()
+    repository.index.close()
 
 
 def test_temporary_and_unclassified_imports_do_not_write(repository, tmp_path):

@@ -20,6 +20,15 @@ PYTHON_VERSION = "3.14.4"
 PYTHON_SHA256 = "cda80a9b1e75c0f1b4f9872ca1b417f0d19bce32facc811aea9180e70fad5fb9"
 sys.dont_write_bytecode = True
 
+def embedded_paths(python: Path) -> None:
+    # Keep site disabled. pywin32 normally adds these wheel directories through
+    # its .pth file; declare the selected local paths without executing it.
+    (python / "python314._pth").write_text(
+        "python314.zip\n.\n../dependencies\n../dependencies/win32\n"
+        "../dependencies/win32/lib\n../dependencies/pywin32_system32\n"
+        "../runtime\n../upstream/hermes\n..\n", encoding="utf-8")
+
+
 def digest(path):
     value = hashlib.sha256()
     with path.open("rb") as stream:
@@ -175,6 +184,7 @@ def main():
             raise ValueError("Source refresh requires a completed generated embedded payload")
         previous = manifest["source_revision"]
         refresh_snapshot(source, previous, revision, target)
+        embedded_paths(target / "python")
         if digest(target / "packaging/runtime/helper-assets.json") != manifest["helper_contract_sha256"]:
             raise ValueError("A changed helper contract requires a fresh acquired payload")
         helper_contract(target / "packaging/runtime/helper-assets.json", target / "helper-assets")
@@ -201,8 +211,7 @@ def main():
         contents.extractall(python)
     # Python's supported embedded path contract ignores registry/user/global paths.
     # No import site: copied .pth files cannot execute outside-profile startup code.
-    (python / "python314._pth").write_text(
-        "python314.zip\n.\n../dependencies\n../runtime\n../upstream/hermes\n..\n", encoding="utf-8")
+    embedded_paths(python)
     snapshot(source, revision, target)
     source_patches = [apply_runtime_patch(args.runtime_patch_repo.resolve(),
                                         args.runtime_patch_revision, target)] if args.runtime_patch_repo else []
