@@ -1,28 +1,36 @@
 # Using Renulus
 
 Renulus is an English-language Windows learning space for nephrology. For the
-selected installation and current delivery status, see [Running Renulus](RUNNING.md).
+selected unsigned installation and dated owner-PC acceptance status, see
+[Running Renulus](RUNNING.md). These instructions describe the Flow controls;
+they do not establish native acceptance of a new installed build or live generation.
 
 ## Start and connect
 
 Open the **Renulus** shortcut or double-click **Start-Renulus.cmd** in the supplied
 folder. Allow the learning window to open, then use **Today** or the navigation
 rail. **Ctrl+K** opens **Find a destination**. Local runtime readiness and your
-learning subscription are separate statuses.
+learning subscription are separate statuses. The installed app bundles its
+runtime and CPU helpers; no developer tools, GPU, Docker or local model server
+setup is needed. Keep the existing E: data and Renulus account profile when
+updating the app.
 
-In **Connections → Learning subscriptions**, choose **Continue with ChatGPT**
-under **Codex**. Complete sign-in in your browser using your own account. If you
-need an account or subscription, complete that provider setup first; if you
-already have one, sign in with that account. Connecting another application
-does not connect this Renulus profile.
+In **Connections → Learning subscriptions**, use **Check models** for a saved
+account. For a disconnected Codex account, choose **Continue with ChatGPT**
+under **Codex** and complete sign-in in your browser using your own account.
+If you need an account or subscription, complete that provider setup first.
+Connecting another application does not connect this Renulus profile.
 
-For a saved account, use **Check models**. Choose **Use Codex** when offered and
-check the **Selected** badge. To reconnect an expired or different account, use
-**Disconnect**, then **Continue with ChatGPT** again. During sign-in,
+Choose **Use Codex** when offered and
+confirm the **Selected** badge before asking for generation. A saved account
+alone does not select a subscription. Only approved models shown as **Listed
+for this account** are eligible. To reconnect an expired or different account,
+use **Disconnect**, then **Continue with ChatGPT** again. During sign-in,
 **Reopen sign-in in browser**, **Check sign-in status** and **Cancel sign-in**
 help you finish or restart the attempt.
 
-Requests stay within your explicitly selected subscription and these models:
+Requests stay within your explicitly selected subscription and its approved,
+available models:
 
 | Subscription | Approved model labels |
 | --- | --- |
@@ -81,9 +89,16 @@ read, store, index and use the file locally, then **Add document**. PDF, image,
 text and supported Office files are accepted within the displayed limits.
 **Study note → Add note** saves deliberately added text.
 
+For ERA or institutional material, obtain the file through your own authorised
+access and retain its edition and permitted use. Public download access does
+not grant every processing or redistribution right. [SOURCES](../SOURCES.md)
+records the development acquisition boundaries; a personal import retains
+its own terms.
+
 Check **View import details** and **Import status**. Queued or processing
-revisions are not yet searchable; wait for processing to finish. For a failed
-or cancelled import, **Retry import** asks you to select the original again.
+revisions are not yet searchable; an earlier indexed revision may remain
+available. For a failed or cancelled import, **Retry import** asks you to select
+the original again or supply the study note.
 **Collected sources** lists acquisitions; queuing selected files is a separate
 step from making their passages ready.
 
@@ -94,6 +109,15 @@ from the start of the file, rather than its printed page label. Unknown pages
 open without a page jump; exact passage highlighting is unavailable. Office
 originals offer **Save original** for opening in a compatible application.
 Current-guidance search excludes sources whose currency is unverified.
+
+Check publication/edition and review dates, corrigenda, chapter or scope
+replacements and retractions. A receipt/download date, recent URL or dated
+research note does not establish latest-final guidance. Keep research findings,
+drafts and commentary distinct from final guidelines.
+
+**Remove from library** removes the source from retrieval and cleans app-owned
+copies; read any **Storage cleanup pending** notice. Your external original
+is preserved. Copies already exported or backed up remain separate.
 
 ## Temporary and saved Cases
 
@@ -117,7 +141,9 @@ verify interpretation quality.
 
 The case-scope banner follows you through Learn and **Practise from this case**.
 Return to Cases to save; navigation alone does not save. Choose
-**End temporary context** to return to ordinary study.
+**End temporary context** to return to ordinary study. Closing a temporary case
+or the app discards unsaved case work; it is not retained in learner Memory or
+a saved backup. Bring daily-practice input through Cases to keep this scope.
 
 ## Inspect and correct Memory
 
@@ -161,14 +187,23 @@ Open **Connections → Your study data**:
   recover missing originals.
 
 Credentials, search indexes and the external acquisition catalogue are excluded.
-Keep external collection originals separately. Temporary case changes are not
-a saved backup.
+Keep external collection originals separately. A study backup does not back up
+your account credentials. Temporary cases and unsaved changes to saved cases
+are not included.
 
 To restore, **Choose ZIP backup or JSON export**, review its date, contents and
 omissions, acknowledge the displayed deletion limits, then choose
 **Restore full backup** or **Restore records only**. Restoration merges saved
-records and preserves newer deletions known to this installation; an older copy
-alone cannot know about later deletions elsewhere. Check **Recovery status**
-while local search and memory indexes rebuild. Use **Retry local rebuild** if
-offered, then **Refresh recovery status**; a completed records restore does not
-by itself mean search is ready.
+records and preserves newer deletions known to this installation. Read the
+restored and excluded counts; an older copy alone cannot know about later
+deletions elsewhere. Deleting in Renulus does not erase an existing backup or
+external original.
+
+Check **Recovery status** while local indexes rebuild, including the separate
+**Library search** and **Learning memory** results. For **Blocked**, **Partial**
+or **Failed**, read the message and any pending cleanup, then use
+**Retry local rebuild** when offered and **Refresh recovery status**. If status
+could not be checked, use **Try again** to read it again. A completed records restore
+does not by itself mean search is ready; **Not reported** is not completion.
+Matching installed recovery acceptance remains pending as recorded in
+[Running Renulus](RUNNING.md#delivery-status).
