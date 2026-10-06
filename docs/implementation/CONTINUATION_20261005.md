@@ -5,6 +5,21 @@ historical `SESSION_HANDOFF.md`. Preserve its receipts and observations.
 
 ## Current October 6 recovery delivery wave
 
+The follow-up 64-row gap triage is integrated and pushed as `dd806d3f`; see
+[the bounded remaining-flow map](finalise-gap-triage-20261006.md). It adds no
+admission requirement and changes no frozen production/test source. Its agent
+is closed and clean worktree removed, with the report/branch retained and
+`C:/rn-finalise-20261005/preserved-lanes/final-gap-triage-20261006/parent-retirement.json`
+recorded. No ignored handoff files existed. One new bounded Ultra lane,
+Linnaeus (`01a10fd3-effa-7370-b867-eccaa762f6da`), owns only a report and ignored
+installed-input/Flow/Updates recipe in
+`C:/rn-finalise-20261005/lanes/installed-gap-slice-20261006`. It prepares the
+missing scanned-PDF, access and one deliberately selected free K01 check; no
+runtime, helper, provider, network or acceptance execution is admitted to the
+lane. The parent continues matching manufacture/Install/recovery and connected
+learning first. Accessibility-tree observations cannot claim spoken screen-reader
+testing, and a source baseline cannot claim educational review or live freshness.
+
 The accepted manufacture freeze is
 `6599bf796900e33cb1cb2319b5812ea4b8aa2a7b`. Package session **38280**, run
 `6599bf79-package-10296ae7`, remains active and must be recovered before any
@@ -33,7 +48,8 @@ deletion reconciliation and ordinary closes must execute on the matching app.
 Ohm and Dewey completed their bounded preparation. Their report-only commits
 are integrated as `b362b297` and `184932dc`. Both agents are closed and both
 clean C worktrees removed after full ignored-file preservation and verified
-deployment. Only the active integration and held E supplement worktrees remain.
+deployment. At that checkpoint only the integration and held E supplement
+worktrees remained; the later bounded input/Flow/Updates lane is listed above.
 The release sidecar has 25 files/361,185 bytes, preservation receipt SHA256
 `f0130f2885e82161fe2ce57712665bbc0d966bbce89ac6bad29fbfc5472638d6`,
 and is deployed at `C:/rn-finalise-20261005/parent-release-continuation-6599`.
