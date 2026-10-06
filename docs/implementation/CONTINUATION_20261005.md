@@ -13,12 +13,24 @@ No build, import or accepted regression check was repeated. The prior queued
 Install wrapper82750 timed out waiting for the package controller before
 installation started; its failed terminal is preserved in
 `C:/rn-finalise-20261005/install-after-package-699938f2-recovered-terminal.json`.
-One actual matching Install is now running in session95706, run
-`699938f2-install-336d4498`, begun09:48:25UTC. Owned chain is controller36884
-→test-installer38676→NSIS42140. At09:53UTC extraction was active and the target
-executable existed; this is activity, not completed installation or native/live
-acceptance. Recover this session and its actual receipt before proceeding.
-Native/helper/model work stays serial.
+The one actual matching Install session95706, run
+`699938f2-install-336d4498`, completed exit0 at09:57:02UTC, NSIS487.566s.
+Its receipt is `proofs/installer-e794e99d/installer-evidence.json`, SHA256
+`3bc8ab092a6ef0445f2b80b62f5c589b21059c71d14998b904f65c621a2f62b7`.
+Matching Recovery01 finished exit1 at10:05:26UTC after actually completing
+the39,255-file inventory and isolated runtime. The driver expected200 for
+Retry; the asynchronous API returns202. Preserve that failed invocation and
+its zero ordinary-close credit. A reviewed driver-only repair retained that
+performed same6999 inventory, with explicit `inventoryFreshlyExecuted=false`.
+Recovery02 session73435 completed exit0 at10:23:18UTC. All five current slice
+gates passed, both indexes rebuilt, six restored originals/citations inspected,
+newer deletion reconciled, and three ordinary closes/two reopens completed.
+Parent reviewed all seven captures, including the actual PDF physical page2.
+The parent admitted an honest five-current/twelve-historical composite at
+10:31:41UTC; there is no full current sweep or repeated initial restore/import.
+Connected session97216, driver37364, started10:32:12UTC on the closed C restored
+profile and now owns the serial native/helper slot. Recover it before another
+native, model or live operation. See [the installed record](finalise-installed-699938f2.md).
 
 The final next-installed/freshness follow-on lane is integrated, its47 ignored
 files preserved outside the clean worktree, and that tree removed after agent
@@ -27,10 +39,12 @@ closure. Deployment remains in `apps/desktop/.local/next-installed-20261006` and
 pins remain under `C:/rn-finalise-20261005/parent-source-review-699938f2`. The
 final audit lane is integrated as44798f59/838c3d78; its clean tree had no ignored
 sidecars and was removed after closure. Study-specific source-status projection
-is optional refinement, not an additional release gate. A bounded guide lane
-owns RUNNING/USING_RENULUS only in
-`C:/rn-finalise-20261005/lanes/delivery-guide-20261006`, agent
-`01a110a0-6314-7f11-ba63-3ceed1d031b6`. Keep the held E supplement tree,
+is optional refinement, not an additional release gate. The guide lane is
+integrated as7297c513 and its clean tree retired. The contracts report is
+integrated as7e1bae7b; its first three ignored files are preserved in the parent
+admission root. That same bounded lane now owns only the remaining gap-driver
+binding adaptation. A separate audit lane owns the current64-row report update.
+Neither lane may execute native/helper/provider/data work. Keep the held E supplement tree,
 PID38448/port18765, E raw/profile and all failed historical receipts.
 See [the wave record](finalise-recovery-freshness-20261006.md) for current limits.
 
@@ -42,7 +56,7 @@ backend cases,11 correction cases,6 affected final public renderer cases and
 2 Updates renderer cases, with integrated typecheck0. Counts retain overlap and
 source scope; see [the new wave record](finalise-recovery-freshness-20261006.md).
 The two6599 native attempts have finished and failed, as detailed below.
-Recover the matching Install above before replacements.
+Recover the active Connected session above before replacements.
 
 Report-only commits91a233e1/ec826214 preserve freshness gaps and all64 requirement
 dispositions. Production commitsabbf098c/859b001f/9b5410ce and fixture-only699938f2
