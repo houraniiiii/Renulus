@@ -1,5 +1,13 @@
 # Session transfer — October 5, 2026
 
+Latest checkpoint, October6: source699938f2 is locally installed/accepted and
+the normal shortcut selects it, preserving E learning/account data. Matching
+maintenance and its12.973s ordinary main/backend close passed; see
+[the current result](finalise-maintenance-699938f2.md). The selected Codex
+subscription_limit still blocks successful generation/capture and dependent
+live journeys. The active goal and draft PR13 are not complete. Recover the
+current receipts before any further work; do not replay installation/imports.
+
 Read [the current continuation](CONTINUATION_20261005.md) for the C checkout,
 native heartbeat, current lanes and unsigned current-PC acceptance. The record
 below is historical.

@@ -1,5 +1,38 @@
 # Current delivery continuation — October 5, 2026
 
+## Latest October 6 local delivery
+
+Matching source699938f2 is accepted for local installed use after actual
+Recovery02, qualified native17, Connected03, scanned-PDF gap continuation and
+matching maintenance. Maintenance03 exited0 at12:34:25.741436UTC, parent accepted
+it at12:36:07UTC, and the normal selector/owned shortcut now select the C
+installed699938f2 app while retaining the E learning/account profile. Previous
+selector/shortcut and the old installation are preserved. Launcher confirmation
+exited0 at12:41:27UTC. See [maintenance and launch](finalise-maintenance-699938f2.md).
+
+Reopen02's failed deletion assertion mixed Connected's separate fresh restore
+target with the source profile. Read-only metadata confirmed both intended
+states; Reopen03 proves retained source PDF/PNG exact originals and unchanged
+canonical state after uninstall/reinstall/reopen. Ordinary main21084/backend12800
+close took12.973s, with no remaining owned identities. Neither install nor SQL
+workloads were repeated. Both earlier failed aggregates remain failed.
+
+The actual selected Codex gpt-6-astra Probe02 returned subscription_limit.
+There is no successful live answer/capture or dependent image/Journeys/freshness/
+correction acceptance. The access question remains pending; no quota retry,
+account/model fallback or Go activation occurred. The active end-to-end goal
+and draft PR13 remain open. The normal launcher is a locally accepted runnable
+delivery, with explicit false full-product/generation/capture validation flags.
+The [64-row audit](finalise-audit-699938f2.md) retains every requirement and the
+observed accessibility/content/currentness limits.
+
+This parent wave uses two bounded Ultra documentation/queue lanes in separate
+C worktrees. They perform no test/import/provider/native/engine work. Integrate
+their commits and retire their clean trees after preserving refs and receipts;
+the held E supplement worktree remains untouched. Exactly one20-minute
+renulus-final-delivery heartbeat remains active. Product source remains699938f2;
+later commits are documentation. The record below is earlier history.
+
 This record supersedes the location, heartbeat and lane instructions in the
 historical `SESSION_HANDOFF.md`. Preserve its receipts and observations.
 

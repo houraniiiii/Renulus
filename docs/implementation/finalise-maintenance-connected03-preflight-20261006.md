@@ -1,5 +1,12 @@
 # Matching maintenance assertion adaptation — October 6, 2026
 
+Later actual maintenance and parent acceptance are recorded in
+[the matching maintenance result](finalise-maintenance-699938f2.md). The
+preflight below incorrectly applied Connected's fresh-target case deletion to
+its separate source profile. Reopen03 verifies the retained source case and its
+exact PDF/PNG originals; the fresh target deletion remains separately proved.
+Both earlier failed invocations remain failed. No production code changed.
+
 The parent prepared a narrow, unexecuted driver adaptation before matching
 maintenance. Original preparations, package, application source and accepted
 receipts remain unchanged. The selected target is source699938f2 and its same

@@ -1,5 +1,21 @@
 # Renulus implementation run
 
+Current October6 delivery: matching699938f2 local installed acceptance and
+maintenance are recorded in [the maintenance result](finalise-maintenance-699938f2.md).
+The normal C launcher/owned shortcut selects that app and preserves the E
+learning/account profile. Uninstall/reinstall/reopen canonical and original
+signatures are unchanged; ordinary main/backend close passed12.973s. Original
+failed aggregates remain failed and completed installation/storage/imports were
+not repeated. Documentation and scoped queue-closeout lanes are integrated in
+the final wave and retired after preserving their commits/receipts.
+
+The selected Codex gpt-6-astra run returned subscription_limit; successful
+generation/automatic capture and dependent live journeys remain unperformed.
+Go stays paused. No source, account or model fallback is authorised. Draft PR13
+and the end-to-end goal remain open; [the exact64-row audit](finalise-audit-699938f2.md)
+records accepted local scopes and limitations. Exactly one20-minute heartbeat
+remains active. The earlier timeline below is preserved history.
+
 Started October 4, 2026, 19:21 UTC (21:21 Warsaw). Target work window ends
 October 5, 2026, 03:21 UTC (05:21 Warsaw). The user authorised implementation,
 parallel bounded agents, GitHub tracking and a heartbeat every 20 minutes
