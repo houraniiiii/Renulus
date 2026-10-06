@@ -3,6 +3,44 @@
 This record supersedes the location, heartbeat and lane instructions in the
 historical `SESSION_HANDOFF.md`. Preserve its receipts and observations.
 
+## October 6 installed continuation
+
+The manufacture freeze and installed payload remain 035ca7bd. Native03 ended
+exit 1 before any app launch: its isolation predicate excluded the configured
+bundled backend root itself. The reviewed correction accepts that root and its
+descendants while retaining isolated/no-user-site and external-path checks.
+
+Native04 finished at 23:51:14 UTC on October 5, 2026, with exit 1. Its immutable
+receipt is apps/desktop/test-results/installed-product-4c73b819/installed-product-evidence.json,
+SHA256 62498114c8eff82b0e71a26daacf457f4d7597c360c8fab1510c4219cfa0d9c5.
+Installed identity, isolated runtime, programme selectors, reviewed quiz,
+native backup Save/Cancel and Library text individually passed. The PDF upload
+was committed, but the driver then failed reading its response from Chromium's
+inspector cache. This does not establish a PDF product defect. No ordinary
+shutdown passed in that attempt; its exact owned app/backend processes were
+subsequently observed absent. Keep this failed receipt unchanged.
+
+Native05 started at 00:48:26 UTC on October 6 in
+C:/rn-finalise-20261005/parent-native-035ca7bd-05, Node PID 21996. Its operational
+entry is apps/desktop/.local/installed-journey-resume-035ca7bd/verify-installed-product-resume.mjs,
+SHA256 601c3bc40aa4e73487a0504c3d26c4c105b1bda11c8ca4bacd91bbc493870efd.
+It reuses the same owned synthetic profile, five existing document fixtures
+and committed text/PDF imports. Four previously passed UI gates are individually
+carried; identity/runtime are checked afresh and the remaining eleven gates and
+three ordinary physical closes must complete. The driver observes an armed
+real renderer response clone before UI continuation, returns the original
+response unchanged and never replays an import. The 39,253-file raw inventory
+is carried from its completed boundary without another scan. The new receipt
+will be adjacent to the original failed receipt, with separate continuation
+screenshots and output. No native05 pass is credited before its terminal and
+evidence review. Connected/live/maintenance and launcher promotion remain pending.
+
+Exactly one active heartbeat remains at twenty-minute intervals. Capacity
+fixture/report changes are already integrated as 00fd4d55 and 698fb2c0; their
+retained receipts do not require cherry-picking or execution again. The parent
+owns native execution and GitHub tracking; the audit lane continues bounded
+source review and truthful requirement reconciliation.
+
 ## Current manufacture and recovered acceptance preparation
 
 The accepted product manufacture freeze is
