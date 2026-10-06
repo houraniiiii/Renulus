@@ -2,8 +2,12 @@
 
 Renulus is an English-language Windows learning space for nephrology. For the
 selected unsigned installation and dated owner-PC acceptance status, see
-[Running Renulus](RUNNING.md). These instructions describe the Flow controls;
-they do not establish native acceptance of a new installed build or live generation.
+[Running Renulus](RUNNING.md#delivery-status). On October 6, 2026, matching
+Recovery02, Connected03, the bounded Gap01/02 local flows and Maintenance03 are
+accepted on freeze `699938f2`. Normal launch selects that matching installation.
+Acceptance covers these local installed workflows with an external live
+subscription blocker. Successful live answers and automatic capture remain
+unproved, and the full product goal remains open.
 
 ## Start and connect
 
@@ -13,7 +17,15 @@ rail. **Ctrl+K** opens **Find a destination**. Local runtime readiness and your
 learning subscription are separate statuses. The installed app bundles its
 runtime and CPU helpers; no developer tools, GPU, Docker or local model server
 setup is needed. Keep the existing E: data and Renulus account profile when
-updating the app.
+updating the app, including the learning profile
+`E:/Renulus-native-delivery/desktop-20261005/data/learning`. The parent promoted
+the normal launcher to `installed-699938f2` on C: and updated the owned shortcut,
+preserving that E: profile and the previous pointer/shortcut. The remaining
+parent launcher confirmation is read-only; the promotion is already complete.
+
+While generation is blocked, use reviewed **Test**, **Today** planning, saved
+**Library** passages/originals, local **Cases** with explicit Save, **Memory**
+editing/recall and study-data backup/recovery.
 
 In **Connections → Learning subscriptions**, use **Check models** for a saved
 account. For a disconnected Codex account, choose **Continue with ChatGPT**
@@ -43,6 +55,19 @@ it does not enable learning requests. Model listing also does not prove a
 successful response. Read connection errors and recheck availability; Renulus
 does not silently substitute another model or subscription. Reviewed quizzes
 and saved study material can be used without a model connection.
+
+At **11:31:48 UTC on October 6, 2026**, Probe02 ended with
+`subscription_limit` after selecting Codex `gpt-6-astra` and making one synthetic
+Explain attempt. Its retained text/image capability values were **unknown**;
+an available model listing does not verify those capabilities. It produced no
+successful answer or automatic learning capture; guided follow-up, generated
+practice, live case discussion and image work did not run. Its ordinary close
+passed, while its blocked receipt and failed outer
+terminal remain unchanged. Use the local workflows while the limit is unresolved;
+sign-in and **Check models** do not establish quota recovery. Go stays paused,
+with no automatic quota retry loop, model/subscription switch or paid generation
+fallback. See [the Probe02 record](finalise-live-blocker-699938f2.md).
+The owner's live-access decision remains unresolved.
 
 ## Learn and Test
 
@@ -110,7 +135,7 @@ open without a page jump; exact passage highlighting is unavailable. Office
 originals offer **Save original** for opening in a compatible application.
 Current-guidance search excludes sources whose currency is unverified.
 
-Check publication/edition and review dates, corrigenda, chapter or scope
+Check publication/edition, retrieval and review dates, corrigenda, chapter or scope
 replacements and retractions. A receipt/download date, recent URL or dated
 research note does not establish latest-final guidance. Keep research findings,
 drafts and commentary distinct from final guidelines.
@@ -137,7 +162,8 @@ send the image to a model. **View original** opens a retained case original.
 **Use extracted text**; it reads words, not clinical images. **Image discussion
 with selected subscription → Send image for discussion** is a separate, explicit
 provider request, subject to displayed availability. Input acceptance does not
-verify interpretation quality.
+verify interpretation quality; Probe02 made no image request. Keeping and viewing
+originals locally remains available.
 
 The case-scope banner follows you through Learn and **Practise from this case**.
 Return to Cases to save; navigation alone does not save. Choose
@@ -147,8 +173,9 @@ a saved backup. Bring daily-practice input through Cases to keep this scope.
 
 ## Inspect and correct Memory
 
-**Memory** shows retained learning, preferences and goals, including eligible
-learning captured during ordinary study. Use **Search retained learning**,
+**Memory** shows saved learning, preferences and goals. Manual correction and
+local recall are accepted in the Connected scope; automatic capture from a live
+answer remains unproved. Use **Search retained learning**,
 **Edit → Save changes** to correct a record, and **History** to inspect previous
 text. **Remove history → Remove revision history** keeps the current record.
 **Delete → Delete learning and history** removes the record and its history
@@ -171,6 +198,13 @@ sources and **Check interval**, enable **Check my selected sources automatically
 then **Save automatic checks**. **Check selected now** also works for a saved
 selection with automatic checking off. Read failures and **Last success** dates:
 a failed check retains previous evidence and does not establish freshness.
+
+The single K01 catalogue check on **October 6, 2026, at 11:51:42.812 UTC**
+(13:51:42.812 Europe/Warsaw) returned baseline. Gap02 confirmed its saved state
+with automatic checks off, without fetching it again. This is dated catalogue
+discovery, not reviewed latest-final guidance or proof that an installed
+correction changes later learning. Dated research passages remain unreviewed
+and do not certify guidance currency or complete retraction status.
 
 **Connections → Sources and retrieval** holds optional personal retrieval keys.
 Enable and select a tool deliberately, with daily request/credit limits, or use
@@ -205,5 +239,23 @@ or **Failed**, read the message and any pending cleanup, then use
 **Retry local rebuild** when offered and **Refresh recovery status**. If status
 could not be checked, use **Try again** to read it again. A completed records restore
 does not by itself mean search is ready; **Not reported** is not completion.
-Matching installed recovery acceptance remains pending as recorded in
-[Running Renulus](RUNNING.md#delivery-status).
+A Retry starts asynchronous rebuilding; refresh until both index results report
+readiness before relying on search. Inspect restored originals and citations too.
+
+Recovery02 on **October 6, 2026** accepted Retry/rebuild, restored-original
+inspection, newer-deletion reconciliation and three ordinary closes/two reopens.
+Connected03 accepted populated ZIP restoration of Memory, saved originals and
+the manual plan. Its deletion checks in a different fresh-restored synthetic
+profile showed that replaying the ZIP did not resurrect newer deleted Memory,
+case/raw originals or Library material. The source profile intentionally retains
+its saved PDF/PNG case; deletion in the other profile does not delete that copy.
+These continuations retain earlier proofs; all original failed aggregates remain
+failed. Your own restore still needs the status checks above.
+
+Matching Maintenance03 exited 0 on **October 6, 2026, at 12:34:25.741436 UTC**
+and the parent accepted it at **12:36:07 UTC**. Uninstall/reinstall/reopen
+preserved the source profile's canonical data, saved case and exact PDF/PNG
+originals, followed by an ordinary main/backend close. Earlier maintenance
+failures remain failed. See [the parent maintenance report](finalise-maintenance-699938f2.md)
+and [Running Renulus](RUNNING.md#delivery-status) for acceptance and launcher
+provenance; this local result supplies no live answer or automatic-capture pass.
