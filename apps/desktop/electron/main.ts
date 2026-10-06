@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, session, shell, type IpcMainInvokeEvent } from 'electron';
+import { ownedApiHeaders } from './owned-api-headers';
 import { randomBytes } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
@@ -42,10 +43,7 @@ function createWindow() {
     const local = details.url.startsWith(origin + '/') || details.url === origin;
     callback({ cancel: !local && !details.url.startsWith('data:') && !details.url.startsWith('blob:') && !isBuiltinPdfResource(details.url) });
   });
-  isolated.webRequest.onBeforeSendHeaders({ urls: [origin + '/api/v1/*'] }, (details, callback) => {
-    if (details.webContentsId !== owner.webContents.id) { callback({ cancel: true }); return; }
-    callback({ requestHeaders: { ...details.requestHeaders, 'x-renulus-token': token } });
-  });
+  isolated.webRequest.onBeforeSendHeaders({ urls: [origin + '/api/v1/*'] }, ownedApiHeaders(owner, token));
   owner.webContents.setWindowOpenHandler(({ url }) => {
     if (allowedSourceUrl(url)) void shell.openExternal(url).catch(() => {
       dialog.showErrorBox('The source could not open', 'Try the source link again after checking your default browser.');
