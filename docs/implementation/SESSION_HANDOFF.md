@@ -7,6 +7,13 @@ maintenance and its12.973s ordinary main/backend close passed; see
 subscription_limit still blocks successful generation/capture and dependent
 live journeys. The active goal and draft PR13 are not complete. Recover the
 current receipts before any further work; do not replay installation/imports.
+Reader03 additionally accepts actual saved Case PDF page1 and native Library
+200% fit/reachable controls, with unchanged selected records and5.59s ordinary
+close. The known ANTLR licence omission is supplied through a static companion
+and installed notice addition. Both lanes are integrated/retired, receipts and
+refs preserved; only the main C checkout and held E supplement tree remain.
+See [reader acceptance](finalise-reader-reflow-699938f2.md),
+[notices delivery](finalise-notices-699938f2.md) and the current continuation.
 
 Read [the current continuation](CONTINUATION_20261005.md) for the C checkout,
 native heartbeat, current lanes and unsigned current-PC acceptance. The record

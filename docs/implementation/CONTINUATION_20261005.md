@@ -26,12 +26,50 @@ delivery, with explicit false full-product/generation/capture validation flags.
 The [64-row audit](finalise-audit-699938f2.md) retains every requirement and the
 observed accessibility/content/currentness limits.
 
-This parent wave uses two bounded Ultra documentation/queue lanes in separate
-C worktrees. They perform no test/import/provider/native/engine work. Integrate
-their commits and retire their clean trees after preserving refs and receipts;
-the held E supplement worktree remains untouched. Exactly one20-minute
-renulus-final-delivery heartbeat remains active. Product source remains699938f2;
-later commits are documentation. The record below is earlier history.
+The queue and guide lanes are integrated, pushed and retired. Queue source
+472932f8 is preserved as refs/renulus/retired/queue-closeout-20261006; guide
+source46158261 is preserved as refs/renulus/retired/delivery-guide-final-20261006.
+Their retirement receipts remain in C:/rn-finalise-20261005. Issues6 and17
+are closed for their bounded local scopes; issues1,2,3,5,7,9,12 and draft PR13
+retain the remaining work. Main documentation checkpoint is dc6676fb.
+
+The reader and notices lanes are integrated and retired; no C lane or native
+check remains running. Reader03 completed exit0 at13:57:34.577UTC on October6.
+Parent reviewed actual1440×960 native pixels: saved Case PDF page1 renders,
+Library200% content fits, and Find/Filter/Open are reachable by ordinary scroll.
+Saved Case/Library records are unchanged; main14348/backend43664 closed normally
+in5.5878479s. The fourteen captures are hash-verified. Earlier Reader01/02
+aggregates remain failed; their extra protocol/Blob reads establish no damaged
+stored original. Reader03 reuses accepted Maintenance03 original-byte proof.
+See [the bounded reader acceptance](finalise-reader-reflow-699938f2.md).
+
+The targeted static notices audit found and repaired one known omission: the
+original2,699-byte ANTLR4.9.3 licence. At13:57:54.6125116UTC it was supplied
+beside the unchanged installer in matching-699938f2/notices-699938f2-20261006
+and added to the installed resources/licenses/runtime-helpers directory.
+SHA256b1b379fcaf3219593a4c433feb1b35c780bed23fafaae440b1ae2771a9521e3a
+matches both copies. The installer predates the supplement; its existing
+EXE/ASAR/backend/helper/source identities remain unchanged. See
+[the notices disposition and actual delivery](finalise-notices-699938f2.md).
+
+Preserved refs are refs/renulus/retired/installed-reader-reflow-20261006 and
+refs/renulus/retired/distribution-notices-20261006. Reader preparation and
+failed/current receipts live under C:/rn-finalise-20261005/parent-reader-reflow-699938f2-01/02/03;
+the notices sidecars are preserved under parent-distribution-notices-699938f2.
+Both retirement receipts remain in C:/rn-finalise-20261005. Only the main C
+checkout and held E supplement worktree remain; the latter stays untouched.
+Exactly one20-minute renulus-final-delivery heartbeat remains active. Executable,
+renderer, runtime, engines and content remain frozen699938f2; later source
+changes are documentation and scoped public licence notices. No completed
+import, K01 check, regression, manufacture or installation was repeated.
+
+Remaining priority is the already pending live-access decision: the last
+selected Codex Astra Probe02 returned subscription_limit. There is no successful
+generation, automatic capture, image/Journeys/freshness/correction acceptance.
+Do not assume access restored, repeat quota requests, switch subscriptions or
+activate paused Go. Recover accepted receipts rather than repeating the local
+slices. Broader accessibility, content/currentness and scaling/rollback scopes
+remain as recorded in the64-row audit. The record below is earlier history.
 
 This record supersedes the location, heartbeat and lane instructions in the
 historical `SESSION_HANDOFF.md`. Preserve its receipts and observations.

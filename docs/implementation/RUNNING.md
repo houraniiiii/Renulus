@@ -68,10 +68,17 @@ external live subscription blocker. All times in this table are on
 | [Connected03](finalise-connected-continuation-699938f2.md) | Exited 0 at **11:12:00.7575338**. Seven remaining restore/reconciliation/deletion operations passed with three retained Connected02 proofs. Corrected Memory, saved PDF/PNG originals and a manual plan survived restore. Deletions survived ZIP replay in the fresh-restored profile; the source profile retains its saved case. Ordinary main/backend close completed. |
 | [Gap01 + Gap02](finalise-installed-gap-continuation-699938f2.md) | Gap02 exited 0 at **11:58:09**. Retained Gap01 operations prove local OCR/search and physical-page citations for one synthetic scanned PDF plus one free K01 catalogue check. Gap02 proves reopen/persistence and closed table/units extraction; it repeated no import or check. |
 | [Maintenance03](finalise-maintenance-699938f2.md) | Exited 0 at **12:34:25.741436**; parent accepted at **12:36:07**. All **969,663 canonical bytes** stayed unchanged through uninstall/reinstall/reopen. Source-profile saved PDF (**1,285 bytes**) and PNG (**813 bytes**) originals returned status 200 with matching hashes. Main21084/backend12800 closed normally in **12.973 seconds**, with no remaining owners. |
+| [Reader03](finalise-reader-reflow-699938f2.md) | Exited 0 at **13:57:34.577**. Parent reviewed the saved Case PDF page1 and native Library pixels at **200%**; Find, Filter and Open original fit and are reachable by ordinary scrolling. Case/Library records stayed unchanged. Main14348/backend43664 closed normally in **5.59 seconds**. Broader accessibility remains unproved. |
 | [Codex Probe02](finalise-live-blocker-699938f2.md) | Terminal at **11:31:48.7296032**: selected `gpt-6-astra`, blocked by `subscription_limit`, outer exit 1. Ordinary main/backend close completed. No successful direct answer, automatic capture, dependent live journeys or image request. |
 
 The unsigned installer is **1,010,355,641 bytes**, SHA256
 `ce1ed76147585477412a8d5319d485fdb03c5e1f3daae2ed02c2ca6669261f5d`.
+The [notice supplement](finalise-notices-699938f2.md) beside that unchanged
+installer supplies the missing ANTLR licence. Keep its
+`matching-699938f2/notices-699938f2-20261006` folder with the installer or an
+extracted copy. The same notice is added to the installed app's licences.
+This static addition leaves the executable, ASAR, backend and learning data
+at their accepted versions; the installer itself predates the supplement.
 The continuations retain explicit proof origins; all earlier failed aggregates
 remain failed, including Recovery01, Connected01/02, Gap01 and Probe01/02's
 outer terminals. Documentation does not change the frozen product or package.

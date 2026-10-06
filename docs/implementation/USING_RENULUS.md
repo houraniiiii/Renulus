@@ -30,6 +30,10 @@ repeated. See [the parent maintenance report](finalise-maintenance-699938f2.md).
 While generation is blocked, use reviewed **Test**, **Today** planning, saved
 **Library** passages/originals, local **Cases** with explicit Save, **Memory**
 editing/recall and study-data backup/recovery.
+The [bounded reader check](finalise-reader-reflow-699938f2.md) also confirms the
+saved Case PDF page1 displays and Library content/Find/Filter/Open original
+remain usable at200% zoom through ordinary scrolling. This is a local reader
+observation, not a complete accessibility or live-generation acceptance.
 
 In **Connections → Learning subscriptions**, use **Check models** for a saved
 account. For a disconnected Codex account, choose **Continue with ChatGPT**

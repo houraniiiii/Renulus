@@ -1,5 +1,29 @@
 # Targeted distribution notices audit — October 6, 2026
 
+Parent delivery checkpoint,13:57:54.6125116UTC: the original2,699-byte ANTLR
+notice is now supplied beside the matching installer in
+C:/Renulus-native-delivery/desktop-20261005/matching-699938f2/notices-699938f2-20261006,
+with README and SUPPLEMENT-MANIFEST.json. The identical text is added directly
+to installed-699938f2/resources/licenses/runtime-helpers/ANTLR4-BSD-3-Clause.txt.
+Both copies have SHA256b1b379fcaf3219593a4c433feb1b35c780bed23fafaae440b1ae2771a9521e3a.
+The installer predates this static supplement and retains its original hash.
+No existing executable, ASAR, backend inventory, engine/helper or data file is
+changed. The known omission is repaired for the supplied local distribution;
+the unchanged installer alone does not embed the later notice.
+
+Actual delivery receipt:
+C:/rn-finalise-20261005/parent-distribution-notices-699938f2/companion-delivery.json,
+SHA256ab9175234e24ea3f9c7e0823b4bbd00828bc623a4bea391e2c72a7c69657db9c.
+The original lane receipts and inspector are preserved in its adjacent
+lane-receipts directory; lane-preservation.json has
+SHA256b313140ecf5e563751917104f35c5f70506dc06daa7d3b8ceaf9ff7659ef1c28.
+Sourcee9a057d6/6c501b87/bd8d1f5c are integrated as6b644947/e2d441b1/624b15e3.
+The agent is closed and the clean worktree removed, preserving
+refs/renulus/retired/distribution-notices-20261006 and
+C:/rn-finalise-20261005/distribution-notices-699938f2-retirement.json.
+The following audit/source history retains its original bounded scope; there
+was no repeated inventory, manufacture, test or provider request.
+
 **The matching installation contains the principal Renulus, content, Hermes,
 font, renderer, Python and CPU-helper notices. One concrete completeness gap
 remains in the original installer: ANTLR 4.9.3 refers to a BSD 3-clause
