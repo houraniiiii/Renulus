@@ -20,10 +20,21 @@ exact c7 freeze. The completed controller checked all **39,253 backend files /
 `c5f7da67d90fd85b4dfaae6e7190920e8cf1ba29bde5ceed61db993a4bf84434`;
 provenance SHA256 is `3d1b6cb79d08e8ebd3e0e8f27610866bfe76be3459d77471520c09389330e6cb`.
 Parent review is `C:/rn-finalise-20261005/parent-matching-c7b3b5de-01/package-review.json`.
-Matching extraction-only Install is now running in session **71802**, run
-`c7b3b5de-install-70a21716`, started **03:41:24 UTC**. Recover that run before
-any replacement. No c7 installation, ordinary-close or journey pass is credited
-yet. The normal launcher still selects 3ff9b0d6 and the E learning profile.
+Matching extraction-only Install **71802**, run `c7b3b5de-install-70a21716`,
+completed exit 0: NSIS 481.506 seconds, NotSigned, exact c7 source and matching
+EXE/ASAR. Receipt: `proofs/installer-9078a65e/installer-evidence.json`, SHA256
+`ca3977cdb52f9ee8eec6da5743ea7de71c755abed6aa8a1b0856fe1b831093e3`.
+The receipt's `checkedAt` is its start time, not completion; the parent observed
+and reviewed the completed run at **03:50:39 UTC**.
+
+Actual native continuation is running in session **62280**, Node PID **27824**,
+started **03:50:46 UTC**. Root:
+`C:/rn-finalise-20261005/parent-native-c7b3b5de-01`. Recover that controller and
+its receipt before any replacement. It performs fresh installed inventory and
+the remaining six gates/three ordinary physical closes; existing UI origins,
+originals, jobs and ZIP are retained. No new native journey or normal-close pass
+is credited before its actual receipt is reviewed. The normal launcher still
+selects 3ff9b0d6 and the E learning profile.
 
 Native05 at 035ca7bd ended exit 1 at 00:57:33 UTC on October 6. All remaining
 Library format journeys individually passed: PDF with physical page 2, no-text
