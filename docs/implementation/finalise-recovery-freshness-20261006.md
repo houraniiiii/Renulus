@@ -5,6 +5,29 @@ for the next matching manufacture. This record establishes reviewed changes
 and bounded local validation; matching installed and live acceptance remain open.
 The completed source6599 package and installation remain preserved.
 
+At08:05 UTC the parent recovered the existing6999 Package controller/session47784
+without replacement. Its selected Python read/write counters and generated
+backend payload progressed; no manufacture completion is inferred from activity.
+Gibbs's report7d1bf94e is integrated asd1a5bf9a. Its37-file installed handoff
+is independently verified and preserved under
+`C:/rn-finalise-20261005/preserved-lanes/next-installed-20261006/recipes`, then
+deployed to`apps/desktop/.local/next-installed-20261006`. Manifest SHA256 is
+`e33d9c631f1bfc9d76083a1c77fbf8d1f65f077cf377257a18cced148ae06607`.
+No binder or installed journey has run from this preparation.
+
+The parent independently recorded the complete c7/6999 and6599/6999 source
+deltas and the closed existing synthetic recovery state under
+`C:/rn-finalise-20261005/parent-source-review-699938f2`. Source-review SHA256 is
+`058c955649bff2434c2a0cdc9dfae1a84ae4404e733587203a4d03e0d5f7313a`;
+retained-state SHA256 is
+`0e33b4b2af6dfc03c57e1164dd1949900aa38912058a888ce0aec38e9da60646`.
+The read-only immutable SQLite observation retained six documents/originals,
+seven passages, four facts, three assessment sessions and recovery72f6e060.
+Canonical hashes were unchanged across the observation; this is metadata and
+source qualification only, not current app, rebuild or normal-close acceptance.
+Gibbs now prepares a disjoint narrow freshness/correction installed follow-on
+while the parent owns manufacture, Install and the serial native slot.
+
 ## Performed installed observations
 
 The first6599 driver ended at07:05:45.951 UTC with exit-1073740791
