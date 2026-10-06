@@ -5,25 +5,43 @@ historical `SESSION_HANDOFF.md`. Preserve its receipts and observations.
 
 ## Current October 6 recovery delivery wave
 
+Matching6599 Package completed at **06:48:22 UTC** on October 6, followed by
+the parent's artifact review at **06:49:44 UTC**. Recovered Package session38280
+exited0; run `6599bf79-package-10296ae7` retains its complete backend inventory
+(39,253 files / 2,171,019,193 bytes). The matching unsigned Install session47596
+also exited0 at **06:58:45 UTC**, run `6599bf79-install-939d3a54`. Its actual
+receipt is `C:/Renulus-native-delivery/desktop-20261005/proofs/installer-aa008fcd/installer-evidence.json`;
+installed EXE/ASAR and source6599 match the package. This establishes installation,
+not app acceptance. The bound recovery retry is now running in session **9992**,
+driver root `C:/rn-finalise-20261005/parent-native-recovery-6599bf79-01`. Recover it
+before replacement; execution-binding SHA256 is
+`1ca18c0564c657ddc57b80b0e957699c24e0b4df1041fb6865e09c8bb524f1d3`.
+
 The follow-up 64-row gap triage is integrated and pushed as `dd806d3f`; see
 [the bounded remaining-flow map](finalise-gap-triage-20261006.md). It adds no
 admission requirement and changes no frozen production/test source. Its agent
 is closed and clean worktree removed, with the report/branch retained and
 `C:/rn-finalise-20261005/preserved-lanes/final-gap-triage-20261006/parent-retirement.json`
-recorded. No ignored handoff files existed. One new bounded Ultra lane,
-Linnaeus (`01a10fd3-effa-7370-b867-eccaa762f6da`), owns only a report and ignored
-installed-input/Flow/Updates recipe in
-`C:/rn-finalise-20261005/lanes/installed-gap-slice-20261006`. It prepares the
+recorded. No ignored handoff files existed. Linnaeus's bounded Ultra lane
+(`01a10fd3-effa-7370-b867-eccaa762f6da`) completed its report and ignored
+installed-input/Flow/Updates recipe; report integrated as `5d039b07`. It prepares the
 missing scanned-PDF, access and one deliberately selected free K01 check; no
 runtime, helper, provider, network or acceptance execution is admitted to the
 lane. The parent continues matching manufacture/Install/recovery and connected
 learning first. Accessibility-tree observations cannot claim spoken screen-reader
 testing, and a source baseline cannot claim educational review or live freshness.
+The agent is closed and its clean worktree removed after verified preservation.
+Operational files are deployed at `apps/desktop/.local/installed-gap-slice-20261006`;
+the preserved original and 28 public dependencies remain under
+`C:/rn-finalise-20261005/preserved-lanes/installed-gap-slice-20261006/checkpoints/015f6391`.
+Only three deployed dependency paths were resolved through the approved C node
+junction to physical paths; script bytes are unchanged. Use deployed manifest
+SHA256 `7da02cd44f6aa86dcbcafeb89cc717d73e48bb791f2fcd2f95bfe5b591e0337c`
+for the single later run after native admission.
 
 The accepted manufacture freeze is
-`6599bf796900e33cb1cb2319b5812ea4b8aa2a7b`. Package session **38280**, run
-`6599bf79-package-10296ae7`, remains active and must be recovered before any
-replacement. No matching6599 Install or native acceptance is claimed yet.
+`6599bf796900e33cb1cb2319b5812ea4b8aa2a7b`. Matching Package and Install have
+completed as recorded above; matching native acceptance remains pending.
 The production repair and its six focused checks/actual bundled-engine
 diagnostic are recorded in [the recovery correction](finalise-recovery-windows.md).
 
