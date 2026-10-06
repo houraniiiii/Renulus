@@ -131,5 +131,31 @@ C:/rn-finalise-20261005/preserved-lanes/next-installed-20261006.
 The freshness follow-on resumes only the admitted synthetic E Codex study after
 actual Probe/Journeys. Correction is confined to an owned C synthetic profile
 and needs actual eligible entry/revision/evidence/history identities. Neither
-recipe has executed. The new bounded audit lane owns its report only while the
-parent retains the serial manufacture/native/provider slot and final acceptance.
+recipe has executed. The parent retains the serial manufacture/native/provider
+slot and final acceptance.
+
+## Matching package terminal and one installation
+
+Actual Package47784 completed at09:45:34UTC on October6, exit0, exact accepted
+source699938f20efb6bbc2cf8df684cc5c6c3450e6eaf. Existing renderer, native and backend
+manufacture was retained. The final matching provenance SHA256 is
+9ab9e469ea4e925c72ec19531521a41ff95a00cea121c6bc7fb7a4d1fd34a2c4; controller receipt
+SHA256 is3d412741793855accf9b7cbe633fd1c6082b1ac62d7f8d3a83d913e33c3337af.
+The installer is1,010,355,641bytes, SHA256
+ce1ed76147585477412a8d5319d485fdb03c5e1f3daae2ed02c2ca6669261f5d. The package records
+19 helper assets/483,597,181bytes. Executable SHA256 is
+37e82a40e5143336ffca364d64e2f58e013411727d7a6455462ec53a31b1a802; ASAR SHA256 is
+02d8037b3e70d3ab3411c2a7f4a905ccf0cc984e1f506b9bfaa996b83e641ff8.
+This completed manufacture does not establish installed/runtime/live acceptance.
+
+The queued Install82750 wrapper failed its1800-second package wait before
+starting installation. That failure is preserved outside Git; the target was
+absent when recovered. The parent then started one matching Install95706/run
+699938f2-install-336d4498 at09:48:25UTC. NSIS42140 was actively extracting at09:53UTC;
+its completed receipt remains pending. No duplicate installation or proof begins.
+
+The final audit ec692cd2/76d021ee is integrated as44798f59/838c3d78. Its clean tree
+had no ignored sidecars and was retired after agent closure. All64 IDs/wording
+remain; the Study-specific warning is correctly classified as optional. Parent
+continues the actual recovery/Connected/selected-Codex/maintenance sequence, with
+one bounded guide lane editing RUNNING/USING_RENULUS while installation proceeds.
