@@ -10,13 +10,17 @@ The [original audit](finalise-audit.md) supplies all 64 IDs, order and verbatim
 requirement wording. Its historical receipts retain their original source and
 failure dispositions; this document updates their relevance to the accepted wave.
 
-Parent-supplied operational checkpoint: **October 6, 09:03 UTC**, actual Package
-session **47784** still running; diagnosis found slow ASAR dependency safety
-checks at **3435/4300**, not a deadlock. No completed 6999 Package/Install/native/
-connected/live/maintenance result has been supplied. Activity and preparation
-credit no terminal acceptance. The parent owns manufacture, installed payloads,
-serial native/live work and any later result amendment; this lane did not poll
-that work. No S0–S6 or complete-release pass is declared.
+Latest parent-supplied operational checkpoint: **October 6, 09:36 UTC**. The
+current builder produced `Renulus-Development-0.1.0-windows-x64-setup.exe`
+(**1,010,355,641 bytes**) and builder Node PID **24568** exited. Existing Package
+session **47784** is still completing final inventory/provenance; **Install 82750**
+is queued on that exact Package success. No completed 6999 Package/Install/native/
+connected/live/maintenance result has been supplied. Installer emission and
+builder exit credit no Package terminal acceptance. The earlier **09:03 UTC**
+diagnosis found slow ASAR dependency safety checks at **3435/4300**, not a
+deadlock; it remains a dated observation. The parent owns manufacture, installed
+payloads, serial native/live work and any later result amendment; this lane did
+not poll that work. No S0–S6 or complete-release pass is declared.
 
 The owner-selected scope remains an unsigned fresh isolated installation on the
 current Windows PC, bundled runtime with developer tools absent from app PATH,
@@ -109,8 +113,16 @@ The concrete source boundaries are:
   for later corrected-copy approval. [Correction report](finalise-update-correction-20261006.md)
   and C/U establish local feedback preservation. Failed/no-match sync remains
   incomplete. Study activities in [Study service](../../runtime/renulus/study/service.py)
-  still have no affected-source projection; Home's reviewed-entry list does not
-  fill that gap. History without citation references and derived-Memory source
+  have no affected-source projection; this is an **optional refinement**, with
+  no demonstrated current-content mislabel or bypass of existing notices. Study
+  reasons describe recorded assessment evidence, and Home already lists reviewed
+  Updates. Existing [assessment currency](../../runtime/renulus/assessment/currency.py)
+  and [notice rendering](../../apps/desktop/src/modules/assessment/SourceCurrencyNotice.tsx)
+  project affected-item/session/feedback/history annotations while retaining keys
+  and results. [Confirmed S5 acceptance](../planning/IMPLEMENTATION_PLAN.md#s5--current-evidence-and-reviewed-updates)
+  requires affected-learning and eligibility behavior, not a Study-specific
+  warning. Actual installed affected-item/feedback/history/eligibility proof
+  remains open. History without citation references and derived-Memory source
   correction are outside the new evidence-screening seam.
 
 ## Requirement ledger — unchanged 64 IDs and wording
@@ -201,7 +213,7 @@ not certify every requirement or request broad repeated tests/imports.
 | S5.01 | Bounded in-app source checks, explicit opt-in, durable successes/failures and topic-only queries | Local bounded opt-in topic-only scheduling/check persistence [R10](finalise-audit.md#r10); no actual source check in this wave. | G8: installed Check/Stop/shutdown/reopen, persisted success/failure and no raw-case query/background actor. Prepared single K01 check is unexecuted [NEXT](#next). |
 | S5.02 | Final/draft, chapter replacement, corrigenda, expiry, removal/retraction remain separate | Local invalidation now clears review/current flags for corrections, replacements, retractions, draft/preprint/removal [C](#c); publication/currency history [R10](finalise-audit.md#r10)/[R31](finalise-audit.md#r31). | G8: actual inspected relationships/corrected bytes and installed eligibility; dated publication/access/expiry/corrigendum holds remain. |
 | S5.03 | Detected changes separate from explicitly reviewed educational entries, with dates/source links | Local detected-vs-reviewed workflow [R10](finalise-audit.md#r10); [C](#c) keeps new metadata detection pending/unreviewed; form behavior [U](#u). | G8: actual eligible changed source → explicit educational review → dates/links/affected objectives. Public fetch or K01 baseline is not a reviewed update. |
-| S5.04 | Correction flags bank/learning history without rewriting keys/results | Local feedback re-review with recorded keys/answers/scores unchanged [C](#c); later cited Learn history screened [F](#f). | G4/G8: actual update→item/feedback/learning behavior. Study activities still lack source-status projection; update navigation is not the missing plan warning. |
+| S5.04 | Correction flags bank/learning history without rewriting keys/results | Local feedback re-review with recorded keys/answers/scores unchanged [C](#c); later cited Learn history screened [F](#f). | G4/G8: actual update→affected-item/feedback/history and eligibility effects with keys/results preserved remain unperformed. Study projection is optional refinement; no current-content mislabel or notice bypass was demonstrated and no Study-specific release gate is added. |
 | S5.05 | Offline/failed/stale/restricted reimport accurate, same-URL change and exact-copy review reproducible | Local exact edition+SHA256 reconfirmation, ordered invalidation/retry and explicit false flags [C](#c)/[U](#u); read-only current eligibility [F](#f). | G3/G8: installed stale/offline/restricted/same-URL/exact-copy behavior. Failed/no-match sync is incomplete; no unverified copy is promoted current. |
 
 ### S6 — Complete installed product
@@ -212,7 +224,7 @@ not certify every requirement or request broad repeated tests/imports.
 | S6.02 | Case → Explain → practice/Test → feedback → Memory → plan → Updates across domains | Real local vertical parts in [original ledger](finalise-audit.md#requirement-ledger--64-original-rows); this wave adds freshness/replay/correction parts [F](#f)/[C](#c)/[P](#p)/[U](#u). | G4/G5/G6/G8: actual multi-domain case→Explain→practice/Test→feedback→Memory→plan→Updates/return/resume; isolated subproofs do not compose the live loop. |
 | S6.03 | Completed relevant backend/renderer/regression on integrated source, failures/exclusions adjudicated | Bounded accepted new receipts [F](#f)/[C](#c)/[P](#p)/[U](#u), source-qualified below; historical identity accounting retained [R29](finalise-audit.md#r29)/[R34](finalise-audit.md#r34)/[R41](finalise-audit.md#r41)/[R43](finalise-audit.md#r43). | G2 accounting only: retain every failed invocation/exclusion and changed-source limit. No summed/full-green regression, all-engine claim or broad repeat run. |
 | S6.04 | One Flow system; keyboard, screen reader, text scaling/resize/reduced motion; loading/empty/errors | One Flow system with bounded focus/font/error scopes [R12](finalise-audit.md#r12)/[R22](finalise-audit.md#r22)/[R26](finalise-audit.md#r26); local source/form controls [P](#p)/[U](#u). | G8: actual keyboard/focus/screen-reader/scaling/resize/reduced-motion/loading/empty/error/original-reader observations; prepared slice is no access pass [NEXT](#next). |
-| S6.05 | New source freeze → exact payload → manufacture/install → normal lifecycle matching that source | Historical exact 035/c7/6599 manufacture/install [R42](finalise-audit.md#r42)/[R54](finalise-audit.md#r54)/[D](#d);6999 source accepted [WAVE](#wave). | G1/G3/G6/G7: Package 47784 has no supplied completion; matching 6999 Install, fresh target provenance/inventory/runtime and accepted normal lifecycle remain. |
+| S6.05 | New source freeze → exact payload → manufacture/install → normal lifecycle matching that source | Historical exact 035/c7/6599 manufacture/install [R42](finalise-audit.md#r42)/[R54](finalise-audit.md#r54)/[D](#d);6999 source accepted [WAVE](#wave). | G1/G3/G6/G7: at 09:36 UTC, Package 47784 is completing final inventory/provenance and Install 82750 is queued on exact success; fresh 6999 target provenance/inventory/runtime and accepted normal lifecycle remain. |
 | S6.06 | Unsigned current-PC delivery, update provenance, static distribution and complete notices | Unsigned current-PC decision [DECISIONS](../DECISIONS.md); historical 6599 unsigned extraction/provenance [D](#d). | G1/G7: actual 6999 delivery/update provenance, final notices/static distribution and accepted lifecycle. Signing/separate PC/VM remain optional. |
 | S6.07 | Install/upgrade/rollback, database migration, uninstall/data-retention and isolated installation identity | Actual035 six-phase migration/refusal [R45](finalise-audit.md#r45); historical 6599 extraction [D](#d);6999 maintenance/storage adaptation is prepared [NEXT](#next). | G7: mapped storage qualification, populated app upgrade/refusal, compatible rollback, isolated identity and uninstall/retention/reinstall/reopen; do not repeat or relabel035 storage. |
 | S6.08 | Backup/restore incl. Office/image originals, citations and both derived indexes; recovery disclosure | Bounded local/engine recovery [R37](finalise-audit.md#r37)/[R41](finalise-audit.md#r41); historical native Save/Cancel/exact ZIP [R47](finalise-audit.md#r47)/[R49](finalise-audit.md#r49); Retry parser local [P](#p). | G6: installed Retry/both indexes, Office/image/case originals/citations, deletion reconciliation and recovery disclosure. Failed rebuilds remain failed [H](#h). |
@@ -221,8 +233,9 @@ not certify every requirement or request broad repeated tests/imports.
 
 ## Remaining big product outcomes within existing gates
 
-1. **Matching delivery and usable recovery (G1/G3/G6).** Actual6999 manufacture
-   terminal/provenance and matching Install remain unsupplied. Then fresh target
+1. **Matching delivery and usable recovery (G1/G3/G6).** At the supplied 09:36 UTC
+   checkpoint, actual 6999 Package 47784 final inventory/provenance remains pending
+   and matching Install 82750 is queued on exact success. Then fresh target
    identity/full inventory/OS-only runtime, UI Retry on the already applied
    recovery 72f6e060, both indexes, six retained originals/hash/citations (PDF
    physical page 2, Office locators, no-text PNG), and the separate older-ZIP
@@ -261,10 +274,14 @@ not certify every requirement or request broad repeated tests/imports.
    and invalidation fixes are supported; actual no-upload evidence/failure,
    public source display/reopen and later excluded-citation nonreuse are not.
    Actual eligible changed publication → inspected educational review → dated
-   source/objective/item/feedback effects remains open. Correction/replacement/
-   draft/retraction/removal/stale/restricted states must keep historical keys/
-   scores intact and currentness unverified until the exact copy is reviewed.
-   Source-status projection onto Study activities remains an implementation gap.
+   source/objective/item/feedback/history and eligibility effects remain open.
+   Correction/replacement/draft/retraction/removal/stale/restricted states must
+   keep historical keys/scores intact and currentness unverified until the exact
+   copy is reviewed.
+   Source-status projection onto Study activities is optional refinement, with no
+   demonstrated current-content mislabel or notice bypass; it is not an additional
+   release gate. Actual S5 affected-item/feedback/history/eligibility proof remains
+   required through the existing surfaces.
    A single K01 publication baseline/check, navigation or dated OA body excerpt
    proves neither reviewed change nor latest-final/corrected-byte clearance.
    Keep the existing single-check scope; no additional catalogue sweep or paid
