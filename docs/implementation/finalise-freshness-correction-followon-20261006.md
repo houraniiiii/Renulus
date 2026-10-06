@@ -97,11 +97,16 @@ correction-reuse.md provides the supported Updates form/API recipe: notice revie
 invalidates confirmations, acknowledged Library status must be applied, and a
 separate inspected exact edition/original-SHA256 review can reconfirm only that
 copy. An unchanged correction relationship is retained without resubmitting the
-notice as a new invalidation. It also describes an actual freshness-worded reuse
-follow-up and preservation of prior stored message/score fields through supported
-reads. No existing score is recomputed or overwritten.
+notice as a new invalidation. Its optional supported current-only Library read
+can observe actual eligibility while preserving stored message/score fields.
+Correction is confined to the parent-bound owned C synthetic restored profile
+and parent existing C launch/close recipe. No correction touches E originals,
+real histories or any real publisher article; no existing score is recomputed
+or overwritten. The E driver remains solely admitted live freshness. No C model
+request, account setup or transfer of E state is prepared.
 
-This lane was not supplied an actual owned synthetic Updates entry, existing
+This lane was not supplied the exact current C synthetic restored-profile path
+with full-hash closed-state receipt, an actual C owned synthetic Updates entry, existing
 acquired/corrected revision and passage/edition/hash, inspected synthetic evidence
 reference, retained cited study/run/message or owned scored-session identities.
 There is no supported arbitrary entry-create route. Test fixtures are not installed
@@ -118,24 +123,29 @@ supply an authorised observable recipe if that exact claim is needed; it remains
 unperformed here. Derived learner memory and old uncited messages are outside this
 seam's proof scope. These missing inputs/observability are limitations, not new gates.
 
+Parent now reports the matching source snapshot created, source-review hash prefix
+058c9556 and retained-state prefix0e33b4b2 prepared, with no installed acceptance.
+These reported short prefixes are not usable full-hash actual bindings. Parent
+will provide complete paths/hashes and acceptance/live receipts at execution.
+
 ## Sealed ignored manifest for safe preservation
 
 Original lane root:
 C:/rn-finalise-20261005/lanes/next-installed-20261006/.local/freshness-correction-followon-20261006.
-Preserve all10 files,69,505 bytes. Eight payload files total67,640 bytes; manifest
+Preserve all10 files,70,874 bytes. Eight payload files total69,009 bytes; manifest
 is1,784 bytes and checksum81 bytes. manifest.json SHA256:
-a1489c5b90910f377eb47d6036b8f0bd1eb9411ff3d6857e6b62479360d333a1.
+8d50f08ebb1e9d57bf73851ee6811c7ed6a903ecfb8b5b4572515e61fd3f3f67.
 The manifest excludes itself/checksum to avoid a circular hash. source-pins.json
 records exact frozen source bytes, mirrored helper origins and adapted fragments.
 
 | Ignored relative file | Bytes | SHA256 |
 | --- | ---: | --- |
 | binding.template.json | 590 | 2b90d63530c380968944b0e753ba882de81d371aafe5555b5fb97acca02d4c24 |
-| correction-reuse.md | 10043 | 2e00ff14a24206216168c5742d34c42e0d38d94eab2883b73d74be78569ad658 |
+| correction-reuse.md | 10958 | 202f5dac71a92050a82da584ecbb4a4ca220c93eb46665b44e8100b56ce89a7a |
 | followon.mjs | 25878 | aeb44f34151fa715799a25a5c612d3e30a3de0954371f41fe0f51680b34998af |
 | helpers/owned-processes.ps1 | 3228 | 5e163a494a755708712bf5f2d023b37eedd137203b92cb144a34f9432d7950ff |
 | helpers/response-observation.mjs | 9379 | 1d43b348b137634169e6b86d7ac9fe6dbb1a363d4bfe18cf287be33125134f96 |
-| README.md | 7773 | abf8cd83e1a0897c529127ebafce9e3153f9ca290f9e9ef3bc1377c5b64d8961 |
+| README.md | 8227 | bd3ac295c69ddaa1b795f9d59a45d2272387b0068588106ae695e2407fb105c4 |
 | seal-preparation.ps1 | 6503 | 2ad16a00bd4d574e566b899576fb3e902ae70b3171bb0574b1f775a0edca456e |
 | source-pins.json | 4246 | 4d2d98bf9b93fcef498450b0893c74ae0a987a329de2ea3a510e03556033776e |
 
