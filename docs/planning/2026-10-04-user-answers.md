@@ -345,3 +345,16 @@ to remove signing and separate clean Windows PC/VM acceptance requirements.
 - Preserve historical signed-release/clean-machine planning and observations as
   dated evidence; the updated DECISIONS and implementation plan govern current
   acceptance. No subscription, stack, source-use or retention constraint changed.
+
+## October 6 local delivery with the live blocker
+
+The installed app's selected Codex GPT 6 Astra attempt returned
+`subscription_limit`. Asked whether to restore the existing connection or deliver
+with the blocker documented, the owner answered: **“Deliver with the live blocker.”**
+
+Complete the runnable local Windows handover with the observed acceptance scopes
+and limits. Successful generation, automatic capture and dependent live journeys
+stay unperformed; account access is not required for this handover. Preserve
+the original failed attempt and exact model/subscription constraints, with no
+retry, silent switch, fallback or Go activation. The decision supplies no live
+success or full product validation claim.

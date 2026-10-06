@@ -75,7 +75,9 @@ terminal remain unchanged. Use the local workflows while the limit is unresolved
 sign-in and **Check models** do not establish quota recovery. Go stays paused,
 with no automatic quota retry loop, model/subscription switch or paid generation
 fallback. See [the Probe02 record](finalise-live-blocker-699938f2.md).
-The owner's live-access decision remains unresolved.
+On October 6, 2026 the owner chose **delivery with the live blocker documented**.
+Successful generation, automatic capture and dependent live journeys remain
+unvalidated; restoring subscription access is future work.
 
 ## Learn and Test
 

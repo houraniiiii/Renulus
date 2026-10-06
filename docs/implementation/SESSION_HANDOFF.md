@@ -1,11 +1,24 @@
 # Session transfer — October 5, 2026
 
+Final October6 handover: the owner accepted the runnable local app with the
+selected Codex subscription_limit documented. See [delivery](DELIVERY_20261006.md)
+and [the final continuation](CONTINUATION_20261005.md#final-local-handover--october-6-2026).
+Ordinary queue02/03 now adds actual concurrent Library use and same-profile
+readiness after reopen with no reimports; original failures stay failed.
+Retrieval-policy reconciliation and queue preparation are integrated/retired;
+no C lane or owned check remains running. Preserve main and the held E
+supplement tree. Publish the scoped local handover and retire its single
+20-minute heartbeat; full/live work stays in GitHub and the64-row audit.
+The preceding checkpoints below remain historical.
+
 Latest checkpoint, October6: source699938f2 is locally installed/accepted and
 the normal shortcut selects it, preserving E learning/account data. Matching
 maintenance and its12.973s ordinary main/backend close passed; see
 [the current result](finalise-maintenance-699938f2.md). The selected Codex
 subscription_limit still blocks successful generation/capture and dependent
-live journeys. The active goal and draft PR13 are not complete. Recover the
+live journeys. On October 6 the owner chose **“Deliver with the live blocker.”**
+The runnable local handover is accepted on that basis; draft PR13 and full
+product validation remain open. Recover the
 current receipts before any further work; do not replay installation/imports.
 Reader03 additionally accepts actual saved Case PDF page1 and native Library
 200% fit/reachable controls, with unchanged selected records and5.59s ordinary

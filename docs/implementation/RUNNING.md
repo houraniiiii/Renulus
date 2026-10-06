@@ -99,15 +99,25 @@ remains preserved, with no selector or shortcut mutation repeated and no app
 launched by confirmation. Promotion and launcher confirmation are complete.
 The parent's `promotion.json` receipt has SHA256
 `ec8fcc3b751516378de7383dbab4b957025be3cc23e05ccf1290a0c333c58408`; see
-[the parent maintenance report](finalise-maintenance-699938f2.md). The owner's
-live-access decision remains unresolved; see [current continuation](CONTINUATION_20261005.md).
+[the parent maintenance report](finalise-maintenance-699938f2.md). The owner
+accepted local delivery with the live blocker on October 6; successful generation
+and automatic capture remain unvalidated. See [current continuation](CONTINUATION_20261005.md).
 
 The K01 result establishes dated discovery, not latest-final guidance. Accepted
 local installation does not establish successful live generation or capture;
 the full product goal remains open. Clinical image interpretation remains unproved.
-The installed gap observation found clipped controls at 200% zoom; full reflow
-and accessibility are not accepted. Earlier evidence remains in
+The earlier installed gap observation found clipped controls at 200% zoom.
+Reader03 subsequently accepted bounded native Library fit and reachable controls;
+complete accessibility remains unproved. Earlier evidence remains in
 [historical validation](final-validation.md).
+
+The [ordinary queue02/03 proof](finalise-ingestion-usability-699938f2.md#parent-acceptance)
+completed at **15:21:18.7990153 UTC** on October 6. Four Library actions responded
+during actual two-PDF processing; both same revisions became ready after reopen
+with no reimports. Parent reviewed and hash-checked three native images. Ordinary
+main/backend closes took **6.824/9.831 seconds**, with no owners remaining.
+The original02 aggregate remains failed at its reopen guard;03 executes only
+the unfinished reopen/readiness/close. Sustained corpus performance is unproved.
 
 ## Contributor startup
 

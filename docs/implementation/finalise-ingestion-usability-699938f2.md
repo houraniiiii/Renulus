@@ -1,5 +1,75 @@
 # One installed ordinary-queue usability proof — October 6, 2026
 
+## Parent acceptance
+
+**Bounded S2.14/G3 ordinary-queue usability and same-profile reopen are now
+accepted.** Product source remains699938f2. The owner accepted local delivery
+with the live blocker; this proof has no provider/live/full-product credit.
+
+Attempt01 failed at setup before any app launch/import: exclusive output mkdir
+encountered the environment folders created by ownership preflight. Parent
+reordered only that setup in the preserved02 preparation. Its original
+manifest/driver/logs/terminal remain unchanged and failed.
+
+The first actual execution02 ran October6 from15:05:46.3864721 to
+15:09:38.0708963UTC, terminal exit1. It imported one synthetic136-byte note
+anchor and admitted exactly two ordinary1,332-byte PDF originals below HTTP
+through the installed canonical repository, without ready rows, priority hints
+or engine doubles. Real bundled Docling/FastEmbed/LanceDB processed the queue.
+Four actual Library actions had processing both before and after: inspect
+status0.990s, filter/open anchor0.776s, refresh0.458s, retrieve/inspect exact
+anchor citation1.200s. At close one PDF revision was ready and the other
+processing. Main28300/backend34972 closed normally in6.8238877s, with no
+remaining/reused identities. The subsequent global serial-slot guard refused
+reopen; **02 remains failed**. No application defect or guard-failure cause
+is inferred from that refusal.
+
+After observing no Renulus native processes, parent prepared only the
+unfinished reopen/readiness/close in03. It reused02/p and its environment,
+anchor, originals and exact jobs; no acquisition, import, prior action or
+completed proof was repeated. Controller20272 ran15:17:47.9068761 to
+15:21:18.7990153UTC and exited0. Main26452/backend20412 used the matching
+installed app and existing synthetic profile. Both original PDF revisions
+became ready with3 passages each; the anchor retained1 passage. All exact
+document/revision/hash identities matched02; the same queue drained. Normal
+main/backend close took9.8313017s and the final Renulus process query was empty.
+Actual first-visible window was3.296s and renderer readiness148.839s; this
+small synthetic run does not establish a startup/performance target.
+
+Parent reviewed the three existing1384×921 native captures and independently
+matched their hashes. Processing/citation images show the ordinary queue and
+working controls, exact synthetic passage, rights/currentness and Open original.
+The reopened image shows3 available,0 queued/processing/failed/cancelled;
+the two PDF rows are below its fold, so exact identity/readiness is established
+separately by the receipt. No recapture or extra jobs were used.
+
+| Immutable evidence | SHA256 / disposition |
+| --- | --- |
+| `C:/rn-finalise-20261005/parent-ingestion-usability-699938f2-02/ingestion-usability-evidence.json` | `4a14e03ca8198364d342833720abe5d91d863ec7add40f053d9bf9caa100af65`,30,633bytes, failed; performed actions/close only. |
+| Adjacent02 `.terminal.json` | `0436a3bb01294dea86e44e7dd73cdd0c6760ee2f9b29d82e641ed59d9f73ebd9`,248bytes, exit1. |
+| `C:/rn-finalise-20261005/parent-ingestion-usability-699938f2-03/ingestion-usability-evidence.json` | `98fcb313c51bee14fb8087b03a3654f6393b42aa6294b13dc8efd31bfabeed23`,16,890bytes, observed-awaiting-parent-usability-review; no new imports. |
+| Adjacent03 `.terminal.json` | `3f73e65446357bcfa14d4038abb001389daba13ee120da466c14dff4db882fc7`,248bytes, exit0. |
+|03 `parent-review.json` | `3b62fad7c5ed5776301837437e7a1be3913117e9856cc0110669943c1702b148`; accepted-bounded-ordinary-queue-usability-and-same-profile-reopen. Pins eight receipt/controller/preparation files and all3 captures; previousFailureRelabelled=false/fullProductAccepted=false. |
+|02 processing/citation PNGs | `6adca82b90aa8f975445f692166b45a827f5ac43f795db9cf2dc91bdfc223c40` / `f23682f8c3944764af6808cab3a07e05c18460c38fd9257c9b97f0d3876152bf`. |
+|03 reopened PNG | `248bf22baa8dddf26ca770387da7d320d4188ad623706aa621c5e2d3a4caf901`. |
+
+Neither native picker/collected-corpus admission UX, sustained contention,
+expected-volume performance, broad OCR/currentness/accessibility nor
+temporary-case/live reexecution is accepted. No inventory rescan, K01 check,
+completed import/regression/manufacture/install or paid/provider work occurred.
+The only product-source differences from6999 remain the three known notice
+files; executable/runtime/renderer/content are unchanged.
+
+The preparation lane report a2f4fec3 is integrated as3d59a0d9; its four ignored
+files/31,963bytes were hash-preserved before clean worktree retirement.
+`refs/renulus/retired/ingestion-final-20261006` and the external retirement
+receipt retain its source. All02/03 preparation, logs, terminals, captures,
+synthetic state and original failed01 remain outside the retired worktree.
+The following lane preparation is historical; its unexecuted/pending statements
+describe the lane's original handoff, not this parent acceptance.
+
+## Prepared lane handoff (history)
+
 **S2.14/G3 still needs one concurrent Library/ordinary-queue observation.**
 The prepared recipe is unexecuted and syntax-unverified. Parent owns review,
 operational fixes and the free serial native/helper slot. No release gate is added.

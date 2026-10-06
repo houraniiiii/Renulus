@@ -8,6 +8,28 @@ actual Windows DPAPI and unperformed live keyed/account/billing acceptance.
 The parent owns admission and any audit/GitHub change. Neither row nor complete
 product acceptance is declared closed here.
 
+## Parent admission on October 6
+
+After integrating source228f8554 as3b92e80c, the parent opened the original b4
+receipts at their existing C: paths. All **63 selected retrieval IDs** have one
+passing outcome, exactly one passing setup/call/teardown (**189 phase events**)
+and matching passing JUnit names. The native DPAPI ID is explicitly excluded.
+Original JUnit/module-source digests match the anchors below; b4
+source_unchanged=false, accepted_stage_pass=false and pytest exit1 are preserved.
+No test was executed. The source-relevant protection subset below is admitted
+as controlled historical evidence; changed import/evidence acquisition and
+current whole-runtime behavior are not transferred as a fresh pass.
+
+Parent qualification receipt:
+C:/Renulus-native-delivery/desktop-20261005/repo/.local/github-checkpoint-5227cc6b/retrieval-qualification.json,
+SHA256216a60475debbe0ee17470231a87990a38d0a7ebb512638bee5f072c4c19bec6.
+The original native DPAPI receipt remains unavailable in this reconciliation;
+its historical reported scope and live billing limits below remain unchanged.
+Source commit/ref is preserved at refs/renulus/retired/retrieval-controls-final-20261006.
+The closed, clean lane was removed with zero ignored files; retirement receipt
+C:/rn-finalise-20261005/preserved-lanes/retrieval-controls-final-20261006/retirement/228f8554/retirement.json
+has SHA2566aa73386021decfb4db30143ba071621c5effffe3a03f01bd3af4a7da6672023.
+
 Prepared only in `C:/rn-finalise-20261005/lanes/retrieval-controls-final-20261006`,
 branch `codex/retrieval-controls-final-20261006`, clean base
 `5227cc6bc2366689503e9785ace1f68be29eaddb`. Installed product target:

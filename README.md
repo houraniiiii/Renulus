@@ -12,14 +12,23 @@ This repository contains the application, the confirmed direction, selected Flow
 interface, original teaching packs and dated implementation evidence. The local
 backend and renderer connect study discussions, document retrieval, cases,
 assessment, learner memory, study planning and source updates. The current
-integration build is on `build/renulus-integration`; Windows packaging and the
-remaining connected journeys are tracked in the live implementation queue.
+integration build is on `build/renulus-integration`. The matching Windows app
+is installed on the owner's PC and selected by the Renulus desktop shortcut.
+Installation, recovery, originals, deletion handling, native reader and ordinary
+shutdown/reopen have accepted evidence within the recorded local scopes.
+The October 6, 2026 selected Codex request returned `subscription_limit`;
+successful generation, automatic learning capture and dependent live journeys
+remain unproved. On October 6 the owner chose local delivery with this blocker
+documented; draft PR #13 tracks the remaining full product validation. See the
+[running guide](docs/implementation/RUNNING.md) and
+[requirement audit](docs/implementation/finalise-audit-699938f2.md).
 
 The repository is `houraniiiii/Renulus`, with independent Git history.
 `Start-Renulus.cmd` opens this learning app. The archived clinical MVP has its own
 explicit reference launcher and is separate from Renulus implementation evidence.
 
 - [Project brief](docs/PROJECT_BRIEF.md) — audience, purpose and current status.
+- [Local Windows handover](docs/implementation/DELIVERY_20261006.md) — installed app, installer, notice companion and accepted live blocker.
 - [Run the app](docs/implementation/RUNNING.md) — Windows delivery and contributor startup.
 - [Use Renulus](docs/implementation/USING_RENULUS.md) — subscriptions, study, Library, Cases, Memory and recovery.
 - [Implementation run](docs/implementation/EXECUTION.md) — live queue, ownership and evidence rules.

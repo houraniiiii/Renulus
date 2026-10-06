@@ -1,6 +1,6 @@
 # Renulus decisions
 
-Updated on 2026-10-05. The [recorded user answers](planning/2026-10-04-user-answers.md)
+Updated on 2026-10-06. The [recorded user answers](planning/2026-10-04-user-answers.md)
 are the evidence for the new product decisions. Earlier assistant suggestions
 remain proposals unless accepted here.
 
@@ -51,6 +51,7 @@ remain proposals unless accepted here.
 | Supermemory | Excluded from adoption by the user in the later 2026-10-04 research round; the reusable engine itself must be open source. Earlier evaluation remains dated evidence. |
 | Delivery standard | Real working product. Prototypes inform production work; mock screens, hardcoded responses and disconnected modules do not establish completion. |
 | Current Windows acceptance | On October 5, 2026 the owner chose an unsigned build installed and validated on the current Windows PC. A signing identity and a separate clean PC/VM are not required for this delivery. Matching source/artifact provenance, bundled runtime with developer tools absent from the app PATH, installation, shutdown/reopen, recovery and connected journeys remain required. Signing and separate clean-machine tests are optional future distribution work. |
+| Current delivery disposition | On October 6, 2026 the owner instructed: “Deliver with the live blocker.” Deliver the runnable local Windows app with the selected Codex `subscription_limit` documented. Successful generation, automatic capture and dependent live journeys remain unperformed and receive no success credit. This accepts the blocked live disposition for this handover; it does not establish full product or live validation. No quota retry, subscription/model fallback or Go activation is required or authorised by this decision. |
 | Work organisation | Staged vertical implementation slices, clear module ownership, parallel worktree plan and multiple adversarial review waves. |
 | Licensing | MIT for Renulus's own code; CC BY 4.0 for original Renulus teaching content. Permissive commercial reuse with attribution; third-party terms remain independent. |
 | Design workflow | Figma with Impeccable and Interface Design. |

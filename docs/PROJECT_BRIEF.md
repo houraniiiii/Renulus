@@ -103,9 +103,15 @@ acceptance; an external review panel is not a prerequisite for starting work.
 The working integration build now has the Flow renderer, managed local API,
 attributed Hermes routes and canonical SQLite records. Learn, Library, Cases,
 reviewed Test/generated practice, Memory, Today/study planning and Updates have
-real service implementations. Native packaging and combined delivery checks
-continue in parallel; see [the implementation run](implementation/EXECUTION.md)
-and [startup guidance](implementation/RUNNING.md).
+real service implementations. The matching Windows app is installed and selected
+by the normal shortcut, with bounded local installation, recovery, originals,
+deletion, reader and ordinary lifecycle acceptance. The selected Codex request
+on October 6, 2026 returned `subscription_limit`; successful generation and
+automatic capture remain unproved. On October 6 the owner accepted local delivery
+with that blocker documented; full product and live acceptance remain unproved.
+See [the implementation run](implementation/EXECUTION.md),
+[startup guidance](implementation/RUNNING.md) and
+[requirement audit](implementation/finalise-audit-699938f2.md).
 The inherited clinical MVP and batch/research project remain separately archived.
 Their code and checks do not establish Renulus's functionality or effectiveness.
 

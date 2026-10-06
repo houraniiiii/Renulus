@@ -1,5 +1,48 @@
 # Current delivery continuation — October 5, 2026
 
+## Final local handover — October 6, 2026
+
+The owner resolved the access decision with **“Deliver with the live blocker.”**
+The installed699938f2 app and normal shortcut are the accepted local delivery;
+the [handover](DELIVERY_20261006.md) supplies startup, installer/notice companion
+and limitations. This concludes the selected local handover, with full product
+and live validation still open in the64-row audit and draft PR13. Successful
+generation/capture flags remain false. No quota retry, fallback or Go activation
+was made. Signing/separate-clean-PC requirements remain removed under October5.
+
+The final ordinary-queue02/03 proof is accepted at its bounded scope.
+Continuation03 exited0 at15:21:18.7990153UTC: both exact ordinary PDF revisions
+became ready after reopening02/p, without reimports. Four Library actions
+overlapped processing in02; three native captures were reviewed/hash-checked.
+Ordinary main/backend closes took6.8238877/9.8313017s; final native processes
+were absent. Original02 remains failed at its reopen guard and01 remains a
+pre-launch setup failure. [Parent review](finalise-ingestion-usability-699938f2.md#parent-acceptance)
+SHA2563b62fad7c5ed5776301837437e7a1be3913117e9856cc0110669943c1702b148
+separates performed/retained origins and gives no full/live or scaling credit.
+
+Retrieval-controls report228f8554 is integrated as3b92e80c. Parent independently
+reconciled63 passing selected IDs,189 passing events and exact JUnit names
+against the original b4 receipts; the native DPAPI ID was excluded.
+The original broad run remains exit1/source_unchanged=false/accepted_stage_pass=false.
+Qualified controlled-policy evidence receives no whole-runtime/live-billing
+credit. [The report](finalise-retrieval-controls-699938f2.md) retains parent
+qualification216a60475debbe0ee17470231a87990a38d0a7ebb512638bee5f072c4c19bec6.
+Its clean worktree and the ingestion-preparation worktree are retired after
+preserving refs/ignored receipts, and both agents are closed. No C lane or
+owned check remains running; only main C and the held E supplement tree remain.
+
+Executable/backend/renderer/content are unchanged from699938f2; the three
+known licence/notice files are the only product-tree differences. Existing
+installation, recovery, connected, scanned-PDF, maintenance, reader and capacity
+receipts retain their scopes. E raw/profile/account data, inherited.vite cache,
+all earlier failures and unrelated PID38448/port18765 remain preserved.
+Issue12 holds the scoped handover; issues1/2/3/5/7/9 and draft PR13 retain
+broader/full/live work. After publishing this handover, retire the single
+20-minute renulus-final-delivery heartbeat and complete the local-delivery goal
+under the owner's accepted blocker disposition. This is no S0–S6/full-product pass.
+The latest section below is the preceding checkpoint; earlier timings and
+historical lane states retain their original meaning.
+
 ## Latest October 6 local delivery
 
 Matching source699938f2 is accepted for local installed use after actual
@@ -19,8 +62,9 @@ workloads were repeated. Both earlier failed aggregates remain failed.
 
 The actual selected Codex gpt-6-astra Probe02 returned subscription_limit.
 There is no successful live answer/capture or dependent image/Journeys/freshness/
-correction acceptance. The access question remains pending; no quota retry,
-account/model fallback or Go activation occurred. The active end-to-end goal
+correction acceptance. On October 6 the owner answered: **“Deliver with the live blocker.”**
+No quota retry, account/model fallback or Go activation occurred. This handover
+accepts the runnable local delivery with the blocker; full product validation
 and draft PR13 remain open. The normal launcher is a locally accepted runnable
 delivery, with explicit false full-product/generation/capture validation flags.
 The [64-row audit](finalise-audit-699938f2.md) retains every requirement and the
@@ -63,8 +107,8 @@ renderer, runtime, engines and content remain frozen699938f2; later source
 changes are documentation and scoped public licence notices. No completed
 import, K01 check, regression, manufacture or installation was repeated.
 
-Remaining priority is the already pending live-access decision: the last
-selected Codex Astra Probe02 returned subscription_limit. There is no successful
+The live-access decision is resolved: the owner accepted delivery with the
+selected Codex Astra Probe02 subscription_limit documented. There is no successful
 generation, automatic capture, image/Journeys/freshness/correction acceptance.
 Do not assume access restored, repeat quota requests, switch subscriptions or
 activate paused Go. Recover accepted receipts rather than repeating the local

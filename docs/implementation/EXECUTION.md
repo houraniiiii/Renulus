@@ -1,5 +1,16 @@
 # Renulus implementation run
 
+Final local handover October6: [the delivered app](DELIVERY_20261006.md) follows
+the owner's explicit acceptance of the live blocker. The final ordinary
+queue02/03 proof passed its bounded parent review: concurrent Library controls,
+same revisions ready after reopen, no reimports and normal physical closes.
+See [receipt-qualified queue acceptance](finalise-ingestion-usability-699938f2.md#parent-acceptance).
+All C lanes are integrated/retired with commits/ignored receipts preserved;
+only the main checkout and held E supplement tree remain. Issue12 is scoped
+to this accepted local handover. Full/live work remains in1/2/3/5/7/9 and
+draft PR13; no broader requirement or failed aggregate is silently passed.
+At publication, stop the one20-minute heartbeat for this handover.
+
 Current October6 delivery: matching699938f2 local installed acceptance and
 maintenance are recorded in [the maintenance result](finalise-maintenance-699938f2.md).
 The normal C launcher/owned shortcut selects that app and preserves the E
@@ -11,10 +22,11 @@ the final wave and retired after preserving their commits/receipts.
 
 The selected Codex gpt-6-astra run returned subscription_limit; successful
 generation/automatic capture and dependent live journeys remain unperformed.
-Go stays paused. No source, account or model fallback is authorised. Draft PR13
-and the end-to-end goal remain open; [the exact64-row audit](finalise-audit-699938f2.md)
-records accepted local scopes and limitations. Exactly one20-minute heartbeat
-remains active. The earlier timeline below is preserved history.
+Go stays paused. No source, account or model fallback is authorised. On October 6
+the owner chose **“Deliver with the live blocker.”** The local handover follows
+that decision; full product validation and draft PR13 remain open.
+[The exact64-row audit](finalise-audit-699938f2.md) records accepted local scopes
+and limitations. The earlier timeline below is preserved history.
 
 Started October 4, 2026, 19:21 UTC (21:21 Warsaw). Target work window ends
 October 5, 2026, 03:21 UTC (05:21 Warsaw). The user authorised implementation,
