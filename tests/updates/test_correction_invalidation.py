@@ -158,7 +158,7 @@ def test_correction_refreshes_real_feedback_without_rewriting_committed_answers_
         tables = (("assessment_attempts", "id"), ("assessment_commands", "idempotency_key"),
                   ("assessment_items", "id"), ("learning_evidence", "id"),
                   ("content_question_versions", "question_id,version"))
-        snapshots = {table: db.fetch_all("SELECT * FROM " + table + " ORDER BY order) for table, order in tables}
+        snapshots = {table: db.fetch_all("SELECT * FROM " + table + " ORDER BY " + order) for table, order in tables}
         cited = {citation["source_id"] for citation in question["sources"]}
         source = next(row for row in question["source_records"] if row["register_id"] == "K01" and row["id"] in cited)
         service = app.state.services.registry["updates"]
@@ -171,4 +171,4 @@ def test_correction_refreshes_real_feedback_without_rewriting_committed_answers_
         assert replay["feedback"]["correct"] == original_result["feedback"]["correct"]
         assert replay["feedback"]["committed_at"] == original_result["feedback"]["committed_at"]
         assert replay["session"]["scores"] == original_result["session"]["scores"]
-        assert {table: db.fetch_all("SELECT * FROM " + table + " ORDER BY order) for table, order in tables} == snapshots
+        assert {table: db.fetch_all("SELECT * FROM " + table + " ORDER BY " + order) for table, order in tables} == snapshots
