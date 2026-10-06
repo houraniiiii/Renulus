@@ -106,6 +106,17 @@ result or clinical-performance result is established by this cleanup.
 
 ## Dated evidence
 
+On October 6, 2026 the app-scoped development controller completed a real
+39-operation MCP journey with hidden, unfocused windows, synthetic Case
+save/reopen without duplication, ESENeph track selection, cancelled native
+backup and owned shutdown/disconnect cleanup. An interactive local MCP
+client separately completed seven Library/control operations and normal
+close. This is the default development control path while the owner uses
+the PC. Existing-chat MCP code caching is recorded with a validated local
+client alternative. These receipts establish source-app control; physical
+dialogs, installed/live generation and PDF/image journeys keep separate
+acceptance. See [the control report](implementation/app-control-20261006.md).
+
 On October 6, 2026 the owner requested removal of image-input capability probes
 and selection from the exact approved models inside Renulus. Codex model
 catalogue presence is advisory: an approved exact model may be selected even

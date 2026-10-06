@@ -80,3 +80,6 @@ work. Keep edits scoped to the user's current request.
   focus(), bringToFront() or foreground-window helpers for these checks.
   Physical Windows dialogs, installation and external handoffs need their
   separately scoped native acceptance; hidden tests do not prove them.
+  If this chat cached an older MCP connection, use
+  `tools/renulus-control/client.mjs` with the documented fixed configuration.
+  It sends the same MCP requests without desktop input.

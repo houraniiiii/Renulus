@@ -25,14 +25,14 @@ never start Electron, Python, providers or real ingestion.
 Source mode, after the parent builds the renderer and native main:
 
 ```powershell
-node C:/rn-finalise-20261005/lanes/renulus-control-20261006/tools/renulus-control/server.mjs --repo C:/Renulus-native-delivery/desktop-20261005/repo --python C:/path/to/dev/python.exe --state-root C:/rn-control --helper-assets C:/path/to/reviewed/public/helper-assets
+node C:/Renulus-native-delivery/desktop-20261005/repo/tools/renulus-control/server.mjs --repo C:/Renulus-native-delivery/desktop-20261005/repo --python C:/path/to/dev/python.exe --state-root C:/rn-control --helper-assets C:/path/to/reviewed/public/helper-assets
 ```
 
 Replace the example Python/helper paths with the parent's prepared public inputs.
 Packaged mode uses the bundled Python/helpers, so --python is optional:
 
 ```powershell
-node C:/rn-finalise-20261005/lanes/renulus-control-20261006/tools/renulus-control/server.mjs --repo C:/Renulus-native-delivery/desktop-20261005/repo --executable C:/path/to/background-build/Renulus.exe --state-root C:/rn-control
+node C:/Renulus-native-delivery/desktop-20261005/repo/tools/renulus-control/server.mjs --repo C:/Renulus-native-delivery/desktop-20261005/repo --executable C:/path/to/background-build/Renulus.exe --state-root C:/rn-control
 ```
 
 | CLI option | Contract |
@@ -69,12 +69,31 @@ RENULUS_BACKGROUND_OWNER_PID:String(process.pid). No inherited account paths,
 keys, proxies, session token, backend attachment or NODE_OPTIONS are forwarded.
 The PID belongs to Electron main, not the Python backend environment.
 
+The local `client.mjs` uses the same fixed CLI configuration and MCP server.
+It is available when an already-open Codex chat cached older server code.
+Start it with `node client.mjs` and the same options shown above. Send one
+JSON request per stdin line, for example:
+
+```json
+{"name":"renulus_start","arguments":{}}
+{"name":"renulus_click","arguments":{"locator":{"role":"link","name":"Library"}}}
+{"name":"renulus_snapshot","arguments":{}}
+{"name":"renulus_screenshot","arguments":{}}
+{"name":"renulus_close","arguments":{}}
+```
+
+Requests run in order. The client prints JSON results and screenshot paths,
+without dumping image bytes; use the returned PNG for visual inspection.
+EOF disconnects the session. Explicit close returns the normal shutdown
+receipt before disconnect. An updated MCP module needs a fresh server
+connection; rebuilding/restarting the test app alone does not reload it.
+
 ## Tools and schemas
 
 A locator is exactly one of these strict objects:
 
 ```json
-{"role":"button","name":"Cases"}
+{"role":"link","name":"Cases"}
 {"css":"[data-testid=\"example\"]"}
 ```
 
@@ -89,7 +108,7 @@ row, cell and img. Names and CSS are bounded to 512 characters.
 | --- | --- |
 | renulus_start | {} |
 | renulus_snapshot | {}; bounded ARIA snapshot |
-| renulus_click | {"locator":{"role":"button","name":"Cases"}} |
+| renulus_click | {"locator":{"role":"link","name":"Cases"}} |
 | renulus_fill | {"locator":{"role":"textbox","name":"Case notes"},"value":"Synthetic educational case"}; at most 4096 characters |
 | renulus_press | {"locator":{"role":"textbox","name":"Case notes"},"key":"Enter"} |
 | renulus_select | {"locator":{"role":"combobox","name":"Topic"},"value":"ckd"}; exactly one of value or label |
@@ -141,6 +160,10 @@ every 150 ms and before/after actions. Main/profile/parent/owner PID, sandbox,
 unfocusability and backgroundThrottling:false are checked. Read-only Windows
 CIM queries verify observed main/backend executable, creation and parent identities.
 No global window inventory or unrelated process kill is performed.
+Runtime throttling is read through webContents.getBackgroundThrottling();
+Electron 44 omits it from getLastWebPreferences. The app's session filter
+covers startup; the controller adds its exact-origin filter after verified
+Flow readiness, without accessing an initial navigation's unavailable frame.
 
 ElectronApplication.close() uses normal app quit; verified main/backend exit is
 required. Surviving/unverifiable children are failures. Essential cleanup starts
@@ -164,6 +187,10 @@ redaction. Evidence is retained for review, not deleted on close.
 Worker checks cover dependency installation, syntax and mock Node tests. The
 parent owns actual stdio handshake, hidden native UI, fresh pixels, packaged
 build and abrupt-disconnect acceptance. No native launch occurs in worker tests.
+Parent source acceptance now includes the real 39-operation MCP journey and
+seven-operation interactive client check. See
+[the dated report](../../docs/implementation/app-control-20261006.md) for exact
+receipts, preserved failures and the remaining installed/live boundaries.
 
 Primary API references checked on October 6, 2026: Playwright ElectronApplication,
 Electron launch and locator/ariaSnapshot documentation at playwright.dev;

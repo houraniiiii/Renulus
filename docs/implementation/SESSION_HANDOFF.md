@@ -1,5 +1,17 @@
 # Session transfer — October 5, 2026
 
+Latest development control checkpoint, October 6: use hidden app-scoped
+MCP/Playwright control and the owned synthetic backend/profile. The real
+39-operation source journey and seven-operation local client passed; read
+[the control report](app-control-20261006.md) and [operating guide](APP_CONTROL.md).
+The current chat's old MCP connection needs a fresh connection; the validated
+local stdio client works immediately without Computer Use. Frozen model-fix
+02cd88e1 directory manufacture/deployment and both backend inventories have
+completed, but matching installed acceptance and launcher promotion remain
+unperformed. The normal launcher still selects699938f2 and E personal data.
+Recover receipts before any further native/live work. No heartbeat was
+recreated for this scoped development change.
+
 Final October6 handover: the owner accepted the runnable local app with the
 selected Codex subscription_limit documented. See [delivery](DELIVERY_20261006.md)
 and [the final continuation](CONTINUATION_20261005.md#final-local-handover--october-6-2026).

@@ -12,6 +12,12 @@ It does not attach to the owner's open app, import an account, copy credentials
 or select a different subscription/model. Its default run is local UI testing;
 live generation still needs separately authorised account acceptance.
 
+The real source-app MCP journey is accepted at its recorded scope: 39 tool
+operations, five screenshots, explicit synthetic Case save/reopen, track
+selection and owned cleanup. The local interactive client adds seven actual
+Library/control operations and a normal close. Read
+[the October 6 report](app-control-20261006.md) before repeating checks.
+
 ## Setup and operation
 
 Install the pinned development dependencies with
@@ -27,6 +33,25 @@ controller's synthetic profile. Close stops its app and backend and retains
 evidence. Use the errors tool after a journey. Do not add focus(), bringToFront(),
 SetForegroundWindow, OS key/mouse helpers or the legacy foreground dialog scripts
 to this path.
+
+The owner's current Codex project configuration is in
+`C:/Users/karol/Documents/t3-workspaces/Renulus/.codex/config.toml`; it points
+to the active C checkout. A chat which loaded the earlier MCP code needs a
+fresh server connection. The current chat's cached connection returned
+`Transport closed` after its verified idle old servers were stopped. This
+does not require controlling or restarting the user's desktop. Use the
+validated local client immediately:
+
+```powershell
+node tools/renulus-control/client.mjs --repo C:/Renulus-native-delivery/desktop-20261005/repo --python C:/Users/karol/Documents/t3-workspaces/Renulus-wt-integration/.venv/Scripts/python.exe --state-root C:/rn-control --helper-assets C:/Renulus-native-delivery/desktop-20261005/payloads/backend-699938f2/helper-assets
+```
+
+Send `{"name":"renulus_start","arguments":{}}`, then the documented
+tool requests as individual stdin lines. The client prints results and
+captures to external files. Use `renulus_close` before EOF. A new client
+reads the latest server code; `renulus_restart` loads the latest built app
+with the same owned synthetic profile. Input files are suppressed in this
+initial toolset; no file-upload or arbitrary evaluation tool is exposed.
 
 Screenshots use Electron's capturePage with stayHidden enabled. The controller
 checks its windows for visibility/focus and keeps hidden rendering unthrottled.

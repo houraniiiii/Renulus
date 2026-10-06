@@ -16,10 +16,12 @@ integration build is on `build/renulus-integration`. The matching Windows app
 is installed on the owner's PC and selected by the Renulus desktop shortcut.
 Installation, recovery, originals, deletion handling, native reader and ordinary
 shutdown/reopen have accepted evidence within the recorded local scopes.
-The October 6, 2026 selected Codex request returned `subscription_limit`;
-successful generation, automatic learning capture and dependent live journeys
-remain unproved. On October 6 the owner chose local delivery with this blocker
-documented; draft PR #13 tracks the remaining full product validation. See the
+The owner accepted that local handover on October 6, 2026 with the earlier
+Codex `subscription_limit` documented. Later that day an exact `gpt-6.1-sol`
+streaming diagnostic succeeded on the existing connection. Source commit
+`02cd88e1` fixes Renulus's erroneous catalogue gate and exact model selection;
+matching installed Learn, automatic capture and dependent live journeys remain
+unproved. Draft PR #13 tracks that validation. See the
 [running guide](docs/implementation/RUNNING.md) and
 [requirement audit](docs/implementation/finalise-audit-699938f2.md).
 
@@ -30,6 +32,7 @@ explicit reference launcher and is separate from Renulus implementation evidence
 - [Project brief](docs/PROJECT_BRIEF.md) — audience, purpose and current status.
 - [Local Windows handover](docs/implementation/DELIVERY_20261006.md) — installed app, installer, notice companion and accepted live blocker.
 - [Run the app](docs/implementation/RUNNING.md) — Windows delivery and contributor startup.
+- [Control the development app](docs/implementation/APP_CONTROL.md) — hidden app-scoped MCP/Playwright input and screenshots while the owner uses this PC.
 - [Use Renulus](docs/implementation/USING_RENULUS.md) — subscriptions, study, Library, Cases, Memory and recovery.
 - [Implementation run](docs/implementation/EXECUTION.md) — live queue, ownership and evidence rules.
 - [Decisions](docs/DECISIONS.md) — confirmed choices and unresolved work.
