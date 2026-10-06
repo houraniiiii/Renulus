@@ -8,7 +8,7 @@ type Availability = 'unknown' | 'available' | 'unavailable' | 'account_unsupport
 type Capability = 'unknown' | 'supported' | 'account_unsupported';
 interface Model { id: string; availability: Availability; text_input: Capability; image_input: Capability }
 interface Connection { provider: Provider; status: string; allowed_models: string[]; models: Model[]; learning_use?: { status: string; generation_allowed: boolean } }
-interface Connections { selected_provider: Provider | null; connections: Connection[] }
+interface Connections { selected_provider: Provider | null; selected_models?: Partial<Record<Provider, string | null>>; connections: Connection[] }
 const approved = { codex: ['gpt-6.1-sol', 'gpt-6-astra', 'gpt-6-luna'], 'opencode-go': ['mimo-v2.6-pro', 'deepseek-v4.1-flash'] };
 const authorization = 'https://auth.openai.com/api/accounts/authorize?state=SYNTHETIC';
 const loginPath = '/api/v1/connections/codex/login/synthetic-login';
@@ -27,7 +27,7 @@ let publicUnavailable: boolean;
 
 function connection(provider: Provider, state = 'disconnected'): Connection {
   return { provider, status: state, allowed_models: approved[provider], models: approved[provider].map(id => ({
-    id, availability: state === 'connected' ? 'available' : state === 'no_allowed_models' ? 'unavailable' : 'unknown',
+    id, availability: provider === 'codex' && state !== 'disconnected' ? 'available' : state === 'connected' ? 'available' : state === 'no_allowed_models' ? 'unavailable' : 'unknown',
     text_input: state === 'no_allowed_models' ? 'account_unsupported' : 'unknown', image_input: state === 'no_allowed_models' ? 'account_unsupported' : 'unknown',
   })) };
 }
@@ -65,7 +65,10 @@ beforeEach(() => {
     if (loginMatch && method === 'GET') return status(decodeURIComponent(loginMatch[1]));
     if (loginMatch && method === 'DELETE') return cancel(decodeURIComponent(loginMatch[1]));
     if (url === '/api/v1/connections/opencode-go' && method === 'POST') return go();
-    if (url === '/api/v1/connections/select' && method === 'POST') { current.selected_provider = JSON.parse(options!.body as string).provider; return json(current); }
+    if (url === '/api/v1/connections/select' && method === 'POST') {
+      const body = JSON.parse(options!.body as string); current.selected_provider = body.provider;
+      current.selected_models = { ...current.selected_models, [body.provider]: body.model ?? null }; return json(current);
+    }
     const providerMatch = String(url).match(/^\/api\/v1\/connections\/(codex|opencode-go)(\/refresh)?$/);
     if (providerMatch && providerMatch[2] && method === 'POST') return refresh(providerMatch[1] as Provider);
     if (providerMatch && !providerMatch[2] && method === 'DELETE') return disconnect(providerMatch[1] as Provider);
@@ -87,7 +90,7 @@ describe('subscription status and explicit model selection', () => {
     await mount();
     expect(screen.getAllByText('Not connected')).toHaveLength(2);
     expect(screen.queryByText('Selected')).toBeNull();
-    expect(screen.getAllByText('Availability not checked')).toHaveLength(5);
+    expect(screen.getAllByText('Connect account')).toHaveLength(5);
     Object.values(approved).flat().forEach(id => expect(screen.getByText(id)).toBeTruthy());
     expect(request.mock.calls.map(([url]) => url)).toEqual(['/api/v1/health', '/api/v1/connections']);
     expect(screen.queryByRole('button', { name: /^Use / })).toBeNull();
@@ -96,7 +99,7 @@ describe('subscription status and explicit model selection', () => {
     setConnection('codex', state); await mount();
     expect(subscription('codex').getByRole('button', { name: 'Check models' })).toBeTruthy();
     expect(subscription('codex').getByRole('button', { name: 'Disconnect' })).toBeTruthy();
-    expect(subscription('codex').queryByRole('button', { name: 'Use Codex' })).toBeNull();
+    expect(subscription('codex').getByRole('button', { name: 'Use Codex' })).toBeTruthy();
     expect(subscription('codex').queryByText('Account connected')).toBeNull();
   });
   it('shows catalogue absence and account rejections separately from accepted input requests', async () => {
@@ -107,9 +110,9 @@ describe('subscription status and explicit model selection', () => {
     current.connections[0].models.push({ id: 'UNAPPROVED_SYNTHETIC_MODEL', availability: 'available', text_input: 'supported', image_input: 'supported' });
     await mount();
     expect(screen.getByText('Account rejected this model')).toBeTruthy();
-    expect(screen.getByText('Not listed for this account')).toBeTruthy();
-    expect(screen.getByText('Text: request accepted · Images: request accepted')).toBeTruthy();
-    expect(screen.getByText(/image interpretation quality remains unverified/)).toBeTruthy();
+    expect(screen.getByText('Unavailable')).toBeTruthy();
+    expect(screen.getByText('Text and image input.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Check image input/ })).toBeNull();
     expect(screen.queryByText('UNAPPROVED_SYNTHETIC_MODEL')).toBeNull();
   });
   it('does not offer selection when every listed model was rejected by the account', async () => {
@@ -125,10 +128,19 @@ describe('subscription status and explicit model selection', () => {
     await mount(); fireEvent.click(subscription('codex').getByRole('button', { name: 'Check models' }));
     const use = await screen.findByRole('button', { name: 'Use Codex' });
     expect(current.selected_provider).toBe('opencode-go'); expect(calls('/api/v1/connections/select', 'POST')).toHaveLength(0);
-    expect(screen.getByText(/3 of 3 approved models listed/)).toBeTruthy();
+    expect(screen.getByText('Codex connection checked.')).toBeTruthy();
     fireEvent.click(use);
     await waitFor(() => expect(current.selected_provider).toBe('codex'));
     expect(JSON.parse(calls('/api/v1/connections/select', 'POST')[0][1]!.body as string)).toEqual({ provider: 'codex' });
+  });
+  it('selects the exact approved default without an image probe or generation request', async () => {
+    setConnection('codex', 'configured'); current.selected_provider = 'codex'; await mount();
+    const field = screen.getByLabelText('Default Codex model');
+    expect(Array.from(field.querySelectorAll('option')).map(option => option.value)).toEqual(['automatic', ...approved.codex]);
+    fireEvent.change(field, { target: { value: 'gpt-6.1-sol' } });
+    await waitFor(() => expect((screen.getByLabelText('Default Codex model') as HTMLSelectElement).value).toBe('gpt-6.1-sol'));
+    expect(JSON.parse(calls('/api/v1/connections/select', 'POST')[0][1]!.body as string)).toEqual({ provider: 'codex', model: 'gpt-6.1-sol' });
+    expect(screen.queryByRole('button', { name: /Check image input/ })).toBeNull();
   });
   it('retries the failed catalogue operation, rather than merely reloading public status', async () => {
     setConnection('codex', 'configured'); let attempts = 0;

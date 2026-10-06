@@ -105,6 +105,18 @@ result or clinical-performance result is established by this cleanup.
 
 ## Dated evidence
 
+On October 6, 2026 the owner requested removal of image-input capability probes
+and selection from the exact approved models inside Renulus. Codex model
+catalogue presence is advisory: an approved exact model may be selected even
+when omitted from the display catalogue. A real `gpt-6.1-sol` request through
+the existing Renulus connection succeeded despite that omission. Connections
+stores the chosen default model for Explain and generated practice; Cases can
+override it within the same approved list. Documented text/image modalities
+replace prerequisite probes. Actual authentication, quota, model or image
+rejections remain visible without automatic retries, fallback models or
+subscription changes. This supersedes the earlier observed-capability
+prerequisite; it does not establish clinical image accuracy.
+
 The [reference shelf](../references/README.md) preserves selected public-source
 links, vocabulary and observations from earlier notes. Their recorded cutoffs
 are part of their provenance. They are not confirmed product decisions, current

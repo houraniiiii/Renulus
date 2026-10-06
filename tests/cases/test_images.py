@@ -16,7 +16,7 @@ from renulus.cases.models import ImageDiscussion, StartCase
 from renulus.cases.api import create_router
 from renulus.contracts import ContextScope, Scope
 from renulus.runtime.manager import ProviderManager
-from renulus.runtime.policy import learning_usage
+from renulus.runtime.policy import ALLOWED_MODELS, learning_usage
 from renulus.server import create_app
 
 from .conftest import assert_absent_from_profile
@@ -46,7 +46,7 @@ def sdk_response(text=ANSWER):
         content="".join("data: " + json.dumps(frame) + "\n\n" for frame in frames))
 
 
-async def connect(services, *, supported=True, infer=None):
+async def connect(services, *, infer=None):
     bodies = []
     def serve(request):
         if request.url.path.endswith("/models"):
@@ -59,13 +59,6 @@ async def connect(services, *, supported=True, infer=None):
     manager._settings["selected_provider"] = "codex"
     await manager.refresh("codex")
     services.registry["provider"] = manager
-    if supported:
-        # Establish capability through an actual SDK request, not a test-only flag.
-        part = {"type": "image", "media_type": "image/png",
-                "data": base64.b64encode(image()).decode(), "detail": "auto"}
-        _ = [delta async for delta in manager.stream([{
-            "role": "user", "content": [{"type": "text", "text": "Synthetic capability probe"}, part]}],
-            scope=ContextScope(kind=Scope.TEMPORARY_CASE), run_id="synthetic-image-probe", model=MODEL)]
     return manager, bodies
 
 
@@ -105,14 +98,14 @@ def test_real_cases_api_actual_sdk_image_wire_explicit_save_retains_original(tmp
     with TestClient(app) as client:
         case = client.post("/api/v1/cases/sessions", json={"text": "Synthetic image learning"}).json()
         caps = client.get("/api/v1/cases/capabilities").json()["image_interpretation"]
-        assert caps["supported"] and caps["models"] == [MODEL]
+        assert caps["supported"] and caps["models"] == list(ALLOWED_MODELS["codex"])
         assert caps["interpretation_verified"] is False
         preview = upload(client, case)
         assert preview.status_code == 202 and preview.headers["cache-control"] == "no-store"
         preview = preview.json()
         encoded = base64.b64encode(image()).decode()
         assert preview["image"]["data"] == encoded and preview["image_retained"] is False
-        assert len(bodies) == 1  # Upload/preview never invokes a model.
+        assert len(bodies) == 0  # Upload/preview never invokes a model.
         assert_absent_from_profile(services, IMAGE_SENTINEL, encoded, QUESTION, ANSWER)
         response = client.post(f"/api/v1/cases/attachments/{preview['id']}/discuss-image",
             json={"revision": 1, "request_id": "explicit-image", "message": QUESTION, "model": MODEL})
@@ -120,7 +113,7 @@ def test_real_cases_api_actual_sdk_image_wire_explicit_save_retains_original(tmp
         frames = decode_sse(response.text)
         assert [frame["type"] for frame in frames] == ["started", "answer.delta", "completed"]
         assert frames[0]["payload"]["scope"]["kind"] == "temporary-case"
-        assert len(bodies) == 2 and bodies[-1]["model"] == MODEL and bodies[-1]["store"] is False
+        assert len(bodies) == 1 and bodies[-1]["model"] == MODEL and bodies[-1]["store"] is False
         parts = next(row["content"] for row in reversed(bodies[-1]["input"]) if row.get("role") == "user")
         assert next(part for part in parts if part["type"] == "input_image")["image_url"] == "data:image/png;base64," + encoded
         assert_absent_from_profile(services, IMAGE_SENTINEL, encoded, QUESTION, ANSWER)
@@ -163,14 +156,14 @@ def test_ready_image_keep_stages_original_without_additional_model_call(tmp_path
         case = client.post("/api/v1/cases/sessions", json={"text": "Synthetic kept image"}).json()
         preview = upload(client, case).json()
         stale = client.post(f"/api/v1/cases/attachments/{preview['id']}/keep", json={"revision": 99})
-        assert stale.status_code == 409 and len(bodies) == 1
+        assert stale.status_code == 409 and len(bodies) == 0
         kept = client.post(f"/api/v1/cases/attachments/{preview['id']}/keep", json={"revision": case["revision"]})
         assert kept.status_code == 200 and kept.headers["cache-control"] == "no-store"
         current = kept.json()
         attachment = current["attachments"][0]
         assert not current["saved"] and current["dirty"]
         assert not attachment["saved"] and attachment["original_available"]
-        assert len(bodies) == 1 and current["messages"] == []
+        assert len(bodies) == 0 and current["messages"] == []
         assert base64.b64encode(image()).decode() not in json.dumps(current)
         binary = client.get(f"/api/v1/cases/sessions/{case['id']}/attachments/{attachment['id']}/original")
         assert binary.status_code == 200 and binary.content == image()
@@ -178,7 +171,7 @@ def test_ready_image_keep_stages_original_without_additional_model_call(tmp_path
         closed = client.post(f"/api/v1/cases/sessions/{case['id']}/close", json={"revision": current["revision"]})
         assert closed.status_code == 200
         assert client.get(f"/api/v1/cases/sessions/{case['id']}/attachments/{attachment['id']}/original").status_code == 404
-        assert len(bodies) == 1
+        assert len(bodies) == 0
 
 
 @pytest.mark.parametrize("kind", ["png", "jpeg"])
@@ -260,15 +253,15 @@ def test_disconnected_original_image_denials_do_not_keep_bytes_or_call_provider(
         assert_absent_from_profile(services, IMAGE_SENTINEL, base64.b64encode(image()).decode())
 
 
-def test_unknown_account_cannot_prepare_or_send_and_no_fallback(tmp_path):
+def test_documented_image_model_can_prepare_without_probe_or_provider_call(tmp_path):
     app = create_app(tmp_path / "unverified-image")
     services = app.state.services
-    manager, bodies = asyncio.run(connect(services, supported=False))
+    manager, bodies = asyncio.run(connect(services))
     with TestClient(app) as client:
         case = client.post("/api/v1/cases/sessions", json={"text": "Synthetic case"}).json()
         path = f"/api/v1/cases/sessions/{case['id']}/attachments/prepare"
         response = client.post(path, headers=headers(case))
-        assert response.status_code == 409 and response.json()["error"]["code"] == "image_capabilities_unverified"
+        assert response.status_code == 201
         assert not bodies and manager.connections()["selected_provider"] == "codex"
     assert_absent_from_profile(services, IMAGE_SENTINEL, QUESTION)
 
@@ -330,7 +323,7 @@ def test_image_send_guards_do_not_infer_or_retain(tmp_path, condition):
                 "message": QUESTION, "model": "unapproved" if condition == "model" else MODEL})
             assert response.status_code == 409
             client.delete(f"/api/v1/cases/attachments/{preview['id']}")
-        assert len(bodies) == 1
+        assert len(bodies) == 0
         assert_absent_from_profile(services, IMAGE_SENTINEL, base64.b64encode(image()).decode(), QUESTION, ANSWER)
 
 

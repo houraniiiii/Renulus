@@ -66,7 +66,7 @@ def safe_error(error: Exception, *, trusted_runtime: bool = False) -> dict:
         "case_response_invalid": "The provider did not return a usable response",
         "case_response_too_large": "The response exceeded the case limit",
         "case_context_full": "Start a new session for further discussion",
-        "image_capabilities_unverified": "The selected account has no verified image-input model. Check Connections",
+        "image_input_unsupported": "The selected account rejected image input for this model",
         "image_input_unsupported": "The selected account does not support image input for this model",
         "connection_changed": "The selected connection changed. Review the image and send it again",
     }

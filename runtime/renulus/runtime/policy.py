@@ -11,6 +11,10 @@ ALLOWED_MODELS = {
     "codex": ("gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna"),
     "opencode-go": ("mimo-v2.6-pro", "deepseek-v4.1-flash"),
 }
+# These approved Codex models document text and image input. Catalogue display
+# visibility is not an account entitlement or an input-capability check.
+# https://developers.openai.com/api/docs/models/compare (2026-10-06)
+CODEX_IMAGE_MODELS = frozenset(ALLOWED_MODELS["codex"])
 BASE_URLS = {
     "codex": "https://api.openai.com/v1",
     "opencode-go": "https://opencode.ai/zen/go/v1",

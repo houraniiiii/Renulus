@@ -105,23 +105,51 @@ async def test_stop_at_public_event_does_not_dispatch_compaction(app_paths, stop
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("model,code", [
-    ("gpt-6.1-sol", "model_unavailable"), ("gpt-6-luna", "model_unavailable"),
-    ("unapproved-synthetic-model", "model_not_allowed"),
-])
-async def test_astra_only_catalogue_rejects_other_overrides_before_transport(app_paths, model, code):
+async def test_unapproved_override_rejected_before_transport(app_paths):
     manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(
         lambda request: pytest.fail("Unavailable override reached a provider")))
     seed_astra(manager)
     flow = [event async for event in manager.events(
         [{"role": "user", "content": "Synthetic educational input"}],
-        scope=ContextScope(kind=Scope.STUDY), run_id="model-override", model=model)]
+        scope=ContextScope(kind=Scope.STUDY), run_id="model-override", model="unapproved-synthetic-model")]
     assert [event.type for event in flow] == ["error"]
-    assert flow[0].payload["code"] == code
+    assert flow[0].payload["code"] == "model_not_allowed"
     models = manager.connections()["connections"][0]["models"]
-    assert [item["id"] for item in models if item["availability"] == "available"] == [MODEL]
+    assert len([item for item in models if item["availability"] == "available"]) == 3
     assert manager.connections()["selected_provider"] == "codex"
     assert not manager.status()["active_runs"] and not manager.status()["live_provider_verified"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("model", ["gpt-6.1-sol", "gpt-6-luna"])
+@pytest.mark.parametrize("catalogue", [None, set(), {MODEL}])
+async def test_approved_unlisted_model_dispatches_exactly_and_persists_selection(app_paths, model, catalogue):
+    requests = []
+    def serve(request):
+        requests.append(json.loads(request.content))
+        return response("Synthetic approved-model answer")
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(serve))
+    seed_astra(manager)
+    if catalogue is None:
+        manager._catalogs.clear()
+    else:
+        manager._catalogs["codex"] = catalogue
+    selected = manager.select("codex", model)
+    assert selected["selected_models"]["codex"] == model
+    status = next(item for item in selected["connections"][0]["models"] if item["id"] == model)
+    assert status["availability"] == "available"
+    assert status["catalogue_listed"] == (None if catalogue is None else False)
+    # Restart with no discovery cache: the saved exact choice still dispatches.
+    restarted = ProviderManager(app_paths, http_transport=httpx.MockTransport(serve))
+    flow = [event async for event in restarted.events(
+        [{"role": "user", "content": "Synthetic educational input"}],
+        scope=SCOPE, run_id="saved-model-choice")]
+    assert [event.type for event in flow] == ["started", "delta", "completed"]
+    assert flow[0].payload["model"] == model and flow[-1].payload["model"] == model
+    assert len(requests) == 1 and requests[0]["model"] == model
+    assert not restarted.status()["active_runs"] and not restarted.status()["live_provider_verified"]
+    await manager.close()
+    await restarted.close()
 
 
 class PausedSSE(httpx.AsyncByteStream):
@@ -180,7 +208,8 @@ async def test_pending_sdk_read_closes_without_inflight_or_capability_success(ap
         assert not manager.status()["active_runs"]
         assert not manager.status()["live_provider_verified"]
         astra = manager.connections()["connections"][0]["models"][1]
-        assert astra["id"] == MODEL and astra["text_input"] == "unknown"
+        assert astra["id"] == MODEL and astra["text_input"] == "supported"
+        assert astra["capability_evidence"]["text"] == "documented_model"
         assert not await manager.cancel("pending-sdk")
     finally:
         task.cancel()
@@ -286,7 +315,8 @@ async def test_astra_learn_failure_retry_and_durable_answer_capture_eligibility(
     assert len(requests) == 2 and not provider.status()["active_runs"]
     assert not provider.status()["live_provider_verified"]
     models = provider.connections()["connections"][0]["models"]
-    assert [model["id"] for model in models if model["availability"] == "available"] == [MODEL]
+    assert [model["id"] for model in models if model["catalogue_listed"]] == [MODEL]
+    assert len([model for model in models if model["availability"] == "available"]) == 3
     assert memory._engine is None and memory._embedding is None
     await provider.close()
     await memory.close()

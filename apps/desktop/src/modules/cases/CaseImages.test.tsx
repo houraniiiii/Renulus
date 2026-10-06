@@ -28,7 +28,7 @@ function fixture({ supported = true, pause = false, reject = false, originalsSup
         formats: ['.png', '.jpg', '.jpeg'], scope: 'temporary-case' },
       image_interpretation: { supported, models: supported ? [MODEL] : [], provider: supported ? 'codex' : null,
         interpretation_verified: false, max_bytes: 8 * 1024 * 1024, image_pixels: 16000000,
-        reason: supported ? null : 'The selected account has no verified image-input model. Check Connections.' },
+        reason: supported ? null : 'Connect and select an approved image model in Connections.' },
       discussion: { adapter_installed: supported, scope: 'temporary-case' }, teaching: { content_installed: false },
       handoffs: {}, memory_capture: false }));
     if (path.endsWith('/saved') || path.endsWith('/teaching')) return Promise.resolve(json({ cases: [] }));
@@ -51,7 +51,7 @@ function fixture({ supported = true, pause = false, reject = false, originalsSup
     }
     if (options.method === 'DELETE') return Promise.resolve(json({ state: 'cancelled' }));
     if (path.endsWith('/discuss-image')) {
-      if (reject) return Promise.resolve(json({ error: { code: 'image_capabilities_unverified',
+      if (reject) return Promise.resolve(json({ error: { code: 'image_input_unsupported',
         message: 'The selected account changed. Review the image and check Connections.', retryable: true } }, 409));
       current = { ...caseItem, revision: pause ? 2 : 3, messages: pause ? [] : [
         { id: 'image-question', role: 'user', content: 'Synthetic image question', created_at: '2026-10-05' },

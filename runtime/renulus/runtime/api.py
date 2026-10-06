@@ -33,6 +33,7 @@ class LoginRequest(_Input):
 
 class SelectRequest(_Input):
     provider: Literal["codex", "opencode-go"]
+    model: str | None = None
 
 
 class RunRequest(_Input):
@@ -84,7 +85,7 @@ def create_router(services: Services) -> APIRouter:
 
     @connections.post("/select")
     def select(request: SelectRequest):
-        return manager.select(request.provider)
+        return manager.select(request.provider, request.model)
 
     @connections.post("/codex/login")
     async def start_login(request: LoginRequest):

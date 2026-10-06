@@ -2,34 +2,23 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type MouseEve
 import { ArrowRight, Check, RefreshCw } from 'lucide-react';
 import { api, ApiError, isCancelled } from './api';
 import { useResource } from './useResource';
-import { Badge, Button, ErrorState, Input, LoadingState, Notice, PageHeader } from '../ui';
+import { Badge, Button, ErrorState, Input, LoadingState, Notice, PageHeader, Select } from '../ui';
 import type { Health } from './contracts';
 import { DataManagement } from './DataManagement';
 import { RetrievalConnections } from './RetrievalConnections';
-import { cancelRun, runEvents } from './runs';
-import { imageCapabilityRequest } from './imageCapability';
 
 type Provider = 'codex' | 'opencode-go';
 type Availability = 'unknown' | 'available' | 'unavailable' | 'account_unsupported';
 type Capability = 'unknown' | 'supported' | 'account_unsupported';
 interface Model { id: string; availability: Availability; text_input?: Capability; image_input?: Capability; image_interpretation_verified?: boolean }
 interface Connection { provider: Provider; status: string; allowed_models: string[]; models: Model[]; learning_use?: { status: string; generation_allowed: boolean; message?: string | null } }
-interface Connections { selected_provider: Provider | null; connections: Connection[]; revocation?: 'failed'; recovery?: string }
+interface Connections { selected_provider: Provider | null; selected_models?: Partial<Record<Provider, string | null>>; connections: Connection[]; revocation?: 'failed'; recovery?: string }
 interface Login {
   login_id: string; status: 'pending' | 'exchanging' | 'connected' | 'error' | 'cancelled';
   authorization_url?: string; expires_at?: number; error?: { code: string; message: string; retryable: boolean };
 }
 type Action = { kind: 'start-login' | 'open-login' | 'check-login' | 'cancel-login' | 'go' | 'go-account' }
-  | { kind: 'select' | 'refresh' | 'disconnect'; provider: Provider }
-  | { kind: 'check-image'; model: string };
-interface ImageAttempt {
-  id: string; model: string; controller: AbortController; stopped: boolean; terminal: boolean;
-  cancellation?: ReturnType<typeof cancelRun>;
-}
-function cancelImage(attempt: ImageAttempt) {
-  attempt.cancellation ??= cancelRun('/runtime/runs/' + encodeURIComponent(attempt.id), 'DELETE');
-  return attempt.cancellation;
-}
+  | { kind: 'select' | 'refresh' | 'disconnect'; provider: Provider; model?: string | null };
 interface Failure { error: unknown; action?: Action }
 interface Message { text: string; tone?: 'warning' }
 const names: Record<Provider, string> = { codex: 'Codex', 'opencode-go': 'OpenCode Go' };
@@ -78,13 +67,10 @@ function modelRows(connection: Connection): Model[] {
   return approvedModels[connection.provider].map(id => connection.models.find(model => model.id === id) ?? { id, availability: 'unknown' });
 }
 function statusLabel(status: string): string {
-  return ({ connected: 'Account connected', disconnected: 'Not connected', configured: 'Saved · check models',
+  return ({ connected: 'Account connected', disconnected: 'Not connected', configured: 'Account saved',
     no_allowed_models: 'No approved models', authentication_required: 'Sign-in required', connection_required: 'Not connected',
     provider_unavailable: 'Account check unavailable', subscription_limit: 'Subscription limit reached', model_unavailable: 'Models need checking',
   } as Record<string, string>)[status] ?? 'Connection needs attention';
-}
-function capabilityLabel(kind: 'Text' | 'Images', value?: Capability): string {
-  return kind + ': ' + (value === 'supported' ? 'request accepted' : value === 'account_unsupported' ? 'unsupported for this account' : 'not verified');
 }
 
 export function ConnectionsPage() {
@@ -107,7 +93,6 @@ export function ConnectionsPage() {
   const loginRef = useRef<Login | undefined>(undefined);
   const pendingLogin = useRef<string | undefined>(undefined);
   const releasedLogins = useRef(new Set<string>());
-  const imageAttempt = useRef<ImageAttempt | undefined>(undefined);
 
   const releaseLogin = useCallback((id: string) => {
     if (releasedLogins.current.has(id)) return;
@@ -120,11 +105,6 @@ export function ConnectionsPage() {
     return () => {
       mounted.current = false; active.current?.abort(); polling.current?.abort();
       if (pendingLogin.current) releaseLogin(pendingLogin.current);
-      const attempt = imageAttempt.current;
-      if (attempt && !attempt.terminal) {
-        attempt.stopped = true;
-        void cancelImage(attempt).catch(() => {});
-      }
     };
   }, [releaseLogin]);
 
@@ -226,7 +206,7 @@ export function ConnectionsPage() {
   async function providerAction(action: Extract<Action, { provider: Provider }>) {
     await operation(action, async signal => {
       const result = await api<Connections>(action.kind === 'select' ? '/connections/select' : '/connections/' + action.provider + (action.kind === 'refresh' ? '/refresh' : ''), {
-        method: action.kind === 'disconnect' ? 'DELETE' : 'POST', body: action.kind === 'select' ? { provider: action.provider } : undefined, signal,
+        method: action.kind === 'disconnect' ? 'DELETE' : 'POST', body: action.kind === 'select' ? { provider: action.provider, ...(action.model !== undefined ? { model: action.model } : {}) } : undefined, signal,
       });
       if (signal.aborted) return;
       if (action.kind === 'disconnect') {
@@ -234,10 +214,8 @@ export function ConnectionsPage() {
           ? { text: names[action.provider] + ' was disconnected from this Renulus profile. ChatGPT access could not be revoked. ' + (result.recovery ?? "Remove Renulus in your ChatGPT account's connected apps."), tone: 'warning' }
           : { text: names[action.provider] + ' was disconnected from this Renulus profile.' });
       } else if (action.kind === 'refresh') {
-        const connection = result.connections.find(item => item.provider === action.provider);
-        const available = connection ? modelRows(connection).filter(model => model.availability === 'available').length : 0;
-        setNotice({ text: names[action.provider] + ' catalogue checked: ' + available + ' of ' + approvedModels[action.provider].length + ' approved models listed. Model listing does not verify text or image requests.', tone: available ? undefined : 'warning' });
-      } else setNotice({ text: names[action.provider] + ' selected for learning. Renulus will not switch subscriptions automatically.' });
+        setNotice({ text: names[action.provider] + ' connection checked.' });
+      } else setNotice({ text: (action.model ?? names[action.provider]) + ' selected for learning.' });
     });
   }
   async function openGoAccount(event?: MouseEvent<HTMLAnchorElement>) {
@@ -249,69 +227,6 @@ export function ConnectionsPage() {
       catch { throw new ApiError('The OpenCode Go account page could not be opened. Try opening it again.', 0, 'account_open_failed', true); }
     }, false);
   }
-  async function checkImage(model: string) {
-    if (busy || imageAttempt.current || loginActive(loginRef.current) || resource.status !== 'ready') return;
-    const connection = resource.data.connections.connections.find(item => item.provider === 'codex');
-    if (resource.data.connections.selected_provider !== 'codex' || connection?.status !== 'connected'
-      || !learningEnabled(connection) || !approvedModels.codex.includes(model)
-      || !connection.models.some(item => item.id === model && item.availability === 'available' && item.image_input !== 'account_unsupported')) return;
-    const attempt: ImageAttempt = { id: crypto.randomUUID(), model, controller: new AbortController(), stopped: false, terminal: false };
-    imageAttempt.current = attempt; active.current = attempt.controller;
-    setBusy({ kind: 'check-image', model }); setFailure(undefined); setNotice(undefined);
-    try {
-      for await (const event of runEvents('/runtime/runs', { method: 'POST',
-        body: imageCapabilityRequest(attempt.id, model), runId: attempt.id, signal: attempt.controller.signal })) {
-        if (!mounted.current || attempt.stopped || attempt.controller.signal.aborted || imageAttempt.current !== attempt) break;
-        if (event.type === 'error') {
-          attempt.terminal = true;
-          const payload = event.payload;
-          throw new ApiError(typeof payload.message === 'string' ? payload.message : 'Image input could not be checked.',
-            typeof payload.status === 'number' ? payload.status : 503,
-            typeof payload.code === 'string' ? payload.code : 'image_check_failed', payload.retryable === true);
-        }
-        if (event.type === 'cancelled') {
-          attempt.terminal = true; setNotice({ text: 'Image input check cancelled.' });
-        }
-        if (event.type === 'completed') {
-          attempt.terminal = true;
-          setNotice({ text: model + ' accepted the Renulus test image. Refreshing observed input support; interpretation quality remains unverified.' });
-          retry();
-        }
-      }
-    } catch (error) {
-      if (mounted.current && !attempt.stopped && !attempt.controller.signal.aborted && !isCancelled(error)) {
-        setFailure({ error, action: { kind: 'check-image', model } });
-        // Account/quota failures may update the public runtime capability report.
-        retry();
-      }
-    } finally {
-      if (!attempt.terminal && !attempt.stopped) {
-        attempt.controller.abort();
-        void cancelImage(attempt).catch(() => {});
-      }
-      if (mounted.current && imageAttempt.current === attempt && !attempt.stopped) {
-        imageAttempt.current = undefined; active.current = null; setBusy(undefined);
-      }
-    }
-  }
-  async function stopImageCheck() {
-    const attempt = imageAttempt.current; if (!attempt || attempt.terminal || attempt.stopped) return;
-    attempt.stopped = true; attempt.controller.abort();
-    setNotice({ text: 'Stopping the image input check…' });
-    try {
-      await cancelImage(attempt);
-      if (mounted.current && imageAttempt.current === attempt) setNotice({ text: 'Image input check stopped.' });
-    } catch (error) {
-      if (mounted.current && imageAttempt.current === attempt) {
-        setNotice({ text: 'The local check was stopped, but server cancellation could not be confirmed. Refresh status before another check.', tone: 'warning' });
-        setFailure({ error, action: { kind: 'refresh', provider: 'codex' } });
-      }
-    } finally {
-      if (mounted.current && imageAttempt.current === attempt) {
-        imageAttempt.current = undefined; active.current = null; setBusy(undefined);
-      }
-    }
-  }
   function retryFailure() {
     const action = failure?.action; if (!action) return;
     switch (action.kind) {
@@ -320,7 +235,6 @@ export function ConnectionsPage() {
       case 'cancel-login': void cancelLogin(); break;
       case 'open-login': void operation(action, openLogin, false); break;
       case 'go-account': void openGoAccount(); break;
-      case 'check-image': void checkImage(action.model); break;
       case 'select': case 'refresh': case 'disconnect': void providerAction(action); break;
     }
   }
@@ -354,9 +268,8 @@ export function ConnectionsPage() {
         <Button key={item.id} variant={section === item.id ? 'secondary' : 'ghost'} aria-pressed={section === item.id} disabled={!!busy || signingIn} onClick={() => setSection(item.id)}>{item.label}</Button>)}
     </nav>
     {section === 'subscriptions' && <>
-      {failure && <div className="section"><ErrorState error={failure.error} title={failure.action?.kind === 'check-image' ? 'Image input could not be checked' : 'The connection could not be updated'} onRetry={failure.action && !busy && !(failure.action.kind === 'check-image' && failure.error instanceof ApiError && !failure.error.retryable) ? retryFailure : undefined} />{!failure.action && <p>Enter your OpenCode Go key again to retry. The previous entry has been cleared.</p>}</div>}
+      {failure && <div className="section"><ErrorState error={failure.error} title="The connection could not be updated" onRetry={failure.action && !busy ? retryFailure : undefined} />{!failure.action && <p>Enter your OpenCode Go key again to retry. The previous entry has been cleared.</p>}</div>}
       {notice && <div className="section"><Notice tone={notice.tone}><p>{notice.text}</p></Notice></div>}
-      {busy?.kind === 'check-image' && <section className="section" aria-label="Image input check"><Notice><p>Checking image input for {busy.model} using the synthetic Renulus test image.</p></Notice><Button variant="secondary" disabled={imageAttempt.current?.stopped} onClick={stopImageCheck}>Stop image check</Button></section>}
       {signingIn && login && <section className="section" aria-label="Codex sign-in"><Notice><div className="section">
         <p>{login.status === 'exchanging' ? 'ChatGPT sign-in received. Renulus is finishing the account connection.' : 'Finish sign-in in your browser. Renulus is waiting for your account to connect.'}</p>
         {typeof login.expires_at === 'number' && <p className="muted">Sign-in expires at {new Date(login.expires_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.</p>}
@@ -373,22 +286,25 @@ export function ConnectionsPage() {
           {resource.data.connections.connections.map(connection => {
             const models = modelRows(connection);
             const learningAllowed = learningEnabled(connection);
-            const ready = learningAllowed && connection.status === 'connected' && models.some(model => model.availability === 'available');
+            const ready = learningAllowed && connection.status !== 'disconnected' && models.some(model => model.availability === 'available');
             const saved = !['disconnected', 'connection_required'].includes(connection.status);
             return <section className="connection-row" key={connection.provider} aria-label={names[connection.provider] + ' subscription'}>
               <div className="connection-heading"><h2>{names[connection.provider]}</h2><Badge tone={connection.status === 'connected' ? 'default' : saved ? 'warning' : 'neutral'}>{statusLabel(connection.status)}</Badge>{resource.data.connections.selected_provider === connection.provider && <Badge><Check size={14} />Selected</Badge>}</div>
               <p>{connection.provider === 'codex' ? 'Connect your own account through Continue with ChatGPT.' : 'A Go key can check account model listings. It does not enable learning requests.'}</p>
               {!learningAllowed && <Notice tone="warning"><p><strong>Learning requests paused.</strong> OpenCode Go documents coding-agent use. Renulus educational use has not been confirmed.</p><p>Checking a key or listed model does not grant eligibility. <a href={goPolicy} target="_blank" rel="noopener noreferrer">Read the Go usage policy</a>.</p></Notice>}
               {connection.provider === 'opencode-go' && <p><a href={goAccount} target="_blank" rel="noopener noreferrer" aria-disabled={!!busy || signingIn || undefined} tabIndex={busy || signingIn ? -1 : undefined} className={busy || signingIn ? 'muted' : undefined} onClick={openGoAccount}>Open OpenCode Go account</a></p>}
-              {connection.status === 'configured' && <p>Your account is saved in this Renulus profile. Check models to confirm its current availability.</p>}
+              {connection.status === 'configured' && <p>Your account is saved in this Renulus profile.</p>}
               {connection.status === 'no_allowed_models' && <p>This account lists none of the approved models. Check models again or disconnect. Renulus will not substitute a different model or subscription.</p>}
               <ul className="connection-models" aria-label={names[connection.provider] + ' model availability'}>{models.map(model => <li key={model.id}>
-                <strong>{model.id}</strong><Badge tone={model.availability === 'available' ? 'default' : 'neutral'}>{({ unknown: 'Availability not checked', available: 'Listed for this account', unavailable: 'Not listed for this account', account_unsupported: 'Account rejected this model' })[model.availability] ?? 'Availability not checked'}</Badge>
-                <span className="muted">{capabilityLabel('Text', model.text_input)} · {capabilityLabel('Images', model.image_input)}</span>
-                {connection.provider === 'codex' && ready && resource.data.connections.selected_provider === 'codex' && model.availability === 'available' &&
-                  <Button variant="secondary" aria-label={'Check image input for ' + model.id} disabled={!!busy || signingIn || model.image_input === 'account_unsupported'} busy={busy?.kind === 'check-image' && busy.model === model.id} onClick={() => checkImage(model.id)}>Check image input</Button>}
+                <strong>{model.id}</strong><Badge tone={model.availability === 'available' ? 'default' : 'neutral'}>{({ unknown: 'Connect account', available: 'Ready', unavailable: 'Unavailable', account_unsupported: 'Account rejected this model' })[model.availability] ?? 'Connect account'}</Badge>
               </li>)}</ul>
-              {connection.provider === 'codex' && ready && resource.data.connections.selected_provider === 'codex' && <p className="muted">Check image input sends one original synthetic Renulus test image to the model you choose and uses your subscription. It does not upload your files or verify interpretation quality. If image input was rejected, check models before retrying.</p>}
+              {connection.provider === 'codex' && <p className="muted">Text and image input.</p>}
+              {connection.provider === 'codex' && ready && resource.data.connections.selected_provider === 'codex' && <Select label="Default Codex model"
+                value={resource.data.connections.selected_models?.codex ?? 'automatic'} disabled={!!busy || signingIn}
+                hint="Used for explanations and generated practice. Cases can use a different approved model."
+                onChange={event => providerAction({ kind: 'select', provider: 'codex', model: event.target.value === 'automatic' ? null : event.target.value })}>
+                <option value="automatic">Automatic</option>{models.map(model => <option key={model.id} value={model.id} disabled={model.availability !== 'available'}>{model.id}</option>)}
+              </Select>}
               {connection.provider === 'opencode-go' && connection.status !== 'connected' && <form className="connection-key" onSubmit={connectGo}>
                 <Input label="OpenCode Go key" type="password" value={key} onChange={event => setKey(event.target.value)} autoComplete="off" spellCheck={false} disabled={!!busy || signingIn} maxLength={8192} hint="Stored by Renulus in its protected app profile. Never imported from another application." />
                 <div><Button type="submit" busy={busy?.kind === 'go'} disabled={!key.trim() || !!busy || signingIn}>Check and save Go key<ArrowRight size={16} /></Button></div>
@@ -407,7 +323,7 @@ export function ConnectionsPage() {
               ? ' remains selected, but learning requests are paused pending educational eligibility confirmation.'
               : ' is selected. Its account and model availability are shown here.')
             : 'No subscription selected. Connect an eligible account, check its models, then explicitly select it.'}</p>
-          <p>Only the five approved models are used. Model listing does not verify a successful request. Input capability reflects observed requests; image interpretation quality remains unverified.</p>
+          <p>Only your approved models are used. Requests stay with the selected subscription.</p>
         </section><Notice><p>Reviewed tests and your saved study material are available without a model connection.</p></Notice><p className="muted">Renulus {resource.data.health.version} · Connecting and checking models do not send a learning prompt.</p></aside>
       </div>}
     </>}

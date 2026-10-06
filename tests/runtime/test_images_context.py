@@ -108,7 +108,7 @@ async def test_actual_hermes_sdk_image_wire_all_five_models_and_honest_capabilit
     manager, requests = await connected(app_paths, provider, model, infer)
     status = next(row for row in manager.connections()["connections"] if row["provider"] == provider)
     selected = next(row for row in status["models"] if row["id"] == model)
-    assert selected["image_input"] == selected["text_input"] == "unknown"
+    assert selected["image_input"] == selected["text_input"] == ("supported" if provider == "codex" else "unknown")
     deltas = [item async for item in manager.stream(image_messages(), scope=SCOPE, run_id="image-wire", model=model)]
     assert deltas == ["Synthetic image accepted"] and len(requests) == 2
     status = next(row for row in manager.connections()["connections"] if row["provider"] == provider)
@@ -124,19 +124,13 @@ async def test_actual_hermes_sdk_image_wire_all_five_models_and_honest_capabilit
 
 
 @pytest.mark.asyncio
-async def test_case_image_requires_observed_support_before_credentials_or_context(app_paths, monkeypatch):
-    manager = ProviderManager(app_paths)
-    manager._settings["connections"]["codex"] = {"client_id": "synthetic-client",
-        "access_token": "synthetic-plan-token", "expires_at": time.time() + 1200}
-    manager._settings["selected_provider"] = "codex"
-    manager._catalogs["codex"] = {"gpt-6.1-sol"}
-    async def forbidden_credentials(provider):
-        raise AssertionError("Unverified case images must be rejected before credential access")
-    monkeypatch.setattr(manager, "_access_token", forbidden_credentials)
-    with pytest.raises(ApiError) as failure:
-        _ = [part async for part in manager.stream(image_messages(), scope=SCOPE,
-            run_id="unverified-case-image", model="gpt-6.1-sol", purpose="case-image-discuss")]
-    assert failure.value.code == "image_capabilities_unverified" and not failure.value.retryable
+async def test_case_image_uses_documented_support_without_probe(app_paths):
+    manager, requests = await connected(app_paths, "codex", "gpt-6.1-sol",
+        lambda request: response("codex", "Synthetic image discussion"))
+    assert manager.connections()["connections"][0]["models"][0]["capability_evidence"]["image"] == "documented_model"
+    parts = [part async for part in manager.stream(image_messages(), scope=SCOPE,
+        run_id="no-probe-case-image", model="gpt-6.1-sol", purpose="case-image-discuss")]
+    assert parts == ["Synthetic image discussion"] and len(requests) == 2
     assert manager.status()["active_runs"] == []
     assert not manager.status()["live_provider_verified"]
     await manager.close()
@@ -186,14 +180,14 @@ async def test_image_account_rejection_blocks_replay_but_keeps_text_and_subscrip
 
 
 @pytest.mark.asyncio
-async def test_quota_and_model_access_are_distinct_from_unknown_image_capability(app_paths):
+async def test_quota_and_model_access_are_distinct_from_documented_image_capability(app_paths):
     rejection = {"status": 429, "code": "rate_limit_exceeded"}
     manager, requests = await connected(app_paths, "codex", "gpt-6.1-sol", lambda request:
         httpx.Response(rejection["status"], json={"error": {"code": rejection["code"], "message": SENTINEL}}))
     with pytest.raises(ApiError) as failure:
         _ = [part async for part in manager.stream(image_messages(), scope=SCOPE, run_id="quota")]
     assert failure.value.code == "subscription_limit"
-    assert manager.connections()["connections"][0]["models"][0]["image_input"] == "unknown"
+    assert manager.connections()["connections"][0]["models"][0]["image_input"] == "supported"
     rejection.update(status=404, code="model_not_found")
     with pytest.raises(ApiError) as failure:
         _ = [part async for part in manager.stream(image_messages(), scope=SCOPE, run_id="account-model")]

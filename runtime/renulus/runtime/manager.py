@@ -15,7 +15,7 @@ from renulus.contracts import ApiError, ContextScope, Event, durable_id
 from .context import CONTEXT_BUDGET, OUTPUT_RESERVATION, SUMMARY_MAX_CHARS, HermesContextAdapter
 from .hermes import HermesSubscriptionTransport
 from .inputs import has_images
-from .policy import ALLOWED_MODELS, BASE_URLS, learning_usage, rejection_kind, require_learning_route, require_provider, require_run_id, safe_error, validate_messages
+from .policy import ALLOWED_MODELS, BASE_URLS, CODEX_IMAGE_MODELS, learning_usage, rejection_kind, require_learning_route, require_provider, require_run_id, safe_error, validate_messages
 from .protected import ConnectionStore
 
 if TYPE_CHECKING:
@@ -67,27 +67,41 @@ class ProviderManager:
             catalog = self._catalogs.get(provider)
             status = "disconnected" if not record else "configured"
             if record and catalog is not None:
-                status = "connected" if catalog else "no_allowed_models"
+                status = "connected" if catalog or provider == "codex" else "no_allowed_models"
             if provider in self._catalog_errors:
                 status = self._catalog_errors[provider]
             rows.append({"provider": provider, "status": status,
                          "learning_use": learning_usage(provider),
                          "allowed_models": list(allowed),
                          "models": [self._model_status(provider, model, catalog) for model in allowed]})
-        return {"selected_provider": self._settings["selected_provider"], "connections": rows}
+        return {"selected_provider": self._settings["selected_provider"],
+                "selected_models": {provider: self._selected_model(provider) for provider in ALLOWED_MODELS},
+                "connections": rows}
+
+    def _selected_model(self, provider: str) -> str | None:
+        selected = self._settings.get("selected_models", {}).get(provider)
+        return selected if selected in ALLOWED_MODELS[provider] else None
 
     def _model_status(self, provider: str, model: str, catalog: set[str] | None) -> dict:
         unavailable = (provider, model) in self._unsupported_models
-        missing = catalog is not None and model not in catalog
         observed = self._capabilities.get((provider, model), {})
-        fallback = "account_unsupported" if unavailable or missing else "unknown"
+        connected = provider in self._settings["connections"]
+        documented = provider == "codex" and model in CODEX_IMAGE_MODELS
+        fallback = "supported" if documented else "unknown"
+        evidence = "documented_model" if documented else "none"
+        if unavailable:
+            availability = "account_unsupported"
+        elif provider == "codex":
+            availability = "available" if connected else "unknown"
+        else:
+            availability = "unknown" if catalog is None else "available" if model in catalog else "unavailable"
         return {"id": model,
-                "availability": "account_unsupported" if unavailable else
-                "unknown" if catalog is None else "unavailable" if missing else "available",
-                "text_input": fallback if unavailable or missing else observed.get("text", "unknown"),
-                "image_input": fallback if unavailable or missing else observed.get("image", "unknown"),
-                "capability_evidence": {"text": observed.get("text_evidence", "model_not_in_catalogue" if missing else "none"),
-                                        "image": observed.get("image_evidence", "model_not_in_catalogue" if missing else "none")},
+                "availability": availability,
+                "catalogue_listed": None if catalog is None else model in catalog,
+                "text_input": "account_unsupported" if unavailable else observed.get("text", fallback),
+                "image_input": "account_unsupported" if unavailable else observed.get("image", fallback),
+                "capability_evidence": {"text": observed.get("text_evidence", evidence),
+                                        "image": observed.get("image_evidence", evidence)},
                 "image_interpretation_verified": False}
 
     def _clear_capabilities(self, provider: str) -> None:
@@ -125,15 +139,18 @@ class ProviderManager:
                 if run.pending and not run.pending.done():
                     run.pending.cancel()
 
-    def select(self, provider: str) -> dict:
+    def select(self, provider: str, model: str | None = None) -> dict:
         require_provider(provider)
         require_learning_route(provider)
+        if model is not None and model not in ALLOWED_MODELS[provider]:
+            raise ApiError("model_not_allowed", "Choose an allowed model in the selected subscription.")
         if provider not in self._settings["connections"]:
             raise ApiError("connection_required", "Connect this subscription before selecting it.", 409)
         previous = self._settings["selected_provider"]
         if previous and previous != provider:
             self._stop_provider_runs(previous)
         self._settings["selected_provider"] = provider
+        self._settings.setdefault("selected_models", {})[provider] = model
         self._save()
         return self.connections()
 
@@ -292,12 +309,21 @@ class ProviderManager:
         if model is not None and model not in ALLOWED_MODELS[provider]:
             raise ApiError("model_not_allowed", "Choose an allowed model in the selected subscription.")
         require_learning_route(provider)
-        catalog = self._catalogs.get(provider)
-        if catalog is None:
-            raise ApiError("capabilities_unverified", "Refresh the selected connection before generation.", 409, True)
-        chosen = model or next((item for item in ALLOWED_MODELS[provider] if item in catalog), None)
-        if not chosen or chosen not in catalog:
-            raise ApiError("model_unavailable", "No requested allowed model is available in the selected subscription.", 409, True)
+        if provider not in self._settings["connections"]:
+            raise ApiError("connection_required", "Connect your selected subscription in Renulus.", 409)
+        if provider == "codex":
+            # A display catalogue can lag behind models accepted by inference.
+            # Keep the exact allowlist and let the actual request report access.
+            chosen = model or self._selected_model(provider) or next(
+                (item for item in ALLOWED_MODELS[provider] if item in self._catalogs.get(provider, set())),
+                ALLOWED_MODELS[provider][0])
+        else:
+            catalog = self._catalogs.get(provider)
+            if catalog is None:
+                raise ApiError("capabilities_unverified", "Refresh the selected connection before generation.", 409, True)
+            chosen = model or next((item for item in ALLOWED_MODELS[provider] if item in catalog), None)
+            if not chosen or chosen not in catalog:
+                raise ApiError("model_unavailable", "No requested allowed model is available in the selected subscription.", 409, True)
         if (provider, chosen) in self._unsupported_models:
             raise ApiError("account_model_unsupported", "The selected account cannot use this model. Refresh the connection to retry.", 409)
         return provider, chosen
@@ -413,9 +439,6 @@ class ProviderManager:
             capability = self._model_status(provider, chosen, catalog)
             if images and capability["image_input"] == "account_unsupported":
                 raise ApiError("image_input_unsupported", "This account rejected image input for the selected model. Choose an explicitly available image route.", 409)
-            if images and purpose == "case-image-discuss" and capability["image_input"] != "supported":
-                raise ApiError("image_capabilities_unverified",
-                    "Check image input for this model in Connections before sending a case image.", 409)
             run.pending = asyncio.create_task(self._access_token(provider))
             try:
                 token = await run.pending
