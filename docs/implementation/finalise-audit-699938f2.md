@@ -1,39 +1,58 @@
 # Requirement audit for accepted source 699938f2 — October 6, 2026
 
-**Matching Package/Install have completed and the source-qualified native
-composite is admitted; connected/live journeys and complete product acceptance
-remain open.** Target source is
-`699938f20efb6bbc2cf8df684cc5c6c3450e6eaf`. This bounded current checkpoint starts at
-`7297c5136ce43e799a8d32555c28ae5abdee99a6` in
-`C:/rn-finalise-20261005/lanes/final-current-audit-20261006`, branch
-`codex/final-current-audit-20261006`. Only this existing report and ignored receipt
-notes under `.local/final-current-audit-20261006/` are owned here.
-The [original audit](finalise-audit.md) supplies all 64 IDs, order and verbatim
-requirement wording. Its historical receipts retain their original source and
-failure dispositions; this document updates their relevance to the accepted wave.
+**Matching Package/Install, Recovery02's source-qualified native composite and
+Connected03's bounded installed subset are accepted. Probe02 ended in a real
+subscription limit; complete product acceptance remains open.** Target source is
+`699938f20efb6bbc2cf8df684cc5c6c3450e6eaf`. This report-only update starts at
+`891850c04ddf83f579eb517502a6267ea18e7a7e` in
+`C:/rn-finalise-20261005/lanes/freshness-driver-preflight-20261006`, branch
+`codex/freshness-driver-preflight-20261006`. The exclusive write lease is this
+existing report. Parent integration `2269d9e762de69cef663917850d25e1e589fabfb`
+and its delivery documents were read through Git without merging runtime. The
+[original audit](finalise-audit.md) supplies all 64 IDs, order and verbatim
+requirement wording. Historical receipts retain their original source and
+failure dispositions. The prior freshness preparation and ignored patch/manifest
+remain unchanged for parent preservation before worktree retirement.
 
-Current performed checkpoint: **October 6, 2026 UTC**. Parent-supplied terminal
-results are **Package 47784 exit 0 at 09:45:34**, **Install 95706 exit 0 at
-09:57:02**, and **Recovery02 session 73435 exit 0 at 10:23:18**. Matching package
-provenance and the extraction-only installer receipt agree on the exact 6999
-source and installer/EXE/ASAR identities [M](#m). Recovery02's actual receipt and
-terminal establish **five current gates, three fresh ordinary physical closes
-and two reopens** [R](#r). Its full **39,255-file / 5,742-frozen-file** inventory
-was performed at the same 6999 target in failed next01 and is retained by digest;
+Current performed checkpoint: **October 6, 2026 UTC**. Package47784 exited0 at
+**09:45:34**, Install95706 exited0 at **09:57:02**, and Recovery02/session73435
+exited0 at **10:23:18.0762039**. Matching provenance and the extraction-only
+installer receipt agree on exact6999 and installer/EXE/ASAR identities [M](#m).
+Recovery02 establishes **five current gates, three ordinary physical closes and
+two reopens** [R](#r). Its **39,255-file / 5,742-frozen-file** inventory was
+performed at the same target in failed next01 and retained by digest;
 `inventoryFreshlyExecuted=false` [I](#i). Initial canonical restore remains c7
-work, and twelve historical operation proofs retain their source-qualified
-origins. The parent independently reviewed six original/citation captures,
-including actual PDF physical page 2; this lane read receipt metadata/text only.
-Parent admission/preparation completed at **10:31:41 UTC** [N](#n); the composite
-records its review/acceptance at **10:31:38.874358 UTC**. Parent reports consumer
-guard success. The later **Connected01/session97216 ended exit1 at
-10:35:05.754 UTC**, status `blocked`, active stage
-`manual-memory-correction-real-index`, `TimeoutError`, `stages=[]`; no Connected
-pass or provider call [X](#x). Its attempted close earns **zero close credit**
-because the owned-process helper failed before identity readback. The admitted
-native composite is unaffected. **Probe, Journeys and maintenance remain
-unexecuted.** Parent diagnoses the narrow driver seams; this bounded report does
-not wait for a fix or claim a retry result. No S0–S6 or complete-release pass is declared.
+work. Parent admitted the **five-current / twelve-qualified-historical** native
+composite at the **10:31:41** checkpoint, with
+`fullExecutionAtCurrentTarget=false` [N](#n). Parent reviewed six
+original/citation captures plus the deletion capture, including physical Library
+PDF page2; this lane read only receipt metadata/text.
+
+Connected03/session27882 exited0 at **11:12:00.7575338**; parent receipt/UI review
+and consumer admission passed. **Seven operations performed in03 / three exact
+individually passed proofs retained from failed02** remain separate, with
+`completeExecutionInThisInvocation=false` [CON](#con). Its ordinary main/backend
+close took **5.7199216s**. Failed Connected01/02 retain zero aggregate/close
+credit [X](#x). Probe01's launcher-identity failure occurred before any provider
+request and remains failed with its original latches [Z](#z). The separately
+latched continuation02 was the same first logical provider proof, not a quota
+retry. Probe02 selected **Codex gpt-6-astra**, recorded one failed
+`/learn/ask` run with **subscription_limit**, and exited1 at
+**11:31:48.7296032**. There is no successful answer or automatic capture; its
+ordinary failure close took **5.2447568s** [L](#l).
+
+Dependent **Journeys, image interpretation, automatic capture, installed/live
+freshness and correction are unperformed**. Gap02 completed exit0 at
+**11:58:09.9089015 UTC**; parent accepted bounded local persistence/extraction
+operations while preserving gap01's failed aggregate [GAP](#gap). One scanned-PDF
+import/OCR, one free K01 baseline, physical PDF pages1/2, Flow observations and an
+11.1487911s ordinary close are retained from01. New02 performs only the missing
+reopen/persistence/closed extraction and a4.9068316s ordinary close, with zero
+repeated imports/checks. Fifteen table cells, Unicode units and footnote match;
+parent inspected physical scanned page2. At200% right content is visibly clipped
+despite measured overflow=false, so full reflow/accessibility is unproved. The
+**maintenance exclusive slot is just starting, with no outcomes supplied**;
+parent owns later acceptance. No S0–S6 or complete-release pass is declared.
 
 The owner-selected scope remains an unsigned fresh isolated installation on the
 current Windows PC, bundled runtime with developer tools absent from app PATH,
@@ -41,33 +60,43 @@ normal physical shutdown/reopen, real learning and recovery on a second isolated
 same-PC installation/profile. Signing and a separate clean PC/VM are optional.
 Preserve Flow/Renal flow, Hermes, canonical SQLite and the selected OSS engines.
 Codex remains **GPT 6.1 Sol, GPT 6 Astra, GPT 6 Luna**; OpenCode Go remains
-**MiMo V2.6 Pro, DeepSeek V4.1 Flash**, with Go learning paused. The last supplied
-account evidence is dated Astra catalogue/quota failure [R16](finalise-audit.md#r16),
-not current availability/quota or successful text/image generation. No substituted
-model, silent subscription switch, paid generation fallback, owner inference
-service or doctor-managed runtime is authorised. See [DECISIONS](../DECISIONS.md)
-and [the implementation plan](../planning/IMPLEMENTATION_PLAN.md).
+**MiMo V2.6 Pro, DeepSeek V4.1 Flash**, with Go learning paused. Probe02's actual
+catalogue/selection exposed Astra as available, with text/image capability
+unknown, and the selected run then failed with a subscription limit [L](#l).
+The dated earlier Astra evidence retains its historical scope
+[R16](finalise-audit.md#r16). Neither catalogue availability nor this failed run
+establishes successful text/image generation, Sol/Luna access or later quota.
+No substituted model, silent subscription switch, paid generation fallback,
+owner inference service or doctor-managed runtime is authorised. See
+[DECISIONS](../DECISIONS.md) and
+[the implementation plan](../planning/IMPLEMENTATION_PLAN.md).
 
 ## Evidence and source qualification
 
 **Implemented** means present in the frozen source. **Local** means performed
-API/SQLite/renderer checks with the stated controlled seams; synthetic publisher
-and generation fixtures establish rules. **Actual engine** means real pinned CPU
+API/SQLite/renderer checks with stated controlled seams; synthetic publisher and
+generation fixtures establish rules. **Actual engine** means real pinned CPU
 extraction/OCR/embeddings/LanceDB/Mem0/Qdrant in its recorded scope. **Installed**
-means performed work on that exact historical artifact; extraction-only Install
-is not an app journey. **Live** requires successful deliberate approved-account
-operation. The source wave supplies local evidence; this checkpoint adds exact
-manufacture/install and Recovery02's installed identity, isolated runtime, both
-index rebuilds, original/citation continuity, deletion reconciliation and
-ordinary lifecycle in their bounded scope. It adds no new ingestion/OCR, live
-generation or broad engine aggregate for changed Knowledge/Learn/Updates consumers.
+means performed work on that exact artifact, using synthetic isolated state here;
+extraction-only Install is not an app journey. **Live acceptance** requires a
+successful deliberate approved-account operation. Probe02 is actual live failure
+evidence, with zero successful-generation/capture credit. Recovery02 and
+Connected03 establish actual installed UI, canonical state, real index rebuilds,
+original retention/deletion and ordinary lifecycle in their bounded scopes.
+Connected's manual Memory correction/recall is separate from automatic live
+answer capture and later personalisation. The gap adds one actual synthetic scanned-PDF/OCR/retrieval/page-reader operation
+retained from failed01, plus fresh02 persistence/closed extraction. Its accepted
+scope does not establish broad OCR quality, source currency or full accessibility.
 
 <a id="wave"></a>The [recovery/freshness integration report](finalise-recovery-freshness-20261006.md)
-records accepted freeze 6999 and the earlier separately performed receipts below.
+records accepted freeze6999 and the earlier separately performed receipts below.
 F/C/P/U retain the previous audit's JSON/terminal qualification and their original
-execution sources; they were not rerun or re-collected here. This lane read only
-permitted package, installer, inventory and Recovery02 receipt metadata/text.
-JUnit counts/digests remain reported JSON/integration values; XML was not inspected.
+execution sources; they were not rerun or re-collected here. Parent integration
+2269 and [the Connected continuation](finalise-connected-continuation-699938f2.md)
+were read through Git. This lane also read permitted Recovery/native-admission,
+Connected03/parent-review, Probe01/02 and gap01/02/parent-review receipt/terminal
+metadata, with actual receipt hashes checked. JUnit counts/digests remain reported JSON/integration
+values; XML was not inspected.
 
 | Evidence | Performed result and precise scope |
 | --- | --- |
@@ -80,9 +109,13 @@ JUnit counts/digests remain reported JSON/integration values; XML was not inspec
 | <a id="m"></a>**M — actual matching 6999 manufacture/install** | [Package provenance](C:/Renulus-native-delivery/desktop-20261005/matching-699938f2/delivery-provenance.json), [installer receipt](C:/Renulus-native-delivery/desktop-20261005/proofs/installer-e794e99d/installer-evidence.json): parent-supplied **Package 47784 exit 0, 09:45:34 UTC; Install 95706 exit 0, 09:57:02 UTC**. Exact 6999, unsigned extraction-only install to `installed-699938f2`; installer **1,010,355,641 bytes**, SHA256 `ce1ed76147585477412a8d5319d485fdb03c5e1f3daae2ed02c2ca6669261f5d`; EXE `37e82a40e5143336ffca364d64e2f58e013411727d7a6455462ec53a31b1a802`; ASAR `02d8037b3e70d3ab3411c2a7f4a905ccf0cc984e1f506b9bfaa996b83e641ff8`. Installer receipt's 09:48:26 check time is not its terminal time. No installer-native or maintenance claim is inferred. |
 | <a id="i"></a>**I — performed same-target inventory retained from failed next01** | [Completed current inventory](C:/rn-finalise-20261005/parent-native-recovery-699938f2-699938f2-next01/completed-current-inventory.json), verified SHA256 **`e1c7e2dc03a79b37f5b195d03f4f3fcee22c434ab80daa14f3abde81e0953904`**: full **39,255 files / 5,742 frozen files**, exact 6999 and M artifact hashes; backend inventory `3b0fc2c9d277ba78cdeef461f53875b8f0fb0d4a6ae1c5cf0e89e1bd476326af`. Origin installed-identity gate passed inside **failed next01, exit 1**, with `nativeDriverAccepted=false`. Recovery02 retains every inventory/ancestor check and this transfer; `inventoryFreshlyExecuted=false`, `prior035InventoryReusedForNewTarget=false`. Neither failed invocation nor older-build inventory becomes a pass. |
 | <a id="r"></a>**R — actual Recovery02 bounded installed continuation** | [Actual receipt](C:/Renulus-native-delivery/desktop-20261005/repo/apps/desktop/test-results/installed-product-4c73b819/recovery-resume-699938f2-next02/installed-product-recovery-resume-evidence.json), [terminal](C:/rn-finalise-20261005/parent-native-recovery-699938f2-699938f2-next02/terminal.json): **session 73435 exit 0 at 10:23:18.0762039 UTC**, exact 6999; receipt finished **10:23:17.969 UTC**, `status=slice-passed`, `fullInstalledProductAccepted=false`, `parentReconciliationRequired=true`. **Five current gates** passed: installed-identity, isolated-runtime, full-backup-restore, deletion-reconciliation, final-close. UI Retry completed existing restore 72f6e060 with **7 Knowledge passages / 4 Memory records** and six exact restored originals/citations. Separate older-backup-after-deletion restore retains **five originals**, excludes deleted PNG (**404**), three canonical rows excluded/removed, retained text/PDF query resolves seven passage IDs, both indexes complete. **Three physical ordinary closes / two reopens**, owning main/backend observed and no remaining identities. No initial c7 apply replay, provider/model, import or active-ingestion execution. The later parent admission is recorded separately [N](#n). Receipt SHA256 `2a7d14a4d2e6b45028d2a9b90342f472baf72fe66d3beeb0598729917f799304`; terminal SHA256 `b9fc31764c2c3027b9ff7e4218d77342fc5d3d0820cfa6477e22d00cd9ca1d30`. |
-| <a id="n"></a>**N — parent-admitted source-qualified native17 composite** | [Composite](C:/Renulus-native-delivery/desktop-20261005/repo/apps/desktop/test-results/installed-product-4c73b819/source-qualified-native17-699938f2.json), SHA256 **`825ae4dbaebe40f5f8c3401f56c453d3b486c5787d61ef05b07bdc2e40592108`**; [native review](C:/Renulus-native-delivery/desktop-20261005/repo/apps/desktop/.local/next-installed-20261006/native-review.json), SHA256 **`03564473e0e97f7214248034e0188205e8e39ee4464b98c9e9c506b1f64dd8d5`**; [parent observations](C:/rn-finalise-20261005/parent-native-admission-699938f2-02/parent-observations.json), SHA256 **`03a05dbe6a36555e51be4bcb7ca66e1fadde50a10849a1be7476fd52d3f95bb4`**. Direct receipt/hash review confirms `status=accepted`, `approved=true`, exact6999, **five actual current gates / twelve source-qualified historical gates / three actual current ordinary closes**, with two historical closes kept separate and `fullExecutionAtCurrentTarget=false`. Review/acceptedAt **10:31:38.874358 UTC**; parent reports preparation/admission completed **10:31:41 UTC**, consumer guard passed and Connected97216 was running at that checkpoint; its later failure is retained [X](#x). Parent reviewed six original/citation captures plus one deletion capture, including actual PDF page2. No full current sweep, Connected pass, live or maintenance acceptance follows. |
-| <a id="x"></a>**X — failed Connected01; parent-supplied terminal metadata** | **Session97216 exit1 at10:35:05.754 UTC**, `status=blocked`, `activeStage=manual-memory-correction-real-index`, `TimeoutError`, `stages=[]`. No completed Connected stage/pass and **no provider call**. Ordinary close event was attempted, but `owned-processes.ps1` array decoding failed (`Object[]` cannot cast to `Int32`); **zero close credit until separate owning-identity readback**. Parent is diagnosing narrow driver seams; no fix/retry/readback outcome is supplied. Failure remains failed and does not invalidate [N](#n) or add to/subtract from Recovery02's three closes. This row records the owner's update; no new receipt path or digest is invented. |
-| <a id="next"></a>**NEXT — remaining 6999 continuations** | [Next installed continuation](finalise-next-installed-20261006.md) and [gap adaptation](finalise-installed-gap-699938f2.md) retain Codex Probe/Journeys, maintenance and scanned-input/Flow/one-K01 preparation. Recovery02 is performed [R](#r) and its source-qualified native composite admitted [N](#n). Connected01 failed [X](#x); no completed pass or accepted close. Probe/Journeys/maintenance remain unexecuted. No binder/template/syntax result supplies remaining product acceptance. |
+| <a id="n"></a>**N — parent-admitted source-qualified native17 composite** | [Composite](C:/Renulus-native-delivery/desktop-20261005/repo/apps/desktop/test-results/installed-product-4c73b819/source-qualified-native17-699938f2.json), SHA256 **`825ae4dbaebe40f5f8c3401f56c453d3b486c5787d61ef05b07bdc2e40592108`**; [native review](C:/Renulus-native-delivery/desktop-20261005/repo/apps/desktop/.local/next-installed-20261006/native-review.json), SHA256 **`03564473e0e97f7214248034e0188205e8e39ee4464b98c9e9c506b1f64dd8d5`**; [parent observations](C:/rn-finalise-20261005/parent-native-admission-699938f2-02/parent-observations.json), SHA256 **`03a05dbe6a36555e51be4bcb7ca66e1fadde50a10849a1be7476fd52d3f95bb4`**. Direct receipt/hash review confirms `status=accepted`, `approved=true`, exact6999, **five actual current gates / twelve source-qualified historical gates / three actual current ordinary closes**, with two historical closes kept separate and `fullExecutionAtCurrentTarget=false`. Review/acceptedAt **10:31:38.874358 UTC**; parent preparation/admission completed **10:31:41 UTC**, consumer guard passed. Parent reviewed six original/citation captures plus one deletion capture, including actual Library PDF page2. Connected has its separate later acceptance [CON](#con); no full current sweep, live or maintenance acceptance follows from this composite. |
+| <a id="x"></a>**X — failed Connected01/02 retained** | Connected01/session97216 exited1 at **10:35:05.754 UTC**, blocked at manual-memory-correction-real-index with TimeoutError/stages empty and no provider call. Its attempted ordinary close hit helper array decoding before identity readback; **zero close credit**. Connected02/session73927 exited1 at **10:53:30 UTC** after three individually passed stages and a populated252959-byte format2 ZIP; its first close exceeded30s with main3124 remaining/backend46528 gone. [Failed02 receipt](C:/Renulus-native-delivery/desktop-20261005/proofs/connected-cb5f679d/connected-evidence.json) SHA256 `07ac008a7b2c142d9a3c2224844a63ddf90655a10445e75db3442fcbd3749059`; [terminal](C:/rn-finalise-20261005/parent-connected-699938f2-02/terminal.json) SHA256 `9c3d8ac1fc95cdf9758772591667b10f39610dd119b789da24070952723141e8`. Parent independently observed the owners absent before03. Both aggregates/closes remain failed with zero acceptance/close credit; exact individually passed02 proofs are retained separately in [CON](#con). Driver event-loop starvation is a parent hypothesis, not a proven production defect. |
+| <a id="con"></a>**CON — accepted Connected03 bounded installed subset** | [Actual receipt](C:/Renulus-native-delivery/desktop-20261005/proofs/connected-d52d3dc6/connected-evidence.json), SHA256 `84f76360e08b6a82c19b3f1da5c6226a4db9e4fefeae1fb3d3aa8eead905d48c`; [terminal](C:/rn-finalise-20261005/parent-connected-699938f2-03/terminal.json), SHA256 `d670e24b93d2728d866e45570198b05cbe76a7037b4f6dddccb665c0eea4e551`; [parent review](C:/rn-finalise-20261005/parent-connected-699938f2-03/parent-review.json), SHA256 `54e3a0c1b6817807655d25a04c71f29c6166e0617638cb9aeb50e659e0e366f1`. Exact6999, session27882 exit0 **11:12:00.7575338 UTC**, parent approved **11:15:35.899372 UTC**, consumer guard passed. **Seven performed03 / three exact retained02 stages**, `completeExecutionInThisInvocation=false`; retained proofs are manual Memory revision2/real recall, explicit PDF/PNG Save/reopen/originals, and reviewed wrong attempt→exact plan producer/manual override/Updates navigation, each `executedHere=false`. New03 performs populated restore/rebuild (Knowledge7/Memory6, then Knowledge5/Memory5 after deletion replay), original/Memory/case/plan reconciliation, three owned deletions, same-ZIP newer-deletion reconciliation and raw-part suppression. Fifteen canonical records/one Library original excluded; Library original404, case originals410, own Memory recall empty; verification ZIP has zero owned case/session/attachment/raw-part rows and its deletion marker. One ordinary main44736/backend10612 close **5.7199216s**, remaining/reused identities empty and independent post-close empty. Parent-reviewed Case PDF iframe capture is dark; exact PDF/PNG response bytes and PNG dimensions are proved, **physical Case PDF text rendering is not claimed**. No live generation/capture or complete learning-loop acceptance. |
+| <a id="z"></a>**Z — Probe01 pre-dispatch failure retained** | [Receipt](C:/Renulus-native-delivery/desktop-20261005/repo/apps/desktop/.local/next-installed-20261006/recipes/live-acceptance/receipts/2026-10-06T11-22-22-297Z-636b99ca/live-evidence.json), SHA256 `3f74bb06fe0d6b5d3c876fbe4573bc0440ae61f1175d703cc8eaa954e848a1fe`; [terminal](C:/rn-finalise-20261005/parent-probe-699938f2-01/terminal.json), SHA256 `b776636d0c16ee96d0d6861d607779e38f825c42daf124092e54ad57f14492de`. Exit1 **11:23:10.4076689 UTC**, `main_identity` failure before catalogue/selection/thread/answer/capture/provider; the Playwright process PID was the Windows cmd.exe launcher. The original failed latch/aggregate remains unchanged. Probe02 explicitly pins this failure, `providerRequestsPreviouslyDispatched=0`, `originalLatchesPreserved=true`, `failedAggregateRelabelled=false`, `oldCloseCredit=false`. The continuation repairs launcher identity only and continues the same first logical provider proof; no quota retry is credited or authorised. |
+| <a id="l"></a>**L — actual Probe02 subscription-limit failure** | [Actual receipt](C:/Renulus-native-delivery/desktop-20261005/repo/apps/desktop/.local/next-installed-20261006/recipes/live-acceptance/receipts/2026-10-06T11-28-27-144Z-71daf1d3/live-evidence.json), SHA256 `358bda5f8e83e2dbdb8a7d26df1908fdc2c78b58ef8c3a49a12a6f7366f4859e`; [terminal](C:/rn-finalise-20261005/parent-probe-699938f2-02/terminal.json), SHA256 `285a68114b04fa8bbc0ee69ad00857f4c672c23ff3014600217a9cffa3f5b1d3`; [blocker latch](C:/Renulus-native-delivery/desktop-20261005/repo/apps/desktop/.local/next-installed-20261006/recipes/live-acceptance/blocked-continuation02.json), SHA256 `7239702d3215ca5cd5a51691aa6a0dd9c30dd700e3dcc97b33977e1ef2671c00`. Exact6999, **11:28:26.8399447–11:31:48.7296032 UTC**, exit1, `status=blocked`, `livePassed=false`. Selected/automatic Codex `gpt-6-astra`, catalogue availability=available but text/image capability=unknown. Recorded `/learn/ask` run `run_b474c74e004f4cb9bff704017d5e9cfe` is `state=failed`, `error_code=subscription_limit`. Public app failure is actual external-access evidence; `retry=false`, `fallback=false`. No successful answer, capture evidence/jobs/records empty, image=not-run. Ordinary failure close of main18536/backend8020 **5.2447568s**, no remaining/reused identities. The terminal blocker stops dependent Journeys/image/capture/freshness/correction and supports only the existing parent maintenance ordering; it supplies no live success or permission for account/model fallback. |
+| <a id="gap"></a>**GAP — gap02 bounded continuation accepted; failed01 retained** | [Gap02 receipt](C:/Renulus-native-delivery/desktop-20261005/proofs/installed-gap-slice-699938f2-02/slice-evidence.json), SHA256 `2ceca767597f288fce5c36ae33fb445f5e03df73aaa24a02e2234147e89efd5b`; [terminal](C:/rn-finalise-20261005/parent-gap-699938f2-02/terminal.json), SHA256 `c83243988972c04f4b4826dfd53f6fb8943749248a481eee4b424fbd05460b7d`; [parent review](C:/rn-finalise-20261005/parent-gap-699938f2-02/parent-review.json), SHA256 `3e67b2ce51800889d7f427112b7dd8dcba05d8bafd548cb745c7213037f846cd`. Exact6999, exit0 **11:58:09.9089015 UTC**, `status=continued-local-observation`, `localPersistenceAccepted=true`, parent bounded-operations acceptance **12:01:22.710680 UTC**. [Gap01 receipt](C:/Renulus-native-delivery/desktop-20261005/proofs/installed-gap-slice-699938f2-01/slice-evidence.json), SHA256 `fcc5ac961d2a9f294df8225ad5340d3af6e43a132130b038fa3e052e4c89fe2a`, remains **failed** at late prelaunch `slot_occupied`. Its one scanned-PDF import/OCR/retrieval/page reader, one free K01 baseline, original Flow observations and ordinary main38212/backend46932 close **11.1487911s** are explicitly retained, `retainedExecutedHere=false`. New02 only reopens that exact profile, reads persistence, closes main30200/backend44336 normally in **4.9068316s** and reads closed structured extraction; `operationRequests=[]`, zero repeated imports/checks, no remaining/reused identities. **Fifteen exact table cells, Unicode units and footnote checks true**; parent inspected physical scanned page2, with pages1/2 reader evidence retained. `fullExecutionInThisInvocation=false`, `previousFailureRelabelled=false`. Stale state unobserved. Parent visual200% review found right text/controls clipped despite overflow=false: **no full reflow, complete accessibility or spoken screen-reader pass**. Synthetic table fidelity is not clinical/content review; K01 discovery baseline is not latest-final/corrected-source review. |
+| <a id="next"></a>**NEXT — remaining 6999 continuations** | [Next installed continuation](finalise-next-installed-20261006.md), [Connected record](finalise-connected-continuation-699938f2.md) and [gap adaptation](finalise-installed-gap-699938f2.md) retain source/admission boundaries. Recovery02/native and Connected03 subsets are accepted [R](#r)/[N](#n)/[CON](#con); gap02 accepts only bounded retained/new local operations [GAP](#gap). Probe02 is terminally blocked [L](#l); dependent Journeys/image/capture/freshness/correction are unperformed. Parent reported maintenance source preflight resolving a stale native-only three-answer assertion against Connected progress4 and intentional owned-case deletion, with no production runtime change. The maintenance exclusive slot is just starting: no completed outcome or acceptance is supplied; parent handles later amendments. |
 
 Recovery02 retains twelve historical operation proofs with
 `executedHere=false`, `currentTargetPassed=false` and explicit compatibility
@@ -177,13 +210,13 @@ not certify every requirement or request broad repeated tests/imports.
 | --- | --- | --- | --- |
 | S0.01 | Immutable Hermes adoption, patch provenance, source layout and scoped licences | Implemented/local: attributed pinned Hermes and scoped licences [R01](finalise-audit.md#r01); actual matching 6999 source/artifact provenance [M](#m)/[I](#i). | G1/G7: final distributable notices/licence completeness and static handoff remain open; exact manufacture/install identities are now evidenced. |
 | S0.02 | Controlled runtime/tools/context; no unapproved secondary calls, credential discovery or persistence | Local controlled policy [R01](finalise-audit.md#r01)/[R17](finalise-audit.md#r17)/[R33](finalise-audit.md#r33); [F](#f) blocks automatic acquisition outside ordinary study. | G5/G6: preserve approved transport, context, retention and background-call policy in actual installed/live work. |
-| S0.03 | Versioned process contracts, IDs, migration coordinator and isolated storage | Canonical contracts/SQLite and cases-002 are implemented [R41](finalise-audit.md#r41); six actual 035 storage phases [R45](finalise-audit.md#r45). | G7: qualify actual mapped6999 storage/Python/migration bytes; isolated app identity and upgrade/refusal remain open. |
+| S0.03 | Versioned process contracts, IDs, migration coordinator and isolated storage | Canonical contracts/SQLite and cases-002 are implemented [R41](finalise-audit.md#r41); six actual035 storage phases [R45](finalise-audit.md#r45). Matching isolated identity/restore state is observed in [R](#r)/[CON](#con). | G7: mapped6999 storage/Python/migration byte qualification and populated upgrade/refusal remain open. Installed identity and canonical restore do not establish all compatibility/maintenance outcomes. |
 | S0.04 | Protected deliberate optional retrieval keys, activation and usage/cost controls | Bounded local deliberate key controls [R10](finalise-audit.md#r10). [F](#f) supplies a key-free evidence path. | Selected optional-adapter auth/quota/cost-cap protection remains unproved; optional paid keys cannot become prerequisites. |
-| S0.05 | Native Windows runtime starts with OS-only PATH on this PC | Actual matching 6999 isolated OS-only-PATH runtime and three ordinary main/backend closes/two reopens [R](#r); Electron44.5.1/Python3.14.4, six developer tools absent. Historical c7/6599 startup retains its origin [R55](finalise-audit.md#r55)/[H](#h). | G1/G3: remaining required real journeys; the source-qualified native composite is admitted [N](#n). Current identity/runtime/lifecycle is evidenced with [I](#i) retained same-target inventory. |
-| S0.06 | Bundled Docling/OCR/FastEmbed/LanceDB/Mem0 helpers perform offline round trips | Bounded actual CPU producers [R02](finalise-audit.md#r02)/[R07](finalise-audit.md#r07)/[R37](finalise-audit.md#r37), 035 Cases [R43](finalise-audit.md#r43); actual current installed recovery completes Knowledge7/Memory4 rebuild [R](#r). | G3/G6: remaining matching extraction/OCR/Cases and useful round-trip scopes; Recovery02 rebuild adds no fresh Docling/OCR ingestion or all-engine aggregate. |
+| S0.05 | Native Windows runtime starts with OS-only PATH on this PC | Actual matching6999 isolated OS-only-PATH runtime and three ordinary main/backend closes/two reopens [R](#r); Electron44.5.1/Python3.14.4, six developer tools absent. Connected03 and Probe02 add separately attributed ordinary closes [CON](#con)/[L](#l). Historical c7/6599 startup retains its origin [R55](finalise-audit.md#r55)/[H](#h). | G1/G3: remaining required real learning/input journeys; native composite and bounded Connected subset are admitted [N](#n)/[CON](#con). Keep each lifecycle invocation and retained same-target inventory [I](#i) distinct. |
+| S0.06 | Bundled Docling/OCR/FastEmbed/LanceDB/Mem0 helpers perform offline round trips | Bounded actual CPU producers [R02](finalise-audit.md#r02)/[R07](finalise-audit.md#r07)/[R37](finalise-audit.md#r37),035 Cases [R43](finalise-audit.md#r43); current Recovery/Connected real index rebuilds [R](#r)/[CON](#con). Gap retains one actual current installed scanned-PDF/OCR/retrieval operation from failed01, then proves reopened persistence and closed exact extraction in02 [GAP](#gap). | G3/G6: broader matching extraction/OCR/useful round trips remain bounded. Fifteen synthetic table cells/Unicode units/footnote are exact; per-page OCR confidence and broad fidelity/all-engine aggregate remain unproved. |
 | S0.07 | Compatible pins, hashes, tokenizer/native binaries, CPU paths and no implicit downloads/cloud fallback | Pinned CPU/tokenizer/helper policy [R02](finalise-audit.md#r02)/[R23](finalise-audit.md#r23); current exact artifacts [M](#m), performed 39,255/5,742 same-target inventory retained from failed next01 [I](#i), isolated runtime [R](#r). | G1/G7: final notices and remaining engine-specific no-download/round-trip coverage. `inventoryFreshlyExecuted=false`; no old-build inventory transfer or new scan is claimed. |
-| S0.08 | Exact five-model/account/input capability matrix, automatic routing/manual override | Five-model policy/overrides [R17](finalise-audit.md#r17); dated Astra-only catalogue [R16](finalise-audit.md#r16). | G5: current selected-account/input capabilities and automatic/manual routing. Sol/Luna availability is unresolved; Go remains paused. |
-| S0.09 | App-owned authentication, real response per advertised available connection, stream/Stop/restart | App-owned authentication recorded with quota failures [R16](finalise-audit.md#r16); local terminal/cancel controls [R33](finalise-audit.md#r33). | G5/G6: successful available approved connection, stream/Stop/retry/restart and required image interpretation; no successful live receipt supplied. |
+| S0.08 | Exact five-model/account/input capability matrix, automatic routing/manual override | Five-model policy/overrides [R17](finalise-audit.md#r17); dated Astra catalogue [R16](finalise-audit.md#r16). Probe02 actually selected/automatically routed Codex gpt-6-astra, exposed as available, then received subscription_limit [L](#l). | G5: complete selected-account/input capabilities and successful automatic/manual routing. Probe text/image capabilities are unknown; Sol/Luna access remains unresolved and Go paused. Available catalogue status establishes no usable quota or live success. |
+| S0.09 | App-owned authentication, real response per advertised available connection, stream/Stop/restart | App-owned authentication with historical quota failures [R16](finalise-audit.md#r16); local terminal/cancel controls [R33](finalise-audit.md#r33). Current installed Probe02 records a failed selected Codex run with subscription_limit and ordinary failure close [L](#l). | G5/G6: successful approved connection, stream/Stop/retry/restart and required image interpretation remain unproved. Probe02 supplies actual failure evidence only; image is not-run and no quota retry/fallback is authorised. |
 | S0.10 | No-save sentinel absence, bounded resource/latency/installer measurements | Bounded local/engine no-save [R03](finalise-audit.md#r03)/[R37](finalise-audit.md#r37)/[R43](finalise-audit.md#r43) and freshness guards [F](#f); actual installer1,010,355,641 bytes [M](#m), Recovery02 first window1.048s/renderer107.731s and closes19.641/9.148/7.561s [R](#r). | G3/G6: installed derivative absence across errors/crashes/compaction/handoffs/exports/backups. Measurements are this synthetic slice only; sustained resource/latency/footprint coverage remains bounded. |
 | S0.11 | Schema compatibility, no implicit downgrade; app rollback distinct from data restore | Actual035 checksum/schema-99 refusal [R45](finalise-audit.md#r45); local restore guards [R29](finalise-audit.md#r29)/[R30](finalise-audit.md#r30). | G6/G7: populated app upgrade/refusal and compatible app rollback. Data restore and old compact-index readability remain distinct. |
 
@@ -191,30 +224,30 @@ not certify every requirement or request broad repeated tests/imports.
 
 | ID | Requirement (verbatim) | Supported disposition and evidence | Still unperformed / limited |
 | --- | --- | --- | --- |
-| S1.01 | Flow shell, connection controls and normal Windows launcher | Flow shell/controls and historical035 selectors [R47](finalise-audit.md#r47); actual current Flow Recovery UI/original access and ordinary close/reopen [R](#r); local renderer delta [P](#p)/[U](#u). | G1/G3/G5/G7: actual account/learning journeys and normal launcher promotion. Current restored-profile UI/lifecycle is admitted in [N](#n); connection/live scope remains open. |
-| S1.02 | Direct and guided explanations/follow-ups across nephrology | Direct/guided local producers [R06](finalise-audit.md#r06)/[R12](finalise-audit.md#r12); controlled fresh Explain [F](#f); broad pack [R34](finalise-audit.md#r34). | G5: approved live direct/guided explanations and follow-ups across domains. |
-| S1.03 | Streaming, selected-subscription model override, Stop/retry | Local one-terminal/awaited cleanup [R33](finalise-audit.md#r33); [F](#f) adds Stop during full-text acquisition without answer/capture. | G5/G6: installed live stream, deliberate model override, Stop/retry and reopen; acquisition cancellation is narrower. |
+| S1.01 | Flow shell, connection controls and normal Windows launcher | Flow shell/controls and historical035 selectors [R47](finalise-audit.md#r47); Recovery original access/lifecycle [R](#r), bounded Case/Memory/feedback/plan/Updates [CON](#con), Codex selection/quota failure [L](#l), retained gap Flow/reader observations and fresh02 persistence [GAP](#gap); local renderer delta [P](#p)/[U](#u). | G1/G3/G5/G7: successful account/learning journeys and launcher promotion remain open. Installed subsets retain their individual scope; visual200% clipping prevents full-reflow/accessibility credit [GAP](#gap). |
+| S1.02 | Direct and guided explanations/follow-ups across nephrology | Direct/guided local producers [R06](finalise-audit.md#r06)/[R12](finalise-audit.md#r12); controlled fresh Explain [F](#f); broad pack [R34](finalise-audit.md#r34). | G5: approved live direct/guided explanations and follow-ups across domains. Probe02 ended in subscription_limit, so dependent Journeys are unperformed [L](#l). |
+| S1.03 | Streaming, selected-subscription model override, Stop/retry | Local one-terminal/awaited cleanup [R33](finalise-audit.md#r33); [F](#f) adds Stop during full-text acquisition without answer/capture. Current Probe02 selected Astra and observed terminal quota failure/ordinary close [L](#l). | G5/G6: live streaming, deliberate override, Stop/retry and learning reopen remain unproved. The quota failure and narrower acquisition-cancellation proof establish no successful stream or permission to retry. |
 | S1.04 | Ordinary study history resumes/deletes after restart; case branches remain volatile | Scoped persistence/resume/delete [R06](finalise-audit.md#r06)/[R08](finalise-audit.md#r08); [F](#f) preserves stored cited history while screening excluded evidence from later context. | G6: actual installed resume/delete and volatile case-branch error/crash/handoff absence. History lacking citation references cannot be screened by the new seam. |
-| S1.05 | Actionable offline/auth/quota/model errors preserve work, without fallback | Local retained-input recovery [R25](finalise-audit.md#r25)/[R33](finalise-audit.md#r33); explicit controlled retrieval failures [F](#f). | G5: installed offline/auth/quota/model failures preserve work without fallback. Historical quota failure establishes no current quota state. |
-| S1.06 | Sources/unverified answers visibly distinguished; no canned production answer | Local cited/unverified distinction now includes actual body excerpts, dates, JATS/rights and replay [F](#f)/[P](#p); no production canned response. | G5/G8: matching installed/live grounded answers and visible retrieval failure. Dated research is unreviewed and does not verify latest-final guidance. |
+| S1.05 | Actionable offline/auth/quota/model errors preserve work, without fallback | Local retained-input recovery [R25](finalise-audit.md#r25)/[R33](finalise-audit.md#r33); controlled retrieval failures [F](#f). Actual installed Probe02 exposes subscription_limit on its failed run, with retry=false/fallback=false [L](#l). | G5: complete installed offline/auth/model/quota input-preservation behavior remains bounded. Probe02 establishes current quota failure for that dated attempt only; work retention, later quota and successful access are not inferred. |
+| S1.06 | Sources/unverified answers visibly distinguished; no canned production answer | Local cited/unverified distinction includes body excerpts, dates, JATS/rights and replay [F](#f)/[P](#p); no production canned response. | G5/G8: matching installed/live grounded answers and visible retrieval failure remain unperformed after Probe02 blocked [L](#l). Dated research is unreviewed and does not verify latest-final guidance. |
 
 ### S2 — Library, evidence and cases
 
 | ID | Requirement (verbatim) | Supported disposition and evidence | Still unperformed / limited |
 | --- | --- | --- | --- |
-| S2.01 | Useful direct text, text-PDF and scanned-PDF/OCR through selected pipeline | Actual bounded PDF/OCR producers [R02](finalise-audit.md#r02)/[R37](finalise-audit.md#r37); historical text/native PDF [R47](finalise-audit.md#r47)/[R48](finalise-audit.md#r48); current restored text/PDF original/citation access, with parent-reviewed actual PDF page2 [R](#r). | G3/G6: matching scanned-PDF/OCR utility, table/unit/reading-order fidelity and Cases UI. Recovery access does not rerun ingestion; prepared scanned-input slice remains unexecuted [NEXT](#next). |
-| S2.02 | Preserve valid no-text image originals; separate OCR from model interpretation | Exact no-text originals: local Keep [R41](finalise-audit.md#r41), actual035 PNG [R43](finalise-audit.md#r43), historical Library PNG [R48](finalise-audit.md#r48); current restored PNG original/view before deletion, older-backup exclusion/404 after deletion [R](#r). | G5/G6: installed Cases Keep/Save/view/reopen and separate allowed-model interpretation. Library original recovery proves no new OCR or model interpretation. |
+| S2.01 | Useful direct text, text-PDF and scanned-PDF/OCR through selected pipeline | Actual bounded PDF/OCR producers [R02](finalise-audit.md#r02)/[R37](finalise-audit.md#r37); historical text/native PDF [R47](finalise-audit.md#r47)/[R48](finalise-audit.md#r48); Recovery Library physical page2 [R](#r). Gap retains one actual raster-PDF import/OCR/retrieval/page1/2 reader, verifies reopened persistence/closed structured extraction and exact15 table cells/Unicode units/footnote; parent inspected physical scanned page2 [GAP](#gap). | G3/G6: broader OCR/reading-order utility and calibrated confidence remain limited to the synthetic fixture. Gap01 aggregate remains failed;02 performs no new import. Case PDF physical text rendering remains unproved [CON](#con); source/content accuracy is independent. |
+| S2.02 | Preserve valid no-text image originals; separate OCR from model interpretation | Exact no-text originals: local Keep [R41](finalise-audit.md#r41), actual035 PNG [R43](finalise-audit.md#r43), historical Library PNG [R48](finalise-audit.md#r48); Recovery PNG access/deletion404 [R](#r). Connected retains actual same-target PDF/PNG Save/reopen bytes/dimensions and performs restore/delete/raw-part suppression [CON](#con). | G5/G6: successful allowed-model image interpretation remains unperformed; Probe02 image=not-run [L](#l). These original-retention operations establish no new OCR/model interpretation or universal derivative absence. |
 | S2.03 | Durable selected Office supplements, actual slide/sheet/item/table locators and original bytes | Bounded Office conversion/locators [R20](finalise-audit.md#r20); historical035 exact DOCX/PPTX/XLSX downloads [R48](finalise-audit.md#r48); current six-original recovery includes Office bytes/locators, parent-reviewed captures and two normal reopens [R](#r). | G3/G6: current retained-original recovery is admitted in [N](#n) with historical conversions source-qualified. External Office dialogs/automatic jumps remain unclaimed; no new conversion or repeated import occurred. |
-| S2.04 | Exact revision/passage/page/region citation and original access, unknown locators remain unknown | Historical exact Library locators/originals [R47](finalise-audit.md#r47)/[R48](finalise-audit.md#r48); current six restored original/citation proofs with parent review including actual PDF page2 [R](#r); local public JATS/excerpt/date/rights rendering [F](#f)/[P](#p). | G3/G8: remaining reader/accessibility/freshness scopes. Current restored continuity is admitted [N](#n); JATS is not a PDF page, unknown locators stay unknown and highlighting remains unproved. |
+| S2.04 | Exact revision/passage/page/region citation and original access, unknown locators remain unknown | Historical exact Library locators/originals [R47](finalise-audit.md#r47)/[R48](finalise-audit.md#r48); Recovery Library physical page2 [R](#r), Case PDF/PNG response bytes [CON](#con), gap scanned reader pages1/2/parent-reviewed page2 and reopened original/extraction persistence [GAP](#gap); local public JATS/excerpts/dates/rights [F](#f)/[P](#p). | G3/G8: remaining reader/accessibility/freshness scopes. Case PDF captured frame is dark; scanned reader clips right content at200% despite overflow=false, so no full reflow. JATS is not a PDF page; unknown locators stay unknown and highlighting remains unavailable/unproved. |
 | S2.05 | Stage eligible revisions; failed/cancelled replacement retains prior active revision | Local staged activation, prior-revision continuity and race fences [R05](finalise-audit.md#r05)/[R15](finalise-audit.md#r15)/[R27](finalise-audit.md#r27). | G3: installed cancel/failure/delete/restart retains prior active revision and excludes stale jobs. |
-| S2.06 | LanceDB native hybrid retrieval, filters, paraphrases/acronyms across editions/domains | Bounded actual hybrid retrieval [R02](finalise-audit.md#r02)/[R20](finalise-audit.md#r20); local current-only projection [F](#f)/[C](#c); current Knowledge rebuild7 and retained text/PDF query returning seven passage IDs after deletion reconciliation [R](#r). | G3/G8: installed edition/scope/currency filtering and varied-domain paraphrase/acronym utility. Synthetic recovery retrieval is bounded and proves no whole-corpus quality. |
+| S2.06 | LanceDB native hybrid retrieval, filters, paraphrases/acronyms across editions/domains | Bounded actual hybrid retrieval [R02](finalise-audit.md#r02)/[R20](finalise-audit.md#r20); local current-only projection [F](#f)/[C](#c); Recovery retained passage query [R](#r), Connected real Knowledge rebuilds [CON](#con), one actual installed scanned-PDF retrieval retained from failedgap01 with persistence confirmed in02 [GAP](#gap). | G3/G8: edition/scope/currency filtering and varied-domain paraphrase/acronym utility remain bounded. Synthetic installed retrieval establishes no whole-corpus quality or current-source clearance. |
 | S2.07 | Authorised local import, official user download, per-file edition/rights/attribution, originals preserved | Classified 29 E07/L03 and28 E06 admissions [R18](finalise-audit.md#r18); scoped source/Office/queue closure [R52](finalise-audit.md#r52). | Preserve per-file rights, attribution, originals, EMF/component/currency holds and selected readiness. Admission is not searchable/current status; no duplicate imports. |
 | S2.08 | Malformed/encrypted/oversized inputs and cancellation handled before unsafe persistence | Bounded malformed Office/temporary-byte/large-upload refusals [R14](finalise-audit.md#r14)/[R20](finalise-audit.md#r20)/[R30](finalise-audit.md#r30). | G3: installed encrypted/oversized/malformed/cancel behavior before unsafe persistence; new HTTP evidence failures are a separate scope. |
 | S2.09 | Freshness-sensitive Explain automatically retrieves eligible evidence without an upload/paid key | Automatic passage path now implemented and locally validated [F](#f)/[P](#p): current-only local search, one eligible key-free PMC body candidate, dates/rights, failure/Stop/replay. | G5/G8: actual installed no-upload passage/failure journey through selected live generation. Public OA research does not establish latest-final guidance or comprehensive retraction clearance. |
 | S2.10 | Optional keyed retrieval has deliberate activation, protected keys, quota/cost-cap errors | Bounded optional connection controls [R10](finalise-audit.md#r10); [F](#f) uses no paid key or alternate provider. | Selected optional-adapter auth/quota/cost limits remain unproved. Keep explicit activation and the required key-free route. |
 | S2.11 | Temporary/unclassified case data and every derivative remain absent from durable stores | Bounded volatile originals/cancellation [R41](finalise-audit.md#r41)/[R43](finalise-audit.md#r43); [F](#f) blocks temporary/unclassified freshness acquisition and durable Learn/source writes. | G6: every installed derivative across error/Stop/crash/compaction/handoff/export/backup. Bounded freshness denial and earlier no-write guards are not universal retention proof. |
-| S2.12 | Explicit Save retains case snapshot/attachments; saved follow-up and restart/delete semantics | Local atomic Save/parts/recovery [R41](finalise-audit.md#r41); actual 035 PDF/PNG Save/reopen/hash/delete [R43](finalise-audit.md#r43); installed SQL parts only [R45](finalise-audit.md#r45). | G5/G6: matching Case UI Save/original view/follow-up/reopen/delete/populated recovery and successful live case discussion. |
-| S2.13 | Physical derivative cleanup, old Lance versions, delete-during-ingestion and stale-job exclusion | Local/historical engine cleanup/fences [R05](finalise-audit.md#r05)/[R07](finalise-audit.md#r07)/[R41](finalise-audit.md#r41); actual current older-backup deletion reconciliation excludes PNG original/three canonical rows, leaves five originals and completes both indexes, cleanup_pending=false [R](#r). | G6: broader old-Lance-version, delete-during-ingestion, stale-job and derivative-purge coverage remains bounded. PNG404/five retained originals survive two reopens; this is no universal purge proof. |
+| S2.12 | Explicit Save retains case snapshot/attachments; saved follow-up and restart/delete semantics | Local atomic Save/parts/recovery [R41](finalise-audit.md#r41); actual035 Save/reopen/hash/delete [R43](finalise-audit.md#r43)/[R45](finalise-audit.md#r45). Accepted Connected retains same-target explicit Case PDF/PNG Save/reopen, then performs populated restore/exact original access, owned-case deletion410 and zero raw-part resurrection [CON](#con). | G5/G6: successful live case discussion and saved follow-up remain unperformed after Probe02 [L](#l). Case original retention/deletion is bounded; captured dark PDF frame supplies no physical Case PDF text-rendering pass. |
+| S2.13 | Physical derivative cleanup, old Lance versions, delete-during-ingestion and stale-job exclusion | Local/historical engine cleanup/fences [R05](finalise-audit.md#r05)/[R07](finalise-audit.md#r07)/[R41](finalise-audit.md#r41); Recovery PNG404/three-row suppression and completed indexes [R](#r). Connected03 deletes owned Memory/case/Library original, suppresses15 canonical records/one Library original on ZIP replay, verifies case410/zero owned raw parts and empty own-Memory recall [CON](#con). | G6: broader old-Lance-version, delete-during-ingestion, stale-job and derivative-purge coverage remains bounded. Exact recorded deletion markers/parts and cleanup state do not establish a universal purge proof. |
 | S2.14 | Interactive Library stays usable while the normal queue progresses | Local queue priority/fairness [R27](finalise-audit.md#r27); historical c7 active-ingestion close/reopen [R55](finalise-audit.md#r55); scoped queue closure [R52](finalise-audit.md#r52). Current Recovery02 ordinary three-close/two-reopen slice [R](#r). | G3: matching ordinary queue usability/readiness under ingestion remains unaccepted; Recovery02 did not run active ingestion. Sustained responsiveness/resources remain unmeasured. |
 
 ### S3 — Reviewed assessment and original content
@@ -223,7 +256,7 @@ not certify every requirement or request broad repeated tests/imports.
 | --- | --- | --- | --- |
 | S3.01 | Retain measurable broad content targets; original reviewed questions/cases with evidence terms | Adopted broad minima and scoped original-content review/terms met [R34](finalise-audit.md#r34). | G4: delivered consumers/disclosures; depth and current evidence remain partial. Link counts do not establish a complete curriculum. |
 | S3.02 | Actual immutable original pack installs/activates and consumers share it | Immutable1.1.2 local activation/restart [R34](finalise-audit.md#r34); installed035 selectors/reviewed consumer [R47](finalise-audit.md#r47). | G4/G6: exact matching pack, shared Cases/Study/Home consumers, normal reopen and preserved predecessor pins. |
-| S3.03 | Committed deterministic scoring, rationale sources, mistakes, pause/resume | Local deterministic scoring/history [R12](finalise-audit.md#r12), historical035 quiz [R47](finalise-audit.md#r47), immutable answers/keys/scores during notice replay [C](#c); Recovery02 observes three retained reviewed sessions/three fresh answered items [R](#r). | G4/G6: matching feedback/mistake/pause/resume and plan links. Restored session observations are not a new quiz execution or connected feedback journey. |
+| S3.03 | Committed deterministic scoring, rationale sources, mistakes, pause/resume | Local deterministic scoring/history [R12](finalise-audit.md#r12), historical035 quiz [R47](finalise-audit.md#r47), immutable results during notice replay [C](#c); Recovery observes retained reviewed sessions/answered items [R](#r). Connected retains an actually performed same-target reviewed wrong attempt with its exact plan producer/manual override [CON](#con). | G4/G6: broader matching mistake/pause/resume coverage remains open. Recovery session observations are retained state; Connected wrong-attempt evidence is a separately attributed passed02 operation, not replayed in03. |
 | S3.04 | Idempotent restart avoids duplicate answers/exposure; stable item/family/key versions | Local stable item/family/version and restart/idempotency guards [R11](finalise-audit.md#r11)/[R29](finalise-audit.md#r29)/[R34](finalise-audit.md#r34). | G4/G6: installed commit/resume/retry/cancel/help without duplicate answers or exposure. |
 | S3.05 | Corrected/withdrawn keys annotate historical results without rewriting them | Local historical annotation/citation versions [R34](finalise-audit.md#r34); [C](#c) adds source re-review feedback with immutable recorded results. | G4/G8: actual corrected/withdrawn key transitions and installed history; source notice review neither changes a key nor clears question re-review. |
 | S3.06 | Fresh, assisted, repeat and generated aggregates remain separate after mode switches | Local assistance/repeat/generated separation [R12](finalise-audit.md#r12)/[R17](finalise-audit.md#r17)/[R32](finalise-audit.md#r32). | G4/G5/G6: installed mode/help/repeat transitions and successful separately labelled generated practice. |
@@ -235,23 +268,23 @@ not certify every requirement or request broad repeated tests/imports.
 
 | ID | Requirement (verbatim) | Supported disposition and evidence | Still unperformed / limited |
 | --- | --- | --- | --- |
-| S4.01 | Hermes/Mem0 OSS + explicit FastEmbed/local Qdrant; SQLite authority and rebuildable generations | Actual bounded Hermes/Mem0/FastEmbed/local Qdrant with SQLite authority [R07](finalise-audit.md#r07); current installed recovery completes Knowledge7/Memory4 rebuild, with four retained Memory fact IDs [R](#r). | G6: recovery is admitted in [N](#n) as bounded synthetic state. New capture/generation, broader learner-engine round trips and expected-volume acceptance remain open. |
-| S4.02 | Durable idempotent eligible capture queue with references/provenance and correct scope | Local durable eligible outbox/provenance [R08](finalise-audit.md#r08)/[R33](finalise-audit.md#r33); [F](#f) refuses capture after Stop or cited-source invalidation. | G5/G6: live completed capture/worker/restart/distinct lessons and capture's own exact provider/model provenance. |
-| S4.03 | Automatic general learning points through approved live subscription, without case/prompt facts | Actual Mem0 producer with controlled generation [R07](finalise-audit.md#r07)/[R08](finalise-audit.md#r08); live quota failure only [R16](finalise-audit.md#r16). | G5: ordinary live answer → autonomous canonical general point → recall/correct/delete/restart, without case/prompt facts. Manual Memory is insufficient. |
-| S4.04 | Deduplication, editable records, revision conflicts, physical history/index purge and suppression | Local/engine dedup, correction/history purge/delete/replay [R07](finalise-audit.md#r07)/[R08](finalise-audit.md#r08); canonical guards [R30](finalise-audit.md#r30). | G5/G6: installed correction/delete during capture/summary, reindex/restart/restore and honest pending-cleanup state remain open. Connected01 timed out at manual-memory-correction-real-index with stages empty [X](#x); no correction/connected pass is credited. |
-| S4.05 | Relevant corrected personal context within separate library/memory budgets, no invented mastery | Local/engine scoped budgets/recall [R07](finalise-audit.md#r07)/[R08](finalise-audit.md#r08); [F](#f) screens excluded cited assistant history from later provider context. | G5: live personalisation changes after correction/deletion. Citation screening does not correct derived Memory or history without citation references; no mastery inference. |
-| S4.06 | Plan uses goals/time/exam date/observed mistakes, with free browsing and manual overrides | Real local wrong-answer→plan/manual override/date/restart and receiver [R09](finalise-audit.md#r09)/[R22](finalise-audit.md#r22)/[R32](finalise-audit.md#r32). | G4/G6: matching exact attempt/topic-to-plan producer link, manual override and Today/Test handoff; absent producer link stays partial. |
+| S4.01 | Hermes/Mem0 OSS + explicit FastEmbed/local Qdrant; SQLite authority and rebuildable generations | Actual bounded Hermes/Mem0/FastEmbed/local Qdrant with SQLite authority [R07](finalise-audit.md#r07); Recovery Knowledge7/Memory4 rebuild [R](#r), Connected03 real rebuilds Knowledge7/Memory6 then Knowledge5/Memory5 and canonical Memory revision2 continuity [CON](#con). | G6: actual installed synthetic-state rebuilds are accepted within [N](#n)/[CON](#con). Automatic capture/generation, broader learner-engine round trips and expected-volume acceptance remain unproved. |
+| S4.02 | Durable idempotent eligible capture queue with references/provenance and correct scope | Local durable eligible outbox/provenance [R08](finalise-audit.md#r08)/[R33](finalise-audit.md#r33); [F](#f) refuses capture after Stop/source invalidation. Probe02 receipt has empty capture evidence/jobs/records after quota failure [L](#l). | G5/G6: completed live capture/worker/restart/distinct lessons and capture's own exact provider/model provenance remain unperformed. Empty capture arrays supply no successful-capture acceptance. |
+| S4.03 | Automatic general learning points through approved live subscription, without case/prompt facts | Actual Mem0 producer with controlled generation [R07](finalise-audit.md#r07)/[R08](finalise-audit.md#r08); historical quota failure [R16](finalise-audit.md#r16), actual current subscription_limit Probe02 [L](#l). Connected establishes manual Memory operations only [CON](#con). | G5: ordinary live answer→autonomous canonical general point→recall/correct/delete/restart without case/prompt facts remains unperformed. Manual Memory correction/recall establishes no automatic lesson capture. |
+| S4.04 | Deduplication, editable records, revision conflicts, physical history/index purge and suppression | Local/engine dedup, correction/history purge/delete/replay [R07](finalise-audit.md#r07)/[R08](finalise-audit.md#r08), canonical guards [R30](finalise-audit.md#r30). Connected retains actual revision2 manual correction/real recall and performs restore/index reconciliation, owned Memory deletion/empty recall and same-ZIP deletion suppression [CON](#con). | G5/G6: correction/delete during live capture/summary, broader conflicts/restarts and all physical history/index-purge scopes remain open. Failed Connected01/02 aggregates remain failed [X](#x); their exact retained passing02 proof is explicitly separate from fresh03 operations. |
+| S4.05 | Relevant corrected personal context within separate library/memory budgets, no invented mastery | Local/engine scoped budgets/recall [R07](finalise-audit.md#r07)/[R08](finalise-audit.md#r08); [F](#f) screens excluded cited assistant history. Connected proves actual manual corrected recall and empty owned recall after deletion [CON](#con). | G5: changed later live personalisation remains unperformed after Probe02 [L](#l). Citation screening does not correct derived Memory or history without references; manual recall establishes no later answer adaptation or mastery. |
+| S4.06 | Plan uses goals/time/exam date/observed mistakes, with free browsing and manual overrides | Real local wrong-answer→plan/manual override/date/restart [R09](finalise-audit.md#r09)/[R22](finalise-audit.md#r22)/[R32](finalise-audit.md#r32). Connected retains actual reviewed wrong attempt→exact plan producer/refresh/manual date override/Updates navigation, with plan surviving fresh03 restore [CON](#con). | G4/G6: broader Today/Test/return/resume and shared pack/version boundaries remain limited. The exact recorded producer link is evidenced; Updates navigation supplies no publication-currency review or complete live loop. |
 | S4.07 | Useful new-user home: Ask/Resume/review/updates, real records | Local new/existing-user Home uses real records [R09](finalise-audit.md#r09)/[R12](finalise-audit.md#r12)/[R32](finalise-audit.md#r32). | G6/G8: installed empty/history/error states and linked Ask/Resume/review/Updates return; full accessibility remains unperformed. |
-| S4.08 | Versioned export/restore with attachments/provenance and deletion limits on an isolated same-PC target | Actual current app Retry completes existing c7 canonical restore72f6e060 on the isolated same-PC target: six originals/citations, Knowledge7/Memory4 rebuild and retained reviewed sessions/facts; separate older-backup-after-deletion probe preserves five originals/PNG404 through two reopens [R](#r). | G6: bounded recovery is admitted [N](#n). Initial preview/Cancel/Apply remain c7, `initialRestoreRepeated=false`; newer deletions are known only where markers exist. App rollback and the complete connected retention journey remain separate open outcomes. |
-| S4.09 | Expected memory volume, paraphrases/abbreviations, repeated capture and quota/index failure recovery | Bounded semantic/race/failure evidence [R07](finalise-audit.md#r07)/[R33](finalise-audit.md#r33), canonical capacity [R30](finalise-audit.md#r30); actual current failed-index Retry completes Knowledge7/Memory4 recovery [R](#r). | G5/G6: actual semantic/abbreviation/capture/quota behavior and expected Mem0 volume remain unproved; four recovered records/canonical capacity establish no scaling result. |
+| S4.08 | Versioned export/restore with attachments/provenance and deletion limits on an isolated same-PC target | Recovery Retry completes existing c7 restore72f6e060: six originals/citations, Knowledge7/Memory4, older-backup PNG404/five originals through two reopens [R](#r). Connected03 performs fresh populated format2 restore from exact failed02 ZIP, preserves Memory revision2/plan/PDF/PNG originals, then suppresses newer Memory/case/Library deletion including zero owned raw parts [CON](#con). | G6: bounded recovery/native and Connected subsets are admitted [N](#n)/[CON](#con). Initial Recovery preview/Cancel/Apply remain c7, initialRestoreRepeated=false; Connected's fresh populated restore is a separately attributed current operation. Deletions require known markers; app rollback and live learning remain distinct open outcomes. |
+| S4.09 | Expected memory volume, paraphrases/abbreviations, repeated capture and quota/index failure recovery | Bounded semantic/race/failure evidence [R07](finalise-audit.md#r07)/[R33](finalise-audit.md#r33), canonical capacity [R30](finalise-audit.md#r30); Recovery index Retry Knowledge7/Memory4 [R](#r), Connected real Memory6/Memory5 rebuild/owned recall [CON](#con), actual terminal quota failure [L](#l). | G5/G6: broad semantics/abbreviations, repeated automatic capture, quota recovery and expected Mem0 volume remain unproved. Small synthetic-state rebuilds/canonical capacity establish no scaling result; no quota retry follows Probe02. |
 
 ### S5 — Current evidence and Updates
 
 | ID | Requirement (verbatim) | Supported disposition and evidence | Still unperformed / limited |
 | --- | --- | --- | --- |
-| S5.01 | Bounded in-app source checks, explicit opt-in, durable successes/failures and topic-only queries | Local bounded opt-in topic-only scheduling/check persistence [R10](finalise-audit.md#r10); no actual source check in this wave. | G8: installed Check/Stop/shutdown/reopen, persisted success/failure and no raw-case query/background actor. Prepared single K01 check is unexecuted [NEXT](#next). |
+| S5.01 | Bounded in-app source checks, explicit opt-in, durable successes/failures and topic-only queries | Local bounded opt-in topic-only checks [R10](finalise-audit.md#r10); Connected Updates navigation [CON](#con). Gap retains exactly one deliberate free K01 baseline check from failed01;02 proves reopened Updates/source persistence with automation disabled and zero repeated check/import requests [GAP](#gap). | G8: Check/Stop and wider persisted failure/stale/background/query boundaries remain limited. Stale state was unobserved; baseline discovery establishes no educational review or latest-final/corrected-copy clearance. |
 | S5.02 | Final/draft, chapter replacement, corrigenda, expiry, removal/retraction remain separate | Local invalidation now clears review/current flags for corrections, replacements, retractions, draft/preprint/removal [C](#c); publication/currency history [R10](finalise-audit.md#r10)/[R31](finalise-audit.md#r31). | G8: actual inspected relationships/corrected bytes and installed eligibility; dated publication/access/expiry/corrigendum holds remain. |
-| S5.03 | Detected changes separate from explicitly reviewed educational entries, with dates/source links | Local detected-vs-reviewed workflow [R10](finalise-audit.md#r10); [C](#c) keeps new metadata detection pending/unreviewed; form behavior [U](#u). | G8: actual eligible changed source → explicit educational review → dates/links/affected objectives. Public fetch or K01 baseline is not a reviewed update. |
+| S5.03 | Detected changes separate from explicitly reviewed educational entries, with dates/source links | Local detected-vs-reviewed workflow [R10](finalise-audit.md#r10); correction metadata stays pending/unreviewed [C](#c)/[U](#u). Actual free K01 discovery baseline and reopened persistence are narrowly evidenced [GAP](#gap). | G8: actual eligible changed source→explicit educational review→dates/links/affected objectives remains unperformed. Public baseline/navigation/persistence is not a reviewed update or clinical-currency proof. |
 | S5.04 | Correction flags bank/learning history without rewriting keys/results | Local feedback re-review with recorded keys/answers/scores unchanged [C](#c); later cited Learn history screened [F](#f). | G4/G8: actual update→affected-item/feedback/history and eligibility effects with keys/results preserved remain unperformed. Study projection is optional refinement; no current-content mislabel or notice bypass was demonstrated and no Study-specific release gate is added. |
 | S5.05 | Offline/failed/stale/restricted reimport accurate, same-URL change and exact-copy review reproducible | Local exact edition+SHA256 reconfirmation, ordered invalidation/retry and explicit false flags [C](#c)/[U](#u); read-only current eligibility [F](#f). | G3/G8: installed stale/offline/restricted/same-URL/exact-copy behavior. Failed/no-match sync is incomplete; no unverified copy is promoted current. |
 
@@ -260,112 +293,142 @@ not certify every requirement or request broad repeated tests/imports.
 | ID | Requirement (verbatim) | Supported disposition and evidence | Still unperformed / limited |
 | --- | --- | --- | --- |
 | S6.01 | Required broad-topic and ESENeph cells: explanation/evidence/questions/cases/update sources | Adopted minima, eight filled facets and56/56 case links [R34](finalise-audit.md#r34); complete_content_coverage=false. | G4/G8: delivered consumers/current-evidence behavior.11 partial domains/27 currency-review cells and incomplete depth prevent complete-coverage claims. |
-| S6.02 | Case → Explain → practice/Test → feedback → Memory → plan → Updates across domains | Real local vertical parts in [original ledger](finalise-audit.md#requirement-ledger--64-original-rows); this wave adds freshness/replay/correction parts [F](#f)/[C](#c)/[P](#p)/[U](#u). | G4/G5/G6/G8: actual multi-domain case→Explain→practice/Test→feedback→Memory→plan→Updates/return/resume remains open. Connected01 failed at manual Memory correction with no completed stages/provider call [X](#x); isolated subproofs do not compose the live loop. |
-| S6.03 | Completed relevant backend/renderer/regression on integrated source, failures/exclusions adjudicated | Bounded accepted receipts [F](#f)/[C](#c)/[P](#p)/[U](#u), with historical identity accounting [R29](finalise-audit.md#r29)/[R34](finalise-audit.md#r34)/[R41](finalise-audit.md#r41)/[R43](finalise-audit.md#r43); separate actual Recovery02 installed slice [R](#r). | G2 accounting only: retain every failed invocation/exclusion and changed-source limit, including failed6999 next01 [I](#i) and Connected01 [X](#x). [N](#n) is an admitted source-qualified composite, not a full current sweep; no full-green regression/all-engine claim or repeat workload. |
-| S6.04 | One Flow system; keyboard, screen reader, text scaling/resize/reduced motion; loading/empty/errors | One Flow system with bounded focus/font/error scopes [R12](finalise-audit.md#r12)/[R22](finalise-audit.md#r22)/[R26](finalise-audit.md#r26); local source/form controls [P](#p)/[U](#u). | G8: actual keyboard/focus/screen-reader/scaling/resize/reduced-motion/loading/empty/error/original-reader observations; prepared slice is no access pass [NEXT](#next). |
-| S6.05 | New source freeze → exact payload → manufacture/install → normal lifecycle matching that source | Accepted6999 freeze [WAVE](#wave), actual matching Package47784/Install95706 [M](#m), full same-target inventory from failed next01 [I](#i), current identity/runtime and three ordinary closes/two reopens [R](#r). Historical035/c7/6599 origins remain qualified. | G1/G3/G6/G7: five-current/twelve-historical native composite admitted [N](#n); remaining Connected/live/maintenance outcomes stay open. Exact manufacture/install and bounded current ordinary lifecycle are performed, without a full current sweep. |
+| S6.02 | Case → Explain → practice/Test → feedback → Memory → plan → Updates across domains | Real local vertical parts in [original ledger](finalise-audit.md#requirement-ledger--64-original-rows); freshness/replay/correction parts [F](#f)/[C](#c)/[P](#p)/[U](#u). Accepted Connected provides bounded Case Save/reopen/restore/delete, manual Memory correction/recall and reviewed feedback→exact plan/manual override/Updates navigation [CON](#con). | G4/G5/G6/G8: actual multi-domain case→Explain→generated practice/Test→feedback→automatic Memory→plan→reviewed Updates/return/resume remains unperformed. Probe02 subscription_limit stops dependent Journeys/capture [L](#l); manual/retained installed subproofs do not compose the live loop. |
+| S6.03 | Completed relevant backend/renderer/regression on integrated source, failures/exclusions adjudicated | Bounded accepted F/C/P/U receipts and historical identity accounting [F](#f)/[C](#c)/[P](#p)/[U](#u), [R29](finalise-audit.md#r29)/[R34](finalise-audit.md#r34)/[R41](finalise-audit.md#r41)/[R43](finalise-audit.md#r43); actual Recovery/native and Connected subsets [R](#r)/[N](#n)/[CON](#con), gap02 bounded retained/new local operations [GAP](#gap). | G2 accounting: all failed invocations/exclusions/source limits remain, including next01 [I](#i), Connected01/02 [X](#x), Probe01/02 [Z](#z)/[L](#l) and failedgap01. Gap02 fullExecutionInThisInvocation=false/previousFailureRelabelled=false. No full current sweep, full-green regression/all-engine claim or repeated workload. |
+| S6.04 | One Flow system; keyboard, screen reader, text scaling/resize/reduced motion; loading/empty/errors | One Flow system with bounded focus/font/error scopes [R12](finalise-audit.md#r12)/[R22](finalise-audit.md#r22)/[R26](finalise-audit.md#r26); local controls [P](#p)/[U](#u), Recovery/Connected UI [R](#r)/[CON](#con). Gap01 Flow keyboard/AX/reader/size/zoom/media observations are retained;02 confirms reopened persistence; parent inspected physical scanned page2 [GAP](#gap). | G8: visual200% screenshot clips right text/controls despite measured overflow=false, so full reflow is unaccepted. Stale state unobserved. Complete accessibility, spoken screen reader, Windows DPI/OS preferences, wider focus/loading/error coverage and independent human accessibility review remain separate limits. |
+| S6.05 | New source freeze → exact payload → manufacture/install → normal lifecycle matching that source | Accepted6999 freeze [WAVE](#wave), matching manufacture/install [M](#m), retained same-target inventory [I](#i), Recovery runtime/three closes/two reopens [R](#r). Connected03, failed Probe02 and gap01/02 ordinary closes keep separate attribution [CON](#con)/[L](#l)/[GAP](#gap); historical035/c7/6599 origins stay qualified. | G1/G3/G6/G7: native five-current/twelve-historical composite, Connected subset and bounded gap operations are accepted in their own scopes. Live/dependent Journeys and maintenance outcomes remain open; fullExecutionAtCurrentTarget=false remains unchanged and gap01 is not relabelled. |
 | S6.06 | Unsigned current-PC delivery, update provenance, static distribution and complete notices | Unsigned current-PC decision [DECISIONS](../DECISIONS.md); actual6999 installer/EXE/ASAR provenance and NotSigned extraction [M](#m), matching inventory/runtime/lifecycle slice [I](#i)/[R](#r). | G1/G7: final notices/static distribution/update provenance and handoff remain open; source-qualified native admission is complete [N](#n). Signing and separate clean PC/VM remain optional owner-selected future work. |
-| S6.07 | Install/upgrade/rollback, database migration, uninstall/data-retention and isolated installation identity | Actual035 six-phase migration/refusal [R45](finalise-audit.md#r45); actual6999 fresh extraction and isolated installer identity [M](#m), installed runtime [R](#r); maintenance/storage adaptation remains prepared [NEXT](#next). | G7: mapped storage qualification, populated app upgrade/refusal, compatible rollback and uninstall/retention/reinstall/reopen remain unperformed. Do not repeat/relabel035 storage or treat data restore as app rollback. |
-| S6.08 | Backup/restore incl. Office/image originals, citations and both derived indexes; recovery disclosure | Historical Save/Cancel/exact ZIP [R47](finalise-audit.md#r47)/[R49](finalise-audit.md#r49); actual current UI Retry, six restored text/PDF/image/Office originals/citations, both indexes, deletion disclosure and older-backup PNG exclusion/five retained originals [R](#r). Parent reviewed all six captures including actual PDF page2. | G6: broader saved-Case UI/attachment retention journeys remain open; bounded recovery is admitted in [N](#n). Initial preview/Cancel/Apply remain c7; failed prior rebuilds/invocations remain failed [H](#h)/[I](#i). No full product acceptance follows. |
-| S6.09 | Plain-language onboarding/running/recovery and truthful capability controls | Running/recovery guidance and local error/capability controls [R25](finalise-audit.md#r25)/[R26](finalise-audit.md#r26)/[R33](finalise-audit.md#r33); explicit new source disclosures [P](#p). | G7: parent reconciles accepted-install onboarding/launcher/recovery guidance and truthful quota/image/Go/content/currency limits after actual proof. |
-| S6.10 | Fresh isolated installation on this Windows PC completes required real journeys with bundled runtime | Actual fresh matching6999 extraction [M](#m), retained full same-target inventory [I](#i), current isolated bundled runtime/Recovery02 original-retrieval/deletion slice and three physical closes/two reopens [R](#r); twelve historical operations retain their origins. | G1/G3/G5/G6/G7: Connected01/session97216 failed with no completed stages/provider call/close credit [X](#x); Probe/Journeys and maintenance remain unexecuted. [N](#n) remains admitted: five current/twelve historical operations and three fresh closes, no full current sweep or complete installed acceptance. |
+| S6.07 | Install/upgrade/rollback, database migration, uninstall/data-retention and isolated installation identity | Actual035 six-phase migration/refusal [R45](finalise-audit.md#r45); actual6999 fresh extraction/isolated installer identity [M](#m), runtime [R](#r), parent maintenance driver/storage source preparation [NEXT](#next). | G7: no completed mapped-storage/upgrade/refusal/rollback/uninstall/retention/reinstall/reopen outcomes are supplied. Maintenance exclusive slot is just starting; prior source preflight addressed the stale native-only three-answer assertion versus Connected progress4/owned-case deletion without production runtime change. Parent owns later acceptance;035 storage/data restore remain distinct. |
+| S6.08 | Backup/restore incl. Office/image originals, citations and both derived indexes; recovery disclosure | Historical Save/Cancel/exact ZIP [R47](finalise-audit.md#r47)/[R49](finalise-audit.md#r49); current Recovery Retry/six Library originals/citations/derived indexes/PNG deletion reconciliation [R](#r), parent-reviewed Library PDF page2. Connected03 adds actual populated restore/Memory and plan continuity/exact Case bytes/deletion-marker and raw-part suppression [CON](#con). | G6: bounded native/Connected retention scopes are admitted [N](#n)/[CON](#con); broader saved follow-up/volatile-case/live derivative coverage remains open. Recovery initial preview/Cancel/Apply remain c7. Dark Case PDF frame supplies no physical text-rendering acceptance; all original failures stay failed. |
+| S6.09 | Plain-language onboarding/running/recovery and truthful capability controls | Running/recovery guidance and local error/capability controls [R25](finalise-audit.md#r25)/[R26](finalise-audit.md#r26)/[R33](finalise-audit.md#r33); source disclosures [P](#p); actual installed Astra subscription_limit [L](#l). | G7: parent reconciles accepted-install onboarding/launcher/recovery guidance and truthful quota/image/Go/content/currency limits after actual outcomes. No successful generation/image/capture or maintenance claim follows source preparation or catalogue availability. |
+| S6.10 | Fresh isolated installation on this Windows PC completes required real journeys with bundled runtime | Fresh matching6999 extraction [M](#m), retained same-target inventory [I](#i), Recovery isolated runtime/originals/deletion/three closes/two reopens [R](#r), with twelve historical operations qualified. Connected03 seven performed/three retained operations are separately accepted [CON](#con). Gap02 bounded reopen/persistence/extraction accepts exact retainedgap01 import/K01/reader/Flow/ordinary close, with zero replay [GAP](#gap). | G1/G3/G5/G6/G7: Probe02 subscription_limit [L](#l); dependent Journeys/image/capture/freshness/correction remain unperformed. Maintenance is just starting with no outcomes supplied. Gap01 remains failed; reflow/accessibility/stale-state limits and all scope flags remain. No full current sweep or complete installed acceptance. |
 
 ## Remaining big product outcomes within existing gates
 
 1. **Delivery/recovery and source-qualified native composition admitted (G1/G3/G6).**
-   Actual6999 Package47784 and Install95706 completed exit0 at09:45:34/09:57:02
-   [M](#m). Recovery02 session73435 completed exit0 at10:23:18 [R](#r): current
-   identities/OS-only runtime, UI Retry of already applied c7 recovery72f6e060,
-   Knowledge7/Memory4 rebuilds, six retained originals/citations and parent-reviewed
-   captures including actual PDF physical page2. Separate older-backup deletion
-   reconciliation retains five originals, PNG404, seven text/PDF passage results
-   and completed indexes. Three fresh ordinary main/backend closes leave no owned
-   identities; two reopens preserve that result. The full39,255/5,742 inventory
-   was performed at this same6999 target in failed next01 and retained by SHA256
-   [I](#i); `inventoryFreshlyExecuted=false`. Initial c7 restore was not replayed,
-   historical c7 closes are not added, and twelve historical operation proofs
-   remain source-qualified. Parent admitted this five-current/twelve-historical
-   native17 composite at the10:31:41 checkpoint [N](#n), with three fresh closes.
-   `fullExecutionAtCurrentTarget=false`: no full current-target sweep is declared.
-   Consumer guard passed per parent; later Connected01/session97216 failed exit1
-   at10:35:05.754 with no completed stages/provider call and zero close credit
-   [X](#x). Native admission is unaffected; no full product acceptance follows. Preserve state/ZIP/jobs; no
-   repeat inventory, format imports, quiz, stress work or initial restore is
-   needed for this checkpoint.
-2. **A working approved learning route and automatic Memory (G5).** Deliberate
-   selected Codex Probe, then dependent Journeys including the required image
-   scope, remain unperformed. Direct/guided multi-domain follow-ups, stream,
-   deliberate override, Stop/retry/error recovery, generated practice and daily
-   discussion need actual success. A completed ordinary answer must autonomously
-   produce a scoped canonical general lesson with its own exact provider/model,
-   then recall/correction/deletion/restart and changed later personalisation.
-   Manual fact entry and synthetic generation do not establish this. Current
-   access/quota/image support is uncertain. An exact terminal external-access
-   blocker plus ordinary physical close can support the existing maintenance
-   route only; it supplies no live/image pass or permission to retry/fallback/
-   activate Go [release continuation](finalise-release-continuation-6599.md),
-   [NEXT](#next).
-3. **Connected learning and retention (G4/G5/G6).** Connected01/session97216 ended
-   exit1, blocked at manual Memory correction with TimeoutError/stages empty; no
-   provider call or accepted close [X](#x). Actual multi-domain case →
-   Explain → generated practice/reviewed Test → feedback → Memory → plan →
-   Updates/return/resume remains unperformed. Require the observed exact wrong
-   attempt/topic-to-plan producer, manual overrides and shared pack/version/
-   assistance/repeat/context boundaries; absent linkage stays partial. Explicit
-   Case Save/view/reopen/delete and saved follow-up remain open. Recovery02 now
-   supports restored Library Office/image bytes/citations, three reviewed sessions,
-   three fresh answered items, four Memory fact IDs, both indexes and newer-PNG
-   deletion reconciliation [R](#r); it does not complete Case UI or the connected
-   attempts/study/case/Memory/plan loop. Unsaved-case
-   derivative absence is still bounded for errors/crashes/compaction/handoffs/
-   exports/backups; no new fixture or account/profile transport is justified.
-4. **Useful freshness and reviewed Updates (G8; S2.09/S5.04).** Local missing-path
-   and invalidation fixes are supported; actual no-upload evidence/failure,
-   public source display/reopen and later excluded-citation nonreuse are not.
-   Actual eligible changed publication → inspected educational review → dated
-   source/objective/item/feedback/history and eligibility effects remain open.
-   Correction/replacement/draft/retraction/removal/stale/restricted states must
-   keep historical keys/scores intact and currentness unverified until the exact
-   copy is reviewed.
-   Source-status projection onto Study activities is optional refinement, with no
-   demonstrated current-content mislabel or notice bypass; it is not an additional
-   release gate. Actual S5 affected-item/feedback/history/eligibility proof remains
-   required through the existing surfaces.
-   A single K01 publication baseline/check, navigation or dated OA body excerpt
-   proves neither reviewed change nor latest-final/corrected-byte clearance.
-   Keep the existing single-check scope; no additional catalogue sweep or paid
-   key is introduced [gap triage](finalise-gap-triage-20261006.md), [NEXT](#next).
-5. **Useful inputs and accessible Flow (G3/G8).** Actual matching scanned-PDF/OCR
-   with meaningful tables/units/reading order, prior-revision continuity and
-   malformed/encrypted/oversized/cancel handling remain unaccepted. Recovery02
-   establishes bounded six-original/citation continuity and two ordinary reopens
-   [R](#r), admitted in the source-qualified native composite [N](#n). The prepared scanned-input/keyboard/AX/reader/size/zoom/
-   reduced-motion slice is unexecuted. Essential focus/loading/empty/error/
-   reader usability and remaining spoken screen-reader/Windows DPI/resize/motion
-   observations are open; role locators/screenshots or CPU OCR do not establish
-   them. External Office viewing/automatic highlighting and calibrated OCR
-   confidence remain explicitly limited [gap adaptation](finalise-installed-gap-699938f2.md).
-6. **Safe compatibility and final handoff (G7).** Original035 storage stays actual
-   bounded proof with six exits **0/86/0/0/0/0**. Current mapped installed byte/
-   source qualification and unchanged anchors are parent work, not a new6999 SQL
-   invocation. Real populated app upgrade/refusal, compatible app rollback,
-   isolated identity, uninstall/data retention/same-installer reinstall/ordinary
-   reopen, final notices/static distribution/update provenance and reconciled
-   guidance/launcher remain unperformed. Pre6599 app reopening on compact indexes
-   is refused; restore is not app rollback. Apply the existing maintenance
-   ordering, with no repeated storage workload, fake binding or extra gate
-   [NEXT](#next), [R45](finalise-audit.md#r45).
+   Actual6999 Package47784/Install95706 completed at09:45:34/09:57:02 [M](#m).
+   Recovery02/session73435 exited0 at10:23:18.0762039 [R](#r): current identities,
+   OS-only runtime, Retry of already applied c7 restore72f6e060, Knowledge7/Memory4,
+   six originals/citations and parent-reviewed Library PDF physical page2. Its
+   separate older-backup reconciliation retains five originals/PNG404, seven
+   text/PDF passage results and complete indexes through two reopens. Three
+   ordinary main/backend closes leave no owners. The39,255/5,742 inventory was
+   performed at the same6999 target in failed next01 and retained by digest
+   [I](#i), inventoryFreshlyExecuted=false. Initial c7 Apply and twelve historical
+   operation proofs remain attributed to their origins; historical closes are
+   separate. The five-current/twelve-historical native17 composite is admitted
+   [N](#n), fullExecutionAtCurrentTarget=false. Connected and Probe outcomes below
+   preserve their own operation/failure/lifecycle scopes. No inventory, original
+   import, stress workload or initial c7 restore was repeated for this report.
+2. **A working approved learning route and automatic Memory remain blocked (G5).**
+   Probe01 failed before dispatch on launcher identity and remains pinned/failed
+   [Z](#z). The separately latched Probe02 continued that first logical proof,
+   selected Codex gpt-6-astra, and recorded one failed /learn/ask run with
+   subscription_limit before exiting1 at11:31:48.7296032 [L](#l). Its ordinary
+   failure close is confirmed in5.2447568s; capture evidence/jobs/records are
+   empty, image=not-run, livePassed=false, retry=false/fallback=false. This is
+   actual dated external-access failure evidence, with no successful answer or
+   capability/quota promise. Dependent Journeys/image, direct/guided multi-domain
+   follow-ups, stream/override/Stop, generated practice and daily discussion are
+   unperformed. Ordinary successful answer→autonomous canonical general lesson
+   with its own provider/model→recall/correction/deletion/restart and changed later
+   personalisation remains unproved. Manual Memory and synthetic generation do
+   not establish it. The pinned blocker plus ordinary close supports only the
+   existing parent maintenance ordering, with no quota retry, fallback, account
+   action or Go activation [release continuation](finalise-release-continuation-6599.md).
+3. **Connected retention subset accepted; full live learning loop open (G4/G5/G6).**
+   Connected03/session27882 completed exit0 at11:12:00.7575338; actual receipt,
+   parent UI/terminal review and consumer guard passed [CON](#con). Three exact
+   individually passed same-target02 operations remain executedHere=false:
+   manual Memory revision2/real recall; explicit Case PDF/PNG Save/reopen/originals;
+   reviewed wrong attempt→exact plan producer/refresh/manual date override/Updates
+   navigation. Seven fresh03 operations cover populated restore/real rebuild,
+   original/Memory/case/plan reconciliation, three owned deletions, same-ZIP newer
+   deletion reconciliation and case metadata/raw-part suppression. Knowledge7/
+   Memory6 rebuild then Knowledge5/Memory5 completes; corrected Memory and manual
+   plan survive restore. Deletion replay excludes15 canonical records/one Library
+   original; Library404, case410, own recall empty, verification ZIP has zero
+   owned case/session/attachment/raw parts and its marker. Normal5.7199216s
+   main/backend close and independent empty post-close inspection are accepted.
+   completeExecutionInThisInvocation=false; failed01/02 aggregates/closes remain
+   failed [X](#x). Parent-reviewed Case captures show saved originals/retention,
+   but the PDF frame is dark: exact bytes/PNG dimensions establish no physical
+   Case PDF text-rendering pass. Library physical page2 remains separate [R](#r).
+   Multi-domain case→Explain→generated practice/Test→feedback→automatic Memory→
+   plan→reviewed Updates/return/resume, live saved follow-up and later
+   personalisation remain unperformed. Unsaved-case derivative absence remains
+   bounded across errors/crashes/compaction/handoffs/exports/backups.
+4. **Useful freshness and reviewed Updates remain unperformed (G8; S2.09/S5.04).**
+   Local automatic-evidence and invalidation fixes retain their F/C/P/U scope.
+   Actual no-upload evidence/failure, public source display/reopen, successful
+   selected live answer/capture and later excluded-citation nonreuse have no
+   acceptance; the freshness/correction follow-on remains prepared and dependent
+   on the blocked live route. Actual eligible changed publication→inspected
+   educational review→dated source/objective/item/feedback/history and eligibility
+   effects remain open. Correction/replacement/draft/retraction/removal/stale/
+   restricted states must preserve historical keys/scores and keep currentness
+   unverified until the exact copy is reviewed. Study source-status projection
+   remains optional refinement, with no demonstrated mislabel/notice bypass or
+   added Study gate. The single free K01 baseline actually executed in gap01 and
+   persisted on02 reopen [GAP](#gap), with automation disabled and no repeated
+   check. It is discovery only; stale state was unobserved and no educational
+   review, latest-final/corrected-byte clearance or live freshness acceptance is
+   supplied. Keep that single-check scope, with no catalogue sweep or paid key
+   [gap triage](finalise-gap-triage-20261006.md).
+5. **Bounded scanned-PDF/persistence accepted; Flow limitations remain (G3/G8).**
+   Gap02 completed exit0 at11:58:09.9089015; parent reviewed/accepted bounded local
+   operations at12:01:22.710680 [GAP](#gap). Gap01 stays failed at the late prelaunch
+   slot_occupied guard. Its one actual synthetic scanned-PDF import/OCR/retrieval,
+   physical pages1/2 reader, one free K01 baseline, Flow observations and normal
+   11.1487911s main/backend close are exact retained evidence, executedHere=false.
+   Gap02 only reopens the prior profile, reads Library/Updates persistence, closes
+   actual main30200/backend44336 in4.9068316s and inspects closed structured
+   extraction. It issues zero new import/check requests. Fifteen table cells,
+   Unicode units and footnote are exact; parent inspected physical scanned page2.
+   fullExecutionInThisInvocation=false and previousFailureRelabelled=false retain
+   the original failure and distinguish new operations. Broader OCR/reading-order
+   quality, calibrated confidence, prior-revision continuity and malformed/
+   encrypted/oversized/cancel behavior remain limited. The original Flow
+   keyboard/AX/reader/size/zoom/media observations have their bounded scope.
+   Parent visual200% review shows right-side content/controls clipped despite
+   measured overflow=false; full reflow is not accepted. Stale state unobserved,
+   complete accessibility, spoken screen reader, Windows DPI/OS preferences and
+   independent human usability assessment remain separate limits. Roles,
+   screenshots, emulation and synthetic table fidelity establish no clinical/
+   content review. External Office dialogs/automatic highlighting remain limited
+   [gap adaptation](finalise-installed-gap-699938f2.md).
+6. **Maintenance just starting; no outcomes or final handoff credited (G7).**
+   Historical035 storage retains its bounded six exits0/86/0/0/0/0. Current mapped
+   installed storage/source qualification remains parent work, with no new6999
+   SQL invocation here. Parent reported source preflight resolving the stale
+   native-only three-answer assertion against accepted Connected progress4 and
+   intentional owned-case deletion, with no production runtime change. At this
+   latest cutoff its exclusive maintenance slot is just starting; no outcome is
+   supplied or accepted. Populated upgrade/refusal, compatible app rollback,
+   uninstall/data retention/same-installer reinstall/ordinary reopen, final
+   notices/static distribution/update provenance and reconciled guidance/launcher
+   remain open. Current isolated fresh-install/process identity is evidenced
+   [M](#m)/[R](#r); remaining maintenance identity/reopen behavior is separate.
+   Pre6599 app reopening on compact indexes is refused; data restore is not app
+   rollback. Parent handles later actual maintenance amendments under existing
+   ordering, without repeating historical storage or inventing receipt bindings/
+   gates [NEXT](#next), [R45](finalise-audit.md#r45). Unsigned validation on this
+   Windows11 Home26200 PC is owner-selected; signing and a separate clean PC/VM
+   are optional. Current-PC evidence supplies no broader platform certification.
 
 Adopted content minima remain **27 topics, 56 objectives, 178 General questions,
 38 cases, 170 mapped ESENeph questions**, unchanged minimum 150, eight filled
 facets and56/56 case links [R34](finalise-audit.md#r34). Remaining **11 partial
 domains, 27 currency-review cells, four objective holds, eight General-only
 exclusions, four-choice/zero best-of-five items and incomplete explanation/depth**
-keep `complete_content_coverage=false`. They are product limits and confirmed
-requirements wherever incomplete, not an invitation to redo finite authoring or
-invent an official-exam quota/panel. Clinical accuracy/mastery/educational efficacy
-are not established. Actual sustained performance and Mem0-volume evidence
-remain bounded; canonical capacity is not a scaling result.
+keep `complete_content_coverage=false`. These remain product limits and confirmed
+requirements wherever incomplete; finite authoring is not repeated and no
+invented official-exam quota/external-panel prerequisite is added. Existing
+assistant/source content review is distinct from independent human clinical and
+educational review, which is not demonstrated here. Clinical accuracy, mastery
+and educational efficacy are unproved. Actual sustained performance and Mem0
+volume remain bounded; canonical capacity and small installed synthetic profiles
+are not scaling results.
 
 [Source register](../SOURCES.md) permissions and dated
 [currency holds](finalise-source-currency.md) remain authoritative. Keep display,
@@ -379,21 +442,31 @@ scoped source/Office/queue closures [R52](finalise-audit.md#r52) remain closed.
 
 ## Bounded verification and handoff
 
-Only `docs/implementation/finalise-audit-699938f2.md` is updated; optional receipt
-notes stay ignored under `.local/final-current-audit-20261006/`. Checks are static
-verbatim 64-row ID/order/wording comparison against both the original ledger and
-the starting report, permitted receipt JSON/count/source/digest qualification,
-local evidence-link review and Git whitespace/explicit file-list inspection.
-Package47784/Install95706 session endings, consumer guard success and failed
-Connected01/session97216 terminal/close-helper limits are parent-supplied. Matching provenance/installer metadata,
-Recovery02 terminal/receipt, composite/native-review and parent-observations text
-were read directly. The parent visually reviewed six original/citation captures
-plus the deletion capture; this lane did not open images. Inventory/receipt hashes are computed from receipt
-text only; binaries and payload/profile/original/data/model files are not read.
-No tests/collection/imports/runtime/native/provider/network/model execution,
-installer launch, process polling, push or other-lane mutation is performed.
-The report is committed on the assigned branch with Git hooks disabled. Parent
-may amend later actual results only in their corresponding rows with source,
-artifact, operation, time, terminal origin and retained failures/limits. Prepared
-sources, exit0 alone or an external account block establish no complete product
-acceptance.
+Only `docs/implementation/finalise-audit-699938f2.md` is updated under the confirmed
+exclusive lease. The original ledger and freshness report/ignored source.patch
+and manifest.json remain unchanged. Verification is text/Git only: all64 row
+IDs/order/verbatim requirement cells against the original and starting report,
+permitted public receipt/count/source/digest qualification, evidence-link review,
+whitespace and explicit changed-file inspection. Parent integration2269 was read
+via git show without merging runtime. Matching manufacture/install and historical
+F/C/P/U evidence keep their prior qualification. Recovery02/native composite,
+Connected03/parent-review, Probe01/02 and gap01/02/parent-review public receipt/
+terminal projections were read directly; actual hashes match the identities
+recorded above.
+Connected01/02 outcomes and parent visual observations are sourced from the parent
+Connected continuation/review. This lane did not open screenshots/originals.
+
+Parent gap02 admission and visual limitations are verified in its actual review;
+gap01 stays failed with exact retained operations. The just-starting maintenance
+slot and its prior source preflight are owner-supplied states, with no maintenance
+outcome inferred. Parent will amend later actual maintenance results.
+Hashes are computed from permitted receipt text and the already prepared ignored
+freshness patch/manifest only; binaries, profile/raw-original/data/model files and
+credentials are not read or transported. No tests/collection/imports/runtime/
+native/helper/provider/network/GitHub/model execution, installer launch, process
+polling, push or other-lane mutation is performed. The report is committed on the
+assigned branch with hooks and signing disabled. Parent preserves the original
+ignored sidecar before integration/retirement and owns all later execution.
+Any amendment must retain source, artifact, operation, time, terminal origin,
+failed invocations and scope limits. Prepared sources, exit0 alone or a terminal
+account block establish no complete product acceptance.
