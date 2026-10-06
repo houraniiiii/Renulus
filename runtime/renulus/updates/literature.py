@@ -87,6 +87,14 @@ class Literature:
                      article.get("firstPublicationDate"), now, "pending", "Publication metadata requires review; notice identity and original article identity are separate.", canonical(topic_ids), canonical(source_metadata)))
                 # Metadata notices do not identify the affected original article
                 # without reviewed relationship evidence. No L03-family flags.
+                if prior:
+                    # Only the same record's prior review is invalidated. A
+                    # correction/retraction notice cannot identify another article
+                    # or publish an educational review through detection alone.
+                    target = {"register_id": "L03", "canonical_url": article_url,
+                              **current_metadata["identifiers"]}
+                    self.updates.affected.record(conn, entry_id, target, now, "publication metadata changed; educational implication unreviewed")
+                    self.updates.reviews.observed_change(conn, entry_id, target, prior["fingerprint"], current_metadata, now)
             elif topic_ids:
                 entry = conn.execute("SELECT topic_ids_json,review_state FROM update_entries WHERE id=?", (entry_id,)).fetchone()
                 if entry["review_state"] == "pending":
@@ -94,6 +102,8 @@ class Literature:
                     conn.execute("UPDATE update_entries SET topic_ids_json=? WHERE id=?", (canonical(merged), entry_id))
             conn.execute("INSERT INTO update_literature_records(external_id,entry_id,fingerprint,observation,metadata_json,last_checked_at,last_success_at,state) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(external_id) DO UPDATE SET entry_id=excluded.entry_id,fingerprint=excluded.fingerprint,observation=excluded.observation,metadata_json=excluded.metadata_json,last_checked_at=excluded.last_checked_at,last_success_at=excluded.last_success_at,state=excluded.state,error_code=NULL",
                          (external_id, entry_id, fingerprint, observation, canonical(current_metadata), now, now, state))
+        if state == "changed":
+            self.updates.reviews.sync("observed:" + entry_id)
         return {"external_id": external_id, "entry_id": entry_id, "state": state, "discovered": int(state != "unchanged")}
 
     async def check(self, topic_ids, days=7):

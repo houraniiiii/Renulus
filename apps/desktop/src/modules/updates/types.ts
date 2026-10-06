@@ -91,9 +91,11 @@ export function reviewPayload(entry: Entry, draft: ReviewDraft, topicIds: string
   if (draft.publicationDate) changes.publication_date = draft.publicationDate;
   if (draft.revisionDate) changes.revision_date = draft.revisionDate;
   if (draft.reviewDue) changes.review_due = draft.reviewDue;
-  if (draft.latestFinal) changes.latest_final_verified = true;
-  if (draft.contentReviewed) changes.content_reviewed = true;
-  if (draft.correction.trim()) changes.correction = draft.correction.trim();
+  changes.latest_final_verified = draft.latestFinal;
+  changes.content_reviewed = draft.contentReviewed;
+  // An unchanged notice stays in the journal. A later exact-copy review is a
+  // separate confirmation, rather than publishing the correction again.
+  if (draft.correction.trim() && draft.correction.trim() !== entry.review?.changes.correction) changes.correction = draft.correction.trim();
   if (draft.retraction) changes.retracted = draft.retraction === 'yes';
   if (draft.replacement === 'whole') changes.superseded = true;
   if (draft.replacement === 'no') { changes.superseded = false; changes.replaced_topics = []; }

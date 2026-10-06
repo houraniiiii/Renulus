@@ -57,6 +57,56 @@ class SourceReviews:
         conn.execute("INSERT OR IGNORE INTO update_library_changes(id,entry_id,payload_json) VALUES(?,?,?)",
                      (identifier, entry_id, canonical(payload)))
 
+    @staticmethod
+    def publication_target(target):
+        # A notice revokes review of affected copies, rather than promoting the
+        # one file used to inspect it. Positive review remains exactly bound.
+        value = {key: item for key, item in target.items() if key not in ("edition", "original_sha256")}
+        if value.get("canonical_url") or article_identity(value):
+            value.pop("pinned_source_id", None)
+        return value
+
+    def same_publication(self, stored, target):
+        wanted = self.publication_target(target)
+        source = {**stored, "id": stored.get("pinned_source_id"), "url": stored.get("canonical_url")}
+        return self.updates.affected.matches(source, wanted)
+
+    def publication_statuses(self, conn, target):
+        return [row for row in conn.execute("SELECT target_key,target_json,status_json FROM update_source_statuses").fetchall()
+                if self.same_publication(json.loads(row["target_json"]), target)]
+
+    def invalidate_statuses(self, conn, target):
+        for row in self.publication_statuses(conn, target):
+            status = {**json.loads(row["status_json"]), "latest_final_verified": False, "content_reviewed": False}
+            conn.execute("UPDATE update_source_statuses SET status_json=? WHERE target_key=?",
+                         (canonical(status), row["target_key"]))
+
+    def reviewed_changes(self, conn, identifier, entry_id, target, changes, evidence, reviewer, now):
+        invalidates = (bool(changes.get("correction")) or bool(changes.get("replaced_topics"))
+                       or bool(changes.get("excluded_pages"))
+                       or any(changes.get(key) is True for key in ("retracted", "superseded", "repository_removed"))
+                       or changes.get("publication_status", "final") != "final")
+        if invalidates:
+            changes = {**changes, "latest_final_verified": False, "content_reviewed": False}
+            self.invalidate_statuses(conn, target)
+            publication = self.publication_target(target)
+            if any(changes.get(key) is True for key in ("retracted", "repository_removed")):
+                # These restrictions are publication-wide even when inspected
+                # on a particular chapter/copy; scope cannot preserve its review.
+                publication.pop("topic_ids", None)
+                publication.pop("locators", None)
+            self.enqueue(conn, "invalidate:" + identifier, entry_id, publication,
+                {"latest_final_verified": False, "content_reviewed": False},
+                {"kind": "reviewed-publication", "reviewer": reviewer, "reviewed_at": now, "references": evidence},
+                "Source notice invalidates prior content and latest-final review")
+        elif any(changes.get(key) is True for key in ("latest_final_verified", "content_reviewed")):
+            corrected = any(json.loads(row["status_json"]).get("correction")
+                            for row in self.publication_statuses(conn, target))
+            if corrected and not (target.get("edition") and target.get("original_sha256")):
+                raise ApiError("corrected_copy_review_required",
+                    "Identify the exact corrected edition and original SHA256 before confirming its content or latest-final review", 422)
+        return changes
+
     def observed_change(self, conn, entry_id, target, previous_digest, observed, now):
         # Observation invalidates prior currency review. It does not claim a
         # correction, new edition, final publication or scientific retraction.
@@ -67,12 +117,7 @@ class SourceReviews:
                      "Published bytes changed; source currency needs re-review")
         # Retain publication/access/retraction facts independently. Only the
         # prior review's applicability is invalidated for this exact URL.
-        for row in conn.execute("SELECT target_key,target_json,status_json FROM update_source_statuses").fetchall():
-            stored = json.loads(row["target_json"])
-            if (stored["register_id"] == target["register_id"] and stored.get("canonical_url")
-                    and urldefrag(stored["canonical_url"])[0] == urldefrag(target.get("canonical_url") or "")[0]):
-                status = {**json.loads(row["status_json"]), **changes}
-                conn.execute("UPDATE update_source_statuses SET status_json=? WHERE target_key=?", (canonical(status), row["target_key"]))
+        self.invalidate_statuses(conn, target)
 
     def review(self, identifier, summary, topic_ids, reviewer, state, *, target=None, changes=None, evidence=None):
         entry = self.updates.get_entry(identifier)
@@ -91,6 +136,8 @@ class SourceReviews:
             return self.updates.get_entry(identifier)
         now = utc_now()
         with self.db.transaction() as conn:
+            if target and changes:
+                changes = self.reviewed_changes(conn, review_id, identifier, target, changes, evidence, reviewer, now)
             previous = conn.execute("SELECT reviewed_at FROM update_reviews WHERE id=?", (review_id,)).fetchone()
             reviewed_at = previous["reviewed_at"] if previous else now
             conn.execute("INSERT OR IGNORE INTO update_reviews(id,entry_id,target_json,changes_json,evidence_json,summary,topic_ids_json,reviewer,state,reviewed_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
@@ -132,12 +179,18 @@ class SourceReviews:
                         raise ApiError("review_identity_conflict", "The identifiers conflict with the recorded publication identity", 422)
                     exact = {**previous_target, **exact}
                 merged = {**(json.loads(current["status_json"]) if current else {}), **changes}
-                if merged.get("publication_status") not in (None, "final") or any(merged.get(key) for key in ("retracted", "superseded", "repository_removed")):
-                    merged["latest_final_verified"] = False
+                if (merged.get("publication_status") not in (None, "final")
+                        or any(merged.get(key) for key in ("retracted", "superseded", "repository_removed", "replaced_topics", "excluded_pages"))):
+                    changes = {**changes, "latest_final_verified": False, "content_reviewed": False}
+                    merged.update(changes)
+                    conn.execute("UPDATE update_reviews SET changes_json=? WHERE id=?", (canonical(changes), review_id))
                 conn.execute("INSERT INTO update_source_statuses(target_key,target_json,status_json,review_id) VALUES(?,?,?,?) ON CONFLICT(target_key) DO UPDATE SET target_json=excluded.target_json,status_json=excluded.status_json,review_id=excluded.review_id",
                              (target_key, canonical(exact), canonical(merged), review_id))
                 material = any(key in changes for key in ("correction", "retracted", "superseded", "repository_removed",
-                               "access_changed", "replaced_topics", "excluded_pages")) or entry["kind"] == "publication-change" or entry["source_metadata"].get("previous_entry_id")
+                               "access_changed", "replaced_topics", "excluded_pages")) or (
+                               changes.get("publication_status") not in (None, "final")
+                               or any(changes.get(key) is False for key in ("latest_final_verified", "content_reviewed"))
+                               or entry["kind"] == "publication-change" or entry["source_metadata"].get("previous_entry_id"))
                 if material:
                     self.updates.affected.record(conn, identifier, target, reviewed_at, "reviewed source status changed")
                 self.enqueue(conn, review_id, identifier, {**target, **exact}, changes,
@@ -148,6 +201,27 @@ class SourceReviews:
         return self.updates.get_entry(identifier)
 
     def sync(self, identifier):
+        row = self.db.fetch_one("SELECT rowid AS ordinal,* FROM update_library_changes WHERE id=?", (identifier,))
+        if not row:
+            raise ApiError("source_change_missing", "This source metadata change is unavailable", 404)
+        payload = json.loads(row["payload_json"])
+        target = {"register_id": payload["source_id"], **payload["identity"]}
+        # A delayed older promotion must enter the existing Library journal
+        # before a newer invalidation. Failed delivery stays visibly retryable.
+        for previous in self.db.fetch_all("SELECT id,payload_json FROM update_library_changes WHERE rowid<? AND state IN ('pending','failed','unavailable') ORDER BY rowid", (row["ordinal"],)):
+            older = json.loads(previous["payload_json"])
+            if not self.same_publication({"register_id": older["source_id"], **older["identity"]}, target):
+                continue
+            result = self._sync_one(previous["id"])
+            if result["state"] not in ("applied", "no-match"):
+                code = "prior_source_change_pending"
+                with self.db.transaction() as conn:
+                    conn.execute("UPDATE update_library_changes SET state='failed',last_attempt_at=?,error_code=? WHERE id=?", (utc_now(), code, identifier))
+                    conn.execute("UPDATE update_reviews SET library_sync_state='failed',library_sync_error=? WHERE id=?", (code, identifier))
+                return {"event_id": identifier, "state": "failed", "error_code": code, "result": None}
+        return self._sync_one(identifier)
+
+    def _sync_one(self, identifier):
         row = self.db.fetch_one("SELECT * FROM update_library_changes WHERE id=?", (identifier,))
         if not row:
             raise ApiError("source_change_missing", "This source metadata change is unavailable", 404)

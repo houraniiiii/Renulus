@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import Updates from './index';
-import { literatureMessage } from './types';
+import { literatureMessage, reviewDraft, reviewPayload } from './types';
 import type { Entry } from './types';
 
 const entry = (id = 'synthetic-update'): Entry => ({ id, source_id: 'L03', title: 'Synthetic publication ' + id,
@@ -42,6 +42,35 @@ function inspectEvidence() {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe('Updates review and bounded queue', () => {
+  it('submits explicit false when prior review confirmations are unchecked', async () => {
+    const row: Entry = { ...entry(), review_state: 'reviewed', summary: 'Synthetic prior review',
+      review: { id: 'prior-review', target: { register_id: 'L03', canonical_url: entry().url },
+        changes: { publication_status: 'final', latest_final_verified: true, content_reviewed: true },
+        evidence: [{ url: entry().url, locator: 'Synthetic source section', finding: 'Synthetic prior inspection', checked_on: '2026-10-04', inspected: true }],
+        library_sync_state: 'applied', library_sync_error: null } };
+    const fetch = mockApi([row]); render(<Updates />); await openFirst(); inspectEvidence();
+    fireEvent.click(screen.getByText('Publication status and affected source'));
+    fireEvent.click(screen.getByLabelText('Verified latest final for this scope'));
+    fireEvent.click(screen.getByLabelText('Content reviewed for the recorded educational scope'));
+    fireEvent.click(screen.getByRole('button', { name: 'Save reviewed update' }));
+    await screen.findByText('Your evidence and reviewed update are saved.');
+    const body = JSON.parse(fetch.mock.calls.find(([path]) => path.endsWith('/review'))![1]!.body as string);
+    expect(body.changes).toMatchObject({ latest_final_verified: false, content_reviewed: false });
+  });
+  it('separates a repeated correction reference from later exact copy confirmations', () => {
+    const row: Entry = { ...entry(), review_state: 'reviewed', summary: 'Synthetic correction review',
+      review: { id: 'correction-review', target: { register_id: 'L03', canonical_url: entry().url },
+        changes: { correction: 'Synthetic correction notice', latest_final_verified: false, content_reviewed: false },
+        evidence: [], library_sync_state: 'applied', library_sync_error: null } };
+    const draft = { ...reviewDraft(row), edition: 'Synthetic corrected edition', originalSha256: 'b'.repeat(64),
+      publicationStatus: 'final', latestFinal: true, contentReviewed: true };
+    const body = reviewPayload(row, draft, [], 'reviewed');
+    expect('changes' in body && body.changes).toMatchObject({ latest_final_verified: true, content_reviewed: true });
+    expect('changes' in body && body.changes).not.toHaveProperty('correction');
+    const changed = reviewPayload(row, { ...draft, correction: 'Synthetic second correction' }, [], 'reviewed');
+    expect('changes' in changed && changed.changes).toHaveProperty('correction', 'Synthetic second correction');
+    expect(reviewPayload(row, draft, [], 'dismissed')).not.toHaveProperty('changes');
+  });
   it('moves keyboard focus into the selected publication in a compact window', async () => {
     vi.stubGlobal('innerWidth', 620);
     mockApi(); render(<Updates />); await openFirst();

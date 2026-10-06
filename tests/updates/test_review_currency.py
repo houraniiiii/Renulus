@@ -145,7 +145,7 @@ def test_retraction_requires_exact_original_article_and_never_flags_l03_family(t
     assert service.affected.for_entry(identifier)["total"] == 2
     assert not service.affected.needs_re_review("question", "article-b-q", 1)["needs_re_review"]
     states = service.reviews.statuses("L03")
-    assert states[0]["target"]["pmid"] == "111111" and states[0]["status"] == {"retracted": True, "latest_final_verified": False}
+    assert states[0]["target"]["pmid"] == "111111" and states[0]["status"] == {"retracted": True, "latest_final_verified": False, "content_reviewed": False}
     # A conflicting original PMID/canonical URL cannot OR-match another article.
     invalid = {**target, "pmid": "222222"}
     with pytest.raises(ApiError):
@@ -206,7 +206,7 @@ def test_article_identity_enrichment_retains_prior_publication_and_access_facts(
     reviewed(service, identifier, {**target, "pmid": "111111"}, {"correction": "Synthetic correction notice"})
     states = service.reviews.statuses("L03")
     assert len(states) == 1 and states[0]["target"]["pmid"] == "111111"
-    assert states[0]["status"] == {"publication_status": "final", "publication_date": "2020-01-01", "access_changed": True, "correction": "Synthetic correction notice"}
+    assert states[0]["status"] == {"publication_status": "final", "publication_date": "2020-01-01", "access_changed": True, "correction": "Synthetic correction notice", "latest_final_verified": False, "content_reviewed": False}
 
 
 @pytest.mark.asyncio
