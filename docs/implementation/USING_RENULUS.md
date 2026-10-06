@@ -20,8 +20,12 @@ setup is needed. Keep the existing E: data and Renulus account profile when
 updating the app, including the learning profile
 `E:/Renulus-native-delivery/desktop-20261005/data/learning`. The parent promoted
 the normal launcher to `installed-699938f2` on C: and updated the owned shortcut,
-preserving that E: profile and the previous pointer/shortcut. The remaining
-parent launcher confirmation is read-only; the promotion is already complete.
+preserving that E: profile and the previous pointer/shortcut. Selection at
+**12:39:56.5997385 UTC on October 6, 2026** was confirmed at
+**12:41:27.7088281 UTC**: **CheckOnly exited 0** for the actual matching6999
+target and normal C: shortcut. Launcher confirmation is complete. The earlier
+false scalar/array assertion is preserved; no selector or shortcut update was
+repeated. See [the parent maintenance report](finalise-maintenance-699938f2.md).
 
 While generation is blocked, use reviewed **Test**, **Today** planning, saved
 **Library** passages/originals, local **Cases** with explicit Save, **Memory**

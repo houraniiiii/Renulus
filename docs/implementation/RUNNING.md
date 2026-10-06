@@ -83,12 +83,17 @@ retains the six original `035ca7bd` storage phases, eight mapped artifact matche
 and the scoped unused Win32 path difference; no new SQL workload ran. See
 [the parent maintenance report](finalise-maintenance-699938f2.md) for receipt pins.
 
-The parent promoted `.local/delivery.json` to `installed-699938f2` and updated the
-owned shortcut to C:, preserving the E: learning profile and previous pointer
-and shortcut. Only the parent's read-only final confirmation remains after a
-comparison false negative; that check launched no app and did not repeat the
-pointer update. Promotion is complete. The owner's live-access decision remains
-unresolved; see [current continuation](CONTINUATION_20261005.md).
+The parent selected `installed-699938f2` in `.local/delivery.json` at
+**12:39:56.5997385 UTC on October 6, 2026**, then confirmed it at
+**12:41:27.7088281 UTC**. **CheckOnly exited 0** for the actual matching6999
+target and normal C: shortcut. The E: learning profile is unchanged; the previous
+pointer and shortcut are preserved. The earlier false scalar/array assertion
+remains preserved, with no selector or shortcut mutation repeated and no app
+launched by confirmation. Promotion and launcher confirmation are complete.
+The parent's `promotion.json` receipt has SHA256
+`ec8fcc3b751516378de7383dbab4b957025be3cc23e05ccf1290a0c333c58408`; see
+[the parent maintenance report](finalise-maintenance-699938f2.md). The owner's
+live-access decision remains unresolved; see [current continuation](CONTINUATION_20261005.md).
 
 The K01 result establishes dated discovery, not latest-final guidance. Accepted
 local installation does not establish successful live generation or capture;
