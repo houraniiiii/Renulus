@@ -3,6 +3,47 @@
 This record supersedes the location, heartbeat and lane instructions in the
 historical `SESSION_HANDOFF.md`. Preserve its receipts and observations.
 
+## Current October 6 recovery delivery wave
+
+The accepted manufacture freeze is
+`6599bf796900e33cb1cb2319b5812ea4b8aa2a7b`. Package session **38280**, run
+`6599bf79-package-10296ae7`, remains active and must be recovered before any
+replacement. No matching6599 Install or native acceptance is claimed yet.
+The production repair and its six focused checks/actual bundled-engine
+diagnostic are recorded in [the recovery correction](finalise-recovery-windows.md).
+
+The completed recovery preparation report was integrated as `5d662072`. Its
+nine handoff files, 215,023 bytes, are preserved and hash-verified under
+`C:/rn-finalise-20261005/preserved-lanes/recovery-resume-20261006/checkpoints/ec7957e7`;
+`parent-preservation.json` SHA256 is
+`00358628687ccb8142002218e646f47b0b88909f16d87f717f707e0357cfe370`.
+The bounded agent is closed and its clean worktree removed, with branch retained
+and `parent-retirement.json` recorded. Operational files are already deployed
+under the parent desktop `.local/installed-recovery-resume-20261006`.
+
+The parent reviewed the complete c7-to6599 source delta and explicitly bound
+the planned deletion scope to `older-backup-after-deletion` with **three fresh
+ordinary closes**. The already applied restore is retried through the UI;
+replaying the exact ZIP after a new PNG deletion is the separate required
+deletion-ledger probe. Twelve old gate origins and two c7 closes remain
+historical, with their actual sources and explicit qualifications. New-target
+identity, complete inventory, runtime, retry, original/citation inspection,
+deletion reconciliation and ordinary closes must execute on the matching app.
+
+Ohm owns bounded connected/live/lifecycle preparation in
+`C:/rn-finalise-20261005/lanes/release-continuation-20261006`; Dewey owns a small
+honest composite-acceptance binder in
+`C:/rn-finalise-20261005/lanes/native-reconcile-20261006`. Neither is authorised
+to execute native/helper/provider/install work. The parent owns the serial
+manufacture/install/native/live slot and actual acceptance. Keep the held E
+supplement-inputs worktree, raw collection, learning profile and unrelated
+PID38448/port18765. Exactly one twenty-minute heartbeat remains active.
+
+Capacity commits are already integrated by cherry-pick as `00fd4d55` and
+`698fb2c0`; the original lane IDs are not ancestors under those new IDs. Its
+two ignored recovered JSON files retain their exact hashes in the parent
+preservation root. No capacity test or original import is repeated.
+
 ## October 6 shutdown correction and matching rebuild
 
 The accepted product freeze is now
