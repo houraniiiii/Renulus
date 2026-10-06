@@ -76,3 +76,13 @@ remain beside the application executable. Complete CPU helper terms and their
 source/card evidence supplement the original bundled model cards under
 licenses/runtime-helpers/PROVENANCE.md; the helper weights and inventory are
 unchanged. The unsigned NSIS profile does not discover signing credentials.
+
+ANTLR Python runtime 4.9.3 has a supplementary original project licence at
+`licenses/runtime-helpers/ANTLR4-BSD-3-Clause.txt`. The entire tag-pinned
+upstream file retains the 2012–2017 ANTLR Project BSD 3-clause conditions and
+disclaimer, plus its upstream MIT JavaScript-helper notices. Exact source URL,
+byte count and SHA256 are in `licenses/runtime-helpers/PROVENANCE.md`.
+Installer freeze `699938f20efb6bbc2cf8df684cc5c6c3450e6eaf` predates this
+addition; the source notice is ready for separate documented companion delivery.
+Future manufacture includes the notice through the existing licence-resource
+mapping. No previously manufactured artifact is relabelled by this source edit.

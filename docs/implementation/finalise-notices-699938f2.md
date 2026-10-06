@@ -2,9 +2,11 @@
 
 **The matching installation contains the principal Renulus, content, Hermes,
 font, renderer, Python and CPU-helper notices. One concrete completeness gap
-remains: ANTLR 4.9.3 refers to a BSD 3-clause LICENSE.txt that is absent from its
-inventoried package. Supply that original notice as a small distribution
-supplement. This audit does not change or reject the tested runnable freeze.**
+remains in the original installer: ANTLR 4.9.3 refers to a BSD 3-clause
+LICENSE.txt that is absent from its inventoried package. The complete official
+4.9.3 project licence is now preserved in source for the parent's documented
+companion supplement and future manufacture. This does not change or reject
+the tested runnable freeze.**
 
 Assigned worktree: `C:/rn-finalise-20261005/lanes/distribution-notices-20261006`;
 branch `codex/distribution-notices-20261006`, starting commit
@@ -114,8 +116,37 @@ For a future source-packaging update, the scoped notice can be
 text/source digest in helper provenance. The existing `licenses/**` and
 licence-directory resource mappings already carry such a file; no dependency,
 model, runtime or UI change is needed. Parent owns any distribution supplement
-or later manufacture and its identity record. This lane performs no repair or
-repackaging and leaves the tested freeze and installed sources unchanged.
+or later manufacture and its identity record. The narrowly authorised source
+notice repair below leaves the tested freeze and installed sources unchanged.
+
+### Performed source notice repair — October 6, 2026
+
+Parent verified the official 4.9.3 project text and authorised one read-only
+download of that exact tag-pinned licence. The lane performed one successful
+HTTP 200 download from
+`https://raw.githubusercontent.com/antlr/antlr4/4.9.3/LICENSE.txt`, directly
+writing the unmodified response bytes to
+`apps/desktop/licenses/runtime-helpers/ANTLR4-BSD-3-Clause.txt`. Actual size is
+**2,699 bytes** and actual SHA256 is
+`b1b379fcaf3219593a4c433feb1b35c780bed23fafaae440b1ae2771a9521e3a`.
+The entire upstream file is preserved: copyright 2012–2017 The ANTLR Project,
+all BSD 3-clause conditions/disclaimer and the upstream Mathias Bynens MIT
+notices for `codepointat.js` and `fromcodepoint.js`. Nothing was trimmed,
+reformatted or replaced by a template.
+
+Exact source URL, byte count, hash and current/future delivery distinction are
+recorded in the leased helper `PROVENANCE.md`; desktop `THIRD_PARTY_NOTICES.md`
+points to the supplementary file. The existing `licenses/**` whitelist and
+licence-directory `extraResources` mapping already include it on future
+manufacture; the builder was only read and was not changed or executed.
+No runtime, dependency, model, test or payload modification is involved.
+
+The accepted installer predates this source addition. The source repair is
+complete; parent owns the actual companion copy/hash/validation and recipient
+delivery. Providing the documented companion with the unchanged installer can
+repair this known BSD binary-documentation omission without remanufacturing
+or repeating app tests. No new legal/full-release gate is introduced, and no
+claim is made that the original installer now embeds the added notice.
 
 ### Practical companion disposition for the current frozen app
 
@@ -124,9 +155,10 @@ manufacture and app tests need not be repeated for this documentation addition.*
 Parent can supply `matching-699938f2/notices-699938f2/` beside the original
 installer, containing these three small files:
 
-1. `ANTLR4-4.9.3-BSD-3-Clause.txt`: the verbatim original project copyright,
-   all three licence conditions and disclaimer, with no placeholder owner/year.
-   A generic BSD template or the wheel's short METADATA field is insufficient.
+1. `ANTLR4-BSD-3-Clause.txt`: copy the now-preserved 2,699-byte source notice
+   without alteration; its expected SHA256 is
+   `b1b379fcaf3219593a4c433feb1b35c780bed23fafaae440b1ae2771a9521e3a`.
+   Keep the complete BSD/MIT upstream text; no placeholder or abbreviated copy.
 2. `README.md`: identify the library and wheel version 4.9.3, the full app
    freeze `699938f20efb6bbc2cf8df684cc5c6c3450e6eaf`, unchanged installer
    filename and SHA256 from the identity table above, and the exact public
@@ -136,8 +168,8 @@ installer, containing these three small files:
    `d234a2e0a26cf1f0a1ae5b727d8c71c1c3305ef183f962f729a0b4b915bd20e7`.
 3. `manifest.json`: record the same app/installer binding, licence source
    identifier, and the measured byte counts and SHA256 values of the actual
-   companion licence and README. These companion hashes are pending actual
-   preparation; none is invented or reported as performed here.
+   companion licence and README. The source licence hash above is measured;
+   the actual companion-copy and README/manifest validation remain parent work.
 
 Distribute the unchanged installer **together with** the companion folder,
 preferably in one public delivery ZIP/directory containing the original
@@ -157,10 +189,11 @@ The already-shipped BSD-3-Clause reference text at backend
 states that binary notices may be reproduced in accompanying documentation or
 other distribution materials. It is a template with placeholder owner/year,
 so it supplies that condition's evidence, not the missing ANTLR attribution.
-Parent need only verify the exact original ANTLR text and the small companion
-files/binding; no runtime, helper, model or provider execution is required by
-this repair. Until the companion is actually supplied, the ANTLR gap remains
-open. This lane has created no companion folder and changed no delivery input.
+The exact original ANTLR source notice is now retained. Parent need only
+verify the copied companion files/binding; no runtime, helper, model or
+provider execution is required by this repair. Until the companion is actually
+supplied, notice delivery remains pending. This lane has created no companion
+folder and changed no frozen delivery input.
 
 No other missing file is established in this targeted audit. Original teaching
 content already carries its CC BY licence link and attribution; font, Hermes
@@ -212,7 +245,15 @@ public root counts and scope flags. No full inventory copy is created.
 | `C:/rn-finalise-20261005/lanes/distribution-notices-20261006/.local/notices-699938f2/observations.json` (17,222 bytes; observed 13:30:09.7160925 UTC) | `e3fd7159a4ea03ef48509fd5834c5c510df5f5b3d75bac806f32729505e65961` |
 | `C:/rn-finalise-20261005/lanes/distribution-notices-20261006/.local/notices-699938f2/file-hashes.json` (14,876 bytes) | `ec306565862f2610c77724afac74863d412926abbd3224c48a64bd7ef0844f2a` |
 
-Only tracked change: `docs/implementation/finalise-notices-699938f2.md`.
+The original audit/disposition commits changed only this report. The narrow
+source-repair commit has exactly four tracked changes:
+
+- `apps/desktop/licenses/runtime-helpers/ANTLR4-BSD-3-Clause.txt` (new; actual
+  source hash/size above).
+- `apps/desktop/licenses/runtime-helpers/PROVENANCE.md`.
+- `apps/desktop/THIRD_PARTY_NOTICES.md`.
+- `docs/implementation/finalise-notices-699938f2.md`.
+
 Ignored lane-owned outputs: `.local/notices-699938f2/inspect-static.ps1`,
 `observations.json`, `file-hashes.json`. The script is a PowerShell static
 metadata/licence inspector; it imports no app runtime and invokes no helper.
@@ -225,11 +266,15 @@ retained helper/package notices and one already-shipped BSD reference text.
 The original two receipt hashes remain unchanged. Only this report was amended;
 there was no second inventory inspection, runtime/native/installer execution,
 payload mutation, companion preparation or licence acquisition. Parent's
-existing-profile reader slice remains independent on freeze699938f2.
+existing-profile reader slice remains independent on freeze699938f2. The later
+source-repair follow-up performed only the separately authorised one-file
+licence download and the four leased source/documentation edits above.
 
 Verification is scoped text/path/hash comparison, ignored-output validation,
 explicit Git changed-file review and `git diff --check`. No tests, builds,
-native/installer/helper/model/provider execution, network acquisition, E-data
-inspection, credentials access, push or other-lane mutation occurred. Commit
+native/installer/helper/model/provider execution, E-data inspection, credentials
+access, push or other-lane mutation occurred. Network use was limited to the
+one expressly authorised official 4.9.3 licence download during source repair;
+the original audit receipts remain unchanged and retain their no-network scope. Commit
 uses hooks/signing disabled. No exhaustive legal clearance, successful live
 journey, complete release pass or external review prerequisite is asserted.
