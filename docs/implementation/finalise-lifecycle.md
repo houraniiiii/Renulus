@@ -1,6 +1,6 @@
 # Bounded lifecycle acceptance — October 6, 2026
 
-**Prepared, not completed proof.** Lease: C:/rn-finalise-20261005/lanes/lifecycle-acceptance,
+**Current c7 preparation, not completed proof.** Historical lease: C:/rn-finalise-20261005/lanes/lifecycle-acceptance,
 branch codex/finalise-lifecycle-acceptance, base
 0618e3fb84571495a2f42a7cd1a24ce86a24de00. Read workspace instructions, README,
 brief, workspace, decisions, stage/architecture/parallel rules and the relevant
@@ -8,15 +8,16 @@ native, connected, live, packaging and saved-originals records. Recovered the
 existing final-acceptance-audit lifecycle-preparation directory read-only. Its
 four file hashes and source paths are retained in the ignored metadata.
 
-The parent supplied accepted source freeze
-035ca7bd07337c65266c17f9b762ca1f97238e11 on October 5. Expected delivery roots are
-C:/Renulus-native-delivery/desktop-20261005/matching-035ca7bd and installed-035ca7bd.
-Matching Package and extraction-only Install have now completed, with exact
-035ca7bd source/installer/EXE/ASAR identities ([audit R42/R44](finalise-audit.md#r42)).
-Independent installed storage passed October 5, 22:09:39 UTC ([R45](finalise-audit.md#r45));
-its six exits 0/86/0/0/0/0 cover cases-002 migration/interruption/recovery, exact
-two-part originals/reopen and checksum/schema-99 refusal. The immutable receipt
-and early binding remain unchanged; these phases must not be repeated.
+Accepted current product freeze is
+c7b3b5dea9258845273a8df95ca24f5da5bf1ca5. Parent Package72410
+(c7-package8121cbe0) is running; matching c7 Package/Install/native/connected/
+terminal-live/full binding/maintenance results are not supplied or credited.
+The earlier035 Package and extraction-only Install completed ([R42/R44](finalise-audit.md#r42)).
+Independent installed storage passed at035 October5, 22:09:39 UTC ([R45](finalise-audit.md#r45)),
+with exits0/86/0/0/0/0 for cases-002 migration/interruption/recovery, exact multipart
+originals/reopen and checksum/schema99 refusal. Its binding/receipt/phase/source
+bytes remain immutable at the original parent-lifecycle-035ca7bd root. These
+six phases must not repeat or be relabelled as c7 execution.
 
 Native03 failed at the bundled-root containment assertion before app launch.
 The reviewed equality correction retained all other isolation guards. Native04
@@ -29,14 +30,26 @@ receipt](C:/Renulus-native-delivery/desktop-20261005/repo/apps/desktop/test-resu
 SHA256 is `af46d0c89e5eb3194f6e769e1b9f6568964d794bc45663780a9d805543aaf98a`.
 Eleven entries pass, four carried; six existing gates are not-run and there are
 zero ordinary closes. Source inspection confirms the frozen renderer proxy omits
-the custom format header. Parent Native06 validates the actual populated ZIP
-instead; no completed receipt, product defect, full restore or native17 acceptance
-is inferred.
+the custom format header. Native06 validated the actual populated ZIP instead, then failed ordinary close
+at a genuine product defect ([R49](finalise-audit.md#r49)): destroyed owner.webContents
+access in the API header callback, main.cjs601:41. Actual exit1 October6, 01:15:53 UTC;
+eleven passing entries/nine historical UI origins, six not-run and zero ordinary
+shutdowns. Parent dialog acknowledgement/physical cleanup is not normal close.
+The verified246365-byte ZIP retains605 canonical records/33members/six originals,
+not a full-restore pass. Accepted c7 header correction has four focused passes and
+parent desktop TypeScript success; runtime/content/Hermes/renderer/helpers/locks/
+packaging stay byte-identical035. The corrected installed close/reopen remains unproved.
 
-All stopped/failed invocations remain unchanged ([R46–R48](finalise-audit.md#r46)).
+All stopped/failed invocations remain unchanged ([R46–R49](finalise-audit.md#r46)).
 Same-profile continuation must preserve actual imports and completed gate origins.
-Complete native17/three ordinary physical closes, connected/live and app/NSIS
-lifecycle admission/execution remain pending; there is no binding or maintenance pass.
+The reviewed c7 continuation requires fresh new-target inventory/artifacts and
+identity/runtime, source-qualified nine prior UI proofs and six remaining gates/
+three closes. It preserves six originals/four stress jobs/ZIP, observes retained
+jobs before any load, and permits at most one distinct missing synthetic load
+only after all four ready/worker idle. PNG deletion uses a retained nonempty text/PDF
+query. Complete native17, connected/live and app/NSIS lifecycle admission/execution
+remain pending; there is no current full binding or maintenance pass. Scoped source/
+Office/queue closures ([R52](finalise-audit.md#r52)) remain closed without repeated imports/tests.
 
 The parent owns the freeze, manufacture, installation, matching native17,
 connected/live acceptance and serial execution. The preparation/audit lanes ran no app, Python interpreter, profile, helper/model,
@@ -57,7 +70,7 @@ identity by R47/R48. Earlier base 0618e3fb is not relabelled as the accepted fre
 | Parent gate | Small executable recipe and required observation |
 | --- | --- |
 | Admission | bind-lifecycle.ps1 requires actual matching Package/Install/native17 and passed connected proof, plus either passed live journeys or one terminal external-access-blocked selected-account probe with exact source/executable and ordinary physical close. f316 predecessor receipts and actual NSIS policy-provenance.json remain required. Derive revision, installer, exact compiled target and closed native17 restored-profile from those inputs. Refuse partial native/connected or stale identities; preserve E and both checkpoints. |
-| Populated forward migration, interruption and refusal | **Installed storage portion performed/passed**, R45: predecessor seed, owned exit 86 before ledger commit, rollback recovery, immutable cases-001/additive cases-002, two-part exact originals, reopen/checksum and schema-99 refusal. Carry this unchanged receipt only after full admission, explicit original StorageBinding/hash, six expected exits and exact revision/predecessor/backend/Python/migration/source/artifact equality. No storage repeat; native refusal presentation and app compatibility remain separate. |
+| Populated forward migration, interruption and refusal | **Actual035 storage portion passed**, R45. c7 carry is preparation R51: retain old binding/receipt source, six original exits/JSON/logs/gate/parent hashes; compare eight recorded installed storage/Python/migration anchors by relative mapped paths at c7/f316 and exact SHA, preserving unchanged f316 receipts/paths and cases-002 checksum. Full new native17/connected/terminal-live/NSIS admission remains required. No storage repeat or new-source execution claim; app/native refusal and compatibility remain separate. |
 | Installation lifecycle after terminal live receipt | run-maintenance.ps1 snapshots only the retired synthetic profile, uninstalls the exact accepted current target once, verifies retention while closed, reinstalls the same installer to the same now-absent target with test-installer.ps1 -InstallOnly, then performs one ordinary reopen/close and canonical/original comparison. The actual new install receipt must match the earlier installer, EXE, ASAR and source identity. |
 | Optional exact old/current compatible opens | run-compatible-open.ps1 opens receipt-bound f316/current on the same closed native17 restored-profile, with ordinary owning main/backend exit and identical canonical/original snapshots after each. No restore/downgrade, imports, models, quizzes or native17 repetition. An old API/content incompatibility remains a failed result; app compatibility does not replace the real migration gate. |
 
@@ -93,16 +106,17 @@ manual study records, preferences, deletion markers, passages and synthetic
 original hashes, excluding credential stores and derived queues/index state.
 The normal E learning profile, raw source originals and PID 38448 are preserved.
 
-Use PowerShell 7 and the existing parent harness Node. The following values are
-the parent's actual completed receipt paths, frozen public C repository and
-assigned exclusive slot. Apply the final reviewed binder only after its exact
-baseline/pins match the next passing native continuation. Native05 preparation
-is historical/unaccepted. These are deferred parent commands, not lane execution.
+Use PowerShell 7 and the existing parent harness Node. The following values must come from actual completed current receipts, frozen
+public C repository and parent slot. Apply the final c7 native-compatible binder
+only after its exact baseline/pins match the passing native continuation. All035
+native invocations remain failed; their preparations are historical. These are
+deferred parent commands, not lane execution.
 
 ~~~powershell
-$prep = 'C:/rn-finalise-20261005/parent-lifecycle-035ca7bd'
+$prep = 'C:/rn-finalise-20261005/parent-lifecycle-c7b3b5de'
+$oldStorage = 'C:/rn-finalise-20261005/parent-lifecycle-035ca7bd'
 $inputs = @{
-    ExpectedRevision = '035ca7bd07337c65266c17f9b762ca1f97238e11'
+    ExpectedRevision = 'c7b3b5dea9258845273a8df95ca24f5da5bf1ca5'
     PackageReceipt = $actualCurrentPackageReceipt
     InstallReceipt = $actualCurrentInstallReceipt
     Native17Receipt = $actualCurrentNative17Receipt
@@ -114,8 +128,8 @@ $inputs = @{
     Repository = $actualFrozenPublicDeliveryRepository
 }
 $bound = & "$prep/bind-lifecycle.ps1" @inputs
-$storageReceipt = "$prep/storage-64d7e2c5/storage-evidence.json"
-$storageBinding = "$prep/early-installed-storage-binding.json"
+$storageReceipt = "$oldStorage/storage-64d7e2c5/storage-evidence.json"
+$storageBinding = "$oldStorage/early-installed-storage-binding.json"
 & "$prep/run-maintenance.ps1" -Run -Binding $bound.binding -StorageReceipt $storageReceipt -StorageBinding $storageBinding -Slot $parentLifecycleSlot -NodeExecutable $parentExistingHarnessNode
 # Optional compatibility evidence, separately scheduled before maintenance:
 # & "$prep/run-compatible-open.ps1" -Run -Binding $bound.binding -Slot $parentLifecycleSlot -NodeExecutable $parentExistingHarnessNode
@@ -129,15 +143,15 @@ for the parent to inspect. The parent keeps actual storage-evidence.json,
 maintenance-evidence.json, new installer-evidence.json, reopen-evidence.json and
 snapshot comparisons; optional comparison has its own receipts.
 
-Ignored executable sidecar: C:/rn-finalise-20261005/lanes/lifecycle-acceptance/.local/lifecycle-acceptance.
+Historical ignored executable sidecar: C:/rn-finalise-20261005/lanes/lifecycle-acceptance/.local/lifecycle-acceptance.
 README.md contains the receipt contracts and bounded invocations;
 preparation.json contains the checks, hashes and recovered input provenance.
-Cherry-picking this report does not transport ignored scripts; run them from
-this dedicated worktree. All five PowerShell files parse without AST errors;
+Cherry-picking this report does not transport ignored scripts. Preserve the original
+sidecar; current execution needs the reviewed new parent-lifecycle-c7b3b5de copy. All five PowerShell files parse without AST errors;
 the JavaScript file passes node --check without imports. Python files received
 source inspection only; no interpreter was invoked. No current receipt was
 bound, no scratch/profile was created, and no runtime acceptance is claimed.
-The bounded amendment adds 16 in-memory receipt-metadata checks of the extracted
+The historical035 amendment recorded 16 in-memory receipt-metadata checks of the extracted
 admission function: valid pass/blocker branches and refusal of wrong identities,
 driver/timeout/provider errors, missing selection and incomplete physical close.
 All 16 match their expected disposition; every admitted external blocker records
@@ -174,11 +188,11 @@ Source-reviewed Native06 entry is `ce27b41efb94bc7e92968fcc40a048053f91ce30dcd31
 preparation `360006f796d7b27c7f183026aa2803b077b8f4216f59e7ad13eff0b57d8ae0d0`,
 diff `8de929721f64624ff098ff5297606342a9e81abf425dea93b4bb28dee19fc7a9`,
 stdlib ZIP inspector `e8d62b2a929ea88b9e41b7c372b8f0fbf8ad4fc255b6d5edd51e27ac55360579`.
-It carries nine UI proofs through failed05/failed04, rechecks identity/runtime and
-validates every segment/original size/SHA against the actual format-2 manifest.
-The 1-MiB read buffer retains hash order and sentinel overlap checks; all six
-remaining gates and ordinary-close bodies remain unchanged. This is source review
-only; parent owns execution. The held binder05 draft omitted its operational
+Historical Native06 carries nine UI proofs through failed05/failed04 and verifies
+the actual format2 segments/originals. Its performed invocation now remains failed
+at ordinary close, R49. The new c7 continuation keeps unchanged UI/close/restore
+bodies and fresh artifact/inventory checks; no old raw inventory transfers to a
+different payload/path. Parent owns its execution. The held binder05 draft omitted its operational
 source_files append/metadata attribution; it was not applied or executed. Final
 amendment must restore both historical isolation metadata additions and pin the
 ZIP inspector plus failed05 terminal and nested individual proof origins.
@@ -187,8 +201,37 @@ A recognised external live-account blocker may retain the existing local lifecyc
 admission policy, but credits no live journey. The unchanged early storage receipt
 SHA256 `81ecaa0d53413646d682246eed6884f5c9474ad935e8da24f9e1e6bbc9bf36a5`
 and binding `590bc5f846363b54fbedc82135b14c0bcab04c8c8bf81d456fe037d52d009f8c`
-can carry only under full source/artifact equality; parent reports that maintenance
-carry patch applied/syntax-checked, with no maintenance execution.
+remain qualified actual035 evidence. The original same-revision maintenance carry
+patch was parent-applied/syntax-checked, with no maintenance execution. Current c7
+requires a separate exact mapped-byte compatibility amendment, prepared only.
+
+
+Current storage compatibility sidecar:
+C:/rn-finalise-20261005/lanes/final-acceptance-audit/.local/final-acceptance-audit/storage-carry-c7b3b5de.
+The [preparation](C:/rn-finalise-20261005/lanes/final-acceptance-audit/.local/final-acceptance-audit/storage-carry-c7b3b5de/preparation.json)
+and [receipt mapping](C:/rn-finalise-20261005/lanes/final-acceptance-audit/.local/final-acceptance-audit/storage-carry-c7b3b5de/receipt-reconciliation.json)
+record eight planned relative paths, original hashes and unperformed installed
+comparisons. Prepared maintenance SHA256
+`50ea2b037609c513ff59bdb7e380c2657fcf7aa73446de15ab5821fb29ce92c3`
+is based on applied035 `b98e6c033d84d55c505bcee8961f9e3a68434f29712a5c0dfa7f68dd05d93616`.
+Common changes only the operational root; its prepared SHA256 is
+`f0bb75cd3be54b636a361575841965137f7c817bfb3fdcead88ecf539e12c6ae`.
+Binder source-files supplement `337104d6bf7d76f2f1ec5ae20fecd5229f19b4795303e978b9ca8444a474e724`
+adds actual common/maintenance pins to baseline8cb42; it is not a replacement
+for the parent's final operational native lineage amendment. Both sources must
+be pinned in the actual full binding before maintenance. Parser-only checks have
+zero AST errors; storage/admission/functions were not executed or simulated.
+
+The old binding_sha256 relation, original parent/gate/Package/Install/phase/log
+hashes and ordered exits0/86/0/0/0/0 remain mandatory. Five current anchors map
+from installed-035ca7bd to installed-c7b3b5de by backend-relative paths; three
+predecessor anchors remain identical f316 paths. All eight old and mapped file
+SHA values must match actual installed bytes. Current EXE/ASAR/source identity
+comes from fresh c7 receipts, not old byte equality. Output names tested035 source,
+admitted c7 source and new_storage_phases_executed=false. Snapshot/uninstall/
+reinstall/reopen/physical-close/refusal bodies and native17/connected/terminal-live/
+NSIS guards remain intact. No fake binding, old receipt rewrite, maintenance pass
+or new installed storage run is produced by readiness preparation.
 
 Remaining acceptance is parent execution on the matching accepted current
 installation. Storage receipts establish the actual coordinator/SQL boundary,
