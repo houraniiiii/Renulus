@@ -15,12 +15,13 @@ if (argv.includes('--help')) {
   const config = parseCli(argv);
   const transport = new StdioClientTransport({ command: process.execPath, args: [path.join(path.dirname(fileURLToPath(import.meta.url)), 'server.mjs'), ...argv], cwd: config.repo, stderr: 'pipe' });
   const client = new Client({ name: 'renulus-local-development', version: '0.1.0' }, { capabilities: {} });
-  const input = createInterface({ input: process.stdin, crlfDelay: Infinity });
+  let input;
   transport.stderr?.on('data', chunk => process.stderr.write(String(redact(chunk.toString())).slice(0, 4096)));
   try {
     await client.connect(transport);
     const { tools } = await client.listTools();
     const names = new Set(tools.map(tool => tool.name));
+    input = createInterface({ input: process.stdin, crlfDelay: Infinity });
     process.stdout.write(JSON.stringify({ connected: true, tools: [...names] }) + '\n');
     for await (const line of input) {
       if (!line.trim()) continue;
@@ -36,7 +37,7 @@ if (argv.includes('--help')) {
       }
     }
   } finally {
-    input.close();
+    input?.close();
     await client.close();
   }
 }
