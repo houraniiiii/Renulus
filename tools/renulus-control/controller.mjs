@@ -591,17 +591,24 @@ export class RenulusController {
     const application = this.application;
     check(application, 'not_running', 'There is no owned Electron application.');
     const state = await application.evaluate(readObservation);
-    check(state.name === 'Renulus' && state.pid === application.process().pid && state.parentPid === process.pid && state.ownerPid === String(process.pid) && state.background && !state.attachedBackend && samePath(state.profile, this.session.profile) && samePath(state.userData, path.join(this.session.profile, 'desktop')), 'ownership_mismatch', 'The launched app does not have the expected synthetic profile, owner/main PID and managed background mode.');
+    const launcherPid = application.process().pid;
+    // Playwright 1.62 launches Electron through cmd.exe on Windows. The owned
+    // launcher handle and the real Electron main process have different PIDs.
+    const shellLaunch = state.pid !== launcherPid;
+    check(state.name === 'Renulus' && Number.isSafeInteger(state.pid) && state.pid > 0 && state.ownerPid === String(process.pid) && state.background && !state.attachedBackend && samePath(state.profile, this.session.profile) && samePath(state.userData, path.join(this.session.profile, 'desktop')), 'ownership_mismatch', 'The launched app does not have the expected synthetic profile, owner/main PID and managed background mode.');
     check(state.violations.length === 0 && state.windows.every(window => !window.visible && !window.focused && !window.focusable && window.backgroundThrottling === false && window.sandbox && window.contextIsolation && !window.nodeIntegration), 'visible_window', 'An owned window was visible, focused or lacked the required background isolation.');
     check(state.packaged === !!this.config.executable, 'ownership_mismatch', 'The launched source/package mode differs from the fixed CLI configuration.');
     for (const child of state.children) check(samePath(child.profile, this.session.profile), 'backend_unverified', 'An unexpected managed child has no controller-owned profile.');
     const expectedBackend = this.config.executable ? path.join(path.dirname(this.config.executable), 'resources/backend/python/python.exe') : this.config.python;
-    const fresh = [{ pid: state.pid, executable: state.executable, kind: 'main' }, ...state.children.map(child => ({ ...child, kind: 'backend' }))].filter(item => !this.owners.some(owner => owner.pid === item.pid));
+    const launcher = shellLaunch ? [{ pid: launcherPid, executable: path.join(this.env.SystemRoot ?? this.env.SYSTEMROOT ?? 'C:\Windows', 'System32/cmd.exe'), kind: 'launcher' }] : [];
+    const fresh = [...launcher, { pid: state.pid, executable: state.executable, kind: 'main' }, ...state.children.map(child => ({ ...child, kind: 'backend' }))].filter(item => !this.owners.some(owner => owner.pid === item.pid));
     if (fresh.length) {
       const rows = await this.inspect(fresh.map(item => item.pid), this.env);
       for (const claim of fresh) {
         const row = rows.find(item => item.pid === claim.pid);
-        check(row?.executable && row.created && samePath(row.executable, claim.kind === 'main' ? state.executable : expectedBackend) && (claim.kind === 'main' ? row.parentPid === process.pid : row.parentPid === state.pid && samePath(claim.executable, expectedBackend)), 'backend_unverified', 'Physical process identity or managed backend parentage could not be verified.');
+        const expectedExecutable = claim.kind === 'backend' ? expectedBackend : claim.executable;
+        const expectedParent = claim.kind === 'launcher' ? process.pid : claim.kind === 'main' ? (shellLaunch ? launcherPid : process.pid) : state.pid;
+        check(row?.executable && row.created && samePath(row.executable, expectedExecutable) && row.parentPid === expectedParent && (claim.kind !== 'backend' || samePath(claim.executable, expectedBackend)), 'backend_unverified', 'Physical process identity or managed backend parentage could not be verified.');
         this.owners.push({ ...row, kind: claim.kind });
       }
     }

@@ -39,7 +39,7 @@ let profile: DesktopProfile;
 try {
   if (backgroundTest && (!process.env.RENULUS_PROFILE || !path.isAbsolute(process.env.RENULUS_PROFILE))) throw new Error('Background tests require an explicit absolute synthetic RENULUS_PROFILE.');
   if (backgroundTest && process.env.RENULUS_BACKEND_URL) throw new Error('Background tests must launch their own managed backend.');
-  if (backgroundOwner !== undefined && (!Number.isSafeInteger(backgroundOwner) || backgroundOwner <= 0 || backgroundOwner !== process.ppid)) throw new Error('The background owner must be this app launcher.');
+  if (backgroundOwner !== undefined && (!Number.isSafeInteger(backgroundOwner) || backgroundOwner <= 0 || backgroundOwner === process.pid)) throw new Error('The background owner must be a valid controller process.');
   profile = resolveProfile(process.env.RENULUS_PROFILE, app.isPackaged, process.env.LOCALAPPDATA);
 }
 catch (error) { reportNativeError('Renulus could not start', (error as Error).message); app.exit(1); throw error; }

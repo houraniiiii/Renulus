@@ -50,23 +50,26 @@ async function fixture(overrides = {}) {
     options = launchOptions; closed = false; applicationNumber++;
     app = new EventEmitter();
     const child = { pid: 100 + applicationNumber * 10, exitCode: null, signalCode: null, stderr: new PassThrough(), stdout: new PassThrough(), kill: () => { child.exitCode = 1; calls.push('direct-main-kill'); } };
-    const backendPid = child.pid + 1;
-    rows.set(child.pid, { pid: child.pid, parentPid: process.pid, executable: mainExe, created: 'synthetic-main-' + applicationNumber });
-    rows.set(backendPid, { pid: backendPid, parentPid: child.pid, executable: python, created: 'synthetic-backend-' + applicationNumber });
+    const mainPid = overrides.shellLaunch ? child.pid + 1 : child.pid;
+    const mainParent = overrides.shellLaunch ? child.pid : process.pid;
+    const backendPid = mainPid + 1;
+    if (overrides.shellLaunch) rows.set(child.pid, { pid: child.pid, parentPid: overrides.launcherParent ?? process.pid, executable: path.join(launchOptions.env.SystemRoot ?? launchOptions.env.SYSTEMROOT ?? 'C:/Windows', 'System32/cmd.exe'), created: 'synthetic-launcher-' + applicationNumber });
+    rows.set(mainPid, { pid: mainPid, parentPid: mainParent, executable: mainExe, created: 'synthetic-main-' + applicationNumber });
+    rows.set(backendPid, { pid: backendPid, parentPid: mainPid, executable: python, created: 'synthetic-backend-' + applicationNumber });
     app.process = () => child;
     app.windows = () => [page];
     app.context = () => ({ setDefaultTimeout: timeout => assert.ok(timeout <= LIMITS.operation), route: async (_pattern, handler) => { calls.push('route'); app.route = handler; } });
     app.evaluate = async fn => {
       if (fn.name === 'installObservation') { calls.push('observer'); return; }
       assert.equal(fn.name, 'readObservation'); calls.push('observe');
-      return { name: 'Renulus', pid: child.pid, parentPid: process.pid, ownerPid: String(process.pid), executable: mainExe, background: true, attachedBackend: false, packaged: false, profile: options.env.RENULUS_PROFILE,
+      return { name: 'Renulus', pid: mainPid, parentPid: mainParent, ownerPid: String(process.pid), executable: mainExe, background: true, attachedBackend: false, packaged: false, profile: options.env.RENULUS_PROFILE,
         userData: path.join(options.env.RENULUS_PROFILE, 'desktop'), ...state,
         children: [{ pid: backendPid, executable: python, profile: options.env.RENULUS_PROFILE, exited: false }] };
     };
     app.browserWindow = async () => ({ evaluate: async fn => fn({ capturePage: async (rect, opts) => { assert.equal(rect, undefined); assert.equal(opts.stayHidden, true); assert.equal(opts.stayAwake, false); calls.push('capturePage'); return { toPNG: () => png }; } }), dispose: async () => { calls.push('dispose'); } });
     app.close = async () => {
       calls.push('close'); if (overrides.closeDelay) await delay(overrides.closeDelay);
-      closed = true; child.exitCode = 0; rows.delete(child.pid);
+      closed = true; child.exitCode = 0; rows.delete(child.pid); rows.delete(mainPid);
       if (!overrides.surviveBackend) rows.delete(backendPid);
       else if (overrides.reusePid) rows.set(backendPid, { ...rows.get(backendPid), created: 'unrelated-new-process' });
     };
@@ -77,6 +80,21 @@ async function fixture(overrides = {}) {
     operationTimeout: 5_000, lifecycleTimeout: overrides.lifecycleTimeout ?? 1_500, startTimeout: 5_000 });
   return { controller, config, calls, elements, state, rows, options: () => options, app: () => app };
 }
+
+test('Windows shell launcher validates controller to cmd to Electron to backend ownership', async t => {
+  const f = await fixture({ shellLaunch: true }); t.after(() => f.controller.shutdown());
+  const ready = await f.controller.run('renulus_start');
+  assert.deepEqual(ready.ownedPids.map(owner => owner.kind), ['launcher', 'main', 'backend']);
+  assert.notEqual(ready.ownedPids[0].pid, ready.ownedPids[1].pid);
+  assert.equal((await f.controller.run('renulus_close')).normal, true);
+  assert.equal(f.rows.size, 0);
+});
+
+test('Windows shell launcher rejects an unrelated launcher parent', async () => {
+  const f = await fixture({ shellLaunch: true, launcherParent: process.pid + 9999 });
+  await assert.rejects(f.controller.run('renulus_start'), error => error.code === 'backend_unverified');
+  assert.equal(f.rows.size, 0);
+});
 
 test('CLI has fixed absolute configuration, packaged Python is optional, and no attach/profile/eval flag', () => {
   const repo = path.join(root, 'repo'), python = path.join(root, 'python.exe'), executable = path.join(root, 'Renulus.exe');
