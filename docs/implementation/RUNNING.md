@@ -7,10 +7,20 @@ not establish clinical accuracy or live account access.
 
 ## Windows delivery
 
+On October 6, installed acceptance found and repaired an Electron shutdown
+exception caused by a late request after window destruction. The correction is
+committed at `c7b3b5dea9258845273a8df95ca24f5da5bf1ca5`; matching manufacture
+and acceptance are in progress. The 035ca7bd artifacts below are preserved
+historical candidates and do not have accepted ordinary-close/recovery proof.
+The normal launcher remains on its previous selection until the rebuilt app
+passes matching installed acceptance and maintenance. See
+[the correction](finalise-owned-api-headers.md) and
+[current continuation](CONTINUATION_20261005.md).
+
 The matching unsigned installer and fresh installation for product source
 `035ca7bd07337c65266c17f9b762ca1f97238e11` completed on October 5, 2026.
 The active checkout is on C:. Raw collection files and the normal learning
-profile remain on the second drive. Current matching artifacts are:
+profile remain on the second drive. Preserved 035ca7bd artifacts are:
 
 | Item | Local delivery path |
 | --- | --- |
