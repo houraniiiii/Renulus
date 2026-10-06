@@ -21,6 +21,7 @@ explicit reference launcher and is separate from Renulus implementation evidence
 
 - [Project brief](docs/PROJECT_BRIEF.md) — audience, purpose and current status.
 - [Run the app](docs/implementation/RUNNING.md) — Windows delivery and contributor startup.
+- [Use Renulus](docs/implementation/USING_RENULUS.md) — subscriptions, study, Library, Cases, Memory and recovery.
 - [Implementation run](docs/implementation/EXECUTION.md) — live queue, ownership and evidence rules.
 - [Decisions](docs/DECISIONS.md) — confirmed choices and unresolved work.
 - [Implementation stages](docs/planning/IMPLEMENTATION_PLAN.md) — working outcomes and acceptance gates from foundation to full product.

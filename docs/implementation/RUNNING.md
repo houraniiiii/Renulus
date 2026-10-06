@@ -4,6 +4,7 @@ The active app is the Flow learning application in this repository. The
 integration branch is `build/renulus-integration`, tracked by GitHub issue #1 and
 draft PR #13. The implementation record is a dated capability report; it does
 not establish clinical accuracy or live account access.
+For the app's controls and everyday workflows, see [Using Renulus](USING_RENULUS.md).
 
 ## Windows delivery
 

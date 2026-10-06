@@ -207,9 +207,9 @@ requires a separate exact mapped-byte compatibility amendment, prepared only.
 
 
 Current storage compatibility sidecar:
-C:/rn-finalise-20261005/lanes/final-acceptance-audit/.local/final-acceptance-audit/storage-carry-c7b3b5de.
-The [preparation](C:/rn-finalise-20261005/lanes/final-acceptance-audit/.local/final-acceptance-audit/storage-carry-c7b3b5de/preparation.json)
-and [receipt mapping](C:/rn-finalise-20261005/lanes/final-acceptance-audit/.local/final-acceptance-audit/storage-carry-c7b3b5de/receipt-reconciliation.json)
+C:/rn-finalise-20261005/preserved-lanes/final-acceptance-audit/checkpoints/final-60c4d88c-all-ignored/storage-carry-c7b3b5de.
+The [preparation](C:/rn-finalise-20261005/preserved-lanes/final-acceptance-audit/checkpoints/final-60c4d88c-all-ignored/storage-carry-c7b3b5de/preparation.json)
+and [receipt mapping](C:/rn-finalise-20261005/preserved-lanes/final-acceptance-audit/checkpoints/final-60c4d88c-all-ignored/storage-carry-c7b3b5de/receipt-reconciliation.json)
 record eight planned relative paths, original hashes and unperformed installed
 comparisons. Prepared maintenance SHA256
 `50ea2b037609c513ff59bdb7e380c2657fcf7aa73446de15ab5821fb29ce92c3`
