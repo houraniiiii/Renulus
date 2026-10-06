@@ -27,14 +27,43 @@ EXE/ASAR. Receipt: `proofs/installer-9078a65e/installer-evidence.json`, SHA256
 The receipt's `checkedAt` is its start time, not completion; the parent observed
 and reviewed the completed run at **03:50:39 UTC**.
 
-Actual native continuation is running in session **62280**, Node PID **27824**,
-started **03:50:46 UTC**. Root:
-`C:/rn-finalise-20261005/parent-native-c7b3b5de-01`. Recover that controller and
-its receipt before any replacement. It performs fresh installed inventory and
-the remaining six gates/three ordinary physical closes; existing UI origins,
-originals, jobs and ZIP are retained. No new native journey or normal-close pass
-is credited before its actual receipt is reviewed. The normal launcher still
-selects 3ff9b0d6 and the E learning profile.
+Native continuation **62280** ended **exit 1 at 04:06:29 UTC on October 6**.
+The invocation remains failed. Fresh c7 installed identity, full raw inventory
+and isolated runtime passed. Nine historical UI proofs retain explicit source
+qualifications. New close during ingestion, reopen and temporary retention
+passed. Two genuine ordinary physical closes observed their backend and ended
+with no remaining processes: **18.838 / 14.514 seconds**. Shutdown issue #18 is
+closed on this actual installed evidence.
+
+Receipt `apps/desktop/test-results/installed-product-4c73b819/installed-product-recovery-c7b3b5de-evidence.json`
+has SHA256 `e8eaff8aa835f5e4a74960cce9bab73d7e41cc8736e49aaeff646563f8ac6fee`.
+The third launch committed restore `72f6e060fc4341698151861ccde86e25`, then both
+local rebuilds failed. Full restore, deletion reconciliation and final close
+remain unaccepted. Cleanup succeeded and grants no third ordinary close.
+Preserve the applied restored state; retry rebuilding rather than apply the
+same ZIP again. The normal launcher still selects 3ff9b0d6 and the E profile.
+
+Parent copy-only diagnosis reproduced missing embedded pywin32 import paths
+and Lance's Windows atomic-writer failure at the same 118-character profile.
+The original database remained SHA256
+`3b8c12b7bdfdd246197207095c53cc7df98f7d78944985e1f25735194ccfb03d`.
+Correct local Win32 paths passed lock/unlock and rebuilt four canonical Memory
+facts offline. A shorter path rebuilt seven Library passages; an extended
+Windows prefix did not solve the pinned writer's path handling.
+
+Repair **6599bf796900e33cb1cb2319b5812ea4b8aa2a7b** declares bundled Win32 paths
+on fresh and refreshed payloads, and uses compact `indexes/k` generations while
+retaining recognised legacy indexes. Six focused actual-Lance repository cases
+passed once: long-path rebuild/reopen, legacy promotion, failed staging, deletion
+coordination and empty cleanup. Receipt
+`C:/rn-finalise-20261005/recovery-6599bf79-01/result.json` is complete, source
+unchanged, accepted stage pass, 6/6, zero guards and physical exit 0. A bounded
+Ultra lane prepares the missing native slice. The combined actual bundled-engine
+diagnostic also passed7 passages/4 Memory facts, external attempts0 and source
+database unchanged; see [the exact correction report](finalise-recovery-windows.md).
+Matching Package **38280**, run `6599bf79-package-10296ae7`, is active; recover
+its controller before replacement. Parent owns matching Install and actual
+installed recovery retry. Source/diagnostic checks grant no installed acceptance.
 
 Native05 at 035ca7bd ended exit 1 at 00:57:33 UTC on October 6. All remaining
 Library format journeys individually passed: PDF with physical page 2, no-text
@@ -74,8 +103,8 @@ only sequential file-hash buffers to 1 MiB. The new controller is
 `.local/finalise-run-follow-on-c7b3b5de.ps1`. Parse checks passed; native,
 connected and provider execution is not claimed by preparation.
 
-Next: matching Install, fresh installed identity/inventory and the remaining
-native gates/three ordinary physical closes, connected saved-original/recovery/
+Next: complete matching Package/Install at6599bf79, fresh target identity/runtime
+and the remaining actual restore/deletion/final-close slice, connected saved-original/recovery/
 Memory/mistake-to-plan journeys, one selected-account Probe and admitted
 dependent journeys/maintenance. Keep one twenty-minute heartbeat and preserve
 unrelated PID 38448 and the held E supplement-inputs worktree.

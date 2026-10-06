@@ -12,8 +12,10 @@ On October 6, installed acceptance found and repaired an Electron shutdown
 exception caused by a late request after window destruction. The correction is
 committed at `c7b3b5dea9258845273a8df95ca24f5da5bf1ca5`; matching manufacture
 passed on October 6 at 03:40:50 UTC, and matching unsigned installation completed
-with exit 0 in 481.506 seconds. Installed close/reopen and recovery acceptance
-are running. The current candidate is
+with exit 0 in 481.506 seconds. Installed close during ingestion, reopen and
+temporary retention passed, with two ordinary physical closes. Restore then
+failed during both local rebuilds. Repair6599bf79 passed focused checks; its
+matching manufacture and remaining installed acceptance are pending. The current candidate is
 `C:/Renulus-native-delivery/desktop-20261005/installed-c7b3b5de/Renulus Development.exe`.
 The current installer is
 `C:/Renulus-native-delivery/desktop-20261005/matching-c7b3b5de/Renulus-Development-0.1.0-windows-x64-setup.exe`,
