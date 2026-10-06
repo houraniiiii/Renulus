@@ -91,8 +91,12 @@ Connected03 began11:07:30UTC, session27882/driver28664. A reviewed asynchronous
 Exit observer preserves the same30second budget and ordinary close. It retains
 the three passed stages with origin pins/executedHere=false, and runs only the
 remaining fresh restore/rebuild/reconciliation, three owned deletions, older-ZIP
-deletion/raw-part suppression and close. Actual receipt/terminal review precedes
-admission. See [the continuation](finalise-connected-continuation-699938f2.md).
+deletion/raw-part suppression and close. It completed exit0 at11:12:00.7575338UTC;
+parent receipt/terminal/UI review and downstream admission passed. Seven performed
+stages and three retained proofs remain separate. Newer Memory/case/Library
+deletion survived the same ZIP, including zero deleted-case raw parts. The
+ordinary main/backend close took5.7199216seconds. See
+[the continuation](finalise-connected-continuation-699938f2.md).
 
 Selected Codex Probe/capture follows admitted Connected; Journeys/image depend on
 successful Probe. Prepared freshness/correction, scanned-PDF/Flow/single-K01 and

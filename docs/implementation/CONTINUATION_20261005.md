@@ -32,11 +32,12 @@ Connected01/session97216 ended exit1 at10:35:05.754UTC. Connected02/session73927
 ended exit1 at10:53:30UTC after three passed stages and a populated format2 backup,
 then an unconfirmed ordinary close. Both failures remain failed with zero close
 credit; their owned processes were later absent. Connected03/session27882,
-driver28664, started11:07:30UTC and owns the serial native/helper slot. It retains
-the three passed02 stages explicitly and executes only remaining restore,
-reconciliation/deletion/close operations from the existing backup with a reviewed
-asynchronous observer. Recover its invocation/latch before another native, model
-or live operation. See [the installed record](finalise-installed-699938f2.md) and
+driver28664, completed exit0 at11:12:00.7575338UTC. Parent reviewed/admitted all
+seven remaining restore/reconciliation/deletion operations and three exact
+retained02 proofs; main/backend ordinary close took5.7199216seconds. The serial
+native/helper slot is released for one selected Codex Probe after the live-driver
+patch is reviewed/deployed. Preserve the03 receipt/latch/controller without replay.
+See [the installed record](finalise-installed-699938f2.md) and
 [Connected continuation](finalise-connected-continuation-699938f2.md).
 
 The final next-installed/freshness follow-on lane is integrated, its47 ignored

@@ -54,7 +54,33 @@ ordinary close. No add/edit, case creation, wrong answer, plan refresh, populate
 backup, import or completed native/regression check is replayed. Actual receipts,
 terminal and UI evidence require parent review before Connected admission/Probe.
 
-All times areOctober6,2026UTC. No in-flight stage establishes completion. The
+Connected03 completed exit0 at11:12:00.7575338UTC. Parent reviewed and admitted
+the actual receipt, SHA25684f76360e08b6a82c19b3f1da5c6226a4db9e4fefeae1fb3d3aa8eead905d48c,
+with terminal SHA256d670e24b93d2728d866e45570198b05cbe76a7037b4f6dddccb665c0eea4e551.
+All seven remaining operations passed; three retained02 proofs compare exactly
+and remain executedHere=false. Both real indexes rebuilt after each restore:
+first7Knowledge passages/6Memory records. The manual plan and corrected revision2
+Memory survived restore; PDF/PNG authenticated originals retained exact hashes.
+After deleting owned Memory, case and Library PDF, replaying the same ZIP excluded
+15canonical records and1Library original. Deleted Library original is404,
+case originals410, own memory recall empty, and a genuine verification ZIP has
+zero own case/session/attachment/raw-part rows plus its deletion marker.
+
+The new main44736 and bundled backend10612 exited normally in5.7199216seconds,
+with no remaining or reused identities; independent post-close inspection was
+empty. The downstream Connected consumer guard passed. Parent opened two existing
+Case captures at original resolution: saved text/retention disclosure and saved
+original rows are visible. The PDF iframe is present but its captured frame is
+dark, so physical Case PDF text rendering is not claimed. Library physical page2
+remains the separate accepted Recovery02 proof. Actual raw PDF/PNG UI responses
+and PNG natural dimensions are independently in the receipt. Parent-review.json
+under the03 controller is4651bytes, SHA256
+54e3a0c1b6817807655d25a04c71f29c6166e0617638cb9aeb50e659e0e366f1.
+The Connected scope is accepted, with three prior operations/seven performed here
+and completeExecutionInThisInvocation=false. Failed01/02 remain failed. Live
+generation/capture and complete product acceptance remain unproved.
+
+All times areOctober6,2026UTC. The
 original failures, E profile/raw data, originals, credentials, held supplement
 tree and unrelatedPID38448/port18765 are preserved. Go remains paused, launcher
 promotion awaits acceptance/maintenance, and one20minute heartbeat remains active.
