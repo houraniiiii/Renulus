@@ -13,11 +13,17 @@ passed; see [the actual failure and correction](finalise-owned-api-headers.md).
 Runtime, content, Hermes, dependency/model locks and the Flow renderer are
 unchanged from 035ca7bd. Completed unaffected checks and imports are preserved.
 
-Matching Package is running in controller `72410`, run
-`c7b3b5de-package-8121cbe0`. Recover this controller and its receipts before
-starting Install; no package, installation or normal-close pass is credited
-before actual terminal and evidence review. The normal launcher still selects
-the previous 3ff9b0d6 installation and E learning profile.
+Matching Package `72410`, run `c7b3b5de-package-8121cbe0`, completed with
+exit 0 on October 6. Provenance was written at **03:40:50 UTC** and names the
+exact c7 freeze. The completed controller checked all **39,253 backend files /
+2,171,018,592 bytes**. Installer size is 1,010,348,108 bytes, SHA256
+`c5f7da67d90fd85b4dfaae6e7190920e8cf1ba29bde5ceed61db993a4bf84434`;
+provenance SHA256 is `3d1b6cb79d08e8ebd3e0e8f27610866bfe76be3459d77471520c09389330e6cb`.
+Parent review is `C:/rn-finalise-20261005/parent-matching-c7b3b5de-01/package-review.json`.
+Matching extraction-only Install is now running in session **71802**, run
+`c7b3b5de-install-70a21716`, started **03:41:24 UTC**. Recover that run before
+any replacement. No c7 installation, ordinary-close or journey pass is credited
+yet. The normal launcher still selects 3ff9b0d6 and the E learning profile.
 
 Native05 at 035ca7bd ended exit 1 at 00:57:33 UTC on October 6. All remaining
 Library format journeys individually passed: PDF with physical page 2, no-text
