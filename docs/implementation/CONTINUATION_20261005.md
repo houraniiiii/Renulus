@@ -5,6 +5,23 @@ historical `SESSION_HANDOFF.md`. Preserve its receipts and observations.
 
 ## Current October 6 recovery delivery wave
 
+The parent now accepts production freeze
+`699938f20efb6bbc2cf8df684cc5c6c3450e6eaf` for matching manufacture. Recovery
+format2 parsing, public citation projection, automatic dated body retrieval and
+correction invalidation are integrated. Bounded validation passed48 freshness
+backend cases,11 correction cases,6 affected final public renderer cases and
+2 Updates renderer cases, with integrated typecheck0. Counts retain overlap and
+source scope; see [the new wave record](finalise-recovery-freshness-20261006.md).
+The two6599 native attempts have finished and failed, as detailed below; no
+current native job is running. Recover the next matching job before replacements.
+
+Report-only commits91a233e1/ec826214 preserve freshness gaps and all64 requirement
+dispositions. Production commitsabbf098c/859b001f/9b5410ce and fixture-only699938f2
+are integrated. Freshness's clean worktree is retired with commits and receipts
+preserved. Correction validation is complete; retirement follows. A bounded Ultra
+next-installed preparation lane owns only an ignored operational handoff/report;
+parent owns exact source qualification and all actual manufacture/native/live work.
+
 Matching6599 Package completed at **06:48:22 UTC** on October 6, followed by
 the parent's artifact review at **06:49:44 UTC**. Recovered Package session38280
 exited0; run `6599bf79-package-10296ae7` retains its complete backend inventory
@@ -12,9 +29,12 @@ exited0; run `6599bf79-package-10296ae7` retains its complete backend inventory
 also exited0 at **06:58:45 UTC**, run `6599bf79-install-939d3a54`. Its actual
 receipt is `C:/Renulus-native-delivery/desktop-20261005/proofs/installer-aa008fcd/installer-evidence.json`;
 installed EXE/ASAR and source6599 match the package. This establishes installation,
-not app acceptance. The bound recovery retry is now running in session **9992**,
-driver root `C:/rn-finalise-20261005/parent-native-recovery-6599bf79-01`. Recover it
-before replacement; execution-binding SHA256 is
+not app acceptance. Recovery session **9992** ended at07:05:45.951 UTC with a
+Node driver crash after completed installed inventory; root
+`C:/rn-finalise-20261005/parent-native-recovery-6599bf79-01` retains it. A second
+attempt,22539, passed identity/runtime and ended07:21:47.979 UTC at the invalid
+format2 Recovery UI response. Both failures and cleanup remain preserved without
+normal-close acceptance. The original execution-binding SHA256 is
 `1ca18c0564c657ddc57b80b0e957699c24e0b4df1041fb6865e09c8bb524f1d3`.
 
 The follow-up 64-row gap triage is integrated and pushed as `dd806d3f`; see
@@ -39,9 +59,9 @@ junction to physical paths; script bytes are unchanged. Use deployed manifest
 SHA256 `7da02cd44f6aa86dcbcafeb89cc717d73e48bb791f2fcd2f95bfe5b591e0337c`
 for the single later run after native admission.
 
-The accepted manufacture freeze is
-`6599bf796900e33cb1cb2319b5812ea4b8aa2a7b`. Matching Package and Install have
-completed as recorded above; matching native acceptance remains pending.
+The previously manufactured freeze is
+`6599bf796900e33cb1cb2319b5812ea4b8aa2a7b`. Its Package and Install have
+completed as recorded above; native acceptance failed and remains unaccepted.
 The production repair and its six focused checks/actual bundled-engine
 diagnostic are recorded in [the recovery correction](finalise-recovery-windows.md).
 
