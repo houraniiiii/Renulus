@@ -49,7 +49,7 @@ class Literature:
 
     async def query(self, query, page_size=25):
         url = "https://www.ebi.ac.uk/europepmc/webservices/rest/search?" + urlencode(
-            {"query": query, "format": "json", "resultType": "core", "pageSize": page_size, "sort": "FIRST_PDATE_D desc"})
+            {"query": query, "format": "json", "resultType": "core", "pageSize": page_size})
         body, _, _ = await self.updates.fetcher.fetch(url, {"www.ebi.ac.uk"})
         result = json.loads(body)
         articles = result.get("resultList", {}).get("result") if isinstance(result, dict) else None
@@ -119,7 +119,10 @@ class Literature:
         now, discovered, checks = utc_now(), 0, []
         for topic_id, topic in selected:
             # Only the canonical installed topic label leaves the app.
-            query = f'({topic}) FIRST_PDATE:[{since} TO {today.isoformat()}]'
+            # Keep the label literal and restrict phrase matches to title/abstract.
+            phrase = topic.replace("\\", "\\\\").replace('"', '\\"')
+            # Europe PMC documents newest-first sorting inside the query.
+            query = f'TITLE_ABS:"{phrase}" AND FIRST_PDATE:[{since} TO {today.isoformat()}] sort_date:y'
             found, checked = 0, 0
             try:
                 articles, hits = await self.query(query)
