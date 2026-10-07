@@ -3,9 +3,10 @@
 Active continuation, October 7: read [FINISH_20261007](FINISH_20261007.md).
 Its 14:07 UTC checkpoint records the matching **installed cb59beb2** core Sol
 and saved DeepSeek/Library/Memory/teaching acceptance and normal launcher promotion.
-Read [the delivery](DELIVERY_20261007.md) before any repeat execution. All workers
-are closed; all worktrees, including the held E supplement, are retired with
-needed ignored evidence and branch refs preserved. Only the main checkout remains.
+Read [the delivery](DELIVERY_20261007.md) before any repeat execution. All first-wave
+workers/worktrees, including the held E supplement, were retired with evidence
+and branch refs preserved. The 14:17 continuation in FINISH records two new
+bounded evidence-selection/content-application lanes; parent owns Updates review.
 The full goal remains active for substantive content/currency, dated-body retrieval
 and remaining connected/accessibility scopes, with one twenty-minute heartbeat.
 The owner explicitly approves OpenCode Go personal
