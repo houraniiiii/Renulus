@@ -1,5 +1,38 @@
 # Recalled Memory invalidation during Explain — 7 October 2026
 
+## Parent validation — 17:20 UTC
+
+The guard is integrated at199c9c55; the real canonical recall fixture is fixed
+at9d96258c; the Windows event-loop fixture is repaired atfab88e1d. **All13 new
+controlled concurrency cases passed** atfab88e1d in5.14s, with complete,
+source_unchanged and accepted_stage_pass true. No guard violations or foreign
+module sources. JUnit `2f273cc93cad66331950b06b6797563444cf1b51d3ce8a4861fa8fa5e25e02f5`.
+
+The first invocation remains **failed**:13 setup errors and14 individually
+passing existing Learn/freshness/temporary-scope cases. Its network-denial fixture
+blocked Windows asyncio's loopback self-pipe before the new cases could execute.
+The fixture now permits that local framework mechanism while refusing external
+connections. Only the13 setup-error identities were retried. Production trees
+and all14 previously passing test bodies are unchanged between9d96258c and
+fab88e1d; those14 retain individual credit, not a new27-case all-green run.
+
+| Receipt | SHA256 | Exact result |
+| --- | --- | --- |
+| `C:\rn-finalise-20261005\summary-memory-20261007-01\result.json` | `6731bff62700d232b853372d26a018da64b49c4c3b57b23203cdbcbfda2f5f2a` | exit1,14passed/13setup errors; aggregate remains failed |
+| `C:\rn-finalise-20261005\summary-memory-20261007-02\result.json` | `ed6d092996f739600483e5e222b1d6851b2f8e7b859cc12995ffb04a92845386` | exit0,13/13; accepted guarded invocation |
+
+Commands, logs and terminal receipts: `C:\rn-finish-20261007\evidence\summary-memory`. No provider, engine, model,
+Hermes algorithm or native check was executed for these cases. Actual manager
+orchestration, canonical revision/deletion/commit ordering and reopening are
+covered with controlled transport and compaction planning. Earlier actual
+Hermes/reindex and installed Memory proofs retain their original attribution.
+
+Matching0318 manufacture completed separately and contains **none of this
+guard**. Its installed content acceptance is running. A later matching delivery
+is still required before advertising this guard as installed.
+
+## Lane implementation snapshot (before parent validation)
+
 **A narrow missing guard is implemented in this lane, with 13 proposed controlled
 test cases, none executed or collected.** The defect is stale recalled Memory in
 the primary system context after a canonical correction/deletion. It is not an
