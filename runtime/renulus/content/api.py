@@ -95,7 +95,7 @@ def _bootstrap(services, repository: ContentRepository, root: Path) -> dict:
             # Bootstrap must not silently undo a withdrawal or deliberate selection.
             state["reason"] = "target_previously_installed"
             return state
-        repository.install_pack(candidate)
+        repository.install_bundled_release(candidate)
     except (ContentUnavailable, ContentConflict, PackValidationError, ValidationError,
             OSError, UnicodeError, json.JSONDecodeError) as exc:
         code = ("content_not_found" if isinstance(exc, ContentUnavailable) else

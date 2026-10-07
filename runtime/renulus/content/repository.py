@@ -6,10 +6,11 @@ from __future__ import annotations
 from contextlib import closing
 from datetime import datetime, timezone
 import json
+import re
 from pathlib import Path
 
 from .programmes import mapped_question_pins, programme_metadata
-from .validation import canonical_json, digest, validate_pack
+from .validation import MAX_FILE_BYTES, PackValidationError, canonical_json, digest, validate_pack
 
 
 class ContentConflict(ValueError):
@@ -110,60 +111,123 @@ class ContentRepository:
         if not chosen.is_absolute():
             chosen = self.pack_root / chosen
         pack = validate_pack(chosen)
+        with self.db.transaction() as conn:
+            return self._install(conn, pack)
+
+    def install_bundled_release(self, path: str | Path) -> dict:
+        """Install required immutable predecessors and the release atomically.
+
+        Only bundled published packs in the same lineage may supply a missing
+        withdrawn version. Arbitrary imports retain the strict predecessor rule.
+        """
+        candidate = Path(path).resolve()
+        if not candidate.is_relative_to(self.pack_root):
+            raise ContentConflict("Bundled release must stay within the app pack directory")
+        pack = validate_pack(candidate)
+        lineage = (self.pack_root / pack.manifest["id"]).resolve()
+        if (candidate.parent != lineage or candidate.name != pack.manifest["version"]
+                or not lineage.is_relative_to(self.pack_root)):
+            raise ContentConflict("Bundled release must match its pack lineage")
+        with self.db.transaction() as conn:
+            self._install_predecessors(conn, candidate, pack)
+            return self._install(conn, pack)
+
+    def _install_predecessors(self, conn, path, pack):
+        required = {(item["question_id"], item["version"])
+                    for item in pack.manifest["withdrawals"]}
+        missing = {pin for pin in required if not conn.execute(
+            "SELECT 1 FROM content_question_versions WHERE question_id=? AND version=?",
+            pin).fetchone()}
+        if not missing:
+            return
+        version = lambda value: tuple(int(part) for part in value.split("."))
+        prior = sorted((item for item in path.parent.iterdir()
+                        if item.is_dir() and re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", item.name)
+                        and version(item.name) < version(pack.manifest["version"])),
+                       key=lambda item: version(item.name), reverse=True)
+        for item in prior:
+            resolved = item.resolve()
+            if resolved.parent != path.parent:
+                raise ContentConflict("Bundled predecessor must stay within its pack lineage")
+            metadata = resolved / "manifest.json"
+            if not metadata.is_file():
+                continue
+            if metadata.stat().st_size > MAX_FILE_BYTES:
+                raise PackValidationError("Bundled predecessor manifest exceeds the supported size")
+            header = json.loads(metadata.read_text(encoding="utf-8"))
+            if isinstance(header, dict) and header.get("state") == "draft":
+                continue
+            # Validate immutable bytes before installing a published dependency.
+            previous = validate_pack(resolved)
+            if (previous.manifest["id"] != pack.manifest["id"]
+                    or previous.manifest["version"] != item.name):
+                raise ContentConflict("Bundled predecessor identity must match its directory")
+            pins = {(q["id"], q["version"]) for q in previous.bundle["questions"]}
+            if not missing.intersection(pins):
+                continue
+            self._install_predecessors(conn, resolved, previous)
+            self._install(conn, previous)
+            missing = {pin for pin in missing if not conn.execute(
+                "SELECT 1 FROM content_question_versions WHERE question_id=? AND version=?",
+                pin).fetchone()}
+            if not missing:
+                return
+        raise ContentConflict("Install the predecessor before its correction; bundled predecessor is missing")
+
+    def _install(self, conn, pack) -> dict:
         bundle, manifest = pack.bundle, pack.manifest
         pack_id, version = manifest["id"], manifest["version"]
-        with self.db.transaction() as conn:
-            previous = conn.execute(
-                "SELECT sha256 FROM content_packs WHERE pack_id=? AND version=?",
-                (pack_id, version)).fetchone()
-            if previous and previous[0] != pack.sha256:
-                raise ContentConflict(f"Immutable pack changed: {pack_id} v{version}")
-            if conn.execute("SELECT 1 FROM content_pack_withdrawals WHERE pack_id=? AND version=?",
-                            (pack_id, version)).fetchone():
-                raise ContentConflict("Withdrawn packs cannot be reactivated")
-            if not previous:
-                conn.execute("INSERT INTO content_packs VALUES(?,?,?,?,?)",
-                             (pack_id, version, canonical_json(manifest), pack.sha256, _now()))
-                definitions = (
-                    ("topics", "content_topics", "topic_id", "topic_version"),
-                    ("cases", "content_case_versions", "case_id", "case_version"),
-                    ("questions", "content_question_versions", "question_id", "question_version"),
-                )
-                for name, table, id_column, version_column in definitions:
-                    for item in bundle[name]:
-                        if name in ("cases", "questions"):
-                            cited = {s["source_id"] for s in item["sources"]}
-                            if name == "cases":
-                                cited.update(s["source_id"] for stage in item["stages"] for s in stage["sources"])
-                            # Preserve edition/URL/check evidence inside the canonical
-                            # immutable snapshot; future pack files may disappear.
-                            item = {**item, "source_records": [s for s in bundle["sources"] if s["id"] in cited]}
-                        self._store(conn, table, id_column, item, family=(name == "questions"))
-                        if name == "questions" and "correction" in item:
-                            correction = item["correction"]
-                            if not conn.execute(
-                                "SELECT 1 FROM content_question_versions WHERE question_id=? AND version=?",
-                                (item["id"], correction["previous_version"])).fetchone():
-                                raise ContentConflict("Install the predecessor before its correction")
-                            if not any(w["question_id"] == item["id"]
-                                       and w["version"] == correction["previous_version"]
-                                       and w.get("replacement_version") == item["version"]
-                                       for w in manifest["withdrawals"]):
-                                raise ContentConflict("A key correction must withdraw the previous version")
-                        conn.execute(f"INSERT INTO content_pack_{name} "
-                                     f"(pack_id,pack_version,{id_column},{version_column}) VALUES(?,?,?,?)",
-                                     (pack_id, version, item["id"], item["version"]))
-                for withdrawal in manifest["withdrawals"]:
-                    self._withdraw_question(conn, **withdrawal)
-            # Reject an old selected version after any global withdrawal, including on reinstallation.
-            if conn.execute(
-                "SELECT 1 FROM content_pack_questions s JOIN content_question_withdrawals w "
-                "ON w.question_id=s.question_id AND w.version=s.question_version "
-                "WHERE s.pack_id=? AND s.pack_version=?", (pack_id, version)).fetchone():
-                raise ContentConflict("Pack selects withdrawn question versions")
-            conn.execute("INSERT INTO content_active_pack VALUES(1,?,?) ON CONFLICT(slot) DO UPDATE "
-                         "SET pack_id=excluded.pack_id,pack_version=excluded.pack_version",
-                         (pack_id, version))
+        previous = conn.execute(
+            "SELECT sha256 FROM content_packs WHERE pack_id=? AND version=?",
+            (pack_id, version)).fetchone()
+        if previous and previous[0] != pack.sha256:
+            raise ContentConflict(f"Immutable pack changed: {pack_id} v{version}")
+        if conn.execute("SELECT 1 FROM content_pack_withdrawals WHERE pack_id=? AND version=?",
+                        (pack_id, version)).fetchone():
+            raise ContentConflict("Withdrawn packs cannot be reactivated")
+        if not previous:
+            conn.execute("INSERT INTO content_packs VALUES(?,?,?,?,?)",
+                         (pack_id, version, canonical_json(manifest), pack.sha256, _now()))
+            definitions = (
+                ("topics", "content_topics", "topic_id", "topic_version"),
+                ("cases", "content_case_versions", "case_id", "case_version"),
+                ("questions", "content_question_versions", "question_id", "question_version"),
+            )
+            for name, table, id_column, version_column in definitions:
+                for item in bundle[name]:
+                    if name in ("cases", "questions"):
+                        cited = {s["source_id"] for s in item["sources"]}
+                        if name == "cases":
+                            cited.update(s["source_id"] for stage in item["stages"] for s in stage["sources"])
+                        # Preserve edition/URL/check evidence inside the canonical
+                        # immutable snapshot; future pack files may disappear.
+                        item = {**item, "source_records": [s for s in bundle["sources"] if s["id"] in cited]}
+                    self._store(conn, table, id_column, item, family=(name == "questions"))
+                    if name == "questions" and "correction" in item:
+                        correction = item["correction"]
+                        if not conn.execute(
+                            "SELECT 1 FROM content_question_versions WHERE question_id=? AND version=?",
+                            (item["id"], correction["previous_version"])).fetchone():
+                            raise ContentConflict("Install the predecessor before its correction")
+                        if not any(w["question_id"] == item["id"]
+                                   and w["version"] == correction["previous_version"]
+                                   and w.get("replacement_version") == item["version"]
+                                   for w in manifest["withdrawals"]):
+                            raise ContentConflict("A key correction must withdraw the previous version")
+                    conn.execute(f"INSERT INTO content_pack_{name} "
+                                 f"(pack_id,pack_version,{id_column},{version_column}) VALUES(?,?,?,?)",
+                                 (pack_id, version, item["id"], item["version"]))
+            for withdrawal in manifest["withdrawals"]:
+                self._withdraw_question(conn, **withdrawal)
+        # Reject an old selected version after any global withdrawal, including on reinstallation.
+        if conn.execute(
+            "SELECT 1 FROM content_pack_questions s JOIN content_question_withdrawals w "
+            "ON w.question_id=s.question_id AND w.version=s.question_version "
+            "WHERE s.pack_id=? AND s.pack_version=?", (pack_id, version)).fetchone():
+            raise ContentConflict("Pack selects withdrawn question versions")
+        conn.execute("INSERT INTO content_active_pack VALUES(1,?,?) ON CONFLICT(slot) DO UPDATE "
+                     "SET pack_id=excluded.pack_id,pack_version=excluded.pack_version",
+                     (pack_id, version))
         return {"id": pack_id, "version": version, "sha256": pack.sha256,
                 "installed": previous is None, "active": True,
                 "questions": len(bundle["questions"]), "cases": len(bundle["cases"])}
