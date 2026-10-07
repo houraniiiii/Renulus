@@ -145,3 +145,13 @@ comprehensive CMV treatment, resistant/refractory disease, immune-assay-guided
 strategies and full drug/dialysis/IV prescribing. The undefined boundary of
 “comprehensive” CMV coverage remains for the parent's A01 reconciliation.
 Source notice completeness and wider clinical currency are not certified here.
+
+## Additive 1.4.0 integration review — 2026-10-07
+
+Integration review found one missing scenario condition: Leon is now explicitly
+D+/R− before EU kidney-transplant letermovir prophylaxis is discussed. The exact
+stage-review narrative was corrected with it. All eight questions, options and
+keys are unchanged. Adult scope, at least 40 kg, starting no later than day 7 and
+continuing through day 200 remain explicit. See the
+[publication record](finish-depth-publication-20261007.md) for the recovered
+EMA/consensus reading, additive pack validation and remaining clinical limits.

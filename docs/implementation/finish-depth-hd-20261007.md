@@ -144,3 +144,13 @@ The static receipt passed with **5 questions, 3 cases, 4 sources and 8 reviews**
 all eight artifact reviews match their exact authored content and only leased
 paths are present. The staged whitespace check also passed. Commit uses disabled
 hooks and an explicit five-file list.
+
+## Additive 1.4.0 integration review — 2026-10-07
+
+G09 was unused and is registered for BC Renal in the additive publication slice,
+with original terms and external-only source bodies retained. Earlier proposed
+allocation/publication holds above and in raw proposal reviews are historical;
+the runtime register still requires parent integration. The accepted mapping is
+partial T20.O02 ongoing-care safety only. No assessment text or key changed. See
+the [publication record](finish-depth-publication-20261007.md) for exact blood-return
+exceptions, unchanged predecessor evidence and remaining emergency/currency gaps.

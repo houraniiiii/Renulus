@@ -1,6 +1,34 @@
 # Original Renulus learning content
 
-The latest authored pack is **1.3.0**: 27 topics, 57 objectives, 230 reserved
+The latest authored pack is **1.4.0**: 27 topics, 57 objectives, 249 reserved
+questions, 58 staged cases and 77 immutable source snapshots. It preserves every
+1.3.0 question, case, source, option and key exactly and adds 19 five-option
+questions and six cases: adult kidney-recipient CMV prevention/medicine safety,
+anti-GBM monitoring/prevention/timing, and recognition/response reasoning for air
+embolism, haemolysis and access/disconnection bleeding. These are independently
+authored educational units with exact claim/key/distractor and stage reviews.
+
+The `2026-10-07-depth2` mapping selects 245 questions, including 71 five-option
+items. The 57 objective definitions and adopted targets are unchanged; topics
+advance only for the mapping reference. New HD credit is partial T20.O02 ongoing
+care. All eleven domains remain partial and all 27 currency cells remain open.
+The mapping's official-source check date remains October 5; it was not refreshed
+by the October 7 content review. No practical certification or complete-exam claim.
+
+The [publication record](../docs/implementation/finish-depth-publication-20261007.md)
+records exact additions, primary locators, retained receipts, clinical limits and
+validation. `content/authoring/author_depth2.py` uses the existing static publisher,
+pack/revision/review validators and required-cell builder. Its code is MIT;
+original teaching is CC BY 4.0, while every cited source retains its own terms.
+No source bodies or restricted figures are distributed. G09 registers BC Renal
+in `docs/SOURCES.md`; **parent must regenerate the bundled runtime source-register
+IDs before activation**. Static validation used the validator's existing explicit
+register parameter. Integrated activation and desktop/native checks remain with
+parent; no installed-state or independent human-review acceptance is claimed.
+
+## Historical 1.3.0 authoring record
+
+The previous authored pack **1.3.0** contains 27 topics, 57 objectives, 230 reserved
 questions, 52 staged cases and 69 source snapshots. This bounded release applies
 the recovered eight-record 2026 MGRS diagnostic comparison and IKMG/ISTH correction
 relationships to eleven question/two case successors. It narrows both copies of

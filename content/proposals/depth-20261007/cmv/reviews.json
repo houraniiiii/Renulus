@@ -2351,7 +2351,7 @@
     "stage_review": [
       {
         "stage_id": "stage-1",
-        "narrative": "Leon, 59 and weighing 74 kg, receives valganciclovir prophylaxis after a kidney transplant. His initial prescription reflected poor graft function. On day 4, kidney function is improving, but the same prescription has been copied forward. The blood report displays indexed eGFR.",
+        "narrative": "Leon, 59 and weighing 74 kg, receives valganciclovir prophylaxis after a kidney transplant. The donor was CMV IgG positive and Leon was negative (D+/R−). His initial prescription reflected poor graft function. On day 4, kidney function is improving, but the same prescription has been copied forward. The blood report displays indexed eGFR.",
         "prompts": [
           "Which prescription details and renal information must be checked?",
           "Why is an automatic half-dose or an unchanged discharge dose unsafe reasoning?"
