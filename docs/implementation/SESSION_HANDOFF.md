@@ -1,5 +1,14 @@
 # Session transfer — October 5, 2026
 
+Active continuation, October 7: read [FINISH_20261007](FINISH_20261007.md).
+The full delivery goal is resumed with five bounded Ultra lanes and one
+twenty-minute heartbeat. The owner explicitly approves OpenCode Go personal
+learning use; the earlier app-imposed eligibility pause is superseded. Both
+saved Renulus connections are present. Parent owns live learning/capture,
+integration and matching release acceptance. Historical checkpoints below
+retain their original evidence; their pause/blocker statements are not current
+policy or proof of today's account access.
+
 Latest development control checkpoint, October 6: use hidden app-scoped
 MCP/Playwright control and the owned synthetic backend/profile. The real
 39-operation source journey and seven-operation local client passed; read

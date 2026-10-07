@@ -106,6 +106,17 @@ result or clinical-performance result is established by this cleanup.
 
 ## Dated evidence
 
+On October 7, 2026 the owner resumed full delivery and explicitly confirmed
+OpenCode Go use for Renulus as a personal learning agent. Remove the earlier
+app-imposed learning-eligibility pause and its active warning copy. The app
+approval is not a claim of a separate vendor confirmation. Validate the exact
+`mimo-v2.6-pro` and `deepseek-v4.1-flash` models through the existing Renulus
+connection, with the truthful Renulus User-Agent and stable conversation header.
+Approved model catalogues are advisory; preserve the selected exact model and
+report actual authentication, quota and model rejection without fallback.
+Real account results and matching installed acceptance remain evidence tasks.
+This supersedes the October 5 precautionary Go release decision.
+
 On October 6, 2026 the app-scoped development controller completed a real
 39-operation MCP journey with hidden, unfocused windows, synthetic Case
 save/reopen without duplication, ESENeph track selection, cancelled native

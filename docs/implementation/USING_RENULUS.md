@@ -43,8 +43,9 @@ Connecting another application does not connect this Renulus profile.
 
 Choose **Use Codex** when offered and
 confirm the **Selected** badge before asking for generation. A saved account
-alone does not select a subscription. Only approved models shown as **Listed
-for this account** are eligible. To reconnect an expired or different account,
+alone does not select a subscription. Choose an exact approved model with the
+default-model selector; catalogue omission does not block that choice in the
+updated app. To reconnect an expired or different account,
 use **Disconnect**, then **Continue with ChatGPT** again. During sign-in,
 **Reopen sign-in in browser**, **Check sign-in status** and **Cancel sign-in**
 help you finish or restart the attempt.
@@ -57,27 +58,18 @@ available models:
 | Codex | `gpt-6.1-sol`, `gpt-6-astra`, `gpt-6-luna` |
 | OpenCode Go | `mimo-v2.6-pro`, `deepseek-v4.1-flash` |
 
-**OpenCode Go** currently shows **Learning requests paused** pending confirmation
-of educational eligibility. **Check and save Go key** checks account listings;
-it does not enable learning requests. Model listing also does not prove a
-successful response. Read connection errors and recheck availability; Renulus
-does not silently substitute another model or subscription. Reviewed quizzes
-and saved study material can be used without a model connection.
+For **OpenCode Go**, save your subscription key, choose **Use OpenCode Go** and
+select MiMo V2.6 Pro or DeepSeek V4.1 Flash. The October 7 update removes the
+earlier app-imposed learning pause at the owner's instruction. Model listing
+is separate from an actual successful response. Connection errors remain
+visible; Renulus keeps your selected model and subscription.
 
-At **11:31:48 UTC on October 6, 2026**, Probe02 ended with
-`subscription_limit` after selecting Codex `gpt-6-astra` and making one synthetic
-Explain attempt. Its retained text/image capability values were **unknown**;
-an available model listing does not verify those capabilities. It produced no
-successful answer or automatic learning capture; guided follow-up, generated
-practice, live case discussion and image work did not run. Its ordinary close
-passed, while its blocked receipt and failed outer
-terminal remain unchanged. Use the local workflows while the limit is unresolved;
-sign-in and **Check models** do not establish quota recovery. Go stays paused,
-with no automatic quota retry loop, model/subscription switch or paid generation
-fallback. See [the Probe02 record](finalise-live-blocker-699938f2.md).
-On October 6, 2026 the owner chose **delivery with the live blocker documented**.
-Successful generation, automatic capture and dependent live journeys remain
-unvalidated; restoring subscription access is future work.
+The older October 6 Astra attempt returned `subscription_limit`; a later real
+`gpt-6.1-sol` stream succeeded through the existing connection. Those are dated
+observations, not today's account status. Matching updated-app validation is
+tracked in [the active delivery continuation](FINISH_20261007.md), including
+successful learning, generated practice and completed automatic capture.
+The normal launcher is promoted only after matching installed acceptance.
 
 ## Learn and Test
 

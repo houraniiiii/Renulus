@@ -358,3 +358,16 @@ stay unperformed; account access is not required for this handover. Preserve
 the original failed attempt and exact model/subscription constraints, with no
 retry, silent switch, fallback or Go activation. The decision supplies no live
 success or full product validation claim.
+
+## October 7 full delivery continuation and Go approval
+
+The owner resumed full product delivery and explicitly instructed us to enable
+and test OpenCode Go for personal-agent learning, removing the earlier overly
+cautious app pause and notes. Test the two approved Go models using Renulus's
+existing saved connection; keep exact subscription/model choices and preserve
+credentials. App approval does not invent a vendor confirmation or a live pass.
+The prior October 6 limited handover remains historical; complete Explain,
+practice, automatic Memory, connected evidence/Cases/Updates, required content,
+Windows usability and matching release acceptance are now the active goal.
+Use bounded parallel lanes, integrate their work, keep GitHub current and clean
+completed worktrees after preserving useful evidence.
