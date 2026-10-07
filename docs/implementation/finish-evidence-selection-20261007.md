@@ -1,5 +1,40 @@
 # Bounded eligible evidence selection — October 7, 2026
 
+## Parent validation and integration
+
+Implementation `df69e3972b41b127b01c092248fa193df830d30a` is integrated as
+`6bef89f7`. The parent permitted inert SDK imports in the external test runner,
+retaining the heavy-engine and live-socket guards. The first actual test execution
+passed **54 tests in11.89s**, with zero failures/skips/guard attempts. JUnit
+SHA256 is `7add7d48c8e74c25cf8431de92b0ec8be6a53efb97c232c23cc4a2bb9784b039`.
+Receipt: `C:/rn-finish-20261007/evidence/evidence-selection/parent-validation-01/test-run.json`.
+The recovered public-body replay ran locally; it is not live discovery.
+The original collection failure below remains preserved. The clean worktree
+was retired after confirming no ignored/untracked files needed transfer; all
+receipts are external and its branch remains. Live source acceptance is next;
+installed cb59 has not been replaced by this patch.
+
+The parent then completed an actual source-app journey at **6bef89f7**,
+14:26:57.333–14:28:55.082UTC. T10's first candidate PMC13456060 failed the
+unchanged article-licence gate; candidate2 **PMC13595398** supplied three
+CC-BY-4.0 body paragraphs. The app preserved the skipped-candidate disclosure,
+publication date2026-09-22, retrieval date, original XML SHA256 and exact JATS
+loci. Sol streamed an answer that cites the passage and distinguishes dated
+research from verified latest-final guidance. Requested/reported model is
+`gpt-6.1-sol`. Automatic capture completed in one attempt with two learning
+records. Library documents stayed7364; no import occurred. Normal close/reopen
+preserved the saved conversation/citations exactly. Two closes left no owned
+processes, renderer errors or visibility violations.
+
+Receipt: `C:/rn-finish-20261007/evidence/connected/eligible-source-01/result.json`,
+**passed**, SHA256
+`14630ff072c8ef4da1a9959b0790b8e4d1121216719ada1cfdd36fdd5e2c1a0c`.
+The screenshot confirms title/dates/currency disclosure; its crop captured the
+third collapsed source rather than the expanded first passage. Exact passage
+content is recorded in actual sources/completed events and persisted replay.
+Matching installation and expanded first-source pixels remain separate next
+acceptance. This does not certify general scientific completeness or all topics.
+
 Prepared in `C:/rn-finish-20261007/lanes/evidence-selection`, branch
 `codex/finish-evidence-selection-20261007`, from
 `b13a90d62ec7de89426ea1cfb0a495987f7e28b9`. The lease covers only

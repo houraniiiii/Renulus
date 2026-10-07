@@ -7,7 +7,11 @@ Read [the delivery](DELIVERY_20261007.md) before any repeat execution. All first
 workers/worktrees, including the held E supplement, were retired with evidence
 and branch refs preserved. The 14:17 continuation in FINISH records two new
 bounded evidence-selection/content-application lanes; parent owns Updates review.
-The full goal remains active for substantive content/currency, dated-body retrieval
+The 14:32 checkpoint supersedes those active leases: all three second-wave lanes
+are integrated/retired, real source eligible-body generation and installed Updates
+review passed. Matching next manufacture/installation/promotion is next; the
+working cb59 launcher remains selected. Read its exact receipts before repeats.
+The full goal remains active for substantive content/currency, installed dated-body retrieval
 and remaining connected/accessibility scopes, with one twenty-minute heartbeat.
 The owner explicitly approves OpenCode Go personal
 learning use; the earlier app-imposed eligibility pause is superseded. Both

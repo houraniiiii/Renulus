@@ -1,5 +1,17 @@
 # Immutable content application — October 7, 2026
 
+Parent integration: `a03f3371` is cherry-picked as `6fb26fcc`. A new focused
+actual-repository check at integrated293675af passed (1test,1.68s): seed1.2.0,
+answer the affected historical item through ordinary assessment presentation,
+bootstrap1.3.0, preserve exact attempt/key/body/score values, show the
+rationale-only withdrawal/replacement, select the new items, replay the original
+answer and bootstrap again without duplicate packs. No engine/provider/native
+operation ran. Receipt: external `evidence/content-application/parent-upgrade-01`.
+The unused asyncio config emitted one warning; no repeated execution followed.
+Parent reviewed the original eight questions/two staged cases and scoped evidence.
+Matching installed activation remains required. The clean worktree is retired;
+external evidence and branch remain preserved.
+
 **Result: `renulus-foundations` 1.3.0**, ready for parent review/integration.
 Pack identity: `19ea87bc7922328e18158652788550cdc7ca7590ccd128aa9e3dcc94fedc5ddc`.
 It contains 230 questions, 52 cases, 57 objectives and 69 source snapshots.
