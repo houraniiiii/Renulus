@@ -1,6 +1,64 @@
 # Original Renulus learning content
 
-The current bundled release is **1.1.2**: 27 topics, 56 objectives, 178 reserved
+The latest authored pack is **1.2.0**: 27 topics, 57 objectives, 222 reserved
+assessment questions and 50 staged synthetic teaching cases. It adds 44 original
+five-option questions and 12 independent three-stage cases, with explanations
+for every choice, primary-source locators and explicit case-stage support for
+each objective. The new `T23.O03` objective addresses regional citrate
+anticoagulation and protocol-dependent calcium/acid-base monitoring. Parent
+integration owns runtime selection and installed acceptance.
+
+Eleven finite teaching units add depth across every ESENeph domain: IgAN/IgAV,
+established adult CDI, longitudinal CKD risk, anemia response, kidney-protection
+safety, asymptomatic bacteriuria, Gitelman syndrome, PD response/catheter
+decisions, HD delivery/tolerance, BK aftercare and pregnancy surveillance. Each
+unit has four assessment items and a three-stage case; citrate has an additional
+case. This is a concrete increment, not complete domain coverage. The mapping
+retains named gaps in disease-specific treatment, doses, images/procedures,
+rare conditions, dialysis operations and the wider curriculum.
+
+The `2026-10-07-depth1` map selects **218 questions**. Four objective holds are
+repaired in reviewed version-2 records: adequacy to `T20.O02`, URR to `T23.O01`,
+cancer-remission candidate risk to `T21.O02`, and citrate to `T23.O03`. Their
+stems, options, answer values, families and primary/secondary topic IDs are
+unchanged. The four generic appraisal items remain General-only. Official
+curriculum/blueprint evidence retains its actual October 5 check date. Only the
+44 new questions use five options; all eleven domains remain partial and a
+full examination simulation remains unavailable.
+
+All 1.1.2 files, 47 source snapshots, 174 unchanged questions and 38 cases are
+preserved. Seventeen scoped source snapshots bring the total to 64: twelve
+support the new content/revised metadata and five record correction relationships
+for IKMG, ISTH diagnosis, AAV, CKD-MBD and urine eosinophils. The new PD source
+also records both peritonitis corrigenda and teaches the corrected units.
+Correction-impact findings do not imply new keys, revised source originals or
+complete clinical currency. All **27 update-source cells remain open**; MGRS
+2026 comparison, overdue UKKA scopes and other named notice/current-treatment
+limits remain separate. Original content is CC BY 4.0; clinical references
+retain their own rights. No source bodies or restricted examination material
+are bundled.
+
+`tools/content/author_depth.py` reproduces the immutable pack and mapping without
+network or inference. Staging, its 60-row item review and execution receipts
+must remain outside Git. For this delivery, using the assigned public Python
+interpreter, the authoring commands are:
+
+```powershell
+python -B tools/content/author_depth.py --evidence-dir C:/rn-finish-20261007/evidence/content/release
+python -B tools/content/check_required_cells.py --release content/packs/renulus-foundations/1.2.0 --review-evidence C:/rn-finish-20261007/evidence/content/release/renulus-foundations-1.2.0-review.json --output C:/rn-finish-20261007/evidence/content/release/required-cells-1.2.0.json
+```
+
+The receipt checks all 57 objective-to-question/case links while retaining the
+56 original objective targets and the original four expansion items/two skill
+types per topic. It requires reviewed successor versions for revised expansion
+items instead of silently losing their pins or counting new depth as original
+expansion. The adopted bank minimum remains 150. Earlier required-cell receipts
+still reproduce unchanged. Source/key/stage checks are assistant review and
+consistency evidence, not independent clinical review or measured efficacy.
+
+## Historical 1.1.2 authoring and integration record
+
+The 1.1.2 release contains 27 topics, 56 objectives, 178 reserved
 assessment questions and 38 staged synthetic teaching cases. It finishes the
 interrupted finite draft with 18 original questions and 12 cases. The eight
 previously empty mapped facets now have small, explicitly partial question/case

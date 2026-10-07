@@ -34,7 +34,8 @@ def required_cells(pack, baseline, review):
     if pack.manifest["version"] != baseline.manifest["version"]:
         validate_revision(pack, baseline)
     b = pack.bundle
-    objectives = sorted(o["id"] for t in baseline.bundle["topics"] for o in t["objectives"])
+    baseline_objectives = sorted(o["id"] for t in baseline.bundle["topics"] for o in t["objectives"])
+    objectives = sorted(o["id"] for t in b["topics"] for o in t["objectives"])
     questions = [q for q in b["questions"] if q["usage"] == "assessment_reserved"]
     cases = b["cases"]
     sources = {s["id"]: s for s in b["sources"]}
@@ -88,12 +89,12 @@ def required_cells(pack, baseline, review):
                    r["original_expansion"]["status"] == "met_minimum"
                    and not r["unlinked_objective_ids"] for r in rows))
     return {
-        "schema_version": 1, "checked_on": "2026-10-05",
+        "schema_version": 1, "checked_on": pack.manifest["published_on"],
         "scope": "Adopted original-bank breadth and remaining partial-curriculum cells",
         "pack": {"id": pack.manifest["id"], "version": pack.manifest["version"], "sha256": pack.sha256},
         "targets": {"baseline_version": "1.1.0", "baseline_sha256": BASELINE_HASH,
             "target_topic_ids": baseline.bundle["coverage"]["target_topics"],
-            "objective_ids": objectives,
+            "objective_ids": baseline_objectives,
             "minimum_assessment_questions": baseline.bundle["coverage"]["minimum_questions"],
             "minimum_expansion_questions_per_topic": 4, "minimum_expansion_skill_types_per_topic": 2,
             "provenance": ["content/packs/renulus-foundations/1.1.0/coverage.json",
@@ -126,12 +127,31 @@ def required_cells(pack, baseline, review):
     }
 
 
-def build_manifest(release=RELEASE):
+def build_manifest(release=RELEASE, review_evidence=None):
     baseline, pack = validate_pack(BASELINE), validate_pack(release)
     review_path = ROOT / "content/reviews/renulus-foundations-1.1.0.json"
     predecessors = [validate_pack(BASELINE.parent / version) for version in ("1.0.0", "1.0.1")]
     validate_review_evidence(baseline, review_path, predecessors)
     review = json.loads(review_path.read_text(encoding="utf-8"))
+    # Breadth is the adopted 1.1.0 expansion, not every later reviewed question.
+    # Only explicitly reviewed successor versions of those same IDs replace pins.
+    selected = {q["id"]: q for q in pack.bundle["questions"]}
+    revised = [row for row in review["items"] if row["kind"] == "question"
+               and row["id"] in selected and row["version"] != selected[row["id"]]["version"]]
+    if revised and review_evidence is None:
+        raise PackValidationError("Revised original-expansion pins require --review-evidence")
+    if review_evidence is not None:
+        ancestors = [validate_pack(BASELINE.parent / v) for v in
+                     ("1.0.0", "1.0.1", "1.1.0", "1.1.1", "1.1.2")
+                     if tuple(map(int, v.split("."))) < tuple(map(int, pack.manifest["version"].split(".")))]
+        validate_review_evidence(pack, review_evidence, ancestors)
+        successors = {(row["id"], row["version"]): row for row in
+                      json.loads(Path(review_evidence).read_text(encoding="utf-8"))["items"]}
+        for row in revised:
+            key = (row["id"], selected[row["id"]]["version"])
+            if key not in successors:
+                raise PackValidationError(f"Revised expansion pin lacks review: {key}")
+            row.update(successors[key])
     return required_cells(pack, baseline, review)
 
 
@@ -139,10 +159,12 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--release", type=Path, default=RELEASE, help="Selected immutable release; defaults to the historical 1.1.1 receipt")
     parser.add_argument("--output", type=Path, default=MANIFEST)
+    parser.add_argument("--review-evidence", type=Path,
+                        help="Reviewed successor pins, needed when original expansion items advance versions")
     parser.add_argument("--check", action="store_true", help="Compare the committed receipt without writing")
     args = parser.parse_args(argv)
     try:
-        report = build_manifest(args.release)
+        report = build_manifest(args.release, args.review_evidence)
         raw = (json.dumps(report, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
         if args.check:
             if args.output.read_bytes() != raw:
