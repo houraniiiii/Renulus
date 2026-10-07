@@ -43,15 +43,49 @@ def test_installed_topic_label_only_and_default_stays_keyfree(services, monkeypa
     assert "PRIVATE_SYNTHETIC" not in str(services.db.fetch_all("SELECT * FROM retrieval_usage"))
 
 
+@pytest.mark.parametrize("evidence_candidates", [False, True])
 @pytest.mark.parametrize("kind", [Scope.TEMPORARY_CASE, Scope.SAVED_CASE, Scope.UNCLASSIFIED, Scope.REVIEWED_ASSESSMENT, Scope.GENERATED_PRACTICE])
-def test_forbidden_contexts_reject_before_network_or_any_profile_write(services, kind):
+def test_forbidden_contexts_reject_before_network_or_any_profile_write(services, kind, evidence_candidates):
     calls = []
     service = make(services, lambda request: calls.append(request))
     before = {str(path): path.read_bytes() for path in services.paths.root.rglob("*") if path.is_file()}
     with pytest.raises(ApiError) as error:
-        asyncio.run(service.discover("T21", scope=ContextScope(kind=kind, entity_id="PRIVATE_SYNTHETIC_SENTINEL")))
+        asyncio.run(service.discover("T21", scope=ContextScope(kind=kind, entity_id="PRIVATE_SYNTHETIC_SENTINEL"),
+                                     _evidence_candidates=evidence_candidates))
     assert error.value.code == "retrieval_scope_blocked" and calls == []
+    assert services.db.fetch_all("SELECT * FROM retrieval_usage") == []
     assert before == {str(path): path.read_bytes() for path in services.paths.root.rglob("*") if path.is_file()}
+
+
+@pytest.mark.parametrize("provider", ["pubmed", "ncbi", "brave", "tavily", "exa", "selected-tool"])
+def test_internal_evidence_query_rejects_other_sources_before_usage(services, provider):
+    calls = []
+    service = make(services, lambda request: calls.append(request))
+    async def configure():
+        selected = provider if provider in ("ncbi", "brave", "tavily", "exa") else "tavily"
+        await service.configure(selected, api_key="SYNTHETIC_SELECTED_KEY", enabled=True)
+        await service.select(selected)
+    asyncio.run(configure())
+    before = {str(path): path.read_bytes() for path in services.paths.root.rglob("*") if path.is_file()}
+    with pytest.raises(ApiError) as error:
+        asyncio.run(service.discover("T10", scope=STUDY, provider=provider, _evidence_candidates=True))
+    assert error.value.code == "retrieval_evidence_provider" and calls == []
+    assert services.db.fetch_all("SELECT * FROM retrieval_usage") == []
+    assert before == {str(path): path.read_bytes() for path in services.paths.root.rglob("*") if path.is_file()}
+
+
+@pytest.mark.parametrize("scope,limit,code", [
+    (ContextScope(kind=Scope.LIBRARY), 5, "retrieval_scope_blocked"),
+    (STUDY, 6, "retrieval_result_limit"),
+    (STUDY, 20, "retrieval_result_limit"),
+])
+def test_internal_evidence_query_scope_and_limit_are_bounded(services, scope, limit, code):
+    calls = []
+    service = make(services, lambda request: calls.append(request))
+    with pytest.raises(ApiError) as error:
+        asyncio.run(service.discover("T10", scope=scope, limit=limit, _evidence_candidates=True))
+    assert error.value.code == code and calls == []
+    assert services.db.fetch_all("SELECT * FROM retrieval_usage") == []
 
 
 def test_unknown_topic_and_bad_response_are_visible(services):

@@ -31,7 +31,8 @@ async def acquire_evidence(service, topic_id, *, scope):
     check = getattr(knowledge, "check_evidence", None)
     if not callable(check):
         raise ApiError("source_status_unavailable", "Current source restrictions could not be checked.", 503, True)
-    discovered = await service.discover(topic_id, scope=scope, provider="europe-pmc", limit=5)
+    discovered = await service.discover(topic_id, scope=scope, provider="europe-pmc", limit=5,
+                                        _evidence_candidates=True)
     # Select at most one candidate. No provider rotation or hidden retry loop.
     candidates = [row for row in discovered["records"] if row.get("pmcid")
                   and row.get("open_access") and not row.get("retracted")]

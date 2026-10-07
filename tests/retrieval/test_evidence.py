@@ -17,13 +17,17 @@ from .fixtures import PMCID, article, europe
 STUDY = ContextScope(kind=Scope.STUDY)
 
 
-def setup(services, *, raw=None, changes=None):
+def setup(services, *, raw=None, changes=None, discovery=None):
     calls = []
     raw = article() if raw is None else raw
     def handler(request):
         calls.append(request)
         assert request.method == "GET" and request.url.host == "www.ebi.ac.uk"
         if request.url.path.endswith("/search"):
+            if request.url.params["query"].startswith("PMCID:"):
+                assert request.url.params["query"] == "PMCID:" + PMCID
+            elif discovery is not None:
+                return httpx.Response(200, json=discovery(request))
             return httpx.Response(200, json=europe(**(changes or {})))
         assert request.url.path.endswith("/" + PMCID + "/fullTextXML")
         return httpx.Response(200, content=raw)
@@ -43,7 +47,7 @@ def test_dated_body_passage_rights_and_jats_locus_without_library_import(service
     gateway, knowledge, calls = setup(services, raw=raw)
     gateway.connections.settings["selected_provider"] = "tavily"
     result = asyncio.run(gateway.evidence("T21", scope=STUDY))
-    assert len(calls) == 3 and calls[0].url.params["query"] == 'TITLE_ABS:"Kidney transplantation"'
+    assert len(calls) == 3 and calls[0].url.params["query"] == 'TITLE_ABS:"Kidney transplantation" AND OPEN_ACCESS:y sort_date:y'
     assert calls[1].url.params["query"] == "PMCID:" + PMCID
     passage = result["passages"][0]
     assert passage["text"] == "Kidney study paragraph with synthetic observations."
@@ -65,7 +69,65 @@ def test_dated_body_passage_rights_and_jats_locus_without_library_import(service
     assert knowledge.check_evidence(result["passages"], scope=STUDY, current_only=True)["eligible_ids"] == []
 
 
-@pytest.mark.parametrize("scope", [Scope.TEMPORARY_CASE, Scope.SAVED_CASE, Scope.UNCLASSIFIED, Scope.LIBRARY])
+@pytest.mark.parametrize("topic_id", ["T10", "T21"])
+def test_oa_date_query_finds_body_when_general_discovery_has_no_eligible_rows(services, topic_id, monkeypatch):
+    label = next(row["label"] for row in services.registry["content"].list_topics() if row["id"] == topic_id)
+    general_query = 'TITLE_ABS:"' + label + '"'
+    evidence_query = general_query + " AND OPEN_ACCESS:y sort_date:y"
+    ineligible = [europe(id=str(20001 + i), pmcid=None, isOpenAccess="N")["resultList"]["result"][0]
+                  for i in range(5)]
+    eligible = europe()["resultList"]["result"] + [
+        europe(id="20002", pmcid="PMC20002", firstPublicationDate="2025-09-01")["resultList"]["result"][0]]
+    def discovery(request):
+        assert dict(request.url.params) == {"query": request.url.params["query"],
+            "format": "json", "resultType": "core", "pageSize": "5"}
+        assert request.url.params["query"] in (general_query, evidence_query)
+        rows = eligible if request.url.params["query"] == evidence_query else ineligible
+        return {"hitCount": len(rows), "resultList": {"result": rows}}
+    monkeypatch.setenv("TAVILY_API_KEY", "AMBIENT_SYNTHETIC_KEY")
+    gateway, _, calls = setup(services, discovery=discovery)
+    private_scope = ContextScope(kind=Scope.STUDY, entity_id="PRIVATE_SYNTHETIC_QUESTION_AND_CASE")
+    async def run():
+        await gateway.configure("tavily", api_key="EXPLICIT_SYNTHETIC_KEY", enabled=True)
+        await gateway.select("tavily")
+        general = await gateway.discover(topic_id, scope=private_scope)
+        assert len(general["records"]) == 5
+        assert all(not row["open_access"] and not row["pmcid"] for row in general["records"])
+        assert len(calls) == 1 and calls[0].url.params["query"] == general_query
+        calls.clear()
+        return await gateway.evidence(topic_id, scope=private_scope)
+    result = asyncio.run(run())
+    assert len(calls) == 3
+    assert calls[0].url.params["query"] == evidence_query
+    assert calls[1].url.params["query"] == "PMCID:" + PMCID
+    assert calls[2].url.path.endswith("/" + PMCID + "/fullTextXML")
+    outgoing = " ".join(str(call.url) + str(call.headers) + call.content.decode() for call in calls)
+    assert all(value not in outgoing for value in ("PRIVATE_SYNTHETIC", "AMBIENT_SYNTHETIC", "EXPLICIT_SYNTHETIC"))
+    assert result["passages"][0]["text"] == "Kidney study paragraph with synthetic observations."
+    assert result["passages"][0]["metadata"]["topic_ids"] == [topic_id]
+    assert result["verification"] == "dated-research" and result["latest_final_verified"] is False
+    assert services.db.fetch_all("SELECT provider,requests,credits FROM retrieval_usage") == [
+        {"provider": "europe-pmc", "requests": 4, "credits": 0}]
+    for table in ("retrieval_imports", "knowledge_documents", "knowledge_revisions", "knowledge_passages"):
+        assert services.db.fetch_all("SELECT * FROM " + table) == []
+
+
+@pytest.mark.parametrize("count", [0, 5, 6])
+def test_filtered_search_stops_without_eligible_rows_in_first_five(services, count):
+    rows = [europe(id=str(20001 + i), pmcid=None, isOpenAccess="N")["resultList"]["result"][0]
+            for i in range(min(count, 5))]
+    if count == 6:
+        rows += europe()["resultList"]["result"]
+    gateway, _, calls = setup(services, discovery=lambda _: {"hitCount": count, "resultList": {"result": rows}})
+    with pytest.raises(ApiError) as error:
+        asyncio.run(gateway.evidence("T10", scope=STUDY))
+    assert error.value.code == "no_eligible_public_evidence"
+    assert len(calls) == 1 and calls[0].url.params["pageSize"] == "5"
+    assert services.db.fetch_all("SELECT requests,credits FROM retrieval_usage") == [{"requests": 1, "credits": 0}]
+
+
+@pytest.mark.parametrize("scope", [Scope.TEMPORARY_CASE, Scope.SAVED_CASE, Scope.UNCLASSIFIED, Scope.LIBRARY,
+                                  Scope.REVIEWED_ASSESSMENT, Scope.GENERATED_PRACTICE])
 def test_automatic_evidence_scope_denial_precedes_requests_and_writes(services, scope):
     gateway, _, calls = setup(services)
     before = {str(path): path.read_bytes() for path in services.paths.root.rglob("*") if path.is_file()}
@@ -92,6 +154,30 @@ def test_automatic_fulltext_denial_is_explicit_without_import(services, changes,
     assert error.value.code == code and len(calls) == requests
     assert services.db.fetch_all("SELECT * FROM retrieval_imports") == []
     assert services.db.fetch_all("SELECT * FROM knowledge_documents") == []
+
+
+@pytest.mark.parametrize("changes,raw,code,requests", [
+    ({"license": "cc by-nc"}, None, "article_permission_required", 2),
+    ({"isOpenAccess": "N"}, None, "article_permission_required", 2),
+    ({"isRetracted": "Y"}, None, "article_retracted", 2),
+    ({"pmcid": "PMC20002"}, None, "article_identity_mismatch", 2),
+    ({}, article(licence="https://creativecommons.org/licenses/by-nc/4.0/"), "article_permission_required", 3),
+    ({}, article(pmcid="PMC20002"), "article_identity_mismatch", 3),
+    ({}, article().replace(b"10.0000/synthetic", b"10.0000/other"), "article_identity_mismatch", 3),
+    ({"commentCorrectionList": {"commentCorrection": [{"type": "Erratum in", "source": "MED", "id": "10002"}]}}, None, "article_review_required", 3),
+])
+def test_selected_candidate_checks_metadata_and_xml_without_trying_alternates(services, changes, raw, code, requests):
+    rows = europe()["resultList"]["result"] + europe(id="20002", pmcid="PMC20002")["resultList"]["result"]
+    gateway, _, calls = setup(services, raw=raw, changes=changes,
+        discovery=lambda _: {"hitCount": 2, "resultList": {"result": rows}})
+    with pytest.raises(ApiError) as error:
+        asyncio.run(gateway.evidence("T10", scope=STUDY))
+    assert error.value.code == code and len(calls) == requests
+    assert calls[1].url.params["query"] == "PMCID:" + PMCID
+    assert sum(call.url.path.endswith("/fullTextXML") for call in calls) == requests - 2
+    assert services.db.fetch_all("SELECT requests,credits FROM retrieval_usage") == [{"requests": requests, "credits": 0}]
+    for table in ("retrieval_imports", "knowledge_documents", "knowledge_revisions", "knowledge_passages"):
+        assert services.db.fetch_all("SELECT * FROM " + table) == []
 
 
 @pytest.mark.parametrize("restriction", ["none", "not-current", "inactive", "not-ready", "excluded-page",

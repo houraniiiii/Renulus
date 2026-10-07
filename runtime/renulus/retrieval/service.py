@@ -142,11 +142,20 @@ class RetrievalService:
             self._reserve(provider, 1, 0)
             return await self.http.json("GET", PUBMED + "/" + route, params=params)
 
-    async def discover(self, topic_id: str, *, scope: ContextScope, provider: str = "europe-pmc", limit: int = 5) -> dict:
-        self._scope(scope)
+    async def discover(self, topic_id: str, *, scope: ContextScope, provider: str = "europe-pmc", limit: int = 5,
+                       _evidence_candidates: bool = False) -> dict:
+        scope = self._scope(scope)
+        if _evidence_candidates:
+            if scope.kind != Scope.STUDY:
+                raise ApiError("retrieval_scope_blocked", "Automatic evidence is available only in ordinary study.", 403)
+            # Internal acquisition query, never optional-tool selection or fallback.
+            if provider != "europe-pmc":
+                raise ApiError("retrieval_evidence_provider", "Automatic evidence uses Europe PMC only.", 409)
         topic = self.topic(topic_id)
         if not isinstance(limit, int) or not 1 <= limit <= 20:
             raise ApiError("retrieval_result_limit", "Choose between one and twenty discovery results.")
+        if _evidence_candidates and limit > 5:
+            raise ApiError("retrieval_result_limit", "Automatic evidence is limited to five discovery results.")
         async with self._settings_lock:
             if provider == "selected-tool":
                 provider = self.connections.settings["selected_provider"]
@@ -160,8 +169,13 @@ class RetrievalService:
         provider_usage = {}
         try:
             if provider == "europe-pmc":
+                query = 'TITLE_ABS:"' + topic["label"] + '"'
+                if _evidence_candidates:
+                    # OA XML candidates, newest publication first. Availability
+                    # does not replace the independent metadata/JATS rights gates.
+                    query += " AND OPEN_ACCESS:y sort_date:y"
                 self._reserve(provider, 1, 0)
-                data = await self.http.json("GET", EUROPE + "/search", params={"query": 'TITLE_ABS:"' + topic["label"] + '"', "format": "json", "resultType": "core", "pageSize": limit})
+                data = await self.http.json("GET", EUROPE + "/search", params={"query": query, "format": "json", "resultType": "core", "pageSize": limit})
                 records = europe_records(data, limit)
             elif provider in ("pubmed", "ncbi"):
                 params = {"db": "pubmed", "retmode": "json", "tool": "renulus", **({"api_key": key} if key else {})}
