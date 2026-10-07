@@ -6,7 +6,7 @@ from renulus.server import create_app
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("error,code,retryable", [
-    (ApiError("learning_use_unverified", "Learning use is unconfirmed", 403, False), "learning_use_unverified", False),
+    (ApiError("model_not_allowed", "Choose an approved model", 400, False), "model_not_allowed", False),
     (ApiError("provider_unavailable", "Provider unavailable", 503, True), "provider_unavailable", True),
     (RuntimeError("PRIVATE_SYNTHETIC_EXCEPTION"), "explain_failed", True),
 ])

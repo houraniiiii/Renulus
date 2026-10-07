@@ -14,9 +14,6 @@ import httpx
 from PIL import Image, PngImagePlugin
 import pytest
 
-# Actual SDK protocol checks use synthetic HTTP and simulated future eligibility.
-pytestmark = pytest.mark.usefixtures("synthetic_go_approval")
-
 from renulus.contracts import ApiError, ContextScope, Scope
 from renulus.runtime.context import SUMMARY_INSTRUCTIONS
 from renulus.runtime.inputs import validate_inputs
@@ -48,16 +45,17 @@ def long_conversation():
         for index in range(42)] + [{"role": "user", "content": "What should I review next in transplantation?"}]
 
 
-def response(provider, text):
+def response(provider, text, model=None):
+    model = model or ALLOWED_MODELS[provider][0]
     if provider == "codex":
         events = [{"type": "response.output_text.delta", "delta": text, "item_id": "synthetic",
                    "output_index": 0, "content_index": 0, "sequence_number": 1},
                   {"type": "response.completed", "sequence_number": 2,
                    "response": {"id": "synthetic", "object": "response", "created_at": 1,
-                                "status": "completed", "model": "gpt-6.1-sol", "output": []}}]
+                                "status": "completed", "model": model, "output": []}}]
     else:
         events = [{"id": "synthetic", "object": "chat.completion.chunk", "created": 1,
-                   "model": "mimo-v2.6-pro", "choices": [{"index": 0, "delta": {"content": delta},
+                   "model": model, "choices": [{"index": 0, "delta": {"content": delta},
                    "finish_reason": finish}]} for delta, finish in ((text, None), (None, "stop"))]
     data = "".join("data: " + json.dumps(event) + "\n\n" for event in events)
     if provider != "codex":
@@ -104,7 +102,7 @@ async def test_actual_hermes_sdk_image_wire_all_five_models_and_honest_capabilit
             image = next(part for part in parts if part["type"] == "image_url")
             url = image["image_url"]["url"]
         assert url == "data:image/png;base64," + image_part()["data"]
-        return response(provider, "Synthetic image accepted")
+        return response(provider, "Synthetic image accepted", model)
     manager, requests = await connected(app_paths, provider, model, infer)
     status = next(row for row in manager.connections()["connections"] if row["provider"] == provider)
     selected = next(row for row in status["models"] if row["id"] == model)

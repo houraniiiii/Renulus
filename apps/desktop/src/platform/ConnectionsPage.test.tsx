@@ -26,7 +26,7 @@ let disconnect: (provider: Provider) => Response | Promise<Response>;
 let publicUnavailable: boolean;
 
 function connection(provider: Provider, state = 'disconnected'): Connection {
-  return { provider, status: state, allowed_models: approved[provider], models: approved[provider].map(id => ({
+  return { provider, status: state, learning_use: { status: 'app_approved', generation_allowed: true }, allowed_models: approved[provider], models: approved[provider].map(id => ({
     id, availability: provider === 'codex' && state !== 'disconnected' ? 'available' : state === 'connected' ? 'available' : state === 'no_allowed_models' ? 'unavailable' : 'unknown',
     text_input: state === 'no_allowed_models' ? 'account_unsupported' : 'unknown', image_input: state === 'no_allowed_models' ? 'account_unsupported' : 'unknown',
   })) };
@@ -67,7 +67,8 @@ beforeEach(() => {
     if (url === '/api/v1/connections/opencode-go' && method === 'POST') return go();
     if (url === '/api/v1/connections/select' && method === 'POST') {
       const body = JSON.parse(options!.body as string); current.selected_provider = body.provider;
-      current.selected_models = { ...current.selected_models, [body.provider]: body.model ?? null }; return json(current);
+      if ('model' in body) current.selected_models = { ...current.selected_models, [body.provider]: body.model };
+      return json(current);
     }
     const providerMatch = String(url).match(/^\/api\/v1\/connections\/(codex|opencode-go)(\/refresh)?$/);
     if (providerMatch && providerMatch[2] && method === 'POST') return refresh(providerMatch[1] as Provider);
@@ -172,35 +173,48 @@ describe('subscription status and explicit model selection', () => {
 });
 
 describe('explicit OpenCode Go access', () => {
-  it.each([
-    undefined,
-    { status: 'unresolved', generation_allowed: false },
-    { status: 'unsupported', generation_allowed: false },
-    { status: 'confirmed', generation_allowed: false },
-  ])('keeps account availability separate from learning eligibility: %j', async learning_use => {
-    setConnection('opencode-go', 'connected'); current.selected_provider = 'opencode-go';
-    current.connections[1].learning_use = learning_use;
-    await mount();
+  it('makes app-approved Go available for explicit selection without claiming vendor confirmation', async () => {
+    setConnection('opencode-go', 'connected'); await mount();
     const section = subscription('opencode-go');
-    expect(section.getByText('Account connected')).toBeTruthy();
-    expect(section.getByText('Selected')).toBeTruthy();
-    expect(section.getByText('Learning requests paused.')).toBeTruthy();
-    expect(screen.getByText(/remains selected, but learning requests are paused/)).toBeTruthy();
-    expect(section.queryByRole('button', { name: 'Use OpenCode Go' })).toBeNull();
-    expect(section.getByRole('button', { name: 'Check models' })).toBeTruthy();
-    expect(section.getByRole('button', { name: 'Disconnect' })).toBeTruthy();
+    expect(section.getByRole('button', { name: 'Use OpenCode Go' })).toBeTruthy();
+    expect(section.queryByText(/Learning requests paused/)).toBeNull();
     expect(section.getByRole('link', { name: 'Read the Go usage policy' }).getAttribute('href')).toBe('https://opencode.ai/docs/go/');
-    expect(calls('/api/v1/connections/select', 'POST')).toHaveLength(0);
-    expect(openSource).not.toHaveBeenCalled();
-  });
-  it('requires explicit selection even with hypothetical confirmed learning eligibility', async () => {
-    setConnection('opencode-go', 'connected');
-    current.connections[1].learning_use = { status: 'confirmed', generation_allowed: true };
-    await mount();
-    expect(subscription('opencode-go').getByRole('button', { name: 'Use OpenCode Go' })).toBeTruthy();
-    expect(subscription('opencode-go').queryByText('Learning requests paused.')).toBeNull();
     expect(current.selected_provider).toBeNull();
+    fireEvent.click(section.getByRole('button', { name: 'Use OpenCode Go' }));
+    await screen.findByLabelText('Default OpenCode Go model');
+    expect(JSON.parse(calls('/api/v1/connections/select', 'POST')[0][1]!.body as string)).toEqual({ provider: 'opencode-go' });
+  });
+  it.each(approved['opencode-go'])('selects and reloads exact Go default %s', async model => {
+    setConnection('opencode-go', 'connected'); current.selected_provider = 'opencode-go';
+    const view = await mount();
+    const field = screen.getByLabelText('Default OpenCode Go model');
+    expect(Array.from(field.querySelectorAll('option')).map(option => option.value)).toEqual(['automatic', ...approved['opencode-go']]);
+    fireEvent.change(field, { target: { value: model } });
+    await waitFor(() => expect(current.selected_models?.['opencode-go']).toBe(model));
+    expect(JSON.parse(calls('/api/v1/connections/select', 'POST')[0][1]!.body as string)).toEqual({ provider: 'opencode-go', model });
+    view.unmount(); await mount();
+    expect((screen.getByLabelText('Default OpenCode Go model') as HTMLSelectElement).value).toBe(model);
+    fireEvent.change(screen.getByLabelText('Default OpenCode Go model'), { target: { value: 'automatic' } });
+    await waitFor(() => expect(current.selected_models?.['opencode-go']).toBeNull());
+  });
+  it('retains a rejected model selection and offers the other approved model', async () => {
+    setConnection('opencode-go', 'connected'); current.selected_provider = 'opencode-go';
+    current.selected_models = { 'opencode-go': 'deepseek-v4.1-flash' };
+    current.connections[1].models[1].availability = 'account_unsupported';
+    await mount();
+    const field = screen.getByLabelText('Default OpenCode Go model') as HTMLSelectElement;
+    expect(field.value).toBe('deepseek-v4.1-flash');
+    expect((within(field).getByRole('option', { name: 'deepseek-v4.1-flash' }) as HTMLOptionElement).disabled).toBe(true);
+    expect((within(field).getByRole('option', { name: 'mimo-v2.6-pro' }) as HTMLOptionElement).disabled).toBe(false);
     expect(calls('/api/v1/connections/select', 'POST')).toHaveLength(0);
+  });
+  it('reports an older runtime restriction without presenting it as vendor policy', async () => {
+    setConnection('opencode-go', 'connected'); current.selected_provider = 'opencode-go';
+    current.connections[1].learning_use = { status: 'unresolved', generation_allowed: false };
+    await mount();
+    expect(subscription('opencode-go').getByText(/This version of the runtime has disabled learning/)).toBeTruthy();
+    expect(screen.queryByLabelText('Default OpenCode Go model')).toBeNull();
+    expect(screen.queryByText(/educational use has not been confirmed/)).toBeNull();
   });
   it('clears the entered key immediately, saves nothing in browser storage, and never auto-selects', async () => {
     const storage = vi.spyOn(Storage.prototype, 'setItem'); const held = deferred<Response>(); go = () => held.promise;
@@ -210,8 +224,8 @@ describe('explicit OpenCode Go access', () => {
     expect(field.value).toBe('');
     expect(JSON.parse(calls('/api/v1/connections/opencode-go', 'POST')[0][1]!.body as string)).toEqual({ api_key: 'SYNTHETIC_KEY_ONLY', select: false });
     setConnection('opencode-go', 'connected'); await act(async () => { held.resolve(json(current)); });
-    await screen.findByText(/OpenCode Go key saved and catalogue checked/);
-    expect(subscription('opencode-go').queryByRole('button', { name: 'Use OpenCode Go' })).toBeNull();
+    await screen.findByText(/OpenCode Go access saved/);
+    expect(subscription('opencode-go').getByRole('button', { name: 'Use OpenCode Go' })).toBeTruthy();
     expect(storage).not.toHaveBeenCalled(); expect(current.selected_provider).toBeNull();
   });
   it('requires fresh key entry after failure, with no retry closure or subscription fallback', async () => {
@@ -228,7 +242,7 @@ describe('explicit OpenCode Go access', () => {
     go = () => { setConnection('opencode-go', 'no_allowed_models'); return json(current); };
     await mount(); fireEvent.change(screen.getByLabelText('OpenCode Go key'), { target: { value: 'SYNTHETIC_EMPTY_CATALOGUE' } });
     fireEvent.click(screen.getByRole('button', { name: /Check and save Go key/ }));
-    await screen.findByText(/OpenCode Go key saved and catalogue checked/);
+    await screen.findByText(/OpenCode Go access saved/);
     expect(await subscription('opencode-go').findByText('No approved models')).toBeTruthy();
     expect(subscription('opencode-go').queryByRole('button', { name: 'Use OpenCode Go' })).toBeNull();
     expect(subscription('opencode-go').getByRole('button', { name: 'Disconnect' })).toBeTruthy();

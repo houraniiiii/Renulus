@@ -49,7 +49,7 @@ def codex_response(text):
         content="".join("data: " + json.dumps(event) + "\n\n" for event in events))
 
 
-def producer_app(tmp_path, selected):
+def producer_app(tmp_path, selected, *, reject=False):
     app = create_app(tmp_path / "profile", token="synthetic-local-token", source_root=SOURCE)
     services = app.state.services
     provider = services.registry["provider"]
@@ -57,17 +57,31 @@ def producer_app(tmp_path, selected):
 
     def serve(request):
         requests.append(request)
-        assert selected == "codex", "Go educational egress is prohibited"
-        assert str(request.url) == "https://api.openai.com/v1/responses"
         assert request.headers["user-agent"] == "Renulus/0.1.0"
         body = json.loads(request.content)
-        assert body["model"] == "gpt-6.1-sol" and body["store"] is False
         assert "tools" not in body and "context_management" not in body
-        text = (json.dumps(practice_output()) if "original generated practice" in body["instructions"]
+        if selected == "codex":
+            assert str(request.url) == "https://api.openai.com/v1/responses"
+            assert body["model"] == "gpt-6.1-sol" and body["store"] is False
+            instructions = body["instructions"]
+        else:
+            assert str(request.url) == "https://opencode.ai/zen/go/v1/chat/completions"
+            assert body["model"] in ALLOWED_MODELS["opencode-go"]
+            assert request.headers["x-opencode-session"]
+            instructions = "\n".join(item["content"] for item in body["messages"] if item["role"] == "system")
+        if reject:
+            return httpx.Response(429, json={"error": {"code": "rate_limit_exceeded"}})
+        text = (json.dumps(practice_output()) if "original generated practice" in instructions
                 else json.dumps({"memory": [{"text": "Synthetic general glomerular learning point"}]})
-                if "SYNTHETIC_MEMORY_SYSTEM" in body["instructions"]
+                if "SYNTHETIC_MEMORY_SYSTEM" in instructions
                 else "Synthetic cross-domain renal learning explanation")
-        return codex_response(text)
+        if selected == "codex":
+            return codex_response(text)
+        chunks = [{"id": "synthetic", "object": "chat.completion.chunk", "created": 1,
+            "model": body["model"], "choices": [{"index": 0, "delta": {"content": delta},
+            "finish_reason": reason}]} for delta, reason in [(text, None), (None, "stop")]]
+        return httpx.Response(200, headers={"content-type": "text/event-stream"},
+            content="".join("data: " + json.dumps(chunk) + "\n\n" for chunk in chunks))
 
     provider._http_transport = httpx.MockTransport(serve)
     provider._settings["connections"] = {
@@ -105,7 +119,7 @@ async def test_real_cases_explain_and_generated_handoffs_preserve_scope_under_ro
         identifier = case["id"]
         discussed = flow(await client.post("/api/v1/cases/sessions/" + identifier + "/discuss",
             json={"revision": case["revision"], "request_id": "cross-discuss", "message": "Explain the mechanism"}))
-        assert discussed[-1]["type"] == ("completed" if selected == "codex" else "failed")
+        assert discussed[-1]["type"] == "completed"
         for target in ("explain", "generated-practice"):
             current = (await client.get("/api/v1/cases/sessions/" + identifier)).json()
             handoff = (await client.post("/api/v1/cases/sessions/" + identifier + "/handoff",
@@ -118,15 +132,11 @@ async def test_real_cases_explain_and_generated_handoffs_preserve_scope_under_ro
                 result = flow(await client.post("/api/v1/assessment/practice/generate", json={
                     "prompt": handoff["question"], "count": 1, "context": "temporary",
                     "idempotency_key": "cross-practice", "case_handoff_id": handoff["id"]}))
-            assert result[-1]["type"] == ("completed" if selected == "codex" else "error")
-            if selected == "opencode-go":
-                assert all(event["type"] != "delta" for event in result)
-                if target == "explain":
-                    assert result[-1]["payload"]["code"] == "learning_use_unverified"
+            assert result[-1]["type"] == "completed"
         assert (await client.get("/api/v1/cases/saved")).json() == {"cases": []}
         assert (await client.get("/api/v1/learn/threads")).json() == {"threads": []}
         assert (await client.get("/api/v1/assessment/practice/sessions")).json() == {"sessions": []}
-    assert len(requests) == (3 if selected == "codex" else 0)
+    assert len(requests) == 3
     assert provider.connections()["selected_provider"] == selected
     assert not provider.status()["active_runs"] and not provider.status()["live_provider_verified"]
     for table in ("learning_evidence", "memory_jobs", "assessment_generated_sessions", "assessment_attempts"):
@@ -135,8 +145,8 @@ async def test_real_cases_explain_and_generated_handoffs_preserve_scope_under_ro
 
 
 @pytest.mark.asyncio
-async def test_shared_consumers_present_go_gate_as_unavailable_and_non_retryable(tmp_path):
-    app, provider, requests = producer_app(tmp_path, "opencode-go")
+async def test_shared_consumers_surface_go_subscription_limit_without_fallback(tmp_path):
+    app, provider, requests = producer_app(tmp_path, "opencode-go", reject=True)
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://127.0.0.1",
             headers={"x-renulus-token": "synthetic-local-token"}) as client:
         capabilities = (await client.get("/api/v1/assessment/practice/capabilities")).json()
@@ -148,19 +158,18 @@ async def test_shared_consumers_present_go_gate_as_unavailable_and_non_retryable
             "idempotency_key": "presentation-practice"}))
         learn = flow(await client.post("/api/v1/learn/ask", json={
             "question": "Synthetic temporary learning", "scope": {"kind": "temporary-case"}}))
-    assert requests == [] and not provider.status()["active_runs"]
+    assert len(requests) == 3 and not provider.status()["active_runs"]
     errors = [discussion[-1]["payload"]["error"], practice[-1]["payload"], learn[-1]["payload"]]
     absent(app.state.services.paths.root)
-    assert capabilities["available"] is False
-    assert capabilities["code"] == "learning_use_unverified" and capabilities["retryable"] is False
-    assert all(error["code"] == "learning_use_unverified" and not error["retryable"] for error in errors)
+    assert capabilities["available"] is True and capabilities["code"] is None
+    assert all(error["code"] == "subscription_limit" and error["retryable"] for error in errors)
 
 
 @pytest.mark.asyncio
-async def test_actual_mem0_oss_outbox_rejects_go_without_assets_or_model_calls(tmp_path, monkeypatch):
+async def test_actual_mem0_oss_outbox_preserves_go_provider_failure_without_assets(tmp_path, monkeypatch):
     # Qdrant adds a collection tree below the profile. Keep this native fixture
     # short even when pytest uses a long Windows test-function directory name.
-    app, provider, requests = producer_app(tmp_path.parent / ("m" + uuid4().hex[:8]), "opencode-go")
+    app, provider, requests = producer_app(tmp_path.parent / ("m" + uuid4().hex[:8]), "opencode-go", reject=True)
     services = app.state.services
     memory = services.registry["memory"]
 
@@ -188,10 +197,11 @@ async def test_actual_mem0_oss_outbox_rejects_go_without_assets_or_model_calls(t
         assert outcome == {"processed": 0}
         failed = memory.repository.job(job["id"])
         assert failed["state"] == "failed"
-        assert memory.repository.list() == [] and requests == []
+        assert memory.repository.list() == [] and requests
+        assert all(json.loads(request.content)["model"] == "mimo-v2.6-pro" for request in requests)
         assert memory._engine.memory.__class__.__module__ == "mem0.memory.main"
         assert memory._engine.memory.vector_store.client._client.__class__.__name__ == "QdrantLocal"
-        assert failed["error_code"] in {"memory_capture_failed", "learning_use_unverified"}
+        assert failed["error_code"] in {"memory_capture_failed", "subscription_limit"}
         assert provider.connections()["selected_provider"] == "opencode-go"
         assert not provider.status()["active_runs"] and not provider.status()["live_provider_verified"]
     finally:
@@ -200,7 +210,7 @@ async def test_actual_mem0_oss_outbox_rejects_go_without_assets_or_model_calls(t
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("selected", ["codex", "opencode-go"])
-async def test_real_mem0_registered_llm_bridge_consumes_route_and_propagates_gate_without_assets(tmp_path, selected):
+async def test_real_mem0_registered_llm_bridge_consumes_approved_route_without_assets(tmp_path, selected):
     app, provider, requests = producer_app(tmp_path, selected)
     services = app.state.services
     # Import only the real registered bridge under its app-owned bootstrap.
@@ -216,15 +226,10 @@ async def test_real_mem0_registered_llm_bridge_consumes_route_and_propagates_gat
         bridge = ApprovedLLM()
         messages = [{"role": "system", "content": "SYNTHETIC_MEMORY_SYSTEM"},
                     {"role": "user", "content": "Synthetic general glomerular study point"}]
-        if selected == "opencode-go":
-            with pytest.raises(ApiError) as error:
-                await asyncio.to_thread(bridge.generate_response, messages)
-            assert error.value.code == "learning_use_unverified" and not error.value.retryable
-        else:
-            result = json.loads(await asyncio.to_thread(bridge.generate_response, messages))
-            assert result == {"memory": [{"text": "Synthetic general glomerular learning point"}]}
+        result = json.loads(await asyncio.to_thread(bridge.generate_response, messages))
+        assert result == {"memory": [{"text": "Synthetic general glomerular learning point"}]}
     finally:
         generation_binding.reset(token)
-    assert len(requests) == (1 if selected == "codex" else 0)
+    assert len(requests) == 1
     assert provider.connections()["selected_provider"] == selected
     assert not provider.status()["active_runs"] and not provider.status()["live_provider_verified"]

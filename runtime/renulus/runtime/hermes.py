@@ -14,7 +14,7 @@ from openai import AsyncOpenAI
 from renulus.contracts import ApiError
 from renulus import __version__
 from .inputs import to_hermes_messages
-from .policy import ALLOWED_MODELS, BASE_URLS, INSTRUCTIONS, require_provider, require_learning_route, stream_failure
+from .policy import ALLOWED_MODELS, BASE_URLS, INSTRUCTIONS, require_provider, require_learning_route, response_model_identity, stream_failure
 
 
 class HermesSubscriptionTransport:
@@ -119,7 +119,8 @@ class HermesSubscriptionTransport:
                         if kind == "response.output_text.delta":
                             yield {"type": "delta", "text": event.delta}
                         elif kind == "response.completed":
-                            yield {"type": "completed"}
+                            reported = response_model_identity(getattr(event.response, "model", None))
+                            yield {"type": "completed", **({"response_model": reported} if reported else {})}
                             return
                         elif kind in ("error", "response.failed", "response.incomplete"):
                             failure = getattr(getattr(event, "response", None), "error", None)
@@ -129,8 +130,14 @@ class HermesSubscriptionTransport:
                             raise ApiError("tools_disabled", "The runtime refused an automation response.", 409)
             else:
                 stream = await client.chat.completions.create(**request)
+                reported = None
                 async with stream:
                     async for chunk in stream:
+                        identity = response_model_identity(getattr(chunk, "model", None))
+                        if identity:
+                            if reported and identity != reported:
+                                raise ApiError("provider_protocol_error", "The subscription changed model identity during the response.", 503)
+                            reported = identity
                         for choice in chunk.choices:
                             if choice.delta.tool_calls or getattr(choice.delta, "function_call", None):
                                 raise ApiError("tools_disabled", "The runtime refused an automation response.", 409)
@@ -139,6 +146,6 @@ class HermesSubscriptionTransport:
                             if choice.finish_reason:
                                 if choice.finish_reason != "stop":
                                     raise ApiError("provider_stream_incomplete", "The response ended before completion. Retry or shorten the input.", 409, True)
-                                yield {"type": "completed"}
+                                yield {"type": "completed", **({"response_model": reported} if reported else {})}
                                 return
         raise ApiError("provider_stream_incomplete", "The subscription stream ended without completion.", 503, True)

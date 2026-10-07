@@ -12,10 +12,6 @@ import httpx
 import jwt
 import pytest
 
-# Prior transport acceptance remains synthetic; default Go eligibility is tested
-# separately without this fixture in test_go_eligibility.py.
-pytestmark = pytest.mark.usefixtures("synthetic_go_approval")
-
 from renulus.contracts import ApiError, ContextScope, Scope
 from renulus.runtime.auth import ISSUER, PLAN_SCOPE, SCOPES
 from renulus.runtime.manager import ProviderManager

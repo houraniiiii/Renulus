@@ -85,6 +85,8 @@ def create_router(services: Services) -> APIRouter:
 
     @connections.post("/select")
     def select(request: SelectRequest):
+        if "model" not in request.model_fields_set:
+            return manager.select(request.provider)
         return manager.select(request.provider, request.model)
 
     @connections.post("/codex/login")

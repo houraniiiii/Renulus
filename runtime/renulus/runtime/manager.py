@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections import deque
 from contextlib import aclosing, suppress
 from contextvars import ContextVar
 from dataclasses import dataclass, field
@@ -15,13 +16,16 @@ from renulus.contracts import ApiError, ContextScope, Event, durable_id
 from .context import CONTEXT_BUDGET, OUTPUT_RESERVATION, SUMMARY_MAX_CHARS, HermesContextAdapter
 from .hermes import HermesSubscriptionTransport
 from .inputs import has_images
-from .policy import ALLOWED_MODELS, BASE_URLS, CODEX_IMAGE_MODELS, learning_usage, rejection_kind, require_learning_route, require_provider, require_run_id, safe_error, validate_messages
+from .policy import ALLOWED_MODELS, BASE_URLS, CODEX_IMAGE_MODELS, learning_usage, rejection_kind, require_learning_route, require_provider, require_run_id, response_model_identity, safe_error, validate_messages
 from .protected import ConnectionStore
 
 if TYPE_CHECKING:
     from renulus.storage import AppPaths
 
 _GO_CONVERSATION = ContextVar("renulus_go_conversation", default=None)
+_UNCHANGED_MODEL = object()
+_RECORDED_PURPOSES = frozenset({"explain", "memory", "memory-extraction", "compaction",
+                               "generated-practice", "case-discuss", "case-image-discuss"})
 
 
 @dataclass
@@ -44,6 +48,7 @@ class ProviderManager:
         self._capabilities: dict[tuple[str, str], dict] = {}
         self._unsupported_models: set[tuple[str, str]] = set()
         self._completed_requests = 0
+        self._completion_history: deque[dict] = deque(maxlen=32)
         self._credential_locks = {name: asyncio.Lock() for name in ALLOWED_MODELS}
         self._connection_versions = {name: 0 for name in ALLOWED_MODELS}
         self._auth = None
@@ -67,7 +72,7 @@ class ProviderManager:
             catalog = self._catalogs.get(provider)
             status = "disconnected" if not record else "configured"
             if record and catalog is not None:
-                status = "connected" if catalog or provider == "codex" else "no_allowed_models"
+                status = "connected"
             if provider in self._catalog_errors:
                 status = self._catalog_errors[provider]
             rows.append({"provider": provider, "status": status,
@@ -91,10 +96,8 @@ class ProviderManager:
         evidence = "documented_model" if documented else "none"
         if unavailable:
             availability = "account_unsupported"
-        elif provider == "codex":
-            availability = "available" if connected else "unknown"
         else:
-            availability = "unknown" if catalog is None else "available" if model in catalog else "unavailable"
+            availability = "available" if connected else "unknown"
         return {"id": model,
                 "availability": availability,
                 "catalogue_listed": None if catalog is None else model in catalog,
@@ -117,6 +120,7 @@ class ProviderManager:
 
     def status(self) -> dict:
         return {**self.connections(), "active_runs": list(self._runs),
+                "completed_requests": [dict(item) for item in self._completion_history],
                 "runtime": "hermes-provider-transports",
                 "general_automation": False, "auxiliary_model_calls": False,
                 "hermes_persistence": False, "temporary_scope": "volatile",
@@ -139,10 +143,10 @@ class ProviderManager:
                 if run.pending and not run.pending.done():
                     run.pending.cancel()
 
-    def select(self, provider: str, model: str | None = None) -> dict:
+    def select(self, provider: str, model: str | None | object = _UNCHANGED_MODEL) -> dict:
         require_provider(provider)
         require_learning_route(provider)
-        if model is not None and model not in ALLOWED_MODELS[provider]:
+        if model is not _UNCHANGED_MODEL and model is not None and model not in ALLOWED_MODELS[provider]:
             raise ApiError("model_not_allowed", "Choose an allowed model in the selected subscription.")
         if provider not in self._settings["connections"]:
             raise ApiError("connection_required", "Connect this subscription before selecting it.", 409)
@@ -150,7 +154,8 @@ class ProviderManager:
         if previous and previous != provider:
             self._stop_provider_runs(previous)
         self._settings["selected_provider"] = provider
-        self._settings.setdefault("selected_models", {})[provider] = model
+        if model is not _UNCHANGED_MODEL:
+            self._settings.setdefault("selected_models", {})[provider] = model
         self._save()
         return self.connections()
 
@@ -311,19 +316,12 @@ class ProviderManager:
         require_learning_route(provider)
         if provider not in self._settings["connections"]:
             raise ApiError("connection_required", "Connect your selected subscription in Renulus.", 409)
-        if provider == "codex":
-            # A display catalogue can lag behind models accepted by inference.
-            # Keep the exact allowlist and let the actual request report access.
-            chosen = model or self._selected_model(provider) or next(
-                (item for item in ALLOWED_MODELS[provider] if item in self._catalogs.get(provider, set())),
-                ALLOWED_MODELS[provider][0])
-        else:
-            catalog = self._catalogs.get(provider)
-            if catalog is None:
-                raise ApiError("capabilities_unverified", "Refresh the selected connection before generation.", 409, True)
-            chosen = model or next((item for item in ALLOWED_MODELS[provider] if item in catalog), None)
-            if not chosen or chosen not in catalog:
-                raise ApiError("model_unavailable", "No requested allowed model is available in the selected subscription.", 409, True)
+        # A display catalogue can lag behind models accepted by inference.
+        # Preserve an explicit or saved choice even when it is not listed.
+        # Only Automatic may choose by catalogue order; failures never fall back.
+        chosen = model or self._selected_model(provider) or next(
+            (item for item in ALLOWED_MODELS[provider] if item in self._catalogs.get(provider, set())),
+            ALLOWED_MODELS[provider][0])
         if (provider, chosen) in self._unsupported_models:
             raise ApiError("account_model_unsupported", "The selected account cannot use this model. Refresh the connection to retry.", 409)
         return provider, chosen
@@ -515,8 +513,17 @@ class ProviderManager:
                 if run.stopped.is_set():
                     break
                 if item["type"] == "completed":
-                    self._observe_completion(provider, chosen, images=images)
-                    yield event("completed", provider=provider, model=chosen)
+                    reported = response_model_identity(item.get("response_model"))
+                    # Process-local route evidence for callers of stream(), which
+                    # intentionally yields text only. Never retain request content
+                    # or an arbitrary user-supplied purpose string in status.
+                    self._completion_history.append({"run_id": run_id,
+                        "purpose": purpose if purpose in _RECORDED_PURPOSES else "other",
+                        "provider": provider, "model": chosen, "response_model": reported})
+                    if reported is None or reported == chosen:
+                        self._observe_completion(provider, chosen, images=images)
+                    yield event("completed", provider=provider, model=chosen,
+                                **({"response_model": reported} if reported else {}))
                     return
                 if item["type"] != "delta" or not isinstance(item.get("text"), str):
                     raise ApiError("provider_protocol_error", "The runtime refused an unexpected subscription event.", 503)

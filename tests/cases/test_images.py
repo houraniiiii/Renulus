@@ -16,7 +16,7 @@ from renulus.cases.models import ImageDiscussion, StartCase
 from renulus.cases.api import create_router
 from renulus.contracts import ContextScope, Scope
 from renulus.runtime.manager import ProviderManager
-from renulus.runtime.policy import ALLOWED_MODELS, learning_usage
+from renulus.runtime.policy import ALLOWED_MODELS
 from renulus.server import create_app
 
 from .conftest import assert_absent_from_profile
@@ -266,36 +266,32 @@ def test_documented_image_model_can_prepare_without_probe_or_provider_call(tmp_p
     assert_absent_from_profile(services, IMAGE_SENTINEL, QUESTION)
 
 
-def test_actual_runtime_go_denial_keeps_public_nonretryable_error_before_io(tmp_path, monkeypatch):
-    app = create_app(tmp_path / "go-policy-denied")
+def test_actual_runtime_go_text_route_is_active_without_claiming_image_support(tmp_path):
+    app = create_app(tmp_path / "go-active")
     services = app.state.services
     calls = []
-    def denied_http(request):
-        calls.append("http")
-        raise AssertionError("Policy denial must precede provider HTTP")
-    async def denied_credentials(provider):
-        calls.append("credentials")
-        raise AssertionError("Policy denial must precede credentials")
-    manager = ProviderManager(services.paths, http_transport=httpx.MockTransport(denied_http))
+    def limited_http(request):
+        calls.append(request)
+        assert json.loads(request.content)["model"] == "mimo-v2.6-pro"
+        return httpx.Response(429, json={"error": {"code": "rate_limit_exceeded"}})
+    manager = ProviderManager(services.paths, http_transport=httpx.MockTransport(limited_http))
     manager._settings["selected_provider"] = "opencode-go"
-    manager._settings["connections"]["opencode-go"] = {"api_key": "synthetic-only"}
+    manager._settings["connections"]["opencode-go"] = {"access_token": "synthetic-only"}
     manager._catalogs["opencode-go"] = {"mimo-v2.6-pro"}
-    monkeypatch.setattr(manager, "_access_token", denied_credentials)
     services.registry["provider"] = manager
     with TestClient(app) as client:
         case = client.post("/api/v1/cases/sessions", json={"text": QUESTION}).json()
         capability = client.get("/api/v1/cases/capabilities").json()["image_interpretation"]
-        assert capability["code"] == "learning_use_unverified" and not capability["retryable"]
+        assert not capability["supported"] and capability["code"] != "learning_use_unverified"
         image_denial = client.post(f"/api/v1/cases/sessions/{case['id']}/attachments/prepare", headers=headers(case))
-        assert image_denial.status_code == 403 and not image_denial.json()["error"]["retryable"]
+        assert image_denial.status_code == 409 and calls == []
         response = client.post(f"/api/v1/cases/sessions/{case['id']}/discuss", json={
-            "revision": 1, "request_id": "go-denied", "message": IMAGE_SENTINEL})
+            "revision": 1, "request_id": "go-active", "message": IMAGE_SENTINEL})
         frames = decode_sse(response.text)
         error = frames[-1]["payload"]["error"]
         assert frames[-1]["type"] == "failed"
-        assert error == {"code": "learning_use_unverified",
-            "message": learning_usage("opencode-go")["message"], "retryable": False}
-        assert calls == [] and manager.connections()["selected_provider"] == "opencode-go"
+        assert error["code"] == "subscription_limit" and error["retryable"] is True
+        assert len(calls) == 1 and manager.connections()["selected_provider"] == "opencode-go"
         current = client.get(f"/api/v1/cases/sessions/{case['id']}").json()
         assert not any(row["role"] == "assistant" for row in current["messages"])
         assert_absent_from_profile(services, IMAGE_SENTINEL, QUESTION)

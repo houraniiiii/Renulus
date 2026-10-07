@@ -1,5 +1,4 @@
-"""Default release gate and hypothetical-approved SDK headers, never live calls."""
-import asyncio
+"""Approved Go routing with synthetic SDK traffic; no live model access proof."""
 import ipaddress
 import json
 import socket
@@ -14,7 +13,8 @@ from renulus.runtime.manager import ProviderManager
 from renulus.runtime.policy import ALLOWED_MODELS
 from renulus.server import create_app
 
-SENTINEL = "SYNTHETIC_EDUCATIONAL_CASE_NEVER_SEND_152"
+SENTINEL = "SYNTHETIC_EDUCATIONAL_CASE_NEVER_SAVE_152"
+GO = "opencode-go"
 
 
 @pytest.fixture(autouse=True)
@@ -33,11 +33,25 @@ def catalog(request):
     assert request.url == "https://opencode.ai/zen/go/v1/models"
     assert request.headers["user-agent"] == "Renulus/0.1.0"
     assert UUID(request.headers["x-opencode-session"])
-    return httpx.Response(200, json={"data": [{"id": model} for model in ALLOWED_MODELS["opencode-go"]]})
+    return httpx.Response(200, json={"data": [{"id": model} for model in ALLOWED_MODELS[GO]]})
+
+
+def completion(request):
+    assert request.url == "https://opencode.ai/zen/go/v1/chat/completions"
+    assert request.headers["user-agent"] == "Renulus/0.1.0"
+    assert "opencode-version" not in request.headers
+    assert UUID(request.headers["x-opencode-session"])
+    body = json.loads(request.content)
+    assert body["model"] in ALLOWED_MODELS[GO] and "tools" not in body
+    events = [{"id": "synthetic", "object": "chat.completion.chunk", "created": 1,
+        "model": body["model"], "choices": [{"index": 0, "delta": {"content": text},
+        "finish_reason": reason}]} for text, reason in [("Synthetic result", None), (None, "stop")]]
+    return httpx.Response(200, headers={"content-type": "text/event-stream"},
+        content="".join("data: " + json.dumps(event) + "\n\n" for event in events) + "data: [DONE]\n\n")
 
 
 @pytest.mark.asyncio
-async def test_default_capability_is_unresolved_and_metadata_cannot_enable_learning(app_paths):
+async def test_app_approval_does_not_claim_account_access_or_select_implicitly(app_paths):
     requests = []
 
     def serve(request):
@@ -47,64 +61,154 @@ async def test_default_capability_is_unresolved_and_metadata_cannot_enable_learn
     manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(serve))
     initial = manager.connections()["connections"][1]
     assert initial["status"] == "disconnected"
-    assert initial["learning_use"]["status"] == "unresolved"
-    assert initial["learning_use"]["generation_allowed"] is False
+    assert initial["learning_use"]["status"] == "app_approved"
+    assert initial["learning_use"]["generation_allowed"] is True
+    with pytest.raises(ApiError) as error:
+        manager.select(GO)
+    assert error.value.code == "connection_required"
     await manager.connect_go("synthetic-go-key")
-    await manager.refresh("opencode-go")
-    row = manager.connections()["connections"][1]
-    assert row["status"] == "connected" and all(model["availability"] == "available" for model in row["models"])
-    assert row["learning_use"]["generation_allowed"] is False
+    await manager.refresh(GO)
     assert manager.connections()["selected_provider"] is None
-    with pytest.raises(ApiError) as error:
-        manager.select("opencode-go")
-    assert error.value.code == "learning_use_unverified" and error.value.status == 403
-    assert not error.value.retryable and len(requests) == 2
-    assert ALLOWED_MODELS["opencode-go"] == ("mimo-v2.6-pro", "deepseek-v4.1-flash")
+    assert len(requests) == 2 and not manager.status()["live_provider_verified"]
+    assert ALLOWED_MODELS[GO] == ("mimo-v2.6-pro", "deepseek-v4.1-flash")
 
 
 @pytest.mark.asyncio
-async def test_connect_and_select_cannot_override_policy_or_replace_current_subscription(app_paths):
-    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(lambda request: pytest.fail("Unexpected provider request")))
+async def test_failed_connect_preserves_current_selection_and_saved_credentials(app_paths):
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(
+        lambda request: httpx.Response(401, json={"error": {"code": "invalid_api_key"}})))
     manager._settings["selected_provider"] = "codex"
+    manager._settings["connections"][GO] = {"access_token": "synthetic-old-go-key"}
     with pytest.raises(ApiError) as error:
-        await manager.connect_go("synthetic-go-key", select=True)
-    assert error.value.code == "learning_use_unverified"
+        await manager.connect_go("synthetic-rejected-key", select=True)
+    assert error.value.code == "authentication_required"
     assert manager.connections()["selected_provider"] == "codex"
-    assert not manager._settings["connections"]
+    assert manager._settings["connections"][GO]["access_token"] == "synthetic-old-go-key"
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("model", ALLOWED_MODELS[GO])
+async def test_exact_go_selection_persists_and_routes_without_catalogue_after_restart(app_paths, model):
+    requests = []
+
+    def serve(request):
+        requests.append(request)
+        if request.url.path.endswith("/models"):
+            return httpx.Response(200, json={"data": []})
+        assert json.loads(request.content)["model"] == model
+        return completion(request)
+
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(serve))
+    await manager.connect_go("synthetic-go-key", select=True)
+    manager.select(GO, model)
+    rows = manager.connections()["connections"][1]
+    assert rows["status"] == "connected"
+    assert all(row["availability"] == "available" and not row["catalogue_listed"] for row in rows["models"])
+    restarted = ProviderManager(app_paths, http_transport=httpx.MockTransport(serve))
+    assert restarted.connections()["selected_models"][GO] == model
+    assert restarted.connections()["selected_provider"] == GO
+    assert restarted._route(None) == (GO, model)
+    events = [event async for event in restarted.events([{"role": "user", "content": SENTINEL}],
+        scope=ContextScope(kind=Scope.TEMPORARY_CASE), run_id="go-restart")]
+    assert [event.type for event in events] == ["started", "delta", "completed"]
+    assert len(requests) == 2 and not restarted.status()["live_provider_verified"]
+    other = next(item for item in ALLOWED_MODELS[GO] if item != model)
+    assert restarted._route(other) == (GO, other)
+    assert restarted.connections()["selected_models"][GO] == model
+    restarted._settings["connections"]["codex"] = {"access_token": "synthetic-other-key"}
+    restarted.select("codex", "gpt-6-astra")
+    restarted.select(GO)
+    assert restarted.connections()["selected_models"] == {GO: model, "codex": "gpt-6-astra"}
+    restarted.select(GO, None)
+    assert ProviderManager(app_paths).connections()["selected_models"][GO] is None
+    for path in app_paths.root.rglob("*"):
+        if path.is_file():
+            assert SENTINEL.encode() not in path.read_bytes()
+            assert b"synthetic-go-key" not in path.read_bytes()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("model", ALLOWED_MODELS[GO])
 @pytest.mark.parametrize("kind", list(Scope))
-@pytest.mark.parametrize("purpose", ["explain", "memory", "compaction", "coding"])
-async def test_legacy_selected_go_blocks_every_scope_and_purpose_before_provider_io(app_paths, kind, purpose):
-    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(lambda request: pytest.fail("Learning egress")))
-    manager._settings["connections"]["opencode-go"] = {"access_token": "synthetic-legacy-go-key"}
-    manager._settings["selected_provider"] = "opencode-go"
-    manager._catalogs["opencode-go"] = set(ALLOWED_MODELS["opencode-go"])
-    manager._save()
+async def test_go_generation_preserves_every_scope_without_writing_request_data(app_paths, model, kind):
+    requests = []
+
+    def serve(request):
+        requests.append(request)
+        assert json.loads(request.content)["model"] == model
+        return completion(request)
+
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(serve))
+    manager._settings["connections"][GO] = {"access_token": "synthetic-key"}
+    manager.select(GO, model)
     before = {path: path.read_bytes() for path in app_paths.root.rglob("*") if path.is_file()}
     events = [event async for event in manager.events([{"role": "user", "content": SENTINEL}],
-        scope=ContextScope(kind=kind), run_id="legacy-go", purpose=purpose)]
-    assert [event.type for event in events] == ["error"]
-    assert events[0].payload["code"] == "learning_use_unverified"
-    assert SENTINEL not in json.dumps([event.model_dump() for event in events])
-    assert manager.connections()["selected_provider"] == "opencode-go"
-    assert not manager.status()["active_runs"]
+        scope=ContextScope(kind=kind), run_id="go-scope", purpose="memory")]
+    assert [event.type for event in events] == ["started", "delta", "completed"]
+    assert len(requests) == 1 and not manager.status()["active_runs"]
     assert before == {path: path.read_bytes() for path in app_paths.root.rglob("*") if path.is_file()}
-    with pytest.raises(ApiError) as error:
-        await manager.compact([{"role": "user", "content": SENTINEL}],
-            scope=ContextScope(kind=kind), run_id="compact-blocked")
-    assert error.value.code == "learning_use_unverified"
 
 
 @pytest.mark.asyncio
-async def test_direct_hermes_transport_cannot_bypass_route_gate(app_paths):
-    transport = HermesSubscriptionTransport(app_paths.source_root, app_paths.root,
-        http_transport=httpx.MockTransport(lambda request: pytest.fail("Direct transport egress")))
+@pytest.mark.parametrize("model", ALLOWED_MODELS[GO])
+async def test_model_rejection_has_no_retry_fallback_or_changed_preference(app_paths, model):
+    requests = []
+
+    def serve(request):
+        requests.append(request)
+        assert json.loads(request.content)["model"] == model
+        return httpx.Response(404, json={"error": {"code": "model_not_found", "message": SENTINEL}})
+
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(serve))
+    manager._settings["connections"][GO] = {"access_token": "synthetic-key"}
+    manager._settings["connections"]["codex"] = {"access_token": "synthetic-other-subscription"}
+    manager.select(GO, model)
+    for run in ("go-reject", "go-no-retry"):
+        events = [event async for event in manager.events([{"role": "user", "content": SENTINEL}],
+            scope=ContextScope(kind=Scope.TEMPORARY_CASE), run_id=run)]
+        assert events[-1].type == "error" and events[-1].payload["code"] == "account_model_unsupported"
+        assert SENTINEL not in json.dumps([event.model_dump() for event in events])
+    assert len(requests) == 1
+    assert manager.connections()["selected_provider"] == GO
+    assert manager.connections()["selected_models"][GO] == model
+    assert manager._route(next(item for item in ALLOWED_MODELS[GO] if item != model))[0] == GO
     with pytest.raises(ApiError) as error:
-        _ = [item async for item in transport.stream("opencode-go", "mimo-v2.6-pro", "synthetic-key",
-            [{"role": "user", "content": SENTINEL}], session_id="synthetic-session")]
-    assert error.value.code == "learning_use_unverified"
+        manager.select(GO, "gpt-6.1-sol")
+    assert error.value.code == "model_not_allowed"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("model", ALLOWED_MODELS[GO])
+async def test_api_selects_exact_go_model_and_retains_failed_study_on_provider_limit(app_paths, model):
+    app = create_app(app_paths.root, token="synthetic-token", source_root=app_paths.source_root)
+    provider = app.state.services.registry["provider"]
+    requests = []
+
+    def serve(request):
+        requests.append(request)
+        assert json.loads(request.content)["model"] == model
+        return httpx.Response(429, json={"error": {"code": "rate_limit_exceeded"}})
+
+    provider._http_transport = httpx.MockTransport(serve)
+    provider._settings["connections"][GO] = {"access_token": "synthetic-key"}
+    app.state.services.registry["knowledge"] = app.state.services.registry["memory"] = None
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://127.0.0.1",
+        headers={"x-renulus-token": "synthetic-token"}) as client:
+        selected = await client.post("/api/v1/connections/select", json={"provider": GO, "model": model})
+        assert selected.status_code == 200 and selected.json()["selected_models"][GO] == model
+        reselected = await client.post("/api/v1/connections/select", json={"provider": GO})
+        assert reselected.json()["selected_models"][GO] == model
+        assert not requests
+        answer = await client.post("/api/v1/learn/ask", json={"question": "Explain synthetic CKD study",
+            "scope": {"kind": "study"}})
+        events = [json.loads(line[6:]) for line in answer.text.splitlines() if line.startswith("data: ")]
+        assert events[-1]["type"] == "error" and events[-1]["payload"]["code"] == "subscription_limit"
+        thread_id = events[0]["payload"]["thread_id"]
+        thread = (await client.get("/api/v1/learn/threads/" + thread_id)).json()
+        assert [message["role"] for message in thread["messages"]] == ["user"]
+        assert thread["runs"][0]["state"] == "failed"
+    assert len(requests) == 1 and provider.connections()["selected_provider"] == GO
+    assert not provider.status()["live_provider_verified"]
 
 
 def test_upstream_ambient_identity_cannot_replace_app_owned_header(app_paths, monkeypatch):
@@ -118,31 +222,7 @@ def test_upstream_ambient_identity_cannot_replace_app_owned_header(app_paths, mo
 
 
 @pytest.mark.asyncio
-async def test_real_api_exposes_gate_and_retains_failed_study_without_egress(app_paths):
-    app = create_app(app_paths.root, token="synthetic-token", source_root=app_paths.source_root)
-    provider = app.state.services.registry["provider"]
-    provider._http_transport = httpx.MockTransport(lambda request: pytest.fail("Unexpected provider traffic"))
-    provider._settings["connections"]["opencode-go"] = {"access_token": "synthetic-key"}
-    provider._settings["selected_provider"] = "opencode-go"
-    app.state.services.registry["knowledge"] = app.state.services.registry["memory"] = None
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://127.0.0.1",
-        headers={"x-renulus-token": "synthetic-token"}) as client:
-        status = (await client.get("/api/v1/connections")).json()
-        assert status["connections"][1]["learning_use"]["generation_allowed"] is False
-        denied = await client.post("/api/v1/connections/select", json={"provider": "opencode-go"})
-        assert denied.status_code == 403 and denied.json()["error"]["code"] == "learning_use_unverified"
-        answer = await client.post("/api/v1/learn/ask", json={"question": "Explain synthetic CKD study",
-            "scope": {"kind": "study"}})
-        events = [json.loads(line[6:]) for line in answer.text.splitlines() if line.startswith("data: ")]
-        assert events[-1]["type"] == "error" and events[-1]["payload"]["code"] == "learning_use_unverified"
-        thread_id = events[0]["payload"]["thread_id"]
-        thread = (await client.get("/api/v1/learn/threads/" + thread_id)).json()
-        assert [message["role"] for message in thread["messages"]] == ["user"]
-        assert thread["runs"][0]["state"] == "failed"
-
-
-@pytest.mark.asyncio
-async def test_hypothetical_approved_headers_are_truthful_stable_scoped_and_private(app_paths, synthetic_go_approval):
+async def test_approved_headers_are_truthful_stable_scoped_and_private(app_paths):
     requests = []
 
     def serve(request):
