@@ -44,7 +44,7 @@ def test_depth2_upgrade_keeps_answer_history_and_exposes_six_staged_cases(databa
 
     create_router(services)
     content = services.registry["content"]
-    assert content.active_manifest()["version"] == "1.4.0"
+    assert content.active_manifest()["version"] == "1.4.2"
     assert services.registry["content_bootstrap"]["reason"] == "newer_bundled_release"
     assert database.fetch_all("SELECT * FROM assessment_attempts ORDER BY id") == before
     assert assessment.aggregates() == scores

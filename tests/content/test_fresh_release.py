@@ -23,9 +23,9 @@ def bundled(tmp_path, *versions):
 def test_fresh_current_release_installs_correction_ancestry_and_reopens(database, tmp_path):
     repository, outcome = boot(database, tmp_path, PACKS)
     assert outcome["status"] == "activated" and outcome["reason"] == "fresh_profile"
-    assert repository.active_manifest()["version"] == "1.4.0"
-    assert len(repository.list_question_summaries()) == 249
-    assert len(repository.list_cases()) == 58
+    assert repository.active_manifest()["version"] == "1.4.2"
+    assert len(repository.list_question_summaries()) == 251
+    assert len(repository.list_cases()) == 59
     assert repository.get_source("K01-2024")["register_id"] == "K01"
     prior = repository.get_question_version(TARGET, 1)
     current = repository.get_question_version(TARGET, 2)
@@ -33,7 +33,7 @@ def test_fresh_current_release_installs_correction_ancestry_and_reopens(database
     assert prior["withdrawn"] and prior["withdrawal"]["replacement_version"] == 2
     assert "Review medications and acquired/inherited causes" in prior["rationale"]
     assert "Review medications and acquired/inherited causes" not in current["rationale"]
-    assert {row["version"] for row in database.fetch_all("SELECT version FROM content_packs")} == {"1.2.0", "1.4.0"}
+    assert {row["version"] for row in database.fetch_all("SELECT version FROM content_packs")} == {"1.2.0", "1.4.2"}
     before = database.fetch_all("SELECT * FROM content_packs ORDER BY version")
     repository, reopened = boot(database, tmp_path, PACKS)
     assert reopened["reason"] == "active_version_not_older"
