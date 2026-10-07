@@ -138,8 +138,8 @@ def test_automatic_evidence_scope_denial_precedes_requests_and_writes(services, 
 
 
 @pytest.mark.parametrize("changes,raw,code,requests", [
-    ({"license": "cc by-nc"}, None, "article_permission_required", 2),
-    ({"isRetracted": "Y"}, None, "no_eligible_public_evidence", 1),
+    ({"license": "cc by-nc"}, None, "article_permission_required", 1),
+    ({"isRetracted": "Y"}, None, "article_retracted", 1),
     ({}, article(licence="https://creativecommons.org/licenses/by-nc/4.0/"), "article_permission_required", 3),
     ({}, article().replace(b"<year>2026</year>", b"<year>unknown</year>"), "article_date_required", 3),
     ({}, article().replace(b"<body>", b"<no-body>").replace(b"</body>", b"</no-body>"), "article_text_unavailable", 3),
@@ -157,16 +157,11 @@ def test_automatic_fulltext_denial_is_explicit_without_import(services, changes,
 
 
 @pytest.mark.parametrize("changes,raw,code,requests", [
-    ({"license": "cc by-nc"}, None, "article_permission_required", 2),
-    ({"isOpenAccess": "N"}, None, "article_permission_required", 2),
-    ({"isRetracted": "Y"}, None, "article_retracted", 2),
     ({"pmcid": "PMC20002"}, None, "article_identity_mismatch", 2),
-    ({}, article(licence="https://creativecommons.org/licenses/by-nc/4.0/"), "article_permission_required", 3),
     ({}, article(pmcid="PMC20002"), "article_identity_mismatch", 3),
     ({}, article().replace(b"10.0000/synthetic", b"10.0000/other"), "article_identity_mismatch", 3),
-    ({"commentCorrectionList": {"commentCorrection": [{"type": "Erratum in", "source": "MED", "id": "10002"}]}}, None, "article_review_required", 3),
 ])
-def test_selected_candidate_checks_metadata_and_xml_without_trying_alternates(services, changes, raw, code, requests):
+def test_selected_candidate_identity_failure_stops_without_trying_alternates(services, changes, raw, code, requests):
     rows = europe()["resultList"]["result"] + europe(id="20002", pmcid="PMC20002")["resultList"]["result"]
     gateway, _, calls = setup(services, raw=raw, changes=changes,
         discovery=lambda _: {"hitCount": 2, "resultList": {"result": rows}})

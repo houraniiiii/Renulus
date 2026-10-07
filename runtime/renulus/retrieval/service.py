@@ -14,7 +14,7 @@ from renulus.storage.database import utc_now
 from .connections import FREE, TOOLS, RetrievalConnections
 from .hermes import normalize
 from .http import OfficialHTTP
-from .literature import EUROPE, PUBMED, PMCID, europe_records, europe_status, pubmed_records, licensed_article
+from .literature import EUROPE, PUBMED, PMCID, europe_records, europe_status, pubmed_records, licensed_article, metadata_licence_permitted
 
 
 class RetrievalService:
@@ -261,7 +261,7 @@ class RetrievalService:
         if len(matches) != 1 or len(rows) != 1:
             raise ApiError("article_identity_mismatch", "The selected article could not be uniquely resolved.", 409)
         match = matches[0]
-        if match.get("isOpenAccess") != "Y" or not isinstance(match.get("license"), str) or not re.fullmatch(r"cc[ -]?by(?: [234]\.0)?|cc0(?: 1\.0)?", match["license"].strip().lower()):
+        if match.get("isOpenAccess") != "Y" or not metadata_licence_permitted(match.get("license")):
             raise ApiError("article_permission_required", "This article is not available as eligible open-access full text.", 403)
         status = europe_status(match)
         if status["retracted"]:

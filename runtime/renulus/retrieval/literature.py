@@ -17,6 +17,12 @@ def text(node) -> str:
     return " ".join(" ".join(node.itertext()).split()) if node is not None else ""
 
 
+def metadata_licence_permitted(value) -> bool:
+    """A metadata prefilter only; the independent JATS rights gate still applies."""
+    return isinstance(value, str) and re.fullmatch(
+        r"cc[ -]?by(?: [234]\.0)?|cc0(?: 1\.0)?", value.strip().lower()) is not None
+
+
 def europe_records(data: dict, limit: int) -> list[dict]:
     envelope = data.get("resultList")
     rows = envelope.get("result") if isinstance(envelope, dict) else None
@@ -44,6 +50,7 @@ def europe_records(data: dict, limit: int) -> list[dict]:
             "pmid": identifier if source == "MED" else None, "pmcid": pmcid,
             "publication_date": row.get("firstPublicationDate") or row.get("pubYear"),
             "open_access": row.get("isOpenAccess") == "Y",
+            "metadata_licence": row.get("license") if isinstance(row.get("license"), str) else None,
             **status,
             "fulltext_licence": "unverified", "record_type": "discovery",
             "latest_final_verified": False, "passage_evidence": False})
