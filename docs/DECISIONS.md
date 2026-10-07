@@ -1,6 +1,6 @@
 # Renulus decisions
 
-Updated on 2026-10-06. The [recorded user answers](planning/2026-10-04-user-answers.md)
+Updated on 2026-10-07. The [recorded user answers](planning/2026-10-04-user-answers.md)
 are the evidence for the new product decisions. Earlier assistant suggestions
 remain proposals unless accepted here.
 
@@ -52,7 +52,8 @@ remain proposals unless accepted here.
 | Delivery standard | Real working product. Prototypes inform production work; mock screens, hardcoded responses and disconnected modules do not establish completion. |
 | Current Windows acceptance | On October 5, 2026 the owner chose an unsigned build installed and validated on the current Windows PC. A signing identity and a separate clean PC/VM are not required for this delivery. Matching source/artifact provenance, bundled runtime with developer tools absent from the app PATH, installation, shutdown/reopen, recovery and connected journeys remain required. Signing and separate clean-machine tests are optional future distribution work. |
 | Development app control | On October 6, 2026 the owner requested app-scoped Playwright/Electron control through MCP so testing can continue while they use the same PC. Use hidden, non-focusable test windows, a separate synthetic profile and its owned backend. App screenshots and renderer input replace shared desktop control for UI work. Native Windows installation, dialogs and external handoffs retain separate acceptance scopes. See [app control](implementation/APP_CONTROL.md). |
-| Current delivery disposition | On October 6, 2026 the owner instructed: “Deliver with the live blocker.” Deliver the runnable local Windows app with the selected Codex `subscription_limit` documented. Successful generation, automatic capture and dependent live journeys remain unperformed and receive no success credit. This accepts the blocked live disposition for this handover; it does not establish full product or live validation. No quota retry, subscription/model fallback or Go activation is required or authorised by this decision. |
+| Historical October 6 delivery disposition | The owner accepted the then-runnable local Windows app with the selected Codex `subscription_limit` documented. That handover did not establish successful generation or full product validation. Its failed receipts remain historical; it is superseded by the resumed October 7 scope below. |
+| Resumed October 7 delivery | The owner restored access and resumed full delivery, explicitly approving OpenCode Go personal-agent use and real validation of the exact selected models. Sol learning/capture and both Go Case discussions now have source evidence; installed acceptance remains separate. No model/subscription fallback or credential transport is authorised. Finish the connected flows, content coverage, Windows usability and matching release; see [current finish scope](implementation/FINISH_20261007.md). |
 | Work organisation | Staged vertical implementation slices, clear module ownership, parallel worktree plan and multiple adversarial review waves. |
 | Licensing | MIT for Renulus's own code; CC BY 4.0 for original Renulus teaching content. Permissive commercial reuse with attribution; third-party terms remain independent. |
 | Design workflow | Figma with Impeccable and Interface Design. |

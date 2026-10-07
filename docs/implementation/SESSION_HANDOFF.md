@@ -1,6 +1,10 @@
 # Session transfer — October 5, 2026
 
 Active continuation, October 7: read [FINISH_20261007](FINISH_20261007.md).
+Its 13:25 UTC checkpoint records integrated lane commits, actual source learning,
+Go/image/Library proof, the query fixes and completed worktree retirement. The
+old held E supplement worktree has now been reconciled and retired with its
+ignored evidence preserved. Matching new installation remains the next release gate.
 The full delivery goal is resumed with five bounded Ultra lanes and one
 twenty-minute heartbeat. The owner explicitly approves OpenCode Go personal
 learning use; the earlier app-imposed eligibility pause is superseded. Both
