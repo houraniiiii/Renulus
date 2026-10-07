@@ -2,12 +2,11 @@
 
 Renulus is an English-language Windows learning space for nephrology. For the
 selected unsigned installation and dated owner-PC acceptance status, see
-[Running Renulus](RUNNING.md#delivery-status). On October 6, 2026, matching
-Recovery02, Connected03, the bounded Gap01/02 local flows and Maintenance03 are
-accepted on freeze `699938f2`. Normal launch selects that matching installation.
-Acceptance covers these local installed workflows with an external live
-subscription blocker. Successful live answers and automatic capture remain
-unproved, and the full product goal remains open.
+[Running Renulus](RUNNING.md#delivery-status). The October 7 source app has real
+Sol Explain/practice/automatic Memory and both Go Case-discussion evidence.
+The matching **cb59beb2** Windows installation passed the real Sol core journey
+and is selected by the normal launcher, preserving the E: learning profile.
+Complete content/currency and broader acceptance remain tracked separately.
 
 ## Start and connect
 
@@ -18,16 +17,12 @@ learning subscription are separate statuses. The installed app bundles its
 runtime and CPU helpers; no developer tools, GPU, Docker or local model server
 setup is needed. Keep the existing E: data and Renulus account profile when
 updating the app, including the learning profile
-`E:/Renulus-native-delivery/desktop-20261005/data/learning`. The parent promoted
-the normal launcher to `installed-699938f2` on C: and updated the owned shortcut,
-preserving that E: profile and the previous pointer/shortcut. Selection at
-**12:39:56.5997385 UTC on October 6, 2026** was confirmed at
-**12:41:27.7088281 UTC**: **CheckOnly exited 0** for the actual matching6999
-target and normal C: shortcut. Launcher confirmation is complete. The earlier
-false scalar/array assertion is preserved; no selector or shortcut update was
-repeated. See [the parent maintenance report](finalise-maintenance-699938f2.md).
+`E:/Renulus-native-delivery/desktop-20261005/data/learning`. The normal shortcut
+selects `installed-cb59beb2` on C:. Launcher promotion followed matching installed
+acceptance and preserved the previous selector. See the
+[current delivery record](DELIVERY_20261007.md).
 
-While generation is blocked, use reviewed **Test**, **Today** planning, saved
+Without a generative connection, use reviewed **Test**, **Today** planning, saved
 **Library** passages/originals, local **Cases** with explicit Save, **Memory**
 editing/recall and study-data backup/recovery.
 The [bounded reader check](finalise-reader-reflow-699938f2.md) also confirms the
@@ -69,7 +64,8 @@ The older October 6 Astra attempt returned `subscription_limit`; a later real
 observations, not today's account status. Matching updated-app validation is
 tracked in [the active delivery continuation](FINISH_20261007.md), including
 successful learning, generated practice and completed automatic capture.
-The normal launcher is promoted only after matching installed acceptance.
+The normal launcher was promoted to cb59beb2 after matching installed core
+acceptance on October 7. See [the current delivery](DELIVERY_20261007.md).
 
 ## Learn and Test
 

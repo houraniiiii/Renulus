@@ -105,13 +105,18 @@ attributed Hermes routes and canonical SQLite records. Learn, Library, Cases,
 reviewed Test/generated practice, Memory, Today/study planning and Updates have
 real service implementations. The matching Windows app is installed and selected
 by the normal shortcut, with bounded local installation, recovery, originals,
-deletion, reader and ordinary lifecycle acceptance. The selected Codex request
-on October 6, 2026 returned `subscription_limit`; successful generation and
-automatic capture remain unproved. On October 6 the owner accepted local delivery
-with that blocker documented; full product and live acceptance remain unproved.
+deletion, reader and ordinary lifecycle acceptance. On October 7, actual source
+journeys completed with Sol and both approved Go models. Explain, follow-up,
+Stop/retry, generated practice, automatic capture/recall, Case/image discussion
+and Library citation/original access have individually scoped live evidence.
+The 1.2.0 content release adds depth across eleven domains and resolves four
+objective mismatches; complete content/currency and successful dated external
+body retrieval remain open. The matching cb59beb2 Windows installation passed
+the real Sol core learning/capture/reopen journey and is selected by the normal
+launcher. Its profile and original collection remain on E:.
 See [the implementation run](implementation/EXECUTION.md),
 [startup guidance](implementation/RUNNING.md) and
-[requirement audit](implementation/finalise-audit-699938f2.md).
+[current continuation](implementation/FINISH_20261007.md).
 The inherited clinical MVP and batch/research project remain separately archived.
 Their code and checks do not establish Renulus's functionality or effectiveness.
 

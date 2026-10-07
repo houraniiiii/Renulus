@@ -157,14 +157,23 @@ ISPD peritonitis record is 2022 plus **both 2023 and 2024 corrections**; cathete
 infection is 2023. Separate pediatric, teaching, nutrition and PD-loss guidance
 does not establish replacement of those adult infection documents.
 
-The four objective holds have source-backed repair proposals in the report;
-newer source dates cannot repair mismatched learning objectives. Content owners
-must publish their reviewed mapping/citation changes in a new immutable release.
-This register update does not change pack statuses or claim all cells cleared.
-In particular, the 2026 European MGRS diagnostic consensus, overdue UKKA
-recommendations, unavailable correction records and unreviewed treatment scopes
-remain separately identified. Rights, access classes and original-file handling
-in this register are unchanged; no source import or permission grant occurred.
+The four objective holds are repaired in immutable pack **1.2.0**, including a
+dedicated circuit-anticoagulation objective and citrate teaching case. All eleven
+domains remain partial and all 27 currency-review cells remain open.
+
+The subsequent [eight-item MGRS comparison](implementation/finish-mgrs-comparison-20261007.md)
+resolved the 2026 reading blocker through the official Europe PMC full-text XML
+for DOI **10.1093/ckj/sfag163**, PMCID **PMC13284707**, retrieved October 7 at
+13:31:22 UTC under its CC BY 4.0 notice. The seven existing keys and one teaching
+case remain supported in that bounded diagnostic comparison. One ancillary
+RN11-T11-001 rationale clause needs its own source or narrower wording in a later
+immutable release. The source snapshot/locators have not yet been adopted into
+the pack. The full appendix, treatment and broader MGRS scope are not cleared.
+
+Overdue UKKA clinical reviews, named unavailable correction records and
+unreviewed treatment scopes remain separately identified. These report updates
+do not clear every cell or grant new acquisition rights. Original-file handling
+and permissions remain unchanged.
 
 ## Acquisition and currency contract for implementation
 

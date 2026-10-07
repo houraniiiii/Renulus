@@ -1,12 +1,14 @@
 # Session transfer — October 5, 2026
 
 Active continuation, October 7: read [FINISH_20261007](FINISH_20261007.md).
-Its 13:25 UTC checkpoint records integrated lane commits, actual source learning,
-Go/image/Library proof, the query fixes and completed worktree retirement. The
-old held E supplement worktree has now been reconciled and retired with its
-ignored evidence preserved. Matching new installation remains the next release gate.
-The full delivery goal is resumed with five bounded Ultra lanes and one
-twenty-minute heartbeat. The owner explicitly approves OpenCode Go personal
+Its 14:07 UTC checkpoint records the matching **installed cb59beb2** core Sol
+and saved DeepSeek/Library/Memory/teaching acceptance and normal launcher promotion.
+Read [the delivery](DELIVERY_20261007.md) before any repeat execution. All workers
+are closed; all worktrees, including the held E supplement, are retired with
+needed ignored evidence and branch refs preserved. Only the main checkout remains.
+The full goal remains active for substantive content/currency, dated-body retrieval
+and remaining connected/accessibility scopes, with one twenty-minute heartbeat.
+The owner explicitly approves OpenCode Go personal
 learning use; the earlier app-imposed eligibility pause is superseded. Both
 saved Renulus connections are present. Parent owns live learning/capture,
 integration and matching release acceptance. Historical checkpoints below

@@ -19,15 +19,18 @@ runtime readiness and subscription access have separate statuses.
 For a local session, use reviewed **Test**, saved **Library** passages and
 originals, **Cases** with explicit Save, editable **Memory**, or **Today** study
 preferences and planning. These workflows do not require a generative response.
-The October 6, 2026 selected-Codex Probe02 ended with `subscription_limit`;
-successful live answers and automatic learning capture remain unproved.
+October 7 source-app validation completed live Sol answers, generated practice
+and automatic learning capture/recall. Both approved Go models also completed
+Case discussions. These current results supersede the earlier account blocker;
+each receipt retains its source or installed scope.
 
 For generation, open **Connections → Learning subscriptions**, connect your
 account if needed, **Check models**, choose **Use Codex** when offered and confirm
 the **Selected** badge. Only `gpt-6.1-sol`, `gpt-6-astra` and `gpt-6-luna` are
-allowed for Codex, subject to account availability. OpenCode Go learning
-requests remain paused; its approved models remain `mimo-v2.6-pro` and
-`deepseek-v4.1-flash`. There is no silent subscription switch or paid generation
+allowed for Codex, subject to account availability. For OpenCode Go, save your
+subscription key, choose **Use OpenCode Go**, then select `mimo-v2.6-pro` or
+`deepseek-v4.1-flash`. The owner-approved October 7 update enables both. There
+is no silent subscription switch or paid generation
 fallback. Reviewed Test, saved study material and manual planning are available
 without a generative connection. See [connection instructions](USING_RENULUS.md#start-and-connect).
 
@@ -54,10 +57,18 @@ Contributor development must use a separate profile.
 
 ## Delivery status
 
-As of October 6, 2026, product source remains frozen at
-`699938f20efb6bbc2cf8df684cc5c6c3450e6eaf`. Normal launch now selects the matching
+The normal launcher selects the matching **cb59beb2** installation on C:,
+preserving the existing E: learning profile. The unsigned installer, full backend
+inventories and real installed Sol Explain/practice/automatic Memory/Stop/reopen
+journey passed. Promotion was checked at **14:03:56 UTC on October 7**.
+Read [the current delivery](DELIVERY_20261007.md) for artifacts, exact scope and
+remaining content/freshness/accessibility work.
+The following table preserves the earlier installation/recovery evidence.
+
+At the October 6, 2026 handover, product source was frozen at
+`699938f20efb6bbc2cf8df684cc5c6c3450e6eaf`. At that time normal launch selected the matching
 installation at `C:/Renulus-native-delivery/desktop-20261005/installed-699938f2`.
-The parent has accepted the bounded local installed scopes below, with an
+The parent accepted the bounded local installed scopes below, with the then-current
 external live subscription blocker. All times in this table are on
 **October 6, 2026, in UTC**.
 

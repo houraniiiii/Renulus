@@ -1,27 +1,23 @@
-# Finish requirement checkpoint — October 7, 2026
+# Requirement audit — October 7, 2026
 
-**Report-only checkpoint, not a completion declaration.** All 64 original
-requirement IDs, order and wording are retained below. Historical installed and
-engine acceptance remains valid at its recorded source/scope. The parent now
-accepts the **core source learning composite**: retained Sol
-Explain/follow-up/capture/recall from 01, Stop/subsequent request/capture from 02,
-and completed practice/reopen/persistence from 03. Source01/02 aggregates stay
-**failed**; source 03 is **passed** with retained proof explicitly separate.
-This is neither a complete current-source execution nor installed acceptance.
-Both Go models now have individual real Case-discussion passes, and Sol has a
-bounded synthetic-image pass [J]. The new 1.2.0 content increment is committed
-but not activated [D]. Freshness, remaining required breadth/connected work,
-Windows acceptance and the matching final release remain open.
+The matching **cb59beb2 Windows installation is accepted for core connected
+learning** and is selected by the normal launcher. Installed Sol direct/guided
+Explain, Stop/new request, generated practice, completed automatic Memory
+capture/recall and normal close/reopen passed [I]. Further installed work covers
+correction/deletion of a newly auto-captured synthetic record, retained Library
+citation/original access, new citrate teaching stages and a saved DeepSeek Case
+follow-up/reopen [I]. All original 64 requirement IDs/order/wording are retained.
 
-Assigned checkout: `C:/rn-finish-20261007/lanes/audit`, branch
-`codex/final-audit-20261007`, base
-`dc6185bab7d29d7ef68457ff630b08b7b3d54cb9`.
-The sole tracked edit is this new report. It incorporates the parent's source 03
-update at source
-`035098b468d18c5079b0e51b83a9013f43762102`, read without integration.
-The capability repair and all 12 focused checks, including three real Mem0
-outbox/registered-bridge checks, now have bounded proof [B].
-No app/test/provider/native/helper/packaging/launcher operation was executed here.
+**The full product goal remains open.** Content/currency coverage, successful
+dated external-body retrieval, the remaining reviewed-Updates/cross-module
+journey and broader accessibility limits remain below. A working installed
+release is not full clinical or curriculum acceptance. Failed/partial historical
+aggregates remain unchanged; scoped old engine/recovery proofs retain their
+source attribution. No full regression sweep or duplicate import was performed.
+
+The earlier lane checkpoint was authored at source035098b4 and integrated as
+2ef895db. Its dated evidence sections below remain historical; the current
+matrix and parent disposition incorporate the later actual receipts [I].
 
 ## Evidence boundaries
 
@@ -36,10 +32,10 @@ Receipt totals are never summed into a new all-green invocation.
 | E | [Original audit][E]: immutable requirement baseline and historical exact engine/application identities. Preserve failed b4/r1/r2 and other invocations, capacity 13/content 130 identity reconciliations, 112 earlier assertions + one accepted retry, 45 renderer checks, r3's eight actual-engine identities and separate 035 PDF/PNG consumers. No repeats or new aggregate. |
 | H | [699938f2 audit][H]: accepted matching Package/Install, five-current/twelve-qualified-historical native composite, Recovery three closes/two reopens, Connected seven performed/three retained operations, gap OCR/persistence, reader fit, maintenance and normal launcher. `fullExecutionAtCurrentTarget=false` and failed origins remain. Six 035 storage phases retain their original attribution under 6999 qualification. |
 | G | [Go finish][G], implementation 35b77215 reported; integrated here as 3711f967 plus 37a76a0d: owner-approved Go routes, exact saved defaults, advisory catalogue and requested/reported identity seam. Reported 77 distinct backend/46 renderer checks are controlled, not live Go access. Three actual Mem0 checks originally unexecuted by that lane are now covered by B. |
-| U | [Control finish][U], integrated 4116a3a4: bounded synthetic upload/hidden resize, 45 mocked unit passes plus syntax checks. No native upload/extraction/layout pass. |
+| U | [Control finish][U], integrated 4116a3a4: bounded synthetic upload/hidden resize, 45 mocked unit passes plus syntax checks. Subsequent actual hidden upload/extraction/resize/persistence is recorded in I; physical dialogs remain separate. |
 | W | [Windows finish][W], integrated dc6185ba: focused navigation, Learn/practice, Memory, Cases and Library focus/wrapping fixes. Reported 86 mounted passes/TypeScript, then affected shell 7/7 after final scroll correction. No Chromium/native layout, spoken screen-reader or physical-OS acceptance. |
-| C | [1.1.2 required cells][C] and E/H content receipts:27 topics, 56 objectives, 178 General questions, 38 cases, 170 mapped ESENeph questions. Content tree is unchanged from 6999 at this base. 27 explanation/evidence cells are `linked`; 27 update-source cells remain `needs_currency_review`; four objective holds, 11 partial domains and `complete_content_coverage=false`. This is the integrated baseline; the completed 1.2.0 candidate is D. |
-| D | Completed content increment `def0f80d6146b7f769e1da390d528be3b1eb4fd3`, read via Git and supplied handoff/verification metadata only.1.2.0:27 topics/57 objectives/222 questions/50 cases/64 sources; 44 new five-option questions/12 cases across 11 finite units; 218 mapped questions. Four objective holds repaired, but11 domains partial/27 currency cells open. Parent review/integration/activation/installed consumers unperformed [D]. |
+| C | [1.1.2 required cells][C] and E/H content receipts:27 topics, 56 objectives, 178 General questions, 38 cases, 170 mapped ESENeph questions. Content tree is unchanged from 6999 at this base. 27 explanation/evidence cells are `linked`; 27 update-source cells remain `needs_currency_review`; four objective holds, 11 partial domains and `complete_content_coverage=false`. This is the historical baseline; active 1.2.0 and current installed consumers are recorded in I. |
+| D | Completed content increment `def0f80d6146b7f769e1da390d528be3b1eb4fd3`, read via Git and supplied handoff/verification metadata only.1.2.0:27 topics/57 objectives/222 questions/50 cases/64 sources; 44 new five-option questions/12 cases across 11 finite units; 218 mapped questions. Four objective holds repaired, but11 domains partial/27 currency cells open. This was the lane handoff state; parent subsequently integrated/activated it and verified installed consumers [I]. |
 | J | Connected source 02 partial snapshot at **13:12:22.749 UTC**, exact035098b4: both Go Case-discussion completions and Sol image completion have requested=reported identity. Original failed phases retained; no terminal aggregate or installed pass. Freshness has no accepted result and records `dated_public_evidence_missing` [J]. |
 | S | Source-lane commit`6aad1bb2f23f23786470e70ea42b8a3a25bc4229`, read through `git show` only: `docs/implementation/finish-source-currency-20261007.md` and its `docs/SOURCES.md` changes.47 records/27 cells/four holds reconciled; not integrated here. Dated status/notice findings and repair proposals do not mutate the immutable pack or certify clinical currency. |
 | L | Source01/02/03 receipt metadata below plus the parent's explicit acceptance/defect update. Body text, screenshots, originals, profiles and credentials were not inspected. Core source composite accepted by parent; no complete current-source execution or installed credit. |
@@ -48,7 +44,7 @@ Receipt totals are never summed into a new all-green invocation.
 
 <a id="live"></a>
 
-### Current live receipt checkpoint
+### Earlier source receipt checkpoint
 
 | Receipt | Exact metadata and individually supported scope | Aggregate / limit |
 | --- | --- | --- |
@@ -87,7 +83,7 @@ Registered bridges use controlled provider outcomes and are not live Go results.
 
 <a id="connected"></a>
 
-### Connected work: individual passes, no terminal aggregate
+### Earlier connected snapshot: individually scoped passes
 
 Read only `connected/connected-source-02/result.json` metadata at
 **2026-10-07 13:12:22.749 UTC**. Status/finished_at are absent; the observed
@@ -116,7 +112,7 @@ Parent owns its continuation and final disposition; this audit does not wait.
 
 <a id="content"></a>
 
-### Completed content increment awaiting parent activation
+### Historical content handoff before integration
 
 Commit`def0f80d6146b7f769e1da390d528be3b1eb4fd3` publishes immutable
 `renulus-foundations/1.2.0`, canonical pack SHA256
@@ -151,15 +147,15 @@ open. No inherited accepted scope is reopened merely by listing its limitation.
 
 | ID | Requirement (verbatim) | Supported current disposition | Remaining scope / parent field |
 | --- | --- | --- | --- |
-| S0.01 | Immutable Hermes adoption, patch provenance, source layout and scoped licences | Historical accepted / local: attributed Hermes and scoped licences; 6999 provenance and principal-notice/ANTLR companion accepted [H]. | RELEASE: bind final payload, patch provenance and notices; prior audit was not exhaustive over all transitive obligations. |
-| S0.02 | Controlled runtime/tools/context; no unapproved secondary calls, credential discovery or persistence | Local policy retained [E], [H]; Go exact routes, truthful identity and bounded completion metadata have controlled checks [G]. | LIVE/RELEASE: retain policy in final foreground/background consumers; source 02 identifies Explain and memory extraction only. |
-| S0.03 | Versioned process contracts, IDs, migration coordinator and isolated storage | Historical accepted: canonical SQLite/contracts; six 035 storage phases qualified to 6999; isolated recovery/maintenance accepted [H]. | RELEASE: qualify changed final artifacts. Preserve original phase attribution; no new migration execution or whole-runtime equivalence. |
+| S0.01 | Immutable Hermes adoption, patch provenance, source layout and scoped licences | Attributed Hermes and scoped notices retained. Matching cb59 backend/native/renderer provenance and packaged ANTLR notice verified [I]. | Keep third-party obligations scoped; this is not a newly exhaustive legal audit. |
+| S0.02 | Controlled runtime/tools/context; no unapproved secondary calls, credential discovery or persistence | Approved routes/policy retained [E,H,G]. Installed completions separately report requested/observed Sol for Explain, practice and memory extraction; DeepSeek for saved Case follow-up [I]. | No silent fallback observed; broader adversarial/context limits remain scoped. |
+| S0.03 | Versioned process contracts, IDs, migration coordinator and isolated storage | Canonical/migration contracts and unchanged storage tree qualified from6999; matching installed profile starts/reopens correctly [H,I]. | No new migration stress execution; original six storage phases retain attribution. |
 | S0.04 | Protected deliberate optional retrieval keys, activation and usage/cost controls | Local: deliberate protected optional keys; 63 historical retrieval identities reconciled with original failed aggregate retained [RET]. | SCOPE: live keyed billing/adapter matrices and monetary-cap guarantees unperformed; optional keys are not a prerequisite. |
-| S0.05 | Native Windows runtime starts with OS-only PATH on this PC | Historical accepted: 6999 OS-only PATH/runtime, three Recovery closes/two reopens and later bounded closes [H]. Source01/02 close cleanly [L]. | RELEASE: final matching installed runtime/lifecycle; source-mode closes do not establish OS-only installed acceptance. |
-| S0.06 | Bundled Docling/OCR/FastEmbed/LanceDB/Mem0 helpers perform offline round trips | Historical actual engines and installed rebuild/OCR scopes accepted [E], [H]. Source live automatic Mem0 capture/recall now has individual proof [L]. | SCOPE/RELEASE: qualify final engine consumers; three formerly outstanding real Mem0 bridge checks now pass in bounded B. |
-| S0.07 | Compatible pins, hashes, tokenizer/native binaries, CPU paths and no implicit downloads/cloud fallback | Historical pins/helper hashes, CPU policy and same-target 6999 inventory retained [E], [H]. | RELEASE: final payload/helper/native-binary inventory and no-download scope; do not transplant old artifact hashes or claim an all-engine pass. |
-| S0.08 | Exact five-model/account/input capability matrix, automatic routing/manual override | Local five-model policy/manual selection [G]; Sol Explain/extraction/practice identities [L] and both exact Go Case identities [J] observed. | LIVE/RELEASE: remaining account/input capabilities and final installed selection; no all-five-model or universal-image proof. |
-| S0.09 | App-owned authentication, real response per advertised available connection, stream/Stop/restart | Core Sol source composite accepted [L]; both Go Case discussions individually completed with exact requested/reported identity [J]. | LIVE/RELEASE: remaining freshness/case follow-up/installed journeys. Go cases do not prove every foreground/background consumer. |
+| S0.05 | Native Windows runtime starts with OS-only PATH on this PC | Accepted matching cb59 installation starts and reopens with OS-only app PATH and its own bundled Python process; ordinary owned closes complete [I]. | Current Windows PC only, as authorised; no claim about other hardware. |
+| S0.06 | Bundled Docling/OCR/FastEmbed/LanceDB/Mem0 helpers perform offline round trips | Historical actual engines/OCR/rebuild retained [E,H]; unchanged helper/dependency rows qualified. Installed actual automatic Mem0 capture, recall, correction and deletion passed [I]. | Retain exact older Docling/LanceDB/OCR scopes; no repeated all-engine sweep. |
+| S0.07 | Compatible pins, hashes, tokenizer/native binaries, CPU paths and no implicit downloads/cloud fallback | All33,509 dependency/Python/helper rows unchanged; all39,261 backend files verified in package and installed copy; matching EXE/ASAR hashes [I]. | No implicit download/model fallback observed within these routes; broader CPU limits unchanged. |
+| S0.08 | Exact five-model/account/input capability matrix, automatic routing/manual override | Exact five-model controls retained; source Sol and both Go responses observed. Installed Sol and DeepSeek report exact requested/response identities and saved selections [G,J,I]. | Astra/Luna account-specific live response and every model/input combination are not claimed. |
+| S0.09 | App-owned authentication, real response per advertised available connection, stream/Stop/restart | Both approved connections have actual response evidence. Installed Sol stream/Stop/new request/reopen and saved DeepSeek follow-up passed [I]. | Remaining key-free freshness and full cross-module journey are separate requirements. |
 | S0.10 | No-save sentinel absence, bounded resource/latency/installer measurements | Bounded historical no-save/CPU/resource/installer measurements retained [E], [H]; source closes measured separately [L]. | SCOPE: wider temporary-derivative/resource/latency claims remain unproved; no scale claim from these small fixtures. |
 | S0.11 | Schema compatibility, no implicit downgrade; app rollback distinct from data restore | Historical actual 035 checksum/schema-99 refusal and local restore guards retained [E], [H]. | RELEASE: compatible application rollback across newer indexes remains unproved; data restoration is a separate accepted scope. |
 
@@ -167,29 +163,29 @@ open. No inherited accepted scope is reopened merely by listing its limitation.
 
 | ID | Requirement (verbatim) | Supported current disposition | Remaining scope / parent field |
 | --- | --- | --- | --- |
-| S1.01 | Flow shell, connection controls and normal Windows launcher | Historical installed Flow/normal 6999 launcher accepted [H]; new Connections/focus fixes locally checked [G], [W]. | RELEASE/ACCESS: final source-matching installed shell/launcher and actual focus/layout; parent owns promotion. |
-| S1.02 | Direct and guided explanations/follow-ups across nephrology | Sol direct/follow-up/subsequent answers completed [L]; two Go Case discussions complete [J]. | LIVE: remaining guided/varied-domain connected scope; these passes do not establish all teaching breadth or clinical accuracy. |
-| S1.03 | Streaming, selected-subscription model override, Stop/retry | Core source:01 streaming and02 keyboard Stop/subsequent request retained; 03 normal reopen/persistence accepted [L]. | LIVE/RELEASE: final installed behavior and remaining model-selection scope; source 01 pointer timeout stays failed history. |
-| S1.04 | Ordinary study history resumes/deletes after restart; case branches remain volatile | Local scoped persistence/volatile guards [H]; 03 reopens retained conversation/source 01 capture without duplicate per parent [L]. | LIVE: broader resume/delete and volatile case error/crash/handoff boundaries remain; source proof is not installed acceptance. |
+| S1.01 | Flow shell, connection controls and normal Windows launcher | Matching installed Flow and Connections work; normal shortcut/pointer promoted tocb59 after installed acceptance, CheckOnly passes [I]. | Broader accessibility below; no foreground launch was needed for promotion. |
+| S1.02 | Direct and guided explanations/follow-ups across nephrology | Installed direct PTH/FGF23 explanation, guided calcitriol follow-up and post-Stop dialysis answer completed; source physiology/Library/Go discussions retained [I,L,J]. | Bounded varied-domain teaching proof, not all-topic clinical accuracy or complete content. |
+| S1.03 | Streaming, selected-subscription model override, Stop/retry | Installed exact Sol streaming, Stop with no captured cancelled answer, subsequent successful request and normal reopen passed [I]. | Retain source01 pointer timeout as failed history; no broad model matrix inflation. |
+| S1.04 | Ordinary study history resumes/deletes after restart; case branches remain volatile | Installed ordinary thread/messages and first capture survive normal close/reopen without duplication [I]; temporary Case scopes retain canonical absence [H,J,I]. | Broader crash/error/export derivative bounds remain as recorded; not every failure mode rerun. |
 | S1.05 | Actionable offline/auth/quota/model errors preserve work, without fallback | Local safe errors/no fallback [H], [G]; historical Astra subscription_limit remains dated. Source01/02 have fallback=false and successful Sol operations [L]. | LIVE: remaining actual error/work-retention scopes. Old Astra quota failure is not a current Sol blocker or proof of today's quota. |
-| S1.06 | Sources/unverified answers visibly distinguished; no canned production answer | Local cited/unverified/public-source display and real live Sol output exist [H], [L]. | FRESHNESS: source-grounded live answer with dates/eligible passages and visible lookup failure; generic live success does not prove it. |
+| S1.06 | Sources/unverified answers visibly distinguished; no canned production answer | Real source Library-grounded answer, original reader and unverified freshness failure are visible. Installed saved citation/original replay passed [I]. | FRESHNESS: successful eligible dated public-body answer still unverified. |
 
 ### S2 — Library, evidence and cases
 
 | ID | Requirement (verbatim) | Supported current disposition | Remaining scope / parent field |
 | --- | --- | --- | --- |
-| S2.01 | Useful direct text, text-PDF and scanned-PDF/OCR through selected pipeline | Historical accepted: text/PDF producers, scanned-PDF OCR/retrieval, exact 15 cells/units/footnote and physical pages [E], [H]. New upload control is mock-checked [U]. | INPUT/RELEASE: current hidden PDF/image journeys and final consumers; broad OCR/reading-order quality stays bounded. |
-| S2.02 | Preserve valid no-text image originals; separate OCR from model interpretation | Historical original retention accepted [H]; current Sol synthetic-image discussion reads labels per parent and preserves 19, 037-byte original, Memory 0 [J]. | INPUT/RELEASE: remaining image/OCR/installed scope; the fixture is not clinical interpretation accuracy or every modality. |
+| S2.01 | Useful direct text, text-PDF and scanned-PDF/OCR through selected pipeline | Historical actual PDF/scanned OCR pipelines retained [H]. Actual controller PDF text extraction and hidden Save/reopen passed; final helper bytes unchanged [I]. | Broader OCR/reading-order fidelity remains bounded; no duplicate imports. |
+| S2.02 | Preserve valid no-text image originals; separate OCR from model interpretation | Source Sol synthetic-image answer and original SHA pass [J]; actual controller PNG/JPEG originals survive Save/restart with hashes [I]. | No clinical image accuracy or all-modality claim. |
 | S2.03 | Durable selected Office supplements, actual slide/sheet/item/table locators and original bytes | Historical accepted: selected Office conversion/typed locators, downloads, six-original recovery and reopens [E], [H]. | RELEASE: retain exact qualified scope; external Office dialogs/automatic jumps remain unperformed, without repeating imports. |
-| S2.04 | Exact revision/passage/page/region citation and original access, unknown locators remain unknown | Historical accepted exact locators/originals, Library PDF page2, Case page1 and bounded reader fit [H]; reader focus fixes locally checked [W]. | INPUT/ACCESS: current reader/citation handoff and final accessibility; unknown locators stay unknown, highlighting unproved. |
+| S2.04 | Exact revision/passage/page/region citation and original access, unknown locators remain unknown | Source live Library citation→reader→original passed. Matching installed saved citation/original replay returns unchanged bytes and correct return focus [I]. | Unknown locators remain unknown; no unperformed highlight/external-Office jump claim. |
 | S2.05 | Stage eligible revisions; failed/cancelled replacement retains prior active revision | Local staged activation/prior-revision continuity/race fences retained [E], [H]. | INPUT: matching failure/cancel/delete/restart behavior remains bounded; controller upload completion is not revision activation. |
 | S2.06 | LanceDB native hybrid retrieval, filters, paraphrases/acronyms across editions/domains | Historical real LanceDB/FastEmbed retrieval/rebuild and installed queries; local current-only projection retained [E], [H]. | FRESHNESS/SCOPE: final edition/scope/currency filters and varied-domain paraphrase/acronym utility; no whole-corpus quality claim. |
 | S2.07 | Authorised local import, official user download, per-file edition/rights/attribution, originals preserved | Historical accepted classified 29 E07/L03 and 28 E06 admissions and scoped source/Office closure [E], [H]; source review grants no new rights [S]. | Preserve selected readiness, originals/rights/attribution and EMF/component/currency holds. Admission is not searchable or current; no reimport needed. |
 | S2.08 | Malformed/encrypted/oversized inputs and cancellation handled before unsafe persistence | Bounded local/engine malformed/oversized/cancellation refusals retained [E], [H]; control fixture/path guards locally checked [U]. | INPUT: final product encrypted/malformed/cancel handling remains distinct from controller fixture safety. |
-| S2.09 | Freshness-sensitive Explain automatically retrieves eligible evidence without an upload/paid key | Local key-free current-only search/one eligible PMC-body path, dates/rights/failure/Stop/replay retained [H]. | FRESHNESS: actual no-upload live answer using eligible retrieved evidence; dated OA research does not certify latest-final guidance. |
+| S2.09 | Freshness-sensitive Explain automatically retrieves eligible evidence without an upload/paid key | Current-only local checks and dated public-body implementation have focused checks; real candidate refusal is visibly reported [I]. | OPEN: selected candidate article_permission_required; no successful eligible public-body citation yet. No licence bypass or latest-final claim. |
 | S2.10 | Optional keyed retrieval has deliberate activation, protected keys, quota/cost-cap errors | Local activation/privacy/auth/quota/request-credit controls source-qualified [RET]; required key-free route retained [H]. | SCOPE: live optional keyed billing/error matrices/monetary caps remain unperformed; no paid-tool use required by this checkpoint. |
 | S2.11 | Temporary/unclassified case data and every derivative remain absent from durable stores | Bounded actual no-write/volatile guards [E], [H]; current MiMo temporary case persisted 0/Memory 0; saved DeepSeek/image flows Memory 0 [J]. | LIVE/INPUT: remaining derivatives across errors/crash/compaction/handoff/export/backup; recorded absence is not a universal retention guarantee. |
-| S2.12 | Explicit Save retains case snapshot/attachments; saved follow-up and restart/delete semantics | Historical Save/reopen/restored originals/deletion accepted [H]; DeepSeek discussion explicitly Saved and Sol saved image bytes unchanged [J]. | LIVE/INPUT: current saved follow-up/reopen and remaining connected scope; historical acceptance is not repeated. |
+| S2.12 | Explicit Save retains case snapshot/attachments; saved follow-up and restart/delete semantics | Source saved DeepSeek/image conversations and originals survive reopen. Installed saved DeepSeek follow-up persists through normal reopen; no Case facts enter personal Memory [I]. | Retain qualified historical attachment/delete/restore scopes; no repeated imports. |
 | S2.13 | Physical derivative cleanup, old Lance versions, delete-during-ingestion and stale-job exclusion | Historical accepted owned deletion/replay: 15 canonical records/one Library original suppressed, case 410, empty owned Memory recall [H]. | SCOPE: old-Lance-version, delete-during-ingestion/stale-job and complete physical purge remain bounded. |
 | S2.14 | Interactive Library stays usable while the normal queue progresses | Historical accepted ordinary queue02 actions/close plus 03 unfinished reopen/readiness/close [H], [Q]. | SCOPE/ACCESS: retain this closure; sustained resources/responsiveness and current renderer workload remain bounded, with no repeated imports. |
 
@@ -197,25 +193,25 @@ open. No inherited accepted scope is reopened merely by listing its limitation.
 
 | ID | Requirement (verbatim) | Supported current disposition | Remaining scope / parent field |
 | --- | --- | --- | --- |
-| S3.01 | Retain measurable broad content targets; original reviewed questions/cases with evidence terms | Integrated 1.1.2 minima retained [C]; completed 1.2.0 candidate adds reviewed finite depth:222 questions/50 cases/57 objectives/64 sources [D]. | CONTENT/RELEASE: parent activation/consumers and remaining required breadth/current evidence; finite increment is not complete curriculum. |
-| S3.02 | Actual immutable original pack installs/activates and consumers share it | Historical immutable1.1.2 activation/restart and installed selectors/reviewed consumer retained [E], [H]. | CONTENT/RELEASE: activate reviewed 1.2.0 after integration; verify shared consumers/predecessor pins at final matching source. No activation has run [D]. |
+| S3.01 | Retain measurable broad content targets; original reviewed questions/cases with evidence terms | Active immutable1.2.0:222 questions,50 cases,57 objectives,64 sources;44 new five-option questions/12 cases across11 finite units [I]. | CONTENT/CURRENCY: eleven domains partial and27 cells open; count growth is not complete curriculum. |
+| S3.02 | Actual immutable original pack installs/activates and consumers share it | Normal source startup activates1.2.0; installed manifest/catalogue selects it, with new citrate stages/debrief working [I]. | Further shared reviewed-quiz/new-pack history consumer scope remains bounded. |
 | S3.03 | Committed deterministic scoring, rationale sources, mistakes, pause/resume | Historical deterministic scoring/rationale/history and installed reviewed wrong-answer→plan producer accepted [H]. | CONTENT/RELEASE: matching new-pack feedback/pause/resume scope; retained sessions are not a new attempted assessment. |
-| S3.04 | Idempotent restart avoids duplicate answers/exposure; stable item/family/key versions | Local stable item/family/key/idempotency guards [H]; 1.2.0 preserves prior packs and four revised records' answers/choices/families [D]. | CONTENT/LIVE: runtime upgrade/history and remaining installed commit/resume/help scope; metadata preservation is not a performed upgrade. |
+| S3.04 | Idempotent restart avoids duplicate answers/exposure; stable item/family/key versions | Stable versions/ancestors retained; four repaired objective records preserve keys/families. Installed capture/thread and saved Case reopen are stable [I]. | Broader new-pack assessment commit/resume/history upgrade not inferred from metadata. |
 | S3.05 | Corrected/withdrawn keys annotate historical results without rewriting them | Local source/key annotation with immutable recorded scores/keys retained [H]; source notices now have narrower item-impact analysis [S]. | CONTENT/FRESHNESS: actual affected historical feedback and genuine key transitions where applicable; notice metadata is not a changed key. |
-| S3.06 | Fresh, assisted, repeat and generated aggregates remain separate after mode switches | Local separation retained [H]; source 03 completes practice generation/answer/end with reviewed aggregate unchanged [L]. | LIVE/CONTENT: broader installed help/repeat/mode transitions and new-pack scope; do not generalise one practice sequence. |
+| S3.06 | Fresh, assisted, repeat and generated aggregates remain separate after mode switches | Installed generated practice generation/answer/end leaves reviewed score aggregate unchanged [I]. | Broader help/repeat/mode transitions retain historical controlled scopes. |
 | S3.07 | Reserved bank never leaks into Explain/practice context | Local reserved-bank context exclusion/key-free mapping retained [E], [H]. | CONTENT/LIVE: preserve exclusions with new pack and live Explain/practice; no completed full-loop boundary claim. |
-| S3.08 | Generated practice is labelled, uses approved generation and keeps unreviewed keys separate | Core source accepted: repaired gate [B], source 03 live Sol practice generation/answer/end, matching reported identity and unchanged reviewed aggregate [L]. | LIVE/RELEASE: remaining cross-domain/Go/installed practice scope; retain 02 disabled-control failure. |
-| S3.09 | ESENeph insufficient coverage is honest; no complete exam simulation without supported blueprint/length | 1.2.0 candidate:218 mapped/222 General, 44 five-option items, four generic exclusions, zero objective holds; 11 domains remain partial/no simulation [D]. | CONTENT: parent activation and honest disclosures; do not carry1.1.2's repaired objective holds forward as unresolved in1.2.0. |
+| S3.08 | Generated practice is labelled, uses approved generation and keeps unreviewed keys separate | Installed live Sol practice is generated-unreviewed, answered/ended, with observed matching identity and separate scores [I]. | Not a reviewed-bank key or all-Go/cross-domain practice matrix. |
+| S3.09 | ESENeph insufficient coverage is honest; no complete exam simulation without supported blueprint/length | Installed1.2.0 reports218 mapped/222 General, partial ESENeph/no simulation; four objective holds resolved [I]. | CONTENT: eleven domains remain partial; no complete exam claim. |
 
 ### S4 — Memory, progress and study
 
 | ID | Requirement (verbatim) | Supported current disposition | Remaining scope / parent field |
 | --- | --- | --- | --- |
-| S4.01 | Hermes/Mem0 OSS + explicit FastEmbed/local Qdrant; SQLite authority and rebuildable generations | Historical actual Mem0/FastEmbed/local Qdrant/SQLite and installed rebuilds accepted [E], [H]; source automatic capture/recall individually evidenced [L]. | SCOPE/RELEASE: B now closes the three outstanding bounded bridge checks; final matching consumers and expected-volume performance remain separate. |
-| S4.02 | Durable idempotent eligible capture queue with references/provenance and correct scope | Core source:01 answer/follow-up captures and02 post-Stop capture completed; 03 retained conversation/source 01 capture stable without duplicate [L]. | LIVE: broader distinct-lesson/retry/scope provenance; 02 proves its own extraction model, not every retained 01 background operation. |
-| S4.03 | Automatic general learning points through approved live subscription, without case/prompt facts | Core source:01 study-point capture/recall 3; 02 capture 2 with requested=reported Sol extraction; 03 original capture survives reopen without duplicate [L]. | LIVE: correction/delete/later personalisation and case/prompt-fact boundaries remain; no complete current-source or installed capture claim. |
-| S4.04 | Deduplication, editable records, revision conflicts, physical history/index purge and suppression | Historical accepted manual revision2 correction/recall, deletion and ZIP suppression [H]; current confirmation focus has mounted checks [W]. | LIVE/SCOPE: races during automatic capture/summary, broader revision conflicts and complete physical history purge remain bounded. |
-| S4.05 | Relevant corrected personal context within separate library/memory budgets, no invented mastery | Historical scoped budgets/recall and manual corrected/deleted recall accepted [H]; ordinary source recall now evidenced [L]. | LIVE: changed later personalisation after correction/deletion and varied-domain context; no mastery/efficacy claim. |
+| S4.01 | Hermes/Mem0 OSS + explicit FastEmbed/local Qdrant; SQLite authority and rebuildable generations | Historical real engines retained; matching installed automatic Mem0 capture/recall and cleanup use the bundled approved stack [I]. | Expected-volume performance remains bounded; no independent hosted service added. |
+| S4.02 | Durable idempotent eligible capture queue with references/provenance and correct scope | Installed answer/follow-up/post-Stop capture jobs complete; recalled records and conversation remain stable after reopen. Cancelled run has no evidence/job [I]. | Broader race/retry/volume proof remains scoped to historical checks. |
+| S4.03 | Automatic general learning points through approved live subscription, without case/prompt facts | Matching installed Sol automatic learning-point capture completes and recalls; process history identifies approved memory-extraction response model. Saved Case adds zero Memory evidence [I]. | No generalisation to every clinical answer; temporary/raw facts stay excluded. |
+| S4.04 | Deduplication, editable records, revision conflicts, physical history/index purge and suppression | A newly auto-captured, exclusively owned synthetic record is edited, recalls at its new revision, then deleted with no cleanup pending; canonical/history and recall absence confirmed, persists after restart [I]. | Broader races/revision-conflict/summary purge retain controlled historical limits. |
+| S4.05 | Relevant corrected personal context within separate library/memory budgets, no invented mastery | Installed corrected Memory appears in scoped recall, old text disappears from recall, and deleted record stays absent after reopen [I]. | No claimed mastery/educational efficacy; later answer personalisation after correction is not separately measured. |
 | S4.06 | Plan uses goals/time/exam date/observed mistakes, with free browsing and manual overrides | Historical reviewed wrong-answer→exact plan/manual date override, restart and restore continuity accepted [H]. | CONTENT/LIVE: new-pack shared metadata and remaining Today/Test/return/resume in complete connected journey. |
 | S4.07 | Useful new-user home: Ask/Resume/review/updates, real records | Local real-record new/existing-user Home retained [E], [H]. | ACCESS/LIVE: remaining installed empty/history/error states and Ask/Resume/review/Updates returns; full home acceptance unperformed. |
 | S4.08 | Versioned export/restore with attachments/provenance and deletion limits on an isolated same-PC target | Historical accepted six-original Recovery and populated Connected restore, both indexes, Memory/plan continuity and deletion markers [H]. | RELEASE/LIVE: qualify final source and live-created data; deletion limits remain explicit. Data restore is not application rollback. |
@@ -227,7 +223,7 @@ open. No inherited accepted scope is reopened merely by listing its limitation.
 | --- | --- | --- | --- |
 | S5.01 | Bounded in-app source checks, explicit opt-in, durable successes/failures and topic-only queries | Local topic-only opt-in checks; one actual K01 baseline and reopened persistence with automation disabled retained [H]. | FRESHNESS: remaining Check/Stop/failure/stale/shutdown boundaries; no reviewed update or clinical-currentness claim from that baseline. |
 | S5.02 | Final/draft, chapter replacement, corrigenda, expiry, removal/retraction remain separate | Local invalidation/final-draft-replacement/correction/retraction states [H]; dated47-record status/notice review narrows gaps [S]. | CURRENCY/FRESHNESS: apply scoped relationships and inspect required current evidence; corrected bytes and unavailable notice status stay unknown. |
-| S5.03 | Detected changes separate from explicitly reviewed educational entries, with dates/source links | Local detected-versus-reviewed workflow and actual baseline discovery retained [H]; source research is separate [S]. | FRESHNESS: actual changed publication→explicit educational review→dated links/affected objectives remains unaccepted; current source 02 snapshot supplies no terminal freshness pass [J]. |
+| S5.03 | Detected changes separate from explicitly reviewed educational entries, with dates/source links | Actual Updates discovery works; repaired exact kidney-transplant query returns25 records/146 hits,24 new pending. Existing broad records preserved [I]. | OPEN: explicit educational review→affected feedback/history/eligibility journey; discovery is not reviewed guidance. |
 | S5.04 | Correction flags bank/learning history without rewriting keys/results | Local feedback/history annotation preserves recorded keys/results [H]; source impact proposals do not alter immutable pack [S]. | FRESHNESS: actual affected-item/feedback/history/eligibility effects. Study projection remains optional; no new Study-specific release gate. |
 | S5.05 | Offline/failed/stale/restricted reimport accurate, same-URL change and exact-copy review reproducible | Local exact edition+SHA reconfirmation/invalidation and truthful failed sync retained [H]; source access failures remain explicit [S]. | FRESHNESS/CURRENCY: matching stale/offline/restricted/same-URL/corrected-copy behavior; no unknown copy promoted current. |
 
@@ -235,34 +231,29 @@ open. No inherited accepted scope is reopened merely by listing its limitation.
 
 | ID | Requirement (verbatim) | Supported current disposition | Remaining scope / parent field |
 | --- | --- | --- | --- |
-| S6.01 | Required broad-topic and ESENeph cells: explanation/evidence/questions/cases/update sources | Open complete coverage:1.2.0 candidate fills 11 finite units and repairs four holds; all 11 domains partial and27 currency cells open [D]. | CONTENT/CURRENCY: activate reviewed increment and address genuine remaining explanation/evidence/questions/cases/update-source gaps; no full-coverage relabelling. |
-| S6.02 | Case → Explain → practice/Test → feedback → Memory → plan → Updates across domains | Historical connected subset [H]; core Sol composite [L]; both Go discussions and Sol synthetic-image operation individually pass [J]. | LIVE/INPUT/FRESHNESS: remaining saved follow-up/correction/personalisation and reviewed Updates/return scope; no whole connected or installed aggregate. |
-| S6.03 | Completed relevant backend/renderer/regression on integrated source, failures/exclusions adjudicated | Historical identities/failures [E], [H]; bounded lane reports [G], [U], [W], 12 repair/bridge passes [B] and14 content checks reported [D]. | CHECKS/RELEASE: final integration qualification; connected-source 02 errors/nonterminal snapshot preserved [J], no full all-green suite. |
-| S6.04 | One Flow system; keyboard, screen reader, text scaling/resize/reduced motion; loading/empty/errors | Historical bounded Flow/reader200% fit accepted [H]; focus/navigation/wrapping fixes have mounted checks; resize control mock-checked [W], [U]. | ACCESS: actual current focus/native-dialog/layout and screen-reader/physical-DPI/OS evidence unperformed. Mounted DOM/AX/emulation do not prove speech or OS behavior. |
-| S6.05 | New source freeze → exact payload → manufacture/install → normal lifecycle matching that source | Historical accepted 6999 freeze/manufacture/install/lifecycle; 02cd88e1 manufacture recorded without matching acceptance [H], [F]. Source01/02 installedAcceptance=false [L]. | RELEASE: final integrated freeze→payload→unsigned installer→matching installed journeys/lifecycle; 03 source composite is not installed credit. |
-| S6.06 | Unsigned current-PC delivery, update provenance, static distribution and complete notices | Historical accepted unsigned current-PC distribution/principal notices/ANTLR companion [H]. | RELEASE: final notices/static artifact/update provenance. Signing and a separate clean PC/VM remain optional. |
-| S6.07 | Install/upgrade/rollback, database migration, uninstall/data-retention and isolated installation identity | Historical 035 six-phase storage and qualified 6999 uninstall/reinstall/unchanged canonical-original state accepted [H]. | RELEASE: final compatibility/identity qualification and existing rollback limit; preserve original phases/failed aggregates without rerunning accepted storage. |
-| S6.08 | Backup/restore incl. Office/image originals, citations and both derived indexes; recovery disclosure | Historical accepted Office/image/Case original retention, citations, populated restore/both indexes and deletion suppression [H]. | RELEASE/LIVE: changed-source qualification and remaining live/volatile-case derivative limits; do not reopen already accepted initial restores/imports. |
-| S6.09 | Plain-language onboarding/running/recovery and truthful capability controls | Local guides and historical 6999 launcher are documented [H]; October 7 Go approval/model-selection changes are current [F], [G]. | RELEASE: reconcile final guides/launcher/account/content/currency limits with actual results; remove obsolete blanket Go-pause/quota claims. |
-| S6.10 | Fresh isolated installation on this Windows PC completes required real journeys with bundled runtime | Historical current-PC native/Connected/gap/maintenance subsets accepted [H]; core source composite01/02/03 accepted with retained failures [L]. | RELEASE/LIVE/CONTENT/ACCESS: final matching required journeys remain open. Source03 pass is not full current-source or installed execution. |
+| S6.01 | Required broad-topic and ESENeph cells: explanation/evidence/questions/cases/update sources | Installed1.2.0 broad increment resolves four holds and adds11 finite units; all11 domains/27 currency cells stay partial/open [I]. | OPEN #20: remaining required evidence/questions/cases/update-source depth and currency; no relabelling to pass. |
+| S6.02 | Case → Explain → practice/Test → feedback → Memory → plan → Updates across domains | Installed core learning/practice/capture, Memory correction/delete, Library replay, citrate teaching and saved Go follow-up have concrete passes [I]. | OPEN: remaining reviewed Updates/plan/personalisation/cross-domain connected chain; no whole-product aggregate. |
+| S6.03 | Completed relevant backend/renderer/regression on integrated source, failures/exclusions adjudicated | Relevant lane/source checks retained,12 repair/actual-Mem0 bridge checks pass, query fixes separately checked; matching installed journeys pass [I]. | No new broad sweep. Historical failed/partial invocations retain exact identities/statuses. |
+| S6.04 | One Flow system; keyboard, screen reader, text scaling/resize/reduced motion; loading/empty/errors | Flow focus/wrapping mounted checks retained; actual hidden PDF/image input, two window sizes, screenshot review, Memory confirmation/return and Library return focus passed [I]. | Physical Narrator/NVDA, DPI/high-contrast/settings and native dialogs are unperformed beyond recorded historical scopes. |
+| S6.05 | New source freeze → exact payload → manufacture/install → normal lifecycle matching that source | Accepted cb59 freeze→matching renderer/native/backend→unsigned NSIS→fresh install→full inventory→actual installed core→ordinary closes/reopens [I]. | Artifact is runnable; remaining full product/content/currency work stays open. |
+| S6.06 | Unsigned current-PC delivery, update provenance, static distribution and complete notices | Unsigned current-PC package has exact installer/EXE/ASAR/backend identity and bundled ANTLR notice; old notice supplement no longer needed for this installer [I]. | Static external publication not performed; broader third-party obligations retain their review limits. |
+| S6.07 | Install/upgrade/rollback, database migration, uninstall/data-retention and isolated installation identity | Fresh isolated cb59 install uses revision-specific identity and existing preserved E profile. Unchanged storage/recovery/helper trees qualify retained6999 evidence [I,H]. | No repeated uninstall/reinstall or migration sweep; compatible app rollback across newer indexes remains unproved. |
+| S6.08 | Backup/restore incl. Office/image originals, citations and both derived indexes; recovery disclosure | Historical populated recovery/originals/indexes/deletion suppression retained under exact unchanged storage/knowledge/memory trees [H,I]. | Qualification is not new restore execution or whole-runtime equivalence. |
+| S6.09 | Plain-language onboarding/running/recovery and truthful capability controls | Current guides distinguish live Sol/Go success, exact selected installation and preserved E profile from dated failures; normal launcher validated after promotion [I]. | Keep guide/audit aligned with remaining content/freshness/accessibility work. |
+| S6.10 | Fresh isolated installation on this Windows PC completes required real journeys with bundled runtime | Fresh matching cb59 installation runs real Sol core and saved DeepSeek follow-up using bundled Python and OS-only PATH; qualified retained recovery and installed content/originals pass [I]. | Full required content/currency and remaining connected/accessibility scopes remain open; no complete-product claim. |
 
-## Parent fields still open
+## Parent disposition
 
-These are the existing finish outcomes and recorded limits, not a new test plan.
-Parent fills exact receipt/source/artifact identities and advances only the
-corresponding operations. No successful historical engine, import, recovery,
-storage or native operation needs repetition solely for this report.
+The runnable matching release and the core learning vertical slice are accepted.
+Remaining work is substantive: #20 required content/currency, successful eligible
+public-body evidence and reviewed Updates effects, the remaining connected
+plan/personalisation chain, and explicit broader accessibility/performance limits.
+Physical desktop input remains prohibited while the owner uses this PC; hidden
+controls do not claim spoken screen-reader or OS-dialog proof.
 
-| Field | Current state and next necessary disposition |
-| --- | --- |
-| CHECKS | **Bounded repair checks passed:**771cf4f3; 12/12 XML identities including the three outstanding Mem0 cases [B]. Retain exact source/outcome limits and qualify any later changes. No repeat of these checks or full integrated sweep is requested by this report. |
-| LIVE | **Core Sol composite and both Go Case discussions evidenced:** retain original source/operation attribution and failed aggregates. Sol image labels/original bytes also individually pass [J]. Complete remaining saved follow-up/correction/deletion/personalisation/varied-domain journey and final installed scope. No new eligibility questionnaire, fallback or repeated successful route proof is introduced. |
-| INPUT | **Current journeys unperformed here:** parent-owned hidden Library PDF/image selection, permissions, extraction/preview/citation and temporary/explicit-Save Case use; complete remaining daily-case/image generation scope. Reuse historical original/retention evidence at its qualified scope. Controller success alone does not pass the product flow. |
-| CONTENT | **Bounded increment complete, activation pending:** parent review/integrate def0f80d; 1.2.0 has 222 questions/50 cases/57 objectives/64 sources, 44 five-option questions and repaired four holds. Actual activation/shared consumers/predecessor history remain unperformed. Eleven partial domains/27 open currency cells and explicit broader pathways remain product gaps; full required-cell completion is not established [D]. |
-| CURRENCY | **Dated evidence narrowed, current-content clearance incomplete:** adopt the source report through parent/content ownership. Record correction relationships and scope-specific reviews; retain unknown/overdue/replaced states and rights. Unavailable notice data is unknown, not a false key or absence of corrections. No source report alone clears27 cells. |
-| FRESHNESS | **Unaccepted:** connected-source 02 snapshot records `dated_public_evidence_missing` without a terminal aggregate [J]. Parent owns resolution of the existing no-upload eligible-evidence answer/failure path and actual changed-publication→educational review→affected feedback/history/eligibility journey. Preserve earlier harness errors; no clinical-currency or full Updates pass follows other learning successes. |
-| ACCESS / SCOPE | **Bounded historical/local evidence:** parent fills actual current focus/dialog/wrapping/resize/loading/error observations and remaining workload/retention limits at their stated scope. Spoken Narrator/NVDA, physical Windows DPI/high contrast/OS settings and physical file/external Office dialogs remain separately unperformed where not historically accepted. Hidden resize/AX/DOM checks do not pass them. Expected Mem0 volume, broad OCR fidelity and universal derivative purge remain unproved; do not invent acceptance from small fixtures. |
-| RELEASE | **Final artifact/acceptance not supplied:** parent freezes the integrated repair/content/source state, records exact installer/EXE/ASAR/backend/helper/notices identities and accepted matching bundled operation/current-PC journeys, then reconciles guides and normal launcher. Retain accepted 6999 recovery/maintenance/source qualifications; compatible rollback across newer indexes remains limited. Signing and separate clean PC/VM stay optional. GitHub/disposition/cleanup remain parent-owned and were not inspected here. |
+No new signing, clean-PC, external review-panel or full-exam quota requirement
+is introduced. Do not repeat successful imports, engine/storage checks or provider
+calls solely to make an aggregate green. Keep original failed receipts intact.
 
 <a id="sources"></a>
 The source report closes specific old metadata/access gaps and supplies newly
@@ -270,7 +261,8 @@ identified IKMG/ISTH correction relationships and scoped AAV/CKD-MBD/
 urine-eosinophil/ISPD notice impacts. It finds no key reversal from those specified
 notices in the compared items; this is not a fresh clinical review of all content.
 Hyperkalaemia references were already migrated in 1.1.2 and need no repeat.
-Remaining named work includes the eight-record MGRS2026 diagnostic comparison,
+The eight-record MGRS2026 comparison now supports all seven keys and one case,
+with one ancillary rationale clause needing a source/narrowing. Remaining work includes
 overdue UKKA HD/PD/pregnancy review, unavailable Alport/dRTA/donor/candidate/US MEC
 notice status, incomplete AKI/CUA notice completeness and exact corrected-file
 incorporation. Publication status can be current while a chapter is replaced or
@@ -280,7 +272,7 @@ The completed 1.2.0 candidate implements all four mapping repairs as version2:
 `RN11-T20-001`→`T20.O02`, `RN11-T20-003`→`T23.O01`,
 `RN11-T17-004`→`T21.O02`, and `RN11-T23-004`→new`T23.O03`
 with `RN13-CASE-CITRATE`. Answers/choices/families remain unchanged [D].
-These holds are resolved in the candidate, not in the still-integrated 1.1.2.
+These holds are resolved in the active installed1.2.0 release.
 Broader domain gaps remain, including complete treatment pathways, further rare
 diseases, dialysis operations, transplant aftercare and supportive/sexual-health
 breadth; question counts and repaired mappings do not close them. No external
@@ -319,3 +311,19 @@ stay outside Git. Parent owns later amendments, execution, integration and relea
 [B]: #checks
 [D]: #content
 [J]: #connected
+
+<a id="installed"></a>
+## Current parent evidence
+
+See [matching delivery](DELIVERY_20261007.md) for exact artifacts, clocks, accepted
+scope and remaining limits. The parent actually performed the installed journeys;
+the earlier audit lane did not. Actual hidden controller upload/resize/persistence
+proof is in `evidence/orchestration/control-input-acceptance.json`. Module-tree
+qualification is in `evidence/orchestration/runtime-qualification.json`.
+
+- Package: `C:/rn-finish-20261007/evidence/release/package-result.json`, SHA256 `7ea882d0e7120db8c93a4124904dc6a0d32048042683cc4d61a98be6665e2d6f`.
+- Installed core: `C:/rn-finish-20261007/evidence/connected/sol-installed-cb59-01/result.json`, SHA256 `9c74429f9ecd3ef572d8089abcc8323999b0e7bf81ad80c4fa670dcc54c29752`.
+- Installed follow-through: `C:/rn-finish-20261007/evidence/connected/followthrough-installed-cb59-04/result.json`, SHA256 `32c176400f741d0b790d8758d455273114a94ce2856f4047a89710c181388ea6`.
+- Promotion: `C:/rn-finish-20261007/evidence/release/promotion.json`, SHA256 `cb53eb12a740f5a769c3d857d727c492abf83a2149d8c42c5c06837f863e0d67`.
+
+[I]: #installed

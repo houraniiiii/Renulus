@@ -16,21 +16,26 @@ integration build is on `build/renulus-integration`. The matching Windows app
 is installed on the owner's PC and selected by the Renulus desktop shortcut.
 Installation, recovery, originals, deletion handling, native reader and ordinary
 shutdown/reopen have accepted evidence within the recorded local scopes.
-The owner accepted that local handover on October 6, 2026 with the earlier
-Codex `subscription_limit` documented. Later that day an exact `gpt-6.1-sol`
-streaming diagnostic succeeded on the existing connection. Source commit
-`02cd88e1` fixes Renulus's erroneous catalogue gate and exact model selection;
-matching installed Learn, automatic capture and dependent live journeys remain
-unproved. Draft PR #13 tracks that validation. See the
+On October 7, actual source-app journeys completed with Codex `gpt-6.1-sol`
+and both approved OpenCode Go models. Sol Explain, follow-up, Stop/retry,
+generated practice and completed automatic Memory capture/recall have recorded
+proof. Library citation/original access and synthetic Case/image journeys also
+have individual passes. The 1.2.0 content release contains 222 questions and
+50 teaching cases with explicitly partial ESENeph coverage. The matching
+cb59beb2 installation passed the real Sol core learning/capture/reopen journey
+with bundled Python and an OS-only app PATH. The normal launcher selects it,
+preserving the E: learning profile. Draft PR #13 tracks the release and
+remaining evidence/content work. See the
 [running guide](docs/implementation/RUNNING.md) and
-[requirement audit](docs/implementation/finalise-audit-699938f2.md).
+[current continuation](docs/implementation/FINISH_20261007.md).
 
 The repository is `houraniiiii/Renulus`, with independent Git history.
 `Start-Renulus.cmd` opens this learning app. The archived clinical MVP has its own
 explicit reference launcher and is separate from Renulus implementation evidence.
 
 - [Project brief](docs/PROJECT_BRIEF.md) — audience, purpose and current status.
-- [Local Windows handover](docs/implementation/DELIVERY_20261006.md) — installed app, installer, notice companion and accepted live blocker.
+- [Windows delivery](docs/implementation/DELIVERY_20261007.md) — runnable installation, connected evidence and exact remaining scope.
+- [Previous Windows handover](docs/implementation/DELIVERY_20261006.md) — retained October 6 installation and recovery evidence.
 - [Run the app](docs/implementation/RUNNING.md) — Windows delivery and contributor startup.
 - [Control the development app](docs/implementation/APP_CONTROL.md) — hidden app-scoped MCP/Playwright input and screenshots while the owner uses this PC.
 - [Use Renulus](docs/implementation/USING_RENULUS.md) — subscriptions, study, Library, Cases, Memory and recovery.
