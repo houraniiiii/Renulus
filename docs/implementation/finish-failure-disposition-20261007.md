@@ -8,7 +8,7 @@ fresh bootstrap and installed correction/Updates effects; none is executed here.
 
 **Disposition:** retain the proved failure fences, including real Lance pruning,
 controlled capture/index recovery and installed Memory correction/deletion.
-The ten criteria below retain a finite unproved installed transition; the
+The ten criteria below identify finite unobserved installed extensions; the
 expected-volume boundary is separately undefined. This review establishes no
 new functional defect, all-criteria pass, current quota block or stress target.
 “First missing” is the next evidence dependency, not a claim that completing it
@@ -67,9 +67,15 @@ one K01 baseline from failed01 and proves reopen with automation off, not stale 
 
 Pin IDs below resolve to exact tests in the next table. **LOCAL** means the named
 application/engine boundary is already proved; **OPEN** means the stated matching
-installed transition is not proved by these receipts. Neither means “rerun all”.
+installed observation is absent. These are evidence levels, not automatic new
+release gates: the adopted plan does not require every controlled failure to be
+re-enacted in an installed binary. Parent accepts source-relevant existing
+backend/engine and mounted proof for those rules. New installed work needs a
+specific Windows/process/persistence gap or uncovered behavior; no repeated
+provider quota attempt, import, engine sweep or ten-scenario native matrix.
+Unobserved summaries/retention behavior remains explicitly unverified.
 
-| Criterion | Already proved and source-relevant | First concrete unproved required transition / disposition |
+| Criterion | Already proved and source-relevant | First unobserved installed extension / disposition |
 | --- | --- | --- |
 | S1.05 | LOCAL: L1 auth/quota/EOF preserves input and failed run across restart, then deliberate same-thread retry; mounted recovery in [subscriptions](finalise-subscriptions.md) retains drafts and explicit retryability. Probe02 supplies an actual quota error only. I proves Stop→new request, not error recovery. | OPEN: actual installed selected-account error → retained question/thread → deliberate retry without partial-answer capture or fallback. Start with an available failure receipt's work-retention fields; Probe02 has no such closure. Offline/auth/quota/model are the finite required categories, not new provider/model permutations. Do not manufacture quota failures or infer today's quota from October6. |
 | S2.05 | LOCAL: K1/K2 preserve the previous active revision after failed/queued-cancelled replacement and fence late cancel/delete/replace publication. Actual ordinary queue close/reopen is already accepted by [queue report](finalise-ingestion-usability-699938f2.md). | OPEN: cancel a processing replacement → normal reopen → same prior revision/original remains active and retrievable, cancelled revision never activates. Existing queue readiness/close and controller upload completion do not establish this transition. No repeated successful format imports are needed to credit the existing queue proof. |
@@ -78,7 +84,7 @@ installed transition is not proved by these receipts. Neither means “rerun all
 | S2.13 | LOCAL/ENGINE: K2[delete] fences late extraction, K3 checks real Lance row/version pruning and original removal; R/K6 covers deletion during rebuild. Connected03 already proves owned deletion plus older-ZIP suppression and actual rebuilt indexes. | OPEN: matching installed delete during ingestion → late worker completion/restart leaves no republished passage/original or obsolete owned index data. Old-version pruning is **not wholly unproved**; retain K3's one-version/zero-row result and R's changed-generation proof. Existing restore acceptance is not this active-ingestion race. |
 | S4.02 | LOCAL: M1/M2 prove durable reference jobs, restart/version guards, cross-topic distinct points and idempotent replay; M3 blocks deletion after inference before commit. I's job `memoryjob_2daff84c98d549d4b3daa508c105f517` completes once for `learn-answer:run_30b88c4c8ff24eda8b10b40119d4bb9e`; stopped `run_722213eac24b4d46be4e54cbdd9e8029` has no evidence/jobs/records. | OPEN: installed eligible answer survives its own failed capture → reopen → deliberate Retry completes the same still-eligible reference once. I covers successful repeated capture/reopen, not restart of a failed capture. Share this one remaining failure-retry dependency with S4.09, rather than create another race/volume matrix. |
 | S4.04 | LOCAL/ENGINE: M4/M5/M6 cover edits/deletes during generation, stale index activation, visible pending physical purge and later cleanup; actual Mem0 test M7 inspects history and removed sentinel bytes. D edits owned `memory_4e1dc4f5924241c4a561d0b796b906a1` revision1→2, deletes it: facts0/history0, purgePending=false, recallRemoved=true; absent after reopen. | OPEN: installed correction during summarisation → late summary does not reuse the superseded personal fact → restart/reindex preserves the corrected revision. Existing controlled capture-race/physical-history proof remains credited. D's sequential edit/delete and M4's capture race are not a concurrent summary proof; no requirement to replay successful deletion. |
-| S4.09 | LOCAL/ENGINE: M8 fails extraction, retries to one canonical fact while index fails, then repairs index without duplicating extraction (attempts2). M2 retains distinct CKD/transplant lessons. M7 uses three facts and a CKD-worded query; Recovery02/Connected03 rebuild4–6 Memory records. I adds real repeated captures. | FUNCTIONAL OPEN: the shared S4.02 failed-capture→Retry transition; installed failed-index state→successful repair is separately unproved although small-state rebuild is proved. M7 is not abbreviation expansion or broad paraphrase coverage. **BOUNDARY UNDEFINED:** no adopted expected-memory-volume/latency threshold recovered. This is not a failed volume result and creates no new stress-test requirement. |
+| S4.09 | LOCAL/ENGINE: M8 fails extraction, retries to one canonical fact while index fails, then repairs index without duplicating extraction (attempts2). M2 retains distinct CKD/transplant lessons. M7 uses three facts and a CKD-worded query; Recovery02/Connected03 rebuild4–6 Memory records. I adds real repeated captures. | INSTALLED OBSERVATION OPEN: the shared S4.02 failed-capture→Retry transition; installed failed-index state→successful repair is separately unproved although small-state rebuild is proved. M7 is not abbreviation expansion or broad paraphrase coverage. **BOUNDARY UNDEFINED:** no adopted expected-memory-volume/latency threshold recovered. This is not a failed volume result and creates no new stress-test requirement. |
 | S5.01 | LOCAL: U1–U3 preserve prior success through capped offline retries, cancel/shutdown transport, and mark interrupted work after restart. Topic-only opt-in/caps pass B. Gap supplies baseline/reopen; [installed Updates](finish-updates-review-20261007.md) adds T21 discovery→review→unchanged refresh/reopen. Failed T11 journey01 had a successful empty check, not transport failure. | OPEN: installed source Check failure → reopen retains failed/interrupted state and prior successful timestamp, with automation preference unchanged. Stop/shutdown mechanics already have controlled proof; ordinary app closes do not prove an active-check interruption. Parent correction-effect work remains separate and is not duplicated here. |
 | S5.05 | LOCAL: V1/V2 invalidate review on changed bytes and require a new exact original review; V3 refuses access-changed reimport. C/V4 denies unbound corrected-copy promotion, C/V5 preserves failed outbox ordering/retry; F has explicit offline/no-rights/timeout failures. | OPEN: installed previously current copy → same-URL/changed-byte or restriction event → excluded current eligibility and truthful failed/no-match sync until exact-copy review succeeds. **Parent A04/Updates-effect acceptance owns this dependency.** Source failure/notice metadata and the reviewed T21 paper with zero linked bank items do not close it; do not run a second correction lane. |
 
@@ -108,8 +114,10 @@ explicit. A comma-separated parameter list denotes those exact expanded node IDs
 | V3 | `tests/knowledge/test_acquired_binding.py::test_publication_denials_and_unmatched_clearing_prevent_selected_import[unbound-access_changed]` — B. |
 | V4 / V5 | `tests/updates/test_correction_invalidation.py::test_correction_revokes_all_copies_and_only_exact_corrected_copy_can_be_reconfirmed`; `tests/updates/test_correction_invalidation.py::test_failed_outbox_replays_older_promotion_before_newer_invalidation` — C. |
 
-Parent disposition: retain these credits in A07; close S5.05 only against the
-parent's actual A04 effect receipt. Group the shared S4.02/.09 retry dependency
+Parent disposition: retain these credits in A07. The parent A04 receipt may
+close only the source-effect transitions actually performed; a declared
+synthetic notice cannot itself prove same-URL byte replacement, restriction
+changes or exact corrected-copy acquisition. Group the shared S4.02/.09 retry dependency
 once. Recover/decide the expected-volume boundary before treating measurements
 as pass/fail; catalogue counts, canonical-byte capacity and configured helper
 limits are not that target. No broad engine sweep, import replay, provider retry,
