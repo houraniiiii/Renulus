@@ -21,6 +21,7 @@ def test_application_release_preserves_scored_history_and_bootstraps_successors(
     content.install_pack(packs / "renulus-foundations/1.2.0")
     services = Services(AppPaths.create(tmp_path / "synthetic-profile"), database)
     services.registry.update(content=content, content_pack_root=packs)
+    services.registry["content_pack_selection"] = {"version": "1.3.0"}
     assessment = AssessmentRepository(services)
     session = assessment.start(StartRequest(idempotency_key="application-old-session", count=50,
                                            selector=Selector(topic_ids=["T11"])))
@@ -71,6 +72,7 @@ def test_application_release_preserves_scored_history_and_bootstraps_successors(
 
     reopened = Services(services.paths, database)
     reopened.registry["content_pack_root"] = packs
+    reopened.registry["content_pack_selection"] = {"version": "1.3.0"}
     create_router(reopened)
     assert reopened.registry["content_bootstrap"]["reason"] == "active_version_not_older"
     assert database.fetch_one("SELECT COUNT(*) n FROM content_packs")["n"] == old_count + 1

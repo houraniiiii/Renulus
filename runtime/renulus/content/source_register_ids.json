@@ -1,7 +1,7 @@
 {
   "source_register": "docs/SOURCES.md",
-  "checked_on": "2026-10-04",
-  "source_register_sha256": "1ee37fb21760a95462839c518f4fc5195fa032e12223d4256642c8fad60533e3",
+  "checked_on": "2026-10-07",
+  "source_register_sha256": "0f98030aea8b7ec2ab15c79b2f1e7606a373f0d74119563901d9c4654d274404",
   "ids": [
     "C01",
     "C02",
@@ -20,6 +20,7 @@
     "G06",
     "G07",
     "G08",
+    "G09",
     "K00",
     "K01",
     "K02",

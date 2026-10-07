@@ -12,12 +12,22 @@ from .helpers import PACK, read, refresh, write
 
 @pytest.fixture
 def pack_root(tmp_path):
+    return historical_bundle(tmp_path)
+
+
+def historical_bundle(tmp_path):
+    """These historical bootstrap cases target the immutable 1.1.2 bundle."""
     root = tmp_path / "bundles"
-    shutil.copytree(PACK.parent, root / "renulus-foundations")
+    for version in ("1.0.0", "1.0.1", "1.1.0", "1.1.1", "1.1.2"):
+        destination = root / "renulus-foundations" / version
+        if not destination.exists():
+            shutil.copytree(PACK.parent / version, destination)
     return root
 
 
-def boot(database, tmp_path, root=PACK.parent.parent, selection=None):
+def boot(database, tmp_path, root=None, selection=None):
+    if root is None:
+        root = historical_bundle(tmp_path)
     services = Services(AppPaths.create(tmp_path / "isolated-profile"), database)
     services.registry["content_pack_root"] = root
     if selection is not None:
