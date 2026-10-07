@@ -165,10 +165,12 @@ The subsequent [eight-item MGRS comparison](implementation/finish-mgrs-compariso
 resolved the 2026 reading blocker through the official Europe PMC full-text XML
 for DOI **10.1093/ckj/sfag163**, PMCID **PMC13284707**, retrieved October 7 at
 13:31:22 UTC under its CC BY 4.0 notice. The seven existing keys and one teaching
-case remain supported in that bounded diagnostic comparison. One ancillary
-RN11-T11-001 rationale clause needs its own source or narrower wording in a later
-immutable release. The source snapshot/locators have not yet been adopted into
-the pack. The full appendix, treatment and broader MGRS scope are not cleared.
+case remain supported in that bounded diagnostic comparison. Immutable pack
+**1.3.0** now adopts those scoped snapshots/locators and narrows both ancillary
+RN11-T11-001 rationale copies without changing answer A. Its rationale-only
+successor preserves historical keys and attempts; see the
+[application report](implementation/finish-content-application-20261007.md).
+The full appendix, treatment and broader MGRS scope are not cleared.
 
 Overdue UKKA clinical reviews, named unavailable correction records and
 unreviewed treatment scopes remain separately identified. These report updates

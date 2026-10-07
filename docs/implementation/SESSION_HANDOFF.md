@@ -1,6 +1,12 @@
 # Session transfer — October 5, 2026
 
 Active continuation, October 7: read [FINISH_20261007](FINISH_20261007.md).
+Its matching b8 afternoon checkpoint is current: installed Sol dated evidence,
+capture/reopen and individually scoped1.3.0/Study/keyboard operations passed.
+The Today→reviewed Updates handoff defect is the only active bounded lane;
+recover its handle and preserved Study02 receipt before any further execution.
+The next acceptance reuses existing records. The launcher remains cb59.
+See [b8 installed evidence](finish-installed-b8a3c177-20261007.md).
 Its 14:07 UTC checkpoint records the matching **installed cb59beb2** core Sol
 and saved DeepSeek/Library/Memory/teaching acceptance and normal launcher promotion.
 Read [the delivery](DELIVERY_20261007.md) before any repeat execution. All first-wave
