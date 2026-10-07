@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { RefreshCw, Search } from 'lucide-react';
-import { api } from '../../platform/api';
+import { api, ApiError } from '../../platform/api';
 import { useResource } from '../../platform/useResource';
+import { useNavigation } from '../../shell/navigation';
 import { Button, ErrorState, LoadingState, Notice, PageHeader, Select } from '../../ui';
 import SourceChecks, { checkMessage } from './SourceChecks';
 import UpdatesQueue from './UpdatesQueue';
@@ -15,6 +16,14 @@ type RetryOperation = { kind: 'literature' | 'refresh' | 'sync' } |
   { kind: 'review'; state: 'reviewed' | 'dismissed' } | { kind: 'read'; id: string };
 
 export default function Updates() {
+  const navigation = useNavigation();
+  const entryId = navigation.route === 'updates' && typeof navigation.handoff?.entry_id === 'string'
+    ? navigation.handoff.entry_id : undefined;
+  const handoffRequest = useRef<AbortController | null>(null);
+  const selectionVersion = useRef(0);
+  const [handoffAttempt, setHandoffAttempt] = useState(0);
+  const [handoffLoading, setHandoffLoading] = useState(false);
+  const [handoffError, setHandoffError] = useState<unknown>(null);
   const [filter, setFilter] = useState<Filter>('pending');
   const [offset, setOffset] = useState(0);
   const [current, setCurrent] = useState<Entry | null>(null);
@@ -36,20 +45,55 @@ export default function Updates() {
     return { page, ...sources, ...publications, topics };
   });
 
+  // Only an explicit navigation (or its retry) consumes the handoff. Queue
+  // refreshes must not reopen the entry or replace an in-progress review.
+  useEffect(() => {
+    cancelHandoff();
+    if (!entryId) return;
+    const controller = new AbortController();
+    handoffRequest.current = controller;
+    const version = selectionVersion.current;
+    setHandoffLoading(true);
+    api<Entry>('/updates/entries/' + encodeURIComponent(entryId), { signal: controller.signal }).then(entry => {
+      if (controller.signal.aborted || version !== selectionVersion.current) return;
+      if (!entry || entry.id !== entryId) throw new ApiError('The linked update was not returned. Try again.', 0, 'invalid_response', true);
+      setFilter(entry.review_state); setOffset(0); showEntry(entry); retry();
+    }).catch(cause => {
+      if (controller.signal.aborted || version !== selectionVersion.current) return;
+      setHandoffError(cause instanceof ApiError && cause.status === 404
+        ? new ApiError('This linked update could not be found. Try again or choose an update from the queue.', 404, cause.code)
+        : cause);
+    }).finally(() => {
+      if (!controller.signal.aborted && version === selectionVersion.current) setHandoffLoading(false);
+    });
+    return () => { controller.abort(); selectionVersion.current += 1; };
+  }, [entryId, navigation.revision, handoffAttempt, retry]);
+
+  function cancelHandoff() {
+    selectionVersion.current += 1;
+    handoffRequest.current?.abort(); handoffRequest.current = null;
+    setHandoffLoading(false); setHandoffError(null);
+  }
   function open(entry: Entry) {
+    cancelHandoff(); showEntry(entry);
+  }
+  function showEntry(entry: Entry) {
     setCurrent(entry); setDraft(reviewDraft(entry)); setReviewTopics(entry.topic_ids); setError(null); setRefreshNotice('');
     if (entry.review_state === 'reviewed' && !entry.read_at) void markRead(entry.id);
   }
   async function markRead(id: string) {
+    const version = selectionVersion.current;
     setError(null);
     try { await api('/updates/entries/' + id + '/read', { method: 'POST' }); }
-    catch (cause) { setError({ cause, operation: { kind: 'read', id } }); }
+    catch (cause) { if (version === selectionVersion.current) setError({ cause, operation: { kind: 'read', id } }); }
   }
   function changeFilter(state: Filter) {
+    cancelHandoff();
     setFilter(state); setOffset(0); setCurrent(null); setDraft(null); retry();
   }
   async function checkLiterature() {
     if (!topic) return;
+    cancelHandoff();
     setBusy('literature'); setError(null);
     try {
       const result = await api<LiteratureResult>('/updates/literature/check', { method: 'POST', body: { topic_ids: [topic], days: 30 }, timeoutMs: 60_000 });
@@ -58,6 +102,7 @@ export default function Updates() {
   }
   async function review(state: 'reviewed' | 'dismissed') {
     if (!current || !draft || resource.status !== 'ready') return;
+    cancelHandoff();
     setBusy('review'); setError(null);
     try {
       const result = await api<Entry>('/updates/entries/' + current.id + '/review', { method: 'POST', body: reviewPayload(current, draft, reviewTopics, state) });
@@ -70,6 +115,7 @@ export default function Updates() {
   }
   async function refresh() {
     if (!current) return;
+    cancelHandoff();
     setBusy('refresh'); setError(null); setRefreshNotice('');
     try {
       const result = await api<{ state: string; error?: { message: string }; latest_entry?: Entry; entry: Entry }>('/updates/entries/' + current.id + '/refresh', { method: 'POST', timeoutMs: 60_000 });
@@ -85,6 +131,7 @@ export default function Updates() {
   }
   async function sync() {
     if (!current) return;
+    cancelHandoff();
     setBusy('sync'); setError(null);
     try {
       const result = await api<{ changes: { state: string }[] }>('/updates/entries/' + current.id + '/sync', { method: 'POST' });
@@ -101,17 +148,19 @@ export default function Updates() {
     else if (operation.kind === 'read') void markRead(operation.id);
   }
 
-  if (resource.status === 'loading') return <><LoadingState label="Loading source updates" /><AutomaticChecks key="automatic-checks" onComplete={retry} /></>;
-  if (resource.status === 'error') return <><ErrorState error={resource.error} onRetry={retry} /><AutomaticChecks key="automatic-checks" onComplete={retry} /></>;
+  const handoffFeedback = handoffLoading ? <Notice><p>Opening linked update…</p></Notice> : handoffError !== null
+    ? <ErrorState title="Linked update could not be opened" error={handoffError} onRetry={() => setHandoffAttempt(value => value + 1)} /> : null;
+  if (resource.status === 'loading') return <>{handoffFeedback}<LoadingState label="Loading source updates" /><AutomaticChecks key="automatic-checks" onComplete={retry} /></>;
+  if (resource.status === 'error') return <>{handoffFeedback}<ErrorState error={resource.error} onRetry={retry} /><AutomaticChecks key="automatic-checks" onComplete={retry} /></>;
   const data = resource.data;
   return <><PageHeader title="Stay current." description="Follow changes in your sources and decide what matters for your learning." actions={<Button variant="ghost" onClick={() => setShowSources(value => !value)}><RefreshCw size={17} />{showSources ? 'Hide source checks' : 'Source checks'}</Button>} />
     <section className="updates-discover"><div><h2>Look for recent research</h2><p>Europe PMC checks up to 25 publication records for your selected topic.</p></div><div className="updates-search"><Select label="Nephrology topic" value={topic} onChange={event => setTopic(event.target.value)}><option value="">Choose a topic</option>{data.topics.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</Select><Button variant="secondary" disabled={!topic || busy !== null} busy={busy === 'literature'} onClick={checkLiterature}><Search size={17} />Check last 30 days</Button></div></section>
-    {error !== null && <ErrorState error={error.cause} onRetry={busy !== null ? undefined : () => retryOperation(error.operation)} />}{notice && <Notice><p role="status">{notice}</p></Notice>}
+    {handoffFeedback}{error !== null && <ErrorState error={error.cause} onRetry={busy !== null ? undefined : () => retryOperation(error.operation)} />}{notice && <Notice><p role="status">{notice}</p></Notice>}
     <AutomaticChecks key="automatic-checks" onComplete={retry} />
     {showSources && <SourceChecks sources={data.sources} publications={data.publications} done={message => { setNotice(message); retry(); }} />}
-    <div className="updates-workspace"><UpdatesQueue page={data.page} filter={filter} selectedId={current?.id} busy={busy !== null} open={open} filterChanged={changeFilter} pageChanged={value => { setOffset(value); retry(); }} />
+    <div className="updates-workspace"><UpdatesQueue page={data.page} filter={filter} selectedId={current?.id} busy={busy !== null} open={open} filterChanged={changeFilter} pageChanged={value => { cancelHandoff(); setOffset(value); retry(); }} />
       <ReviewDetail entry={current} draft={draft} topics={data.topics} reviewTopics={reviewTopics} busy={busy} refreshNotice={refreshNotice}
-        change={value => { setDraft(value); setError(null); }} topicsChanged={value => { setReviewTopics(value); setError(null); }}
+        change={value => { cancelHandoff(); setDraft(value); setError(null); }} topicsChanged={value => { cancelHandoff(); setReviewTopics(value); setError(null); }}
         review={review} refresh={refresh} sync={sync} />
     </div>
   </>;

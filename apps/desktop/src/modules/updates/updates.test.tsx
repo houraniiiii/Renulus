@@ -1,10 +1,14 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render as renderComponent, screen, waitFor, within } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { NavigationProvider, useNavigation } from '../../shell/navigation';
 import Updates from './index';
 import { literatureMessage, reviewDraft, reviewPayload } from './types';
 import type { Entry } from './types';
 
+const render = (ui: ReactElement) => renderComponent(<NavigationProvider>{ui}</NavigationProvider>);
+beforeEach(() => { window.history.replaceState(null, '', '#/study'); });
 const entry = (id = 'synthetic-update'): Entry => ({ id, source_id: 'L03', title: 'Synthetic publication ' + id,
   url: 'https://europepmc.org/article/MED/999999', kind: 'research', publication_date: '2020-03-01',
   discovered_at: '2026-10-04T12:00:00Z', reviewed_at: null, review_state: 'pending', summary: '', topic_ids: [],
@@ -216,5 +220,134 @@ describe('Updates review and bounded queue', () => {
   it('reports failures and truncated discovery without claiming an exhaustive no-change result', () => {
     expect(literatureMessage({ state: 'failed', discovered: 0, checks: [], max_records_per_topic: 25 })).toContain('failed');
     expect(literatureMessage({ state: 'checked', discovered: 0, checks: [{ state: 'checked', records_checked: 25, hit_count: 3400, truncated: true }], max_records_per_topic: 25 })).toContain('more matches exist');
+  });
+});
+
+function HandoffHarness() {
+  const { route, navigate } = useNavigation();
+  return <>
+    <button onClick={() => navigate('updates', { payload: { entry_id: 'linked-a' } })}>Today reviewed update A</button>
+    <button onClick={() => navigate('updates', { payload: { entry_id: 'linked-b' } })}>Today reviewed update B</button>
+    <button onClick={() => navigate('updates')}>Open Updates without a handoff</button>
+    <button onClick={() => navigate('study')}>Back to Today</button>
+    {route === 'updates' && <Updates />}
+  </>;
+}
+function linkedEntry(id = 'linked-a', state: Entry['review_state'] = 'reviewed'): Entry {
+  return { ...entry(id), review_state: state, summary: 'Saved synthetic review ' + id, topic_ids: ['ckd'] };
+}
+function deferredResponse() {
+  let resolve!: (response: Response) => void;
+  const promise = new Promise<Response>(done => { resolve = done; });
+  return { promise, resolve };
+}
+const entryPath = (id = 'linked-a') => '/api/v1/updates/entries/' + id;
+const linkedFailure = (status: number) => new Response(JSON.stringify({ error: {
+  code: 'synthetic_handoff_failure', message: 'The linked entry request failed.', retryable: true,
+} }), { status, headers: { 'Content-Type': 'application/json' } });
+const navigateToA = () => fireEvent.click(screen.getByRole('button', { name: 'Today reviewed update A' }));
+const selectedHeading = () => within(screen.getByRole('complementary', { name: 'Selected publication' })).getByRole('heading', { level: 2 });
+
+describe('Updates exact-entry navigation handoff', () => {
+  it('opens the linked reviewed entry outside the first queue page, retains drafts on refresh, and consumes a new explicit handoff', async () => {
+    const linked = linkedEntry();
+    const fetch = mockApi([entry('other')], path => path === entryPath() ? json(linked)
+      : path === entryPath() + '/refresh' ? json({ state: 'checked', entry: linked }) : undefined);
+    render(<HandoffHarness />); navigateToA();
+    await screen.findByRole('complementary', { name: 'Selected publication' });
+    expect(selectedHeading().textContent).toBe(linked.title);
+    expect(screen.getByRole('button', { name: 'Reviewed 17' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.queryByRole('button', { name: new RegExp(linked.title) })).toBeNull();
+    expect((screen.getByLabelText('Chronic kidney disease') as HTMLInputElement).checked).toBe(true);
+    await waitFor(() => expect(fetch.mock.calls.filter(([path]) => path === entryPath() + '/read')).toHaveLength(1));
+    inspectEvidence();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh metadata' }));
+    await waitFor(() => expect(fetch.mock.calls.filter(([path]) => path.includes('entries?state=reviewed'))).toHaveLength(2));
+    await screen.findByRole('complementary', { name: 'Selected publication' });
+    expect((screen.getByLabelText('What changes for your learning?') as HTMLTextAreaElement).value).toBe('Synthetic educational implication only');
+    expect((screen.getByLabelText('I inspected this evidence and its stated publication status.') as HTMLInputElement).checked).toBe(true);
+    expect(fetch.mock.calls.filter(([path]) => path === entryPath())).toHaveLength(1);
+    expect(fetch.mock.calls.filter(([path]) => path.endsWith('/read'))).toHaveLength(1);
+    navigateToA();
+    await waitFor(() => expect(fetch.mock.calls.filter(([path]) => path === entryPath())).toHaveLength(2));
+    await waitFor(() => expect((screen.getByLabelText('What changes for your learning?') as HTMLTextAreaElement).value).toBe(linked.summary));
+  });
+
+  it.each(['pending', 'dismissed', 'reviewed'] as const)('selects the actual %s state and does not mark an ineligible/already-read entry read', async state => {
+    const linked = { ...linkedEntry('linked-a', state), read_at: state === 'reviewed' ? '2026-10-07T10:00:00Z' : null };
+    const fetch = mockApi([], path => path === entryPath() ? json(linked) : undefined);
+    render(<HandoffHarness />); navigateToA();
+    await screen.findByRole('complementary', { name: 'Selected publication' });
+    expect(selectedHeading().textContent).toBe(linked.title);
+    expect(screen.getByRole('button', { name: state === 'pending' ? 'To review 0' : state === 'dismissed' ? 'Dismissed 3' : 'Reviewed 17' }).getAttribute('aria-pressed')).toBe('true');
+    expect(fetch.mock.calls.some(([path]) => path.endsWith('/read'))).toBe(false);
+  });
+
+  it.each([404, 503])('shows a visible %s handoff failure and retries the exact entry', async status => {
+    let attempts = 0;
+    const fetch = mockApi([], path => path === entryPath() ? ++attempts === 1 ? linkedFailure(status) : json(linkedEntry()) : undefined);
+    render(<HandoffHarness />); navigateToA();
+    await screen.findByRole('heading', { name: 'Linked update could not be opened' });
+    if (status === 404) expect(screen.getByText(/This linked update could not be found/)).toBeTruthy();
+    expect(screen.queryByRole('complementary', { name: 'Selected publication' })).toBeNull();
+    expect(fetch.mock.calls.some(([path]) => path.endsWith('/read'))).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await screen.findByRole('complementary', { name: 'Selected publication' });
+    expect(selectedHeading().textContent).toBe(linkedEntry().title);
+    expect(attempts).toBe(2);
+    expect(screen.queryByRole('heading', { name: 'Linked update could not be opened' })).toBeNull();
+  });
+
+  it.each(['success', 'failure'])('ignores a late %s after a newer entry handoff', async result => {
+    const first = deferredResponse(); const second = deferredResponse();
+    const fetch = mockApi([], path => path === entryPath() ? first.promise : path === entryPath('linked-b') ? second.promise : undefined);
+    render(<HandoffHarness />); navigateToA();
+    await screen.findByText('Opening linked update…');
+    fireEvent.click(screen.getByRole('button', { name: 'Today reviewed update B' }));
+    await act(async () => second.resolve(json(linkedEntry('linked-b'))));
+    await screen.findByRole('complementary', { name: 'Selected publication' });
+    await act(async () => first.resolve(result === 'success' ? json(linkedEntry()) : linkedFailure(503)));
+    expect(selectedHeading().textContent).toBe(linkedEntry('linked-b').title);
+    expect(fetch.mock.calls.find(([path]) => path === entryPath())![1]!.signal!.aborted).toBe(true);
+    expect(fetch.mock.calls.filter(([path]) => path.endsWith('/read')).map(([path]) => path)).toEqual([entryPath('linked-b') + '/read']);
+    expect(screen.queryByRole('heading', { name: 'Linked update could not be opened' })).toBeNull();
+  });
+
+  it.each(['entry', 'filter', 'page', 'plain navigation', 'leave'])('cancels the pending handoff when the user chooses %s', async choice => {
+    const pending = deferredResponse();
+    const rows = Array.from({ length: 51 }, (_, index) => entry('manual-' + index));
+    const fetch = mockApi(rows, path => path === entryPath() ? pending.promise : undefined);
+    render(<HandoffHarness />); navigateToA();
+    await screen.findByText('1–50 of 51');
+    if (choice === 'entry') {
+      fireEvent.click(screen.getByRole('button', { name: /Synthetic publication manual-0 / }));
+      inspectEvidence();
+    } else if (choice === 'filter') fireEvent.click(screen.getByRole('button', { name: 'Dismissed 3' }));
+    else if (choice === 'page') fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    else fireEvent.click(screen.getByRole('button', { name: choice === 'leave' ? 'Back to Today' : 'Open Updates without a handoff' }));
+    await act(async () => pending.resolve(json(linkedEntry())));
+    expect(fetch.mock.calls.find(([path]) => path === entryPath())![1]!.signal!.aborted).toBe(true);
+    expect(fetch.mock.calls.some(([path]) => path.endsWith('/read'))).toBe(false);
+    expect(screen.queryByRole('heading', { name: linkedEntry().title })).toBeNull();
+    expect(screen.queryByText('Opening linked update…')).toBeNull();
+    if (choice === 'entry') {
+      expect(selectedHeading().textContent).toBe(rows[0].title);
+      expect((screen.getByLabelText('What changes for your learning?') as HTMLTextAreaElement).value).toBe('Synthetic educational implication only');
+    } else if (choice === 'filter') expect(screen.getByRole('button', { name: 'Dismissed 3' }).getAttribute('aria-pressed')).toBe('true');
+    else if (choice === 'page') expect(await screen.findByText('51–51 of 51')).toBeTruthy();
+  });
+
+  it('keeps the visible draft when editing cancels a new handoff', async () => {
+    const pending = deferredResponse();
+    const fetch = mockApi([entry('manual')], path => path === entryPath() ? pending.promise : undefined);
+    render(<HandoffHarness />);
+    fireEvent.click(screen.getByRole('button', { name: 'Open Updates without a handoff' }));
+    await openFirst(); inspectEvidence(); navigateToA();
+    await screen.findByText('Opening linked update…');
+    fireEvent.change(screen.getByLabelText('What changes for your learning?'), { target: { value: 'Newer manual draft' } });
+    await act(async () => pending.resolve(json(linkedEntry())));
+    expect(selectedHeading().textContent).toBe(entry('manual').title);
+    expect((screen.getByLabelText('What changes for your learning?') as HTMLTextAreaElement).value).toBe('Newer manual draft');
+    expect(fetch.mock.calls.some(([path]) => path.endsWith('/read'))).toBe(false);
   });
 });
