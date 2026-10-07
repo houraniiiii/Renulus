@@ -6,34 +6,34 @@ PROJECT_BRIEF, WORKSPACE, DECISIONS, planning/IMPLEMENTATION_PLAN and
 [current delivery](DELIVERY_20261007.md), [audit](finish-audit-20261007.md),
 [finite checklist](finish-launch-criteria-20261007.md), [control guide](APP_CONTROL.md).
 
-## Current runnable checkpoint
+## Current checkpoint — 17:40 UTC
 
 Repo C:/Renulus-native-delivery/desktop-20261005/repo, branch
 build/renulus-integration, sole origin houraniiiii/Renulus, draft PR13.
-Normal launcher selects installed-0d4b171e with the existing E: learning/account
-profile. Raw acquisitions and all originals stay on the second SSD.
-Exact product source0d4b171e; later commits are docs only. See
-[matching artifact and receipts](finish-installed-0d4b171e-20261007.md).
+Normal launcher still selects installed0d4b171e with the existing E: learning/
+account profile. Originals stay on the second SSD. Source ab0c7294 adds content1.4
+and the canonical Memory-context invalidation guard; later documentation is separate.
 
-Fresh matching NSIS/inventories, actual empty-profile1.3 activation, synthetic
-source-review effects, immutable historical answers and normal reopen pass.
-The1dde fresh failure stays failed;0d4 source proof is separately recorded.
-Previous cb59 live learning/capture, b8 dated citations and1dde handoff/rollback
-retain their precise unchanged-source qualification. No provider/import/quiz/
-engine/restore replay solely to change the artifact label.
+Matching0318 manufacture and content acceptance are complete:37/37 source checks,
+upgrade/history/reopen, fresh activation, six staged cases and ESENeph reviewed
+quiz. The parent accepts completed scopes across three preserved invocations;
+the first two aggregates remain failed. Six normal closes, zero provider/import
+replays. See [0318 exact acceptance](finish-installed-0318c41f-20261007.md).
 
-## Recover before continuing
+Memory guard source validation is complete:13/13 new concurrency checks;14 prior
+individual passes retained from a failed13-setup-error invocation. See
+[guard and receipts](finish-summary-memory-invalidation-20261007.md).
+Do not repeat these checks. Matching ab0c7294 manufacture is running in session37822,
+external root C:/rn-finish-20261007/evidence/release-ab0c7294. Recover
+build.terminal.json/package-result.json and the session before replacements.
+No app/native journey runs concurrently. Source freeze is ab0c7294.
 
-External current roots: C:/rn-finish-20261007/evidence/release-0d4b171e and
-update-effects-0d4b171e. Preserve package-result, terminal/result/controller
-receipts, qualification, promotion and previous launcher selector. Recover
-evidence/orchestration/depth-wave-1626.json for current lane/run handles before
-starting replacements. Three completed content proposals feed one active bounded
-publication lane in depth-hd. The installed temporary-retention run66635 completed
-exit0; no native check is running at this checkpoint. See
-[temporary-case interruption](finish-temporary-retention-20261007.md). Earlier
-driver attempts remain failed. Completed worktrees retire after receipt preservation.
-The one ACTIVE heartbeat is renulus-final-delivery, every20 minutes; no duplicate.
+One bounded read-only content-disposition lane is active in
+C:/rn-finish-20261007/lanes/final-content-disposition,
+agent01a11770-8c0b-7071-a35e-38dd58d76791. Lease: its new report only, no tests,
+providers/imports/production edits. All earlier agents/worktrees are retired.
+Recover evidence/orchestration/depth-wave-1626.json for current handles.
+Exactly one ACTIVE heartbeat renulus-final-delivery runs every20minutes.
 
 User waived mandatory signing/separate clean PC, not runtime/provenance/actual
 journeys. The old Astra quota blocker is historical; live Sol and both Go models
@@ -43,8 +43,9 @@ Use, OS input, foreground windows or credential copies. No broad test sweeps.
 
 ## Remaining goal
 
-GitHub1 orchestrates;12 delivery/robustness,11 current-source/exact-copy effects,
-20 named content/currency depth,3 remaining physical accessibility. The finite
+GitHub1 orchestrates;12 delivery/robustness,20 named content/currency depth,
+3 remaining physical accessibility. Issue11 is closed for the implemented Updates/
+correction workflow; source-currentness/exact-copy limitations remain tracked in20. The finite
 content minima are met; use existing artifacts when disposing remaining claim
 scopes. No invented quotas/panel or global-current claim from metadata. Distinguish
 internal work from exact external access failures. Full completion remains open.
