@@ -2,6 +2,7 @@
 .generated-practice { display: grid; gap: var(--space-32); }
 .generated-practice-request { margin-block: var(--space-24); }
 .assessment-overview, .assessment-session-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 300px); gap: var(--space-40); align-items: start; }
+.assessment-session-layout > *, .assessment-overview > * { min-width: 0; overflow-wrap: anywhere; }
 .assessment-aside { display: grid; gap: var(--space-16); border-left: 1px solid var(--line); padding-left: var(--space-24); }
 .assessment-modes { display: flex; flex-wrap: wrap; gap: var(--space-32); padding: 0 0 var(--space-24); margin: 0 0 var(--space-32); border: 0; border-bottom: 1px solid var(--line); }
 .assessment-modes label { display: flex; align-items: start; gap: var(--space-12); min-height: 44px; cursor: pointer; }

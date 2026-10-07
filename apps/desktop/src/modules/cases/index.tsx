@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ArrowRight, BookOpen, Save, Square, Trash2, X } from 'lucide-react';
 import { Badge, Button, EmptyState, ErrorState, Input, LoadingState, Notice, PageHeader, Textarea } from '../../ui';
 import { useNavigation } from '../../shell/navigation';
@@ -17,10 +17,19 @@ export default function CasesPage() {
   const [title, setTitle] = useState('Daily case');
   const [text, setText] = useState('');
   const [question, setQuestion] = useState('');
-  const [confirmation, setConfirmation] = useState<'delete' | 'close'>('delete');
+  const [confirmation, setConfirmation] = useState<'delete' | 'close' | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
+  const caseContent = useRef<HTMLElement>(null);
   const item = cases.session;
+  const previousCase = useRef(item?.id);
   const disabled = !!cases.busy || cases.running;
+  useEffect(() => {
+    if (previousCase.current !== item?.id) caseContent.current?.focus();
+    previousCase.current = item?.id;
+  }, [item?.id]);
+  useEffect(() => {
+    if (confirmation) dialog.current?.showModal();
+  }, [confirmation]);
 
   function start(event: FormEvent) {
     event.preventDefault();
@@ -43,7 +52,6 @@ export default function CasesPage() {
   function confirm(action: 'delete' | 'close') {
     if (action === 'close' && !item?.dirty) { void cases.close(); return; }
     setConfirmation(action);
-    dialog.current?.showModal();
   }
 
   return <div className="cases-page">
@@ -63,7 +71,7 @@ export default function CasesPage() {
       <Button variant="ghost" onClick={() => void cases.retryPurge()}>Retry cleanup</Button></Notice>}
 
     <div className="cases-workspace">
-      <main className="cases-main">
+      <section className="cases-main" ref={caseContent} tabIndex={-1} aria-label={item?.title ?? 'Start a case'}>
         <Notice><p>{item?.saved ? (item.dirty ? 'Saved snapshot · You have temporary changes. Save again to keep them.' :
           'Saved snapshot · Further discussion stays temporary until you save again.') :
           'Temporary case · Text and discussion stay in this app session until you choose Save.'}</p></Notice>
@@ -127,7 +135,7 @@ export default function CasesPage() {
             <p className="muted">Learn and practice keep this case temporary. Return here to choose Save.</p>
           </form>
         </>}
-      </main>
+      </section>
 
       <aside className="case-catalogue" aria-label="Teaching and saved cases">
         {cases.loading && !cases.capabilities ? <LoadingState label="Loading case options" /> : <>
@@ -151,9 +159,9 @@ export default function CasesPage() {
       </aside>
     </div>
 
-    <dialog ref={dialog} className="case-confirm" aria-labelledby="case-confirm-title">
+    <dialog ref={dialog} className="case-confirm" aria-labelledby="case-confirm-title" aria-describedby="case-confirm-description" onClose={() => setConfirmation(null)}>
       <h2 id="case-confirm-title">{confirmation === 'delete' ? 'Delete this case?' : 'Discard temporary changes?'}</h2>
-      <p>{confirmation === 'delete' ? 'This removes the case, its saved discussion and originals from Renulus. You cannot reopen it.' :
+      <p id="case-confirm-description">{confirmation === 'delete' ? 'This removes the case, its saved discussion and originals from Renulus. You cannot reopen it.' :
         item?.saved ? 'The last saved snapshot remains available. Changes since that Save will be discarded.' :
           'This case has not been saved. Closing it discards its text, discussion and added files.'}</p>
       <div className="actions"><Button variant="secondary" onClick={() => dialog.current?.close()}>Keep case open</Button>

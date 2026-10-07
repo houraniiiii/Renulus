@@ -147,6 +147,9 @@ export function GeneratedPractice({ onBack }: { onBack?: () => void }) {
   const attempt = useRef<GenerationAttempt | null>(null);
   const pending = useRef<PendingCommand | null>(null);
   const questionHeading = useRef<HTMLLegendElement>(null);
+  const practiceHeading = useRef<HTMLHeadingElement>(null);
+  const sessionState = useRef<string | undefined>(undefined);
+  const reviewHeading = useRef<HTMLHeadingElement>(null);
   const capabilities = useResource(signal => api<PracticeCapabilities>(base + '/capabilities', { signal }));
   const history = useResource(async signal => volatile ? [] :
     (await api<{ sessions: PracticeSession[] }>(base + '/sessions', { signal })).sessions
@@ -175,6 +178,12 @@ export function GeneratedPractice({ onBack }: { onBack?: () => void }) {
   useEffect(() => {
     if (!feedback && session?.status === 'active') questionHeading.current?.focus();
   }, [session?.current_item?.id, session?.status, feedback]);
+  useEffect(() => {
+    const state = session?.status;
+    if (!feedback && sessionState.current !== state && (state === 'paused' || state === 'ended' || !state)) practiceHeading.current?.focus();
+    sessionState.current = state;
+  }, [session?.status, feedback]);
+  useEffect(() => { if (review) reviewHeading.current?.focus(); }, [review]);
 
   function checkedSession(value: PracticeSession): PracticeSession {
     if (value.mode !== 'generated' || (volatile && value.retention !== 'volatile')) {
@@ -369,7 +378,7 @@ export function GeneratedPractice({ onBack }: { onBack?: () => void }) {
 
   return <section className="generated-practice section" aria-label="Generated practice">
     <div className="section">{onBack && <div className="actions"><Button variant="ghost" onClick={onBack}><ArrowLeft size={17} />Back to Test</Button></div>}
-      <h2>Generated practice</h2>
+      <h2 ref={practiceHeading} tabIndex={-1}>Generated practice</h2>
       <p>Practise with unreviewed generated questions. Answers are compared with a generated key, separately from reviewed assessment.</p>
       {volatile && <Notice tone="warning"><p>{ticket ? 'Practice from this case is temporary.'
         : context === 'unclassified' ? 'This context is unclassified and stays temporary.' : 'This practice stays temporary.'}
@@ -472,7 +481,7 @@ export function GeneratedPractice({ onBack }: { onBack?: () => void }) {
           {session.status !== 'ended' && <Button variant="ghost" disabled={locked} onClick={() => transition('end')}>End practice</Button>}
           <Button variant="ghost" disabled={locked} onClick={() => { setSession(null); setFeedback(null); setHelp(null); setReview(null); }}>Back to practice request</Button>
         </div>
-        {review && <section className="assessment-review section"><h3>Committed answer review</h3>
+        {review && <section className="assessment-review section"><h3 ref={reviewHeading} tabIndex={-1}>Committed answer review</h3>
           {review.feedback.length ? review.feedback.map(entry => <FeedbackView key={entry.attempt_id} feedback={entry} />)
             : <p>No committed answers to review yet.</p>}</section>}
       </section><aside className="assessment-aside"><ScoreTable scores={review?.scores ?? session.scores} /></aside>

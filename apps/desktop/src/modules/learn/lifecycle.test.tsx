@@ -47,6 +47,30 @@ async function ask(fetch: ReturnType<typeof transport>, text = question) {
 }
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
+it('keeps composer focus usable while Ask becomes Stop and a failed response restores the question', async () => {
+  const source = events();
+  const fetch = transport([source], () => json(first));
+  await screen.findByRole('button', { name: /^Resume transplant/ });
+  const field = screen.getByRole('textbox', { name: 'Your nephrology question' }); field.focus();
+  await ask(fetch);
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Stop' }));
+  await act(async () => { source.emit('error', { message: 'Synthetic connection interrupted.', code: 'interrupted', retryable: true }); source.close(); });
+  await screen.findByText('Synthetic connection interrupted.');
+  const followUp = screen.getByRole('textbox', { name: 'Your follow-up' });
+  expect((followUp as HTMLTextAreaElement).value).toBe(question);
+  expect(document.activeElement).toBe(followUp);
+});
+
+it('does not pull focus away from another control when a response completes', async () => {
+  const source = events();
+  const fetch = transport([source], () => json(first));
+  await ask(fetch);
+  const connection = screen.getByRole('button', { name: 'Open Connections' }); connection.focus();
+  await act(async () => { source.emit('completed', {}); source.close(); });
+  await screen.findByRole('button', { name: 'Ask Renulus' });
+  expect(document.activeElement).toBe(connection);
+});
+
 it('retries a failed resume by loading that thread with no generation request', async () => {
   let reads = 0;
   const fetch = transport([], () => ++reads === 1

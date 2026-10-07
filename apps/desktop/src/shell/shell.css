@@ -24,7 +24,7 @@
 .search-trigger { display: flex; align-items: center; gap: 10px; font-size: 13px; min-height: 44px; color: var(--ink-secondary); padding: 4px 0; }
 .search-trigger:hover { color: var(--renal-teal); }
 kbd { display: inline-block; padding: 1px 5px; background: var(--rail); border: 1px solid var(--line); border-radius: 4px; font: 12px/1.6 var(--font-ui); color: var(--ink-secondary); }
-.workspace-main { flex: 1; min-width: 0; padding: 34px 38px 32px; }
+.workspace-main { flex: 1; min-width: 0; padding: 34px 38px 32px; overflow-wrap: anywhere; }
 .workspace-main:focus { outline: none; }
 .workspace-footer { display: flex; justify-content: space-between; align-items: center; gap: 15px; border-top: 1px solid var(--line-subtle); min-height: 42px; padding: 10px 32px; font-size: 12px; color: var(--ink-muted); }
 .workspace-footer > span { display: flex; gap: 7px; align-items: center; }

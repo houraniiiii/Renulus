@@ -6,6 +6,7 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 button, a, input, textarea, select, summary { -webkit-tap-highlight-color: transparent; }
 button, a, input, textarea, select { transition: background-color var(--motion-fast) var(--ease-out), border-color var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out); }
 button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+[tabindex]:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 button:not(:disabled):active { transform: translateY(1px); }
 input, textarea { caret-color: var(--renal-teal); }
 input::placeholder, textarea::placeholder { color: var(--ink-muted); opacity: 1; }
@@ -41,7 +42,7 @@ a { color: var(--renal-teal); text-underline-offset: 3px; }
 .panel { background: var(--rail); border-radius: var(--radius-panel); padding: var(--space-24); }
 .section { display: grid; gap: var(--space-16); }
 .section + .section { margin-top: var(--space-32); }
-.field { display: grid; gap: var(--space-8); }
+.field { display: grid; gap: var(--space-8); min-width: 0; }
 .field-label { font-size: 14px; font-weight: 600; color: var(--ink-strong); }
 .field-hint { font-size: 13px; color: var(--ink-muted); }
 .field-error { font-size: 14px; color: var(--error-ink); }
@@ -58,6 +59,7 @@ a { color: var(--renal-teal); text-underline-offset: 3px; }
 .error-state > svg, .error-state h2, .error-state p { color: var(--error-ink); }
 .notice { display: flex; align-items: start; gap: var(--space-12); border-radius: var(--radius-control); padding: var(--space-16); background: var(--renal-teal-soft); color: var(--renal-teal); }
 .notice p { color: inherit; font-size: 14px; }
+.notice > div { min-width: 0; overflow-wrap: anywhere; }
 .notice-warning { color: var(--warning-ink); background: var(--warning-bg); }
 .skeleton { display: grid; gap: var(--space-16); max-width: 800px; padding: var(--space-24) 0; }
 .skeleton-line { height: 16px; width: 100%; background: var(--line-subtle); border-radius: 4px; }

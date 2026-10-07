@@ -1,11 +1,11 @@
-import { useId, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { useId, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type Ref, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { AlertCircle, BookOpen, Info } from 'lucide-react';
 import { ApiError } from '../platform/api';
 
 export function Button({ variant = 'primary', busy = false, className = '', children, disabled, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'ghost' | 'danger'; busy?: boolean }) {
   return <button type="button" {...props} disabled={disabled || busy} aria-busy={busy || undefined} className={'button button-' + variant + ' ' + className}>{children}</button>;
 }
-export function IconButton({ label, children, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
+export function IconButton({ label, children, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string; ref?: Ref<HTMLButtonElement> }) {
   return <button type="button" {...props} className={'icon-button ' + (props.className ?? '')} aria-label={label} title={label}>{children}</button>;
 }
 export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {

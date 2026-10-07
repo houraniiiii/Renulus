@@ -32,6 +32,44 @@ function deferred<T>() { let resolve!: (value: T) => void; const promise = new P
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); window.localStorage.clear(); window.sessionStorage.clear(); });
 
 describe('Learning memory API page', () => {
+  it('keeps keyboard context through deletion confirmation, failure, cancellation and success', async () => {
+    let attempts = 0;
+    transport((path, options) => {
+      if (options.method === 'DELETE' && path.includes('/memory/facts/')) {
+        if (++attempts === 1) return json({ error: { code: 'busy', message: 'Synthetic deletion unavailable.', retryable: true } }, 503);
+        return json({ deleted: true, purge_pending: false });
+      }
+    });
+    open(); await screen.findByText(retained.text);
+    const remove = screen.getByRole('button', { name: 'Delete' }); remove.focus(); fireEvent.click(remove);
+    expect(document.activeElement).toBe(screen.getByRole('group', { name: 'Confirm learning deletion' }));
+    expect(document.getElementById(remove.getAttribute('aria-describedby')!)?.textContent).toBe(retained.text);
+    fireEvent.click(screen.getByRole('button', { name: 'Delete learning and history' }));
+    await screen.findByText('Synthetic deletion unavailable.');
+    fireEvent.click(screen.getByRole('button', { name: 'Keep learning' }));
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete learning and history' }));
+    await screen.findByText('Learning and its history removed.');
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Retained learning' }));
+    expect(screen.queryByText(retained.text)).toBeNull();
+  });
+
+  it('focuses history confirmation and restores its surviving history control', async () => {
+    transport((path, options) => {
+      if (path.endsWith('/history')) return options.method === 'DELETE' ? json({ purge_pending: false })
+        : json({ history: [{ revision: 1, event: 'created', text: 'Synthetic earlier wording.', created_at: retained.created_at }] });
+    });
+    open(); await screen.findByText(retained.text);
+    fireEvent.click(screen.getByRole('button', { name: 'History' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove history' }));
+    expect(document.activeElement).toBe(screen.getByRole('group', { name: 'Confirm history removal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Keep history' }));
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Hide history' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove history' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove revision history' }));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Hide history' })));
+  });
   it('shows actual records, source/history affordances and reported capability state', async () => {
     transport(); open();
     await screen.findByText(retained.text);

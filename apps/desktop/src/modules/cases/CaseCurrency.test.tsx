@@ -39,6 +39,42 @@ function backend(extra?: (path: string, options: RequestInit) => Response | Prom
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); window.history.replaceState(null, '', '#'); });
 
 describe('pinned teaching case source currency', () => {
+  it('focuses case transitions and shows the committed confirmation text before opening its dialog', async () => {
+    const show = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, 'showModal');
+    const close = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, 'close');
+    const opened: (string | null | undefined)[] = [];
+    let invoker: Element | null;
+    Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value: function(this: HTMLDialogElement) {
+      opened.push(this.querySelector('h2')?.textContent); invoker = document.activeElement;
+      this.open = true; this.querySelector<HTMLButtonElement>('button')?.focus();
+    } });
+    Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value: function(this: HTMLDialogElement) {
+      this.open = false; if (invoker instanceof HTMLElement) invoker.focus(); this.dispatchEvent(new Event('close'));
+    } });
+    try {
+      const fetch = backend();
+      window.history.replaceState(null, '', '#/cases');
+      render(<NavigationProvider><CasesPage /></NavigationProvider>);
+      fireEvent.click(await screen.findByRole('button', { name: /Synthetic pinned teaching case/ }));
+      await screen.findByText(SENTINEL);
+      await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('region', { name: session.title })));
+      expect(screen.queryByRole('main')).toBeNull();
+      const trigger = screen.getByRole('button', { name: 'Close case' }); trigger.focus(); fireEvent.click(trigger);
+      expect(opened).toEqual(['Discard temporary changes?']);
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Keep case open' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Keep case open' }));
+      expect(document.activeElement).toBe(trigger);
+      fireEvent.click(trigger);
+      expect(opened).toHaveLength(2);
+      fireEvent.click(screen.getByRole('button', { name: 'Discard and close' }));
+      await screen.findByRole('heading', { name: 'Discuss a case' });
+      await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('region', { name: 'Start a case' })));
+      expect(fetch.mock.calls.some(([path]) => path.endsWith('/save'))).toBe(false);
+    } finally {
+      if (show) Object.defineProperty(HTMLDialogElement.prototype, 'showModal', show); else Reflect.deleteProperty(HTMLDialogElement.prototype, 'showModal');
+      if (close) Object.defineProperty(HTMLDialogElement.prototype, 'close', close); else Reflect.deleteProperty(HTMLDialogElement.prototype, 'close');
+    }
+  });
   it.each(['needs-re-review', 'no-known-impact', 'unavailable'] as const)('shows %s without replacing the original content review', status => {
     const value = status === 'no-known-impact' ? clear : status === 'unavailable' ?
       { ...currency, status, needs_re_review: null, annotations: [], annotation_count: 0 } : currency;

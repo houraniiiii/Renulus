@@ -17,6 +17,7 @@ function StudyMemory() {
   const facts = useMemoryResource(signal => api<{ records: Fact[] }>('/memory/facts', { signal }));
   const [adding, setAdding] = useState(false);
   const page = useRef<HTMLDivElement>(null);
+  const listHeading = useRef<HTMLHeadingElement>(null);
   const addWasOpen = useRef(false);
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState<(SearchResult & { query: string })>();
@@ -48,6 +49,7 @@ function StudyMemory() {
     facts.update(previous => previous ? { records: previous.records.filter(record => record.id !== id) } : undefined);
     setRefreshKey(value => value + 1);
     setNotice(result.purge_pending ? 'Learning removed from recall. Index cleanup is pending.' : 'Learning and its history removed.');
+    listHeading.current?.focus();
   }
   function purged(result: PurgeResult) {
     resetSearch(); facts.refresh(); setRefreshKey(value => value + 1);
@@ -62,7 +64,7 @@ function StudyMemory() {
       {notice && <Notice><p>{notice}</p></Notice>}
       {searchRequest.error !== null && <ErrorState error={searchRequest.error} title="Memory search could not finish" />}
       {facts.error !== null && <ErrorState error={facts.error} title="Retained learning could not be loaded" onRetry={facts.refresh} />}
-      <div className="memory-section-heading"><h2>{search ? 'Matching learning' : 'Retained learning'}</h2>{records && <span className="muted">{records.length} {records.length === 1 ? 'record' : 'records'}</span>}</div>
+      <div className="memory-section-heading"><h2 ref={listHeading} tabIndex={-1}>{search ? 'Matching learning' : 'Retained learning'}</h2>{records && <span className="muted">{records.length} {records.length === 1 ? 'record' : 'records'}</span>}</div>
       {searchRequest.busy && <p className="muted" role="status">Searching retained learning…</p>}
       {!records && facts.loading && <LoadingState label="Loading retained learning" />}
       {records && records.length > 0 && <ul className="memory-fact-list">{records.map(fact => <li key={fact.id}><FactItem fact={fact} onChanged={changed} onDeleted={deleted} onPurged={purged} onRefresh={facts.refresh} /></li>)}</ul>}

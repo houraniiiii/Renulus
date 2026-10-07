@@ -88,6 +88,25 @@ const list = () => screen.getByRole('region', { name: 'Library document list' })
 const summary = () => screen.getByLabelText('Library processing summary');
 function count(label: string) { return within(summary()).getByText(label, { selector: 'dt' }).nextElementSibling?.textContent; }
 async function mount() { const view = render(<LibraryPage />); await screen.findByText('1–25 of 156 documents'); return view; }
+
+it('focuses an inspected source, returns to its document, and leaves refresh focus alone', async () => {
+  await mount();
+  const title = records[0].title;
+  const open = screen.getByRole('button', { name: title }); open.focus(); fireEvent.click(open);
+  const heading = await screen.findByRole('heading', { name: title });
+  await waitFor(() => expect(document.activeElement).toBe(heading));
+  const back = screen.getByRole('button', { name: 'Return to sources' });
+  await waitFor(() => expect((open as HTMLButtonElement).disabled).toBe(false));
+  fireEvent.click(back); expect(document.activeElement).toBe(open);
+  const refresh = screen.getByRole('button', { name: 'Refresh documents' }); refresh.focus(); fireEvent.click(refresh);
+  await waitFor(() => expect((refresh as HTMLButtonElement).disabled).toBe(false));
+  expect(document.activeElement).not.toBe(heading);
+  fireEvent.click(open);
+  await waitFor(() => expect(document.activeElement).toBe(heading));
+  fireEvent.click(screen.getByRole('button', { name: 'Remove from library' }));
+  await screen.findByText('Removed from your library. Your external original is preserved.');
+  expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Documents' }));
+});
 async function next(range: string) { fireEvent.click(screen.getByRole('button', { name: 'Next documents' })); await screen.findByText(range); }
 const collectionCalls = () => request.mock.calls.filter(([url]) => String(url).startsWith('/api/v1/library/collection/catalogue?'));
 const receipts = () => screen.getByRole('region', { name: 'Collected source receipts' });

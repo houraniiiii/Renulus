@@ -108,6 +108,16 @@ export default function LibraryPage() {
   const [documentSnapshot, setDocumentSnapshot] = useState<DocumentSnapshot>();
   const [discoveryVersion, setDiscoveryVersion] = useState(0);
   const listRegion = useRef<HTMLDivElement>(null);
+  const documentsHeading = useRef<HTMLHeadingElement>(null);
+  const readerHeading = useRef<HTMLHeadingElement>(null);
+  const readerReturn = useRef<HTMLElement | null>(null);
+  const [readerRequest, setReaderRequest] = useState(0);
+  useEffect(() => { if (readerRequest) readerHeading.current?.focus(); }, [readerRequest]);
+  function returnFromReader() {
+    const origin = readerReturn.current;
+    if (origin?.isConnected && !origin.matches(':disabled')) origin.focus();
+    else documentsHeading.current?.focus();
+  }
   const documentParams = new URLSearchParams({ limit: String(documentPageSize), offset: String(documentOffset) });
   if (documentQuery) documentParams.set('query', documentQuery);
   if (documentStatus) documentParams.set('status', documentStatus);
@@ -186,6 +196,8 @@ export default function LibraryPage() {
       .then(value => { if (!controller.signal.aborted && selection === sourceSelection.current) {
         setSourceLocation({ revisionId: typeof revision === 'string' ? revision : value.active_revision, page: isPhysicalPage(navigation.handoff?.page) ? navigation.handoff.page : null, passageId: passageId ?? null });
         setSelectedDocument(value);
+        readerReturn.current = null;
+        setReaderRequest(value => value + 1);
       } }).catch(value => { if (!controller.signal.aborted && selection === sourceSelection.current) setError(value); });
     return () => controller.abort();
   }, [navigation.revision]);
@@ -256,17 +268,20 @@ export default function LibraryPage() {
       setHits(result.passages);
     });
   }
-  async function inspect(document: LibraryDocument, passage?: Passage) {
+  async function inspect(document: LibraryDocument, passage?: Passage, origin?: HTMLElement) {
     ++sourceSelection.current;
     followActiveRevision.current = !passage;
     const revision = passage?.document_revision ?? document.active_revision;
     setSourceLocation({ revisionId: revision, page: passage?.locators.find(locator => isPhysicalPage(locator.page))?.page ?? null, passageId: passage?.id ?? null });
     setSelectedDocument(document);
+    readerReturn.current = origin ?? null;
+    setReaderRequest(value => value + 1);
   }
   async function remove(document: LibraryDocument) {
     await act(async () => {
       const result = await api<{ cleanup_pending: boolean }>('/library/documents/' + document.id, { method: 'DELETE' });
       ++sourceSelection.current; setSelectedDocument(null); setHits(null);
+      documentsHeading.current?.focus();
       // Discovery confirms imports by document ID; a filtered page is not a membership list.
       // Removing a source invalidates its cached discovery confirmation as well.
       setDiscoveryVersion(value => value + 1);
@@ -385,10 +400,10 @@ export default function LibraryPage() {
             <Button type="submit" variant="secondary" busy={busy} disabled={!query.trim()}><Search size={18} />Search</Button>
           </div><label className="library-check"><input type="checkbox" checked={currentOnly} onChange={event => setCurrentOnly(event.target.checked)} />Only verified current guidance</label></form>
           {hits !== null && <section className="section"><div className="library-section-title"><h2>Passages</h2><Button variant="ghost" onClick={() => setHits(null)}>Clear results</Button></div>
-            {hits.length === 0 ? <EmptyState title="No eligible passages matched"><p>Try another phrase or check whether the source has finished processing. Current-guidance search excludes sources with unverified currency.</p></EmptyState> : <div className="library-passages">{hits.map(hit => <article className="library-passage" key={hit.id}><h3>{hit.title}</h3><p>{hit.text}</p><div className="library-meta"><span>{hit.source_id}</span><span>{sourceLocationLabel(hit.locators)}</span></div><Button disabled={busy} variant="ghost" onClick={() => void act(async () => { const document = await api<LibraryDocument>('/library/documents/' + hit.document_id); await inspect(document, hit); })}>Inspect citation</Button></article>)}</div>}
+            {hits.length === 0 ? <EmptyState title="No eligible passages matched"><p>Try another phrase or check whether the source has finished processing. Current-guidance search excludes sources with unverified currency.</p></EmptyState> : <div className="library-passages">{hits.map(hit => <article className="library-passage" key={hit.id}><h3>{hit.title}</h3><p>{hit.text}</p><div className="library-meta"><span>{hit.source_id}</span><span>{sourceLocationLabel(hit.locators)}</span></div><Button disabled={busy} variant="ghost" onClick={event => { const origin = event.currentTarget; void act(async () => { const document = await api<LibraryDocument>('/library/documents/' + hit.document_id); await inspect(document, hit, origin); }); }}>Inspect citation</Button></article>)}</div>}
           </section>}
           <section className="section library-documents" aria-labelledby="library-documents-title">
-            <div className="library-section-title"><h2 id="library-documents-title">Documents</h2><Button variant="ghost" busy={documents.resource.status === 'loading'} onClick={documents.retry}>Refresh documents</Button></div>
+            <div className="library-section-title"><h2 ref={documentsHeading} tabIndex={-1} id="library-documents-title">Documents</h2><Button variant="ghost" busy={documents.resource.status === 'loading'} onClick={documents.retry}>Refresh documents</Button></div>
             {documentCounts && <dl className="library-counts" aria-label="Library processing summary">{documentStatuses.map(status => <div key={status}><dt>{statusLabel(status)}</dt><dd>{documentCounts[status] ?? 0}</dd></div>)}</dl>}
             {processing && <QueueStatus />}
             <form className="library-document-filters" onSubmit={event => { event.preventDefault(); setDocumentQuery(documentQueryInput.trim()); setDocumentOffset(0); }}>
@@ -407,7 +422,7 @@ export default function LibraryPage() {
                 {documents.resource.status === 'error' && <span className="muted">Showing the last loaded page</span>}
               </div>
               {documentPage.documents.length === 0 ? filteredDocuments ? <EmptyState title="No documents match these filters"><p>Try a different title or source ID, or show all import states.</p><Button variant="secondary" onClick={clearDocumentFilters}>Show all documents</Button></EmptyState> : <EmptyState title="Build a library you can return to"><p>Add a study note or an authorised document. Once processing finishes, passages keep their link to your original source.</p></EmptyState> : <div className="library-document-list-region" ref={listRegion} role="region" aria-label="Library document list" tabIndex={0}><ul className="library-list">{documentPage.documents.map(document => <li key={document.id} className="library-document">
-              <button disabled={busy} className="library-document-title" onClick={() => void act(() => inspect(document))}>{document.title}</button><div className="library-meta"><Badge tone={statusTone(document.status)}>{statusLabel(document.status)}</Badge><span>{document.source_id}</span>
+              <button disabled={busy} className="library-document-title" onClick={event => { const origin = event.currentTarget; void act(() => inspect(document, undefined, origin)); }}>{document.title}</button><div className="library-meta"><Badge tone={statusTone(document.status)}>{statusLabel(document.status)}</Badge><span>{document.source_id}</span>
                 {document.active_revision && document.active_revision !== document.latest_revision && <span>Earlier indexed revision is available</span>}{document.reserved && <span>Reserved</span>}{document.cleanup_pending && <span>Storage cleanup pending</span>}</div>
               {(document.status === 'queued' || document.status === 'processing') && <Button variant="ghost" disabled={busy || temporary} onClick={() => void act(async () => { const job = await api<ImportResult>('/library/documents/' + encodeURIComponent(document.id) + '/import-status'); if (job.document_id !== document.id || job.revision_id !== document.latest_revision || job.job.revision_id !== job.revision_id) throw new ApiError('The import changed. Refresh documents before cancelling.', 0, 'import_status_mismatch', true); await api('/library/jobs/' + encodeURIComponent(job.job.id) + '/cancel', { method: 'POST' }); })}>Cancel import</Button>}
             </li>)}</ul></div>}
@@ -419,7 +434,7 @@ export default function LibraryPage() {
         </>}
       </div>
       <aside className="library-reader" aria-label="Source reader">{selectedDocument ? <>
-        <h2>{selectedDocument.title}</h2><div className="library-meta"><Badge tone={statusTone(selectedDocument.status)}>{statusLabel(selectedDocument.status)}</Badge><span>{selectedDocument.source_id}</span></div>
+        <h2 ref={readerHeading} tabIndex={-1}>{selectedDocument.title}</h2><Button variant="ghost" onClick={returnFromReader}>Return to sources</Button><div className="library-meta"><Badge tone={statusTone(selectedDocument.status)}>{statusLabel(selectedDocument.status)}</Badge><span>{selectedDocument.source_id}</span></div>
         {selectedDocument.latest_revision && (selectedDocument.status !== 'ready' || selectedDocument.active_revision !== selectedDocument.latest_revision) && <ImportStatus key={selectedDocument.id + ':' + selectedDocument.latest_revision} document={selectedDocument} disabled={busy || temporary} onDocument={updateSelectedDocument} onLibraryChange={() => { documents.retry(); catalogue.retry(); }} onReimport={beginReimport} />}
         <SourceInspector key={selectedDocument.id + ':' + sourceLocation.revisionId + ':' + sourceLocation.page + ':' + sourceLocation.passageId} document={selectedDocument} location={sourceLocation} />
         <Button variant="danger" busy={busy} onClick={() => void remove(selectedDocument)}>Remove from library</Button>
