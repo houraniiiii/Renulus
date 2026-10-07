@@ -1,4 +1,61 @@
-# OpenCode Go learning eligibility and client identity
+# OpenCode Go personal-agent learning and client identity
+
+## Current implementation — October 7, 2026
+
+The owner explicitly authorised personal-agent learning with OpenCode Go and
+removal of Renulus's earlier precautionary pause. Both exact selected models,
+`mimo-v2.6-pro` and `deepseek-v4.1-flash`, now use the app-approved learning
+route. `learning_use.status` is `app_approved`, with `generation_allowed:true`.
+This describes Renulus's decision; it does not assert vendor confirmation,
+account access or a successful model response.
+
+The [official Go documentation](https://opencode.ai/docs/go/), checked on
+October 7, lists both model IDs at the Go chat-completions endpoint. It describes
+coding-agent traffic, requires a client-specific User-Agent and a stable
+`x-opencode-session` per conversation, and lists recent Hermes builds among
+validated clients. It does not state a blanket ban on every non-coding use.
+The earlier decision to block this learning application was our interpretation,
+not a vendor prohibition. The owner's later instruction supersedes that app
+pause; actual provider acceptance remains observable in real requests.
+
+Connections offers explicit Use OpenCode Go and a default-model selector using
+the existing Flow controls. Either exact model, or Automatic, is stored in the
+existing protected connection record and restored on restart. The runtime
+honours an explicit per-request model, then the saved preference, then Automatic
+within the selected subscription. Catalogue absence is advisory for these
+approved models, as it already is for Codex. Requests never switch subscriptions,
+substitute models or retry automatically after a provider failure.
+
+Requests retain `User-Agent: Renulus/0.1.0` and the existing opaque session
+identity. Persistent conversations keep their UUIDv5 across turns/restart;
+temporary requests use a fresh in-memory run identity; compaction shares its
+parent identity. No OpenCode identity is impersonated. Authentication, quota,
+model and image rejections remain visible. Go activation adds no image capability
+claim, provider, inference service, dependency or user-managed runtime.
+
+The completion event retains requested `provider`/`model` and optional observed
+`response_model`. Authenticated runtime status exposes only the last 32 completed
+route records (`run_id`, known `purpose`, `provider`, requested `model`, optional
+`response_model`). These records are process-local, contain no prompts, answer
+text, credentials or arbitrary metadata, and clear on restart. Missing response
+identity remains null/omitted; it is never inferred from the request. The parent's
+live proof must compare requested and reported identities. A different reported
+model is exposed separately and receives no capability credit for the requested
+model. A changing model identity within a Go stream is a protocol error.
+
+See [the October 7 lane handoff](finish-go-20261007.md) for exact changes,
+focused synthetic checks and remaining live validation. All new machine state
+and receipts are outside Git under `C:/rn-finish-20261007/evidence/go`.
+The integration parent owns current README/DECISIONS updates and live calls to
+both models. No successful live access is claimed by this lane.
+
+## Historical record — superseded October 5 pause and its checks
+
+Everything below is the preserved, dated record of the earlier implementation.
+Its unresolved/paused language, old acceptance instructions, counts and pending
+consumer requests describe that historical baseline only. They are not current
+Go guidance. Failed and blocked receipts remain failed or blocked; the October 7
+change does not retroactively turn them into successful live checks.
 
 Reviewed on **2026-10-05 UTC**, in isolated branch `build/go-eligibility`,
 based on `14bb101f6308b2f1eae681ac7b5124fddd716bc3`. This is a scoped
