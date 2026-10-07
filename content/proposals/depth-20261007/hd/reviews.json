@@ -1,0 +1,1321 @@
+[
+  {
+    "id": "RN15-HD-001-review",
+    "artifact_type": "question",
+    "artifact_id": "RN15-HD-001",
+    "artifact_version": 1,
+    "reviewer": "Renulus bounded HD content lane assistant",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "checked_on": "2026-10-07",
+    "status": "assistant_reviewed_proposal",
+    "objective_review": {
+      "proposed_objective_ids": [
+        "T20.O02"
+      ],
+      "exact_objective_text": "Plan modality, access and ongoing dialysis care with the person's preferences.",
+      "support": "Bounded ongoing-care safety and post-event discussion; cases explicitly include patient communication/comfort. Does not satisfy the full modality/access-choice/preferences objective.",
+      "not_mapped": {
+        "T20.O01": "Dialysis initiation is not the task assessed.",
+        "T23.O01": "Explain solute clearance, fluid removal and modality constraints is not an explicit emergency-recognition/response objective. No forced emergency mapping.",
+        "T17.O02": "No infection objective credit from contaminated-circuit avoidance alone."
+      },
+      "parent_action": "Accept this partial T20.O02 mapping or define an explicit emergency objective in parent-owned files; do not silently claim all D29 objectives covered."
+    },
+    "authored_claims": [
+      {
+        "path": "/stem",
+        "text": "An adult receiving maintenance haemodialysis suddenly becomes breathless and confused. Staff see air in the return tubing after a connection has loosened. Air embolism is suspected. Which immediate response is best?",
+        "disposition": "Original hypothetical scenario, not a source patient or incidence estimate."
+      },
+      {
+        "path": "/rationale",
+        "text": "Treat this as suspected air embolism. Trained staff interrupt the circuit and prevent further air entry while emergency assessment and oxygen support proceed; diagnostic confirmation must not delay this response. This is educational reasoning, not a machine-specific operating sequence.",
+        "disposition": "Supported within the exact scenario and exclusions below.",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.2 Air Embolus, printed p2 / physical PDF p4: signs, causes and immediate management steps 1, 2, 5-7; positioning and aspiration steps 3-4 excluded"
+          },
+          {
+            "source_id": "RN15-HD-SRC-NDT-2025",
+            "locator": "Treatment standards > First actions > Additional first actions, specific to the hemodialysis population, and Box 1, When to stop dialysis: suspected air embolism/hemolysis"
+          }
+        ]
+      }
+    ],
+    "key_review": {
+      "answer": "C",
+      "key_version": 1,
+      "text": "Stop the blood pump, clamp access and bloodlines, withhold circuit blood and summon emergency help while assessing and supporting oxygenation.",
+      "reason": "This combines interruption of air entry with urgent patient assessment and support by trained staff.",
+      "single_best_answer": true
+    },
+    "option_reviews": [
+      {
+        "option_id": "A",
+        "text": "Pause ultrafiltration but continue pumping blood while checking the connection.",
+        "rationale": "This leaves the suspected route of air delivery active.",
+        "disposition": "rejected_distractor",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.2 Air Embolus, printed p2 / physical PDF p4: signs, causes and immediate management steps 1, 2, 5-7; positioning and aspiration steps 3-4 excluded"
+          },
+          {
+            "source_id": "RN15-HD-SRC-NDT-2025",
+            "locator": "Treatment standards > First actions > Additional first actions, specific to the hemodialysis population, and Box 1, When to stop dialysis: suspected air embolism/hemolysis"
+          }
+        ]
+      },
+      {
+        "option_id": "B",
+        "text": "Return the circuit blood before calling for assistance.",
+        "rationale": "Suspected air embolism is a reason to withhold circuit blood, not perform routine reinfusion.",
+        "disposition": "rejected_distractor",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.2 Air Embolus, printed p2 / physical PDF p4: signs, causes and immediate management steps 1, 2, 5-7; positioning and aspiration steps 3-4 excluded"
+          },
+          {
+            "source_id": "RN15-HD-SRC-NDT-2025",
+            "locator": "Treatment standards > First actions > Additional first actions, specific to the hemodialysis population, and Box 1, When to stop dialysis: suspected air embolism/hemolysis"
+          }
+        ]
+      },
+      {
+        "option_id": "C",
+        "text": "Stop the blood pump, clamp access and bloodlines, withhold circuit blood and summon emergency help while assessing and supporting oxygenation.",
+        "rationale": "This combines interruption of air entry with urgent patient assessment and support by trained staff.",
+        "disposition": "supported_key",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.2 Air Embolus, printed p2 / physical PDF p4: signs, causes and immediate management steps 1, 2, 5-7; positioning and aspiration steps 3-4 excluded"
+          },
+          {
+            "source_id": "RN15-HD-SRC-NDT-2025",
+            "locator": "Treatment standards > First actions > Additional first actions, specific to the hemodialysis population, and Box 1, When to stop dialysis: suspected air embolism/hemolysis"
+          }
+        ]
+      },
+      {
+        "option_id": "D",
+        "text": "Reset the air alarm once and observe whether symptoms settle.",
+        "rationale": "A symptomatic patient and visible air require action before any restart.",
+        "disposition": "rejected_distractor",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.2 Air Embolus, printed p2 / physical PDF p4: signs, causes and immediate management steps 1, 2, 5-7; positioning and aspiration steps 3-4 excluded"
+          },
+          {
+            "source_id": "RN15-HD-SRC-NDT-2025",
+            "locator": "Treatment standards > First actions > Additional first actions, specific to the hemodialysis population, and Box 1, When to stop dialysis: suspected air embolism/hemolysis"
+          }
+        ]
+      },
+      {
+        "option_id": "E",
+        "text": "Wait for imaging to prove an embolus before interrupting treatment.",
+        "rationale": "Clinical suspicion in this setting warrants immediate protective action.",
+        "disposition": "rejected_distractor",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.2 Air Embolus, printed p2 / physical PDF p4: signs, causes and immediate management steps 1, 2, 5-7; positioning and aspiration steps 3-4 excluded"
+          },
+          {
+            "source_id": "RN15-HD-SRC-NDT-2025",
+            "locator": "Treatment standards > First actions > Additional first actions, specific to the hemodialysis population, and Box 1, When to stop dialysis: suspected air embolism/hemolysis"
+          }
+        ]
+      }
+    ],
+    "source_locus_notice_rights_review": [
+      {
+        "source_id": "RN15-HD-SRC-BCR-202607",
+        "locator": "Section 2.2 Air Embolus, printed p2 / physical PDF p4: signs, causes and immediate management steps 1, 2, 5-7; positioning and aspiration steps 3-4 excluded",
+        "checked_on": "2026-10-07",
+        "notice": "Official current HD hub links this PDF and lists it as updated; cover/footer say July 2026, although search indexing surfaced March 2025. Exact downloaded PDF SHA256 a4b8e92617e098674aa37f5dc4c188c56c6bbf02852f36cf1deb608b84bc174f. Physical pp4,10-11,17 read; printed pp2,8-9,15. Scope and terms physical p2 and About_BCR_Guidelines.pdf checked. New immutable snapshot; no prior BC source mutated. No separate correction/retraction notice identified on the examined hub/PDF; complete notice surveillance unverified. Do not extend into adjacent anaphylaxis, generic chest-pain or rupture algorithms. Positioning and air aspiration deliberately excluded.",
+        "rights": "BC Renal permits personal, clinical, non-commercial downloads; commercial reproduction needs permission (About_BCR_Guidelines.pdf). No source prose, tables, figures or algorithm are bundled. Only independently authored scenarios and references are proposed under CC BY 4.0; source retains its own terms. Do not distribute the external PDF or assume AI-ingestion/commercial-source rights."
+      },
+      {
+        "source_id": "RN15-HD-SRC-NDT-2025",
+        "locator": "Treatment standards > First actions > Additional first actions, specific to the hemodialysis population, and Box 1, When to stop dialysis: suspected air embolism/hemolysis",
+        "checked_on": "2026-10-07",
+        "notice": "Publisher-indexed primary text supplied Box 1 and Additional first actions, specific to the hemodialysis population after direct reader internal errors; PubMed confirms review identity. No Crossmark claim. Corrected and typeset date is production metadata, not proof of a clinical corrigendum. No complete correction/retraction search or 2026 resuscitation-guideline clearance claimed.",
+        "rights": "Publisher/author rights retained; no article-specific open reuse licence established in this lane. Public indexed primary passage used as a reference only; no full article, figure or algorithm copied into Git or downloaded by bypass."
+      }
+    ],
+    "jurisdiction": "UK/Canadian guidance and dated published reviews inform EU education; local emergency systems, trained staff and device instructions govern operational response.",
+    "clinical_caveats": [
+      "Suspected diagnoses do not require waiting for confirmatory tests before protective action.",
+      "No positioning, transfusion threshold, aspiration technique, drug dose or whole-unit water procedure assessed.",
+      "Air/haemolysis no-return rule is not extended to every bleed; question 005 deliberately establishes contamination."
+    ],
+    "publication_gate": "Parent review, G09 register reconciliation, mapping and integration; no publication or independent human review asserted."
+  },
+  {
+    "id": "RN15-HD-002-review",
+    "artifact_type": "question",
+    "artifact_id": "RN15-HD-002",
+    "artifact_version": 1,
+    "reviewer": "Renulus bounded HD content lane assistant",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "checked_on": "2026-10-07",
+    "status": "assistant_reviewed_proposal",
+    "objective_review": {
+      "proposed_objective_ids": [
+        "T20.O02"
+      ],
+      "exact_objective_text": "Plan modality, access and ongoing dialysis care with the person's preferences.",
+      "support": "Bounded ongoing-care safety and post-event discussion; cases explicitly include patient communication/comfort. Does not satisfy the full modality/access-choice/preferences objective.",
+      "not_mapped": {
+        "T20.O01": "Dialysis initiation is not the task assessed.",
+        "T23.O01": "Explain solute clearance, fluid removal and modality constraints is not an explicit emergency-recognition/response objective. No forced emergency mapping.",
+        "T17.O02": "No infection objective credit from contaminated-circuit avoidance alone."
+      },
+      "parent_action": "Accept this partial T20.O02 mapping or define an explicit emergency objective in parent-owned files; do not silently claim all D29 objectives covered."
+    },
+    "authored_claims": [
+      {
+        "path": "/stem",
+        "text": "During an otherwise stable dialysis session, a patient develops back pain and nausea. The post-dialyser blood looks unusually translucent and burgundy; staff identify kinked tubing. Acute haemolysis is suspected. Which plan best addresses the immediate hazard?",
+        "disposition": "Original hypothetical scenario, not a source patient or incidence estimate."
+      },
+      {
+        "path": "/rationale",
+        "text": "The combination warrants an immediate suspected-haemolysis response. A kink is a possible cause, not proof of the entire mechanism. Investigate the patient and circuit before deciding how further dialysis can safely proceed.",
+        "disposition": "Supported within the exact scenario and exclusions below.",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.10 Hemolysis, printed pp8-9 / physical PDF pp10-11: definition, signs, immediate management, bloodwork/ECG and equipment investigation"
+          },
+          {
+            "source_id": "RN15-HD-SRC-CJASN-2017",
+            "locator": "Hemolysis section, final paragraph beginning Patients with severe intradialytic hemolysis: diagnostic laboratory findings, no circuit-blood return, potassium mechanism and root-cause investigation"
+          }
+        ]
+      }
+    ],
+    "key_review": {
+      "answer": "B",
+      "key_version": 1,
+      "text": "Stop dialysis, clamp the venous line, do not return circuit blood, and obtain urgent clinical assessment with potassium, haemolysis investigations and ECG monitoring.",
+      "reason": "The response limits further exposure and addresses potentially dangerous potassium release.",
+      "single_best_answer": true
+    },
+    "option_reviews": [
+      {
+        "option_id": "A",
+        "text": "Straighten the tubing and resume the same circuit if its appearance improves.",
+        "rationale": "A mechanical clue does not establish that the blood or equipment is now safe.",
+        "disposition": "rejected_distractor",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.10 Hemolysis, printed pp8-9 / physical PDF pp10-11: definition, signs, immediate management, bloodwork/ECG and equipment investigation"
+          },
+          {
+            "source_id": "RN15-HD-SRC-CJASN-2017",
+            "locator": "Hemolysis section, final paragraph beginning Patients with severe intradialytic hemolysis: diagnostic laboratory findings, no circuit-blood return, potassium mechanism and root-cause investigation"
+          }
+        ]
+      },
+      {
+        "option_id": "B",
+        "text": "Stop dialysis, clamp the venous line, do not return circuit blood, and obtain urgent clinical assessment with potassium, haemolysis investigations and ECG monitoring.",
+        "rationale": "The response limits further exposure and addresses potentially dangerous potassium release.",
+        "disposition": "supported_key",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.10 Hemolysis, printed pp8-9 / physical PDF pp10-11: definition, signs, immediate management, bloodwork/ECG and equipment investigation"
+          },
+          {
+            "source_id": "RN15-HD-SRC-CJASN-2017",
+            "locator": "Hemolysis section, final paragraph beginning Patients with severe intradialytic hemolysis: diagnostic laboratory findings, no circuit-blood return, potassium mechanism and root-cause investigation"
+          }
+        ]
+      },
+      {
+        "option_id": "C",
+        "text": "Reinfuse the circuit blood to prevent anaemia before requesting laboratory tests.",
+        "rationale": "Reinfusion of haemolysed blood can add released potassium to the patient.",
+        "disposition": "rejected_distractor",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.10 Hemolysis, printed pp8-9 / physical PDF pp10-11: definition, signs, immediate management, bloodwork/ECG and equipment investigation"
+          },
+          {
+            "source_id": "RN15-HD-SRC-CJASN-2017",
+            "locator": "Hemolysis section, final paragraph beginning Patients with severe intradialytic hemolysis: diagnostic laboratory findings, no circuit-blood return, potassium mechanism and root-cause investigation"
+          }
+        ]
+      },
+      {
+        "option_id": "D",
+        "text": "Wait for a low blood pressure before treating this as an emergency.",
+        "rationale": "Early haemolysis can occur with hypertension; absence of hypotension does not exclude it.",
+        "disposition": "rejected_distractor",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.10 Hemolysis, printed pp8-9 / physical PDF pp10-11: definition, signs, immediate management, bloodwork/ECG and equipment investigation"
+          },
+          {
+            "source_id": "RN15-HD-SRC-CJASN-2017",
+            "locator": "Hemolysis section, final paragraph beginning Patients with severe intradialytic hemolysis: diagnostic laboratory findings, no circuit-blood return, potassium mechanism and root-cause investigation"
+          }
+        ]
+      },
+      {
+        "option_id": "E",
+        "text": "Treat the finding as a laboratory collection artefact because the sample has not yet been analysed.",
+        "rationale": "Symptoms and a change in the extracorporeal blood cannot be dismissed as an isolated sampling problem.",
+        "disposition": "rejected_distractor",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.10 Hemolysis, printed pp8-9 / physical PDF pp10-11: definition, signs, immediate management, bloodwork/ECG and equipment investigation"
+          },
+          {
+            "source_id": "RN15-HD-SRC-CJASN-2017",
+            "locator": "Hemolysis section, final paragraph beginning Patients with severe intradialytic hemolysis: diagnostic laboratory findings, no circuit-blood return, potassium mechanism and root-cause investigation"
+          }
+        ]
+      }
+    ],
+    "source_locus_notice_rights_review": [
+      {
+        "source_id": "RN15-HD-SRC-BCR-202607",
+        "locator": "Section 2.10 Hemolysis, printed pp8-9 / physical PDF pp10-11: definition, signs, immediate management, bloodwork/ECG and equipment investigation",
+        "checked_on": "2026-10-07",
+        "notice": "Official current HD hub links this PDF and lists it as updated; cover/footer say July 2026, although search indexing surfaced March 2025. Exact downloaded PDF SHA256 a4b8e92617e098674aa37f5dc4c188c56c6bbf02852f36cf1deb608b84bc174f. Physical pp4,10-11,17 read; printed pp2,8-9,15. Scope and terms physical p2 and About_BCR_Guidelines.pdf checked. New immutable snapshot; no prior BC source mutated. No separate correction/retraction notice identified on the examined hub/PDF; complete notice surveillance unverified. Do not extend into adjacent anaphylaxis, generic chest-pain or rupture algorithms. Positioning and air aspiration deliberately excluded.",
+        "rights": "BC Renal permits personal, clinical, non-commercial downloads; commercial reproduction needs permission (About_BCR_Guidelines.pdf). No source prose, tables, figures or algorithm are bundled. Only independently authored scenarios and references are proposed under CC BY 4.0; source retains its own terms. Do not distribute the external PDF or assume AI-ingestion/commercial-source rights."
+      },
+      {
+        "source_id": "RN15-HD-SRC-CJASN-2017",
+        "locator": "Hemolysis section, final paragraph beginning Patients with severe intradialytic hemolysis: diagnostic laboratory findings, no circuit-blood return, potassium mechanism and root-cause investigation",
+        "checked_on": "2026-10-07",
+        "notice": "PMC primary article and indexed Hemolysis paragraph read. Later page-offset access returned a browser challenge; not bypassed and no new original downloaded. Source is a 2017 mechanistic baseline; no complete notice/retraction clearance inferred. Its positioning recommendations are not adopted.",
+        "rights": "Copyright 2017 American Society of Nephrology. Public repository reading does not establish an open reproduction licence. Original Renulus wording only; no article body, cases, figures or tables distributed."
+      }
+    ],
+    "jurisdiction": "UK/Canadian guidance and dated published reviews inform EU education; local emergency systems, trained staff and device instructions govern operational response.",
+    "clinical_caveats": [
+      "Suspected diagnoses do not require waiting for confirmatory tests before protective action.",
+      "No positioning, transfusion threshold, aspiration technique, drug dose or whole-unit water procedure assessed.",
+      "Air/haemolysis no-return rule is not extended to every bleed; question 005 deliberately establishes contamination."
+    ],
+    "publication_gate": "Parent review, G09 register reconciliation, mapping and integration; no publication or independent human review asserted."
+  },
+  {
+    "id": "RN15-HD-003-review",
+    "artifact_type": "question",
+    "artifact_id": "RN15-HD-003",
+    "artifact_version": 1,
+    "reviewer": "Renulus bounded HD content lane assistant",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "checked_on": "2026-10-07",
+    "status": "assistant_reviewed_proposal",
+    "objective_review": {
+      "proposed_objective_ids": [
+        "T20.O02"
+      ],
+      "exact_objective_text": "Plan modality, access and ongoing dialysis care with the person's preferences.",
+      "support": "Bounded ongoing-care safety and post-event discussion; cases explicitly include patient communication/comfort. Does not satisfy the full modality/access-choice/preferences objective.",
+      "not_mapped": {
+        "T20.O01": "Dialysis initiation is not the task assessed.",
+        "T23.O01": "Explain solute clearance, fluid removal and modality constraints is not an explicit emergency-recognition/response objective. No forced emergency mapping.",
+        "T17.O02": "No infection objective credit from contaminated-circuit avoidance alone."
+      },
+      "parent_action": "Accept this partial T20.O02 mapping or define an explicit emergency objective in parent-owned files; do not silently claim all D29 objectives covered."
+    },
+    "authored_claims": [
+      {
+        "path": "/stem",
+        "text": "A dialysis circuit has already been stopped for suspected haemolysis. The patient asks why the team is withholding its blood even though anaemia is a concern. Which explanation best addresses that specific decision?",
+        "disposition": "Original hypothetical scenario, not a source patient or incidence estimate."
+      },
+      {
+        "path": "/rationale",
+        "text": "Potassium release explains the immediate reinfusion hazard. Assessment of anaemia and any transfusion decision is separate; this item sets no transfusion threshold or hyperkalaemia drug regimen.",
+        "disposition": "Supported within the exact scenario and exclusions below.",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-CJASN-2017",
+            "locator": "Hemolysis section, final paragraph beginning Patients with severe intradialytic hemolysis: diagnostic laboratory findings, no circuit-blood return, potassium mechanism and root-cause investigation"
+          },
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.10 Hemolysis, printed pp8-9 / physical PDF pp10-11: definition, signs, immediate management, bloodwork/ECG and equipment investigation"
+          }
+        ]
+      }
+    ],
+    "key_review": {
+      "answer": "D",
+      "key_version": 1,
+      "text": "Damaged red cells release potassium; reinfusing haemolysed circuit blood can worsen hyperkalaemia.",
+      "reason": "This is the relevant mechanism behind the no-return decision.",
+      "single_best_answer": true
+    },
+    "option_reviews": [
+      {
+        "option_id": "A",
+        "text": "The withheld blood can safely be given back after cooling it.",
+        "rationale": "Cooling does not establish that haemolysed blood is safe for reinfusion.",
+        "disposition": "rejected_distractor",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-CJASN-2017",
+            "locator": "Hemolysis section, final paragraph beginning Patients with severe intradialytic hemolysis: diagnostic laboratory findings, no circuit-blood return, potassium mechanism and root-cause investigation"
+          },
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.10 Hemolysis, printed pp8-9 / physical PDF pp10-11: definition, signs, immediate management, bloodwork/ECG and equipment investigation"
+          }
+        ]
+      },
+      {
+        "option_id": "B",
+        "text": "Withholding blood itself guarantees that the potassium is normal.",
+        "rationale": "Potassium released into the patient still needs assessment and management.",
+        "disposition": "rejected_distractor",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-CJASN-2017",
+            "locator": "Hemolysis section, final paragraph beginning Patients with severe intradialytic hemolysis: diagnostic laboratory findings, no circuit-blood return, potassium mechanism and root-cause investigation"
+          },
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.10 Hemolysis, printed pp8-9 / physical PDF pp10-11: definition, signs, immediate management, bloodwork/ECG and equipment investigation"
+          }
+        ]
+      },
+      {
+        "option_id": "C",
+        "text": "Only visible clotting can make extracorporeal blood unsuitable for return.",
+        "rationale": "Haemolysis is a separate reason to withhold it.",
+        "disposition": "rejected_distractor",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-CJASN-2017",
+            "locator": "Hemolysis section, final paragraph beginning Patients with severe intradialytic hemolysis: diagnostic laboratory findings, no circuit-blood return, potassium mechanism and root-cause investigation"
+          },
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.10 Hemolysis, printed pp8-9 / physical PDF pp10-11: definition, signs, immediate management, bloodwork/ECG and equipment investigation"
+          }
+        ]
+      },
+      {
+        "option_id": "D",
+        "text": "Damaged red cells release potassium; reinfusing haemolysed circuit blood can worsen hyperkalaemia.",
+        "rationale": "This is the relevant mechanism behind the no-return decision.",
+        "disposition": "supported_key",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-CJASN-2017",
+            "locator": "Hemolysis section, final paragraph beginning Patients with severe intradialytic hemolysis: diagnostic laboratory findings, no circuit-blood return, potassium mechanism and root-cause investigation"
+          },
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.10 Hemolysis, printed pp8-9 / physical PDF pp10-11: definition, signs, immediate management, bloodwork/ECG and equipment investigation"
+          }
+        ]
+      },
+      {
+        "option_id": "E",
+        "text": "Every interruption of dialysis requires discarding all circuit blood.",
+        "rationale": "The decision depends on the cause and circuit safety; it is not a universal interruption rule.",
+        "disposition": "rejected_distractor",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-CJASN-2017",
+            "locator": "Hemolysis section, final paragraph beginning Patients with severe intradialytic hemolysis: diagnostic laboratory findings, no circuit-blood return, potassium mechanism and root-cause investigation"
+          },
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.10 Hemolysis, printed pp8-9 / physical PDF pp10-11: definition, signs, immediate management, bloodwork/ECG and equipment investigation"
+          }
+        ]
+      }
+    ],
+    "source_locus_notice_rights_review": [
+      {
+        "source_id": "RN15-HD-SRC-CJASN-2017",
+        "locator": "Hemolysis section, final paragraph beginning Patients with severe intradialytic hemolysis: diagnostic laboratory findings, no circuit-blood return, potassium mechanism and root-cause investigation",
+        "checked_on": "2026-10-07",
+        "notice": "PMC primary article and indexed Hemolysis paragraph read. Later page-offset access returned a browser challenge; not bypassed and no new original downloaded. Source is a 2017 mechanistic baseline; no complete notice/retraction clearance inferred. Its positioning recommendations are not adopted.",
+        "rights": "Copyright 2017 American Society of Nephrology. Public repository reading does not establish an open reproduction licence. Original Renulus wording only; no article body, cases, figures or tables distributed."
+      },
+      {
+        "source_id": "RN15-HD-SRC-BCR-202607",
+        "locator": "Section 2.10 Hemolysis, printed pp8-9 / physical PDF pp10-11: definition, signs, immediate management, bloodwork/ECG and equipment investigation",
+        "checked_on": "2026-10-07",
+        "notice": "Official current HD hub links this PDF and lists it as updated; cover/footer say July 2026, although search indexing surfaced March 2025. Exact downloaded PDF SHA256 a4b8e92617e098674aa37f5dc4c188c56c6bbf02852f36cf1deb608b84bc174f. Physical pp4,10-11,17 read; printed pp2,8-9,15. Scope and terms physical p2 and About_BCR_Guidelines.pdf checked. New immutable snapshot; no prior BC source mutated. No separate correction/retraction notice identified on the examined hub/PDF; complete notice surveillance unverified. Do not extend into adjacent anaphylaxis, generic chest-pain or rupture algorithms. Positioning and air aspiration deliberately excluded.",
+        "rights": "BC Renal permits personal, clinical, non-commercial downloads; commercial reproduction needs permission (About_BCR_Guidelines.pdf). No source prose, tables, figures or algorithm are bundled. Only independently authored scenarios and references are proposed under CC BY 4.0; source retains its own terms. Do not distribute the external PDF or assume AI-ingestion/commercial-source rights."
+      }
+    ],
+    "jurisdiction": "UK/Canadian guidance and dated published reviews inform EU education; local emergency systems, trained staff and device instructions govern operational response.",
+    "clinical_caveats": [
+      "Suspected diagnoses do not require waiting for confirmatory tests before protective action.",
+      "No positioning, transfusion threshold, aspiration technique, drug dose or whole-unit water procedure assessed.",
+      "Air/haemolysis no-return rule is not extended to every bleed; question 005 deliberately establishes contamination."
+    ],
+    "publication_gate": "Parent review, G09 register reconciliation, mapping and integration; no publication or independent human review asserted."
+  },
+  {
+    "id": "RN15-HD-004-review",
+    "artifact_type": "question",
+    "artifact_id": "RN15-HD-004",
+    "artifact_version": 1,
+    "reviewer": "Renulus bounded HD content lane assistant",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "checked_on": "2026-10-07",
+    "status": "assistant_reviewed_proposal",
+    "objective_review": {
+      "proposed_objective_ids": [
+        "T20.O02"
+      ],
+      "exact_objective_text": "Plan modality, access and ongoing dialysis care with the person's preferences.",
+      "support": "Bounded ongoing-care safety and post-event discussion; cases explicitly include patient communication/comfort. Does not satisfy the full modality/access-choice/preferences objective.",
+      "not_mapped": {
+        "T20.O01": "Dialysis initiation is not the task assessed.",
+        "T23.O01": "Explain solute clearance, fluid removal and modality constraints is not an explicit emergency-recognition/response objective. No forced emergency mapping.",
+        "T17.O02": "No infection objective credit from contaminated-circuit avoidance alone."
+      },
+      "parent_action": "Accept this partial T20.O02 mapping or define an explicit emergency objective in parent-owned files; do not silently claim all D29 objectives covered."
+    },
+    "authored_claims": [
+      {
+        "path": "/stem",
+        "text": "A maintenance-HD patient reports sudden wetness at the fistula. Staff find the venous needle out, ongoing blood loss and a blood pump that is still running. There has been no pressure alarm. Which response is best?",
+        "disposition": "Original hypothetical scenario, not a source patient or incidence estimate."
+      },
+      {
+        "path": "/rationale",
+        "text": "Needle dislodgement can bleed without triggering a pressure alarm. The appropriate first response addresses the patient and bleeding site immediately; a later equipment review cannot substitute for haemostasis.",
+        "disposition": "Supported within the exact scenario and exclusions below.",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture"
+          },
+          {
+            "source_id": "RN15-HD-SRC-UKKA-STOP-2023",
+            "locator": "Physical PDF pp4-5: Observation, Pressure Monitoring, and Principles of Safe Alarm Handling (MARC); review date April 2026 on physical p5"
+          }
+        ]
+      }
+    ],
+    "key_review": {
+      "answer": "A",
+      "key_version": 1,
+      "text": "Stop the blood pump, call for help and apply pressure to the bleeding fistula site while urgently assessing circulation.",
+      "reason": "The visible event requires immediate control of blood loss and assessment even without an alarm.",
+      "single_best_answer": true
+    },
+    "option_reviews": [
+      {
+        "option_id": "A",
+        "text": "Stop the blood pump, call for help and apply pressure to the bleeding fistula site while urgently assessing circulation.",
+        "rationale": "The visible event requires immediate control of blood loss and assessment even without an alarm.",
+        "disposition": "supported_key",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture"
+          },
+          {
+            "source_id": "RN15-HD-SRC-UKKA-STOP-2023",
+            "locator": "Physical PDF pp4-5: Observation, Pressure Monitoring, and Principles of Safe Alarm Handling (MARC); review date April 2026 on physical p5"
+          }
+        ]
+      },
+      {
+        "option_id": "B",
+        "text": "Continue treatment because the absence of an alarm excludes significant blood loss.",
+        "rationale": "The pressure change may be insufficient to trigger an alarm.",
+        "disposition": "rejected_distractor",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture"
+          },
+          {
+            "source_id": "RN15-HD-SRC-UKKA-STOP-2023",
+            "locator": "Physical PDF pp4-5: Observation, Pressure Monitoring, and Principles of Safe Alarm Handling (MARC); review date April 2026 on physical p5"
+          }
+        ]
+      },
+      {
+        "option_id": "C",
+        "text": "Widen the alarm limits before inspecting the access.",
+        "rationale": "Changing alarm limits does not control the observed bleeding.",
+        "disposition": "rejected_distractor",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture"
+          },
+          {
+            "source_id": "RN15-HD-SRC-UKKA-STOP-2023",
+            "locator": "Physical PDF pp4-5: Observation, Pressure Monitoring, and Principles of Safe Alarm Handling (MARC); review date April 2026 on physical p5"
+          }
+        ]
+      },
+      {
+        "option_id": "D",
+        "text": "Cover the access and wait for the scheduled observation round.",
+        "rationale": "This delays recognition of continued blood loss.",
+        "disposition": "rejected_distractor",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture"
+          },
+          {
+            "source_id": "RN15-HD-SRC-UKKA-STOP-2023",
+            "locator": "Physical PDF pp4-5: Observation, Pressure Monitoring, and Principles of Safe Alarm Handling (MARC); review date April 2026 on physical p5"
+          }
+        ]
+      },
+      {
+        "option_id": "E",
+        "text": "Increase pump speed to compensate for the interrupted venous return.",
+        "rationale": "Continuing the pump can worsen external blood loss.",
+        "disposition": "rejected_distractor",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture"
+          },
+          {
+            "source_id": "RN15-HD-SRC-UKKA-STOP-2023",
+            "locator": "Physical PDF pp4-5: Observation, Pressure Monitoring, and Principles of Safe Alarm Handling (MARC); review date April 2026 on physical p5"
+          }
+        ]
+      }
+    ],
+    "source_locus_notice_rights_review": [
+      {
+        "source_id": "RN15-HD-SRC-BCR-202607",
+        "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture",
+        "checked_on": "2026-10-07",
+        "notice": "Official current HD hub links this PDF and lists it as updated; cover/footer say July 2026, although search indexing surfaced March 2025. Exact downloaded PDF SHA256 a4b8e92617e098674aa37f5dc4c188c56c6bbf02852f36cf1deb608b84bc174f. Physical pp4,10-11,17 read; printed pp2,8-9,15. Scope and terms physical p2 and About_BCR_Guidelines.pdf checked. New immutable snapshot; no prior BC source mutated. No separate correction/retraction notice identified on the examined hub/PDF; complete notice surveillance unverified. Do not extend into adjacent anaphylaxis, generic chest-pain or rupture algorithms. Positioning and air aspiration deliberately excluded.",
+        "rights": "BC Renal permits personal, clinical, non-commercial downloads; commercial reproduction needs permission (About_BCR_Guidelines.pdf). No source prose, tables, figures or algorithm are bundled. Only independently authored scenarios and references are proposed under CC BY 4.0; source retains its own terms. Do not distribute the external PDF or assume AI-ingestion/commercial-source rights."
+      },
+      {
+        "source_id": "RN15-HD-SRC-UKKA-STOP-2023",
+        "locator": "Physical PDF pp4-5: Observation, Pressure Monitoring, and Principles of Safe Alarm Handling (MARC); review date April 2026 on physical p5",
+        "checked_on": "2026-10-07",
+        "notice": "Official May 18 2023 release page and linked final PDF read. SHA256 3c5c772d9bc4df58e839955ec9f5f3bc7031d0a48bff7367151fdf32a9dcc438. Used physical pp4-5. Review due April 2026 is overdue on checked date; this is not globally current certification. No later same-scope final located in the bounded official search. BC July 2026 section 2.16.1 independently supports the selected visibility/alarm-limit concepts. Distinct from UKKA HD2019 and vascular access April2023/journal2025.",
+        "rights": "Public UKKA reference; no blanket open licence established. Original Renulus scenarios only; no UKKA prose, forms, figures, scoring sheets or posters copied."
+      }
+    ],
+    "jurisdiction": "UK/Canadian guidance and dated published reviews inform EU education; local emergency systems, trained staff and device instructions govern operational response.",
+    "clinical_caveats": [
+      "Suspected diagnoses do not require waiting for confirmatory tests before protective action.",
+      "No positioning, transfusion threshold, aspiration technique, drug dose or whole-unit water procedure assessed.",
+      "Air/haemolysis no-return rule is not extended to every bleed; question 005 deliberately establishes contamination."
+    ],
+    "publication_gate": "Parent review, G09 register reconciliation, mapping and integration; no publication or independent human review asserted."
+  },
+  {
+    "id": "RN15-HD-005-review",
+    "artifact_type": "question",
+    "artifact_id": "RN15-HD-005",
+    "artifact_version": 1,
+    "reviewer": "Renulus bounded HD content lane assistant",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "checked_on": "2026-10-07",
+    "status": "assistant_reviewed_proposal",
+    "objective_review": {
+      "proposed_objective_ids": [
+        "T20.O02"
+      ],
+      "exact_objective_text": "Plan modality, access and ongoing dialysis care with the person's preferences.",
+      "support": "Bounded ongoing-care safety and post-event discussion; cases explicitly include patient communication/comfort. Does not satisfy the full modality/access-choice/preferences objective.",
+      "not_mapped": {
+        "T20.O01": "Dialysis initiation is not the task assessed.",
+        "T23.O01": "Explain solute clearance, fluid removal and modality constraints is not an explicit emergency-recognition/response objective. No forced emergency mapping.",
+        "T17.O02": "No infection objective credit from contaminated-circuit avoidance alone."
+      },
+      "parent_action": "Accept this partial T20.O02 mapping or define an explicit emergency objective in parent-owned files; do not silently claim all D29 objectives covered."
+    },
+    "authored_claims": [
+      {
+        "path": "/stem",
+        "text": "After a venous needle becomes dislodged during dialysis, the emergency team stops the pump and controls the fistula bleeding. The detached circuit end has fallen onto the floor and is contaminated. What is the best decision about the blood in that circuit?",
+        "disposition": "Original hypothetical scenario, not a source patient or incidence estimate."
+      },
+      {
+        "path": "/rationale",
+        "text": "Do not return blood from this contaminated circuit. The clinical team separately determines circulatory support, blood tests and any transfusion need; this question does not prescribe those interventions.",
+        "disposition": "Supported within the exact scenario and exclusions below.",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture"
+          }
+        ]
+      }
+    ],
+    "key_review": {
+      "answer": "C",
+      "key_version": 1,
+      "text": "Withhold it, continue urgent assessment of blood loss and arrange further care through the treating team.",
+      "reason": "Contamination is an explicit reason not to return circuit blood after disconnection.",
+      "single_best_answer": true
+    },
+    "option_reviews": [
+      {
+        "option_id": "A",
+        "text": "Reconnect it immediately because all blood loss must be reversed first.",
+        "rationale": "This would reconnect a contaminated circuit.",
+        "disposition": "rejected_distractor",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture"
+          }
+        ]
+      },
+      {
+        "option_id": "B",
+        "text": "Return it if the blood still looks normal.",
+        "rationale": "Normal appearance does not establish freedom from contamination.",
+        "disposition": "rejected_distractor",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture"
+          }
+        ]
+      },
+      {
+        "option_id": "C",
+        "text": "Withhold it, continue urgent assessment of blood loss and arrange further care through the treating team.",
+        "rationale": "Contamination is an explicit reason not to return circuit blood after disconnection.",
+        "disposition": "supported_key",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture"
+          }
+        ]
+      },
+      {
+        "option_id": "D",
+        "text": "Wait for a culture from the circuit before deciding whether to reinfuse it.",
+        "rationale": "A culture result is not a prerequisite for avoiding this contaminated circuit.",
+        "disposition": "rejected_distractor",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture"
+          }
+        ]
+      },
+      {
+        "option_id": "E",
+        "text": "Infer from this event that circuit blood must never be returned after any kind of bleeding.",
+        "rationale": "This scenario supports a contamination-specific decision, not a universal rule for every haemorrhage.",
+        "disposition": "rejected_distractor",
+        "loci": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture"
+          }
+        ]
+      }
+    ],
+    "source_locus_notice_rights_review": [
+      {
+        "source_id": "RN15-HD-SRC-BCR-202607",
+        "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture",
+        "checked_on": "2026-10-07",
+        "notice": "Official current HD hub links this PDF and lists it as updated; cover/footer say July 2026, although search indexing surfaced March 2025. Exact downloaded PDF SHA256 a4b8e92617e098674aa37f5dc4c188c56c6bbf02852f36cf1deb608b84bc174f. Physical pp4,10-11,17 read; printed pp2,8-9,15. Scope and terms physical p2 and About_BCR_Guidelines.pdf checked. New immutable snapshot; no prior BC source mutated. No separate correction/retraction notice identified on the examined hub/PDF; complete notice surveillance unverified. Do not extend into adjacent anaphylaxis, generic chest-pain or rupture algorithms. Positioning and air aspiration deliberately excluded.",
+        "rights": "BC Renal permits personal, clinical, non-commercial downloads; commercial reproduction needs permission (About_BCR_Guidelines.pdf). No source prose, tables, figures or algorithm are bundled. Only independently authored scenarios and references are proposed under CC BY 4.0; source retains its own terms. Do not distribute the external PDF or assume AI-ingestion/commercial-source rights."
+      }
+    ],
+    "jurisdiction": "UK/Canadian guidance and dated published reviews inform EU education; local emergency systems, trained staff and device instructions govern operational response.",
+    "clinical_caveats": [
+      "Suspected diagnoses do not require waiting for confirmatory tests before protective action.",
+      "No positioning, transfusion threshold, aspiration technique, drug dose or whole-unit water procedure assessed.",
+      "Air/haemolysis no-return rule is not extended to every bleed; question 005 deliberately establishes contamination."
+    ],
+    "publication_gate": "Parent review, G09 register reconciliation, mapping and integration; no publication or independent human review asserted."
+  },
+  {
+    "id": "RN15-CASE-HD-AIR-review",
+    "artifact_type": "case",
+    "artifact_id": "RN15-CASE-HD-AIR",
+    "artifact_version": 1,
+    "reviewer": "Renulus bounded HD content lane assistant",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "checked_on": "2026-10-07",
+    "status": "assistant_reviewed_proposal",
+    "objective_review": {
+      "proposed_objective_ids": [
+        "T20.O02"
+      ],
+      "exact_objective_text": "Plan modality, access and ongoing dialysis care with the person's preferences.",
+      "support": "Bounded ongoing-care safety and post-event discussion; cases explicitly include patient communication/comfort. Does not satisfy the full modality/access-choice/preferences objective.",
+      "not_mapped": {
+        "T20.O01": "Dialysis initiation is not the task assessed.",
+        "T23.O01": "Explain solute clearance, fluid removal and modality constraints is not an explicit emergency-recognition/response objective. No forced emergency mapping.",
+        "T17.O02": "No infection objective credit from contaminated-circuit avoidance alone."
+      },
+      "parent_action": "Accept this partial T20.O02 mapping or define an explicit emergency objective in parent-owned files; do not silently claim all D29 objectives covered."
+    },
+    "key_review": {
+      "answer": null,
+      "reason": "Teaching-only staged case; no score/key invented and no reserved item text used as a teaching stage."
+    },
+    "stage_reviews": [
+      {
+        "stage_id": "stage-1",
+        "authored_narrative": "In this fictional unit scenario, an adult on maintenance HD suddenly coughs, struggles to breathe and becomes confused. A nurse sees bubbles in the venous return tubing near a loosened connection. The patient was talking normally moments earlier.",
+        "narrative_disposition": "Original synthetic initial/reveal/debrief narrative; not an observed patient.",
+        "prompts": [
+          "Which findings make a dialysis-related emergency plausible?",
+          "Would a definitive diagnostic test be needed before protecting the patient?"
+        ],
+        "authored_claims": [
+          {
+            "path": "/stages/0/teaching_points/0",
+            "text": "The temporal change and visible air make air embolism a serious working diagnosis. Other causes of sudden deterioration still require assessment.",
+            "loci": [
+              {
+                "source_id": "RN15-HD-SRC-BCR-202607",
+                "locator": "Section 2.2 Air Embolus, printed p2 / physical PDF p4: signs, causes and immediate management steps 1, 2, 5-7; positioning and aspiration steps 3-4 excluded"
+              }
+            ],
+            "disposition": "Reviewed against the cited exact locus; interpret within synthetic adult scenario and scope exclusions."
+          }
+        ],
+        "source_locus_notice_rights_review": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.2 Air Embolus, printed p2 / physical PDF p4: signs, causes and immediate management steps 1, 2, 5-7; positioning and aspiration steps 3-4 excluded",
+            "checked_on": "2026-10-07",
+            "notice": "Official current HD hub links this PDF and lists it as updated; cover/footer say July 2026, although search indexing surfaced March 2025. Exact downloaded PDF SHA256 a4b8e92617e098674aa37f5dc4c188c56c6bbf02852f36cf1deb608b84bc174f. Physical pp4,10-11,17 read; printed pp2,8-9,15. Scope and terms physical p2 and About_BCR_Guidelines.pdf checked. New immutable snapshot; no prior BC source mutated. No separate correction/retraction notice identified on the examined hub/PDF; complete notice surveillance unverified. Do not extend into adjacent anaphylaxis, generic chest-pain or rupture algorithms. Positioning and air aspiration deliberately excluded.",
+            "rights": "BC Renal permits personal, clinical, non-commercial downloads; commercial reproduction needs permission (About_BCR_Guidelines.pdf). No source prose, tables, figures or algorithm are bundled. Only independently authored scenarios and references are proposed under CC BY 4.0; source retains its own terms. Do not distribute the external PDF or assume AI-ingestion/commercial-source rights."
+          }
+        ]
+      },
+      {
+        "stage_id": "stage-2",
+        "authored_narrative": "Reveal: the team treats the presentation as suspected air embolism and activates the unit emergency response. A colleague proposes routine blood return to avoid losing the circuit volume.",
+        "narrative_disposition": "Original synthetic initial/reveal/debrief narrative; not an observed patient.",
+        "prompts": [
+          "What must happen to the pump and access while help arrives?",
+          "Why is routine blood return inappropriate here?"
+        ],
+        "authored_claims": [
+          {
+            "path": "/stages/1/teaching_points/0",
+            "text": "Stop the pump and clamp access and bloodlines; withhold circuit blood. Trained staff assess airway, breathing and circulation and provide oxygen support while emergency help attends.",
+            "loci": [
+              {
+                "source_id": "RN15-HD-SRC-BCR-202607",
+                "locator": "Section 2.2 Air Embolus, printed p2 / physical PDF p4: signs, causes and immediate management steps 1, 2, 5-7; positioning and aspiration steps 3-4 excluded"
+              },
+              {
+                "source_id": "RN15-HD-SRC-NDT-2025",
+                "locator": "Treatment standards > First actions > Additional first actions, specific to the hemodialysis population, and Box 1, When to stop dialysis: suspected air embolism/hemolysis"
+              }
+            ],
+            "disposition": "Reviewed against the cited exact locus; interpret within synthetic adult scenario and scope exclusions."
+          },
+          {
+            "path": "/stages/1/teaching_points/1",
+            "text": "This is a parallel emergency response, not an instruction to complete machine troubleshooting before attending to the patient.",
+            "loci": [
+              {
+                "source_id": "RN15-HD-SRC-BCR-202607",
+                "locator": "Section 2.2 Air Embolus, printed p2 / physical PDF p4: signs, causes and immediate management steps 1, 2, 5-7; positioning and aspiration steps 3-4 excluded"
+              },
+              {
+                "source_id": "RN15-HD-SRC-NDT-2025",
+                "locator": "Treatment standards > First actions > Additional first actions, specific to the hemodialysis population, and Box 1, When to stop dialysis: suspected air embolism/hemolysis"
+              }
+            ],
+            "disposition": "Reviewed against the cited exact locus; interpret within synthetic adult scenario and scope exclusions."
+          }
+        ],
+        "source_locus_notice_rights_review": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.2 Air Embolus, printed p2 / physical PDF p4: signs, causes and immediate management steps 1, 2, 5-7; positioning and aspiration steps 3-4 excluded",
+            "checked_on": "2026-10-07",
+            "notice": "Official current HD hub links this PDF and lists it as updated; cover/footer say July 2026, although search indexing surfaced March 2025. Exact downloaded PDF SHA256 a4b8e92617e098674aa37f5dc4c188c56c6bbf02852f36cf1deb608b84bc174f. Physical pp4,10-11,17 read; printed pp2,8-9,15. Scope and terms physical p2 and About_BCR_Guidelines.pdf checked. New immutable snapshot; no prior BC source mutated. No separate correction/retraction notice identified on the examined hub/PDF; complete notice surveillance unverified. Do not extend into adjacent anaphylaxis, generic chest-pain or rupture algorithms. Positioning and air aspiration deliberately excluded.",
+            "rights": "BC Renal permits personal, clinical, non-commercial downloads; commercial reproduction needs permission (About_BCR_Guidelines.pdf). No source prose, tables, figures or algorithm are bundled. Only independently authored scenarios and references are proposed under CC BY 4.0; source retains its own terms. Do not distribute the external PDF or assume AI-ingestion/commercial-source rights."
+          },
+          {
+            "source_id": "RN15-HD-SRC-NDT-2025",
+            "locator": "Treatment standards > First actions > Additional first actions, specific to the hemodialysis population, and Box 1, When to stop dialysis: suspected air embolism/hemolysis",
+            "checked_on": "2026-10-07",
+            "notice": "Publisher-indexed primary text supplied Box 1 and Additional first actions, specific to the hemodialysis population after direct reader internal errors; PubMed confirms review identity. No Crossmark claim. Corrected and typeset date is production metadata, not proof of a clinical corrigendum. No complete correction/retraction search or 2026 resuscitation-guideline clearance claimed.",
+            "rights": "Publisher/author rights retained; no article-specific open reuse licence established in this lane. Public indexed primary passage used as a reference only; no full article, figure or algorithm copied into Git or downloaded by bypass."
+          }
+        ]
+      },
+      {
+        "stage_id": "stage-3",
+        "authored_narrative": "Debrief: after emergency transfer, the patient asks whether the machine alarm alone should have prevented the event. The unit reviews the connection, alarm history and circumstances with the patient before planning the next treatment.",
+        "narrative_disposition": "Original synthetic initial/reveal/debrief narrative; not an observed patient.",
+        "prompts": [
+          "What should the review establish before treatment resumes?",
+          "Which parts of a full emergency protocol have not been taught here?"
+        ],
+        "authored_claims": [
+          {
+            "path": "/stages/2/teaching_points/0",
+            "text": "Review the route of possible air entry and the response to alarms before deciding how dialysis can safely continue. A reset is not evidence that the cause has been corrected.",
+            "loci": [
+              {
+                "source_id": "RN15-HD-SRC-BCR-202607",
+                "locator": "Section 2.2 Air Embolus, printed p2 / physical PDF p4: signs, causes and immediate management steps 1, 2, 5-7; positioning and aspiration steps 3-4 excluded"
+              },
+              {
+                "source_id": "RN15-HD-SRC-UKKA-STOP-2023",
+                "locator": "Physical PDF pp4-5: Observation, Pressure Monitoring, and Principles of Safe Alarm Handling (MARC); review date April 2026 on physical p5"
+              }
+            ],
+            "disposition": "Reviewed against the cited exact locus; interpret within synthetic adult scenario and scope exclusions."
+          },
+          {
+            "path": "/stages/2/teaching_points/1",
+            "text": "Positioning, air aspiration and hyperbaric referral need separate clinical and local-protocol assessment; this case does not teach or assess those procedures.",
+            "loci": [
+              {
+                "source_id": "RN15-HD-SRC-BCR-202607",
+                "locator": "Section 2.2 Air Embolus, printed p2 / physical PDF p4: signs, causes and immediate management steps 1, 2, 5-7; positioning and aspiration steps 3-4 excluded"
+              },
+              {
+                "source_id": "RN15-HD-SRC-UKKA-STOP-2023",
+                "locator": "Physical PDF pp4-5: Observation, Pressure Monitoring, and Principles of Safe Alarm Handling (MARC); review date April 2026 on physical p5"
+              }
+            ],
+            "disposition": "Reviewed against the cited exact locus; interpret within synthetic adult scenario and scope exclusions."
+          }
+        ],
+        "source_locus_notice_rights_review": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.2 Air Embolus, printed p2 / physical PDF p4: signs, causes and immediate management steps 1, 2, 5-7; positioning and aspiration steps 3-4 excluded",
+            "checked_on": "2026-10-07",
+            "notice": "Official current HD hub links this PDF and lists it as updated; cover/footer say July 2026, although search indexing surfaced March 2025. Exact downloaded PDF SHA256 a4b8e92617e098674aa37f5dc4c188c56c6bbf02852f36cf1deb608b84bc174f. Physical pp4,10-11,17 read; printed pp2,8-9,15. Scope and terms physical p2 and About_BCR_Guidelines.pdf checked. New immutable snapshot; no prior BC source mutated. No separate correction/retraction notice identified on the examined hub/PDF; complete notice surveillance unverified. Do not extend into adjacent anaphylaxis, generic chest-pain or rupture algorithms. Positioning and air aspiration deliberately excluded.",
+            "rights": "BC Renal permits personal, clinical, non-commercial downloads; commercial reproduction needs permission (About_BCR_Guidelines.pdf). No source prose, tables, figures or algorithm are bundled. Only independently authored scenarios and references are proposed under CC BY 4.0; source retains its own terms. Do not distribute the external PDF or assume AI-ingestion/commercial-source rights."
+          },
+          {
+            "source_id": "RN15-HD-SRC-UKKA-STOP-2023",
+            "locator": "Physical PDF pp4-5: Observation, Pressure Monitoring, and Principles of Safe Alarm Handling (MARC); review date April 2026 on physical p5",
+            "checked_on": "2026-10-07",
+            "notice": "Official May 18 2023 release page and linked final PDF read. SHA256 3c5c772d9bc4df58e839955ec9f5f3bc7031d0a48bff7367151fdf32a9dcc438. Used physical pp4-5. Review due April 2026 is overdue on checked date; this is not globally current certification. No later same-scope final located in the bounded official search. BC July 2026 section 2.16.1 independently supports the selected visibility/alarm-limit concepts. Distinct from UKKA HD2019 and vascular access April2023/journal2025.",
+            "rights": "Public UKKA reference; no blanket open licence established. Original Renulus scenarios only; no UKKA prose, forms, figures, scoring sheets or posters copied."
+          }
+        ]
+      }
+    ],
+    "take_home_review": [
+      {
+        "text": "Visible circuit air plus acute symptoms warrants immediate protective action.",
+        "disposition": "Bounded synthesis or explicit scope boundary; does not add a new treatment step."
+      },
+      {
+        "text": "Explain the event and the next-session safety plan in language the patient understands.",
+        "disposition": "Bounded synthesis or explicit scope boundary; does not add a new treatment step."
+      }
+    ],
+    "accessibility_review": "Text-only initial scenario, explicit Reveal and Debrief narratives, prompts and teaching_points in existing1.3 schema. No reliance on colour/image/audio recognition; blood appearance also described in words. Renderer accessibility not executed.",
+    "clinical_caveats": [
+      "Educational immediate-response reasoning only, no practical competence certificate.",
+      "No one-position-fits-all rule; air aspiration and transfusion not taught.",
+      "Does not establish the rest of D29 or D28/home-HD/water-system depth."
+    ],
+    "jurisdiction": "Canadian provincial/UK supplementary sources, independently written for EU learners; local trained-team and manufacturer pathways remain applicable.",
+    "publication_gate": "Parent review, G09 register reconciliation, objective disposition, integrated rendering and publication pending."
+  },
+  {
+    "id": "RN15-CASE-HD-HAEMOLYSIS-review",
+    "artifact_type": "case",
+    "artifact_id": "RN15-CASE-HD-HAEMOLYSIS",
+    "artifact_version": 1,
+    "reviewer": "Renulus bounded HD content lane assistant",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "checked_on": "2026-10-07",
+    "status": "assistant_reviewed_proposal",
+    "objective_review": {
+      "proposed_objective_ids": [
+        "T20.O02"
+      ],
+      "exact_objective_text": "Plan modality, access and ongoing dialysis care with the person's preferences.",
+      "support": "Bounded ongoing-care safety and post-event discussion; cases explicitly include patient communication/comfort. Does not satisfy the full modality/access-choice/preferences objective.",
+      "not_mapped": {
+        "T20.O01": "Dialysis initiation is not the task assessed.",
+        "T23.O01": "Explain solute clearance, fluid removal and modality constraints is not an explicit emergency-recognition/response objective. No forced emergency mapping.",
+        "T17.O02": "No infection objective credit from contaminated-circuit avoidance alone."
+      },
+      "parent_action": "Accept this partial T20.O02 mapping or define an explicit emergency objective in parent-owned files; do not silently claim all D29 objectives covered."
+    },
+    "key_review": {
+      "answer": null,
+      "reason": "Teaching-only staged case; no score/key invented and no reserved item text used as a teaching stage."
+    },
+    "stage_reviews": [
+      {
+        "stage_id": "stage-1",
+        "authored_narrative": "A fictional adult develops chest tightness and nausea during HD. Staff notice unusually cherry-red, translucent blood beyond the dialyser. Blood pressure is initially raised. There is no external bleeding.",
+        "narrative_disposition": "Original synthetic initial/reveal/debrief narrative; not an observed patient.",
+        "prompts": [
+          "Which hazard links the symptoms and blood appearance?",
+          "Does the raised pressure rule it out?"
+        ],
+        "authored_claims": [
+          {
+            "path": "/stages/0/teaching_points/0",
+            "text": "Suspect haemolysis and assess urgently; hypotension is not a required early feature. The appearance is a warning sign, not a stand-alone confirmatory test.",
+            "loci": [
+              {
+                "source_id": "RN15-HD-SRC-BCR-202607",
+                "locator": "Section 2.10 Hemolysis, printed pp8-9 / physical PDF pp10-11: definition, signs, immediate management, bloodwork/ECG and equipment investigation"
+              }
+            ],
+            "disposition": "Reviewed against the cited exact locus; interpret within synthetic adult scenario and scope exclusions."
+          }
+        ],
+        "source_locus_notice_rights_review": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.10 Hemolysis, printed pp8-9 / physical PDF pp10-11: definition, signs, immediate management, bloodwork/ECG and equipment investigation",
+            "checked_on": "2026-10-07",
+            "notice": "Official current HD hub links this PDF and lists it as updated; cover/footer say July 2026, although search indexing surfaced March 2025. Exact downloaded PDF SHA256 a4b8e92617e098674aa37f5dc4c188c56c6bbf02852f36cf1deb608b84bc174f. Physical pp4,10-11,17 read; printed pp2,8-9,15. Scope and terms physical p2 and About_BCR_Guidelines.pdf checked. New immutable snapshot; no prior BC source mutated. No separate correction/retraction notice identified on the examined hub/PDF; complete notice surveillance unverified. Do not extend into adjacent anaphylaxis, generic chest-pain or rupture algorithms. Positioning and air aspiration deliberately excluded.",
+            "rights": "BC Renal permits personal, clinical, non-commercial downloads; commercial reproduction needs permission (About_BCR_Guidelines.pdf). No source prose, tables, figures or algorithm are bundled. Only independently authored scenarios and references are proposed under CC BY 4.0; source retains its own terms. Do not distribute the external PDF or assume AI-ingestion/commercial-source rights."
+          }
+        ]
+      },
+      {
+        "stage_id": "stage-2",
+        "authored_narrative": "Reveal: the team stops dialysis and clamps the venous line. One trainee asks whether the circuit blood should be returned before blood tests are taken.",
+        "narrative_disposition": "Original synthetic initial/reveal/debrief narrative; not an observed patient.",
+        "prompts": [
+          "What mechanism makes reinfusion hazardous?",
+          "Which immediate physiological complication needs assessment?"
+        ],
+        "authored_claims": [
+          {
+            "path": "/stages/1/teaching_points/0",
+            "text": "Do not return suspected haemolysed circuit blood. Red-cell disruption releases potassium, so urgent potassium assessment and ECG monitoring matter alongside haemolysis investigations.",
+            "loci": [
+              {
+                "source_id": "RN15-HD-SRC-BCR-202607",
+                "locator": "Section 2.10 Hemolysis, printed pp8-9 / physical PDF pp10-11: definition, signs, immediate management, bloodwork/ECG and equipment investigation"
+              },
+              {
+                "source_id": "RN15-HD-SRC-CJASN-2017",
+                "locator": "Hemolysis section, final paragraph beginning Patients with severe intradialytic hemolysis: diagnostic laboratory findings, no circuit-blood return, potassium mechanism and root-cause investigation"
+              }
+            ],
+            "disposition": "Reviewed against the cited exact locus; interpret within synthetic adult scenario and scope exclusions."
+          }
+        ],
+        "source_locus_notice_rights_review": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.10 Hemolysis, printed pp8-9 / physical PDF pp10-11: definition, signs, immediate management, bloodwork/ECG and equipment investigation",
+            "checked_on": "2026-10-07",
+            "notice": "Official current HD hub links this PDF and lists it as updated; cover/footer say July 2026, although search indexing surfaced March 2025. Exact downloaded PDF SHA256 a4b8e92617e098674aa37f5dc4c188c56c6bbf02852f36cf1deb608b84bc174f. Physical pp4,10-11,17 read; printed pp2,8-9,15. Scope and terms physical p2 and About_BCR_Guidelines.pdf checked. New immutable snapshot; no prior BC source mutated. No separate correction/retraction notice identified on the examined hub/PDF; complete notice surveillance unverified. Do not extend into adjacent anaphylaxis, generic chest-pain or rupture algorithms. Positioning and air aspiration deliberately excluded.",
+            "rights": "BC Renal permits personal, clinical, non-commercial downloads; commercial reproduction needs permission (About_BCR_Guidelines.pdf). No source prose, tables, figures or algorithm are bundled. Only independently authored scenarios and references are proposed under CC BY 4.0; source retains its own terms. Do not distribute the external PDF or assume AI-ingestion/commercial-source rights."
+          },
+          {
+            "source_id": "RN15-HD-SRC-CJASN-2017",
+            "locator": "Hemolysis section, final paragraph beginning Patients with severe intradialytic hemolysis: diagnostic laboratory findings, no circuit-blood return, potassium mechanism and root-cause investigation",
+            "checked_on": "2026-10-07",
+            "notice": "PMC primary article and indexed Hemolysis paragraph read. Later page-offset access returned a browser challenge; not bypassed and no new original downloaded. Source is a 2017 mechanistic baseline; no complete notice/retraction clearance inferred. Its positioning recommendations are not adopted.",
+            "rights": "Copyright 2017 American Society of Nephrology. Public repository reading does not establish an open reproduction licence. Original Renulus wording only; no article body, cases, figures or tables distributed."
+          }
+        ]
+      },
+      {
+        "stage_id": "stage-3",
+        "authored_narrative": "Debrief: another patient in the same unit develops a similar symptom pattern. The clinical lead coordinates urgent assessment, and biomedical staff retain the affected equipment for investigation. No cause has yet been confirmed.",
+        "narrative_disposition": "Original synthetic initial/reveal/debrief narrative; not an observed patient.",
+        "prompts": [
+          "How does the second event change the investigation?",
+          "What would be wrong with simply restarting the original circuit after the symptoms improve?"
+        ],
+        "authored_claims": [
+          {
+            "path": "/stages/2/teaching_points/0",
+            "text": "A cluster warrants investigation of a shared exposure, including dialysate, as well as tubing or equipment problems. It does not prove a particular contaminant.",
+            "loci": [
+              {
+                "source_id": "RN15-HD-SRC-BCR-202607",
+                "locator": "Section 2.10 Hemolysis, printed pp8-9 / physical PDF pp10-11: definition, signs, immediate management, bloodwork/ECG and equipment investigation"
+              },
+              {
+                "source_id": "RN15-HD-SRC-CJASN-2017",
+                "locator": "Hemolysis section, final paragraph beginning Patients with severe intradialytic hemolysis: diagnostic laboratory findings, no circuit-blood return, potassium mechanism and root-cause investigation"
+              }
+            ],
+            "disposition": "Reviewed against the cited exact locus; interpret within synthetic adult scenario and scope exclusions."
+          },
+          {
+            "path": "/stages/2/teaching_points/1",
+            "text": "Further dialysis requires a safe treatment arrangement after clinical and technical review. Retain implicated equipment for investigation; symptom improvement alone does not clear it for reuse.",
+            "loci": [
+              {
+                "source_id": "RN15-HD-SRC-BCR-202607",
+                "locator": "Section 2.10 Hemolysis, printed pp8-9 / physical PDF pp10-11: definition, signs, immediate management, bloodwork/ECG and equipment investigation"
+              },
+              {
+                "source_id": "RN15-HD-SRC-CJASN-2017",
+                "locator": "Hemolysis section, final paragraph beginning Patients with severe intradialytic hemolysis: diagnostic laboratory findings, no circuit-blood return, potassium mechanism and root-cause investigation"
+              }
+            ],
+            "disposition": "Reviewed against the cited exact locus; interpret within synthetic adult scenario and scope exclusions."
+          }
+        ],
+        "source_locus_notice_rights_review": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.10 Hemolysis, printed pp8-9 / physical PDF pp10-11: definition, signs, immediate management, bloodwork/ECG and equipment investigation",
+            "checked_on": "2026-10-07",
+            "notice": "Official current HD hub links this PDF and lists it as updated; cover/footer say July 2026, although search indexing surfaced March 2025. Exact downloaded PDF SHA256 a4b8e92617e098674aa37f5dc4c188c56c6bbf02852f36cf1deb608b84bc174f. Physical pp4,10-11,17 read; printed pp2,8-9,15. Scope and terms physical p2 and About_BCR_Guidelines.pdf checked. New immutable snapshot; no prior BC source mutated. No separate correction/retraction notice identified on the examined hub/PDF; complete notice surveillance unverified. Do not extend into adjacent anaphylaxis, generic chest-pain or rupture algorithms. Positioning and air aspiration deliberately excluded.",
+            "rights": "BC Renal permits personal, clinical, non-commercial downloads; commercial reproduction needs permission (About_BCR_Guidelines.pdf). No source prose, tables, figures or algorithm are bundled. Only independently authored scenarios and references are proposed under CC BY 4.0; source retains its own terms. Do not distribute the external PDF or assume AI-ingestion/commercial-source rights."
+          },
+          {
+            "source_id": "RN15-HD-SRC-CJASN-2017",
+            "locator": "Hemolysis section, final paragraph beginning Patients with severe intradialytic hemolysis: diagnostic laboratory findings, no circuit-blood return, potassium mechanism and root-cause investigation",
+            "checked_on": "2026-10-07",
+            "notice": "PMC primary article and indexed Hemolysis paragraph read. Later page-offset access returned a browser challenge; not bypassed and no new original downloaded. Source is a 2017 mechanistic baseline; no complete notice/retraction clearance inferred. Its positioning recommendations are not adopted.",
+            "rights": "Copyright 2017 American Society of Nephrology. Public repository reading does not establish an open reproduction licence. Original Renulus wording only; no article body, cases, figures or tables distributed."
+          }
+        ]
+      }
+    ],
+    "take_home_review": [
+      {
+        "text": "Treat suspected haemolysis as an emergency and explain the no-return decision.",
+        "disposition": "Bounded synthesis or explicit scope boundary; does not add a new treatment step."
+      },
+      {
+        "text": "This case covers recognition and investigation reasoning, not water-system engineering or transfusion protocols.",
+        "disposition": "Bounded synthesis or explicit scope boundary; does not add a new treatment step."
+      }
+    ],
+    "accessibility_review": "Text-only initial scenario, explicit Reveal and Debrief narratives, prompts and teaching_points in existing1.3 schema. No reliance on colour/image/audio recognition; blood appearance also described in words. Renderer accessibility not executed.",
+    "clinical_caveats": [
+      "Educational immediate-response reasoning only, no practical competence certificate.",
+      "No one-position-fits-all rule; air aspiration and transfusion not taught.",
+      "Does not establish the rest of D29 or D28/home-HD/water-system depth."
+    ],
+    "jurisdiction": "Canadian provincial/UK supplementary sources, independently written for EU learners; local trained-team and manufacturer pathways remain applicable.",
+    "publication_gate": "Parent review, G09 register reconciliation, objective disposition, integrated rendering and publication pending."
+  },
+  {
+    "id": "RN15-CASE-HD-DISCONNECTION-review",
+    "artifact_type": "case",
+    "artifact_id": "RN15-CASE-HD-DISCONNECTION",
+    "artifact_version": 1,
+    "reviewer": "Renulus bounded HD content lane assistant",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "checked_on": "2026-10-07",
+    "status": "assistant_reviewed_proposal",
+    "objective_review": {
+      "proposed_objective_ids": [
+        "T20.O02"
+      ],
+      "exact_objective_text": "Plan modality, access and ongoing dialysis care with the person's preferences.",
+      "support": "Bounded ongoing-care safety and post-event discussion; cases explicitly include patient communication/comfort. Does not satisfy the full modality/access-choice/preferences objective.",
+      "not_mapped": {
+        "T20.O01": "Dialysis initiation is not the task assessed.",
+        "T23.O01": "Explain solute clearance, fluid removal and modality constraints is not an explicit emergency-recognition/response objective. No forced emergency mapping.",
+        "T17.O02": "No infection objective credit from contaminated-circuit avoidance alone."
+      },
+      "parent_action": "Accept this partial T20.O02 mapping or define an explicit emergency objective in parent-owned files; do not silently claim all D29 objectives covered."
+    },
+    "key_review": {
+      "answer": null,
+      "reason": "Teaching-only staged case; no score/key invented and no reserved item text used as a teaching stage."
+    },
+    "stage_reviews": [
+      {
+        "stage_id": "stage-1",
+        "authored_narrative": "In a fictional dialysis session, a patient tells staff that the sleeve over the fistula suddenly feels wet. The machine has not alarmed. On immediate inspection the venous needle is displaced and blood is escaping.",
+        "narrative_disposition": "Original synthetic initial/reveal/debrief narrative; not an observed patient.",
+        "prompts": [
+          "How much reassurance does the silent alarm provide?",
+          "What takes priority now?"
+        ],
+        "authored_claims": [
+          {
+            "path": "/stages/0/teaching_points/0",
+            "text": "A silent pressure alarm cannot exclude dislodgement. Stop the pump, summon help and apply pressure to the fistula bleeding site while assessing the patient.",
+            "loci": [
+              {
+                "source_id": "RN15-HD-SRC-BCR-202607",
+                "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture"
+              },
+              {
+                "source_id": "RN15-HD-SRC-UKKA-STOP-2023",
+                "locator": "Physical PDF pp4-5: Observation, Pressure Monitoring, and Principles of Safe Alarm Handling (MARC); review date April 2026 on physical p5"
+              }
+            ],
+            "disposition": "Reviewed against the cited exact locus; interpret within synthetic adult scenario and scope exclusions."
+          }
+        ],
+        "source_locus_notice_rights_review": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture",
+            "checked_on": "2026-10-07",
+            "notice": "Official current HD hub links this PDF and lists it as updated; cover/footer say July 2026, although search indexing surfaced March 2025. Exact downloaded PDF SHA256 a4b8e92617e098674aa37f5dc4c188c56c6bbf02852f36cf1deb608b84bc174f. Physical pp4,10-11,17 read; printed pp2,8-9,15. Scope and terms physical p2 and About_BCR_Guidelines.pdf checked. New immutable snapshot; no prior BC source mutated. No separate correction/retraction notice identified on the examined hub/PDF; complete notice surveillance unverified. Do not extend into adjacent anaphylaxis, generic chest-pain or rupture algorithms. Positioning and air aspiration deliberately excluded.",
+            "rights": "BC Renal permits personal, clinical, non-commercial downloads; commercial reproduction needs permission (About_BCR_Guidelines.pdf). No source prose, tables, figures or algorithm are bundled. Only independently authored scenarios and references are proposed under CC BY 4.0; source retains its own terms. Do not distribute the external PDF or assume AI-ingestion/commercial-source rights."
+          },
+          {
+            "source_id": "RN15-HD-SRC-UKKA-STOP-2023",
+            "locator": "Physical PDF pp4-5: Observation, Pressure Monitoring, and Principles of Safe Alarm Handling (MARC); review date April 2026 on physical p5",
+            "checked_on": "2026-10-07",
+            "notice": "Official May 18 2023 release page and linked final PDF read. SHA256 3c5c772d9bc4df58e839955ec9f5f3bc7031d0a48bff7367151fdf32a9dcc438. Used physical pp4-5. Review due April 2026 is overdue on checked date; this is not globally current certification. No later same-scope final located in the bounded official search. BC July 2026 section 2.16.1 independently supports the selected visibility/alarm-limit concepts. Distinct from UKKA HD2019 and vascular access April2023/journal2025.",
+            "rights": "Public UKKA reference; no blanket open licence established. Original Renulus scenarios only; no UKKA prose, forms, figures, scoring sheets or posters copied."
+          }
+        ]
+      },
+      {
+        "stage_id": "stage-2",
+        "authored_narrative": "Reveal: the exposed circuit end has touched the floor. Bleeding is being controlled. During handover, staff also discuss how a separated catheter connection would differ from this fistula needle event.",
+        "narrative_disposition": "Original synthetic initial/reveal/debrief narrative; not an observed patient.",
+        "prompts": [
+          "Should blood from the contaminated circuit be returned?",
+          "What access-specific protective action is described for a catheter?"
+        ],
+        "authored_claims": [
+          {
+            "path": "/stages/1/teaching_points/0",
+            "text": "Withhold blood from the contaminated circuit. Continue urgent assessment of blood loss; this does not establish a universal discard rule for every bleed.",
+            "loci": [
+              {
+                "source_id": "RN15-HD-SRC-BCR-202607",
+                "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture"
+              }
+            ],
+            "disposition": "Reviewed against the cited exact locus; interpret within synthetic adult scenario and scope exclusions."
+          },
+          {
+            "path": "/stages/1/teaching_points/1",
+            "text": "For a catheter disconnection, trained staff secure the access by clamping; for the bleeding fistula needle site, pressure controls the external loss.",
+            "loci": [
+              {
+                "source_id": "RN15-HD-SRC-BCR-202607",
+                "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture"
+              }
+            ],
+            "disposition": "Reviewed against the cited exact locus; interpret within synthetic adult scenario and scope exclusions."
+          }
+        ],
+        "source_locus_notice_rights_review": [
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture",
+            "checked_on": "2026-10-07",
+            "notice": "Official current HD hub links this PDF and lists it as updated; cover/footer say July 2026, although search indexing surfaced March 2025. Exact downloaded PDF SHA256 a4b8e92617e098674aa37f5dc4c188c56c6bbf02852f36cf1deb608b84bc174f. Physical pp4,10-11,17 read; printed pp2,8-9,15. Scope and terms physical p2 and About_BCR_Guidelines.pdf checked. New immutable snapshot; no prior BC source mutated. No separate correction/retraction notice identified on the examined hub/PDF; complete notice surveillance unverified. Do not extend into adjacent anaphylaxis, generic chest-pain or rupture algorithms. Positioning and air aspiration deliberately excluded.",
+            "rights": "BC Renal permits personal, clinical, non-commercial downloads; commercial reproduction needs permission (About_BCR_Guidelines.pdf). No source prose, tables, figures or algorithm are bundled. Only independently authored scenarios and references are proposed under CC BY 4.0; source retains its own terms. Do not distribute the external PDF or assume AI-ingestion/commercial-source rights."
+          }
+        ]
+      },
+      {
+        "stage_id": "stage-3",
+        "authored_narrative": "Debrief: the patient explains that they covered the arm because they felt cold. The team discusses comfort, visibility and how to report wetness, then reviews securement and observation arrangements before the next session.",
+        "narrative_disposition": "Original synthetic initial/reveal/debrief narrative; not an observed patient.",
+        "prompts": [
+          "How can the patient participate in a safer next-session plan?",
+          "Why must staff assess the patient and connections before resetting a pressure alarm?"
+        ],
+        "authored_claims": [
+          {
+            "path": "/stages/2/teaching_points/0",
+            "text": "Agree how to keep the access visible while addressing comfort, and encourage prompt reporting of wetness or bleeding. Alarms supplement direct observation.",
+            "loci": [
+              {
+                "source_id": "RN15-HD-SRC-UKKA-STOP-2023",
+                "locator": "Physical PDF pp4-5: Observation, Pressure Monitoring, and Principles of Safe Alarm Handling (MARC); review date April 2026 on physical p5"
+              },
+              {
+                "source_id": "RN15-HD-SRC-BCR-202607",
+                "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture"
+              }
+            ],
+            "disposition": "Reviewed against the cited exact locus; interpret within synthetic adult scenario and scope exclusions."
+          },
+          {
+            "path": "/stages/2/teaching_points/1",
+            "text": "Assess the patient, connections and alarm cause; correct the problem before reset and confirm that treatment can continue safely.",
+            "loci": [
+              {
+                "source_id": "RN15-HD-SRC-UKKA-STOP-2023",
+                "locator": "Physical PDF pp4-5: Observation, Pressure Monitoring, and Principles of Safe Alarm Handling (MARC); review date April 2026 on physical p5"
+              },
+              {
+                "source_id": "RN15-HD-SRC-BCR-202607",
+                "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture"
+              }
+            ],
+            "disposition": "Reviewed against the cited exact locus; interpret within synthetic adult scenario and scope exclusions."
+          }
+        ],
+        "source_locus_notice_rights_review": [
+          {
+            "source_id": "RN15-HD-SRC-UKKA-STOP-2023",
+            "locator": "Physical PDF pp4-5: Observation, Pressure Monitoring, and Principles of Safe Alarm Handling (MARC); review date April 2026 on physical p5",
+            "checked_on": "2026-10-07",
+            "notice": "Official May 18 2023 release page and linked final PDF read. SHA256 3c5c772d9bc4df58e839955ec9f5f3bc7031d0a48bff7367151fdf32a9dcc438. Used physical pp4-5. Review due April 2026 is overdue on checked date; this is not globally current certification. No later same-scope final located in the bounded official search. BC July 2026 section 2.16.1 independently supports the selected visibility/alarm-limit concepts. Distinct from UKKA HD2019 and vascular access April2023/journal2025.",
+            "rights": "Public UKKA reference; no blanket open licence established. Original Renulus scenarios only; no UKKA prose, forms, figures, scoring sheets or posters copied."
+          },
+          {
+            "source_id": "RN15-HD-SRC-BCR-202607",
+            "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture",
+            "checked_on": "2026-10-07",
+            "notice": "Official current HD hub links this PDF and lists it as updated; cover/footer say July 2026, although search indexing surfaced March 2025. Exact downloaded PDF SHA256 a4b8e92617e098674aa37f5dc4c188c56c6bbf02852f36cf1deb608b84bc174f. Physical pp4,10-11,17 read; printed pp2,8-9,15. Scope and terms physical p2 and About_BCR_Guidelines.pdf checked. New immutable snapshot; no prior BC source mutated. No separate correction/retraction notice identified on the examined hub/PDF; complete notice surveillance unverified. Do not extend into adjacent anaphylaxis, generic chest-pain or rupture algorithms. Positioning and air aspiration deliberately excluded.",
+            "rights": "BC Renal permits personal, clinical, non-commercial downloads; commercial reproduction needs permission (About_BCR_Guidelines.pdf). No source prose, tables, figures or algorithm are bundled. Only independently authored scenarios and references are proposed under CC BY 4.0; source retains its own terms. Do not distribute the external PDF or assume AI-ingestion/commercial-source rights."
+          }
+        ]
+      }
+    ],
+    "take_home_review": [
+      {
+        "text": "Control blood loss immediately even if the machine is silent.",
+        "disposition": "Bounded synthesis or explicit scope boundary; does not add a new treatment step."
+      },
+      {
+        "text": "Keep contamination, circulatory support and later access planning as explicit decisions. This is not practical certification.",
+        "disposition": "Bounded synthesis or explicit scope boundary; does not add a new treatment step."
+      }
+    ],
+    "accessibility_review": "Text-only initial scenario, explicit Reveal and Debrief narratives, prompts and teaching_points in existing1.3 schema. No reliance on colour/image/audio recognition; blood appearance also described in words. Renderer accessibility not executed.",
+    "clinical_caveats": [
+      "Educational immediate-response reasoning only, no practical competence certificate.",
+      "No one-position-fits-all rule; air aspiration and transfusion not taught.",
+      "Does not establish the rest of D29 or D28/home-HD/water-system depth."
+    ],
+    "jurisdiction": "Canadian provincial/UK supplementary sources, independently written for EU learners; local trained-team and manufacturer pathways remain applicable.",
+    "publication_gate": "Parent review, G09 register reconciliation, objective disposition, integrated rendering and publication pending."
+  }
+]
