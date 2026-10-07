@@ -29,9 +29,18 @@ Five affected source cases and both1.4.1/1.4.2 validators passed once. Memory
 13 concurrency passes and14 earlier individual passes remain accepted at scope;
 their original failed aggregates remain unchanged. No rerun/import/provider replay.
 
-Parent owns integration, GitHub, promotion, visual admission and retirement.
-Recover its current orchestration/cleanup receipts for worker/lane/tracker
-state; this report does not attest their closure or integration.
+All lane work is integrated, all workers are closed and only the main checkout
+remains. The final review worktree was retired after confirming clean tracked,
+untracked and ignored state; its external writer/review artifacts are preserved.
+GitHub issues #3, #12 and #20 are closed at their implemented scopes. Issue #1
+remains open for the physical observations in #21. PR #13 contains the accepted
+integration; recover its live status before starting new work.
+No owned app, backend or check is running. Current orchestration and tracker
+receipts are under C:/rn-finish-20261007/evidence/orchestration and
+C:/rn-finish-20261007/evidence/release-f1c49444/github-handover.json. Completed
+source tests, providers, imports, installed journeys and manufacture must not be
+repeated merely to make a new aggregate. The single 20-minute heartbeat monitors
+only meaningful residual evidence and new owner instructions.
 
 The normal profile stays E:/Renulus-native-delivery/desktop-20261005/data/learning.
 It was not read/copied for synthetic acceptance. Originals remain on the second

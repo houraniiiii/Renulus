@@ -1,8 +1,9 @@
 # Working in Renulus
 
 Renulus now has its own repository, `houraniiiii/Renulus`, and its own independent
-Git history. `main` holds the shared planning/acquisition workspace; the current
-app integration branch is `build/renulus-integration` in its sibling worktree.
+Git history. Main is the shared default branch. The active Windows delivery
+checkout at C:/Renulus-native-delivery/desktop-20261005/repo stays on
+build/renulus-integration; its learning profile and originals remain on E:.
 `origin` is the sole remote. No inherited
 MVP branches, recovery remotes, sparse-checkout rules or old Git checkpoints are
 part of this repository.
