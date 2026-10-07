@@ -9,6 +9,7 @@ from renulus.contracts import ApiError
 from renulus.storage import utc_now
 from .models import article_identity
 from .reviews import canonical
+from .topic_queries import topic_expression
 
 
 def publication_types(article):
@@ -118,11 +119,11 @@ class Literature:
         since = (today - timedelta(days=days)).isoformat()
         now, discovered, checks = utc_now(), 0, []
         for topic_id, topic in selected:
-            # Only the canonical installed topic label leaves the app.
-            # Keep the label literal and restrict phrase matches to title/abstract.
-            phrase = topic.replace("\\", "\\\\").replace('"', '\\"')
+            # Reviewed concepts require the exact installed ID/title pair;
+            # unknown headings stay literal. No case or prompt is query input.
+            expression = topic_expression(topic_id, topic)
             # Europe PMC documents newest-first sorting inside the query.
-            query = f'TITLE_ABS:"{phrase}" AND FIRST_PDATE:[{since} TO {today.isoformat()}] sort_date:y'
+            query = f'{expression} AND FIRST_PDATE:[{since} TO {today.isoformat()}] sort_date:y'
             found, checked = 0, 0
             try:
                 articles, hits = await self.query(query)
