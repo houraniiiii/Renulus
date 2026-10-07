@@ -12,22 +12,21 @@ This repository contains the application, the confirmed direction, selected Flow
 interface, original teaching packs and dated implementation evidence. The local
 backend and renderer connect study discussions, document retrieval, cases,
 assessment, learner memory, study planning and source updates. The current
-integration build is on `build/renulus-integration`. The matching Windows app
-is installed on the owner's PC and selected by the Renulus desktop shortcut.
-Installation, recovery, originals, deletion handling, native reader and ordinary
-shutdown/reopen have accepted evidence within the recorded local scopes.
-On October 7, actual source-app journeys completed with Codex `gpt-6.1-sol`
-and both approved OpenCode Go models. Sol Explain, follow-up, Stop/retry,
-generated practice and completed automatic Memory capture/recall have recorded
-proof. Library citation/original access and synthetic Case/image journeys also
-have individual passes. The 1.2.0 content release contains 222 questions and
-50 teaching cases with explicitly partial ESENeph coverage. The matching
-cb59beb2 installation passed the real Sol core learning/capture/reopen journey
-with bundled Python and an OS-only app PATH. The normal launcher selects it,
-preserving the E: learning profile. Draft PR #13 tracks the release and
-remaining evidence/content work. See the
+integration build is on `build/renulus-integration`. The normal Windows shortcut
+selects matching installed1dde6d90 with the existing E: learning profile. Installed
+Sol Explain, Stop/retry, generated practice, automatic Memory capture/recall and
+normal reopen have real evidence. Both approved Go models have source responses;
+installed saved DeepSeek, Library/originals and correction/delete scopes are
+recorded separately. Matching b8 adds successful dated public-body citations and
+capture;1dde adds the exact reviewed-update handoff and retained quiz/manual plan.
+Relevant unchanged-source evidence is qualified without repeating provider calls.
+A later fresh-profile bootstrap failure is fixed in source0d4b171e; matching
+installed acceptance is pending. See the current delivery for its exact scope.
+Content1.3.0 has230 questions and52 cases across27 topics, with honest partial
+ESENeph/source-depth limits. Draft PR13 tracks the remaining full-product scope.
+Read the [delivery](docs/implementation/DELIVERY_20261007.md),
 [running guide](docs/implementation/RUNNING.md) and
-[current continuation](docs/implementation/FINISH_20261007.md).
+[continuation](docs/implementation/FINISH_20261007.md).
 
 The repository is `houraniiiii/Renulus`, with independent Git history.
 `Start-Renulus.cmd` opens this learning app. The archived clinical MVP has its own

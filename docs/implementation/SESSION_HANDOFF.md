@@ -1,35 +1,27 @@
 # Session transfer — October 5, 2026
 
-Active continuation, October 7: read [FINISH_20261007](FINISH_20261007.md).
-Latest: Today→reviewed Updates fix is integrated at1dde6d90 and its actual
-source handoff/retained quiz/manual-plan/normal-reopen acceptance passed.
-Matching manufacture is running as session91944; recover
-`C:/rn-finish-20261007/evidence/release-1dde6d90/package-result.json` and
-`build.log` before starting any native/heavy operation. The old handoff lane
-is retired. Two static sidecars (launch-criteria and update-effects) are recorded
-in `evidence/orchestration/active-finish-1516.json`. Parent owns installed
-acceptance and promotion; launcher remains cb59. Reuse b8 live freshness and
-Study receipts, with exact relevant-source qualification, without repeats.
-See [handoff repair](finish-reviewed-update-link-20261007.md) and
-[b8 installed evidence](finish-installed-b8a3c177-20261007.md).
-Its 14:07 UTC checkpoint records the matching **installed cb59beb2** core Sol
-and saved DeepSeek/Library/Memory/teaching acceptance and normal launcher promotion.
-Read [the delivery](DELIVERY_20261007.md) before any repeat execution. All first-wave
-workers/worktrees, including the held E supplement, were retired with evidence
-and branch refs preserved. The 14:17 continuation in FINISH records two new
-bounded evidence-selection/content-application lanes; parent owns Updates review.
-The 14:32 checkpoint supersedes those active leases: all three second-wave lanes
-are integrated/retired, real source eligible-body generation and installed Updates
-review passed. Matching next manufacture/installation/promotion is next; the
-working cb59 launcher remains selected. Read its exact receipts before repeats.
-The full goal remains active for substantive content/currency, installed dated-body retrieval
-and remaining connected/accessibility scopes, with one twenty-minute heartbeat.
-The owner explicitly approves OpenCode Go personal
-learning use; the earlier app-imposed eligibility pause is superseded. Both
-saved Renulus connections are present. Parent owns live learning/capture,
-integration and matching release acceptance. Historical checkpoints below
-retain their original evidence; their pause/blocker statements are not current
-policy or proof of today's account access.
+Current checkpoint: installed1dde passed existing-profile handoff and bounded
+cb59 compatibility, but a new empty profile exposed missing content ancestry.
+Fix0d4b171e passed11 guarded checks and actual source startup/reopen. Its matching
+installer is running in session4089; installed fresh-profile/effect acceptance
+and promotion are pending. Read [the exact failure, fix and receipts](finish-fresh-bootstrap-20261007.md).
+The normal launcher still selects1dde; E account/data is unchanged.
+
+Active continuation, October7: read [FINISH_20261007](FINISH_20261007.md) and
+[current delivery](DELIVERY_20261007.md). Matching1dde6d90 is manufactured,
+installed, accepted for exact Today→reviewed Updates/retained quiz/manual plan/
+normal reopen, and selected by the launcher. E learning/account/originals remain.
+All lanes are integrated/retired; only the main checkout remains. Git is pushed
+through77015eaf before this report update. Preserve qualified cb59 core and b8
+freshness/Study evidence; no provider/query/import/quiz repeats.
+
+Parent is finishing the bounded compatibility and correction-effect checks.
+Recover external `release-1dde6d90` and `update-effects-preparation/runs`
+receipts before execution. Manufacture91944/handoff17500 exited0; rollback
+session17317 completed successfully. The original statement was superseded by
+source0d4 fresh-bootstrap work and native manufacture4089. The full goal and one20-minute
+heartbeat remain active. Required clinical/source-depth and broader physical
+accessibility/performance limits are honest open scopes, not a full pass.
 
 Latest development control checkpoint, October 6: use hidden app-scoped
 MCP/Playwright control and the owned synthetic backend/profile. The real
