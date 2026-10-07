@@ -140,11 +140,17 @@ def build(paths, monkeypatch, *, identifier=None, pause=None, compact=False):
 
 @pytest.fixture
 def setup(tmp_path, monkeypatch):
-    def deny_network(*args, **kwargs):
-        pytest.fail("Network is outside this controlled test")
+    def local_event_loop_only(original):
+        def connect(sock, address):
+            # Windows asyncio creates a loopback socket pair for its self-pipe.
+            # Keep that framework mechanism while refusing external transports.
+            if isinstance(address, tuple) and address[0] in ("127.0.0.1", "::1"):
+                return original(sock, address)
+            pytest.fail("External network is outside this controlled test")
+        return connect
 
-    monkeypatch.setattr(socket.socket, "connect", deny_network)
-    monkeypatch.setattr(socket.socket, "connect_ex", deny_network)
+    monkeypatch.setattr(socket.socket, "connect", local_event_loop_only(socket.socket.connect))
+    monkeypatch.setattr(socket.socket, "connect_ex", local_event_loop_only(socket.socket.connect_ex))
     paths = AppPaths.create(tmp_path / "synthetic-profile", ROOT)
     return lambda **kwargs: build(paths, monkeypatch, **kwargs)
 
