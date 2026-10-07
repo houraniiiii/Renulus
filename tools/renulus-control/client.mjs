@@ -10,7 +10,7 @@ import { parseCli, redact } from './controller.mjs';
 // The server retains its fixed configuration, strict schemas and owned profile.
 const argv = process.argv.slice(2);
 if (argv.includes('--help')) {
-  process.stdout.write('node client.mjs --repo ABSOLUTE_REPO --python ABSOLUTE_PYTHON [--state-root ABSOLUTE_DIR] [--helper-assets ABSOLUTE_DIR]\nSend one JSON tool request per line. Screenshots are saved by the server; image bytes are not printed. EOF closes the owned session.\n');
+  process.stdout.write('node client.mjs --repo ABSOLUTE_REPO --python ABSOLUTE_PYTHON [--state-root ABSOLUTE_DIR] [--helper-assets ABSOLUTE_DIR] [--fixture-root ABSOLUTE_SYNTHETIC_DIR]\nSend one JSON tool request per line. Screenshots are saved by the server; image bytes are not printed. EOF closes the owned session.\n');
 } else {
   const config = parseCli(argv);
   const transport = new StdioClientTransport({ command: process.execPath, args: [path.join(path.dirname(fileURLToPath(import.meta.url)), 'server.mjs'), ...argv], cwd: config.repo, stderr: 'pipe' });

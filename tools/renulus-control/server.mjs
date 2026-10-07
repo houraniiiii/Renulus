@@ -2,7 +2,7 @@ import { pathToFileURL } from 'node:url';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { RenulusController, parseCli, redact } from './controller.mjs';
+import { RenulusController, parseCli, redact, FIXTURE_NAME, RESIZE } from './controller.mjs';
 
 const short = z.string().max(512);
 export const locatorSchema = z.union([
@@ -23,6 +23,8 @@ export const toolDefinitions = [
   ['renulus_errors', 'Read bounded, redacted app/controller logs and background event counts. No account/token access.', z.object({ limit: z.number().int().min(1).max(200).default(100) }).strict()],
   ['renulus_restart', 'Normally close the owned app/backend, then start again with the same owned synthetic profile. Launch readiness is bounded by 360 seconds.', empty],
   ['renulus_close', 'Normally close the owned app and wait for verified main/backend exit, up to 45 seconds. Surviving children or essential forced cleanup are reported as failures.', empty],
+  ['renulus_upload', 'Select one declared synthetic PDF/PNG/JPEG using the exact fileInputs locator from the latest snapshot. Requires the fixed CLI fixture root/manifest. Uses setInputFiles; no chooser, absolute paths, account imports or inline bytes. Wait for the app result separately.', z.object({ locator: z.object({ css: short.min(1) }).strict(), fixture: z.string().max(100).regex(FIXTURE_NAME) }).strict()],
+  ['renulus_resize', 'Resize only the owned hidden Flow BrowserWindow in device-independent pixels. No focus/show or position changes. Returns actual outer/content dimensions; take a screenshot to inspect layout.', z.object({ width: z.number().int().min(RESIZE.minWidth).max(RESIZE.maxWidth), height: z.number().int().min(RESIZE.minHeight).max(RESIZE.maxHeight) }).strict()],
 ];
 
 export function createServer(controller) {

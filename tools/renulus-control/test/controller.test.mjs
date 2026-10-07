@@ -7,24 +7,32 @@ import { PassThrough } from 'node:stream';
 import { mkdir, mkdtemp, writeFile, readFile, lstat, symlink } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
-import { RenulusController, parseCli, isolatedEnvironment, requestAllowed, remainingOwned, seedHelpers, launchContract, redact, LIMITS } from '../controller.mjs';
+import { RenulusController, parseCli, isolatedEnvironment, requestAllowed, remainingOwned, seedHelpers, launchContract, redact, LIMITS, FIXTURES } from '../controller.mjs';
 
 // All fixtures and receipts are outside Git. No Electron/Python/provider is launched.
 const testParent = process.platform === 'win32' ? 'C:/rn-control' : os.tmpdir();
-await mkdir(testParent, { recursive: true });
-const root = await mkdtemp(path.join(testParent, 'unit-'));
+if (!process.env.RENULUS_CONTROL_TEST_ROOT) await mkdir(testParent, { recursive: true });
+const root = process.env.RENULUS_CONTROL_TEST_ROOT ?? await mkdtemp(path.join(testParent, 'unit-'));
+if (process.env.RENULUS_CONTROL_TEST_ROOT) await mkdir(root); // Fresh evidence only.
 let slot = 0;
 const png = Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), Buffer.from('mock painted frame')]);
 
 async function fixture(overrides = {}) {
-  const base = path.join(root, String(++slot)), repo = path.join(base, 'repo'), python = path.join(base, 'runtime/python.exe'), stateRoot = path.join(base, 'state');
+  const base = path.join(root, String(++slot)), repo = path.join(base, 'repo'), python = path.join(base, 'runtime/python.exe'), stateRoot = path.join(root, 's' + slot);
   await mkdir(repo, { recursive: true }); await mkdir(path.dirname(python)); await writeFile(python, 'synthetic interpreter placeholder');
   const config = { repo, python, stateRoot };
+  if (overrides.fixtures) {
+    config.fixtureRoot = path.join(base, 'fixtures'); await mkdir(config.fixtureRoot);
+    for (const [name, bytes] of Object.entries(overrides.fixtures)) await writeFile(path.join(config.fixtureRoot, name), bytes);
+    await writeFile(path.join(config.fixtureRoot, FIXTURES.marker), JSON.stringify({ format: 'renulus-control-fixtures-v1', syntheticOnly: true,
+      files: Object.entries(overrides.fixtures).map(([name, bytes]) => ({ path: name, size: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') })) }));
+  }
   const calls = [], elements = new Map();
   let options, closed = false, app, applicationNumber = 0;
   const rows = new Map();
   const mainExe = path.join(repo, 'apps/desktop/node_modules/electron/dist/electron.exe');
   const state = { windows: [{ id: 1, url: 'data:startup', visible: false, focused: false, focusable: false, backgroundThrottling: false, sandbox: true, contextIsolation: true, nodeIntegration: false }], seen: 2, violations: [] };
+  const fileElement = entry => ({ tagName: entry.tag, type: entry.type, id: entry.id ?? 'synthetic-input', name: entry.hint ?? '', accept: entry.accept ?? '.pdf,.png,.jpg,.jpeg', labels: [{ textContent: entry.label ?? 'Choose a study document' }], matches: () => entry.disabled ?? false, hasAttribute: () => entry.directory ?? false, getAttribute: () => null });
   const getElement = key => {
     if (!elements.has(key)) elements.set(key, { count: 1, tag: 'BUTTON', type: null, hint: '', snapshot: '- heading "Synthetic learning"', visible: true });
     const entry = elements.get(key);
@@ -32,7 +40,12 @@ async function fixture(overrides = {}) {
       count: async () => entry.count,
       isVisible: async () => entry.visible,
       ariaSnapshot: async () => entry.snapshot,
+      evaluateAll: async fn => {
+        const inputs = key === 'input[type="file"]' ? [...elements.values()].filter(element => element.type === 'file') : Array.from({ length: entry.count }, () => entry);
+        return fn(inputs.map(fileElement));
+      },
       evaluate: async fn => fn({ tagName: entry.tag, id: '', getAttribute: name => name === 'type' ? entry.type : name === 'aria-label' ? entry.hint : null }),
+      setInputFiles: async (payload, opts) => { assert.ok(opts.timeout <= LIMITS.operation); calls.push(['upload', payload]); if (overrides.onUpload) await overrides.onUpload({ payload, state, signal: opts.signal }); },
       click: async () => { calls.push('click:' + key + ':begin'); await delay(5); calls.push('click:' + key + ':end'); },
       fill: async (_value, operation) => { calls.push('fill'); if (overrides.blockFill) await new Promise((_, reject) => operation.signal.addEventListener('abort', () => reject(operation.signal.reason), { once: true })); },
       press: async key => { calls.push('press:' + key); },
@@ -69,7 +82,13 @@ async function fixture(overrides = {}) {
         userData: path.join(options.env.RENULUS_PROFILE, 'desktop'), ...state,
         children: [{ pid: backendPid, executable: python, profile: options.env.RENULUS_PROFILE, exited: false }] };
     };
-    app.browserWindow = async () => ({ evaluate: async fn => fn({ capturePage: async (rect, opts) => { assert.equal(rect, undefined); assert.equal(opts.stayHidden, true); assert.equal(opts.stayAwake, false); calls.push('capturePage'); return { toPNG: () => png }; } }), dispose: async () => { calls.push('dispose'); } });
+    let windowSize = [1400, 960];
+    app.browserWindow = async target => { assert.equal(target, page); return { evaluate: async (fn, arg) => fn({
+      isDestroyed: () => closed, isVisible: () => state.windows[0].visible, isFocused: () => state.windows[0].focused, isFocusable: () => state.windows[0].focusable,
+      setSize: (width, height, animate) => { assert.equal(animate, false); calls.push(['resize', width, height]); windowSize = overrides.clampResize ? [800, 600] : [width, height]; if (overrides.focusOnResize) state.windows[0].focused = true; },
+      getSize: () => windowSize, getContentSize: () => [windowSize[0] - 16, windowSize[1] - 39],
+      capturePage: async (rect, opts) => { assert.equal(rect, undefined); assert.equal(opts.stayHidden, true); assert.equal(opts.stayAwake, false); calls.push('capturePage'); return { toPNG: () => png }; },
+    }, arg), dispose: async () => { calls.push('dispose'); } }; };
     app.close = async () => {
       calls.push('close'); if (overrides.closeDelay) await delay(overrides.closeDelay);
       closed = true; child.exitCode = 0; rows.delete(child.pid); rows.delete(mainPid);
@@ -299,4 +318,103 @@ test('old source builds fail preflight before Electron can launch', async () => 
   await writeFile(path.join(desktop, 'package.json'), JSON.stringify({ name: 'renulus-desktop', main: 'dist-electron/main.cjs' }));
   await writeFile(path.join(desktop, 'dist-electron/main.cjs'), 'window.show();');
   await assert.rejects(launchContract(f.config), { code: 'background_build_required' });
+});
+
+const uploadLocator = { css: 'input[type="file"][id="synthetic-input"]' };
+const pdf = Buffer.from('%PDF-1.7\nSynthetic educational fixture\n%%EOF');
+async function uploadFixture(t, overrides = {}) {
+  const f = await fixture({ fixtures: { 'synthetic-study.pdf': pdf, 'synthetic-image.png': png }, ...overrides });
+  t.after(() => f.controller.shutdown()); await f.controller.run('renulus_start');
+  f.elements.set('css=' + uploadLocator.css, { count: 1, tag: 'INPUT', type: 'file' });
+  return f;
+}
+
+test('upload requires observed exact input and passes only verified bytes to Playwright', async t => {
+  const f = await uploadFixture(t);
+  await assert.rejects(f.controller.run('renulus_upload', { locator: uploadLocator, fixture: 'synthetic-study.pdf' }), { code: 'unobserved_file_input' });
+  const snapshot = await f.controller.run('renulus_snapshot');
+  assert.deepEqual(snapshot.fileInputs[0].locator, uploadLocator);
+  const result = await f.controller.run('renulus_upload', { locator: snapshot.fileInputs[0].locator, fixture: 'synthetic-study.pdf' });
+  assert.equal(result.bytes, pdf.length); assert.equal(result.mimeType, 'application/pdf'); assert.equal(result.hidden, true);
+  assert.deepEqual(f.calls.find(call => Array.isArray(call) && call[0] === 'upload')[1], { name: 'synthetic-study.pdf', mimeType: 'application/pdf', buffer: pdf });
+  await assert.rejects(f.controller.run('renulus_upload', { locator: uploadLocator, fixture: 'synthetic-image.png' }), { code: 'unobserved_file_input' });
+  await f.controller.run('renulus_snapshot');
+  assert.equal((await f.controller.run('renulus_upload', { locator: uploadLocator, fixture: 'synthetic-image.png' })).mimeType, 'image/png');
+  const receipt = await readFile(path.join(f.controller.session.outputs, 'logs.ndjson'), 'utf8');
+  assert.ok(receipt.includes('fixture-upload')); assert.equal(receipt.includes('Synthetic educational fixture'), false);
+});
+
+test('upload stays disabled without a fixed CLI root and rejects unobserved or extra arguments', async t => {
+  const f = await fixture(); t.after(() => f.controller.shutdown()); await f.controller.run('renulus_start');
+  await assert.rejects(f.controller.run('renulus_upload', { locator: uploadLocator, fixture: 'synthetic-study.pdf' }), { code: 'uploads_disabled' });
+  const g = await uploadFixture(t); await g.controller.run('renulus_snapshot');
+  await assert.rejects(g.controller.run('renulus_upload', { locator: uploadLocator, fixture: 'synthetic-study.pdf', profile: 'other' }), { code: 'invalid_argument' });
+  await assert.rejects(g.controller.run('renulus_upload', { locator: { css: 'input' }, fixture: 'synthetic-study.pdf' }), { code: 'unobserved_file_input' });
+});
+
+test('upload refuses stale, duplicate, disabled, directory, credential and backup inputs', async t => {
+  const f = await uploadFixture(t), entry = f.elements.get('css=' + uploadLocator.css);
+  for (const changes of [{ count: 2 }, { disabled: true }, { directory: true }, { type: 'password' }, { hint: 'api-key' }, { label: 'Choose ZIP backup or JSON export' }]) {
+    await f.controller.run('renulus_snapshot'); Object.assign(entry, changes);
+    await assert.rejects(f.controller.run('renulus_upload', { locator: uploadLocator, fixture: 'synthetic-study.pdf' }));
+    for (const key of Object.keys(changes)) delete entry[key]; Object.assign(entry, { count: 1, tag: 'INPUT', type: 'file' });
+  }
+  for (const changes of [{ directory: true }, { hint: 'account' }, { label: 'Choose ZIP backup or JSON export' }]) {
+    Object.assign(entry, changes);
+    assert.deepEqual((await f.controller.run('renulus_snapshot')).fileInputs, []);
+    for (const key of Object.keys(changes)) delete entry[key];
+  }
+  assert.equal(f.calls.some(call => Array.isArray(call) && call[0] === 'upload'), false);
+});
+
+test('image-only case inputs refuse PDFs and accept a declared image without opening a chooser', async t => {
+  const f = await uploadFixture(t);
+  Object.assign(f.elements.get('css=' + uploadLocator.css), { label: 'Image to keep in case', accept: '.png,.jpg,.jpeg' });
+  await f.controller.run('renulus_snapshot');
+  await assert.rejects(f.controller.run('renulus_upload', { locator: uploadLocator, fixture: 'synthetic-study.pdf' }), { code: 'file_type_not_accepted' });
+  assert.equal((await f.controller.run('renulus_upload', { locator: uploadLocator, fixture: 'synthetic-image.png' })).hidden, true);
+  assert.equal(f.app().windows()[0].listenerCount('filechooser'), 1);
+  assert.equal(f.controller.logs.some(log => log.kind === 'filechooser-cancelled'), false);
+});
+
+test('upload rejects a changed fixture and post-action visibility fails closed', async t => {
+  const f = await uploadFixture(t); await f.controller.run('renulus_snapshot');
+  await writeFile(path.join(f.config.fixtureRoot, 'synthetic-study.pdf'), Buffer.alloc(pdf.length, 65));
+  await assert.rejects(f.controller.run('renulus_upload', { locator: uploadLocator, fixture: 'synthetic-study.pdf' }), { code: 'fixture_integrity' });
+  assert.equal(f.calls.some(call => Array.isArray(call) && call[0] === 'upload'), false);
+  const g = await uploadFixture(t, { onUpload: async ({ state }) => { state.windows[0].visible = true; } });
+  await g.controller.run('renulus_snapshot');
+  await assert.rejects(g.controller.run('renulus_upload', { locator: uploadLocator, fixture: 'synthetic-study.pdf' }), { code: 'visible_window' });
+  assert.equal(g.controller.application, null);
+});
+
+test('resize targets only the owned page, preserves hidden state and returns measured dimensions', async t => {
+  const f = await fixture(); t.after(() => f.controller.shutdown()); await f.controller.run('renulus_start'); f.calls.length = 0;
+  const result = await f.controller.run('renulus_resize', { width: 640, height: 540 });
+  assert.deepEqual(result, { performed: 'renulus_resize', width: 640, height: 540, contentWidth: 624, contentHeight: 501, hidden: true });
+  const resizeIndex = f.calls.findIndex(call => Array.isArray(call) && call[0] === 'resize');
+  assert.ok(f.calls.indexOf('observe') < resizeIndex); assert.ok(f.calls.lastIndexOf('observe') > resizeIndex); assert.ok(f.calls.includes('dispose'));
+  for (const args of [{ width: 639, height: 540 }, { width: 640, height: 1601 }, { width: 640.5, height: 540 }, { width: 640, height: 540, show: false }]) await assert.rejects(f.controller.run('renulus_resize', args), { code: 'invalid_argument' });
+  assert.equal(f.calls.filter(call => Array.isArray(call) && call[0] === 'resize').length, 1);
+});
+
+test('cancelling an active file selection aborts Playwright and closes only the owned lifecycle', async t => {
+  const abort = new AbortController(); let reached;
+  const started = new Promise(resolve => { reached = resolve; });
+  const f = await uploadFixture(t, { onUpload: ({ signal }) => new Promise((_, reject) => { signal.addEventListener('abort', () => reject(signal.reason), { once: true }); reached(); }) });
+  await f.controller.run('renulus_snapshot');
+  const pending = f.controller.run('renulus_upload', { locator: uploadLocator, fixture: 'synthetic-study.pdf' }, { signal: abort.signal });
+  await started; abort.abort();
+  await assert.rejects(pending, { code: 'operation_cancelled' });
+  assert.equal(f.controller.application, null);
+  assert.equal(f.calls.some(call => typeof call === 'string' && call.startsWith('kill:')), false);
+});
+
+test('a focused resize closes the owned lifecycle; native clamping never reports requested-size success', async t => {
+  const f = await fixture({ focusOnResize: true }); await f.controller.run('renulus_start');
+  await assert.rejects(f.controller.run('renulus_resize', { width: 640, height: 540 }), { code: 'visible_window' });
+  assert.equal(f.controller.application, null);
+  const g = await fixture({ clampResize: true }); t.after(() => g.controller.shutdown()); await g.controller.run('renulus_start');
+  await assert.rejects(g.controller.run('renulus_resize', { width: 640, height: 540 }), { code: 'resize_not_applied' });
+  assert.ok(g.controller.application); assert.ok(g.calls.includes('dispose'));
 });

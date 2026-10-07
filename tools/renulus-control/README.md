@@ -42,6 +42,7 @@ node C:/Renulus-native-delivery/desktop-20261005/repo/tools/renulus-control/serv
 | --executable | Optional fixed absolute packaged Renulus executable |
 | --state-root | Absolute evidence root; default path.join(os.tmpdir(), 'rn-c') |
 | --helper-assets | Optional absolute trusted public helper bundle |
+| --fixture-root | Optional fixed absolute owned synthetic fixture directory; uploads are disabled when omitted |
 
 The source executable is the existing apps/desktop/node_modules/electron/dist/electron.exe.
 No CLI setting can be supplied through a tool. Compiled source/package preflight
@@ -117,6 +118,8 @@ row, cell and img. Names and CSS are bounded to 512 characters.
 | renulus_errors | {"limit":100}; optional 1-200 |
 | renulus_restart | {}; same owned profile, new main/backend |
 | renulus_close | {}; normal app/backend exit receipt |
+| renulus_upload | {"locator":{"css":"input[type=\"file\"][id=\"OBSERVED_ID\"]"},"fixture":"synthetic-study.pdf"}; copy the exact locator from snapshot.fileInputs |
+| renulus_resize | {"width":1000,"height":720}; integer outer-window dimensions in device-independent pixels, width 640–2560 and height 540–1600 |
 
 Wait states: visible, hidden, attached, detached; defaults visible/5000 ms,
 maximum 12000 ms. Initially absent targets are allowed, multiple matches are
@@ -126,9 +129,67 @@ resulting heading/control before snapshot/capture.
 
 Press keys: Enter, Space, Escape, Tab, Shift+Tab, ArrowUp/Down/Left/Right,
 Backspace, Delete, Home, End, PageUp, PageDown, Control+A. Credential/password
-controls and native file inputs are blocked. Every owned page has a file chooser
+controls and native file inputs are blocked by click/fill/press/select. Every owned page has a file chooser
 listener that immediately calls chooser.setFiles([]) and records cancellation,
-covering indirect label/button triggers. JavaScript dialogs are dismissed. No upload/resize tools.
+covering indirect label/button triggers. JavaScript dialogs are dismissed.
+The upload tool sets the selected input directly; it does not click a chooser.
+
+### Synthetic uploads and hidden resizing
+
+The original eleven tools retain their contracts. Snapshot adds `fileInputs`,
+a bounded list of exact CSS locators, labels, accepted types and disabled state
+for the existing Library/Case inputs. Supported labels are `Choose a study document`,
+`PDF or image for text extraction`, `Image to keep in case` and
+`Image to review before sending`. Other inputs, including account/backup/profile
+imports and directory selection, are not upload targets. A changed or disabled
+input is refused. A fresh snapshot is required after each file selection and
+after changing Case input mode. No renderer or native source modification is needed.
+
+Uploads require `--fixture-root` at server/client creation. This directory must
+be outside Git, user home/profile/credential paths, controller `c/` state,
+runtime/dependency directories and helper assets. Network/device paths, traversal,
+alternate data streams, links, junctions and hard-linked files are refused.
+The root must contain `.renulus-control-fixtures.json` with exactly:
+
+- `format`: `renulus-control-fixtures-v1`.
+- `syntheticOnly`: `true`, the operator's declaration that these are owned synthetic fixtures.
+- `files`: 1–32 records, each containing only `path`, `size` and `sha256`.
+
+Each `path` is a flat lowercase basename matching
+`synthetic-[a-z0-9][a-z0-9-]{0,79}.pdf`, `.png`, `.jpg` or `.jpeg`;
+credential/account/profile names are refused. Size is an integer from 1 through
+10 MiB; SHA-256 is 64 lowercase hex digits. The manifest is at most 16 KiB.
+Use explicit fixture filenames to create declarations; do not enumerate personal
+directories or declare acquired material as synthetic. No inline bytes, full path,
+directory, multiple-file or clear-selection option is exposed through a tool.
+
+Declarations are frozen when the controller prepares its session. Changing the
+fixture set requires a fresh server, not `renulus_restart`. Only the requested
+declared file is read. Each upload checks its ancestors, regular-file/link count,
+real path, bounded size, file identity before/after reading, SHA-256 and media
+signature. Verified bytes are passed as an in-memory Playwright `setInputFiles`
+payload, so Playwright cannot reopen a substituted path. Media decoding remains
+the application's job. The ordinary application rights, retention and processing
+gates still apply. Selection completion is not extraction/import completion;
+wait for the resulting product state. Fixture name/hash/size/MIME are recorded,
+without persisting upload bytes in controller logs.
+
+The October 7 parent fixtures are prepared outside Git at
+`C:/rn-finish-20261007/evidence/control/synthetic-inputs`: `synthetic-study.pdf`,
+`synthetic-image.png` and `synthetic-image.jpg`, with a complete manifest. See
+[the lane handoff](../../docs/implementation/finish-control-inputs-20261007.md).
+Append that root to the existing fixed CLI invocation. Then navigate Library or
+Cases using the ordinary tools, call `renulus_snapshot`, and pass an exact
+returned `fileInputs[i].locator` to `renulus_upload`. An empty list means no
+supported file input was observed; do not invent an ID or selector.
+
+`renulus_resize` uses only the BrowserWindow associated with the verified Flow
+page, calls `setSize(width, height, false)`, and checks ownership/hidden state
+before and afterwards. It never sets position, shows, focuses or attaches to a
+window. It returns actual outer and content dimensions. Native clamping is an
+error, not a successful requested size. Use the existing screenshot tool after
+resize for a fresh frame. This tests app layout; it does not change OS DPI or
+establish physical-dialog acceptance.
 
 Renderer requests are restricted to the exact owned loopback origin and API v1
 prefix. **Normal product routes are allowed**, including Learn/inference, Cases,
@@ -191,6 +252,13 @@ Parent source acceptance now includes the real 39-operation MCP journey and
 seven-operation interactive client check. See
 [the dated report](../../docs/implementation/app-control-20261006.md) for exact
 receipts, preserved failures and the remaining installed/live boundaries.
+
+For a bounded worker run, `RENULUS_CONTROL_TEST_ROOT` can point to a fresh,
+short external evidence directory for controller mocks (created exclusively);
+fixture security tests create separate directories beside it. Run Node with
+`--test-concurrency=1`. October 7 checks reuse the parent's pinned development
+modules read-only through an external test loader; no dependency installation,
+lockfile change, native launch or engine execution is needed.
 
 Primary API references checked on October 6, 2026: Playwright ElectronApplication,
 Electron launch and locator/ariaSnapshot documentation at playwright.dev;

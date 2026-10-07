@@ -1,13 +1,18 @@
 import path from 'node:path';
 import os from 'node:os';
 import { randomBytes, createHash } from 'node:crypto';
-import { createReadStream } from 'node:fs';
-import { mkdir, readdir, readFile, writeFile, lstat, open, copyFile, rename } from 'node:fs/promises';
+import { createReadStream, constants } from 'node:fs';
+import { mkdir, readdir, readFile, writeFile, lstat, open, copyFile, rename, realpath } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { setTimeout as delay } from 'node:timers/promises';
 
 export const LIMITS = Object.freeze({ operation: 15_000, lifecycle: 45_000, start: 360_000, logs: 1_000, line: 2_048, snapshot: 48_000, image: 8_000_000 });
+export const FIXTURES = Object.freeze({ marker: '.renulus-control-fixtures.json', bytes: 10 * 1024 * 1024, manifestBytes: 16_384, count: 32 });
+export const FIXTURE_NAME = /^synthetic-[a-z0-9][a-z0-9-]{0,79}\.(?:pdf|png|jpg|jpeg)$/;
+export const RESIZE = Object.freeze({ minWidth: 640, maxWidth: 2560, minHeight: 540, maxHeight: 1600 });
+const UPLOAD_LABELS = new Set(['Choose a study document', 'PDF or image for text extraction', 'Image to keep in case', 'Image to review before sending']);
+const SENSITIVE_INPUT = /(?:password|token|secret|credential|api.?key|account|email|login|authorization|one.?time.?code|backup|restore|profile)/i;
 const ROOT_MARKER = '.renulus-control.json';
 const GROUPS = ['docling', 'embedding', 'ocr'];
 const EVENT_PREFIX = 'RENULUS_BACKGROUND_EVENT ';
@@ -26,12 +31,12 @@ function absolute(value, label) {
   return path.resolve(value);
 }
 export function parseCli(argv) {
-  const names = { '--repo': 'repo', '--python': 'python', '--executable': 'executable', '--state-root': 'stateRoot', '--helper-assets': 'helperAssets' };
+  const names = { '--repo': 'repo', '--python': 'python', '--executable': 'executable', '--state-root': 'stateRoot', '--helper-assets': 'helperAssets', '--fixture-root': 'fixtureRoot' };
   const result = { stateRoot: path.join(os.tmpdir(), 'rn-c') };
   for (let i = 0; i < argv.length; i += 2) {
     const key = names[argv[i]];
-    check(key && i + 1 < argv.length && !argv[i + 1].startsWith('--') && !Object.hasOwn(result, key === 'stateRoot' ? '_stateRoot' : key), 'invalid_cli', 'Use --repo, --python, and optional --executable, --state-root, --helper-assets once each.');
-    result[key] = absolute(argv[i + 1], argv[i]);
+    check(key && i + 1 < argv.length && !argv[i + 1].startsWith('--') && !Object.hasOwn(result, key === 'stateRoot' ? '_stateRoot' : key), 'invalid_cli', 'Use --repo, --python, and optional --executable, --state-root, --helper-assets, --fixture-root once each.');
+    result[key] = key === 'fixtureRoot' ? fixtureRootPath(argv[i + 1]) : absolute(argv[i + 1], argv[i]);
     if (key === 'stateRoot') result._stateRoot = true;
   }
   delete result._stateRoot;
@@ -92,6 +97,77 @@ async function outsideGit(directory) {
     catch (error) { if (error.code !== 'ENOENT') throw error; }
     const parent = path.dirname(cursor); if (parent === cursor) break; cursor = parent;
   }
+}
+
+function fixtureRootPath(value) {
+  check(typeof value === 'string' && !/[\x00-\x1f%]/.test(value) && !value.startsWith('\\') && !value.startsWith('//') && !value.split(/[\\/]/).some(part => part === '.' || part === '..' || /[. ]$/.test(part)) && !value.slice(2).includes(':'), 'unsafe_fixture_root', 'The fixture root must be an unambiguous absolute local directory.');
+  const root = absolute(value, '--fixture-root');
+  const personal = [process.env.USERPROFILE, process.env.HOME, process.env.APPDATA, process.env.LOCALAPPDATA, process.env.CODEX_HOME].filter(Boolean);
+  check(!personal.some(directory => inside(path.resolve(directory), root)) && !/(?:^|[\\/])(?:users|documents and settings|appdata|\.codex|\.ssh|\.aws|\.azure|\.config|profiles?|credentials?|secrets?|accounts?|auth|personal|renulus-data|node_modules)(?:[\\/]|$)/i.test(root), 'unsafe_fixture_root', 'Fixtures must be outside personal, credential, profile and dependency directories.');
+  return root;
+}
+
+async function fixtureLocation(config) {
+  const root = fixtureRootPath(config.fixtureRoot);
+  const reserved = [config.repo, path.join(config.stateRoot, 'c'), config.python && path.dirname(config.python), config.executable && path.dirname(config.executable), config.helperAssets].filter(Boolean);
+  check(reserved.every(directory => independent(root, directory)), 'unsafe_fixture_root', 'The fixture root must be separate from repositories, owned profiles, runtimes and helpers.');
+  await noLinks(root); await outsideGit(root);
+  check((await lstat(root)).isDirectory() && samePath(await realpath(root), root), 'unsafe_fixture_root', 'The fixture root must be a real directory without aliases.');
+  return root;
+}
+
+// Read only one declared leaf into bounded memory. Passing these checked bytes to
+// Playwright prevents a later path replacement from changing the uploaded data.
+async function fixtureBytes(root, name, limit, signal) {
+  const file = path.join(root, name);
+  await noLinks(file);
+  check(samePath(await realpath(file), file), 'unsafe_fixture_path', 'Fixture aliases are not accepted.');
+  const before = await lstat(file);
+  check(before.isFile() && before.nlink === 1 && before.size > 0 && before.size <= limit, 'unsafe_fixture_file', 'Fixtures and their manifest must be bounded regular files with exactly one link.');
+  const handle = await open(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  const sameFile = stat => stat.isFile() && stat.nlink === 1 && stat.dev === before.dev && stat.ino === before.ino && stat.size === before.size && stat.mtimeMs === before.mtimeMs && stat.ctimeMs === before.ctimeMs;
+  try {
+    check(sameFile(await handle.stat()), 'fixture_changed', 'A fixture changed before it could be read.');
+    const buffer = Buffer.alloc(before.size + 1);
+    let offset = 0;
+    while (offset < buffer.length) {
+      signal?.throwIfAborted();
+      const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
+      if (!bytesRead) break;
+      offset += bytesRead;
+    }
+    await noLinks(file);
+    check(offset === before.size && sameFile(await handle.stat()) && sameFile(await lstat(file)) && samePath(await realpath(file), file), 'fixture_changed', 'A fixture changed while it was being read.');
+    return buffer.subarray(0, offset);
+  } finally { await handle.close(); }
+}
+
+export async function loadFixtureCatalog(config, signal) {
+  const root = await fixtureLocation(config);
+  let manifest;
+  try { manifest = JSON.parse((await fixtureBytes(root, FIXTURES.marker, FIXTURES.manifestBytes, signal)).toString('utf8').replace(/^\uFEFF/, '')); }
+  catch (error) { if (error instanceof SyntaxError) throw new ControlError('invalid_fixture_manifest', 'The synthetic fixture manifest is not JSON.'); throw error; }
+  check(manifest && Object.keys(manifest).sort().join(',') === 'files,format,syntheticOnly' && manifest.format === 'renulus-control-fixtures-v1' && manifest.syntheticOnly === true && Array.isArray(manifest.files) && manifest.files.length > 0 && manifest.files.length <= FIXTURES.count, 'invalid_fixture_manifest', 'Declare 1–32 owned synthetic files in a version-one fixture manifest.');
+  const records = new Map();
+  for (const file of manifest.files) {
+    check(file && Object.keys(file).sort().join(',') === 'path,sha256,size' && typeof file.path === 'string' && FIXTURE_NAME.test(file.path) && !SENSITIVE_INPUT.test(file.path) && !records.has(file.path) && Number.isSafeInteger(file.size) && file.size > 0 && file.size <= FIXTURES.bytes && typeof file.sha256 === 'string' && /^[a-f0-9]{64}$/.test(file.sha256), 'invalid_fixture_manifest', 'Each fixture needs a unique synthetic PDF/PNG/JPEG basename, bounded size and SHA-256; paths and extra fields are refused.');
+    records.set(file.path, Object.freeze({ ...file }));
+  }
+  return { root, records };
+}
+
+export async function readSyntheticFixture(config, catalog, name, signal) {
+  check(typeof name === 'string' && FIXTURE_NAME.test(name) && !SENSITIVE_INPUT.test(name), 'invalid_fixture', 'Supply one declared synthetic PDF/PNG/JPEG basename without directories.');
+  check(catalog?.records.has(name), 'undeclared_fixture', 'This file is not declared in the fixed synthetic fixture manifest.');
+  check(samePath(await fixtureLocation(config), catalog.root), 'unsafe_fixture_root', 'The fixture root changed.');
+  const record = catalog.records.get(name);
+  const buffer = await fixtureBytes(catalog.root, name, record.size, signal);
+  check(buffer.length === record.size && createHash('sha256').update(buffer).digest('hex') === record.sha256, 'fixture_integrity', 'The synthetic fixture size or SHA-256 differs from its declaration.');
+  const extension = path.extname(name);
+  const mimeType = extension === '.pdf' ? 'application/pdf' : extension === '.png' ? 'image/png' : 'image/jpeg';
+  const signature = extension === '.pdf' ? buffer.subarray(0, 5).equals(Buffer.from('%PDF-')) : extension === '.png' ? buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) : buffer.subarray(0, 3).equals(Buffer.from([255, 216, 255]));
+  check(signature, 'fixture_type', 'Fixture bytes do not have the declared PDF/PNG/JPEG signature.');
+  return { payload: { name, mimeType, buffer }, receipt: { fixture: name, bytes: buffer.length, sha256: record.sha256, mimeType } };
 }
 async function hashFile(file, signal) {
   const hash = createHash('sha256');
@@ -242,6 +318,22 @@ function readObservation({ app, BrowserWindow }) {
     }) };
 }
 function captureHidden(window) { return window.capturePage(undefined, { stayHidden: true, stayAwake: false }).then(image => image.toPNG().toString('base64')); }
+function resizeHidden(window, { width, height }) {
+  const hidden = () => !window.isDestroyed() && !window.isVisible() && !window.isFocused() && !window.isFocusable();
+  if (!hidden()) return { unsafe: true };
+  window.setSize(width, height, false);
+  if (!hidden()) return { unsafe: true };
+  const [actualWidth, actualHeight] = window.getSize(), [contentWidth, contentHeight] = window.getContentSize();
+  return { width: actualWidth, height: actualHeight, contentWidth, contentHeight, hidden: true };
+}
+function fileInputDescriptions(elements) {
+  return elements.slice(0, 8).filter(element => element.tagName === 'INPUT' && element.type === 'file' && /^[A-Za-z0-9_:.-]{1,128}$/.test(element.id)).map(element => ({
+    locator: { css: 'input[type="file"][id="' + element.id + '"]' },
+    label: [...(element.labels ?? [])].map(label => label.textContent).join(' ').trim().slice(0, 512),
+    accept: element.accept.slice(0, 512), disabled: element.matches(':disabled'), directory: element.hasAttribute('webkitdirectory'),
+    hint: [element.name, element.getAttribute('aria-label'), element.getAttribute('autocomplete')].filter(Boolean).join(' ').slice(0, 512),
+  }));
+}
 async function freshFrame() {
   let timer;
   try {
@@ -287,6 +379,7 @@ export class RenulusController {
     this.config = { ...config, repo: absolute(config.repo, '--repo'), ...(config.python ? { python: absolute(config.python, '--python') } : {}), stateRoot: absolute(config.stateRoot ?? path.join(os.tmpdir(), 'rn-c'), '--state-root') };
     check(config.python || config.executable, 'invalid_cli', 'Source mode requires --python; packaged mode uses its fixed bundled interpreter.');
     for (const key of ['executable', 'helperAssets']) if (config[key]) this.config[key] = absolute(config[key], '--' + key);
+    if (config.fixtureRoot !== undefined) this.config.fixtureRoot = fixtureRootPath(config.fixtureRoot);
     this.launch = dependencies.launch ?? defaultLaunch;
     this.preflight = dependencies.preflight ?? launchContract;
     this.inspect = dependencies.inspect ?? inspectProcesses;
@@ -300,6 +393,7 @@ export class RenulusController {
     this.fault = null; this.session = null; this.origin = null; this.observer = null; this.observing = null;
     this.outputSequence = 0; this.backgroundEvents = {};
     this.seenEvents = new Set();
+    this.fixtureCatalog = null; this.observedFileInputs = new Map();
   }
   log(kind, message) {
     this.logs.push({ at: new Date().toISOString(), kind, message: String(redact(message, this.filled)).slice(0, LIMITS.line) });
@@ -307,6 +401,7 @@ export class RenulusController {
   }
   async prepare(signal) {
     if (this.session) return;
+    if (this.config.fixtureRoot) this.fixtureCatalog = await loadFixtureCatalog(this.config, signal);
     const stateRoot = this.config.stateRoot;
     check(independent(stateRoot, this.config.repo) && (!this.config.python || independent(stateRoot, path.dirname(this.config.python))), 'unsafe_state', 'Controller state must be separate from repository and dependency directories.');
     // Evidence such as the parent's native-* receipts can share a state-root. Only
@@ -376,9 +471,47 @@ export class RenulusController {
     await budget.wait(this.observe());
     check(this.page.url().startsWith(this.origin + '/'), 'wrong_page', 'Actions are restricted to the owned loopback Flow page.');
     if (name === 'renulus_snapshot') {
+      this.observedFileInputs.clear();
       const snapshot = await budget.wait(this.page.locator('body').ariaSnapshot({ timeout: budget.actionTime(), signal: budget.signal }));
+      const fileInputs = (await budget.wait(this.page.locator('input[type="file"]').evaluateAll(fileInputDescriptions)))
+        .filter(input => UPLOAD_LABELS.has(input.label) && !input.directory && !SENSITIVE_INPUT.test(input.hint));
       await budget.wait(this.observe());
-      return { url: this.page.url().split(/[?#]/)[0], snapshot: redact(snapshot).slice(0, LIMITS.snapshot), truncated: snapshot.length > LIMITS.snapshot, locator: 'Exact role/name, or pure CSS; every action requires exactly one match.' };
+      for (const input of fileInputs) this.observedFileInputs.set(input.locator.css, canonical(input));
+      return { url: this.page.url().split(/[?#]/)[0], snapshot: redact(snapshot).slice(0, LIMITS.snapshot), truncated: snapshot.length > LIMITS.snapshot, locator: 'Exact role/name, or pure CSS; every action requires exactly one match.', fileInputs };
+    }
+    if (name === 'renulus_upload') {
+      check(Object.keys(args).sort().join(',') === 'fixture,locator', 'invalid_argument', 'Upload accepts only an observed locator and a declared fixture basename.');
+      check(this.fixtureCatalog, 'uploads_disabled', 'Configure --fixture-root with an owned synthetic manifest before starting this server.');
+      check(typeof args.locator?.css === 'string' && this.observedFileInputs.has(args.locator.css), 'unobserved_file_input', 'Use the exact file-input locator returned by the latest snapshot.');
+      const locator = await this.uniqueLocator(args.locator, budget);
+      const validateInput = async () => {
+        const descriptions = await budget.wait(locator.evaluateAll(fileInputDescriptions));
+        check(descriptions.length === 1 && canonical(descriptions[0]) === this.observedFileInputs.get(args.locator.css) && !descriptions[0].disabled, 'file_input_changed', 'The observed file input changed or is disabled; inspect a fresh snapshot.');
+        return descriptions[0];
+      };
+      const input = await validateInput();
+      const { payload, receipt } = await budget.wait(readSyntheticFixture(this.config, this.fixtureCatalog, args.fixture, budget.signal));
+      const accepts = input.accept.toLowerCase().split(',').map(value => value.trim());
+      check(accepts.includes(path.extname(args.fixture)) || accepts.includes(payload.mimeType) || payload.mimeType.startsWith('image/') && accepts.includes('image/*'), 'file_type_not_accepted', 'The observed app input does not accept this fixture type.');
+      await validateInput();
+      this.observedFileInputs.clear(); // One selection per observation, including a failed selection.
+      await budget.wait(locator.setInputFiles(payload, { timeout: budget.actionTime(), signal: budget.signal }));
+      await budget.wait(this.observe());
+      this.log('fixture-upload', JSON.stringify(receipt));
+      return { performed: name, ...receipt, unique: true, hidden: true };
+    }
+    if (name === 'renulus_resize') {
+      check(Object.keys(args).sort().join(',') === 'height,width' && Number.isInteger(args.width) && args.width >= RESIZE.minWidth && args.width <= RESIZE.maxWidth && Number.isInteger(args.height) && args.height >= RESIZE.minHeight && args.height <= RESIZE.maxHeight, 'invalid_argument', 'Resize requires integer width 640–2560 and height 540–1600 in device-independent pixels.');
+      const handle = await budget.wait(this.application.browserWindow(this.page));
+      let result;
+      try { result = await budget.wait(handle.evaluate(resizeHidden, args)); }
+      catch (error) { this.fault = new ControlError('resize_failed', 'The owned window resize could not be verified.'); throw error; }
+      finally { await handle.dispose().catch(() => {}); }
+      if (result.unsafe) { this.fault = new ControlError('visible_window', 'The owned resize target was visible, focused or focusable.'); throw this.fault; }
+      await budget.wait(this.observe());
+      check(result.width === args.width && result.height === args.height, 'resize_not_applied', 'The native window did not accept the requested dimensions.');
+      this.log('window-resize', JSON.stringify(result));
+      return { performed: name, ...result };
     }
     if (name === 'renulus_screenshot') {
       await budget.wait(bounded(this.page.evaluate(freshFrame), Math.min(5_100, budget.actionTime()), 'Fresh hidden frame preparation exceeded its deadline.'));
@@ -446,6 +579,7 @@ export class RenulusController {
     return locator;
   }
   async start(budget) {
+    this.observedFileInputs.clear();
     check(!this.application && !this.pendingLaunch && !this.owners.length, 'already_running', 'Close the owned app before starting another instance.');
     this.fault = null; this.origin = null;
     await budget.wait(this.prepare(budget.signal));

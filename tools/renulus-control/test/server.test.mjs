@@ -5,7 +5,8 @@ import { EventEmitter } from 'node:events';
 import { createServer, bindLifecycle, toolDefinitions, locatorSchema } from '../server.mjs';
 
 test('bounded tool schemas reject endpoint/executable/eval/profile parameters and nonexact locators', () => {
-  assert.equal(toolDefinitions.length, 11);
+  assert.equal(toolDefinitions.length, 13);
+  assert.deepEqual(toolDefinitions.slice(0, 11).map(definition => definition[0]), ['renulus_start', 'renulus_snapshot', 'renulus_click', 'renulus_fill', 'renulus_press', 'renulus_select', 'renulus_wait', 'renulus_screenshot', 'renulus_errors', 'renulus_restart', 'renulus_close']);
   for (const name of ['renulus_start', 'renulus_restart', 'renulus_close', 'renulus_snapshot']) {
     const schema = toolDefinitions.find(definition => definition[0] === name)[2];
     assert.equal(schema.safeParse({}).success, true);
@@ -18,6 +19,18 @@ test('bounded tool schemas reject endpoint/executable/eval/profile parameters an
   assert.equal(select.safeParse({ locator: { role: 'combobox', name: 'Topic' }, value: 'ckd', label: 'CKD' }).success, false);
   const wait = toolDefinitions.find(definition => definition[0] === 'renulus_wait')[2];
   assert.equal(wait.safeParse({ locator: { role: 'heading', name: 'Case' }, timeoutMs: 12001 }).success, false);
+});
+
+test('upload and resize schemas expose only bounded file selection and dimensions', () => {
+  const upload = toolDefinitions.find(definition => definition[0] === 'renulus_upload')[2];
+  const resize = toolDefinitions.find(definition => definition[0] === 'renulus_resize')[2];
+  const input = { locator: { css: 'input[type="file"][id="observed"]' }, fixture: 'synthetic-study.pdf' };
+  assert.equal(upload.safeParse(input).success, true);
+  for (const fixture of ['../synthetic-study.pdf', '..\\synthetic-study.pdf', 'C:/synthetic-study.pdf', 'synthetic-study.pdf:stream', 'synthetic-study.zip', 'synthetic-study.json', 'account.json', '%2e%2e/synthetic-study.pdf', ['synthetic-study.pdf']]) assert.equal(upload.safeParse({ ...input, fixture }).success, false);
+  for (const field of ['files', 'buffer', 'path', 'fixtureRoot', 'profile', 'code', 'endpoint']) assert.equal(upload.safeParse({ ...input, [field]: 'forbidden' }).success, false);
+  assert.equal(upload.safeParse({ ...input, locator: { role: 'button', name: 'Choose file' } }).success, false);
+  for (const size of [{ width: 640, height: 540 }, { width: 2560, height: 1600 }]) assert.equal(resize.safeParse(size).success, true);
+  for (const size of [{ width: 639, height: 540 }, { width: 2561, height: 540 }, { width: 640, height: 539 }, { width: 640, height: 1601 }, { width: 640.5, height: 540 }, { width: '640', height: 540 }, { width: 640, height: 540, focus: false }, { width: 640, height: 540, windowId: 1 }, { width: 640, height: 540, x: 0 }]) assert.equal(resize.safeParse(size).success, false);
 });
 
 test('SDK registration works with the pinned Zod object schemas without launching any app', async () => {

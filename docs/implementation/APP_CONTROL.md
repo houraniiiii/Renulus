@@ -50,8 +50,32 @@ Send `{"name":"renulus_start","arguments":{}}`, then the documented
 tool requests as individual stdin lines. The client prints results and
 captures to external files. Use `renulus_close` before EOF. A new client
 reads the latest server code; `renulus_restart` loads the latest built app
-with the same owned synthetic profile. Input files are suppressed in this
-initial toolset; no file-upload or arbitrary evaluation tool is exposed.
+with the same owned synthetic profile. The original eleven tools remain available.
+The October 7 extension adds `renulus_upload` and `renulus_resize`; arbitrary
+evaluation remains unavailable. Read the [bounded input contract](../../tools/renulus-control/README.md#synthetic-uploads-and-hidden-resizing)
+and [lane handoff](finish-control-inputs-20261007.md) before the parent's first
+actual upload/resize check.
+
+For PDF/PNG/JPEG input, start a fresh client/server with the same configuration
+plus `--fixture-root C:/rn-finish-20261007/evidence/control/synthetic-inputs`.
+That external directory contains original synthetic files and the required
+size/SHA-256 manifest. No personal/acquired source is part of it. The root is
+fixed by CLI, separate from profiles and dependencies; tool arguments accept
+only a declared synthetic basename. Omitting it leaves uploads disabled.
+
+Navigate to the existing Library or Case file field, then take a snapshot.
+Its additional `fileInputs` list supplies exact observed locators. Use one as
+`renulus_upload`'s `locator` and `synthetic-study.pdf`, `synthetic-image.png` or
+`synthetic-image.jpg` as `fixture`. The controller verifies the declared bytes
+and uses Playwright `setInputFiles` directly. Refresh the snapshot after a
+selection or Case mode change. Observe the app's resulting extraction, preview,
+rights and Save state separately; successful selection alone proves none of them.
+
+Send `{"name":"renulus_resize","arguments":{"width":1000,"height":720}}`
+to resize only the owned hidden Flow window. Bounds are 640–2560 wide and
+540–1600 high, in device-independent pixels. The result includes actual outer
+and content dimensions. Capture fresh pixels with `renulus_screenshot` after
+resizing. No focus, show, position change or OS input is involved.
 
 Screenshots use Electron's capturePage with stayHidden enabled. The controller
 checks its windows for visibility/focus and keeps hidden rendering unthrottled.
@@ -73,6 +97,11 @@ Native backup save requests return cancelled and record suppression. Startup
 and shutdown errors go to stderr rather than a foreground message box. These
 checks establish app control and suppression, not successful native dialogs or
 external handoffs.
+Indirect HTML chooser requests still receive an empty file list and are logged
+as cancelled. Upload never opens one. The fixed manifest, strict PDF/image types,
+observed Library/Case input labels and filesystem guards exclude account/profile
+imports and arbitrary personal paths. These guards do not replace the operator's
+responsibility to declare only owned synthetic material.
 
 The controller supplies its own process ID as the background owner. The
 controller verifies the Windows launcher/main/backend process chain; Renulus
