@@ -96,3 +96,35 @@ Mounted tests establish renderer behavior only. The parent owns source and new
 installed acceptance: Today to the existing reviewed entry, then retained quiz
 and plan reopen using Study02 records. No generation, discovery or quiz repeat
 is needed for this patch. No installed-pass or packaging claim is made here.
+
+
+## Parent source acceptance, 15:15 UTC
+
+Reviewed and integrated as `1dde6d904dac436cafae331b5898fe45c410a6a6`.
+The lane and its worktree are retired; branch and external evidence are retained.
+Parent desktop build passed. Actual hidden source acceptance
+`C:/rn-finish-20261007/evidence/connected/handoff-source-02/result.json`
+passed at **2026-10-07T15:14:24.186Z–15:15:10.986Z**, SHA256
+`1231b4812b0eab16de3497431110e41b83634724b835af51959db85bfa87db93`.
+
+- Today opens exact existing reviewed publication
+  `update_90e368a9ee685659a6228389`, review
+  `review_e7e301dec492b835a34fab42`, including the saved synthetic learning note.
+- Existing installed-b8 quiz feedback, manual activity date, goals and case IDs
+  remain unchanged. Keyboard Start returns to that exact feedback; no new answer.
+- Normal close/reopen preserves the entire goals/plan/review/update response,
+  exactly one review and zero completed provider requests. The same Today link
+  works after reopen. No new discovery, review, import or generation is run.
+- Normal closes take0.1977319/0.1931247s, with no remaining owned process,
+  visibility/focus violation or renderer error. Parent inspected the exact
+  publication screenshot: title, dates, saved note and inspected-source fields
+  are readable. The reopened capture has the same SHA256.
+
+`handoff-source-01` stays **failed**: the driver incorrectly searched textarea
+content using `innerText`. The exact detail/title had already opened; this was
+a verification defect, not a second product defect. The corrected driver uses
+the labelled textarea value. Original driver bytes and the failure are retained
+with hashes in `evidence/reviewed-update-link/driver-repair.json`.
+These are source results, not installed acceptance. The matching1dde6d90
+manufacture/installation is running under `evidence/release-1dde6d90`; promotion
+requires its own exact handoff/lifecycle receipt. The normal launcher stays cb59.
