@@ -1,5 +1,19 @@
 # Final bounded content disposition — 7 October 2026
 
+**Current disposition after final installed acceptance:** R1 is complete in
+immutable content 1.4.2. RN16-CASE-T18-TREATMENT-INJURY@1 supplies three teaching
+stages, and RN16-T18-001@1 / RN16-T18-002@1 supply reviewed five-option
+assessment with exact EMA source loci. The additive ESENeph mapping preserves
+all previous pins. Five affected source checks and actual installed teaching,
+explicit discard, both reviewed items, history retention and normal reopen are
+accepted; [the final delivery](finish-installed-f1c49444-20261007.md) and
+[64-requirement ledger](finish-requirements-20261007.md) record their exact scopes.
+The adopted finite content requirements can close under issue #20. Dated source,
+access, corrected-copy and wider curriculum restrictions below remain in force.
+
+The original review below retains its ab0/1.4.0 cutoff and then-missing R1;
+its pending-release statements are historical after this completion note.
+
 **Decision: accept the finite bank, broad-topic teaching, partial ESENeph track and the six new 1.4 cases at their recorded scope. Do not close #20 as entirely complete yet: one demonstrable adopted content component remains missing, cancer-treatment-related kidney injury in T18.O01.** The exact residual is R1 below. The 43 D rows and 61 C rows are disposed here; they are not a fresh authoring or acquisition queue. No further whole-bank audit, quota, provider run or installed content replay is proposed.
 
 Source acceptance is **dated, claim-specific educational acceptance**, with the current-guidance restrictions below. It does not certify all 77 snapshots clinically current. Overdue review, incomplete notice checks, unverified corrected bytes and unavailable endpoints remain explicit limitations. Their future resolution is necessary before the corresponding stronger current-source claim; it is not an unimplemented teaching unit or grounds for requiring every source-register candidate at launch.

@@ -4,9 +4,10 @@ Renulus is an English-language Windows learning space for nephrology. For the
 selected unsigned installation and dated owner-PC acceptance status, see
 [Running Renulus](RUNNING.md#delivery-status). The October 7 source app has real
 Sol Explain/practice/automatic Memory and both Go Case-discussion evidence.
-The matching **cb59beb2** Windows installation passed the real Sol core journey
-and is selected by the normal launcher, preserving the E: learning profile.
-Complete content/currency and broader acceptance remain tracked separately.
+The matching **f1c49444** installation is selected by the normal launcher,
+preserving the E: profile. New T18/ESENeph content, ready corrected Memory and
+normal reopen passed. Earlier real connected journeys retain their exact
+qualification. Physical Windows observations remain issue21.
 
 ## Start and connect
 
@@ -18,7 +19,7 @@ runtime and CPU helpers; no developer tools, GPU, Docker or local model server
 setup is needed. Keep the existing E: data and Renulus account profile when
 updating the app, including the learning profile
 `E:/Renulus-native-delivery/desktop-20261005/data/learning`. The normal shortcut
-selects `installed-cb59beb2` on C:. Launcher promotion followed matching installed
+selects `installed-f1c49444` on C:. Launcher promotion followed matching installed
 acceptance and preserved the previous selector. See the
 [current delivery record](DELIVERY_20261007.md).
 

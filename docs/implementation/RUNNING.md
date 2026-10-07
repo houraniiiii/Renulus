@@ -1,10 +1,17 @@
 # Running Renulus
 
-Current checkpoint: matching installed0d4b171e passed fresh1.3 activation,
-synthetic reviewed-source eligibility/history effects and normal reopen; the
-normal launcher selects it as of 2026-10-07T16:23:27.3575531Z. E data/account remains unchanged.
-Read [the current artifact and exact acceptance](finish-installed-0d4b171e-20261007.md).
-Retain original failures and qualified previous live/engine/recovery receipts.
+Current delivery: matching **installed-f1c49444**, source
+`f1c49444ba77f03fe0f35f4657e564c1b26724dc` and content **1.4.2**. Final matching installation,
+new T18 teaching/ESENeph assessment, retained history, ready corrected-record
+Memory recall and normal reopen passed. Launcher promotion/check passed at
+`2026-10-07T21:12:25.8283773Z`; E: account/profile/originals remain.
+Read [the exact artifact and acceptance](finish-installed-f1c49444-20261007.md) and
+[the current64-requirement ledger](finish-requirements-20261007.md).
+Physical Windows speech/scaling/high-contrast observations remain issue21.
+Earlier live/engine/recovery proof keeps its source qualification; failed
+aggregates remain failed. Failed01 stays terminal1; successful02 supplies only
+ready recall. Five ordinary closes include failed pre-search cleanup; four
+within successful scopes. No fresh six-scope or all64 aggregate is claimed.
 
 Renulus is the Flow Windows learning application. For its controls and everyday
 workflows, see [Using Renulus](USING_RENULUS.md).
@@ -63,11 +70,11 @@ Contributor development must use a separate profile.
 
 ## Delivery status
 
-The normal launcher selects matching **0d4b171e** on C:, preserving the E:
-learning profile. Fresh installation, matching inventories, actual empty-profile
-content activation, source-review effects, history retention and normal reopen
-passed. Prior successful Sol/Go/Memory/Library and dated-source evidence keeps
-its exact qualification. Read [the current delivery](DELIVERY_20261007.md).
+The normal launcher selects matching **f1c49444** on C:, preserving the E:
+learning profile. Content1.4.2, new T18/ESENeph teaching/Test, retained history,
+ready corrected Memory and normal reopen passed. Earlier actual connected and
+recovery proof keeps its recorded qualification. Physical observations remain
+issue21. Read [the current delivery](DELIVERY_20261007.md).
 The following table preserves the earlier installation/recovery evidence.
 
 At the October 6, 2026 handover, product source was frozen at

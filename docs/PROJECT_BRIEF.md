@@ -109,13 +109,18 @@ deletion, reader and ordinary lifecycle acceptance. On October 7, actual source
 journeys completed with Sol and both approved Go models. Explain, follow-up,
 Stop/retry, generated practice, automatic capture/recall, Case/image discussion
 and Library citation/original access have individually scoped live evidence.
-The1.3.0 content release contains230 questions/52 cases across27 topics, with
-four objective repairs and bounded MGRS/IKMG/ISTH application. Actual installed
-Sol dated public-body retrieval and automatic capture passed. Matching0d4b171e
-is selected by the normal launcher after actual fresh-profile content activation,
-source-review eligibility/history effects and normal reopen. Its profile and
-original collection remain on E:. Named clinical/source-depth and further
-accessibility/robustness scopes remain open in the original requirement audit.
+Content 1.4.2 contains 251 questions and 59 cases across 27 topics, including the
+final cancer-treatment kidney-injury teaching and reviewed assessment slice.
+The adopted finite launch coverage and claim-specific source dispositions are
+complete; partial ESENeph and dated source/access/copy restrictions remain explicit.
+Actual installed Sol dated public-body retrieval and automatic capture passed
+at their retained source-qualified scope. The normal launcher now selects matching
+installed-f1c49444 after final content/history/ESENeph/reopen acceptance and an
+actual ready corrected-record Memory search. Its profile and originals remain on E:.
+The original 64-requirement audit retains bounded live/engine/recovery evidence
+and failed receipts. Physical Narrator/NVDA speech, Windows scaling and high
+contrast observations remain unperformed under issue #21; full accessibility
+and unconditional all-product acceptance are not claimed.
 See [the implementation run](implementation/EXECUTION.md),
 [startup guidance](implementation/RUNNING.md) and
 [current continuation](implementation/FINISH_20261007.md).

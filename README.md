@@ -8,22 +8,16 @@ It uses the selected existing models through Codex and/or OpenCode Go
 subscriptions, without retraining.
 The project owner will not host a service or model inference.
 
-This repository contains the application, the confirmed direction, selected Flow
-interface, original teaching packs and dated implementation evidence. The local
-backend and renderer connect study discussions, document retrieval, cases,
-assessment, learner memory, study planning and source updates. The current
-integration build is on `build/renulus-integration`. The normal Windows shortcut
-selects matching installed0d4b171e with the existing E: learning profile. Installed
-Sol Explain, Stop/retry, generated practice, automatic Memory capture/recall and
-normal reopen have real evidence. Both approved Go models have source responses;
-installed saved DeepSeek, Library/originals and correction/delete scopes are
-recorded separately. Matching b8 adds successful dated public-body citations and
-capture;1dde adds the exact reviewed-update handoff and retained quiz/manual plan.
-Relevant unchanged-source evidence is qualified without repeating provider calls.
-Matching0d4 fixes fresh-profile bootstrap and accepts source-review eligibility/
-history effects and normal reopen. See the current delivery for its exact scope.
-Content1.3.0 has230 questions and52 cases across27 topics, with honest partial
-ESENeph/source-depth limits. Draft PR13 tracks the remaining full-product scope.
+This repository contains the Windows app, selected Flow interface, original
+teaching packs and dated evidence. Integration is on `build/renulus-integration`.
+The normal shortcut selects validated **installed-f1c49444**, preserving the E:
+learning/account profile. Content1.4.2 has251 questions and59 cases across27
+topics, with General and partial ESENeph preparation. The final bounded composite accepts
+new T18 teaching/questions, retained history, ready corrected Memory and
+normal reopen. Earlier actual Sol/practice/automatic capture, both approved Go
+models, Library/originals, dated evidence, Updates and recovery keep their exact
+source qualification. Physical Windows speech/scaling/high contrast remain
+issue21; dated source/rights/currentness and examination limits remain explicit.
 Read the [delivery](docs/implementation/DELIVERY_20261007.md),
 [running guide](docs/implementation/RUNNING.md) and
 [continuation](docs/implementation/FINISH_20261007.md).

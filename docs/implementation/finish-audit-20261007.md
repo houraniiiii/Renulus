@@ -1,12 +1,22 @@
 # Requirement audit — October 7, 2026
 
-Current checkpoint: matching installed0d4b171e passed fresh1.3 activation,
-synthetic reviewed-source eligibility/history effects and normal reopen; the
-normal launcher selects it as of 2026-10-07T16:23:27.3575531Z. E data/account remains unchanged.
-Read [the current artifact and exact acceptance](finish-installed-0d4b171e-20261007.md).
-Retain original failures and qualified previous live/engine/recovery receipts.
+Current delivery: matching **installed-f1c49444**, source
+`f1c49444ba77f03fe0f35f4657e564c1b26724dc` and content **1.4.2**. Final matching installation,
+new T18 teaching/ESENeph assessment, retained history, ready corrected-record
+Memory recall and normal reopen passed. Launcher promotion/check passed at
+`2026-10-07T21:12:25.8283773Z`; E: account/profile/originals remain.
+Read [the exact artifact and acceptance](finish-installed-f1c49444-20261007.md) and
+[the current64-requirement ledger](finish-requirements-20261007.md).
+Physical Windows speech/scaling/high-contrast observations remain issue21.
+Earlier live/engine/recovery proof keeps its source qualification; failed
+aggregates remain failed. Failed01 stays terminal1; successful02 supplies only
+ready recall. Five ordinary closes include failed pre-search cleanup; four
+within successful scopes. No fresh six-scope or all64 aggregate is claimed.
 
-The matching **0d4b171e Windows installation is selected by the normal launcher** [FB].
+Earlier paragraphs/table retain their checkpoint; the current64-row ledger is
+authoritative for the later final binding. Original requirements are unchanged.
+
+At that earlier checkpoint **0d4b171e was selected by the launcher** [FB].
 Its exact reviewed-update/retained-plan/reopen acceptance passes. Prior cb59 core
 connected learning and b8 freshness keep their qualified original attribution. Installed Sol direct/guided
 Explain, Stop/new request, generated practice, completed automatic Memory

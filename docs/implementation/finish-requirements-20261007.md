@@ -1,25 +1,25 @@
 # Final 64-requirement ledger — 7 October 2026
 
-**The finite content and Memory-guard implementation gaps are resolved at their
-recorded source/review scope. Retain completed 0318 content and ab0 Memory/Home
-acceptance. The remaining parent release conditions are F (matching final
-artifact and promotion), T (new T18 installed acceptance) and M (post-reopen
-ready corrected-record recall). Physical S6.04 observations remain unperformed
-under issue 21. This is not an all-64 fresh execution or full accessibility pass.**
+**Final bounded composite binding: F/T/M are accepted.** Matching f1 manufacture/install,
+six scopes across preserved failed01 and successful02, ready corrected Memory,
+five ordinary closes (four within successful scopes) and
+checked launcher promotion pass. All64 IDs/requirements remain unchanged.
+Physical S6.04 observations under issue21 remain unperformed; no all64 fresh
+execution, full accessibility or universal clinical-currentness claim.
 
-This report preserves all 64 original IDs and requirement wordings, in order,
-from [the prior disposition][H]. Source/review cutoff is parent
-`f1c49444ba77f03fe0f35f4657e564c1b26724dc`, including immutable pack 1.4.2.
-At the parent's stated cutoff its matching manufacture is active in session
-19369; no final matching installed result or promotion is admitted here.
-This sidecar starts at `8e113aaf65e109569077ea6e6ccaca6f35a53b2a` on
-`codex/final-content-disposition`, edits only this report and performs no tests,
-native/model/provider/import/network/GitHub work or private-state access.
+All 64 original IDs and requirement wordings remain unchanged, in order.
+Product `f1c49444ba77f03fe0f35f4657e564c1b26724dc`. Parent composite admission SHA256
+`211e002f4ab6cb6944dfb0eabfd781b701659b4f50c1401b6447e480e382a6c2`; promotion
+`2026-10-07T21:12:25.8283773Z`. Original sidecar was report-only; parent adds only
+the completed final binding. Failed01 stays failed/terminal1; successful02
+completes only the missing ready recall/terminal0. No fresh six-scope aggregate.
+Earlier evidence retains exact source/scope and
+all failed aggregates remain failed.
 
 **Status:** A = accepted implementation/observation at its recorded scope;
 L = retained qualified local, controlled, engine or mounted evidence;
 C = explicit claim restriction or unspecified acceptance bound;
-P:F/T/M = only the finite parent conditions below;
+F/T/M = completed finite final conditions below;
 X21 = outstanding physical observations, no known product defect established.
 A/L preserve source identities and qualifications; they do not make every phrase
 universal. C is not a new authoring, acquisition, load or native-rerun quota.
@@ -44,7 +44,7 @@ universal. C is not a new authoring, acquisition, load or native-rerun quota.
   and durable `connection_required`; retained question, Home/Resume, normal
   close/reopen, no duplicates. Installed01 remains exit 1 after the CDP
   response-body driver failure; installed02 exits 0 without a new question,
-  provider request, answer or capture. Post-reopen ready recall is still M.
+  provider request, answer or capture. Its ready post-reopen recall is now accepted by [FINAL].
 - **[DC] Final required-claim disposition and [T18] original slice:** D/C finite
   decisions retain dated/access limits. R1 is supplied by one three-stage
   cancer-treatment case and two five-option questions using registered G06.
@@ -73,12 +73,12 @@ universal. C is not a new authoring, acquisition, load or native-rerun quota.
 | S0.04 | Protected deliberate optional retrieval keys, activation and usage/cost controls | L/C | Protected opt-in and controlled auth/quota/request-credit proof [H]. Live billing/monetary-cap guarantees unobserved; optional paid use is not a gate. |
 | S0.05 | Native Windows runtime starts with OS-only PATH on this PC | A | Installed bundled runtime/OS-only PATH and reopen [H], [I14]; ab0 matching install/lifecycle [AB]. Scope is this PC. |
 | S0.06 | Bundled Docling/OCR/FastEmbed/LanceDB/Mem0 helpers perform offline round trips | A | Qualified actual offline engines and installed Mem0 lifecycle retained [H], [AB]. No new helper sweep. |
-| S0.07 | Compatible pins, hashes, tokenizer/native binaries, CPU paths and no implicit downloads/cloud fallback | A; P:F | ab0 packaged/deployed inventories match 39,275 files; 33,509 dependencies retained [AB]. Final f1 package binding remains F. |
+| S0.07 | Compatible pins, hashes, tokenizer/native binaries, CPU paths and no implicit downloads/cloud fallback | A | Final source/payload/runtime/inventories match f1; public dependency/helper bytes unchanged [FINAL]. |
 | S0.08 | Exact five-model/account/input capability matrix, automatic routing/manual override | A/C | Five-model controls and observed Sol/MiMo/DeepSeek scopes retained [H]. Astra/Luna account availability and every input combination remain unclaimed. |
 | S0.09 | App-owned authentication, real response per advertised available connection, stream/Stop/restart | A | Qualified actual responses on both connections and installed stream/Stop/retry/reopen [H]. No new provider call required for artifact relabelling. |
 | S0.10 | No-save sentinel absence, bounded resource/latency/installer measurements | A/C | Actual unsaved-interruption absence and recorded footprint/resource/install measurements [H], [AB]. No adopted expected-volume/latency threshold was specified; broader capacity remains unclaimed. |
 | S0.11 | Schema compatibility, no implicit downgrade; app rollback distinct from data restore | A/L | Qualified refusal and compatible rollback preserve canonical data/plan/Memory [H]. Populated Library-index rollback and arbitrary downgrade remain unclaimed; restore is separate. |
-| S1.01 | Flow shell, connection controls and normal Windows launcher | A; P:F | Existing normal launcher acceptance retained [H]; ab0 Flow/Home/Resume observed [AB]. Final selector promotion follows F. |
+| S1.01 | Flow shell, connection controls and normal Windows launcher | A | Installed Flow/Connections/Home retained [H], [AB]; final launcher promoted after matching acceptance [FINAL]. |
 | S1.02 | Direct and guided explanations/follow-ups across nephrology | A | Actual varied-domain direct/guided teaching and follow-ups retain exact observed models/sources [H]. No all-topic clinical-accuracy claim. |
 | S1.03 | Streaming, selected-subscription model override, Stop/retry | A | Installed exact stream/Stop/next request/reopen retained [H]. Failed drivers remain failed; no extra model-transition run. |
 | S1.04 | Ordinary study history resumes/deletes after restart; case branches remain volatile | A/L | Historical persistence/deletion and unsaved Case/PDF/Learn absence retained [H]; ab0 retained single question/Resume/reopen [AB]. No every-crash guarantee. |
@@ -98,20 +98,20 @@ universal. C is not a new authoring, acquisition, load or native-rerun quota.
 | S2.12 | Explicit Save retains case snapshot/attachments; saved follow-up and restart/delete semantics | A/L | Actual saved Case/original and DeepSeek follow-up/reopen; Case facts excluded from Memory [H]. Historical deletion/restore retains its scope. |
 | S2.13 | Physical derivative cleanup, old Lance versions, delete-during-ingestion and stale-job exclusion | L/A | Real old-Lance pruning, controlled deletion/rebuild fences and installed backup-deletion suppression retained [H]. No universal erasure or new concurrent native run. |
 | S2.14 | Interactive Library stays usable while the normal queue progresses | A/C | Actual ordinary queue actions/close/readiness/reopen retained [H]. No sustained-load performance claim or additional stress threshold. |
-| S3.01 | Retain measurable broad content targets; original reviewed questions/cases with evidence terms | A/C; P:T | Finite minima and installed 1.4 accepted [I14], [DC]; required T18 substance reviewed/validated [T18], [V], [T5]. Only its installed delivery remains T. |
-| S3.02 | Actual immutable original pack installs/activates and consumers share it | A; P:T | Actual 1.3→1.4 history-preserving upgrade and fresh activation/consumers accepted [I14]. Final 1.4.2 activation/changed consumers remain T. |
-| S3.03 | Committed deterministic scoring, rationale sources, mistakes, pause/resume | A/L; P:T | Historical scoring/feedback/plan/pause-resume [H] plus committed 1.4 quiz/review [I14]. New mapped T18 assessment is T, not another whole-bank run. |
+| S3.01 | Retain measurable broad content targets; original reviewed questions/cases with evidence terms | A/C | Finite minima/1.4 composite retained [I14], [DC]; sole required T18 slice reviewed and actually installed/assessed [FINAL]. |
+| S3.02 | Actual immutable original pack installs/activates and consumers share it | A | Fresh1.4.2 activation/shared case/Test and upgrade retain old records and committed history [FINAL]. |
+| S3.03 | Committed deterministic scoring, rationale sources, mistakes, pause/resume | A/L | Historical scoring/mistakes/pause-resume [H]; both new keys C/B, exact rationale/G06 loci and review/reopen pass [FINAL]. |
 | S3.04 | Idempotent restart avoids duplicate answers/exposure; stable item/family/key versions | A/L | Actual identical-answer retry/reopen [H], upgrade history/keys [I14], immutable successor validation and affected fixtures [V], [T5]. No extra idempotency sweep. |
 | S3.05 | Corrected/withdrawn keys annotate historical results without rewriting them | A/L | Actual notice/history annotation and rationale-only successor credit retained [H], [I14]. No genuine scoring-key reversal is invented. |
 | S3.06 | Fresh, assisted, repeat and generated aggregates remain separate after mode switches | A/L | Actual generated/reviewed aggregate separation and qualified help/repeat/mode rules retained [H]. No all-model transition matrix. |
 | S3.07 | Reserved bank never leaks into Explain/practice context | L/A | Qualified reserved-bank context exclusion retained [H]; independent RN15 and T18 staged teaching [I14], [T18]. No reserved rationale relabelled as a case. |
 | S3.08 | Generated practice is labelled, uses approved generation and keeps unreviewed keys separate | A | Actual approved Sol practice, unreviewed labels, answer/end and separate score retained [H]. Not reviewed-bank or all-model proof. |
-| S3.09 | ESENeph insufficient coverage is honest; no complete exam simulation without supported blueprint/length | A/C; P:T | Installed partial disclosure accepted [I14]; 1.4.2 maps 247 questions [MAP], [V]. No endorsement/full simulation; new alignment's installed presence remains T. |
+| S3.09 | ESENeph insufficient coverage is honest; no complete exam simulation without supported blueprint/length | A/C | Final247-question ESENeph mapping includes both exact T18 pins; honest partial format/coverage/no endorsement/no simulation [FINAL]. |
 | S4.01 | Hermes/Mem0 OSS + explicit FastEmbed/local Qdrant; SQLite authority and rebuildable generations | A/L | Actual engines/canonical authority/rebuild retained [H]; ab0 ready pre-reopen index/correction [AB]. No hosted service or volume extrapolation. |
 | S4.02 | Durable idempotent eligible capture queue with references/provenance and correct scope | A/L | Actual eligible capture once/persistence/stopped-run exclusion and controlled capture fences [H], [MG]; ab0 failed run creates no capture [AB]. |
 | S4.03 | Automatic general learning points through approved live subscription, without case/prompt facts | A/C | Original live installed Sol extraction/recall and Case exclusion retained [H]. No universal quality claim or repeated provider extraction. |
-| S4.04 | Deduplication, editable records, revision conflicts, physical history/index purge and suppression | A/L; P:M | Sequential edit/delete/purge and late-capture/index guards retained [H]; 13 controlled active-context guard cases [MG], ab0 revision-2 persistence/no duplicates [AB]. Ready post-reopen recall remains M. |
-| S4.05 | Relevant corrected personal context within separate library/memory budgets, no invented mastery | A/L; P:M | Prior corrected recall/budgets [H], guarded canonical context [MG], actual ab0 one-record context use [AB]. M covers corrected retrieval after reopened index readiness; no causal answer-quality claim. |
+| S4.04 | Deduplication, editable records, revision conflicts, physical history/index purge and suppression | A/L | Prior edit/delete/purge [H],13 controlled guards [MG], ab0 revision2 persistence [AB]; final ready post-reopen recall returns exact same corrected record [FINAL]. |
+| S4.05 | Relevant corrected personal context within separate library/memory budgets, no invented mastery | A/L | Scoped budgets [H], guard [MG], actual personalization [AB]; final single ready Mem0 search returns exact canonical revision2/text [FINAL]. No causal learning-quality claim. |
 | S4.06 | Plan uses goals/time/exam date/observed mistakes, with free browsing and manual overrides | A | Actual mistake-to-plan, goals/time/exam date/manual move/feedback/persistence retained [H]. No scheduling-efficacy claim. |
 | S4.07 | Useful new-user home: Ask/Resume/review/updates, real records | A/L | Prior plan/review/Updates links [H] plus fresh empty Home, retained failed Ask, Home/Resume and normal reopen [AB]. Former installed Home/return gap resolved. |
 | S4.08 | Versioned export/restore with attachments/provenance and deletion limits on an isolated same-PC target | A/L | Qualified populated recovery with originals/Memory/plan/both indexes/deletion markers retained [H], [AB]. No new restore or universal equivalence claim. |
@@ -121,35 +121,27 @@ universal. C is not a new authoring, acquisition, load or native-rerun quota.
 | S5.03 | Detected changes separate from explicitly reviewed educational entries, with dates/source links | A | Actual discovery, explicit review, dedup/reopen and Today handoff retained [H]. Discovery alone is not clinical approval or correction propagation. |
 | S5.04 | Correction flags bank/learning history without rewriting keys/results | A | Actual synthetic notice enumerates 24 affected versions, excludes the target and annotates retained feedback without rewriting results [H]. No new genuine key reversal required. |
 | S5.05 | Offline/failed/stale/restricted reimport accurate, same-URL change and exact-copy review reproducible | L/A/C | Qualified same-URL invalidation/restricted-binding/exact-copy/retry guards and installed notice exclusion/reopen retained [H]. Real corrected-copy acquisition and universal transition coverage unclaimed [DC]. |
-| S6.01 | Required broad-topic and ESENeph cells: explanation/evidence/questions/cases/update sources | A/C; P:T | D/C disposition complete; R1 authored/reviewed and mapped in 1.4.2 [DC], [T18], [MAP], [V], [T5]. Only new installed slice remains T; flags/row counts create no quotas. |
-| S6.02 | Case → Explain → practice/Test → feedback → Memory → plan → Updates across domains | A/L; P:T,M | Individually accepted edges retained [H], [I14]; active-context guard and Home/Resume added [MG], [AB]. T/M finish changed scopes; no fictional single all-green loop. |
+| S6.01 | Required broad-topic and ESENeph cells: explanation/evidence/questions/cases/update sources | A/C | Finite D/C dispositions retained [DC]; sole required T18 missing component taught/mapped/actually assessed [FINAL]. Dated restrictions remain, no new quota/certificate. |
+| S6.02 | Case → Explain → practice/Test → feedback → Memory → plan → Updates across domains | A/L | Actual historical connected edges retained [H], [I14], [AB]; new case→separate-study Test→feedback/reopen and ready corrected recall pass [FINAL]. No fictional all-green loop. |
 | S6.03 | Completed relevant backend/renderer/regression on integrated source, failures/exclusions adjudicated | A/L | 37 source passes [I14], 13 controlled guard passes plus 14 retained individual passes [MG], both validators and five affected f1 cases [V], [T5]. Failed aggregates retained. |
 | S6.04 | One Flow system; keyboard, screen reader, text scaling/resize/reduced motion; loading/empty/errors | A/L; X21 | Flow, mounted states and actual keyboard/compact/reflow scopes retained [H]; Home/error/reopen [AB]. Narrator/NVDA, actual Windows scaling/high contrast and physical observations remain issue 21, unperformed. |
-| S6.05 | New source freeze → exact payload → manufacture/install → normal lifecycle matching that source | A; P:F | Historical delivery and matching ab0 manufacture/install/lifecycle accepted [H], [AB]. Final f1 manufacture is active; matching result and promotion remain F. |
-| S6.06 | Unsigned current-PC delivery, update provenance, static distribution and complete notices | A/C; P:F | Existing unsigned same-PC packages/provenance/notices retained [H], [AB]. Final artifact/notices binding belongs to F. No public static publication claimed; signing/separate clean PC remain optional. |
+| S6.05 | New source freeze → exact payload → manufacture/install → normal lifecycle matching that source | A | f1 source→exact payload/renderer/native→NSIS→fresh install→bounded five-plus-one composite/reopen→checked launcher pass [FINAL]. Five ordinary closes; four within successful scopes; failed01 stays exit1. |
+| S6.06 | Unsigned current-PC delivery, update provenance, static distribution and complete notices | A/C | Final unsigned current-PC artifact/inventories/provenance and retained notices [FINAL]. Public binary publication/signing/separate clean PC remain unclaimed. |
 | S6.07 | Install/upgrade/rollback, database migration, uninstall/data-retention and isolated installation identity | A/L | Qualified migration/refusal/uninstall/retention/rollback [H], actual content upgrade [I14], ab0 fresh installation [AB]. No arbitrary downgrade or populated-index rollback extrapolation. |
 | S6.08 | Backup/restore incl. Office/image originals, citations and both derived indexes; recovery disclosure | A/L | Accepted six-original/populated recovery, both indexes and deletion suppression retain qualified source identity [H], [AB]. No redundant restore requested. |
-| S6.09 | Plain-language onboarding/running/recovery and truthful capability controls | A; P:F | Existing guides and capability limits retained [H]. Parent aligns launcher/guides/handoff with the final accepted artifact during F; no premature promotion. |
-| S6.10 | Fresh isolated installation on this Windows PC completes required real journeys with bundled runtime | A/L/C; P:F,T,M; X21 | Accepted fresh/historical journeys, 0318 content and ab0 Memory/Home retain credit [H], [I14], [AB]. Final delivery/T18/ready recall and separate physical observations prevent an unconditional all-64 claim. |
+| S6.09 | Plain-language onboarding/running/recovery and truthful capability controls | A | Final launcher/running/using/recovery guides name accepted artifact and preserve E profile [FINAL]. |
+| S6.10 | Fresh isolated installation on this Windows PC completes required real journeys with bundled runtime | A/L/C; X21 | Actual historical live/engine/recovery scopes qualified; final fresh content/history/ready Memory/reopen use bundled runtime with OS-only PATH [FINAL]. Physical speech/scaling/high contrast remain issue21. |
 
 ## Exact remaining conditions and finite recommendation
 
-1. **F — final matching artifact and promotion.** Parent completes its existing
-   f1 manufacture, records the matching source/payload/install identity and
-   normal lifecycle at that target, retains applicable earlier qualification,
-   then promotes the accepted selector and corresponding guides/handoff. No
-   result from session 19369 is anticipated. The preceding ab0/0318 evidence
-   remains valid at its own scope; no repeat provider/engine/recovery/import
-   matrix is created.
-2. **T — installed new T18 slice.** Record final 1.4.2 activation/history and
-   actual access to the one new three-stage case and its exact mapped assessment
-   slice, retaining honest partial ESENeph disclosure. Earlier six-case and quiz
-   acceptance stays accepted. Source validation, five affected cases and the
-   clinical-locus review are already complete; do not reopen authoring/research.
-3. **M — corrected recall after reopening is ready.** After the reopened index
-   finishes rebuilding, record recall of the current corrected revision. The
-   installed02 persistence/Resume/no-duplicate proof stays accepted. This needs
-   no new clinical answer, provider call or live compaction race.
+1. **F accepted at bounded composite scope:** exact manufacture/install/inventories,
+   five ordinary closes including failed pre-search cleanup; four within
+   successful scopes,
+   source qualification, guides and promotion accepted [FINAL].
+2. **T accepted at bounded composite scope:** final fresh1.4.2/history, staged T18 case and both mapped
+   five-option questions/keys/rationale/source pass [FINAL]. No old six-case replay.
+3. **M accepted at bounded composite scope:** one actual post-reopen ready Mem0 UI search returns exact
+   corrected revision2/text [FINAL]; no new question/provider/capture.
 
 **X21 is separate:** physical Narrator/NVDA, actual Windows scaling/high contrast
 and the existing owner-desktop S6.04 observations remain unperformed. No product
@@ -160,14 +152,14 @@ desktop access is authorised in this sidecar.
 **Claim restrictions remain, without an extra queue.** [DC]'s exact D/C ledger
 continues to govern dated editions, official ESENeph evidence checked October 5,
 notice/corrected-copy/access limitations and optional expansion. R1 now has
-required substance and mapping; pending T is delivery evidence. Neither 11
+required substance, mapping and actual installed delivery evidence. Neither 11
 partial flags, 27 currency flags, 43 D rows nor 61 C rows are new quotas. The
 new EMA locus check does not clear all 78 sources clinically current. Existing
 small-state resource/Memory observations are the supported bounds; unspecified
 larger volume/latency targets and unperformed physical/external transitions are
 not newly invented acceptance tests.
 
-After F/T/M, recommend closure of the implemented content/delivery work with
+With F/T/M completed, recommend closure of the implemented content/delivery work with
 these restrictions preserved, and retain X21 explicitly. Do not call all 64
 requirements freshly executed or physical accessibility complete. Parent owns
 the final evidence insertion, issue decisions, integration and tree retirement.
@@ -177,7 +169,7 @@ the final evidence insertion, issue decisions, integration and tree retirement.
 I14 was read from commit `bce796c2`; MAP from `f1c49444`, without changing this
 worktree. MG's later parent validation supersedes its original unexecuted-lane
 notes. MAP's source-check pending note is superseded by T5; its installed-pending
-note remains. T18's validator-pending note is superseded by V. AB's eight actual
+note is superseded only by [FINAL]. T18's validator-pending note is superseded by V. AB's eight actual
 receipt hashes and qualification limits remain in its linked report.
 
 The following SHA256 values were recomputed from the declared receipts here:
@@ -201,9 +193,10 @@ The following SHA256 values were recomputed from the declared receipts here:
   `fba715ac9baa5f160b477eb65a8baf82b7d2d593a8b909b8fb365662c3af39f3`.
   Both exits are 0 with `valid: true`; 111 review rows and no uncovered objectives.
 
-Static document checks compare the 64 ID/requirement cells ordinally with H,
-check whitespace and enforce this one-file commit. No acceptance execution or
-receipt mutation is performed; commit hooks are disabled.
+The original sidecar preserved 64 rows in one report. The parent's final
+binding keeps all original ID/requirement cells ordinally equal to H and the
+earlier ledger and checks links before writing. Receipts stay read only; this
+writer performs no acceptance execution.
 
 [H]: finish-final-disposition-20261007.md
 [I14]: finish-installed-0318c41f-20261007.md
@@ -214,3 +207,5 @@ receipt mutation is performed; commit hooks are disabled.
 [MAP]: finish-t18-mapping-20261007.md
 [V]: C:/rn-finish-20261007/evidence/final-t18-20261007/validate-02.log
 [T5]: C:/rn-finalise-20261005/t18-content-20261007-01/result.json
+
+[FINAL]: finish-installed-f1c49444-20261007.md

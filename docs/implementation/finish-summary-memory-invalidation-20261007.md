@@ -1,5 +1,15 @@
 # Recalled Memory invalidation during Explain — 7 October 2026
 
+## Final installed consumer and ready recall
+
+The [ab0 composite](finish-installed-ab0c7294-20261007.md) preserves its CDP
+failure and successful retained-question/Home/Memory/reopen continuation. The
+final failed01 retains its first five completed scopes and exit1 aggregate.
+Successful02 alone waits for the reopened index to become ready and performs
+one actual UI search: same canonical revision2/text, one record, no duplicate,
+new question, capture or provider request. [Final acceptance](finish-installed-f1c49444-20261007.md). Controlled
+concurrency remains separate; no live compaction race is claimed.
+
 ## Parent validation — 17:20 UTC
 
 The guard is integrated at199c9c55; the real canonical recall fixture is fixed

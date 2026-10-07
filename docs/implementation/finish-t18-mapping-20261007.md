@@ -26,8 +26,11 @@ validation log SHA256
 `mapping-assembly.json` hashes all protected predecessors and records the exact
 additive alignment. The earlier1.4.1 validator receipt remains unchanged.
 
-Five affected source identities and matching installed activation/history, new
-teaching and normal reopen are pending at this authoring checkpoint. No provider,
-Library import, original/source body redistribution or user-profile access was
-performed. Final source/runtime qualification and installed acceptance are
-parent-owned; this document alone grants no installed or global-currentness credit.
+Five affected source identities passed 5/5 at f1: complete/source_unchanged/
+accepted_stage_pass true, zero foreign modules/guards. JUnit
+379a80d43337c900c11e648ec1635a791721984ee222e699bb56d288446cd892.
+Installed activation/history, new staged teaching, both mapped questions and
+normal reopen retain credit from five completed failed01 scopes. Successful02
+supplies only missing ready corrected Memory recall. [Final bounded composite](finish-installed-f1c49444-20261007.md)
+preserves failed01/exit1, with no fresh six-scope aggregate or provider/import
+replay, original redistribution, personal-profile access or global-currentness claim.
