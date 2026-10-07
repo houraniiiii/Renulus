@@ -1,0 +1,394 @@
+[
+  {
+    "id": "RN15-GBM-001",
+    "version": 1,
+    "family_id": "RN15-GBM-001.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T10",
+    "secondary_topic_ids": [
+      "T16"
+    ],
+    "objective_ids": [
+      "T10.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A person receiving treatment for confirmed anti-GBM disease reports easier breathing. Their next review is being arranged. Which monitoring plan best checks both disease response and treatment safety?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Follow creatinine alone once breathing improves.",
+        "rationale": "Kidney function is relevant, but this omits pulmonary disease, antibody activity and blood-count toxicity surveillance."
+      },
+      {
+        "id": "B",
+        "text": "Follow kidney function, pulmonary findings, anti-GBM titres and blood counts together.",
+        "rationale": "These provide complementary information on organ response, antibody activity and a treatment-related safety signal."
+      },
+      {
+        "id": "C",
+        "text": "Follow anti-GBM titres alone until the first negative result.",
+        "rationale": "Serology cannot replace assessment of the kidneys, lungs and blood counts."
+      },
+      {
+        "id": "D",
+        "text": "Follow symptoms and defer laboratory review until the planned treatment end.",
+        "rationale": "Symptomatic improvement does not demonstrate that antibody activity or treatment toxicity has resolved."
+      },
+      {
+        "id": "E",
+        "text": "Follow blood counts alone because organ response is already established.",
+        "rationale": "Blood counts help detect toxicity but do not establish kidney, pulmonary or antibody response."
+      }
+    ],
+    "answer": "B",
+    "rationale": "Use parallel measures of organ response, antibody activity and toxicity. Improvement in one part of that picture cannot establish safety in the others; monitoring findings should inform treatment review.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "RN15-GBM-SRC-TREATMENT",
+        "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus anti-GBM depth assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-07",
+      "method": "Assistant review of exact authored claims, single-best key, each distractor, teaching-stage support and official primary locators. Dated chapter/notice and rights limits recorded in reviews.json; no independent human review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN15-GBM-002",
+    "version": 1,
+    "family_id": "RN15-GBM-002.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T10",
+    "secondary_topic_ids": [
+      "T16"
+    ],
+    "objective_ids": [
+      "T10.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "During cyclophosphamide treatment for anti-GBM disease, serial blood counts now show clinically significant leukopenia. Pulmonary findings and antibody titres are improving. Which response best addresses this new safety problem?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Continue unchanged because improving antibody titres establish tolerability.",
+        "rationale": "Response to treatment does not establish marrow safety."
+      },
+      {
+        "id": "B",
+        "text": "Increase cyclophosphamide to shorten the remaining course.",
+        "rationale": "Leukopenia is a reason to reduce exposure or interrupt treatment, not intensify it."
+      },
+      {
+        "id": "C",
+        "text": "Stop checking blood counts once the anti-GBM titre becomes negative.",
+        "rationale": "An antibody endpoint does not remove the need to address a blood-count abnormality."
+      },
+      {
+        "id": "D",
+        "text": "Review the leukopenia promptly and reduce or interrupt cyclophosphamide as appropriate.",
+        "rationale": "The anti-GBM treatment guidance explicitly links leukopenia to dose reduction or treatment interruption."
+      },
+      {
+        "id": "E",
+        "text": "Treat the leukopenia as proof of resistant anti-GBM disease.",
+        "rationale": "Leukopenia is a toxicity signal in this context; it does not establish disease resistance."
+      }
+    ],
+    "answer": "D",
+    "rationale": "The new blood-count abnormality requires a toxicity response despite clinical improvement. KDIGO supports reducing or interrupting cyclophosphamide for leukopenia. The item does not specify a count threshold, dose adjustment or restart schedule.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "RN15-GBM-SRC-TREATMENT",
+        "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+      },
+      {
+        "source_id": "RN15-GBM-SRC-TREATMENT",
+        "locator": "Chapter 11, Figure 99 cyclophosphamide toxicity statement, printed S234 (also summary S87): reduce or interrupt treatment for leukopenia; no dosing row or numerical threshold adopted"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus anti-GBM depth assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-07",
+      "method": "Assistant review of exact authored claims, single-best key, each distractor, teaching-stage support and official primary locators. Dated chapter/notice and rights limits recorded in reviews.json; no independent human review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN15-GBM-003",
+    "version": 1,
+    "family_id": "RN15-GBM-003.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T10",
+    "secondary_topic_ids": [
+      "T16"
+    ],
+    "objective_ids": [
+      "T10.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A person with anti-GBM disease and kidney failure is receiving cyclophosphamide and high-dose glucocorticoids. They have no current infection. Which statement best explains the role of Pneumocystis prevention in their care plan?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Consider TMP-SMX prophylaxis alongside the disease-directed treatment.",
+        "rationale": "The treatment exposure creates a prevention question even when no infection is currently present."
+      },
+      {
+        "id": "B",
+        "text": "Reserve discussion of prophylaxis for after pneumonia develops.",
+        "rationale": "That confuses prevention with treatment of an established infection."
+      },
+      {
+        "id": "C",
+        "text": "Use prophylaxis in place of cyclophosphamide once the person feels better.",
+        "rationale": "Infection prevention and suppression of the autoimmune disease have different purposes."
+      },
+      {
+        "id": "D",
+        "text": "Exclude prophylaxis because kidney failure removes the infection risk.",
+        "rationale": "Chapter 11 specifically highlights infection risk with cyclophosphamide in kidney failure."
+      },
+      {
+        "id": "E",
+        "text": "Stop reviewing infection risk as soon as the antibody titre falls.",
+        "rationale": "An improving titre does not establish that the risk associated with immunosuppression has ended."
+      }
+    ],
+    "answer": "A",
+    "rationale": "Consider TMP-SMX (cotrimoxazole) as preventive supportive care during this immunosuppressive exposure. Preserve the guideline qualification: this is a consideration, and much of the general prophylaxis evidence comes from populations without glomerular disease. No prophylaxis dose or stop rule is specified here.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "RN15-GBM-SRC-TREATMENT",
+        "locator": "Chapter 11, text following PP 11.2.3, printed S233: infection risk with cyclophosphamide in kidney failure and consideration of cotrimoxazole prophylaxis"
+      },
+      {
+        "source_id": "RN15-GBM-SRC-PREVENTION",
+        "locator": "Chapter 1, PP 1.8.4 and following qualification, printed S104: consider TMP-SMX during high-dose prednisone or other immunosuppression; evidence mainly outside glomerular disease"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus anti-GBM depth assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-07",
+      "method": "Assistant review of exact authored claims, single-best key, each distractor, teaching-stage support and official primary locators. Dated chapter/notice and rights limits recorded in reviews.json; no independent human review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN15-GBM-004",
+    "version": 1,
+    "family_id": "RN15-GBM-004.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T10",
+    "secondary_topic_ids": [
+      "T16"
+    ],
+    "objective_ids": [
+      "T10.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "Urgent treatment has started for anti-GBM disease. At the first safety review, the team learns that the person previously lived in a tropical region where Strongyloides is endemic and had unexplained eosinophilia and elevated IgE before treatment. Which additional concern is most directly supported?",
+    "options": [
+      {
+        "id": "A",
+        "text": "These findings confirm bacterial pneumonia and remove the need for further assessment.",
+        "rationale": "The exposure pattern does not establish bacterial pneumonia."
+      },
+      {
+        "id": "B",
+        "text": "The absence of bowel symptoms excludes a relevant parasitic infection.",
+        "rationale": "The guideline discusses asymptomatic infection and exposure-related risk."
+      },
+      {
+        "id": "C",
+        "text": "TMP-SMX prophylaxis alone completes the parasite assessment.",
+        "rationale": "The Pneumocystis prevention recommendation does not replace a Strongyloides assessment."
+      },
+      {
+        "id": "D",
+        "text": "The anti-GBM diagnosis makes earlier residence irrelevant to treatment safety.",
+        "rationale": "Exposure history remains relevant when immunosuppression can aggravate an unrecognised infection."
+      },
+      {
+        "id": "E",
+        "text": "Assess for Strongyloides because glucocorticoids can precipitate dangerous hyperinfection.",
+        "rationale": "The exposure and laboratory clues match the guideline risk context; they prompt assessment rather than proving infection."
+      }
+    ],
+    "answer": "E",
+    "rationale": "Consider exposure-related Strongyloides risk during the urgent safety assessment. Eosinophilia and elevated IgE are clues, not a diagnosis; an asymptomatic state does not eliminate the concern. This item does not select a parasite test or treatment regimen and does not require delaying urgent anti-GBM therapy.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "RN15-GBM-SRC-PREVENTION",
+        "locator": "Chapter 1, section 1.8 infection-screening discussion and PP 1.8.2-1.8.3, printed S104: clinically appropriate screening and Strongyloides exposure/risk context"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus anti-GBM depth assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-07",
+      "method": "Assistant review of exact authored claims, single-best key, each distractor, teaching-stage support and official primary locators. Dated chapter/notice and rights limits recorded in reviews.json; no independent human review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN15-GBM-005",
+    "version": 1,
+    "family_id": "RN15-GBM-005.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T10",
+    "secondary_topic_ids": [
+      "T16"
+    ],
+    "objective_ids": [
+      "T10.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "Eight weeks into treatment for isolated anti-GBM disease, pulmonary disease has resolved, serial antibodies have become undetectable and treatment is tolerated. The team is planning the remaining immunosuppressive course. Which description best matches the usual KDIGO treatment-duration framework?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Give cyclophosphamide and glucocorticoids for the same fixed two-week course.",
+        "rationale": "This confuses the different roles and usual durations of the treatment components."
+      },
+      {
+        "id": "B",
+        "text": "Continue cyclophosphamide for about six months and finish glucocorticoids at two months.",
+        "rationale": "This reverses the usual duration pattern."
+      },
+      {
+        "id": "C",
+        "text": "Plan approximately 2-3 months of cyclophosphamide and about 6 months of glucocorticoids with tapering.",
+        "rationale": "This matches PP 11.2.3 for the usual responding course; tolerance and the actual disease course still matter."
+      },
+      {
+        "id": "D",
+        "text": "Stop both drugs abruptly at the first undetectable antibody result.",
+        "rationale": "The antibody endpoint for exchange does not define an abrupt stop for both immunosuppressive drugs."
+      },
+      {
+        "id": "E",
+        "text": "Continue cyclophosphamide until kidney function returns to its premorbid value.",
+        "rationale": "Renal recovery is not the stated duration rule and may be limited by established damage."
+      }
+    ],
+    "answer": "C",
+    "rationale": "For the usual responding course, KDIGO describes cyclophosphamide for 2-3 months and glucocorticoids for about 6 months, with gradual tapering. This planning framework is not an instruction to ignore toxicity or persistent disease, and it is not a drug-dose schedule.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "RN15-GBM-SRC-TREATMENT",
+        "locator": "Chapter 11, PP 11.2.3 and explanatory paragraph, printed S233 (summary S87): cyclophosphamide 2-3 months, glucocorticoids about 6 months with gradual taper; not a rigid rule for persistent disease or toxicity"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus anti-GBM depth assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-07",
+      "method": "Assistant review of exact authored claims, single-best key, each distractor, teaching-stage support and official primary locators. Dated chapter/notice and rights limits recorded in reviews.json; no independent human review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN15-GBM-006",
+    "version": 1,
+    "family_id": "RN15-GBM-006.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T10",
+    "secondary_topic_ids": [
+      "T16"
+    ],
+    "objective_ids": [
+      "T10.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A person remains dialysis-dependent after anti-GBM disease. Diagnosis was six months ago, but antibodies first became undetectable four months ago and have remained undetectable on serial testing. A potential living donor is ready. Considering only the anti-GBM-specific timing criterion, which conclusion is correct?",
+    "options": [
+      {
+        "id": "A",
+        "text": "The criterion is met because six months have passed since diagnosis.",
+        "rationale": "The relevant interval is sustained antibody negativity, not time since diagnosis."
+      },
+      {
+        "id": "B",
+        "text": "The criterion is not yet met: antibodies should remain undetectable for at least six months before transplantation.",
+        "rationale": "Four months of sustained negativity is shorter than the specified interval."
+      },
+      {
+        "id": "C",
+        "text": "The criterion is met because completion of plasma exchange starts a fixed four-month waiting period.",
+        "rationale": "The guidance uses sustained undetectable antibodies, not a four-month interval after exchange."
+      },
+      {
+        "id": "D",
+        "text": "A prepared living donor removes the antibody-duration requirement.",
+        "rationale": "Donor availability does not change this disease-specific timing criterion."
+      },
+      {
+        "id": "E",
+        "text": "Persistent dialysis dependence permanently excludes transplantation for this disease.",
+        "rationale": "The guideline describes when transplantation may proceed, not a permanent exclusion based on dialysis dependence."
+      }
+    ],
+    "answer": "B",
+    "rationale": "Count the interval of sustained undetectable anti-GBM antibodies: at least 6 months is advised before transplantation. This person has only four months. Meeting that interval later would satisfy this disease-specific timing condition, not establish complete transplant eligibility.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "RN15-GBM-SRC-TREATMENT",
+        "locator": "Chapter 11, PP 11.2.7, printed S234 (summary S87): transplantation after anti-GBM antibodies remain undetectable for at least 6 months"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus anti-GBM depth assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-07",
+      "method": "Assistant review of exact authored claims, single-best key, each distractor, teaching-stage support and official primary locators. Dated chapter/notice and rights limits recorded in reviews.json; no independent human review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  }
+]

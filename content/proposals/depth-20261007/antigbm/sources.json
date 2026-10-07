@@ -1,0 +1,32 @@
+[
+  {
+    "id": "RN15-GBM-SRC-TREATMENT",
+    "register_id": "K08",
+    "title": "KDIGO anti-GBM: safety monitoring and treatment/transplant timing",
+    "edition": "2021 remaining chapters; 2024 combined chapter-update file",
+    "publication_status": "final",
+    "url": "https://kdigo.org/wp-content/uploads/2024/05/KDIGO-2021-Glomerular-Diseases-Guideline_English_2024-Chapter-Updates.pdf",
+    "canonical_topic_url": "https://kdigo.org/guidelines/gd/",
+    "checked_on": "2026-10-07",
+    "check_status": "locator_checked",
+    "currency": "dated_final_baseline",
+    "scope": "2021 Chapter 11 only: Figure 98 monitoring, Figure 99 leukopenia response, PP 11.2.3 and associated infection-prevention text, PP 11.2.7 transplant timing. No numerical dosing, refractory treatment, histology images or replaced AAV regimen.",
+    "rights_note": "Original Renulus scenarios, options and teaching are CC BY 4.0. KDIGO/Elsevier source terms remain separate: the recovered acquisition record identifies CC BY-NC-ND with publisher conditions. Factual citations only; no source prose, figures, tables, source-derived artwork or restricted examination items are distributed or relicensed. This review grants no whole-document ingestion, model-input or redistribution permission.",
+    "check_note": "Additional immutable scope alongside K08-2021-anti-GBM-application, whose records and diagnostic/initial-treatment teaching remain unchanged. Official indexed reading: Figure 98 at the 2021/10 official PDF URL, S232; PP 11.2.3 at the 2017/02 English PDF URL, S233; Figure 99 and PP 11.2.7 at the combined 2024/05 PDF URL, S234. No byte-level clinical-text comparison claimed. On 2026-10-07 the official KDIGO GD page listed replacements for Chapters 2/4/9/10, but no replacement or Chapter 1/11-specific correction was identified. The publisher-maintained full-guideline Crossmark record displayed current publication status without an update entry; this does not establish clinical currentness. Direct Kidney International and ScienceDirect article reads returned 403 in the research sidecar. Correction completeness and incorporation into retained bytes remain unverified. Only the listed claims are reviewed; retain dated_final_baseline. Recovered October 4 public acquisition, not downloaded again: combined PDF 11,320,223 bytes, SHA256 8ed871ec098c7eba1cfb0ff6bf2355a6c422166b2691aac138f0273307b2acff, rehashed October 7. Clinical locators were read in official indexed KDIGO text; the direct combined-PDF web reader failed. Hash identity is not an attestation that indexed passages equal those retained bytes."
+  },
+  {
+    "id": "RN15-GBM-SRC-PREVENTION",
+    "register_id": "K08",
+    "title": "KDIGO general principles: infection prevention during anti-GBM treatment",
+    "edition": "2021 remaining chapters; 2024 combined chapter-update file",
+    "publication_status": "final",
+    "url": "https://kdigo.org/wp-content/uploads/2024/05/KDIGO-2021-Glomerular-Diseases-Guideline_English_2024-Chapter-Updates.pdf",
+    "canonical_topic_url": "https://kdigo.org/guidelines/gd/",
+    "checked_on": "2026-10-07",
+    "check_status": "locator_checked",
+    "currency": "dated_final_baseline",
+    "scope": "2021 Chapter 1 section 1.8, PP 1.8.2-1.8.4, applied to infection-risk review during anti-GBM immunosuppression. Risk-based screening and consideration of Pneumocystis prophylaxis only; no vaccine schedule, drug dose, parasite regimen or numerical stopping threshold.",
+    "rights_note": "Original Renulus scenarios, options and teaching are CC BY 4.0. KDIGO/Elsevier source terms remain separate: the recovered acquisition record identifies CC BY-NC-ND with publisher conditions. Factual citations only; no source prose, figures, tables, source-derived artwork or restricted examination items are distributed or relicensed. This review grants no whole-document ingestion, model-input or redistribution permission.",
+    "check_note": "New immutable Chapter 1 claim scope, not an expansion of the old Chapter-11-only snapshot. Printed S104 read in official indexed 2017/02 English KDIGO PDF. Retain clinically-appropriate screening, Strongyloides exposure/clue context and the indirect-evidence qualification after PP 1.8.4. This is a contextual application of general GN principles, not an anti-GBM-specific prophylaxis trial. On 2026-10-07 the official KDIGO GD page listed replacements for Chapters 2/4/9/10, but no replacement or Chapter 1/11-specific correction was identified. The publisher-maintained full-guideline Crossmark record displayed current publication status without an update entry; this does not establish clinical currentness. Direct Kidney International and ScienceDirect article reads returned 403 in the research sidecar. Correction completeness and incorporation into retained bytes remain unverified. Only the listed claims are reviewed; retain dated_final_baseline. Recovered October 4 public acquisition, not downloaded again: combined PDF 11,320,223 bytes, SHA256 8ed871ec098c7eba1cfb0ff6bf2355a6c422166b2691aac138f0273307b2acff, rehashed October 7. Clinical locators were read in official indexed KDIGO text; the direct combined-PDF web reader failed. Hash identity is not an attestation that indexed passages equal those retained bytes."
+  }
+]
