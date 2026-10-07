@@ -100,14 +100,40 @@ acceptance; an external review panel is not a prerequisite for starting work.
 
 ## Current status
 
-Workspace cleanup and the reviewed implementation plan are complete; no new
-application framework, screens or working learning product have been implemented.
+The working integration build now has the Flow renderer, managed local API,
+attributed Hermes routes and canonical SQLite records. Learn, Library, Cases,
+reviewed Test/generated practice, Memory, Today/study planning and Updates have
+real service implementations. The matching Windows app is installed and selected
+by the normal shortcut, with bounded local installation, recovery, originals,
+deletion, reader and ordinary lifecycle acceptance. On October 7, actual source
+journeys completed with Sol and both approved Go models. Explain, follow-up,
+Stop/retry, generated practice, automatic capture/recall, Case/image discussion
+and Library citation/original access have individually scoped live evidence.
+Content 1.4.2 contains 251 questions and 59 cases across 27 topics, including the
+final cancer-treatment kidney-injury teaching and reviewed assessment slice.
+The adopted finite launch coverage and claim-specific source dispositions are
+complete; partial ESENeph and dated source/access/copy restrictions remain explicit.
+Actual installed Sol dated public-body retrieval and automatic capture passed
+at their retained source-qualified scope. The normal launcher now selects matching
+installed-f1c49444 after final content/history/ESENeph/reopen acceptance and an
+actual ready corrected-record Memory search. Its profile and originals remain on E:.
+The original 64-requirement audit retains bounded live/engine/recovery evidence
+and failed receipts. Physical Narrator/NVDA speech, Windows scaling and high
+contrast observations remain unperformed under issue #21; full accessibility
+and unconditional all-product acceptance are not claimed.
+See [the implementation run](implementation/EXECUTION.md),
+[startup guidance](implementation/RUNNING.md) and
+[current continuation](implementation/FINISH_20261007.md).
 The inherited clinical MVP and batch/research project remain separately archived.
 Their code and checks do not establish Renulus's functionality or effectiveness.
 
-Eligible sources and a reviewed assessment bank still need to be assembled across
-the discipline. Multi-format input is a product requirement; this planning work
-does not import actual patient files or connect hospital systems. See [source boundaries](SOURCES.md),
+Original question/case packs span nephrology and record assistant source/key
+review separately from independent human review. Authorised eligible acquired
+files are being indexed from the external collection. Actual CPU-backed text,
+PDF and image extraction, passage retrieval and learner memory have separate
+proof records. Temporary case input remains volatile until explicit Save;
+patient files and hospital systems are not part of development verification.
+See [source boundaries](SOURCES.md),
 [confirmed decisions](DECISIONS.md), [implementation stages](planning/IMPLEMENTATION_PLAN.md)
 and [remaining engineering checks](planning/DECISION_QUEUE.md).
 

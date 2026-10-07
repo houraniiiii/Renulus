@@ -1,0 +1,62 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { PassThrough } from 'node:stream';
+import { EventEmitter } from 'node:events';
+import { createServer, bindLifecycle, toolDefinitions, locatorSchema } from '../server.mjs';
+
+test('bounded tool schemas reject endpoint/executable/eval/profile parameters and nonexact locators', () => {
+  assert.equal(toolDefinitions.length, 13);
+  assert.deepEqual(toolDefinitions.slice(0, 11).map(definition => definition[0]), ['renulus_start', 'renulus_snapshot', 'renulus_click', 'renulus_fill', 'renulus_press', 'renulus_select', 'renulus_wait', 'renulus_screenshot', 'renulus_errors', 'renulus_restart', 'renulus_close']);
+  for (const name of ['renulus_start', 'renulus_restart', 'renulus_close', 'renulus_snapshot']) {
+    const schema = toolDefinitions.find(definition => definition[0] === name)[2];
+    assert.equal(schema.safeParse({}).success, true);
+    for (const param of ['endpoint', 'profile', 'executable', 'code', 'token']) assert.equal(schema.safeParse({ [param]: 'synthetic' }).success, false);
+  }
+  assert.equal(locatorSchema.safeParse({ role: 'button', name: 'Cases' }).success, true);
+  assert.equal(locatorSchema.safeParse({ role: 'button', name: 'Cases', exact: false }).success, false);
+  assert.equal(locatorSchema.safeParse({ css: 'button', role: 'button', name: 'Cases' }).success, false);
+  const select = toolDefinitions.find(definition => definition[0] === 'renulus_select')[2];
+  assert.equal(select.safeParse({ locator: { role: 'combobox', name: 'Topic' }, value: 'ckd', label: 'CKD' }).success, false);
+  const wait = toolDefinitions.find(definition => definition[0] === 'renulus_wait')[2];
+  assert.equal(wait.safeParse({ locator: { role: 'heading', name: 'Case' }, timeoutMs: 12001 }).success, false);
+});
+
+test('upload and resize schemas expose only bounded file selection and dimensions', () => {
+  const upload = toolDefinitions.find(definition => definition[0] === 'renulus_upload')[2];
+  const resize = toolDefinitions.find(definition => definition[0] === 'renulus_resize')[2];
+  const input = { locator: { css: 'input[type="file"][id="observed"]' }, fixture: 'synthetic-study.pdf' };
+  assert.equal(upload.safeParse(input).success, true);
+  for (const fixture of ['../synthetic-study.pdf', '..\\synthetic-study.pdf', 'C:/synthetic-study.pdf', 'synthetic-study.pdf:stream', 'synthetic-study.zip', 'synthetic-study.json', 'account.json', '%2e%2e/synthetic-study.pdf', ['synthetic-study.pdf']]) assert.equal(upload.safeParse({ ...input, fixture }).success, false);
+  for (const field of ['files', 'buffer', 'path', 'fixtureRoot', 'profile', 'code', 'endpoint']) assert.equal(upload.safeParse({ ...input, [field]: 'forbidden' }).success, false);
+  assert.equal(upload.safeParse({ ...input, locator: { role: 'button', name: 'Choose file' } }).success, false);
+  for (const size of [{ width: 640, height: 540 }, { width: 2560, height: 1600 }]) assert.equal(resize.safeParse(size).success, true);
+  for (const size of [{ width: 639, height: 540 }, { width: 2561, height: 540 }, { width: 640, height: 539 }, { width: 640, height: 1601 }, { width: 640.5, height: 540 }, { width: '640', height: 540 }, { width: 640, height: 540, focus: false }, { width: 640, height: 540, windowId: 1 }, { width: 640, height: 540, x: 0 }]) assert.equal(resize.safeParse(size).success, false);
+});
+
+test('SDK registration works with the pinned Zod object schemas without launching any app', async () => {
+  const controller = { run: async () => ({ synthetic: true }), shutdown: async () => {}, filled: [] };
+  const server = createServer(controller);
+  assert.equal(server.isConnected(), false);
+  await server.close();
+});
+
+for (const event of ['EOF', 'SIGTERM', 'MCP disconnect']) {
+  test(event + ' closes only the owned lifecycle once and detaches hooks', async () => {
+    const input = new PassThrough(), output = new PassThrough(), signals = new EventEmitter(), reasons = [];
+    let serverCloses = 0;
+    const server = { server: {}, close: async () => { serverCloses++; server.server.onclose(); } };
+    const controller = { shutdown: async reason => { reasons.push(reason); }, filled: [] };
+    const hooks = bindLifecycle(server, controller, { input, output, signals, diagnostic: () => {} });
+    if (event === 'EOF') input.emit('end');
+    else if (event === 'SIGTERM') signals.emit('SIGTERM');
+    else server.server.onclose();
+    await hooks.stop('duplicate');
+    assert.equal(reasons.length, 1); assert.equal(serverCloses, 1); assert.equal(signals.listenerCount('SIGTERM'), 0); assert.equal(input.listenerCount('end'), 0);
+  });
+}
+
+test('shutdown failure remains a failure diagnostic and exit status; server still closes', async () => {
+  const signals = new EventEmitter(), diagnostics = []; let closed = false;
+  const hooks = bindLifecycle({ server: {}, close: async () => { closed = true; } }, { filled: [], shutdown: async () => { throw new Error('Owned backend survived'); } }, { input: new PassThrough(), output: new PassThrough(), signals, diagnostic: message => diagnostics.push(message) });
+  await hooks.stop('mcp-disconnect'); assert.equal(signals.exitCode, 1); assert.equal(closed, true); assert.equal(diagnostics.length, 1);
+});

@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "renulus"
+version = "0.1.0"
+description = "Local Windows nephrology learning application"
+requires-python = ">=3.12,<3.15"
+license = "MIT"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn>=0.34,<1",
+  "pydantic>=2.10,<3",
+  "httpx>=0.28,<1",
+  "python-multipart>=0.0.20,<1",
+  "jsonschema==4.26.0",
+  "openai==2.24.0",
+  "ruamel.yaml==0.18.16",
+  "PyJWT[crypto]==2.15.1",
+  "docling==2.133.0",
+  "docling-core[chunking]==2.99.0",
+  "fastembed==0.8.1",
+  "lancedb==0.39.0",
+  "mem0ai==2.2.1",
+  "qdrant-client==1.19.1",
+  "onnxruntime==1.30.0",
+  "tokenizers==0.23.2",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8.3,<10", "pytest-asyncio>=0.25,<2"]
+
+[project.scripts]
+renulus = "renulus.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["runtime/renulus"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["runtime"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"

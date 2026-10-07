@@ -1,0 +1,126 @@
+[
+  {
+    "version": 1,
+    "topic_id": "T18",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T18.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus final T18 content assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-07",
+      "source_key_checked": true,
+      "independent_human_review": false,
+      "method": "Scoped official EMA IV SmPC clinical-locus reading and exact claim/key/distractor/stage review in proposal reviews.json. Original synthetic teaching. No independent human review, full oncology curriculum or global-currentness clearance."
+    },
+    "id": "RN16-T18-001",
+    "family_id": "RN16-T18-001.family",
+    "family_version": 1,
+    "key_version": 1,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult receiving pembrolizumab alone for advanced melanoma develops a new creatinine rise. Recent cancer imaging is stable. Reduced intake and several other medicines are also reported. Which reasoning best guides the kidney assessment?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Stable cancer imaging excludes a treatment-related kidney problem.",
+        "rationale": "Tumour response does not establish the renal safety of the treatment."
+      },
+      {
+        "id": "B",
+        "text": "The cancer diagnosis establishes the cause of the creatinine rise.",
+        "rationale": "Neither the malignancy nor the treatment exposure alone establishes causation."
+      },
+      {
+        "id": "C",
+        "text": "Include immune-mediated nephritis from pembrolizumab while evaluating other causes of kidney dysfunction.",
+        "rationale": "The exposure identifies a recognised renal adverse effect; the other explanations still need assessment."
+      },
+      {
+        "id": "D",
+        "text": "Pembrolizumab exposure is sufficient to diagnose nephritis without further evaluation.",
+        "rationale": "A recognised association is a reason to investigate, not proof in this individual."
+      },
+      {
+        "id": "E",
+        "text": "Reported reduced intake makes renal adverse-effect assessment unnecessary.",
+        "rationale": "One plausible contributor does not exclude another process."
+      }
+    ],
+    "answer": "C",
+    "rationale": "Connect the named cancer therapy with its possible kidney adverse effect, assess the renal course and competing causes, and coordinate the findings with the treating team. Stable tumour imaging does not settle the cause of new renal dysfunction.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "RN16-T18-SRC-EMA-KEYTRUDA-20261007",
+        "locator": "IV SmPC section 4.4, printed/PDF p10, Immune-mediated adverse reactions; p11, Immune-mediated nephritis: evaluate aetiology, exclude other causes and monitor renal function."
+      }
+    ]
+  },
+  {
+    "version": 1,
+    "topic_id": "T18",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T18.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus final T18 content assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-07",
+      "source_key_checked": true,
+      "independent_human_review": false,
+      "method": "Scoped official EMA IV SmPC clinical-locus reading and exact claim/key/distractor/stage review in proposal reviews.json. Original synthetic teaching. No independent human review, full oncology curriculum or global-currentness clearance."
+    },
+    "id": "RN16-T18-002",
+    "family_id": "RN16-T18-002.family",
+    "family_version": 1,
+    "key_version": 1,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "After evaluating alternative causes, the treating team identifies a first episode of pembrolizumab-associated immune-mediated nephritis and explicitly classifies it as Grade 2 under the product information. There is no persistent or recurrent severe event. What is the appropriate immediate pembrolizumab decision while the team manages the nephritis?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Continue unchanged because the cancer is responding.",
+        "rationale": "Cancer benefit does not remove the adverse-reaction management requirement."
+      },
+      {
+        "id": "B",
+        "text": "Withhold pembrolizumab and manage the renal event under the severity-based specialist plan.",
+        "rationale": "The cited IV label directs withholding for Grade 2 nephritis; subsequent treatment requires reassessment."
+      },
+      {
+        "id": "C",
+        "text": "Substitute a routine half-dose pembrolizumab schedule.",
+        "rationale": "The label uses withholding or discontinuation for adverse reactions rather than routine dose reductions."
+      },
+      {
+        "id": "D",
+        "text": "Permanently discontinue in every first Grade 2 episode solely because nephritis has occurred.",
+        "rationale": "That blanket decision does not match the specified first Grade 2 scenario; more severe and other stopping criteria are separate."
+      },
+      {
+        "id": "E",
+        "text": "Administer the next dose and defer renal management until cancer progression.",
+        "rationale": "An identified treatment-related renal event needs action independently of tumour progression."
+      }
+    ],
+    "answer": "B",
+    "rationale": "For the stated first Grade 2 event, use the label's withholding pathway and supervised nephritis treatment. This question does not determine a steroid dose, a complete grading rule or eligibility for later rechallenge.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "RN16-T18-SRC-EMA-KEYTRUDA-20261007",
+        "locator": "IV SmPC section 4.2, printed/PDF p7, Table 1 nephritis row and preceding dose-modification text; section 4.4 p11, Immune-mediated nephritis: Grade 2 withholding, severity-dependent management. No numerical grading or corticosteroid dose taught."
+      }
+    ]
+  }
+]

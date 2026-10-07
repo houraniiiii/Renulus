@@ -1,6 +1,13 @@
 # Renulus staged implementation plan
 
-2026-10-04 · Planning only. **Renulus is a real product. Every stage builds
+Original baseline 2026-10-04; implementation is now authorised and active.
+The owner updated Windows acceptance on October 5, 2026: deliver an unsigned
+build and validate a fresh isolated installation on the current PC. Signing and
+a separate clean PC/VM are optional future distribution checks. The bundled
+runtime, provenance, real journeys, retention and recovery gates remain required.
+
+GitHub issues and `../implementation/EXECUTION.md` track the adjustable queue
+and observed acceptance. **Renulus is a real product. Every stage builds
 working software that remains useful in the final application.** Figma concepts,
 test fixtures and prototypes support decisions; none substitutes for working
 connections, persistence, retrieval or assessment.
@@ -75,7 +82,8 @@ coverage and integration; it is not the first time earlier features become real.
    controls. Reuse suitable Hermes adapters; literature-source adapters follow
    the supported routes in SOURCES. Do not make a paid tool key a prerequisite
    or invoke billed providers incidentally during verification.
-5. Prove installation and runtime start on a clean personal Windows machine.
+5. Prove unsigned installation and runtime start in a fresh isolated installation
+   on the owner's current Windows PC, with developer tools absent from the app PATH.
    Establish the supported version/CPU baseline. Bundle necessary runtime
    dependencies; do not require doctors to set up a developer environment.
    Probe Docling native-text and local scanned-page OCR paths, FastEmbed offline
@@ -244,7 +252,8 @@ changes subsequent context; deleted content stays excluded from live reindex,
 queued capture and restore when a newer deletion ledger is available. An older
 backup alone exposes its date and cannot promise later deletions.
 Export versioned canonical records, provenance and eligible attachments without
-credentials; restore them on a clean second installation and regenerate the
+credentials; restore them in a second isolated installation/profile on the same
+Windows PC and regenerate the
 derived Mem0/Qdrant and LanceDB indexes using the recorded artifact identities.
 Manual plan edits survive restart. Temporary-case facts do not become
 personal memory. The home remains useful for a new user with no history.
@@ -295,19 +304,23 @@ practice/test → feedback → memory → plan → updates. Complete keyboard, s
 reader, text scaling, window resizing, loading/empty/error and reduced-motion
 states. Compare implemented screens with Figma using the installed design skills.
 
-Package signed releases with the selected dependency/model artifact inventory
-and complete notices. Verify update authenticity and test install/upgrade/rollback,
+Package unsigned Windows releases with the selected dependency/model artifact
+inventory, exact source/artifact hashes and complete notices. Verify update
+provenance and test install/upgrade/rollback,
 database migration, backup/restore and
 uninstall/data-retention behaviour. Use static release distribution; no owner
 inference service is introduced. Publish plain-language onboarding and recovery.
 
-**Acceptance:** a clean Windows installation completes the real journeys with
+**Acceptance:** a fresh isolated Windows installation on the owner's current PC
+completes the real journeys with
 user-connected models, no developer tooling and no placeholder controls.
 Every required cell in the adopted broad-domain coverage manifest is met;
 unmet required coverage blocks complete-release status. Additional future
 content may remain a roadmap item without redefining the target.
-Release tests use synthetic data. Public signing identity/credentials are
-obtained through the user's release setup, never invented or copied.
+Release tests use synthetic data. Exercise the bundled app with developer tools
+absent from its PATH, and record the observed OS and machine limits. Signing and
+separate clean-machine validation are optional future distribution work under
+the owner's October 5 decision. Do not borrow credentials or claim those checks.
 
 ## Design and testing within every stage
 
@@ -320,7 +333,7 @@ into production code.
 Each slice includes a UI action, domain logic, persistence/integration, failure
 handling and tests through its public interface. Unit/contract tests establish
 rules; integration tests exercise real local storage and parsers; live-provider
-and clean-machine checks establish those integrations separately. Tests do not
+and matching installed-runtime checks establish those integrations separately. Tests do not
 stand in for content review or a real Windows launch.
 
 Use varied topics in every applicable acceptance batch, not one preferred
@@ -348,7 +361,7 @@ adjustments. Selection does not establish implementation or measured reliability
 | Evidence | Supported registered literature/publisher interfaces, Hermes DDGS or explicitly enabled user-keyed search, bounded fetch/user import and maintained extraction | Latest-final/rights filters, corrections/removals, extraction quality, key-free journeys and no silently billed tool or generative fallback. |
 | Supermemory | Excluded; preserve earlier research | The user-approved replacement stack and [decision evidence](../research/2026-10-04-starting-stack-evidence.md) supersede its candidate status. |
 | CPU helper distribution | Small app-managed embeddings/OCR accepted; selected Docling artifacts must meet the CPU budget | Artifact-level terms/hashes, no-save behaviour, clean Windows packaging and no doctor setup. |
-| Packaging | Reuse upstream Windows support and bundled Python 3.14 layout; preserve required dependencies | Clean-machine build; prefer existing bundling, using PyInstaller only if a demonstrated packaging gap warrants it. |
+| Packaging | Reuse upstream Windows support and bundled Python 3.14 layout; preserve required dependencies | Bundled unsigned Windows build and fresh isolated installation on the owner's PC; prefer existing bundling, using PyInstaller only if a demonstrated packaging gap warrants it. |
 
 Initial engineering verification targets a currently supported Windows 11 x64
 release. S0 records the actual OS/CPU support matrix; untested variants are not

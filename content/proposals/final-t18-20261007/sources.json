@@ -1,0 +1,17 @@
+[
+  {
+    "id": "RN16-T18-SRC-EMA-KEYTRUDA-20261007",
+    "register_id": "G06",
+    "title": "EMA Keytruda IV product information: immune-mediated nephritis",
+    "edition": "English product information last updated 2026-07-01; EMA-listed procedures VR/0000316576 and VR/0000316515 dated 2026-06-19; checked 2026-10-07",
+    "publication_status": "final",
+    "url": "https://www.ema.europa.eu/en/documents/product-information/keytruda-epar-product-information_en.pdf",
+    "canonical_topic_url": "https://www.ema.europa.eu/en/medicines/human/EPAR/keytruda",
+    "checked_on": "2026-10-07",
+    "check_status": "locator_checked",
+    "currency": "dated_final_baseline",
+    "scope": "One adult IV pembrolizumab monotherapy example: recognise possible immune-mediated nephritis, assess alternative causes and renal function, and withhold for a team-established first Grade 2 event. No numeric dose/grade calculation, biopsy protocol, rechallenge algorithm, other-agent toxicity course or all-oncology/currentness claim.",
+    "rights_note": "European Medicines Agency (EMA), Keytruda English product information, cited at exact sections/pages. Original Renulus scenarios, questions and teaching are CC BY 4.0; EMA/product-owner and other third-party terms remain separate. EMA's legal notice permits attributed reuse except third-party/excluded material. This slice uses independently worded factual teaching and citations only; no source paragraphs, Table 1, figures, logo or full PDF are reproduced or relicensed. No unrestricted whole-document processing or redistribution permission is asserted. Legal notice checked 2026-10-07: https://www.ema.europa.eu/en/about-us/about-website/legal-notice .",
+    "check_note": "Checked 2026-10-07: EMA's English product-information entry is dated 2026-07-01; latest listed product-information procedures VR/0000316576 and VR/0000316515 are dated 2026-06-19. The medicine overview's 2026-09-03 date is distinct. Official currently linked English IV SmPC sections 4.1, 4.2 and 4.4 were read for these claims. This is a bounded current-link/locus check, not exhaustive correction surveillance, a national-availability check or all-causes clinical clearance. No exact corrected-original incorporation or immutable PDF hash is claimed. Web PDF text supplies printed/physical p2 indication, p7 treatment-modification/nephritis row, p10 general immune-reaction evaluation and p11 nephritis. The 363-page document includes other formulations; only the first IV SmPC is used. Source body stays outside the teaching pack."
+  }
+]

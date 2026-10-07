@@ -1,0 +1,8 @@
+# Runtime-only proposal; the integration owner owns root dependencies/lock.
+# OpenAI and YAML pins match the adopted Hermes baseline.
+openai==2.24.0
+Pillow==12.3.0
+httpx==0.28.1
+ruamel.yaml==0.18.16
+PyJWT[crypto]==2.15.1
+# FastAPI/pydantic supplied by the shared foundation.

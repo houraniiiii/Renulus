@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "repository_contract": 1,
+  "id": "renulus-foundations",
+  "version": "1.0.1",
+  "state": "published",
+  "published_on": "2026-10-04",
+  "title": "Renulus foundations: cross-domain original learning",
+  "license": "CC-BY-4.0",
+  "authors": [
+    "Renulus contributors (assistant-authored initial pack)"
+  ],
+  "attribution": "Renulus foundations 1.0.1, Renulus contributors, CC BY 4.0. Identify any subsequent changes. Primary medical sources retain their own rights.",
+  "source_register": "docs/SOURCES.md",
+  "files": {
+    "topics": {
+      "path": "topics.json",
+      "sha256": "0c71975c3d1bbd3dfef0072c0207a0fe117ce389c26a8c1cb5e6f4cded661dfb"
+    },
+    "sources": {
+      "path": "sources.json",
+      "sha256": "1075b4b2a31c705e811abf19a4764f92b374aa71b105f8c2e602fa72850e5e56"
+    },
+    "cases": {
+      "path": "cases.json",
+      "sha256": "69ceedf530459f17a6b4682b9ff9d26d5a79fb2e45179d76b28995170314154c"
+    },
+    "questions": {
+      "path": "questions.json",
+      "sha256": "dd471ddf397a4188dc4397be7ea59b2629ef9a9b6e9256de0bf870987e3815ec"
+    },
+    "coverage": {
+      "path": "coverage.json",
+      "sha256": "132a5805f677abd76bd91cd797b690045f781a68eaceef06717382c237722fd4"
+    }
+  },
+  "claims": {
+    "complete_curriculum": false,
+    "complete_esen_eph_blueprint": false,
+    "independent_human_review": false
+  },
+  "withdrawals": []
+}

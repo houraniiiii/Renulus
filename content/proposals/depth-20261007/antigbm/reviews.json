@@ -1,0 +1,1116 @@
+[
+  {
+    "id": "RN15-GBM-001",
+    "version": 1,
+    "kind": "question",
+    "reviewed_on": "2026-10-07",
+    "checked_on": "2026-10-07",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "skill": "monitoring_reasoning",
+    "checked_claim": "Monitor kidney function, pulmonary findings, anti-GBM titres and blood counts rather than relying on symptomatic improvement or one marker.",
+    "key": "B",
+    "key_text": "Follow kidney function, pulmonary findings, anti-GBM titres and blood counts together.",
+    "authored_claims": [
+      {
+        "path": "/rationale",
+        "text": "Use parallel measures of organ response, antibody activity and toxicity. Improvement in one part of that picture cannot establish safety in the others; monitoring findings should inform treatment review.",
+        "disposition": "Supported within the stated scenario and source scope",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+          }
+        ]
+      }
+    ],
+    "source_locators": [
+      {
+        "source_id": "RN15-GBM-SRC-TREATMENT",
+        "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+      }
+    ],
+    "objective_support": [
+      {
+        "objective_id": "T10.O02",
+        "checked_claim": "Monitor kidney function, pulmonary findings, anti-GBM titres and blood counts rather than relying on symptomatic improvement or one marker.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+          }
+        ]
+      }
+    ],
+    "distractor_check": [
+      {
+        "option_id": "A",
+        "option_text": "Follow creatinine alone once breathing improves.",
+        "authored_rationale": "Kidney function is relevant, but this omits pulmonary disease, antibody activity and blood-count toxicity surveillance.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "Kidney function is relevant, but this omits pulmonary disease, antibody activity and blood-count toxicity surveillance.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+          }
+        ]
+      },
+      {
+        "option_id": "B",
+        "option_text": "Follow kidney function, pulmonary findings, anti-GBM titres and blood counts together.",
+        "authored_rationale": "These provide complementary information on organ response, antibody activity and a treatment-related safety signal.",
+        "disposition": "key_supported",
+        "reasoning": "These provide complementary information on organ response, antibody activity and a treatment-related safety signal.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+          }
+        ]
+      },
+      {
+        "option_id": "C",
+        "option_text": "Follow anti-GBM titres alone until the first negative result.",
+        "authored_rationale": "Serology cannot replace assessment of the kidneys, lungs and blood counts.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "Serology cannot replace assessment of the kidneys, lungs and blood counts.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+          }
+        ]
+      },
+      {
+        "option_id": "D",
+        "option_text": "Follow symptoms and defer laboratory review until the planned treatment end.",
+        "authored_rationale": "Symptomatic improvement does not demonstrate that antibody activity or treatment toxicity has resolved.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "Symptomatic improvement does not demonstrate that antibody activity or treatment toxicity has resolved.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+          }
+        ]
+      },
+      {
+        "option_id": "E",
+        "option_text": "Follow blood counts alone because organ response is already established.",
+        "authored_rationale": "Blood counts help detect toxicity but do not establish kidney, pulmonary or antibody response.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "Blood counts help detect toxicity but do not establish kidney, pulmonary or antibody response.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+          }
+        ]
+      }
+    ],
+    "notice_review": "On 2026-10-07 the official KDIGO GD page listed replacements for Chapters 2/4/9/10, but no replacement or Chapter 1/11-specific correction was identified. The publisher-maintained full-guideline Crossmark record displayed current publication status without an update entry; this does not establish clinical currentness. Direct Kidney International and ScienceDirect article reads returned 403 in the research sidecar. Correction completeness and incorporation into retained bytes remain unverified. Only the listed claims are reviewed; retain dated_final_baseline.",
+    "rights_review": "Original Renulus scenarios, options and teaching are CC BY 4.0. KDIGO/Elsevier source terms remain separate: the recovered acquisition record identifies CC BY-NC-ND with publisher conditions. Factual citations only; no source prose, figures, tables, source-derived artwork or restricted examination items are distributed or relicensed. This review grants no whole-document ingestion, model-input or redistribution permission.",
+    "jurisdiction": "International KDIGO educational guidance for EU nephrologists; not national product authorisation, a prescribed dose or a local treatment protocol.",
+    "review_limit": "Assistant-authored and assistant-reviewed proposal. No runtime, clinical outcome, global-currentness or independent human-review claim."
+  },
+  {
+    "id": "RN15-GBM-002",
+    "version": 1,
+    "kind": "question",
+    "reviewed_on": "2026-10-07",
+    "checked_on": "2026-10-07",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "skill": "treatment_safety",
+    "checked_claim": "Leukopenia during cyclophosphamide requires treatment review with reduction or interruption as appropriate; clinical response does not justify unchanged exposure.",
+    "key": "D",
+    "key_text": "Review the leukopenia promptly and reduce or interrupt cyclophosphamide as appropriate.",
+    "authored_claims": [
+      {
+        "path": "/rationale",
+        "text": "The new blood-count abnormality requires a toxicity response despite clinical improvement. KDIGO supports reducing or interrupting cyclophosphamide for leukopenia. The item does not specify a count threshold, dose adjustment or restart schedule.",
+        "disposition": "Supported within the stated scenario and source scope",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 99 cyclophosphamide toxicity statement, printed S234 (also summary S87): reduce or interrupt treatment for leukopenia; no dosing row or numerical threshold adopted"
+          }
+        ]
+      }
+    ],
+    "source_locators": [
+      {
+        "source_id": "RN15-GBM-SRC-TREATMENT",
+        "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+      },
+      {
+        "source_id": "RN15-GBM-SRC-TREATMENT",
+        "locator": "Chapter 11, Figure 99 cyclophosphamide toxicity statement, printed S234 (also summary S87): reduce or interrupt treatment for leukopenia; no dosing row or numerical threshold adopted"
+      }
+    ],
+    "objective_support": [
+      {
+        "objective_id": "T10.O02",
+        "checked_claim": "Leukopenia during cyclophosphamide requires treatment review with reduction or interruption as appropriate; clinical response does not justify unchanged exposure.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 99 cyclophosphamide toxicity statement, printed S234 (also summary S87): reduce or interrupt treatment for leukopenia; no dosing row or numerical threshold adopted"
+          }
+        ]
+      }
+    ],
+    "distractor_check": [
+      {
+        "option_id": "A",
+        "option_text": "Continue unchanged because improving antibody titres establish tolerability.",
+        "authored_rationale": "Response to treatment does not establish marrow safety.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "Response to treatment does not establish marrow safety.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 99 cyclophosphamide toxicity statement, printed S234 (also summary S87): reduce or interrupt treatment for leukopenia; no dosing row or numerical threshold adopted"
+          }
+        ]
+      },
+      {
+        "option_id": "B",
+        "option_text": "Increase cyclophosphamide to shorten the remaining course.",
+        "authored_rationale": "Leukopenia is a reason to reduce exposure or interrupt treatment, not intensify it.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "Leukopenia is a reason to reduce exposure or interrupt treatment, not intensify it.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 99 cyclophosphamide toxicity statement, printed S234 (also summary S87): reduce or interrupt treatment for leukopenia; no dosing row or numerical threshold adopted"
+          }
+        ]
+      },
+      {
+        "option_id": "C",
+        "option_text": "Stop checking blood counts once the anti-GBM titre becomes negative.",
+        "authored_rationale": "An antibody endpoint does not remove the need to address a blood-count abnormality.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "An antibody endpoint does not remove the need to address a blood-count abnormality.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 99 cyclophosphamide toxicity statement, printed S234 (also summary S87): reduce or interrupt treatment for leukopenia; no dosing row or numerical threshold adopted"
+          }
+        ]
+      },
+      {
+        "option_id": "D",
+        "option_text": "Review the leukopenia promptly and reduce or interrupt cyclophosphamide as appropriate.",
+        "authored_rationale": "The anti-GBM treatment guidance explicitly links leukopenia to dose reduction or treatment interruption.",
+        "disposition": "key_supported",
+        "reasoning": "The anti-GBM treatment guidance explicitly links leukopenia to dose reduction or treatment interruption.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 99 cyclophosphamide toxicity statement, printed S234 (also summary S87): reduce or interrupt treatment for leukopenia; no dosing row or numerical threshold adopted"
+          }
+        ]
+      },
+      {
+        "option_id": "E",
+        "option_text": "Treat the leukopenia as proof of resistant anti-GBM disease.",
+        "authored_rationale": "Leukopenia is a toxicity signal in this context; it does not establish disease resistance.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "Leukopenia is a toxicity signal in this context; it does not establish disease resistance.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 99 cyclophosphamide toxicity statement, printed S234 (also summary S87): reduce or interrupt treatment for leukopenia; no dosing row or numerical threshold adopted"
+          }
+        ]
+      }
+    ],
+    "notice_review": "On 2026-10-07 the official KDIGO GD page listed replacements for Chapters 2/4/9/10, but no replacement or Chapter 1/11-specific correction was identified. The publisher-maintained full-guideline Crossmark record displayed current publication status without an update entry; this does not establish clinical currentness. Direct Kidney International and ScienceDirect article reads returned 403 in the research sidecar. Correction completeness and incorporation into retained bytes remain unverified. Only the listed claims are reviewed; retain dated_final_baseline.",
+    "rights_review": "Original Renulus scenarios, options and teaching are CC BY 4.0. KDIGO/Elsevier source terms remain separate: the recovered acquisition record identifies CC BY-NC-ND with publisher conditions. Factual citations only; no source prose, figures, tables, source-derived artwork or restricted examination items are distributed or relicensed. This review grants no whole-document ingestion, model-input or redistribution permission.",
+    "jurisdiction": "International KDIGO educational guidance for EU nephrologists; not national product authorisation, a prescribed dose or a local treatment protocol.",
+    "review_limit": "Assistant-authored and assistant-reviewed proposal. No runtime, clinical outcome, global-currentness or independent human-review claim."
+  },
+  {
+    "id": "RN15-GBM-003",
+    "version": 1,
+    "kind": "question",
+    "reviewed_on": "2026-10-07",
+    "checked_on": "2026-10-07",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "skill": "prevention_reasoning",
+    "checked_claim": "Consider Pneumocystis prophylaxis during high-risk immunosuppression; distinguish its preventive role and evidence limits from disease-directed therapy.",
+    "key": "A",
+    "key_text": "Consider TMP-SMX prophylaxis alongside the disease-directed treatment.",
+    "authored_claims": [
+      {
+        "path": "/rationale",
+        "text": "Consider TMP-SMX (cotrimoxazole) as preventive supportive care during this immunosuppressive exposure. Preserve the guideline qualification: this is a consideration, and much of the general prophylaxis evidence comes from populations without glomerular disease. No prophylaxis dose or stop rule is specified here.",
+        "disposition": "Supported within the stated scenario and source scope",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, text following PP 11.2.3, printed S233: infection risk with cyclophosphamide in kidney failure and consideration of cotrimoxazole prophylaxis"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-PREVENTION",
+            "locator": "Chapter 1, PP 1.8.4 and following qualification, printed S104: consider TMP-SMX during high-dose prednisone or other immunosuppression; evidence mainly outside glomerular disease"
+          }
+        ]
+      }
+    ],
+    "source_locators": [
+      {
+        "source_id": "RN15-GBM-SRC-TREATMENT",
+        "locator": "Chapter 11, text following PP 11.2.3, printed S233: infection risk with cyclophosphamide in kidney failure and consideration of cotrimoxazole prophylaxis"
+      },
+      {
+        "source_id": "RN15-GBM-SRC-PREVENTION",
+        "locator": "Chapter 1, PP 1.8.4 and following qualification, printed S104: consider TMP-SMX during high-dose prednisone or other immunosuppression; evidence mainly outside glomerular disease"
+      }
+    ],
+    "objective_support": [
+      {
+        "objective_id": "T10.O02",
+        "checked_claim": "Consider Pneumocystis prophylaxis during high-risk immunosuppression; distinguish its preventive role and evidence limits from disease-directed therapy.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, text following PP 11.2.3, printed S233: infection risk with cyclophosphamide in kidney failure and consideration of cotrimoxazole prophylaxis"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-PREVENTION",
+            "locator": "Chapter 1, PP 1.8.4 and following qualification, printed S104: consider TMP-SMX during high-dose prednisone or other immunosuppression; evidence mainly outside glomerular disease"
+          }
+        ]
+      }
+    ],
+    "distractor_check": [
+      {
+        "option_id": "A",
+        "option_text": "Consider TMP-SMX prophylaxis alongside the disease-directed treatment.",
+        "authored_rationale": "The treatment exposure creates a prevention question even when no infection is currently present.",
+        "disposition": "key_supported",
+        "reasoning": "The treatment exposure creates a prevention question even when no infection is currently present.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, text following PP 11.2.3, printed S233: infection risk with cyclophosphamide in kidney failure and consideration of cotrimoxazole prophylaxis"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-PREVENTION",
+            "locator": "Chapter 1, PP 1.8.4 and following qualification, printed S104: consider TMP-SMX during high-dose prednisone or other immunosuppression; evidence mainly outside glomerular disease"
+          }
+        ]
+      },
+      {
+        "option_id": "B",
+        "option_text": "Reserve discussion of prophylaxis for after pneumonia develops.",
+        "authored_rationale": "That confuses prevention with treatment of an established infection.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "That confuses prevention with treatment of an established infection.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, text following PP 11.2.3, printed S233: infection risk with cyclophosphamide in kidney failure and consideration of cotrimoxazole prophylaxis"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-PREVENTION",
+            "locator": "Chapter 1, PP 1.8.4 and following qualification, printed S104: consider TMP-SMX during high-dose prednisone or other immunosuppression; evidence mainly outside glomerular disease"
+          }
+        ]
+      },
+      {
+        "option_id": "C",
+        "option_text": "Use prophylaxis in place of cyclophosphamide once the person feels better.",
+        "authored_rationale": "Infection prevention and suppression of the autoimmune disease have different purposes.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "Infection prevention and suppression of the autoimmune disease have different purposes.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, text following PP 11.2.3, printed S233: infection risk with cyclophosphamide in kidney failure and consideration of cotrimoxazole prophylaxis"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-PREVENTION",
+            "locator": "Chapter 1, PP 1.8.4 and following qualification, printed S104: consider TMP-SMX during high-dose prednisone or other immunosuppression; evidence mainly outside glomerular disease"
+          }
+        ]
+      },
+      {
+        "option_id": "D",
+        "option_text": "Exclude prophylaxis because kidney failure removes the infection risk.",
+        "authored_rationale": "Chapter 11 specifically highlights infection risk with cyclophosphamide in kidney failure.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "Chapter 11 specifically highlights infection risk with cyclophosphamide in kidney failure.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, text following PP 11.2.3, printed S233: infection risk with cyclophosphamide in kidney failure and consideration of cotrimoxazole prophylaxis"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-PREVENTION",
+            "locator": "Chapter 1, PP 1.8.4 and following qualification, printed S104: consider TMP-SMX during high-dose prednisone or other immunosuppression; evidence mainly outside glomerular disease"
+          }
+        ]
+      },
+      {
+        "option_id": "E",
+        "option_text": "Stop reviewing infection risk as soon as the antibody titre falls.",
+        "authored_rationale": "An improving titre does not establish that the risk associated with immunosuppression has ended.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "An improving titre does not establish that the risk associated with immunosuppression has ended.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, text following PP 11.2.3, printed S233: infection risk with cyclophosphamide in kidney failure and consideration of cotrimoxazole prophylaxis"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-PREVENTION",
+            "locator": "Chapter 1, PP 1.8.4 and following qualification, printed S104: consider TMP-SMX during high-dose prednisone or other immunosuppression; evidence mainly outside glomerular disease"
+          }
+        ]
+      }
+    ],
+    "notice_review": "On 2026-10-07 the official KDIGO GD page listed replacements for Chapters 2/4/9/10, but no replacement or Chapter 1/11-specific correction was identified. The publisher-maintained full-guideline Crossmark record displayed current publication status without an update entry; this does not establish clinical currentness. Direct Kidney International and ScienceDirect article reads returned 403 in the research sidecar. Correction completeness and incorporation into retained bytes remain unverified. Only the listed claims are reviewed; retain dated_final_baseline.",
+    "rights_review": "Original Renulus scenarios, options and teaching are CC BY 4.0. KDIGO/Elsevier source terms remain separate: the recovered acquisition record identifies CC BY-NC-ND with publisher conditions. Factual citations only; no source prose, figures, tables, source-derived artwork or restricted examination items are distributed or relicensed. This review grants no whole-document ingestion, model-input or redistribution permission.",
+    "jurisdiction": "International KDIGO educational guidance for EU nephrologists; not national product authorisation, a prescribed dose or a local treatment protocol.",
+    "review_limit": "Assistant-authored and assistant-reviewed proposal. No runtime, clinical outcome, global-currentness or independent human-review claim."
+  },
+  {
+    "id": "RN15-GBM-004",
+    "version": 1,
+    "kind": "question",
+    "reviewed_on": "2026-10-07",
+    "checked_on": "2026-10-07",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "skill": "risk_based_screening",
+    "checked_claim": "Prior endemic exposure with eosinophilia/elevated IgE warrants Strongyloides assessment in the setting of immunosuppression; risk clues are not proof of infection.",
+    "key": "E",
+    "key_text": "Assess for Strongyloides because glucocorticoids can precipitate dangerous hyperinfection.",
+    "authored_claims": [
+      {
+        "path": "/rationale",
+        "text": "Consider exposure-related Strongyloides risk during the urgent safety assessment. Eosinophilia and elevated IgE are clues, not a diagnosis; an asymptomatic state does not eliminate the concern. This item does not select a parasite test or treatment regimen and does not require delaying urgent anti-GBM therapy.",
+        "disposition": "Supported within the stated scenario and source scope",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-PREVENTION",
+            "locator": "Chapter 1, section 1.8 infection-screening discussion and PP 1.8.2-1.8.3, printed S104: clinically appropriate screening and Strongyloides exposure/risk context"
+          }
+        ]
+      }
+    ],
+    "source_locators": [
+      {
+        "source_id": "RN15-GBM-SRC-PREVENTION",
+        "locator": "Chapter 1, section 1.8 infection-screening discussion and PP 1.8.2-1.8.3, printed S104: clinically appropriate screening and Strongyloides exposure/risk context"
+      }
+    ],
+    "objective_support": [
+      {
+        "objective_id": "T10.O02",
+        "checked_claim": "Prior endemic exposure with eosinophilia/elevated IgE warrants Strongyloides assessment in the setting of immunosuppression; risk clues are not proof of infection.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-PREVENTION",
+            "locator": "Chapter 1, section 1.8 infection-screening discussion and PP 1.8.2-1.8.3, printed S104: clinically appropriate screening and Strongyloides exposure/risk context"
+          }
+        ]
+      }
+    ],
+    "distractor_check": [
+      {
+        "option_id": "A",
+        "option_text": "These findings confirm bacterial pneumonia and remove the need for further assessment.",
+        "authored_rationale": "The exposure pattern does not establish bacterial pneumonia.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "The exposure pattern does not establish bacterial pneumonia.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-PREVENTION",
+            "locator": "Chapter 1, section 1.8 infection-screening discussion and PP 1.8.2-1.8.3, printed S104: clinically appropriate screening and Strongyloides exposure/risk context"
+          }
+        ]
+      },
+      {
+        "option_id": "B",
+        "option_text": "The absence of bowel symptoms excludes a relevant parasitic infection.",
+        "authored_rationale": "The guideline discusses asymptomatic infection and exposure-related risk.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "The guideline discusses asymptomatic infection and exposure-related risk.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-PREVENTION",
+            "locator": "Chapter 1, section 1.8 infection-screening discussion and PP 1.8.2-1.8.3, printed S104: clinically appropriate screening and Strongyloides exposure/risk context"
+          }
+        ]
+      },
+      {
+        "option_id": "C",
+        "option_text": "TMP-SMX prophylaxis alone completes the parasite assessment.",
+        "authored_rationale": "The Pneumocystis prevention recommendation does not replace a Strongyloides assessment.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "The Pneumocystis prevention recommendation does not replace a Strongyloides assessment.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-PREVENTION",
+            "locator": "Chapter 1, section 1.8 infection-screening discussion and PP 1.8.2-1.8.3, printed S104: clinically appropriate screening and Strongyloides exposure/risk context"
+          }
+        ]
+      },
+      {
+        "option_id": "D",
+        "option_text": "The anti-GBM diagnosis makes earlier residence irrelevant to treatment safety.",
+        "authored_rationale": "Exposure history remains relevant when immunosuppression can aggravate an unrecognised infection.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "Exposure history remains relevant when immunosuppression can aggravate an unrecognised infection.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-PREVENTION",
+            "locator": "Chapter 1, section 1.8 infection-screening discussion and PP 1.8.2-1.8.3, printed S104: clinically appropriate screening and Strongyloides exposure/risk context"
+          }
+        ]
+      },
+      {
+        "option_id": "E",
+        "option_text": "Assess for Strongyloides because glucocorticoids can precipitate dangerous hyperinfection.",
+        "authored_rationale": "The exposure and laboratory clues match the guideline risk context; they prompt assessment rather than proving infection.",
+        "disposition": "key_supported",
+        "reasoning": "The exposure and laboratory clues match the guideline risk context; they prompt assessment rather than proving infection.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-PREVENTION",
+            "locator": "Chapter 1, section 1.8 infection-screening discussion and PP 1.8.2-1.8.3, printed S104: clinically appropriate screening and Strongyloides exposure/risk context"
+          }
+        ]
+      }
+    ],
+    "notice_review": "On 2026-10-07 the official KDIGO GD page listed replacements for Chapters 2/4/9/10, but no replacement or Chapter 1/11-specific correction was identified. The publisher-maintained full-guideline Crossmark record displayed current publication status without an update entry; this does not establish clinical currentness. Direct Kidney International and ScienceDirect article reads returned 403 in the research sidecar. Correction completeness and incorporation into retained bytes remain unverified. Only the listed claims are reviewed; retain dated_final_baseline.",
+    "rights_review": "Original Renulus scenarios, options and teaching are CC BY 4.0. KDIGO/Elsevier source terms remain separate: the recovered acquisition record identifies CC BY-NC-ND with publisher conditions. Factual citations only; no source prose, figures, tables, source-derived artwork or restricted examination items are distributed or relicensed. This review grants no whole-document ingestion, model-input or redistribution permission.",
+    "jurisdiction": "International KDIGO educational guidance for EU nephrologists; not national product authorisation, a prescribed dose or a local treatment protocol.",
+    "review_limit": "Assistant-authored and assistant-reviewed proposal. No runtime, clinical outcome, global-currentness or independent human-review claim."
+  },
+  {
+    "id": "RN15-GBM-005",
+    "version": 1,
+    "kind": "question",
+    "reviewed_on": "2026-10-07",
+    "checked_on": "2026-10-07",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "skill": "treatment_timing",
+    "checked_claim": "Distinguish the usual cyclophosphamide and tapered-glucocorticoid durations in responding isolated disease; do not substitute a serology or renal-recovery endpoint for both.",
+    "key": "C",
+    "key_text": "Plan approximately 2-3 months of cyclophosphamide and about 6 months of glucocorticoids with tapering.",
+    "authored_claims": [
+      {
+        "path": "/rationale",
+        "text": "For the usual responding course, KDIGO describes cyclophosphamide for 2-3 months and glucocorticoids for about 6 months, with gradual tapering. This planning framework is not an instruction to ignore toxicity or persistent disease, and it is not a drug-dose schedule.",
+        "disposition": "Supported within the stated scenario and source scope",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.3 and explanatory paragraph, printed S233 (summary S87): cyclophosphamide 2-3 months, glucocorticoids about 6 months with gradual taper; not a rigid rule for persistent disease or toxicity"
+          }
+        ]
+      }
+    ],
+    "source_locators": [
+      {
+        "source_id": "RN15-GBM-SRC-TREATMENT",
+        "locator": "Chapter 11, PP 11.2.3 and explanatory paragraph, printed S233 (summary S87): cyclophosphamide 2-3 months, glucocorticoids about 6 months with gradual taper; not a rigid rule for persistent disease or toxicity"
+      }
+    ],
+    "objective_support": [
+      {
+        "objective_id": "T10.O02",
+        "checked_claim": "Distinguish the usual cyclophosphamide and tapered-glucocorticoid durations in responding isolated disease; do not substitute a serology or renal-recovery endpoint for both.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.3 and explanatory paragraph, printed S233 (summary S87): cyclophosphamide 2-3 months, glucocorticoids about 6 months with gradual taper; not a rigid rule for persistent disease or toxicity"
+          }
+        ]
+      }
+    ],
+    "distractor_check": [
+      {
+        "option_id": "A",
+        "option_text": "Give cyclophosphamide and glucocorticoids for the same fixed two-week course.",
+        "authored_rationale": "This confuses the different roles and usual durations of the treatment components.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "This confuses the different roles and usual durations of the treatment components.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.3 and explanatory paragraph, printed S233 (summary S87): cyclophosphamide 2-3 months, glucocorticoids about 6 months with gradual taper; not a rigid rule for persistent disease or toxicity"
+          }
+        ]
+      },
+      {
+        "option_id": "B",
+        "option_text": "Continue cyclophosphamide for about six months and finish glucocorticoids at two months.",
+        "authored_rationale": "This reverses the usual duration pattern.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "This reverses the usual duration pattern.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.3 and explanatory paragraph, printed S233 (summary S87): cyclophosphamide 2-3 months, glucocorticoids about 6 months with gradual taper; not a rigid rule for persistent disease or toxicity"
+          }
+        ]
+      },
+      {
+        "option_id": "C",
+        "option_text": "Plan approximately 2-3 months of cyclophosphamide and about 6 months of glucocorticoids with tapering.",
+        "authored_rationale": "This matches PP 11.2.3 for the usual responding course; tolerance and the actual disease course still matter.",
+        "disposition": "key_supported",
+        "reasoning": "This matches PP 11.2.3 for the usual responding course; tolerance and the actual disease course still matter.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.3 and explanatory paragraph, printed S233 (summary S87): cyclophosphamide 2-3 months, glucocorticoids about 6 months with gradual taper; not a rigid rule for persistent disease or toxicity"
+          }
+        ]
+      },
+      {
+        "option_id": "D",
+        "option_text": "Stop both drugs abruptly at the first undetectable antibody result.",
+        "authored_rationale": "The antibody endpoint for exchange does not define an abrupt stop for both immunosuppressive drugs.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "The antibody endpoint for exchange does not define an abrupt stop for both immunosuppressive drugs.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.3 and explanatory paragraph, printed S233 (summary S87): cyclophosphamide 2-3 months, glucocorticoids about 6 months with gradual taper; not a rigid rule for persistent disease or toxicity"
+          }
+        ]
+      },
+      {
+        "option_id": "E",
+        "option_text": "Continue cyclophosphamide until kidney function returns to its premorbid value.",
+        "authored_rationale": "Renal recovery is not the stated duration rule and may be limited by established damage.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "Renal recovery is not the stated duration rule and may be limited by established damage.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.3 and explanatory paragraph, printed S233 (summary S87): cyclophosphamide 2-3 months, glucocorticoids about 6 months with gradual taper; not a rigid rule for persistent disease or toxicity"
+          }
+        ]
+      }
+    ],
+    "notice_review": "On 2026-10-07 the official KDIGO GD page listed replacements for Chapters 2/4/9/10, but no replacement or Chapter 1/11-specific correction was identified. The publisher-maintained full-guideline Crossmark record displayed current publication status without an update entry; this does not establish clinical currentness. Direct Kidney International and ScienceDirect article reads returned 403 in the research sidecar. Correction completeness and incorporation into retained bytes remain unverified. Only the listed claims are reviewed; retain dated_final_baseline.",
+    "rights_review": "Original Renulus scenarios, options and teaching are CC BY 4.0. KDIGO/Elsevier source terms remain separate: the recovered acquisition record identifies CC BY-NC-ND with publisher conditions. Factual citations only; no source prose, figures, tables, source-derived artwork or restricted examination items are distributed or relicensed. This review grants no whole-document ingestion, model-input or redistribution permission.",
+    "jurisdiction": "International KDIGO educational guidance for EU nephrologists; not national product authorisation, a prescribed dose or a local treatment protocol.",
+    "review_limit": "Assistant-authored and assistant-reviewed proposal. No runtime, clinical outcome, global-currentness or independent human-review claim."
+  },
+  {
+    "id": "RN15-GBM-006",
+    "version": 1,
+    "kind": "question",
+    "reviewed_on": "2026-10-07",
+    "checked_on": "2026-10-07",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "skill": "transplant_timing",
+    "checked_claim": "Defer transplantation until anti-GBM antibodies have remained undetectable for at least six months; distinguish this from diagnosis date and complete eligibility.",
+    "key": "B",
+    "key_text": "The criterion is not yet met: antibodies should remain undetectable for at least six months before transplantation.",
+    "authored_claims": [
+      {
+        "path": "/rationale",
+        "text": "Count the interval of sustained undetectable anti-GBM antibodies: at least 6 months is advised before transplantation. This person has only four months. Meeting that interval later would satisfy this disease-specific timing condition, not establish complete transplant eligibility.",
+        "disposition": "Supported within the stated scenario and source scope",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.7, printed S234 (summary S87): transplantation after anti-GBM antibodies remain undetectable for at least 6 months"
+          }
+        ]
+      }
+    ],
+    "source_locators": [
+      {
+        "source_id": "RN15-GBM-SRC-TREATMENT",
+        "locator": "Chapter 11, PP 11.2.7, printed S234 (summary S87): transplantation after anti-GBM antibodies remain undetectable for at least 6 months"
+      }
+    ],
+    "objective_support": [
+      {
+        "objective_id": "T10.O02",
+        "checked_claim": "Defer transplantation until anti-GBM antibodies have remained undetectable for at least six months; distinguish this from diagnosis date and complete eligibility.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.7, printed S234 (summary S87): transplantation after anti-GBM antibodies remain undetectable for at least 6 months"
+          }
+        ]
+      }
+    ],
+    "distractor_check": [
+      {
+        "option_id": "A",
+        "option_text": "The criterion is met because six months have passed since diagnosis.",
+        "authored_rationale": "The relevant interval is sustained antibody negativity, not time since diagnosis.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "The relevant interval is sustained antibody negativity, not time since diagnosis.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.7, printed S234 (summary S87): transplantation after anti-GBM antibodies remain undetectable for at least 6 months"
+          }
+        ]
+      },
+      {
+        "option_id": "B",
+        "option_text": "The criterion is not yet met: antibodies should remain undetectable for at least six months before transplantation.",
+        "authored_rationale": "Four months of sustained negativity is shorter than the specified interval.",
+        "disposition": "key_supported",
+        "reasoning": "Four months of sustained negativity is shorter than the specified interval.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.7, printed S234 (summary S87): transplantation after anti-GBM antibodies remain undetectable for at least 6 months"
+          }
+        ]
+      },
+      {
+        "option_id": "C",
+        "option_text": "The criterion is met because completion of plasma exchange starts a fixed four-month waiting period.",
+        "authored_rationale": "The guidance uses sustained undetectable antibodies, not a four-month interval after exchange.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "The guidance uses sustained undetectable antibodies, not a four-month interval after exchange.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.7, printed S234 (summary S87): transplantation after anti-GBM antibodies remain undetectable for at least 6 months"
+          }
+        ]
+      },
+      {
+        "option_id": "D",
+        "option_text": "A prepared living donor removes the antibody-duration requirement.",
+        "authored_rationale": "Donor availability does not change this disease-specific timing criterion.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "Donor availability does not change this disease-specific timing criterion.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.7, printed S234 (summary S87): transplantation after anti-GBM antibodies remain undetectable for at least 6 months"
+          }
+        ]
+      },
+      {
+        "option_id": "E",
+        "option_text": "Persistent dialysis dependence permanently excludes transplantation for this disease.",
+        "authored_rationale": "The guideline describes when transplantation may proceed, not a permanent exclusion based on dialysis dependence.",
+        "disposition": "incorrect_in_stated_scenario",
+        "reasoning": "The guideline describes when transplantation may proceed, not a permanent exclusion based on dialysis dependence.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.7, printed S234 (summary S87): transplantation after anti-GBM antibodies remain undetectable for at least 6 months"
+          }
+        ]
+      }
+    ],
+    "notice_review": "On 2026-10-07 the official KDIGO GD page listed replacements for Chapters 2/4/9/10, but no replacement or Chapter 1/11-specific correction was identified. The publisher-maintained full-guideline Crossmark record displayed current publication status without an update entry; this does not establish clinical currentness. Direct Kidney International and ScienceDirect article reads returned 403 in the research sidecar. Correction completeness and incorporation into retained bytes remain unverified. Only the listed claims are reviewed; retain dated_final_baseline.",
+    "rights_review": "Original Renulus scenarios, options and teaching are CC BY 4.0. KDIGO/Elsevier source terms remain separate: the recovered acquisition record identifies CC BY-NC-ND with publisher conditions. Factual citations only; no source prose, figures, tables, source-derived artwork or restricted examination items are distributed or relicensed. This review grants no whole-document ingestion, model-input or redistribution permission.",
+    "jurisdiction": "International KDIGO educational guidance for EU nephrologists; not national product authorisation, a prescribed dose or a local treatment protocol.",
+    "review_limit": "Assistant-authored and assistant-reviewed proposal. No runtime, clinical outcome, global-currentness or independent human-review claim."
+  },
+  {
+    "id": "RN15-CASE-GBM-SAFETY",
+    "version": 1,
+    "kind": "case",
+    "reviewed_on": "2026-10-07",
+    "checked_on": "2026-10-07",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "skill": "treatment_safety_and_timing",
+    "checked_claim": "Accessible staged teaching of anti-GBM response/toxicity monitoring, infection prevention, leukopenia response, usual drug-course durations and transplantation after sustained antibody negativity.",
+    "key": null,
+    "key_text": null,
+    "source_locators": [
+      {
+        "source_id": "RN15-GBM-SRC-TREATMENT",
+        "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+      },
+      {
+        "source_id": "RN15-GBM-SRC-TREATMENT",
+        "locator": "Chapter 11, text following PP 11.2.3, printed S233: infection risk with cyclophosphamide in kidney failure and consideration of cotrimoxazole prophylaxis"
+      },
+      {
+        "source_id": "RN15-GBM-SRC-PREVENTION",
+        "locator": "Chapter 1, PP 1.8.4 and following qualification, printed S104: consider TMP-SMX during high-dose prednisone or other immunosuppression; evidence mainly outside glomerular disease"
+      },
+      {
+        "source_id": "RN15-GBM-SRC-PREVENTION",
+        "locator": "Chapter 1, section 1.8 infection-screening discussion and PP 1.8.2-1.8.3, printed S104: clinically appropriate screening and Strongyloides exposure/risk context"
+      },
+      {
+        "source_id": "RN15-GBM-SRC-TREATMENT",
+        "locator": "Chapter 11, Figure 99 cyclophosphamide toxicity statement, printed S234 (also summary S87): reduce or interrupt treatment for leukopenia; no dosing row or numerical threshold adopted"
+      },
+      {
+        "source_id": "RN15-GBM-SRC-TREATMENT",
+        "locator": "Chapter 11, PP 11.2.3 and explanatory paragraph, printed S233 (summary S87): cyclophosphamide 2-3 months, glucocorticoids about 6 months with gradual taper; not a rigid rule for persistent disease or toxicity"
+      },
+      {
+        "source_id": "RN15-GBM-SRC-TREATMENT",
+        "locator": "Chapter 11, PP 11.2.7, printed S234 (summary S87): transplantation after anti-GBM antibodies remain undetectable for at least 6 months"
+      }
+    ],
+    "authored_claims": [
+      {
+        "stage_id": "stage-1",
+        "path": "/stages/0/teaching_points/0",
+        "text": "Reveal: Follow kidney function, pulmonary findings, antibody titres and blood counts together. An improving symptom is only one part of the follow-up picture.",
+        "disposition": "Supported factual teaching or explicit scope limit; narrative facts are synthetic, not research outcomes",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+          }
+        ]
+      },
+      {
+        "stage_id": "stage-1",
+        "path": "/stages/0/teaching_points/1",
+        "text": "Reveal: Consider Pneumocystis prophylaxis with TMP-SMX alongside treatment of the autoimmune disease. The general recommendation is qualified by evidence largely from other immunosuppressed populations.",
+        "disposition": "Supported factual teaching or explicit scope limit; narrative facts are synthetic, not research outcomes",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, text following PP 11.2.3, printed S233: infection risk with cyclophosphamide in kidney failure and consideration of cotrimoxazole prophylaxis"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-PREVENTION",
+            "locator": "Chapter 1, PP 1.8.4 and following qualification, printed S104: consider TMP-SMX during high-dose prednisone or other immunosuppression; evidence mainly outside glomerular disease"
+          }
+        ]
+      },
+      {
+        "stage_id": "stage-1",
+        "path": "/stages/0/teaching_points/2",
+        "text": "Reveal: Review infection risks in context. KDIGO lists TB, HBV, HCV, HIV and syphilis screening where clinically appropriate. Prior endemic residence with eosinophilia/elevated IgE raises a separate Strongyloides concern: glucocorticoids can precipitate dangerous hyperinfection from silent infection. These clues prompt assessment, not a diagnosis; risk assessment accompanies urgent care.",
+        "disposition": "Supported factual teaching or explicit scope limit; narrative facts are synthetic, not research outcomes",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-PREVENTION",
+            "locator": "Chapter 1, section 1.8 infection-screening discussion and PP 1.8.2-1.8.3, printed S104: clinically appropriate screening and Strongyloides exposure/risk context"
+          }
+        ]
+      },
+      {
+        "stage_id": "stage-2",
+        "path": "/stages/1/teaching_points/0",
+        "text": "Reveal: Separate treatment response from tolerability. Blood-count surveillance can identify a safety problem even while organ disease improves.",
+        "disposition": "Supported factual teaching or explicit scope limit; narrative facts are synthetic, not research outcomes",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+          }
+        ]
+      },
+      {
+        "stage_id": "stage-2",
+        "path": "/stages/1/teaching_points/1",
+        "text": "Reveal: Review cyclophosphamide exposure promptly; leukopenia can require dose reduction or interruption. Use an individual specialist decision rather than inferring a safe numerical adjustment from this case.",
+        "disposition": "Supported factual teaching or explicit scope limit; narrative facts are synthetic, not research outcomes",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 99 cyclophosphamide toxicity statement, printed S234 (also summary S87): reduce or interrupt treatment for leukopenia; no dosing row or numerical threshold adopted"
+          }
+        ]
+      },
+      {
+        "stage_id": "stage-3",
+        "path": "/stages/2/teaching_points/0",
+        "text": "Reveal: The usual responding course uses cyclophosphamide for 2-3 months and a glucocorticoid course of about 6 months with gradual tapering.",
+        "disposition": "Supported factual teaching or explicit scope limit; narrative facts are synthetic, not research outcomes",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.3 and explanatory paragraph, printed S233 (summary S87): cyclophosphamide 2-3 months, glucocorticoids about 6 months with gradual taper; not a rigid rule for persistent disease or toxicity"
+          }
+        ]
+      },
+      {
+        "stage_id": "stage-3",
+        "path": "/stages/2/teaching_points/1",
+        "text": "Reveal: Tolerability and disease activity still govern review. This framework does not prescribe drug doses, an abrupt steroid stop or a rescue regimen for persistent antibodies.",
+        "disposition": "Supported factual teaching or explicit scope limit; narrative facts are synthetic, not research outcomes",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.3 and explanatory paragraph, printed S233 (summary S87): cyclophosphamide 2-3 months, glucocorticoids about 6 months with gradual taper; not a rigid rule for persistent disease or toxicity"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 99 cyclophosphamide toxicity statement, printed S234 (also summary S87): reduce or interrupt treatment for leukopenia; no dosing row or numerical threshold adopted"
+          }
+        ]
+      },
+      {
+        "stage_id": "stage-4",
+        "path": "/stages/3/teaching_points/0",
+        "text": "Reveal: The interval is sustained undetectable anti-GBM antibodies, not elapsed time since diagnosis or the availability of a donor. Four months does not yet meet the at-least-six-month criterion.",
+        "disposition": "Supported factual teaching or explicit scope limit; narrative facts are synthetic, not research outcomes",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.7, printed S234 (summary S87): transplantation after anti-GBM antibodies remain undetectable for at least 6 months"
+          }
+        ]
+      },
+      {
+        "stage_id": "stage-4",
+        "path": "/stages/3/teaching_points/1",
+        "text": "Reveal: Continued assessment can plan ahead, but reaching the antibody interval is only one condition for transplantation. It is not a complete candidate or donor clearance.",
+        "disposition": "Supported factual teaching or explicit scope limit; narrative facts are synthetic, not research outcomes",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.7, printed S234 (summary S87): transplantation after anti-GBM antibodies remain undetectable for at least 6 months"
+          }
+        ]
+      },
+      {
+        "stage_id": "stage-5",
+        "path": "/stages/4/teaching_points/0",
+        "text": "Debrief: Keep response surveillance and blood-count safety review visible throughout treatment. Preventive infection care has a distinct purpose from suppressing antibody production.",
+        "disposition": "Supported factual teaching or explicit scope limit; narrative facts are synthetic, not research outcomes",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 99 cyclophosphamide toxicity statement, printed S234 (also summary S87): reduce or interrupt treatment for leukopenia; no dosing row or numerical threshold adopted"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, text following PP 11.2.3, printed S233: infection risk with cyclophosphamide in kidney failure and consideration of cotrimoxazole prophylaxis"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-PREVENTION",
+            "locator": "Chapter 1, PP 1.8.4 and following qualification, printed S104: consider TMP-SMX during high-dose prednisone or other immunosuppression; evidence mainly outside glomerular disease"
+          }
+        ]
+      },
+      {
+        "stage_id": "stage-5",
+        "path": "/stages/4/teaching_points/1",
+        "text": "Debrief: Keep the usual immunosuppressive course and the sustained-antibody-negative transplant interval separate. Numerical doses, renal/dialysis adjustments, prophylaxis regimens and refractory disease are outside this case.",
+        "disposition": "Supported factual teaching or explicit scope limit; narrative facts are synthetic, not research outcomes",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.3 and explanatory paragraph, printed S233 (summary S87): cyclophosphamide 2-3 months, glucocorticoids about 6 months with gradual taper; not a rigid rule for persistent disease or toxicity"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.7, printed S234 (summary S87): transplantation after anti-GBM antibodies remain undetectable for at least 6 months"
+          }
+        ]
+      },
+      {
+        "path": "/take_home/0",
+        "text": "A falling titre does not show that treatment is free of harm.",
+        "disposition": "Supported original teaching synthesis",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 99 cyclophosphamide toxicity statement, printed S234 (also summary S87): reduce or interrupt treatment for leukopenia; no dosing row or numerical threshold adopted"
+          }
+        ]
+      },
+      {
+        "path": "/take_home/1",
+        "text": "Use infection prevention as supportive care alongside disease-directed treatment.",
+        "disposition": "Supported original teaching synthesis",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, text following PP 11.2.3, printed S233: infection risk with cyclophosphamide in kidney failure and consideration of cotrimoxazole prophylaxis"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-PREVENTION",
+            "locator": "Chapter 1, PP 1.8.4 and following qualification, printed S104: consider TMP-SMX during high-dose prednisone or other immunosuppression; evidence mainly outside glomerular disease"
+          }
+        ]
+      },
+      {
+        "path": "/take_home/2",
+        "text": "Distinguish the usual drug-course durations from sustained antibody negativity before transplantation.",
+        "disposition": "Supported original teaching synthesis",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.3 and explanatory paragraph, printed S233 (summary S87): cyclophosphamide 2-3 months, glucocorticoids about 6 months with gradual taper; not a rigid rule for persistent disease or toxicity"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.7, printed S234 (summary S87): transplantation after anti-GBM antibodies remain undetectable for at least 6 months"
+          }
+        ]
+      }
+    ],
+    "objective_support": [
+      {
+        "objective_id": "T10.O02",
+        "stage_ids": [
+          "stage-1",
+          "stage-2",
+          "stage-3",
+          "stage-4",
+          "stage-5"
+        ],
+        "checked_claim": "Distinguish disease-directed treatment from supportive infection prevention and prevent treatment harms while preserving separate follow-up timelines.",
+        "source_locators": [
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, text following PP 11.2.3, printed S233: infection risk with cyclophosphamide in kidney failure and consideration of cotrimoxazole prophylaxis"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-PREVENTION",
+            "locator": "Chapter 1, PP 1.8.4 and following qualification, printed S104: consider TMP-SMX during high-dose prednisone or other immunosuppression; evidence mainly outside glomerular disease"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-PREVENTION",
+            "locator": "Chapter 1, section 1.8 infection-screening discussion and PP 1.8.2-1.8.3, printed S104: clinically appropriate screening and Strongyloides exposure/risk context"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, Figure 99 cyclophosphamide toxicity statement, printed S234 (also summary S87): reduce or interrupt treatment for leukopenia; no dosing row or numerical threshold adopted"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.3 and explanatory paragraph, printed S233 (summary S87): cyclophosphamide 2-3 months, glucocorticoids about 6 months with gradual taper; not a rigid rule for persistent disease or toxicity"
+          },
+          {
+            "source_id": "RN15-GBM-SRC-TREATMENT",
+            "locator": "Chapter 11, PP 11.2.7, printed S234 (summary S87): transplantation after anti-GBM antibodies remain undetectable for at least 6 months"
+          }
+        ]
+      }
+    ],
+    "distractor_check": [],
+    "notice_review": "On 2026-10-07 the official KDIGO GD page listed replacements for Chapters 2/4/9/10, but no replacement or Chapter 1/11-specific correction was identified. The publisher-maintained full-guideline Crossmark record displayed current publication status without an update entry; this does not establish clinical currentness. Direct Kidney International and ScienceDirect article reads returned 403 in the research sidecar. Correction completeness and incorporation into retained bytes remain unverified. Only the listed claims are reviewed; retain dated_final_baseline.",
+    "rights_review": "Original Renulus scenarios, options and teaching are CC BY 4.0. KDIGO/Elsevier source terms remain separate: the recovered acquisition record identifies CC BY-NC-ND with publisher conditions. Factual citations only; no source prose, figures, tables, source-derived artwork or restricted examination items are distributed or relicensed. This review grants no whole-document ingestion, model-input or redistribution permission.",
+    "jurisdiction": "International KDIGO guidance; EU learning context, no national drug authorisation or prescribing protocol claimed.",
+    "review_limit": "Teaching-mode case with prompts, explicit reveals and debrief; not scored, not a reserved-bank rationale export and not a competence assessment. All patient data are synthetic."
+  },
+  {
+    "id": "RN15-GBM-SRC-TREATMENT",
+    "kind": "source",
+    "checked_on": "2026-10-07",
+    "reviewed_on": "2026-10-07",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "checked_claim": "2021 Chapter 11 only: Figure 98 monitoring, Figure 99 leukopenia response, PP 11.2.3 and associated infection-prevention text, PP 11.2.7 transplant timing. No numerical dosing, refractory treatment, histology images or replaced AAV regimen.",
+    "key": null,
+    "key_text": null,
+    "distractor_check": [],
+    "source_locators": [
+      {
+        "source_id": "RN15-GBM-SRC-TREATMENT",
+        "locator": "Chapter 11, Figure 98 monitoring box, printed S232: kidney function, pulmonary infiltrates, anti-GBM antibody titres and blood counts; only the monitoring principle is used"
+      },
+      {
+        "source_id": "RN15-GBM-SRC-TREATMENT",
+        "locator": "Chapter 11, text following PP 11.2.3, printed S233: infection risk with cyclophosphamide in kidney failure and consideration of cotrimoxazole prophylaxis"
+      },
+      {
+        "source_id": "RN15-GBM-SRC-TREATMENT",
+        "locator": "Chapter 11, Figure 99 cyclophosphamide toxicity statement, printed S234 (also summary S87): reduce or interrupt treatment for leukopenia; no dosing row or numerical threshold adopted"
+      },
+      {
+        "source_id": "RN15-GBM-SRC-TREATMENT",
+        "locator": "Chapter 11, PP 11.2.3 and explanatory paragraph, printed S233 (summary S87): cyclophosphamide 2-3 months, glucocorticoids about 6 months with gradual taper; not a rigid rule for persistent disease or toxicity"
+      },
+      {
+        "source_id": "RN15-GBM-SRC-TREATMENT",
+        "locator": "Chapter 11, PP 11.2.7, printed S234 (summary S87): transplantation after anti-GBM antibodies remain undetectable for at least 6 months"
+      }
+    ],
+    "notice_review": "On 2026-10-07 the official KDIGO GD page listed replacements for Chapters 2/4/9/10, but no replacement or Chapter 1/11-specific correction was identified. The publisher-maintained full-guideline Crossmark record displayed current publication status without an update entry; this does not establish clinical currentness. Direct Kidney International and ScienceDirect article reads returned 403 in the research sidecar. Correction completeness and incorporation into retained bytes remain unverified. Only the listed claims are reviewed; retain dated_final_baseline.",
+    "exact_copy_review": "Recovered October 4 public acquisition, not downloaded again: combined PDF 11,320,223 bytes, SHA256 8ed871ec098c7eba1cfb0ff6bf2355a6c422166b2691aac138f0273307b2acff, rehashed October 7. Clinical locators were read in official indexed KDIGO text; the direct combined-PDF web reader failed. Hash identity is not an attestation that indexed passages equal those retained bytes.",
+    "rights_review": "Original Renulus scenarios, options and teaching are CC BY 4.0. KDIGO/Elsevier source terms remain separate: the recovered acquisition record identifies CC BY-NC-ND with publisher conditions. Factual citations only; no source prose, figures, tables, source-derived artwork or restricted examination items are distributed or relicensed. This review grants no whole-document ingestion, model-input or redistribution permission.",
+    "source_relationship": "Additive immutable snapshot; no published record, date, source body or accepted claim is replaced.",
+    "clinical_currency": "dated_final_baseline; selected authored claims checked, no whole-chapter or global-current clearance"
+  },
+  {
+    "id": "RN15-GBM-SRC-PREVENTION",
+    "kind": "source",
+    "checked_on": "2026-10-07",
+    "reviewed_on": "2026-10-07",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "checked_claim": "2021 Chapter 1 section 1.8, PP 1.8.2-1.8.4, applied to infection-risk review during anti-GBM immunosuppression. Risk-based screening and consideration of Pneumocystis prophylaxis only; no vaccine schedule, drug dose, parasite regimen or numerical stopping threshold.",
+    "key": null,
+    "key_text": null,
+    "distractor_check": [],
+    "source_locators": [
+      {
+        "source_id": "RN15-GBM-SRC-PREVENTION",
+        "locator": "Chapter 1, PP 1.8.4 and following qualification, printed S104: consider TMP-SMX during high-dose prednisone or other immunosuppression; evidence mainly outside glomerular disease"
+      },
+      {
+        "source_id": "RN15-GBM-SRC-PREVENTION",
+        "locator": "Chapter 1, section 1.8 infection-screening discussion and PP 1.8.2-1.8.3, printed S104: clinically appropriate screening and Strongyloides exposure/risk context"
+      }
+    ],
+    "notice_review": "On 2026-10-07 the official KDIGO GD page listed replacements for Chapters 2/4/9/10, but no replacement or Chapter 1/11-specific correction was identified. The publisher-maintained full-guideline Crossmark record displayed current publication status without an update entry; this does not establish clinical currentness. Direct Kidney International and ScienceDirect article reads returned 403 in the research sidecar. Correction completeness and incorporation into retained bytes remain unverified. Only the listed claims are reviewed; retain dated_final_baseline.",
+    "exact_copy_review": "Recovered October 4 public acquisition, not downloaded again: combined PDF 11,320,223 bytes, SHA256 8ed871ec098c7eba1cfb0ff6bf2355a6c422166b2691aac138f0273307b2acff, rehashed October 7. Clinical locators were read in official indexed KDIGO text; the direct combined-PDF web reader failed. Hash identity is not an attestation that indexed passages equal those retained bytes.",
+    "rights_review": "Original Renulus scenarios, options and teaching are CC BY 4.0. KDIGO/Elsevier source terms remain separate: the recovered acquisition record identifies CC BY-NC-ND with publisher conditions. Factual citations only; no source prose, figures, tables, source-derived artwork or restricted examination items are distributed or relicensed. This review grants no whole-document ingestion, model-input or redistribution permission.",
+    "source_relationship": "Additive immutable snapshot; no published record, date, source body or accepted claim is replaced.",
+    "clinical_currency": "dated_final_baseline; selected authored claims checked, no whole-chapter or global-current clearance"
+  }
+]

@@ -52,11 +52,11 @@ try {
     $Shortcut.Arguments = '-NoLogo -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + $LaunchScript + '" -ShowErrorDialog'
     $Shortcut.WorkingDirectory = $WorkspaceRoot
     $Shortcut.IconLocation = $IconPath + ',0'
-    $Shortcut.Description = 'Renulus - inherited reference preview'
+    $Shortcut.Description = 'Renulus - nephrology learning'
     $Shortcut.WindowStyle = 7
     $Shortcut.Save()
     $Action = if ($Updating) { 'Updated' } else { 'Created' }
-    Write-Output ($Action + ' Renulus.lnk for the inherited reference preview. The shortcut points to the clean workspace wrapper and selected icon.')
+    Write-Output ($Action + ' Renulus.lnk for the learning app and selected icon.')
 } catch {
     [Console]::Error.WriteLine('Renulus shortcut: ' + $_.Exception.Message)
     exit 1

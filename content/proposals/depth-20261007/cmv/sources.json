@@ -1,0 +1,32 @@
+[
+  {
+    "id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+    "register_id": "L01",
+    "title": "Fourth International Consensus Guidelines on CMV in Solid Organ Transplantation — adult kidney prevention slice",
+    "edition": "Kotton et al. Transplantation 2025;109(7):1066–1110; DOI 10.1097/TP.0000000000005374; online April 9, issue July 1, 2025",
+    "publication_status": "final",
+    "url": "https://doi.org/10.1097/TP.0000000000005374",
+    "canonical_topic_url": "https://tts.org/9-tts/general/1616-fourth-international-consensus-guidelines-on-the-management-of-cytomegalovirus-in-solid-organ-transplantation",
+    "checked_on": "2026-10-07",
+    "check_status": "locator_checked",
+    "currency": "dated_final_baseline",
+    "scope": "Adult kidney recipient serologic risk, prophylaxis/preemptive strategy, assay-specific monitoring, renal-dose principles, intolerance alternatives and postprophylaxis surveillance. No comprehensive treatment, resistant CMV, pediatric or other-organ algorithm.",
+    "rights_note": "Kotton et al., 2025; Wolters Kluwer publication, CC BY-NC-ND 4.0. Primary text remains external for bounded research. Original scenarios, options and explanations are Renulus CC BY 4.0; no source prose, table, figure, translation or adapted guideline is distributed. The source licence is not relabelled or extended to commercial reuse.",
+    "check_note": "Recovered October 5 publication-identification evidence before reading the missing prevention claims. Primary Europe PMC XML PMC12180710 read on October 7; SHA256 5e9508b814eadde6b06cc1cabbd96f2f1ed23dcb1e783718c8c5fd2f619759a9. Exact sections are in item/stage locators and reviews.json. TTS still lists the fourth consensus; PubMed records final 2025 publication. No linked erratum/retraction or correction text was identified in the inspected PubMed/PMC records, and targeted title/DOI correction searches returned no relevant same-work notice. Direct publisher page failed with an internal-access error. No exhaustive notice or latest-clinical-guidance clearance. Absence of an indexed notice is not proof that none exists. No Crossmark-only inference; exact corrected publisher PDF bytes were not reviewed."
+  },
+  {
+    "id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+    "register_id": "G06",
+    "title": "EMA Prevymis product information — adult D+/R− kidney prophylaxis and interactions",
+    "edition": "EU English product information last updated 2025-12-12; EPAR revision 18; retrieved 2026-10-07",
+    "publication_status": "final",
+    "url": "https://www.ema.europa.eu/en/documents/product-information/prevymis-epar-product-information_en.pdf",
+    "canonical_topic_url": "https://www.ema.europa.eu/en/medicines/human/EPAR/prevymis",
+    "checked_on": "2026-10-07",
+    "check_status": "locator_checked",
+    "currency": "dated_final_baseline",
+    "scope": "Adult D+/R− kidney recipients weighing at least 40 kg: CMV prophylaxis indication, start by day 7/continue through day 200, and tacrolimus/ciclosporin interaction planning. Not CMV treatment or approval of broader consensus populations, late-switch timing, a fixed dose, full interaction list or renal/IV administration algorithm.",
+    "rights_note": "EMA public product information; EMA legal notice permits attributed reproduction subject to excluded/third-party content. The document retains its own terms; no full product information or source table is bundled. Original Renulus scenarios and explanations are CC BY 4.0.",
+    "check_note": "Official EMA tablet SmPC sections 4.1 p.2, 4.2 p.4, 4.4 p.5 and 4.5 p.7/Table 1 pp.12–13 checked in delegated primary-source research; printed pages equal one-based PDF pages. PDF SHA256 db4998a6cb590006789107af9f09c4196d815ed441a57d076042c2223b8d34a9. Live EPAR displayed English product-information update 2025-12-12, revision 18, procedure N/0000304418 dated 2025-12-05. SmPC section 10 has no populated revision date. EMA lists a 2020-09-11 IV in-line PES filter notice; listing and corresponding current-label passages checked, separate notice PDF not downloaded. That administration detail is outside the authored oral-prophylaxis slice. Later translation dates do not establish a later English revision. No exhaustive EU/national notice clearance. Live EMA product-information URL is mutable. This snapshot does not establish all national availability, reimbursement, use outside the EU kidney indication or unrestricted third-party reuse."
+  }
+]

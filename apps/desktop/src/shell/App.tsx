@@ -1,0 +1,82 @@
+import { useEffect, useRef, useState } from 'react';
+import { ArrowRight, BookOpen, ChevronRight, Home, Layers3, Library, MessageCircle, PanelLeft, Plug, Search, Shield, Stethoscope, X, Newspaper } from 'lucide-react';
+import { IconButton, Button } from '../ui';
+import { api } from '../platform/api';
+import type { Health } from '../platform/contracts';
+import { useResource } from '../platform/useResource';
+import { ModuleOutlet } from './ModuleOutlet';
+import { NavigationProvider, routes, useNavigation } from './navigation';
+
+const icons = [Home, MessageCircle, Library, Stethoscope, Layers3, BookOpen, Newspaper, Plug];
+function Shell() {
+  const { route, revision, scope, navigate, startFreshStudy } = useNavigation();
+  const [railOpen, setRailOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const searchDialog = useRef<HTMLDialogElement>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const searchTrigger = useRef<HTMLButtonElement>(null);
+  const searchReturn = useRef<HTMLElement | null>(null);
+  const searchNavigating = useRef(false);
+  const railToggle = useRef<HTMLButtonElement>(null);
+  const rail = useRef<HTMLElement>(null);
+  const content = useRef<HTMLElement>(null);
+  const { resource } = useResource(signal => api<Health>('/health', { signal }));
+  const label = routes.find(item => item.id === route)!.label;
+  // Privacy scope survives Save; Cases owns the live saved/dirty snapshot cue.
+  const scopeLabel = scope.kind === 'saved-case'
+    ? 'Saved case snapshot · New changes stay temporary until you Save again.'
+    : scope.kind === 'temporary-case'
+      ? 'Temporary case context · Only explicitly saved snapshots are kept. New changes require Save.'
+      : scope.kind === 'unclassified' ? 'Unclassified context · not saved' : null;
+  const temporary = scopeLabel !== null;
+  function openSearch() {
+    if (document.querySelector('dialog[open]')) return;
+    if (!searchDialog.current?.open) {
+      searchReturn.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      searchNavigating.current = false;
+      searchDialog.current?.showModal();
+      searchInput.current?.focus();
+    }
+  }
+  useEffect(() => {
+    document.title = 'Renulus · ' + label;
+    content.current?.focus({ preventScroll: true });
+    document.scrollingElement?.scrollTo({ top: 0, left: 0 });
+    setRailOpen(false);
+  }, [route, revision, label]);
+  useEffect(() => {
+    if (railOpen) rail.current?.querySelector<HTMLAnchorElement>('a[aria-current="page"]')?.focus();
+  }, [railOpen]);
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.key.toLowerCase() === 'k') { event.preventDefault(); openSearch(); }
+      if (event.altKey && /^[1-8]$/.test(event.key) && !document.querySelector('dialog[open]')) { event.preventDefault(); navigate(routes[Number(event.key) - 1].id); }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [navigate]);
+  const matches = routes.filter(item => item.label.toLowerCase().includes(query.toLowerCase()));
+  const runtimeLabel = resource.status === 'ready' ? 'Local runtime ready' : resource.status === 'loading' ? 'Checking local runtime' : 'Local runtime unavailable';
+  return <div className="desktop-shell">
+    <a className="skip-link" href="#learning-content" onClick={event => { event.preventDefault(); content.current?.focus(); }}>Skip to learning</a>
+    <aside ref={rail} className={'navigation-rail' + (railOpen ? ' rail-open' : '')} id="main-navigation" onKeyDown={event => { if (event.key === 'Escape' && railOpen) { event.preventDefault(); setRailOpen(false); railToggle.current?.focus(); } }}>
+      <a href="#/study" className="brand" onClick={event => { event.preventDefault(); navigate('study'); }} aria-label="Renulus home"><img src="./renulus-64.png" width="34" height="34" alt="" /><span>Renulus</span></a>
+      <nav aria-label="Main navigation">{routes.map((item, index) => { const Icon = icons[index]; return <a key={item.id} href={'#/' + item.id} onClick={event => { event.preventDefault(); navigate(item.id); }} aria-current={route === item.id ? 'page' : undefined} title={'Alt+' + (index + 1)}><Icon size={19} aria-hidden="true" /><span>{item.label}</span></a>; })}</nav>
+      <div className="rail-footer"><button className="runtime-status" onClick={() => navigate('connections')}><span className={'status-dot status-' + resource.status} aria-hidden="true" />{runtimeLabel}</button><p>Learning across nephrology</p></div>
+    </aside>
+    <div className="workspace">
+      <header className="workspace-header"><div className="workspace-breadcrumb"><IconButton ref={railToggle} className="mobile-rail-toggle" label={railOpen ? 'Close navigation' : 'Open navigation'} aria-expanded={railOpen} aria-controls="main-navigation" onClick={() => setRailOpen(value => !value)}><PanelLeft size={20} /></IconButton><span>Learning space</span><ChevronRight size={14} aria-hidden="true" /><strong>{label}</strong></div><button className="search-trigger" ref={searchTrigger} onClick={openSearch}><Search size={17} aria-hidden="true" /><span>Find a destination</span><kbd>Ctrl K</kbd></button></header>
+      {temporary && <div className="scope-banner" role="status"><Shield size={17} aria-hidden="true" /><p>{scopeLabel}</p><Button variant="ghost" onClick={startFreshStudy}>End temporary context</Button></div>}
+      <main className="workspace-main" id="learning-content" aria-label={label} tabIndex={-1} ref={content}><ModuleOutlet /></main>
+      <footer className="workspace-footer"><span><img src="./renulus-64.png" width="14" height="14" alt="" />Learning across nephrology</span><span>{temporary ? 'Temporary context' : 'Your learning space'}</span><details className="shortcut-help"><summary>Keyboard</summary><div><strong>Move through Renulus</strong><p><kbd>Ctrl K</kbd> Find a destination</p><p><kbd>Alt 1–8</kbd> Open a destination</p><p><kbd>Esc</kbd> Close destination search</p></div></details></footer>
+    </div>
+    <dialog ref={searchDialog} className="destination-dialog" aria-labelledby="search-title" onClose={() => {
+      setQuery('');
+      // Native close fires after navigation has committed; keep focus in the new view.
+      if (searchNavigating.current) content.current?.focus({ preventScroll: true });
+      else (searchReturn.current?.isConnected ? searchReturn.current : searchTrigger.current)?.focus();
+      searchNavigating.current = false;
+    }}><div className="dialog-heading"><h2 id="search-title">Where would you like to go?</h2><IconButton label="Close destination search" onClick={() => searchDialog.current?.close()}><X size={19} /></IconButton></div><label className="sr-only" htmlFor="destination-search">Search destinations</label><input ref={searchInput} className="input" id="destination-search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Learn, Library, Cases…" /><div className="destination-results">{matches.map(item => <button key={item.id} onClick={() => { searchNavigating.current = true; searchDialog.current?.close(); navigate(item.id); }}><strong>{item.label}</strong><ArrowRight size={16} aria-hidden="true" /></button>)}{!matches.length && <p role="status">No destinations match. Try Learn or Library.</p>}</div></dialog>
+  </div>;
+}
+export function App() { return <NavigationProvider><Shell /></NavigationProvider>; }

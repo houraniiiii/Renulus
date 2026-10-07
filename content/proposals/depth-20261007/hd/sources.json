@@ -1,0 +1,62 @@
+[
+  {
+    "id": "RN15-HD-SRC-BCR-202607",
+    "register_id": "G09",
+    "title": "BC Renal: Nursing Management of Complications during Hemodialysis",
+    "edition": "Updated July 2026; BC Renal Hemodialysis Committee-approved provincial guideline",
+    "publication_status": "final",
+    "url": "https://www.bcrenal.ca/resource-gallery/Documents/Provincial-Guideline_HD_Complications.pdf",
+    "canonical_topic_url": "https://www.bcrenal.ca/health-professionals/clinical-resources/hemodialysis",
+    "checked_on": "2026-10-07",
+    "check_status": "locator_checked",
+    "currency": "dated_final_baseline",
+    "scope": "Canadian provincial in-centre/community-HD nursing guidance used only for adult educational recognition and immediate response reasoning: sections 2.2, 2.10 and 2.16.1. Not EU guidance, machine instructions, transfusion rules or a home-HD curriculum. G09 is registered for BC Renal during 1.4.0 integration; original source terms and Canadian jurisdiction remain distinct from original Renulus teaching.",
+    "rights_note": "BC Renal permits personal, clinical, non-commercial downloads; commercial reproduction needs permission (About_BCR_Guidelines.pdf). No source prose, tables, figures or algorithm are bundled. Only independently authored scenarios and references are proposed under CC BY 4.0; source retains its own terms. Do not distribute the external PDF or assume AI-ingestion/commercial-source rights.",
+    "check_note": "Official current HD hub links this PDF and lists it as updated; cover/footer say July 2026, although search indexing surfaced March 2025. Exact downloaded PDF SHA256 a4b8e92617e098674aa37f5dc4c188c56c6bbf02852f36cf1deb608b84bc174f. Physical pp4,10-11,17 read; printed pp2,8-9,15. Scope and terms physical p2 and About_BCR_Guidelines.pdf checked. New immutable snapshot; no prior BC source mutated. No separate correction/retraction notice identified on the examined hub/PDF; complete notice surveillance unverified. Do not extend into adjacent anaphylaxis, generic chest-pain or rupture algorithms. Positioning and air aspiration deliberately excluded."
+  },
+  {
+    "id": "RN15-HD-SRC-UKKA-STOP-2023",
+    "register_id": "G02",
+    "title": "UK Kidney Association / Kidney Patient Safety Committee: STOP guidance and MARC alarm handling",
+    "edition": "Produced April 2023; review due April 2026",
+    "publication_status": "final",
+    "url": "https://www.ukkidney.org/sites/renal.org/files/STOP%20Guidance%202023%20Final.pdf",
+    "canonical_topic_url": "https://www.ukkidney.org/about-us/news/safer-care-haemodialysis",
+    "checked_on": "2026-10-07",
+    "check_status": "locator_checked",
+    "currency": "dated_final_baseline",
+    "scope": "Adult access visibility, limitations of pressure alarms and assess/correct/confirm reasoning around reset. No numeric alarm-setting rule or device-specific training. UK supplementary evidence for EU learners.",
+    "rights_note": "Public UKKA reference; no blanket open licence established. Original Renulus scenarios only; no UKKA prose, forms, figures, scoring sheets or posters copied.",
+    "check_note": "Official May 18 2023 release page and linked final PDF read. SHA256 3c5c772d9bc4df58e839955ec9f5f3bc7031d0a48bff7367151fdf32a9dcc438. Used physical pp4-5. Review due April 2026 is overdue on checked date; this is not globally current certification. No later same-scope final located in the bounded official search. BC July 2026 section 2.16.1 independently supports the selected visibility/alarm-limit concepts. Distinct from UKKA HD2019 and vascular access April2023/journal2025."
+  },
+  {
+    "id": "RN15-HD-SRC-NDT-2025",
+    "register_id": "L01",
+    "title": "Aoun M, Combe C, Jadoul M: Life support in hemodialysis emergencies—treatment standard",
+    "edition": "NDT 2025;40(11):2046-2057; online 15 July 2025; typeset 7 August 2025; DOI 10.1093/ndt/gfaf136; PMID 40662846",
+    "publication_status": "final",
+    "url": "https://academic.oup.com/ndt/article/40/11/2046/8202812",
+    "canonical_topic_url": "https://pubmed.ncbi.nlm.nih.gov/40662846/",
+    "checked_on": "2026-10-07",
+    "check_status": "locator_checked",
+    "currency": "dated_final_baseline",
+    "scope": "Publisher clinical review, not an official ERC or EU guideline. Bounded corroboration that suspected air embolism/haemolysis requires stopping HD without extracorporeal-blood return. No adoption of complete resuscitation algorithm, positioning or generic return-for-bleeding advice.",
+    "rights_note": "Publisher/author rights retained; no article-specific open reuse licence established in this lane. Public indexed primary passage used as a reference only; no full article, figure or algorithm copied into Git or downloaded by bypass.",
+    "check_note": "Publisher-indexed primary text supplied Box 1 and Additional first actions, specific to the hemodialysis population after direct reader internal errors; PubMed confirms review identity. No Crossmark claim. Corrected and typeset date is production metadata, not proof of a clinical corrigendum. No complete correction/retraction search or 2026 resuscitation-guideline clearance claimed."
+  },
+  {
+    "id": "RN15-HD-SRC-CJASN-2017",
+    "register_id": "L01",
+    "title": "Saha M, Allon M: Diagnosis, Treatment, and Prevention of Hemodialysis Emergencies",
+    "edition": "CJASN 2017;12(2):357-369; online 9 November 2016; DOI 10.2215/CJN.05260516; PMID 27831511; PMCID PMC5293333",
+    "publication_status": "final",
+    "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5293333/",
+    "canonical_topic_url": "https://doi.org/10.2215/CJN.05260516",
+    "checked_on": "2026-10-07",
+    "check_status": "locator_checked",
+    "currency": "dated_final_baseline",
+    "scope": "Dated US clinical review used for the haemolysis/potassium/no-reinfusion mechanism and investigation of clustered events, corroborated against BC2026. Not current EU guideline certification.",
+    "rights_note": "Copyright 2017 American Society of Nephrology. Public repository reading does not establish an open reproduction licence. Original Renulus wording only; no article body, cases, figures or tables distributed.",
+    "check_note": "PMC primary article and indexed Hemolysis paragraph read. Later page-offset access returned a browser challenge; not bypassed and no new original downloaded. Source is a 2017 mechanistic baseline; no complete notice/retraction clearance inferred. Its positioning recommendations are not adopted."
+  }
+]

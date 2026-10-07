@@ -1,0 +1,4 @@
+# Disposable, synthetic UI verification state is never distributed.
+.validation-*/
+.desktop-check.png
+.compact-check.png

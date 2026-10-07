@@ -1,0 +1,2737 @@
+[
+  {
+    "id": "RN-CASE-CKD",
+    "version": 1,
+    "topic_id": "T08",
+    "secondary_topic_ids": [
+      "T02",
+      "T09"
+    ],
+    "objective_ids": [
+      "T08.O01",
+      "T08.O02",
+      "T02.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "One abnormal result, a longer story",
+    "summary": "Build chronicity, CGA classification and a kidney-protection plan from serial evidence.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic 57-year-old is referred with eGFR 47 and urine ACR 220 mg/g. The referral contains no prior laboratory results. The person had a febrile illness last week and feels better now.",
+        "prompts": [
+          "What evidence establishes chronicity?",
+          "Which acute or transient influences need checking?"
+        ],
+        "teaching_points": [
+          "An isolated abnormal filtration or urine result does not establish CKD duration.",
+          "Seek earlier measurements, structural history and a repeat-testing plan that also addresses possible acute disease."
+        ],
+        "sources": [
+          {
+            "source_id": "K01-2024",
+            "locator": "Practice Points 1.1.3.1-1.1.3.2"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "Earlier results are retrieved: eGFR was 46 and ACR 260 mg/g eight months ago. A first-morning ACR is now 240 mg/g, and eGFR remains 47. Blood pressure and the cause of disease are still being assessed.",
+        "prompts": [
+          "How would you state the CGA classification without inventing the cause?",
+          "What changes if the urine sample was taken during infection?"
+        ],
+        "teaching_points": [
+          "Persistence establishes chronicity; the GFR and albuminuria categories here are G3a A2.",
+          "Document cause as under evaluation. Use appropriately collected repeat urine measurements when transient factors could distort ACR."
+        ],
+        "sources": [
+          {
+            "source_id": "K01-2024",
+            "locator": "Tables 1-3; Practice Point 1.3.1.2"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "The person asks whether dialysis is inevitable and wants a clear plan. There is no diabetes, no contraindication to an SGLT2 inhibitor, and no current acute illness.",
+        "prompts": [
+          "How would you explain absolute risk without predicting a dialysis date?",
+          "Which kidney-protective options need shared discussion?"
+        ],
+        "teaching_points": [
+          "A validated kidney-failure risk equation can support counseling in G3-G5; uncertainty and its time horizon should be explained.",
+          "This eGFR and persistent ACR above 200 meet the adult CKD SGLT2 recommendation, including without diabetes. Combine treatment with cause assessment, BP care and monitoring."
+        ],
+        "sources": [
+          {
+            "source_id": "K01-2024",
+            "locator": "Recommendation 2.2.1; Recommendation 3.7.2"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "Establish persistence before labeling chronic disease.",
+      "CGA describes the condition; a risk equation adds calibrated prognosis."
+    ],
+    "sources": [
+      {
+        "source_id": "K01-2024",
+        "locator": "Practice Points 1.1.3.1-1.1.3.2"
+      },
+      {
+        "source_id": "K01-2024",
+        "locator": "Tables 1-3; Practice Point 1.3.1.2"
+      },
+      {
+        "source_id": "K01-2024",
+        "locator": "Recommendation 2.2.1; Recommendation 3.7.2"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-CASE-AKI",
+    "version": 1,
+    "topic_id": "T06",
+    "secondary_topic_ids": [
+      "T03",
+      "T19",
+      "T08"
+    ],
+    "objective_ids": [
+      "T06.O01",
+      "T06.O02",
+      "T19.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "An acute illness and a medication restart plan",
+    "summary": "Recognize nonoliguric AKI, investigate reversible contributors and plan recovery.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic 64-year-old has had two days of vomiting and poor intake. Creatinine was 95 micromol/L last week and is 165 today. Urine is still being passed. Medicines include an ACE inhibitor and a diuretic.",
+        "prompts": [
+          "Does maintained urine output exclude AKI?",
+          "What information changes immediate assessment?"
+        ],
+        "teaching_points": [
+          "The rise is about 1.74-fold within a week, meeting stage 1 by creatinine even without oliguria.",
+          "Assess circulation, electrolytes, obstruction, intercurrent illness and medicine exposure. Avoid assuming that every acute rise has only one cause."
+        ],
+        "sources": [
+          {
+            "source_id": "K10-2012",
+            "locator": "Recommendation 2.1.1; Table 2; Recommendation 2.3.1"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "The adult has clinical evidence of volume depletion, no congestion, and no urgent electrolyte complication. A colleague asks whether furosemide should be used to improve the kidney result.",
+        "prompts": [
+          "What does a diuretic treat in AKI?",
+          "How would you assess response to the cause-directed plan?"
+        ],
+        "teaching_points": [
+          "Do not use a diuretic simply to reverse AKI; volume overload is a separate indication.",
+          "Treatment should address the identified cause and be reassessed using examination, kidney function, urine output and electrolytes."
+        ],
+        "sources": [
+          {
+            "source_id": "K10-2012",
+            "locator": "Recommendations 3.4.1-3.4.2; 2.3.1-2.3.2"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "After recovery the person is ready to leave acute care. Some regular medicines were temporarily withheld, and the discharge summary currently says only 'medications adjusted'.",
+        "prompts": [
+          "What must a useful restart plan specify?",
+          "What later kidney assessment remains necessary?"
+        ],
+        "teaching_points": [
+          "Specify the medicines, reason for interruption, conditions for review/restart and who will check. A temporary change should not silently become a permanent loss of beneficial treatment.",
+          "Arrange early review for unresolved issues and a three-month kidney assessment for resolution or new/worsened CKD."
+        ],
+        "sources": [
+          {
+            "source_id": "K01-2024",
+            "locator": "Practice Point 4.3.2"
+          },
+          {
+            "source_id": "K10-2012",
+            "locator": "Recommendation 2.3.4"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "Nonoliguric AKI is still AKI.",
+      "Recovery planning includes medicine reconciliation and reassessment of kidney status."
+    ],
+    "sources": [
+      {
+        "source_id": "K10-2012",
+        "locator": "Recommendation 2.1.1; Table 2; Recommendation 2.3.1"
+      },
+      {
+        "source_id": "K10-2012",
+        "locator": "Recommendations 3.4.1-3.4.2; 2.3.1-2.3.2"
+      },
+      {
+        "source_id": "K01-2024",
+        "locator": "Practice Point 4.3.2"
+      },
+      {
+        "source_id": "K10-2012",
+        "locator": "Recommendation 2.3.4"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-CASE-DIALYSIS",
+    "version": 1,
+    "topic_id": "T20",
+    "secondary_topic_ids": [
+      "T08",
+      "T21",
+      "T27"
+    ],
+    "objective_ids": [
+      "T20.O01",
+      "T20.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "Preparing before a complication forces the choice",
+    "summary": "Distinguish kidney replacement preparation from symptom-driven initiation.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic adult with progressive CKD has eGFR 17 and a two-year kidney-failure risk of 48%. Daily function is good and current biochemical abnormalities are manageable. No access or transplant assessment is underway.",
+        "prompts": [
+          "What should be planned now?",
+          "Does planning itself mean dialysis must start today?"
+        ],
+        "teaching_points": [
+          "Discuss modality options, access preparation and preemptive transplant evaluation. The risk and GFR support preparation.",
+          "Preparation is distinct from initiation and preserves choice before an emergency."
+        ],
+        "sources": [
+          {
+            "source_id": "K01-2024",
+            "locator": "Practice Point 5.4.3"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "Several months later the person develops increasing breathlessness and congestion despite tolerated treatment. The eGFR has changed little.",
+        "prompts": [
+          "What must be reassessed besides the eGFR?",
+          "Which complication can support dialysis initiation?"
+        ],
+        "teaching_points": [
+          "Assess symptoms, volume, causes, treatment response, preferences and other abnormalities together.",
+          "Inability to control volume status can support initiation even without a sudden eGFR change."
+        ],
+        "sources": [
+          {
+            "source_id": "K01-2024",
+            "locator": "Practice Points 5.4.1-5.4.2; Table 41"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "The person wants to remain at home if feasible and asks how dialysis will affect work and caregiving. A family member assumes there is only one acceptable modality.",
+        "prompts": [
+          "What belongs in a shared modality discussion?",
+          "How do you avoid treating a preference as a promise of suitability?"
+        ],
+        "teaching_points": [
+          "Explain the available options, practical support, expected burden and the person's goals, with assessment of medical suitability.",
+          "A preference directs evaluation; it does not erase modality constraints or the need for a safe access and training plan."
+        ],
+        "sources": [
+          {
+            "source_id": "K01-2024",
+            "locator": "Practice Point 5.4.1; Practice Point 5.5.1"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "Use risk to prepare, and the full clinical picture to initiate.",
+      "Kidney replacement decisions should preserve the person's informed choices."
+    ],
+    "sources": [
+      {
+        "source_id": "K01-2024",
+        "locator": "Practice Point 5.4.3"
+      },
+      {
+        "source_id": "K01-2024",
+        "locator": "Practice Points 5.4.1-5.4.2; Table 41"
+      },
+      {
+        "source_id": "K01-2024",
+        "locator": "Practice Point 5.4.1; Practice Point 5.5.1"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-CASE-TRANSPLANT",
+    "version": 1,
+    "topic_id": "T21",
+    "secondary_topic_ids": [
+      "T17",
+      "T20"
+    ],
+    "objective_ids": [
+      "T21.O01",
+      "T21.O02",
+      "T17.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "A year to prepare for transplantation",
+    "summary": "Plan preemptive assessment, evaluate risks and use the vaccination window.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic 41-year-old with progressive CKD G4 expects to need kidney replacement within a year. A sibling has offered to learn about donation. The patient has not yet started dialysis.",
+        "prompts": [
+          "When should recipient assessment start?",
+          "What can early referral make possible?"
+        ],
+        "teaching_points": [
+          "Initiate assessment early enough to allow 6-12 months before anticipated dialysis when feasible.",
+          "Early recipient and donor assessment may allow preemptive living-donor transplantation; neither the offer nor referral guarantees eligibility."
+        ],
+        "sources": [
+          {
+            "source_id": "K16-2020",
+            "locator": "Recommendations 1.1.1 and 1.4"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "The candidate also has obesity and is worried this makes assessment pointless. Other operative and functional information has not been gathered.",
+        "prompts": [
+          "Which information is still needed?",
+          "How would you discuss risk without declaring eligibility from BMI alone?"
+        ],
+        "teaching_points": [
+          "Assess surgical suitability, body habitus, function and comorbidities with the transplant team.",
+          "Do not exclude solely because of obesity; discuss modifiable risks and relevant center assessment criteria."
+        ],
+        "sources": [
+          {
+            "source_id": "K16-2020",
+            "locator": "Recommendations 7.1-7.1.1"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "Review finds an indicated live attenuated vaccine has not been given. Transplant timing is elective and the candidate is not currently immunosuppressed.",
+        "prompts": [
+          "How does anticipated immunosuppression affect the timing?",
+          "What interval needs consideration before transplantation?"
+        ],
+        "teaching_points": [
+          "Complete indicated vaccination in the pre-transplant window after checking vaccine-specific eligibility.",
+          "Leave at least four weeks after a live vaccine before transplantation under the candidate guideline; use current specialist advice for the exact vaccine."
+        ],
+        "sources": [
+          {
+            "source_id": "K16-2020",
+            "locator": "Recommendations 10.7.2-10.7.2.1"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "Transplant preparation begins before dialysis.",
+      "Risk assessment and prevention are part of candidate care, not an afterthought."
+    ],
+    "sources": [
+      {
+        "source_id": "K16-2020",
+        "locator": "Recommendations 1.1.1 and 1.4"
+      },
+      {
+        "source_id": "K16-2020",
+        "locator": "Recommendations 7.1-7.1.1"
+      },
+      {
+        "source_id": "K16-2020",
+        "locator": "Recommendations 10.7.2-10.7.2.1"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-CASE-NEPHROTIC",
+    "version": 1,
+    "topic_id": "T10",
+    "secondary_topic_ids": [
+      "T22",
+      "T02"
+    ],
+    "objective_ids": [
+      "T10.O01",
+      "T22.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "An antibody result and the purpose of biopsy",
+    "summary": "Interpret a compatible membranous presentation without making serology answer every question.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic 52-year-old develops edema, proteinuria of 6.2 g/day and serum albumin 24 g/L. eGFR is 82. The person asks whether the normal filtration result means the kidneys are healthy.",
+        "prompts": [
+          "What syndrome is present?",
+          "What does preserved filtration fail to exclude?"
+        ],
+        "teaching_points": [
+          "This is a nephrotic presentation needing cause assessment despite preserved filtration.",
+          "Filtration, protein leakage and tissue diagnosis are different dimensions of kidney assessment."
+        ],
+        "sources": [
+          {
+            "source_id": "K08-2021-remaining",
+            "locator": "Chapter 1; Practice Point 1.1.1"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "Anti-PLA2R antibodies are positive and the presentation is compatible with membranous nephropathy. There are no atypical serologic or clinical findings so far.",
+        "prompts": [
+          "Is tissue required solely to establish this diagnosis?",
+          "Which additional questions might tissue answer?"
+        ],
+        "teaching_points": [
+          "In this compatible setting, a biopsy is not required solely to confirm membranous nephropathy.",
+          "Tissue may still be useful for atypical features, kidney-function decline, prognosis or another unanswered clinical question."
+        ],
+        "sources": [
+          {
+            "source_id": "K08-2021-remaining",
+            "locator": "Practice Point 3.1.1"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "The person assumes the positive antibody excludes every secondary association and means immunosuppression should begin immediately.",
+        "prompts": [
+          "Which parts of the assessment remain open?",
+          "How does a diagnosis differ from a treatment indication?"
+        ],
+        "teaching_points": [
+          "Assess relevant associated conditions even with positive anti-PLA2R.",
+          "Treatment decisions need risk assessment, disease course and safety considerations; antibody positivity is not an automatic prescription."
+        ],
+        "sources": [
+          {
+            "source_id": "K08-2021-remaining",
+            "locator": "Practice Point 3.1.2; Chapter 3 risk assessment"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "A positive disease marker may resolve one diagnostic question without resolving all others.",
+      "Always state what a proposed biopsy is intended to change."
+    ],
+    "sources": [
+      {
+        "source_id": "K08-2021-remaining",
+        "locator": "Chapter 1; Practice Point 1.1.1"
+      },
+      {
+        "source_id": "K08-2021-remaining",
+        "locator": "Practice Point 3.1.1"
+      },
+      {
+        "source_id": "K08-2021-remaining",
+        "locator": "Practice Point 3.1.2; Chapter 3 risk assessment"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-CASE-VASCULITIS",
+    "version": 1,
+    "topic_id": "T16",
+    "secondary_topic_ids": [
+      "T10",
+      "T06",
+      "T22"
+    ],
+    "objective_ids": [
+      "T16.O01",
+      "T16.O02",
+      "T10.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "Biopsy matters, and so does the clock",
+    "summary": "Balance urgent treatment and tissue diagnosis in rapidly progressive kidney vasculitis.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic 67-year-old has a creatinine rise from 105 to 360 micromol/L over a week, hematuria with casts, constitutional symptoms and new pulmonary symptoms.",
+        "prompts": [
+          "What makes this a time-sensitive kidney presentation?",
+          "What alternatives and extra-kidney involvement should be assessed?"
+        ],
+        "teaching_points": [
+          "The rapid deterioration and nephritic findings require urgent specialist assessment.",
+          "Evaluate for systemic vasculitis and important mimics, including infection; assess the pulmonary problem rather than assuming its cause."
+        ],
+        "sources": [
+          {
+            "source_id": "K05-2024-amended",
+            "locator": "Diagnosis section; Practice Point 9.1.1"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "MPO-ANCA is positive. The multidisciplinary assessment finds a strongly compatible small-vessel vasculitis presentation and low suspicion of a mimic. Biopsy can be performed promptly but the report will be delayed.",
+        "prompts": [
+          "How should the report delay affect urgent treatment?",
+          "What qualifications prevent misuse of this principle?"
+        ],
+        "teaching_points": [
+          "Treatment should not be delayed solely while awaiting biopsy or its report in this compatible rapidly deteriorating scenario.",
+          "The rule depends on the full presentation and specialist assessment, not ANCA positivity alone."
+        ],
+        "sources": [
+          {
+            "source_id": "K05-2024-amended",
+            "locator": "Practice Point 9.1.1"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "Treatment begins, and a trainee concludes that tissue no longer has any role. The patient asks why a biopsy is still being discussed.",
+        "prompts": [
+          "What information can histology still provide?",
+          "How would you explain the treatment-before-report decision?"
+        ],
+        "teaching_points": [
+          "Biopsy can support diagnosis and characterize damage, activity and chronicity when safe and useful.",
+          "Urgency and diagnostic value coexist: the decision to begin treatment does not imply the diagnosis is infallible or tissue is irrelevant."
+        ],
+        "sources": [
+          {
+            "source_id": "K05-2024-amended",
+            "locator": "Practice Point 9.1.1; biopsy strategy"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "Do not confuse a necessary urgent decision with diagnostic certainty.",
+      "Tissue diagnosis and treatment timing answer related but different questions."
+    ],
+    "sources": [
+      {
+        "source_id": "K05-2024-amended",
+        "locator": "Diagnosis section; Practice Point 9.1.1"
+      },
+      {
+        "source_id": "K05-2024-amended",
+        "locator": "Practice Point 9.1.1"
+      },
+      {
+        "source_id": "K05-2024-amended",
+        "locator": "Practice Point 9.1.1; biopsy strategy"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-CASE-HYPERK",
+    "version": 1,
+    "topic_id": "T04",
+    "secondary_topic_ids": [
+      "T20",
+      "T07",
+      "T19"
+    ],
+    "objective_ids": [
+      "T04.O01",
+      "T20.O01",
+      "T07.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "Protect, redistribute, remove and reassess",
+    "summary": "Work through a severe potassium disturbance in a dialysis-dependent adult.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic maintenance hemodialysis patient missed treatment during an illness. Potassium is confirmed at 7.6 mmol/L and the ECG has a widening QRS. The patient is in a monitored acute-care setting.",
+        "prompts": [
+          "Which treatment addresses immediate electrical toxicity?",
+          "Why does an ECG abnormality change urgency?"
+        ],
+        "teaching_points": [
+          "Indicated intravenous calcium protects the myocardium; it is not potassium removal.",
+          "Treat the severe disturbance urgently with monitored care while arranging definitive removal."
+        ],
+        "sources": [
+          {
+            "source_id": "G02-hyperkalemia-2023",
+            "locator": "Guidelines 16.2 and 18.1-18.2"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "Insulin-glucose is given while urgent dialysis is being arranged. The first repeat potassium is lower and the person feels better.",
+        "prompts": [
+          "What has insulin changed?",
+          "Which adverse effect can appear after an initially reassuring check?"
+        ],
+        "teaching_points": [
+          "Insulin shifts potassium into cells; the total potassium burden can remain.",
+          "Monitor glucose for several hours for hypoglycemia and potassium for response and rebound."
+        ],
+        "sources": [
+          {
+            "source_id": "G02-hyperkalemia-2023",
+            "locator": "Guidelines 16.3 and 17.1-17.2"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "A team member suggests canceling dialysis because the potassium improved after redistribution. The patient has no functioning renal potassium-clearance reserve.",
+        "prompts": [
+          "What treatment completes the removal step?",
+          "What needs checking after dialysis and after recovery from the illness?"
+        ],
+        "teaching_points": [
+          "Urgent dialysis supplies potassium removal in this severe dialysis-dependent scenario. A transient fall is not a substitute.",
+          "Reassess potassium and the reason for the missed treatment; discuss a feasible plan for access to treatment during future illness."
+        ],
+        "sources": [
+          {
+            "source_id": "G02-hyperkalemia-2023",
+            "locator": "Guidelines 18.1-18.4"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "Cardiac protection, redistribution and removal are distinct tasks.",
+      "A response to treatment does not end monitoring."
+    ],
+    "sources": [
+      {
+        "source_id": "G02-hyperkalemia-2023",
+        "locator": "Guidelines 16.2 and 18.1-18.2"
+      },
+      {
+        "source_id": "G02-hyperkalemia-2023",
+        "locator": "Guidelines 16.3 and 17.1-17.2"
+      },
+      {
+        "source_id": "G02-hyperkalemia-2023",
+        "locator": "Guidelines 18.1-18.4"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-CASE-HYPONA",
+    "version": 1,
+    "topic_id": "T03",
+    "secondary_topic_ids": [
+      "T07",
+      "T27"
+    ],
+    "objective_ids": [
+      "T03.O01",
+      "T03.O02",
+      "T07.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "The sodium number and the neurologic emergency",
+    "summary": "Classify hypotonicity, treat severe symptoms and avoid uncontrolled correction.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic 46-year-old develops confusion and then a seizure. Sodium is 116 mmol/L, measured serum osmolality is 246 mOsm/kg, and glucose is normal. No exogenous effective osmole is identified.",
+        "prompts": [
+          "How would you classify tonicity?",
+          "Can all etiologic testing wait until after stabilization?"
+        ],
+        "teaching_points": [
+          "The findings establish hypotonic hyponatremia in this specified setting.",
+          "Severe attributable neurologic symptoms require urgent monitored treatment; collect relevant diagnostic samples promptly when feasible without delaying stabilization."
+        ],
+        "sources": [
+          {
+            "source_id": "G01-hyponatremia-2014",
+            "locator": "Sections 6.2 and 7.1.1"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "After initial monitored hypertonic treatment, symptoms improve with a modest sodium rise. The underlying medication and fluid-intake history are being reconstructed.",
+        "prompts": [
+          "Why is immediate complete normalization not the goal?",
+          "What should subsequent monitoring detect?"
+        ],
+        "teaching_points": [
+          "The early goal is control of dangerous symptoms, while limiting cumulative correction to reduce demyelination risk.",
+          "Frequent sodium reassessment and attention to urine output help identify an unexpectedly rapid rise."
+        ],
+        "sources": [
+          {
+            "source_id": "G01-hyponatremia-2014",
+            "locator": "Sections 7.1.2 and 7.5"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "Water excretion increases during recovery and sodium is rising faster than planned. The treating team reassesses the infusion and the correction trajectory.",
+        "prompts": [
+          "What factors can cause correction to accelerate even after saline is stopped?",
+          "What needs urgent senior review?"
+        ],
+        "teaching_points": [
+          "An emerging water diuresis can accelerate sodium correction as the cause of antidiuresis resolves.",
+          "Review cumulative correction, risk factors and the need for expert-directed measures to prevent or manage overcorrection. Exact rescue treatment belongs to the monitored clinical protocol."
+        ],
+        "sources": [
+          {
+            "source_id": "G01-hyponatremia-2014",
+            "locator": "Section 7.5: management of overly rapid correction"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "Etiology matters, but severe symptoms set immediate priorities.",
+      "The trajectory of correction is as important as the starting sodium."
+    ],
+    "sources": [
+      {
+        "source_id": "G01-hyponatremia-2014",
+        "locator": "Sections 6.2 and 7.1.1"
+      },
+      {
+        "source_id": "G01-hyponatremia-2014",
+        "locator": "Sections 7.1.2 and 7.5"
+      },
+      {
+        "source_id": "G01-hyponatremia-2014",
+        "locator": "Section 7.5: management of overly rapid correction"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-CASE-ACIDOSIS",
+    "version": 1,
+    "topic_id": "T04",
+    "secondary_topic_ids": [
+      "T08",
+      "T19",
+      "T27"
+    ],
+    "objective_ids": [
+      "T04.O02",
+      "T19.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "Correcting acidosis without worsening congestion",
+    "summary": "Evaluate persistent low bicarbonate and monitor benefits and harms of alkali.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic adult with CKD G4 has bicarbonate 16-17 mmol/L on repeated stable-state measurements. The clinical assessment is addressing alternative explanations and nutritional status. There is no acute cardiopulmonary emergency.",
+        "prompts": [
+          "Why should chronic treatment not be selected from one result alone?",
+          "What makes this a treatment discussion rather than an automatic prescription?"
+        ],
+        "teaching_points": [
+          "Confirm persistence and assess the context of the acid-base disturbance.",
+          "KDIGO suggests considering treatment for clinically important acidosis, with bicarbonate below 18 as an adult example; a practice point carries a different evidence status from a graded outcome claim."
+        ],
+        "sources": [
+          {
+            "source_id": "K01-2024",
+            "locator": "Practice Point 3.10.1"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "Oral alkali is chosen after discussion. Bicarbonate improves, but weight and blood pressure rise and ankle edema develops.",
+        "prompts": [
+          "Does the improved bicarbonate prove treatment success?",
+          "Which monitoring domains need attention?"
+        ],
+        "teaching_points": [
+          "Biochemical correction must be balanced against treatment effects on fluid status and blood pressure.",
+          "Review bicarbonate, potassium, BP and congestion, with adjustment of the plan rather than dose escalation based only on bicarbonate."
+        ],
+        "sources": [
+          {
+            "source_id": "K01-2024",
+            "locator": "Practice Point 3.10.2"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "The patient asks whether reaching a high bicarbonate value guarantees preservation of kidney function.",
+        "prompts": [
+          "How would you describe the treatment goal and evidence limits?",
+          "What would make the plan acceptable over time?"
+        ],
+        "teaching_points": [
+          "Do not exceed the upper normal bicarbonate limit or promise an individual kidney-failure benefit.",
+          "Aim for an appropriate individualized correction with tolerable fluid, potassium and BP effects and ongoing reassessment."
+        ],
+        "sources": [
+          {
+            "source_id": "K01-2024",
+            "locator": "Practice Points 3.10.1-3.10.2"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "Monitor treatment harms alongside the number being corrected.",
+      "Teach the evidence status without making a promise the source does not support."
+    ],
+    "sources": [
+      {
+        "source_id": "K01-2024",
+        "locator": "Practice Point 3.10.1"
+      },
+      {
+        "source_id": "K01-2024",
+        "locator": "Practice Point 3.10.2"
+      },
+      {
+        "source_id": "K01-2024",
+        "locator": "Practice Points 3.10.1-3.10.2"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-CASE-MBD",
+    "version": 1,
+    "topic_id": "T05",
+    "secondary_topic_ids": [
+      "T08",
+      "T19"
+    ],
+    "objective_ids": [
+      "T05.O01",
+      "T05.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "PTH is a trend, not a prescription",
+    "summary": "Interpret CKD-MBD jointly and distinguish nondialysis decisions from dialysis pathways.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic adult with CKD G3b not on dialysis has a mildly increased PTH on one sample. Calcium is normal and phosphate has remained normal. A trainee proposes immediate calcitriol.",
+        "prompts": [
+          "Which results and trends should be considered together?",
+          "What modifiable contributors need assessment?"
+        ],
+        "teaching_points": [
+          "Review serial calcium, phosphate and PTH rather than interpreting one PTH value alone.",
+          "Consider vitamin D status, intake and other modifiable factors before deciding on treatment."
+        ],
+        "sources": [
+          {
+            "source_id": "K13-2017",
+            "locator": "Recommendations 4.1.1 and 4.2.1"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "Repeated values show only modest PTH elevation, with no severe progressive hyperparathyroidism and no hyperphosphatemia.",
+        "prompts": [
+          "Is routine active vitamin D justified by this pattern?",
+          "Would a preventive phosphate binder fit the guidance?"
+        ],
+        "teaching_points": [
+          "Do not routinely prescribe calcitriol or analogs in nondialysis adult G3a-G5; severe progressive G4-G5 hyperparathyroidism is a distinct context.",
+          "Phosphate-lowering treatment is driven by progressively or persistently elevated phosphate rather than a normal level."
+        ],
+        "sources": [
+          {
+            "source_id": "K13-2017",
+            "locator": "Recommendations 4.2.2 and 4.1.5"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "The patient wants a simple explanation of why repeat testing is useful when none of the numbers is dramatic.",
+        "prompts": [
+          "What can a trend reveal that a single value cannot?",
+          "How would you agree a follow-up plan without overpromising?"
+        ],
+        "teaching_points": [
+          "Trends show persistence, direction and effects of interventions; calcium, phosphate and PTH influence each other.",
+          "Explain the purpose of monitoring and the clinical changes that would prompt a different decision."
+        ],
+        "sources": [
+          {
+            "source_id": "K13-2017",
+            "locator": "Recommendations 3.1.4 and 4.1.1"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "Use joint serial interpretation.",
+      "An abnormal result does not always imply benefit from immediately lowering it."
+    ],
+    "sources": [
+      {
+        "source_id": "K13-2017",
+        "locator": "Recommendations 4.1.1 and 4.2.1"
+      },
+      {
+        "source_id": "K13-2017",
+        "locator": "Recommendations 4.2.2 and 4.1.5"
+      },
+      {
+        "source_id": "K13-2017",
+        "locator": "Recommendations 3.1.4 and 4.1.1"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-CASE-DIABETES",
+    "version": 1,
+    "topic_id": "T14",
+    "secondary_topic_ids": [
+      "T09",
+      "T19",
+      "T08"
+    ],
+    "objective_ids": [
+      "T14.O01",
+      "T14.O02",
+      "T09.O01",
+      "T19.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "Layering protection and checking tolerance",
+    "summary": "Plan treatment for diabetic CKD without treating every creatinine change as a reason to stop.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic adult with type 2 diabetes has eGFR 44, ACR 390 mg/g and hypertension. A rushed clinic BP reading is higher than the home readings. RAS blockade has been proposed.",
+        "prompts": [
+          "How should the measurement discrepancy be evaluated?",
+          "What baseline monitoring supports treatment?"
+        ],
+        "teaching_points": [
+          "Use standardized office measurement and appropriate out-of-office information; a rushed value is not interchangeable with the standardized target.",
+          "Review BP, kidney function, potassium and contraindications before treatment, and explain the monitoring plan."
+        ],
+        "sources": [
+          {
+            "source_id": "K11-2021",
+            "locator": "Recommendations 1.1-1.2"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "After an indicated ACE inhibitor dose change, creatinine is 18% above baseline at two weeks, potassium remains normal and the person has no hypotensive symptoms.",
+        "prompts": [
+          "Does this change alone require stopping the medicine?",
+          "What should be checked before interpreting it?"
+        ],
+        "teaching_points": [
+          "A rise below 30% in this time frame does not itself meet the KDIGO threshold prompting discontinuation; assess the full context and continue monitoring.",
+          "Review volume, intercurrent illness, interacting medicines, potassium and tolerance rather than assuming the drug has caused irreversible injury."
+        ],
+        "sources": [
+          {
+            "source_id": "K01-2024",
+            "locator": "Practice Points 3.6.2-3.6.5"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "Persistent albuminuria remains, and the person asks about additional kidney-protective treatment and an upcoming operation with fasting.",
+        "prompts": [
+          "What does layered treatment add to the discussion?",
+          "What safety plan is needed if an SGLT2 inhibitor is used?"
+        ],
+        "teaching_points": [
+          "Discuss an eligible SGLT2 inhibitor and, where appropriate, an evidence-based nonsteroidal MRA with potassium monitoring rather than adding dual RAS blockade.",
+          "Explain interruption during prolonged fasting, surgery or critical illness and a documented restart review."
+        ],
+        "sources": [
+          {
+            "source_id": "K01-2024",
+            "locator": "Recommendations 3.7.1-3.7.2 and 3.8.1; Practice Point 3.7.2"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "Measurement quality and tolerance are part of treatment selection.",
+      "Layer protection while making monitoring and temporary interruption explicit."
+    ],
+    "sources": [
+      {
+        "source_id": "K11-2021",
+        "locator": "Recommendations 1.1-1.2"
+      },
+      {
+        "source_id": "K01-2024",
+        "locator": "Practice Points 3.6.2-3.6.5"
+      },
+      {
+        "source_id": "K01-2024",
+        "locator": "Recommendations 3.7.1-3.7.2 and 3.8.1; Practice Point 3.7.2"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-CASE-ADPKD",
+    "version": 1,
+    "topic_id": "T12",
+    "secondary_topic_ids": [
+      "T06",
+      "T19"
+    ],
+    "objective_ids": [
+      "T12.O01",
+      "T12.O02",
+      "T19.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "Progression risk and the tolvaptan sick-day plan",
+    "summary": "Connect disease-modifying eligibility to aquaresis education and interruption planning.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic 36-year-old with confirmed ADPKD has eGFR 62. Serial and imaging assessment supports rapid progression after other causes of declining kidney function are considered. The patient asks whether every person with cysts should take tolvaptan.",
+        "prompts": [
+          "What establishes the appropriate treatment population?",
+          "What eligibility and risk checks remain?"
+        ],
+        "teaching_points": [
+          "Confirmed ADPKD and risk of rapid progression distinguish the eligible population from incidental cysts.",
+          "The guideline recommends initiation in adults with eGFR at least 25 and rapid-progression risk, after contraindication and individualized benefit-risk assessment."
+        ],
+        "sources": [
+          {
+            "source_id": "K03-2025",
+            "locator": "Recommendation 4.1.1.1; Practice Points 4.1.1.1-4.1.2.1"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "The person starts treatment and reports frequent urination, thirst and nocturia. They have an occupation with occasional limited access to drinking water.",
+        "prompts": [
+          "How would you explain the mechanism-related burden?",
+          "What practical safety education should be given?"
+        ],
+        "teaching_points": [
+          "Tolvaptan increases urinary water losses, so access to water and adequate replacement are central to tolerability and safety.",
+          "Discuss daily activities, adverse effects, required liver monitoring and how to respond when water replacement or monitoring is not possible."
+        ],
+        "sources": [
+          {
+            "source_id": "K03-2025",
+            "locator": "Practice Points 4.1.4.1-4.1.5.1"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "During a vomiting illness the patient cannot drink enough. A friend suggests continuing the medicine because missed doses will always be dangerous.",
+        "prompts": [
+          "What does the interruption plan say?",
+          "What information should guide restarting?"
+        ],
+        "teaching_points": [
+          "Interrupt treatment in volume-depleting illness or inability to compensate for aquaresis; this is the purpose of a sick-day plan.",
+          "Seek advice, assess recovery and hydration, and document the conditions for resumption rather than continuing through dehydration."
+        ],
+        "sources": [
+          {
+            "source_id": "K03-2025",
+            "locator": "Practice Points 4.1.4.3-4.1.4.4"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "Risk-based selection and monitoring are integral to disease-modifying treatment.",
+      "An interruption plan protects the patient when usual hydration is not possible."
+    ],
+    "sources": [
+      {
+        "source_id": "K03-2025",
+        "locator": "Recommendation 4.1.1.1; Practice Points 4.1.1.1-4.1.2.1"
+      },
+      {
+        "source_id": "K03-2025",
+        "locator": "Practice Points 4.1.4.1-4.1.5.1"
+      },
+      {
+        "source_id": "K03-2025",
+        "locator": "Practice Points 4.1.4.3-4.1.4.4"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-CASE-SUPPORTIVE",
+    "version": 1,
+    "topic_id": "T26",
+    "secondary_topic_ids": [
+      "T20",
+      "T24",
+      "T25"
+    ],
+    "objective_ids": [
+      "T26.O01",
+      "T20.O02",
+      "T24.O01",
+      "T25.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "What matters when treatment is burdensome",
+    "summary": "Discuss active conservative care and avoid nutrition rules that ignore frailty.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic older adult with kidney failure, frailty and weight loss values comfort and time at home. They ask whether choosing not to start dialysis means their kidney team will stop seeing them.",
+        "prompts": [
+          "How would you explain comprehensive conservative care?",
+          "Which goals and support needs should be elicited?"
+        ],
+        "teaching_points": [
+          "Conservative care is active symptom management and support without dialysis, not abandonment.",
+          "Discuss goals, symptoms, function, family or social support and preferences for future care."
+        ],
+        "sources": [
+          {
+            "source_id": "K01-2024",
+            "locator": "Practice Points 5.5.1-5.5.2; Table 43"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "A family member proposes a very low-protein diet despite the person's poor appetite and ongoing weight loss.",
+        "prompts": [
+          "How does nutritional instability change the decision?",
+          "Who can help individualize the plan?"
+        ],
+        "teaching_points": [
+          "A restrictive regimen can add harm in frailty or nutritional instability; do not apply nondialysis targets without assessing the patient.",
+          "Use individualized dietetic assessment, balancing symptom control and nutrition with the person's goals."
+        ],
+        "sources": [
+          {
+            "source_id": "K01-2024",
+            "locator": "Practice Points 3.3.1.3 and 3.3.1.5"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "The person makes an informed conservative-care choice but wants the option to revisit preferences if circumstances change.",
+        "prompts": [
+          "What should ongoing care and planning include?",
+          "How can the team preserve agency?"
+        ],
+        "teaching_points": [
+          "Continue symptom-focused care, support and advance care planning with clear contact and follow-up arrangements.",
+          "Document the person's priorities and review them as circumstances change. Decisions should not be treated as a reason to withhold useful communication or care."
+        ],
+        "sources": [
+          {
+            "source_id": "K01-2024",
+            "locator": "Practice Points 5.5.1-5.5.2; Table 43"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "Conservative kidney care is a positive active care plan.",
+      "Nutrition and treatment burden should be judged in the person's life context."
+    ],
+    "sources": [
+      {
+        "source_id": "K01-2024",
+        "locator": "Practice Points 5.5.1-5.5.2; Table 43"
+      },
+      {
+        "source_id": "K01-2024",
+        "locator": "Practice Points 3.3.1.3 and 3.3.1.5"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-CASE-LUPUS",
+    "version": 1,
+    "topic_id": "T16",
+    "secondary_topic_ids": [
+      "T10",
+      "T22"
+    ],
+    "objective_ids": [
+      "T16.O01",
+      "T10.O01",
+      "T22.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "Preserved filtration does not settle a lupus kidney question",
+    "summary": "Use urine findings and tissue evaluation to investigate possible lupus nephritis.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic 29-year-old with SLE has preserved eGFR but newly detected urine protein and hematuria. They ask whether a normal creatinine rules out kidney involvement.",
+        "prompts": [
+          "Which screening domains are relevant?",
+          "What can creatinine alone fail to show?"
+        ],
+        "teaching_points": [
+          "Assess urine, protein excretion, kidney function and relevant serology together.",
+          "Preserved filtration does not exclude an active glomerular process."
+        ],
+        "sources": [
+          {
+            "source_id": "K06-2024",
+            "locator": "Practice Point 10.1.1; Figure 1"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "Protein excretion is confirmed at 0.9 g/day and urinary sediment remains abnormal. There is no alternative explanation after initial assessment.",
+        "prompts": [
+          "Why should biopsy be considered?",
+          "Is the protein threshold a substitute for the full assessment?"
+        ],
+        "teaching_points": [
+          "The diagnostic pathway suggests considering biopsy at proteinuria at least 500 mg/day in the appropriate context.",
+          "Integrate the pattern, persistence, kidney function and clinical setting rather than treating one threshold as an automatic rule."
+        ],
+        "sources": [
+          {
+            "source_id": "K06-2024",
+            "locator": "Figure 1; diagnosis section"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "The patient wants to understand why blood tests have not already specified the treatment pathway.",
+        "prompts": [
+          "What information can tissue add?",
+          "How would you explain the difference between suspicion and classification?"
+        ],
+        "teaching_points": [
+          "Biopsy characterizes the kidney lesion and can assess activity and chronicity, supporting management decisions.",
+          "Serology and urine findings can establish a reason to investigate without specifying the histologic class."
+        ],
+        "sources": [
+          {
+            "source_id": "K06-2024",
+            "locator": "Diagnosis section; kidney biopsy assessment"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "Normal filtration does not exclude lupus kidney involvement.",
+      "Tissue evaluation can change what a kidney diagnosis means for treatment."
+    ],
+    "sources": [
+      {
+        "source_id": "K06-2024",
+        "locator": "Practice Point 10.1.1; Figure 1"
+      },
+      {
+        "source_id": "K06-2024",
+        "locator": "Figure 1; diagnosis section"
+      },
+      {
+        "source_id": "K06-2024",
+        "locator": "Diagnosis section; kidney biopsy assessment"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN11-CASE-PROXIMAL",
+    "version": 1,
+    "topic_id": "T11",
+    "secondary_topic_ids": [
+      "T18",
+      "T02",
+      "T22"
+    ],
+    "objective_ids": [
+      "T11.O01",
+      "T18.O01",
+      "T18.O02",
+      "T02.O02",
+      "T22.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "Protein that an albumin test misses",
+    "summary": "Localize tubular losses and investigate a possible monoclonal kidney lesion without assuming causality.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic 61-year-old has fatigue, hypophosphatemia and urinary glucose despite normal plasma glucose. PCR is 2.9 g/g and ACR is 0.18 g/g.",
+        "prompts": [
+          "Which findings localize the problem?",
+          "What does the ACR/PCR discrepancy add?"
+        ],
+        "teaching_points": [
+          "The glucose/phosphate pattern suggests inappropriate proximal losses.",
+          "Total protein substantially exceeding albumin calls for characterization of nonalbumin proteins rather than dismissal of proteinuria."
+        ],
+        "sources": [
+          {
+            "source_id": "L01-IKMG-evaluation-2019",
+            "locator": "Light-chain proximal tubulopathy; monoclonal immunoglobulin testing"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "Blood and urine testing identify a small monoclonal component. There is no established hematologic malignancy diagnosis.",
+        "prompts": [
+          "Can a small clone matter to the kidney?",
+          "Which alternative interpretation must remain open?"
+        ],
+        "teaching_points": [
+          "A small clone can produce a pathogenic protein; malignancy thresholds do not define renal harmlessness.",
+          "A monoclonal component can also be incidental. The circulating protein must be linked to the renal process."
+        ],
+        "sources": [
+          {
+            "source_id": "L01-IKMG-evaluation-2019",
+            "locator": "Definition and evaluation of MGRS"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "A kidney/hematology discussion considers tissue assessment and the patient's procedural risk.",
+        "prompts": [
+          "What does biopsy add beyond a serum spike?",
+          "Which pathology methods may be needed?"
+        ],
+        "teaching_points": [
+          "Tissue can characterize the renal lesion and help establish the link with the clone.",
+          "Light microscopy, appropriate immunofluorescence and electron microscopy are complementary; a single method can miss relevant features."
+        ],
+        "sources": [
+          {
+            "source_id": "L01-IKMG-evaluation-2019",
+            "locator": "Renal biopsy evaluation"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "A normal glucose concentration does not explain away glycosuria.",
+      "A monoclonal result is a lead to investigate, not automatic renal causality."
+    ],
+    "sources": [
+      {
+        "source_id": "L01-IKMG-evaluation-2019",
+        "locator": "Light-chain proximal tubulopathy; monoclonal immunoglobulin testing"
+      },
+      {
+        "source_id": "L01-IKMG-evaluation-2019",
+        "locator": "Definition and evaluation of MGRS"
+      },
+      {
+        "source_id": "L01-IKMG-evaluation-2019",
+        "locator": "Renal biopsy evaluation"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Assistant primary section and cross-domain scenario check; stage-to-source review; synthetic patient and original teaching discussion. Evidence identity: RN11-CASE-PROXIMAL.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN11-CASE-OBSTRUCTION",
+    "version": 1,
+    "topic_id": "T13",
+    "secondary_topic_ids": [
+      "T17",
+      "T06",
+      "T07",
+      "T27"
+    ],
+    "objective_ids": [
+      "T13.O01",
+      "T17.O02",
+      "T06.O02",
+      "T27.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "Sepsis behind an obstructed collecting system",
+    "summary": "Connect infection, obstruction and kidney support; separate urgent source control from later stone prevention.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic adult has flank pain, fever, hypotension and imaging-confirmed obstruction. The contralateral kidney looks normal.",
+        "prompts": [
+          "What makes this different from uncomplicated renal colic?",
+          "Does the other kidney remove the urgency?"
+        ],
+        "teaching_points": [
+          "Suspected infected obstruction requires urgent coordinated resuscitation, antibiotics and drainage assessment.",
+          "A normal other kidney does not eliminate a dangerous infected obstructed source."
+        ],
+        "sources": [
+          {
+            "source_id": "L01-CUA-ureteral-2021",
+            "locator": "Conservative management: obstructive pyelonephritis"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "Urine output falls and potassium begins to rise while the source-control plan is organized.",
+        "prompts": [
+          "Which problems must be assessed in parallel?",
+          "Which action addresses the source rather than only a biochemical consequence?"
+        ],
+        "teaching_points": [
+          "Assess circulation, urine output, electrolytes and evolving AKI while treating infection and obstruction.",
+          "KRT can support urgent physiologic needs, but it does not mechanically drain the infected urinary tract."
+        ],
+        "sources": [
+          {
+            "source_id": "K10-2012-expansion",
+            "locator": "Sections 2.3 and 5.1: cause evaluation and emergent KRT indications"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "After recovery, the patient asks whether the stone should be managed exactly like an asymptomatic stone found incidentally.",
+        "prompts": [
+          "How should the episode be documented for follow-up?",
+          "Which decisions belong after stabilization?"
+        ],
+        "teaching_points": [
+          "Record the infection/obstruction episode and the intervention, with a clear urology/kidney follow-up handoff.",
+          "Definitive stone management and recurrence assessment follow the acute source-control episode rather than replacing it."
+        ],
+        "sources": [
+          {
+            "source_id": "L01-CUA-ureteral-2021",
+            "locator": "Obstructive pyelonephritis: definitive treatment after infection treatment"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "Treat the obstructed infected source as well as systemic consequences.",
+      "Kidney support and urologic source control solve different problems."
+    ],
+    "sources": [
+      {
+        "source_id": "L01-CUA-ureteral-2021",
+        "locator": "Conservative management: obstructive pyelonephritis"
+      },
+      {
+        "source_id": "K10-2012-expansion",
+        "locator": "Sections 2.3 and 5.1: cause evaluation and emergent KRT indications"
+      },
+      {
+        "source_id": "L01-CUA-ureteral-2021",
+        "locator": "Obstructive pyelonephritis: definitive treatment after infection treatment"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Assistant primary section and cross-domain scenario check; stage-to-source review; synthetic patient and original teaching discussion. Evidence identity: RN11-CASE-OBSTRUCTION.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN11-CASE-TMA",
+    "version": 1,
+    "topic_id": "T15",
+    "secondary_topic_ids": [
+      "T16",
+      "T06",
+      "T23",
+      "T27"
+    ],
+    "objective_ids": [
+      "T15.O01",
+      "T15.O02",
+      "T23.O02",
+      "T27.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "A syndrome is not yet its mechanism",
+    "summary": "Recognize TMA and protect diagnostic sampling while coordinating urgent specialist treatment.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic adult has thrombocytopenia, schistocytes, biochemical hemolysis and acute kidney dysfunction.",
+        "prompts": [
+          "Which syndrome does the combination suggest?",
+          "Which etiologic labels cannot yet be assumed?"
+        ],
+        "teaching_points": [
+          "The combination suggests a thrombotic microangiopathy.",
+          "TTP, complement-mediated disease and secondary mechanisms can overlap clinically; renal injury alone does not distinguish them."
+        ],
+        "sources": [
+          {
+            "source_id": "L01-ISTH-TTP-diagnosis-2020",
+            "locator": "Introduction: TTP/HUS distinction and ADAMTS13"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "The hematology team considers TTP highly probable and urgent plasma exchange.",
+        "prompts": [
+          "Which diagnostic sample should be obtained first if promptly feasible?",
+          "Should care wait for the laboratory result?"
+        ],
+        "teaching_points": [
+          "Collect ADAMTS13 activity/inhibitor testing before replacement plasma changes the measurement.",
+          "The high-probability urgent pathway does not wait for the result; sampling and treatment must be coordinated without harmful delay."
+        ],
+        "sources": [
+          {
+            "source_id": "L01-ISTH-TTP-diagnosis-2020",
+            "locator": "Recommendation 1, steps 1-2"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "The pretreatment sample shows severe ADAMTS13 deficiency with an inhibitor. The patient also needs support for a dangerous electrolyte disturbance.",
+        "prompts": [
+          "How does the result refine the mechanism?",
+          "Why are kidney support and plasma exchange not interchangeable?"
+        ],
+        "teaching_points": [
+          "Severe deficiency with an inhibitor supports immune-mediated TTP in the compatible syndrome.",
+          "Kidney support treats fluid/solute consequences; the plasma-directed pathway addresses a different disease mechanism."
+        ],
+        "sources": [
+          {
+            "source_id": "L01-ISTH-TTP-diagnosis-2020",
+            "locator": "Introduction and Recommendation 1: severe deficiency and inhibitor evaluation"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "TMA recognition is the start of etiologic assessment.",
+      "Preserve pretreatment evidence without delaying time-critical specialist care."
+    ],
+    "sources": [
+      {
+        "source_id": "L01-ISTH-TTP-diagnosis-2020",
+        "locator": "Introduction: TTP/HUS distinction and ADAMTS13"
+      },
+      {
+        "source_id": "L01-ISTH-TTP-diagnosis-2020",
+        "locator": "Recommendation 1, steps 1-2"
+      },
+      {
+        "source_id": "L01-ISTH-TTP-diagnosis-2020",
+        "locator": "Introduction and Recommendation 1: severe deficiency and inhibitor evaluation"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Assistant primary section and cross-domain scenario check; stage-to-source review; synthetic patient and original teaching discussion. Evidence identity: RN11-CASE-TMA.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN11-CASE-STONE-ACID",
+    "version": 1,
+    "topic_id": "T11",
+    "secondary_topic_ids": [
+      "T04",
+      "T13",
+      "T05"
+    ],
+    "objective_ids": [
+      "T11.O01",
+      "T04.O02",
+      "T13.O02",
+      "T05.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "An acidification defect behind recurrent stones",
+    "summary": "Integrate persistent urine findings, acid-base measurements and calcium-phosphate stones.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic adult has recurrent calcium-phosphate stones, hypokalemia and low serum bicarbonate. There is no diarrhea or current urinary infection.",
+        "prompts": [
+          "What kidney mechanism belongs in the differential?",
+          "What information distinguishes a pattern from a confirmed diagnosis?"
+        ],
+        "teaching_points": [
+          "Consider a distal acidification defect alongside other causes.",
+          "Confirm the systemic acid-base pattern and persistent inappropriate urine pH rather than diagnosing from one alkaline sample."
+        ],
+        "sources": [
+          {
+            "source_id": "G01-ERKNet-dRTA-2021",
+            "locator": "Diagnosis and pathophysiology"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "Repeat results show a normal anion gap and urine pH remaining above 6 during systemic acidosis.",
+        "prompts": [
+          "Why is urine pH inappropriate here?",
+          "How does this differ from proximal solute wasting?"
+        ],
+        "teaching_points": [
+          "A functioning acidification response should lower urine pH during acidosis; confounders and timing must be checked.",
+          "Normoglycemic glycosuria and phosphate wasting point to a different tubular localization and need separate assessment."
+        ],
+        "sources": [
+          {
+            "source_id": "G01-ERKNet-dRTA-2021",
+            "locator": "Diagnostic criteria; proximal versus distal acidification defects"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "Stone testing reports hypocitraturia, and the patient asks why the kidney team is also asking about bone health.",
+        "prompts": [
+          "How can acid-base and stone/bone findings connect?",
+          "Why is treatment more than removing the latest stone?"
+        ],
+        "teaching_points": [
+          "The acidification disorder can accompany hypocitraturia, calcium-phosphate stones and skeletal effects.",
+          "An individualized metabolic plan addresses the underlying disorder and recurrence risk, with monitoring of electrolytes and nutrition."
+        ],
+        "sources": [
+          {
+            "source_id": "L01-CUA-stones-2022",
+            "locator": "Index patient 2: calcium phosphate stones and distal RTA"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "Persistent acid-base and urine patterns can localize a tubular disorder.",
+      "Stone composition, citrate and bone concerns can be parts of the same process."
+    ],
+    "sources": [
+      {
+        "source_id": "G01-ERKNet-dRTA-2021",
+        "locator": "Diagnosis and pathophysiology"
+      },
+      {
+        "source_id": "G01-ERKNet-dRTA-2021",
+        "locator": "Diagnostic criteria; proximal versus distal acidification defects"
+      },
+      {
+        "source_id": "L01-CUA-stones-2022",
+        "locator": "Index patient 2: calcium phosphate stones and distal RTA"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Assistant primary section and cross-domain scenario check; stage-to-source review; synthetic patient and original teaching discussion. Evidence identity: RN11-CASE-STONE-ACID.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN11-CASE-PD-VOLUME",
+    "version": 1,
+    "topic_id": "T20",
+    "secondary_topic_ids": [
+      "T23",
+      "T03",
+      "T25"
+    ],
+    "objective_ids": [
+      "T20.O02",
+      "T23.O01",
+      "T25.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "Small-solute clearance and fluid balance diverge",
+    "summary": "Interpret peritoneal transport and residual kidney function without reducing dialysis care to one metric.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic peritoneal dialysis patient has an acceptable small-solute metric but increasing edema and declining daily urine output.",
+        "prompts": [
+          "Which contributions to fluid removal should be reviewed?",
+          "What does the small-solute result fail to establish?"
+        ],
+        "teaching_points": [
+          "Review peritoneal ultrafiltration, residual kidney function, intake and the clinical volume state.",
+          "One clearance metric cannot establish satisfactory fluid balance or overall treatment."
+        ],
+        "sources": [
+          {
+            "source_id": "G02-peritoneal-dialysis-2017",
+            "locator": "Sections 3-4: solute clearance and ultrafiltration/fluid management"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "Membrane testing indicates fast solute transport, and a long glucose dwell yields little net ultrafiltration.",
+        "prompts": [
+          "What happens to the glucose osmotic gradient?",
+          "Which information helps tailor the prescription?"
+        ],
+        "teaching_points": [
+          "Faster glucose absorption can dissipate the driving gradient early in a long dwell.",
+          "Transport characteristics, delivered exchanges, fluid response and patient circumstances guide prescription review."
+        ],
+        "sources": [
+          {
+            "source_id": "G02-peritoneal-dialysis-2017",
+            "locator": "Section 4: fast transport and ultrafiltration"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "The patient has also lost appetite. A relative suggests severe fluid and protein restriction without involving the dialysis team.",
+        "prompts": [
+          "How should symptoms and nutrition affect the next plan?",
+          "What would make a follow-up plan assessable?"
+        ],
+        "teaching_points": [
+          "Balance volume management with nutrition, treatment tolerance and the person's priorities.",
+          "Define monitoring of symptoms, weight/volume, ultrafiltration and residual function, with responsibility for reassessment."
+        ],
+        "sources": [
+          {
+            "source_id": "G02-haemodialysis-2019",
+            "locator": "Guidelines 1 and 4.1: holistic adequacy and fluid assessment"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "Fluid balance and small-solute clearance are related but different outcomes.",
+      "Changes in residual function and membrane transport should trigger a whole-patient review."
+    ],
+    "sources": [
+      {
+        "source_id": "G02-peritoneal-dialysis-2017",
+        "locator": "Sections 3-4: solute clearance and ultrafiltration/fluid management"
+      },
+      {
+        "source_id": "G02-peritoneal-dialysis-2017",
+        "locator": "Section 4: fast transport and ultrafiltration"
+      },
+      {
+        "source_id": "G02-haemodialysis-2019",
+        "locator": "Guidelines 1 and 4.1: holistic adequacy and fluid assessment"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Assistant primary section and cross-domain scenario check; stage-to-source review; synthetic patient and original teaching discussion. Evidence identity: RN11-CASE-PD-VOLUME.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN11-CASE-PREGNANCY",
+    "version": 1,
+    "topic_id": "T24",
+    "secondary_topic_ids": [
+      "T01",
+      "T08",
+      "T09",
+      "T22",
+      "T27"
+    ],
+    "objective_ids": [
+      "T24.O01",
+      "T24.O02",
+      "T01.O01",
+      "T22.O02",
+      "T27.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "When baseline CKD complicates pregnancy assessment",
+    "summary": "Use pregnancy-valid kidney measurements and reassess new maternal changes without automatic attribution.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic pregnant adult with CKD is referred at 12 weeks. The laboratory prints an eGFR beside the serum creatinine.",
+        "prompts": [
+          "Which filtration information is appropriate to follow?",
+          "Which baseline measurements will help later interpretation?"
+        ],
+        "teaching_points": [
+          "Pregnancy normally increases filtration and lowers serum creatinine, so a value ordinary outside pregnancy can require assessment in pregnancy.",
+          "Use serum creatinine and its trend; routine eGFR equations are not validated in pregnancy.",
+          "Document prior kidney function, proteinuria, BP and the clinical phenotype with obstetric/kidney coordination."
+        ],
+        "sources": [
+          {
+            "source_id": "G02-pregnancy-renal-2019",
+            "locator": "Recommendation 4.1.1"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "At 16 weeks, unexplained new findings make a histologic diagnosis potentially important to treatment.",
+        "prompts": [
+          "What management question should justify biopsy?",
+          "How does timing enter the risk-benefit discussion?"
+        ],
+        "teaching_points": [
+          "Ask whether tissue will change management rather than merely confirm an abnormal result.",
+          "The guideline permits selected biopsy in the first or early second trimester with a specialist risk-benefit assessment."
+        ],
+        "sources": [
+          {
+            "source_id": "G02-pregnancy-renal-2019",
+            "locator": "Recommendation 4.8.1"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "Later, after 20 weeks, new hypertension and maternal organ dysfunction develop.",
+        "prompts": [
+          "Which obstetric-kidney differential must be revisited?",
+          "Why does existing proteinuria not settle the issue?"
+        ],
+        "teaching_points": [
+          "Consider superimposed preeclampsia and assess the full maternal/fetal picture.",
+          "Baseline CKD/proteinuria complicates interpretation but does not exclude a new pregnancy-associated process."
+        ],
+        "sources": [
+          {
+            "source_id": "G02-pregnancy-renal-2019",
+            "locator": "Recommendations 4.4.5-4.4.6"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "Pregnancy changes the validity of familiar kidney measurements.",
+      "A prior CKD diagnosis does not explain every later maternal abnormality."
+    ],
+    "sources": [
+      {
+        "source_id": "G02-pregnancy-renal-2019",
+        "locator": "Recommendation 4.1.1"
+      },
+      {
+        "source_id": "G02-pregnancy-renal-2019",
+        "locator": "Recommendation 4.8.1"
+      },
+      {
+        "source_id": "G02-pregnancy-renal-2019",
+        "locator": "Recommendations 4.4.5-4.4.6"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Assistant primary section and cross-domain scenario check; stage-to-source review; synthetic patient and original teaching discussion. Evidence identity: RN11-CASE-PREGNANCY.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN11-CASE-CARDIORENAL",
+    "version": 1,
+    "topic_id": "T27",
+    "secondary_topic_ids": [
+      "T14",
+      "T19",
+      "T08",
+      "T04",
+      "T01"
+    ],
+    "objective_ids": [
+      "T27.O01",
+      "T27.O02",
+      "T14.O01",
+      "T19.O02",
+      "T01.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "A changing kidney estimate during heart and diabetes treatment",
+    "summary": "Separate expected hemodynamics from intercurrent illness and make a coordinated medication plan.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic adult with diabetic CKD and heart failure starts an SGLT2 inhibitor. At early review the creatinine has risen slightly, symptoms are stable and the patient has no postural dizziness.",
+        "prompts": [
+          "Which treatment effect belongs in the interpretation?",
+          "What would make the same laboratory change more concerning?"
+        ],
+        "teaching_points": [
+          "A modest reversible hemodynamic filtration change can follow SGLT2 inhibition; the laboratory trend needs its clinical context.",
+          "Volume loss, hypotension, new illness or a disproportionate decline changes the assessment. A recognizable early effect does not exclude another problem."
+        ],
+        "sources": [
+          {
+            "source_id": "K09-2022-expansion",
+            "locator": "Practice Points 1.3.4-1.3.5: volume assessment and reversible eGFR dip"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "Weeks later, vomiting and poor intake occur. Creatinine is now rising rapidly, and several medicines still have doses selected from the earlier stable eGFR.",
+        "prompts": [
+          "Why is the printed eGFR less secure for current dosing?",
+          "How should the team approach the medicine list?"
+        ],
+        "teaching_points": [
+          "A changing marker concentration can lag the evolving filtration state; the number is not a measured instantaneous clearance.",
+          "Review the acute physiology, each medicine's indication/clearance and interacting exposures. Use appropriate monitoring rather than copying the old outpatient doses."
+        ],
+        "sources": [
+          {
+            "source_id": "K01-2024-expansion",
+            "locator": "Practice Points 4.2.5 and 4.3.1: nonsteady-state dosing and medication review"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "After recovery, discharge planning involves kidney, diabetes and heart teams. Some treatments were held and potassium needs reassessment.",
+        "prompts": [
+          "Which details prevent an accidental permanent discontinuation?",
+          "What makes the cross-specialty plan coherent?"
+        ],
+        "teaching_points": [
+          "Record why each hold occurred, what recovery/monitoring is required, and who will decide and communicate resumption.",
+          "Balance continuing indications with potassium, BP, volume and kidney trends in one reconciled plan that the patient can follow."
+        ],
+        "sources": [
+          {
+            "source_id": "K01-2024-expansion",
+            "locator": "Practice Points 3.6.3 and 4.3.2: potassium review and restart communication"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "A filtration estimate is interpreted with its kinetics and clinical setting.",
+      "A temporary hold needs a visible reassessment and resumption plan across teams."
+    ],
+    "sources": [
+      {
+        "source_id": "K09-2022-expansion",
+        "locator": "Practice Points 1.3.4-1.3.5: volume assessment and reversible eGFR dip"
+      },
+      {
+        "source_id": "K01-2024-expansion",
+        "locator": "Practice Points 4.2.5 and 4.3.1: nonsteady-state dosing and medication review"
+      },
+      {
+        "source_id": "K01-2024-expansion",
+        "locator": "Practice Points 3.6.3 and 4.3.2: potassium review and restart communication"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Assistant primary section and cross-domain scenario check; stage-to-source review; synthetic patient and original teaching discussion. Evidence identity: RN11-CASE-CARDIORENAL.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN11-CASE-NEPHROTIC-RISK",
+    "version": 1,
+    "topic_id": "T10",
+    "secondary_topic_ids": [
+      "T02",
+      "T22",
+      "T26",
+      "T27",
+      "T19"
+    ],
+    "objective_ids": [
+      "T10.O02",
+      "T02.O01",
+      "T26.O02",
+      "T27.O02",
+      "T19.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "Different signals during nephrotic recovery",
+    "summary": "Integrate serologic response, protein loss and competing thrombosis/bleeding risks without equating one marker with the whole outcome.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic adult with PLA2R-associated membranous disease has falling antibody levels after treatment, while urine protein remains substantial at the next early visit.",
+        "prompts": [
+          "Are immunologic and clinical response the same event?",
+          "Which trends belong together at review?"
+        ],
+        "teaching_points": [
+          "Immunologic improvement can precede recovery of the protein-leak phenotype.",
+          "Follow antibodies, proteinuria, serum albumin, filtration and complications with treatment exposure rather than labeling one early mismatch as definitive failure."
+        ],
+        "sources": [
+          {
+            "source_id": "K08-2021-remaining-expansion",
+            "locator": "Figure 30 caption, printed S130; Practice Point 3.3.4, S133: immunologic monitoring and clinical-response lag"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "The patient has marked hypoalbuminemia but also a recently treated serious gastrointestinal bleed. Preventive anticoagulation is raised at the multidisciplinary review.",
+        "prompts": [
+          "Which competing risks determine the prophylaxis discussion?",
+          "Why is an albumin threshold alone insufficient?"
+        ],
+        "teaching_points": [
+          "Estimate thromboembolism risk against serious-bleeding risk in this individual.",
+          "A nephrotic risk marker does not remove the importance of recent bleeding, the clinical course or a distinction between prevention and treatment of a confirmed event."
+        ],
+        "sources": [
+          {
+            "source_id": "K08-2021-remaining-expansion",
+            "locator": "Practice Point 1.7.1, printed S101; Practice Point 3.4.5, S138: individualized thromboprophylaxis balance"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "At follow-up, the patient asks whether improved antibodies mean all kidney and general follow-up can stop.",
+        "prompts": [
+          "Which outcomes still need observation?",
+          "How can uncertainty be explained without inventing a predicted recovery date?"
+        ],
+        "teaching_points": [
+          "Clinical protein loss, filtration, nutrition and complications can evolve after a serologic change.",
+          "Explain the observed trends and the next review criteria. Distinguish what has improved from outcomes that remain unresolved."
+        ],
+        "sources": [
+          {
+            "source_id": "K08-2021-remaining-expansion",
+            "locator": "Chapter 3.3: longitudinal membranous response and complication assessment"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "Clinical and immunologic response can follow different time courses.",
+      "Disease-related clotting risk and treatment-related bleeding risk need a shared individualized decision."
+    ],
+    "sources": [
+      {
+        "source_id": "K08-2021-remaining-expansion",
+        "locator": "Figure 30 caption, printed S130; Practice Point 3.3.4, S133: immunologic monitoring and clinical-response lag"
+      },
+      {
+        "source_id": "K08-2021-remaining-expansion",
+        "locator": "Practice Point 1.7.1, printed S101; Practice Point 3.4.5, S138: individualized thromboprophylaxis balance"
+      },
+      {
+        "source_id": "K08-2021-remaining-expansion",
+        "locator": "Chapter 3.3: longitudinal membranous response and complication assessment"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Assistant primary section and cross-domain scenario check; stage-to-source review; synthetic patient and original teaching discussion. Evidence identity: RN11-CASE-NEPHROTIC-RISK.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN11-CASE-DONOR-GOALS",
+    "version": 1,
+    "topic_id": "T21",
+    "secondary_topic_ids": [
+      "T02",
+      "T24",
+      "T09",
+      "T26",
+      "T01"
+    ],
+    "objective_ids": [
+      "T21.O01",
+      "T21.O02",
+      "T02.O01",
+      "T24.O01",
+      "T26.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "Measurements, future pregnancy and a voluntary donor decision",
+    "summary": "Use donor-specific kidney measurements and counseling while protecting a capable person's freedom to choose.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic potential donor has favorable confirmed GFR, but a high initial ACR was collected after exercise. Subsequent confirmed albumin excretion is 42 mg/day.",
+        "prompts": [
+          "Why confirm the initial measurement?",
+          "Which donor albuminuria category applies to the confirmed result?"
+        ],
+        "teaching_points": [
+          "Sample conditions and the creatinine denominator can affect a ratio; donor assessment uses appropriate confirmation.",
+          "AER 30-100 mg/day is an individualized donor-risk decision. Favorable GFR does not make the albumin finding irrelevant."
+        ],
+        "sources": [
+          {
+            "source_id": "K15-2017-donor",
+            "locator": "Recommendations 6.1-6.6, printed S42: donor albumin assessment"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "The candidate hopes for a future pregnancy and has questions about whether donation is automatically prohibited.",
+        "prompts": [
+          "What distinguishes eligibility from risk counseling?",
+          "Which pregnancy risks need an informed discussion?"
+        ],
+        "teaching_points": [
+          "Future conception alone does not exclude donation; the complete profile and timing are assessed.",
+          "Discuss the greater likelihood of gestational hypertension or preeclampsia and review relevant prior pregnancy/vascular history without guaranteeing an outcome."
+        ],
+        "sources": [
+          {
+            "source_id": "K15-2017-donor",
+            "locator": "Recommendations 15.4-15.11, printed S78: future pregnancy and counseling"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "In a private conversation, the candidate describes family pressure and says they are not sure they want to proceed.",
+        "prompts": [
+          "What must remain voluntary after medical evaluation?",
+          "How should a withdrawal request be handled?"
+        ],
+        "teaching_points": [
+          "A medical-risk assessment does not replace informed voluntary consent.",
+          "Protect confidential withdrawal and support communication with the family; the recipient's need does not override the donor's choice."
+        ],
+        "sources": [
+          {
+            "source_id": "K15-2017-donor",
+            "locator": "Recommendations 2.1-2.8, printed S27: consent and withdrawal"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "Donor thresholds concern defined measures within a broader individualized assessment.",
+      "Medical suitability, counseling and voluntary choice are separate essential parts of the decision."
+    ],
+    "sources": [
+      {
+        "source_id": "K15-2017-donor",
+        "locator": "Recommendations 6.1-6.6, printed S42: donor albumin assessment"
+      },
+      {
+        "source_id": "K15-2017-donor",
+        "locator": "Recommendations 15.4-15.11, printed S78: future pregnancy and counseling"
+      },
+      {
+        "source_id": "K15-2017-donor",
+        "locator": "Recommendations 2.1-2.8, printed S27: consent and withdrawal"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Assistant primary section and cross-domain scenario check; stage-to-source review; synthetic patient and original teaching discussion. Evidence identity: RN11-CASE-DONOR-GOALS.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN11-CASE-HOME-BP",
+    "version": 1,
+    "topic_id": "T09",
+    "secondary_topic_ids": [
+      "T08",
+      "T02",
+      "T01",
+      "T26",
+      "T27"
+    ],
+    "objective_ids": [
+      "T09.O01",
+      "T08.O01",
+      "T08.O02",
+      "T02.O01",
+      "T26.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "When measurement settings change the kidney-risk picture",
+    "summary": "Confirm BP and urine trends before using categories and predictions to build a follow-up plan.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic adult with established CKD has standardized clinic BP 118/72 mmHg, while a week of home readings averages 148/85. The home device and technique have not yet been checked.",
+        "prompts": [
+          "What must be verified before interpreting the discrepancy?",
+          "Which out-of-office pattern could matter if it is confirmed?"
+        ],
+        "teaching_points": [
+          "Review device validation, cuff fit, timing and technique, with appropriate repeat/home or ambulatory assessment.",
+          "Higher reproducible out-of-office readings can reveal masked hypertension; a reassuring clinic visit does not settle the whole pattern."
+        ],
+        "sources": [
+          {
+            "source_id": "K11-2021-expansion",
+            "locator": "Recommendations 1.1-1.2 and rationale: standardized and complementary out-of-office BP"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "The initial ACR was 430 mg/g during a symptomatic urinary infection. A suitable repeat is 180 mg/g. eGFR has remained near 58 for more than a year.",
+        "prompts": [
+          "Which part of the CKD picture is already chronic?",
+          "How should the changing albumin result be documented?"
+        ],
+        "teaching_points": [
+          "Persistent filtration below 60 establishes chronic dysfunction independently of the high initial ACR.",
+          "Record measurement conditions and quantitative trends. Infection can affect albumin measurements, and one category should not be treated as the permanent maximum."
+        ],
+        "sources": [
+          {
+            "source_id": "K01-2024-expansion",
+            "locator": "Tables 1-3 and Table 16, printed S154: CKD classification and urine variability"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "After measurements are reconciled, the clinic proposes a kidney-failure risk estimate and coordinated vascular-risk review.",
+        "prompts": [
+          "What should be explained about a prediction tool?",
+          "What makes the follow-up plan more useful than a single score?"
+        ],
+        "teaching_points": [
+          "State the predicted outcome, time horizon and validated population; a numerical probability does not establish a causal diagnosis or treatment preference.",
+          "Link the observed BP, albumin and filtration pattern to agreed monitoring and modifiable risks, with clear responsibility for reassessment."
+        ],
+        "sources": [
+          {
+            "source_id": "K01-2024-expansion",
+            "locator": "Recommendation 2.2.1 and Practice Points 2.2.4-2.2.5: risk-model application"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "Measurement validity comes before category and prediction interpretation.",
+      "BP, albumin and filtration supply related but different information for coordinated kidney and vascular care."
+    ],
+    "sources": [
+      {
+        "source_id": "K11-2021-expansion",
+        "locator": "Recommendations 1.1-1.2 and rationale: standardized and complementary out-of-office BP"
+      },
+      {
+        "source_id": "K01-2024-expansion",
+        "locator": "Tables 1-3 and Table 16, printed S154: CKD classification and urine variability"
+      },
+      {
+        "source_id": "K01-2024-expansion",
+        "locator": "Recommendation 2.2.1 and Practice Points 2.2.4-2.2.5: risk-model application"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Assistant primary section and cross-domain scenario check; stage-to-source review; synthetic patient and original teaching discussion. Evidence identity: RN11-CASE-HOME-BP.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN11-CASE-CRRT-DELIVERY",
+    "version": 1,
+    "topic_id": "T07",
+    "secondary_topic_ids": [
+      "T23",
+      "T06",
+      "T05",
+      "T25",
+      "T26"
+    ],
+    "objective_ids": [
+      "T07.O01",
+      "T07.O02",
+      "T23.O01",
+      "T25.O02",
+      "T26.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "The prescribed circuit and the support actually delivered",
+    "summary": "Connect dose arithmetic, circuit function, recovery and nutrition during acute kidney support.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic critically ill adult receives CRRT prescribed at 25 mL/kg/h, but circuit downtime totals eight hours in the first 24-hour period.",
+        "prompts": [
+          "What average rate would that schedule deliver if flow is otherwise as prescribed?",
+          "Which operational problems should be investigated?"
+        ],
+        "teaching_points": [
+          "The time-averaged delivery is 25 x 16/24, about 16.7 mL/kg/h. A written prescription is not proof of the intended delivered dose.",
+          "Review access, interruptions, circuit clotting and actual flows, alongside metabolic/fluid needs and the method of dose measurement."
+        ],
+        "sources": [
+          {
+            "source_id": "K10-2012-expansion",
+            "locator": "Recommendation 5.8.4 and rationale: delivered CRRT dose and interruptions"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "The team reviews a regional-citrate protocol as part of a circuit strategy and asks why calcium measurements are included.",
+        "prompts": [
+          "How does citrate affect circuit coagulation?",
+          "Why must circuit and systemic calcium be distinguished?"
+        ],
+        "teaching_points": [
+          "Citrate lowers available ionized calcium in the circuit, impairing calcium-dependent coagulation.",
+          "The patient's systemic calcium and metabolic handling still require protocol-guided support/monitoring. A circuit mechanism does not establish a safe patient-specific prescription by itself."
+        ],
+        "sources": [
+          {
+            "source_id": "K10-2012-expansion",
+            "locator": "Section 5.3.2: citrate anticoagulation mechanism and monitoring"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "Later the acute illness improves. Laboratory values look acceptable on support, and the family asks whether sharply restricting protein would avoid any further KRT.",
+        "prompts": [
+          "How should readiness to stop support be assessed?",
+          "What is the nutritional reasoning error?"
+        ],
+        "teaching_points": [
+          "Assess whether intrinsic function can meet current solute, electrolyte and fluid needs; corrected results during support do not independently prove recovery.",
+          "Do not make nutritional deprivation a substitute for needed support. Recovery, intake and the acute nutritional state deserve their own assessment."
+        ],
+        "sources": [
+          {
+            "source_id": "K10-2012-expansion",
+            "locator": "Recommendations 5.2.1 and 3.3.3: stopping KRT and avoiding protein restriction to delay it"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "Delivered time and circuit behavior matter as much as the nominal dose.",
+      "Recovery assessment and nutritional support should not be reduced to an on-treatment laboratory value."
+    ],
+    "sources": [
+      {
+        "source_id": "K10-2012-expansion",
+        "locator": "Recommendation 5.8.4 and rationale: delivered CRRT dose and interruptions"
+      },
+      {
+        "source_id": "K10-2012-expansion",
+        "locator": "Section 5.3.2: citrate anticoagulation mechanism and monitoring"
+      },
+      {
+        "source_id": "K10-2012-expansion",
+        "locator": "Recommendations 5.2.1 and 3.3.3: stopping KRT and avoiding protein restriction to delay it"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Assistant primary section and cross-domain scenario check; stage-to-source review; synthetic patient and original teaching discussion. Evidence identity: RN11-CASE-CRRT-DELIVERY.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN11-CASE-LUPUS-REASSESSMENT",
+    "version": 1,
+    "topic_id": "T16",
+    "secondary_topic_ids": [
+      "T10",
+      "T15",
+      "T22",
+      "T17",
+      "T26"
+    ],
+    "objective_ids": [
+      "T16.O01",
+      "T16.O02",
+      "T15.O01",
+      "T22.O02",
+      "T17.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "An incomplete response is a question to investigate",
+    "summary": "Distinguish residual immune activity, chronic injury and a new vascular pattern before equating proteinuria with a treatment choice.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "A synthetic adult treated for lupus nephritis has persistent proteinuria. The team is unsure whether treatment exposure was adequate and whether chronic damage explains part of the result.",
+        "prompts": [
+          "Which information should be reviewed before declaring refractory inflammation?",
+          "When might tissue reassessment have value?"
+        ],
+        "teaching_points": [
+          "Review adherence, treatment exposure and the serial clinical/urine/kidney-function pattern.",
+          "Consider repeat biopsy when distinguishing active inflammation, chronicity or another lesion would change management; it is not mandatory for every abnormal follow-up sample."
+        ],
+        "sources": [
+          {
+            "source_id": "K06-2024-expansion",
+            "locator": "Practice Point 10.2.5.2.1, Figure 12 and Section 10.2.5.3, printed S46-S47"
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "Reassessment tissue includes a TMA pattern. New thrombocytopenia and hemolysis prompt a coordinated hematology/kidney review.",
+        "prompts": [
+          "What does the pattern establish?",
+          "Which mechanism still needs investigation?"
+        ],
+        "teaching_points": [
+          "It identifies microvascular injury, not a single causal pathway.",
+          "Assess TTP/ADAMTS13, antiphospholipid and complement-related or other secondary mechanisms in the clinical context. The tissue label alone does not choose a universal treatment."
+        ],
+        "sources": [
+          {
+            "source_id": "K06-2024-expansion",
+            "locator": "Practice Point 10.3.1.1 and rationale, printed S47-S48: lupus with TMA"
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "While an individualized treatment plan is considered, the team reconciles infection testing, vaccination and past exposures with the patient.",
+        "prompts": [
+          "Why is historical vaccination alone not the whole safety assessment?",
+          "How can disease urgency and infection risk be coordinated?"
+        ],
+        "teaching_points": [
+          "Prior/current infections and reactivation risk require appropriate testing and exposure review; vaccine history answers a different question.",
+          "Coordinate kidney, hematology and infection expertise around the actual findings and urgency rather than treating a positive historical label as automatic lifelong exclusion from care."
+        ],
+        "sources": [
+          {
+            "source_id": "K08-2021-remaining-expansion",
+            "locator": "Practice Points 1.8.1-1.8.2: infection screening around immunosuppression"
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "Persistent proteinuria is not a direct readout of current histologic activity.",
+      "A new TMA pattern needs etiologic assessment alongside the person's immune and infection context."
+    ],
+    "sources": [
+      {
+        "source_id": "K06-2024-expansion",
+        "locator": "Practice Point 10.2.5.2.1, Figure 12 and Section 10.2.5.3, printed S46-S47"
+      },
+      {
+        "source_id": "K06-2024-expansion",
+        "locator": "Practice Point 10.3.1.1 and rationale, printed S47-S48: lupus with TMA"
+      },
+      {
+        "source_id": "K08-2021-remaining-expansion",
+        "locator": "Practice Points 1.8.1-1.8.2: infection screening around immunosuppression"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Assistant primary section and cross-domain scenario check; stage-to-source review; synthetic patient and original teaching discussion. Evidence identity: RN11-CASE-LUPUS-REASSESSMENT.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  }
+]

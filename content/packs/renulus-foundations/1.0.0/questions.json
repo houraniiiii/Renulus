@@ -1,0 +1,3031 @@
+[
+  {
+    "id": "RN-CKD-001",
+    "version": 1,
+    "family_id": "RN-CKD-001.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T08",
+    "secondary_topic_ids": [
+      "T02"
+    ],
+    "objective_ids": [
+      "T08.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A previously well 48-year-old has a first eGFR result of 52 mL/min/1.73 m2 during gastroenteritis. There are no earlier results or structural findings. What is the best interpretation?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Kidney dysfunction is present, but CKD chronicity is not yet established.",
+        "rationale": "Review prior results and other chronicity evidence, assess acute illness, and arrange appropriate repeat testing. A first abnormal result can reflect AKI or AKD; persistence or other evidence is needed to establish CKD."
+      },
+      {
+        "id": "B",
+        "text": "One eGFR below 60 proves CKD.",
+        "rationale": "An isolated result does not establish persistence for at least three months."
+      },
+      {
+        "id": "C",
+        "text": "CKD can be excluded because the patient feels well.",
+        "rationale": "Symptoms do not reliably identify or exclude CKD."
+      },
+      {
+        "id": "D",
+        "text": "The eGFR establishes the cause as diabetic kidney disease.",
+        "rationale": "A filtration estimate cannot establish the underlying cause."
+      }
+    ],
+    "answer": "A",
+    "rationale": "Review prior results and other chronicity evidence, assess acute illness, and arrange appropriate repeat testing. A first abnormal result can reflect AKI or AKD; persistence or other evidence is needed to establish CKD.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K01-2024",
+        "locator": "Practice Points 1.1.3.1-1.1.3.2"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-CKD-002",
+    "version": 1,
+    "family_id": "RN-CKD-002.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T08",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T08.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "Repeated measurements over six months show eGFR 34 mL/min/1.73 m2 and urine ACR 650 mg/g. The cause is still being investigated. Which GFR/albuminuria classification is correct?",
+    "options": [
+      {
+        "id": "A",
+        "text": "G3a A2",
+        "rationale": "G3a is 45-59 and A2 is 30-300 mg/g; neither matches these results."
+      },
+      {
+        "id": "B",
+        "text": "G3b A3",
+        "rationale": "The persistent eGFR lies in G3b (30-44); ACR exceeds the A3 boundary of 300 mg/g. Describe cause separately rather than inferring it from these categories."
+      },
+      {
+        "id": "C",
+        "text": "G4 A3",
+        "rationale": "G4 requires an eGFR of 15-29, not 34."
+      },
+      {
+        "id": "D",
+        "text": "G3b A1",
+        "rationale": "ACR 650 mg/g is severely increased albuminuria, not A1."
+      }
+    ],
+    "answer": "B",
+    "rationale": "The persistent eGFR lies in G3b (30-44); ACR exceeds the A3 boundary of 300 mg/g. Describe cause separately rather than inferring it from these categories.",
+    "difficulty": "foundation",
+    "sources": [
+      {
+        "source_id": "K01-2024",
+        "locator": "Tables 1-3: CKD, GFR and albuminuria categories"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-CKD-003",
+    "version": 1,
+    "family_id": "RN-CKD-003.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T08",
+    "secondary_topic_ids": [
+      "T02"
+    ],
+    "objective_ids": [
+      "T08.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult without urinary infection has an incidental random urine ACR of 85 mg/g. Which sample is preferred to confirm this finding?",
+    "options": [
+      {
+        "id": "A",
+        "text": "A urine dipstick alone.",
+        "rationale": "A less quantitative test does not adequately confirm an increased ACR."
+      },
+      {
+        "id": "B",
+        "text": "Serum albumin alone.",
+        "rationale": "Serum albumin does not quantify albumin excretion in urine."
+      },
+      {
+        "id": "C",
+        "text": "A subsequent first-morning midstream urine ACR.",
+        "rationale": "Confirm an increased random ACR with a first-morning sample and consider transient influences. Confirmation of albuminuria and establishment of CKD chronicity are related but separate tasks."
+      },
+      {
+        "id": "D",
+        "text": "A creatinine measurement without another urine test.",
+        "rationale": "Filtration and albuminuria describe different aspects of kidney disease."
+      }
+    ],
+    "answer": "C",
+    "rationale": "Confirm an increased random ACR with a first-morning sample and consider transient influences. Confirmation of albuminuria and establishment of CKD chronicity are related but separate tasks.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K01-2024",
+        "locator": "Practice Point 1.3.1.2"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-CKD-004",
+    "version": 1,
+    "family_id": "RN-CKD-004.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T08",
+    "secondary_topic_ids": [
+      "T01",
+      "T02"
+    ],
+    "objective_ids": [
+      "T08.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A stable adult with CKD, several chronic conditions and reduced muscle mass needs a more reliable GFR estimate for a treatment decision. Cystatin C testing is available. Which approach improves on creatinine alone?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Assume a low creatinine proves normal filtration.",
+        "rationale": "Low muscle mass can lower creatinine despite impaired filtration."
+      },
+      {
+        "id": "B",
+        "text": "Use the serum creatinine number as the GFR.",
+        "rationale": "A concentration is not a filtration rate."
+      },
+      {
+        "id": "C",
+        "text": "Diagnose kidney failure solely from muscle wasting.",
+        "rationale": "Muscle wasting changes interpretation but does not itself diagnose kidney failure."
+      },
+      {
+        "id": "D",
+        "text": "Estimate GFR using both creatinine and cystatin C, while considering non-GFR influences.",
+        "rationale": "Combining filtration markers can improve estimation when creatinine is unreliable. Neither marker is free of non-GFR determinants; measured GFR may be needed if the remaining uncertainty affects a major decision."
+      }
+    ],
+    "answer": "D",
+    "rationale": "Combining filtration markers can improve estimation when creatinine is unreliable. Neither marker is free of non-GFR determinants; measured GFR may be needed if the remaining uncertainty affects a major decision.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K01-2024",
+        "locator": "Recommendation 1.1.2.1; Recommendation 1.2.2.1"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-CKD-005",
+    "version": 1,
+    "family_id": "RN-CKD-005.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T08",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T08.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A person with CKD G3b asks about the chance of kidney failure. Which approach best supports counseling and planning?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Use an externally validated kidney-failure risk equation appropriate to this population.",
+        "rationale": "Validated absolute-risk estimates in CKD G3-G5 can support referral and preparation alongside clinical assessment. They estimate risk over a defined interval and do not predict an exact dialysis date."
+      },
+      {
+        "id": "B",
+        "text": "Apply the same probability to everyone with G3b.",
+        "rationale": "Risk varies with factors including albuminuria and other equation inputs."
+      },
+      {
+        "id": "C",
+        "text": "Predict dialysis timing from today's creatinine alone.",
+        "rationale": "One concentration does not provide a calibrated absolute-risk estimate."
+      },
+      {
+        "id": "D",
+        "text": "Use a G3-G5 equation unchanged for every person with G1 disease.",
+        "rationale": "An equation's validated population and scope matter."
+      }
+    ],
+    "answer": "A",
+    "rationale": "Validated absolute-risk estimates in CKD G3-G5 can support referral and preparation alongside clinical assessment. They estimate risk over a defined interval and do not predict an exact dialysis date.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K01-2024",
+        "locator": "Recommendation 2.2.1; Practice Point 2.2.4"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-CKD-006",
+    "version": 1,
+    "family_id": "RN-CKD-006.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T08",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T08.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A stable adult without diabetes has CKD, eGFR 38 mL/min/1.73 m2 and ACR 480 mg/g despite appropriate care. There is no contraindication. Which statement about SGLT2 inhibition is supported by KDIGO 2024?",
+    "options": [
+      {
+        "id": "A",
+        "text": "It is useful only when diabetes is present.",
+        "rationale": "The adult CKD recommendation includes people without diabetes."
+      },
+      {
+        "id": "B",
+        "text": "It is recommended for kidney protection in this eGFR and albuminuria range even without diabetes.",
+        "rationale": "The recommendation covers adults with eGFR at least 20 and ACR at least 200 mg/g, or heart failure irrespective of albuminuria. Eligibility still requires individual safety assessment and counseling."
+      },
+      {
+        "id": "C",
+        "text": "It should first be started after maintenance dialysis begins.",
+        "rationale": "This scenario is eligible nondialysis CKD; it does not establish use on dialysis."
+      },
+      {
+        "id": "D",
+        "text": "Its only purpose is to lower serum glucose.",
+        "rationale": "Its kidney and cardiovascular effects extend beyond glucose lowering."
+      }
+    ],
+    "answer": "B",
+    "rationale": "The recommendation covers adults with eGFR at least 20 and ACR at least 200 mg/g, or heart failure irrespective of albuminuria. Eligibility still requires individual safety assessment and counseling.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K01-2024",
+        "locator": "Recommendation 3.7.2"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-AKI-001",
+    "version": 1,
+    "family_id": "RN-AKI-001.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T06",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T06.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "Creatinine rises from 80 to 112 micromol/L in 36 hours after an acute illness. Urine output is not known. Does this meet the creatinine definition of AKI?",
+    "options": [
+      {
+        "id": "A",
+        "text": "No, because creatinine has not doubled.",
+        "rationale": "Doubling is not required for the AKI definition."
+      },
+      {
+        "id": "B",
+        "text": "No, because urine output was not recorded.",
+        "rationale": "The creatinine criterion can establish AKI independently."
+      },
+      {
+        "id": "C",
+        "text": "Yes: the absolute increase exceeds 26.5 micromol/L within 48 hours.",
+        "rationale": "The increase is 32 micromol/L over 36 hours. It meets the absolute creatinine criterion even though the rise is less than 1.5-fold; staging and cause assessment still follow."
+      },
+      {
+        "id": "D",
+        "text": "Yes, and the value alone establishes stage 3.",
+        "rationale": "This relative and absolute increase does not establish stage 3."
+      }
+    ],
+    "answer": "C",
+    "rationale": "The increase is 32 micromol/L over 36 hours. It meets the absolute creatinine criterion even though the rise is less than 1.5-fold; staging and cause assessment still follow.",
+    "difficulty": "foundation",
+    "sources": [
+      {
+        "source_id": "K10-2012",
+        "locator": "Recommendation 2.1.1"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-AKI-002",
+    "version": 1,
+    "family_id": "RN-AKI-002.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T06",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T06.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "In four days an adult's creatinine rises from 90 to 225 micromol/L. Urine output is maintained and no kidney replacement therapy has begun. What is the creatinine-based AKI stage?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Stage 1",
+        "rationale": "A 2.5-fold rise exceeds the stage 1 relative-creatinine range."
+      },
+      {
+        "id": "B",
+        "text": "Stage 3",
+        "rationale": "There is no threefold rise, qualifying absolute stage-3 level or initiation of KRT here."
+      },
+      {
+        "id": "C",
+        "text": "No AKI because urine output is maintained.",
+        "rationale": "Nonoliguric AKI can satisfy the creatinine criteria."
+      },
+      {
+        "id": "D",
+        "text": "Stage 2",
+        "rationale": "225 divided by 90 is 2.5. A rise to 2.0-2.9 times baseline is stage 2 by creatinine; a higher urine-output stage would take precedence if present."
+      }
+    ],
+    "answer": "D",
+    "rationale": "225 divided by 90 is 2.5. A rise to 2.0-2.9 times baseline is stage 2 by creatinine; a higher urine-output stage would take precedence if present.",
+    "difficulty": "foundation",
+    "sources": [
+      {
+        "source_id": "K10-2012",
+        "locator": "Table 2: AKI staging"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-AKI-003",
+    "version": 1,
+    "family_id": "RN-AKI-003.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T06",
+    "secondary_topic_ids": [
+      "T07"
+    ],
+    "objective_ids": [
+      "T06.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A monitored adult produces 0.4 mL/kg/hour of urine for eight consecutive hours. Creatinine has not yet risen. Which interpretation is correct?",
+    "options": [
+      {
+        "id": "A",
+        "text": "This meets the urine-output criterion for stage 1 AKI.",
+        "rationale": "Output below 0.5 mL/kg/hour for 6-12 hours meets stage 1. Check measurement reliability, perfusion and obstruction rather than waiting for creatinine to rise."
+      },
+      {
+        "id": "B",
+        "text": "AKI requires a creatinine rise as well.",
+        "rationale": "Either the creatinine or urine-output criterion can establish AKI."
+      },
+      {
+        "id": "C",
+        "text": "Any low hourly output immediately establishes stage 3.",
+        "rationale": "Severity depends on the degree and duration of oliguria."
+      },
+      {
+        "id": "D",
+        "text": "Eight hours of this output meets stage 2 by duration.",
+        "rationale": "The stage 2 oliguria duration is at least 12 hours."
+      }
+    ],
+    "answer": "A",
+    "rationale": "Output below 0.5 mL/kg/hour for 6-12 hours meets stage 1. Check measurement reliability, perfusion and obstruction rather than waiting for creatinine to rise.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K10-2012",
+        "locator": "Recommendation 2.1.1; Table 2"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-AKI-004",
+    "version": 1,
+    "family_id": "RN-AKI-004.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T06",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T06.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult with AKI is euvolemic and has no pulmonary edema. A colleague proposes furosemide solely to speed kidney recovery. What is the best response?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Use high-dose furosemide to convert AKI into normal kidney function.",
+        "rationale": "Increased urine volume is not proof of recovery or a reason for routine diuretic treatment."
+      },
+      {
+        "id": "B",
+        "text": "Do not use a diuretic solely to treat AKI; consider it when managing volume overload.",
+        "rationale": "Diuretics do not treat the underlying AKI simply by increasing urine output. Their appropriate role includes volume management, with response and hemodynamics monitored."
+      },
+      {
+        "id": "C",
+        "text": "Diuretics are forbidden even with refractory fluid overload.",
+        "rationale": "Volume overload is an important exception to the general recommendation."
+      },
+      {
+        "id": "D",
+        "text": "A diuretic makes cause assessment unnecessary.",
+        "rationale": "Reversible causes still need investigation and treatment."
+      }
+    ],
+    "answer": "B",
+    "rationale": "Diuretics do not treat the underlying AKI simply by increasing urine output. Their appropriate role includes volume management, with response and hemodynamics monitored.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K10-2012",
+        "locator": "Recommendations 3.4.1-3.4.2"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-AKI-005",
+    "version": 1,
+    "family_id": "RN-AKI-005.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T06",
+    "secondary_topic_ids": [
+      "T07"
+    ],
+    "objective_ids": [
+      "T06.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A critically ill adult is offered low-dose dopamine specifically to prevent or treat AKI, rather than for a hemodynamic indication. Which statement is correct?",
+    "options": [
+      {
+        "id": "A",
+        "text": "It is recommended because any rise in urine output proves protection.",
+        "rationale": "A physiologic urine-output effect does not establish improved kidney outcomes."
+      },
+      {
+        "id": "B",
+        "text": "It replaces evaluation of hypotension and infection.",
+        "rationale": "Underlying systemic causes still require treatment."
+      },
+      {
+        "id": "C",
+        "text": "Low-dose dopamine is not recommended for AKI prevention or treatment.",
+        "rationale": "The KDIGO recommendation rejects low-dose dopamine as a kidney-protective AKI treatment. This does not replace clinical selection of vasoactive support for the patient's circulation."
+      },
+      {
+        "id": "D",
+        "text": "It should be given to every oliguric patient before KRT decisions.",
+        "rationale": "There is no such prerequisite; urgent complications determine KRT need."
+      }
+    ],
+    "answer": "C",
+    "rationale": "The KDIGO recommendation rejects low-dose dopamine as a kidney-protective AKI treatment. This does not replace clinical selection of vasoactive support for the patient's circulation.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K10-2012",
+        "locator": "Recommendation 3.5.1"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-AKI-006",
+    "version": 1,
+    "family_id": "RN-AKI-006.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T06",
+    "secondary_topic_ids": [
+      "T08"
+    ],
+    "objective_ids": [
+      "T06.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult recovers sufficiently from AKI to leave hospital. What kidney-specific follow-up should remain in the plan even if creatinine improves?",
+    "options": [
+      {
+        "id": "A",
+        "text": "No follow-up is needed after any improvement.",
+        "rationale": "Improvement does not exclude persistent kidney disease or future risk."
+      },
+      {
+        "id": "B",
+        "text": "Wait three months before checking any unresolved acute abnormality.",
+        "rationale": "The three-month reassessment does not postpone clinically necessary earlier review."
+      },
+      {
+        "id": "C",
+        "text": "Label every AKI survivor as permanently dialysis dependent.",
+        "rationale": "Outcomes vary; reassessment should establish the actual recovery state."
+      },
+      {
+        "id": "D",
+        "text": "Reassess at about three months for resolution and new or worsened CKD, with earlier review when needed.",
+        "rationale": "A three-month reassessment distinguishes recovery from persistent or new CKD. Medication, electrolyte and clinical problems may require much earlier checks."
+      }
+    ],
+    "answer": "D",
+    "rationale": "A three-month reassessment distinguishes recovery from persistent or new CKD. Medication, electrolyte and clinical problems may require much earlier checks.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K10-2012",
+        "locator": "Recommendation 2.3.4"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-DIAL-001",
+    "version": 1,
+    "family_id": "RN-DIAL-001.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T20",
+    "secondary_topic_ids": [
+      "T08"
+    ],
+    "objective_ids": [
+      "T20.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A well-informed adult with stable CKD G5 has eGFR 9 mL/min/1.73 m2, no uremic symptoms and manageable volume, potassium and nutrition. Which is the most appropriate dialysis decision principle?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Use a composite clinical assessment and preferences rather than starting solely at this eGFR.",
+        "rationale": "Initiation considers symptoms, signs, quality of life, preferences, GFR and laboratory abnormalities together. Continue close surveillance and preparation rather than using a numeric cutoff alone."
+      },
+      {
+        "id": "B",
+        "text": "An eGFR of 9 mandates dialysis regardless of the person's condition.",
+        "rationale": "KDIGO does not define a single mandatory eGFR trigger."
+      },
+      {
+        "id": "C",
+        "text": "Dialysis can never be discussed until severe symptoms develop.",
+        "rationale": "Education, modality discussion and access planning should precede an emergency."
+      },
+      {
+        "id": "D",
+        "text": "A normal potassium excludes every future dialysis indication.",
+        "rationale": "Symptoms, volume, nutrition and other complications also matter."
+      }
+    ],
+    "answer": "A",
+    "rationale": "Initiation considers symptoms, signs, quality of life, preferences, GFR and laboratory abnormalities together. Continue close surveillance and preparation rather than using a numeric cutoff alone.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K01-2024",
+        "locator": "Practice Points 5.4.1-5.4.2; Table 41"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-DIAL-002",
+    "version": 1,
+    "family_id": "RN-DIAL-002.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T20",
+    "secondary_topic_ids": [
+      "T27"
+    ],
+    "objective_ids": [
+      "T20.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A person with advanced CKD has persistent pulmonary congestion despite tolerated medical treatment. Which finding most directly supports discussing initiation of dialysis?",
+    "options": [
+      {
+        "id": "A",
+        "text": "A urine ACR result by itself.",
+        "rationale": "Albuminuria alone is not a dialysis initiation indication."
+      },
+      {
+        "id": "B",
+        "text": "Inability to control volume status medically.",
+        "rationale": "Uncontrollable volume status is a clinical indication to consider dialysis. The team should still assess the cause, treatment response, urgency and the person's goals."
+      },
+      {
+        "id": "C",
+        "text": "Age over 65 by itself.",
+        "rationale": "Age alone does not decide whether or when to initiate dialysis."
+      },
+      {
+        "id": "D",
+        "text": "An unchanged eGFR excludes dialysis need.",
+        "rationale": "Clinically significant refractory complications can matter despite a stable estimate."
+      }
+    ],
+    "answer": "B",
+    "rationale": "Uncontrollable volume status is a clinical indication to consider dialysis. The team should still assess the cause, treatment response, urgency and the person's goals.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K01-2024",
+        "locator": "Practice Point 5.4.2; Table 41"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-DIAL-003",
+    "version": 1,
+    "family_id": "RN-DIAL-003.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T20",
+    "secondary_topic_ids": [
+      "T21"
+    ],
+    "objective_ids": [
+      "T20.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult's eGFR is 18 mL/min/1.73 m2 and validated two-year kidney-failure risk is 45%. What action is most appropriate now?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Defer all preparation until a dialysis emergency.",
+        "rationale": "Timely preparation can avoid an unplanned start."
+      },
+      {
+        "id": "B",
+        "text": "Start dialysis solely because the risk estimate is 45%.",
+        "rationale": "Preparation thresholds are not automatic initiation thresholds."
+      },
+      {
+        "id": "C",
+        "text": "Begin individualized planning for preemptive transplantation and/or dialysis access.",
+        "rationale": "KDIGO supports preparation when GFR is below 15-20 or two-year KRT risk exceeds 40%. Planning is distinct from starting dialysis and includes transplant suitability and shared choice."
+      },
+      {
+        "id": "D",
+        "text": "Commit to one modality without discussing preferences.",
+        "rationale": "Modality and access decisions should reflect circumstances and preferences."
+      }
+    ],
+    "answer": "C",
+    "rationale": "KDIGO supports preparation when GFR is below 15-20 or two-year KRT risk exceeds 40%. Planning is distinct from starting dialysis and includes transplant suitability and shared choice.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K01-2024",
+        "locator": "Practice Point 5.4.3"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-DIAL-004",
+    "version": 1,
+    "family_id": "RN-DIAL-004.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T20",
+    "secondary_topic_ids": [
+      "T04",
+      "T07"
+    ],
+    "objective_ids": [
+      "T20.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A maintenance hemodialysis patient presents after a missed session with potassium 7.2 mmol/L and hyperkalemic ECG changes. Which statement correctly combines immediate and definitive management?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Calcium alone removes enough potassium to replace dialysis.",
+        "rationale": "Calcium protects the myocardium but does not lower total-body potassium."
+      },
+      {
+        "id": "B",
+        "text": "Wait for the next routine dialysis appointment.",
+        "rationale": "Severe hyperkalemia needs urgent assessment and treatment."
+      },
+      {
+        "id": "C",
+        "text": "Insulin permanently eliminates excess potassium.",
+        "rationale": "Insulin redistributes potassium; rebound is possible without removal."
+      },
+      {
+        "id": "D",
+        "text": "Give indicated cardiac protection and arrange urgent dialysis; temporizing treatment does not remove the need for removal.",
+        "rationale": "Urgent dialysis provides potassium removal in this dialysis-dependent scenario. ECG-related calcium and appropriate temporizing measures address immediate risk while dialysis is arranged."
+      }
+    ],
+    "answer": "D",
+    "rationale": "Urgent dialysis provides potassium removal in this dialysis-dependent scenario. ECG-related calcium and appropriate temporizing measures address immediate risk while dialysis is arranged.",
+    "difficulty": "integration",
+    "sources": [
+      {
+        "source_id": "G02-hyperkalemia-2023",
+        "locator": "Guidelines 18.1-18.2"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-TX-001",
+    "version": 1,
+    "family_id": "RN-TX-001.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T21",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T21.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult with progressive CKD G4 is likely to need kidney replacement within a year and wishes to consider transplantation. When should transplant evaluation be initiated?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Before dialysis, ideally allowing at least 6-12 months before anticipated initiation.",
+        "rationale": "Early referral allows candidate assessment and possible living-donor work-up. Eligibility remains individualized; referral is not a guarantee of listing or transplantation."
+      },
+      {
+        "id": "B",
+        "text": "Only after five years of dialysis.",
+        "rationale": "Delaying evaluation can lose the opportunity for preemptive transplantation."
+      },
+      {
+        "id": "C",
+        "text": "Only after an urgent dialysis start.",
+        "rationale": "Preparation should precede an emergency when feasible."
+      },
+      {
+        "id": "D",
+        "text": "Never, because G4 automatically excludes transplant assessment.",
+        "rationale": "Progressive G4-G5 CKD is an appropriate setting for early assessment."
+      }
+    ],
+    "answer": "A",
+    "rationale": "Early referral allows candidate assessment and possible living-donor work-up. Eligibility remains individualized; referral is not a guarantee of listing or transplantation.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K16-2020",
+        "locator": "Recommendation 1.1.1"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-TX-002",
+    "version": 1,
+    "family_id": "RN-TX-002.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T21",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T21.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A medically suitable adult has a fully evaluated willing living donor and can receive a kidney before starting dialysis. Which option is preferred by the candidate guideline?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Dialysis must always precede any transplant.",
+        "rationale": "Dialysis is not a prerequisite for preemptive transplantation."
+      },
+      {
+        "id": "B",
+        "text": "Preemptive living-donor transplantation when feasible.",
+        "rationale": "For an eligible person with an eligible donor, a preemptive living-donor transplant is preferred. Medical, psychosocial and donor safety assessments remain essential."
+      },
+      {
+        "id": "C",
+        "text": "Exclude a living donor solely because the recipient has not dialyzed.",
+        "rationale": "This is not an exclusion criterion."
+      },
+      {
+        "id": "D",
+        "text": "Cancel all recipient and donor risk assessment.",
+        "rationale": "Preemptive timing does not remove the need for careful evaluation."
+      }
+    ],
+    "answer": "B",
+    "rationale": "For an eligible person with an eligible donor, a preemptive living-donor transplant is preferred. Medical, psychosocial and donor safety assessments remain essential.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K16-2020",
+        "locator": "Recommendation 1.4"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-TX-003",
+    "version": 1,
+    "family_id": "RN-TX-003.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T21",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T21.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult referred for transplantation has obesity but no completed surgical or functional assessment. What is the most appropriate initial principle?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Every person with obesity is automatically ineligible.",
+        "rationale": "The guideline advises against exclusion solely on this basis."
+      },
+      {
+        "id": "B",
+        "text": "Obesity has no relevance to operative assessment.",
+        "rationale": "Surgical risk, wound issues and overall health still need assessment."
+      },
+      {
+        "id": "C",
+        "text": "Assess obesity-related risks individually rather than excluding solely because of obesity.",
+        "rationale": "Obesity warrants risk assessment and appropriate weight-management discussion. The question concerns obesity alone; it does not override center policies or other contraindications."
+      },
+      {
+        "id": "D",
+        "text": "Eligibility can be decided from BMI without other information.",
+        "rationale": "BMI is one aspect of an individualized candidate assessment."
+      }
+    ],
+    "answer": "C",
+    "rationale": "Obesity warrants risk assessment and appropriate weight-management discussion. The question concerns obesity alone; it does not override center policies or other contraindications.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K16-2020",
+        "locator": "Recommendations 7.1-7.1.1"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-TX-004",
+    "version": 1,
+    "family_id": "RN-TX-004.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T21",
+    "secondary_topic_ids": [
+      "T17"
+    ],
+    "objective_ids": [
+      "T21.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A transplant candidate needs a live attenuated vaccine and transplantation is elective. Which plan is consistent with the candidate guideline?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Give the live vaccine routinely immediately after transplantation.",
+        "rationale": "Post-transplant immunosuppression changes the safety of live vaccines."
+      },
+      {
+        "id": "B",
+        "text": "Ignore the vaccination history until after transplant.",
+        "rationale": "Pre-transplant assessment is an opportunity to complete indicated protection."
+      },
+      {
+        "id": "C",
+        "text": "No vaccine is useful before transplantation.",
+        "rationale": "Candidate guidance explicitly supports recommended vaccines before transplant."
+      },
+      {
+        "id": "D",
+        "text": "Complete indicated vaccination before transplant, leaving at least four weeks after a live vaccine.",
+        "rationale": "Plan indicated vaccines before immunosuppression. Live attenuated vaccines should be completed at least four weeks before transplantation; exact vaccine eligibility follows current specialist recommendations."
+      }
+    ],
+    "answer": "D",
+    "rationale": "Plan indicated vaccines before immunosuppression. Live attenuated vaccines should be completed at least four weeks before transplantation; exact vaccine eligibility follows current specialist recommendations.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K16-2020",
+        "locator": "Recommendations 10.7.2-10.7.2.1"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-GN-001",
+    "version": 1,
+    "family_id": "RN-GN-001.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T10",
+    "secondary_topic_ids": [
+      "T22"
+    ],
+    "objective_ids": [
+      "T10.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult with unexplained proteinuria and active urine sediment is being evaluated for glomerular disease. What best describes kidney biopsy's diagnostic role?",
+    "options": [
+      {
+        "id": "A",
+        "text": "It is the diagnostic reference standard, although selected diseases can be managed without it.",
+        "rationale": "Biopsy can establish lesion, activity and chronicity. It is not mandatory in every circumstance; the result must have clinical value and the procedure's risks must be considered."
+      },
+      {
+        "id": "B",
+        "text": "A biopsy is never useful if creatinine is normal.",
+        "rationale": "Important glomerular disease may be present with preserved filtration."
+      },
+      {
+        "id": "C",
+        "text": "Any positive dipstick identifies the histologic diagnosis.",
+        "rationale": "A dipstick does not identify the glomerular lesion."
+      },
+      {
+        "id": "D",
+        "text": "Every patient must be biopsied irrespective of risk or diagnostic context.",
+        "rationale": "The decision depends on diagnostic value, clinical context and risk."
+      }
+    ],
+    "answer": "A",
+    "rationale": "Biopsy can establish lesion, activity and chronicity. It is not mandatory in every circumstance; the result must have clinical value and the procedure's risks must be considered.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K08-2021-remaining",
+        "locator": "Practice Point 1.1.1"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-GN-002",
+    "version": 1,
+    "family_id": "RN-GN-002.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T10",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T10.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult has nephrotic syndrome and positive anti-PLA2R antibodies in a compatible presentation. Which statement about diagnosing membranous nephropathy is correct?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Positive anti-PLA2R excludes every associated condition.",
+        "rationale": "Evaluation for associated conditions remains appropriate irrespective of antibody status."
+      },
+      {
+        "id": "B",
+        "text": "A biopsy is not required solely to confirm the diagnosis in this setting, but other reasons for biopsy may remain.",
+        "rationale": "The antibody can establish membranous nephropathy in a compatible nephrotic presentation. Consider atypical features, kidney function, associated conditions and whether tissue would answer another question."
+      },
+      {
+        "id": "C",
+        "text": "The antibody always establishes minimal change disease.",
+        "rationale": "Anti-PLA2R is associated with membranous nephropathy, not this histologic diagnosis."
+      },
+      {
+        "id": "D",
+        "text": "The antibody automatically mandates immediate immunosuppression.",
+        "rationale": "Diagnosis does not by itself determine treatment intensity or timing."
+      }
+    ],
+    "answer": "B",
+    "rationale": "The antibody can establish membranous nephropathy in a compatible nephrotic presentation. Consider atypical features, kidney function, associated conditions and whether tissue would answer another question.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K08-2021-remaining",
+        "locator": "Practice Points 3.1.1-3.1.2"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-GN-003",
+    "version": 1,
+    "family_id": "RN-GN-003.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T10",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T10.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult has biopsy-proven adaptive secondary FSGS with an identified cause and no evidence of primary FSGS. What treatment principle is appropriate?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Use immunosuppression for every biopsy showing an FSGS lesion.",
+        "rationale": "FSGS is a lesion with different causes; the primary-disease treatment pathway is not universal."
+      },
+      {
+        "id": "B",
+        "text": "Ignore blood pressure and proteinuria.",
+        "rationale": "Supportive kidney-protective care is important in secondary disease."
+      },
+      {
+        "id": "C",
+        "text": "Treat the cause and provide supportive care rather than routine primary-FSGS immunosuppression.",
+        "rationale": "Secondary FSGS should not receive immunosuppression as though it were primary FSGS. Address the driver and kidney-protective measures; classification is central to the decision."
+      },
+      {
+        "id": "D",
+        "text": "The biopsy proves there can be no underlying adaptive cause.",
+        "rationale": "The lesion must be interpreted with the clinical and pathologic context."
+      }
+    ],
+    "answer": "C",
+    "rationale": "Secondary FSGS should not receive immunosuppression as though it were primary FSGS. Address the driver and kidney-protective measures; classification is central to the decision.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K08-2021-remaining",
+        "locator": "Practice Point 6.2.1.1"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-GN-004",
+    "version": 1,
+    "family_id": "RN-GN-004.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T10",
+    "secondary_topic_ids": [
+      "T22"
+    ],
+    "objective_ids": [
+      "T10.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A 43-year-old develops new nephrotic syndrome. Minimal change disease is suspected, but no biopsy has been performed. Which statement best fits the adult diagnostic pathway?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Response to a diuretic establishes minimal change disease.",
+        "rationale": "Edema response does not identify the glomerular lesion."
+      },
+      {
+        "id": "B",
+        "text": "Nephrotic-range proteinuria alone identifies the lesion.",
+        "rationale": "Several different diseases cause nephrotic syndrome."
+      },
+      {
+        "id": "C",
+        "text": "The pediatric empirical pathway applies automatically to all adults.",
+        "rationale": "Adult and pediatric diagnostic pathways are not interchangeable."
+      },
+      {
+        "id": "D",
+        "text": "Adult minimal change disease is a biopsy diagnosis.",
+        "rationale": "In adults, diagnosing minimal change disease requires kidney biopsy. Clinical nephrotic syndrome is a presentation, not a specific histologic diagnosis."
+      }
+    ],
+    "answer": "D",
+    "rationale": "In adults, diagnosing minimal change disease requires kidney biopsy. Clinical nephrotic syndrome is a presentation, not a specific histologic diagnosis.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K08-2021-remaining",
+        "locator": "Practice Point 5.1.1"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-K-001",
+    "version": 1,
+    "family_id": "RN-K-001.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T04",
+    "secondary_topic_ids": [
+      "T07"
+    ],
+    "objective_ids": [
+      "T04.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult has severe hyperkalemia with a broad QRS attributed to hyperkalemia. What is the principal immediate purpose of intravenous calcium?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Reduce cardiac electrical toxicity while potassium-lowering treatment is arranged.",
+        "rationale": "Calcium provides myocardial protection when indicated by toxic ECG changes. Treat hyperkalemia itself and reassess the ECG; protection is distinct from redistribution and removal."
+      },
+      {
+        "id": "B",
+        "text": "Remove excess potassium from the body.",
+        "rationale": "Calcium does not provide potassium removal."
+      },
+      {
+        "id": "C",
+        "text": "Shift potassium into cells for several hours.",
+        "rationale": "That is the purpose of redistribution therapies such as insulin, not calcium."
+      },
+      {
+        "id": "D",
+        "text": "Replace all further ECG and potassium monitoring.",
+        "rationale": "Protection can be temporary and the underlying disturbance still needs treatment."
+      }
+    ],
+    "answer": "A",
+    "rationale": "Calcium provides myocardial protection when indicated by toxic ECG changes. Treat hyperkalemia itself and reassess the ECG; protection is distinct from redistribution and removal.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "G02-hyperkalemia-2023",
+        "locator": "Guideline 16.2; STEP 1 cardiac protection"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-K-002",
+    "version": 1,
+    "family_id": "RN-K-002.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T04",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T04.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "Potassium falls after insulin-glucose treatment for hyperkalemia. Which statement explains why potassium still needs repeated monitoring and a removal plan?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Insulin directly excretes potassium in every patient.",
+        "rationale": "It redistributes potassium rather than guaranteeing excretion."
+      },
+      {
+        "id": "B",
+        "text": "Insulin shifts potassium intracellularly; rebound can occur as that effect wanes.",
+        "rationale": "Redistribution can temporarily improve the circulating concentration without resolving excess potassium. Reassess both biochemical response and the need for definitive removal."
+      },
+      {
+        "id": "C",
+        "text": "A single improved potassium value proves permanent resolution.",
+        "rationale": "The cause can persist and potassium may rebound."
+      },
+      {
+        "id": "D",
+        "text": "Giving glucose makes dialysis unnecessary in all circumstances.",
+        "rationale": "Glucose support does not decide whether potassium removal is needed."
+      }
+    ],
+    "answer": "B",
+    "rationale": "Redistribution can temporarily improve the circulating concentration without resolving excess potassium. Reassess both biochemical response and the need for definitive removal.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "G02-hyperkalemia-2023",
+        "locator": "Guidelines 16.3.1-16.3.2; 17.1"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-K-003",
+    "version": 1,
+    "family_id": "RN-K-003.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T04",
+    "secondary_topic_ids": [
+      "T19"
+    ],
+    "objective_ids": [
+      "T04.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult without diabetes receives insulin-glucose for severe hyperkalemia. Which monitoring plan is required?",
+    "options": [
+      {
+        "id": "A",
+        "text": "No glucose checks because the person does not have diabetes.",
+        "rationale": "Nondiabetic patients can develop treatment-related hypoglycemia."
+      },
+      {
+        "id": "B",
+        "text": "One glucose check immediately after infusion is sufficient.",
+        "rationale": "Hypoglycemia can develop later; UKKA specifies monitoring through six hours."
+      },
+      {
+        "id": "C",
+        "text": "Serial blood glucose monitoring for several hours, as well as potassium reassessment.",
+        "rationale": "Hypoglycemia is a recognized insulin-treatment harm and may be delayed. UKKA recommends regular glucose checks over six hours; potassium monitoring addresses response and rebound separately."
+      },
+      {
+        "id": "D",
+        "text": "Measure HbA1c instead of monitoring blood glucose.",
+        "rationale": "HbA1c does not detect acute treatment-related hypoglycemia."
+      }
+    ],
+    "answer": "C",
+    "rationale": "Hypoglycemia is a recognized insulin-treatment harm and may be delayed. UKKA recommends regular glucose checks over six hours; potassium monitoring addresses response and rebound separately.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "G02-hyperkalemia-2023",
+        "locator": "Guideline 17.2"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-K-004",
+    "version": 1,
+    "family_id": "RN-K-004.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T04",
+    "secondary_topic_ids": [
+      "T07"
+    ],
+    "objective_ids": [
+      "T04.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A promptly confirmed potassium of 6.9 mmol/L is found in an adult whose first ECG shows no characteristic hyperkalemic changes. Which conclusion is safest?",
+    "options": [
+      {
+        "id": "A",
+        "text": "The potassium result is necessarily false because the ECG is normal.",
+        "rationale": "ECG sensitivity is insufficient to make that inference."
+      },
+      {
+        "id": "B",
+        "text": "No further monitoring or assessment is needed.",
+        "rationale": "Severe biochemical hyperkalemia still requires urgent evaluation."
+      },
+      {
+        "id": "C",
+        "text": "A normal ECG proves there can be no arrhythmia risk.",
+        "rationale": "Absence of classic changes does not establish safety."
+      },
+      {
+        "id": "D",
+        "text": "The normal ECG does not exclude dangerous hyperkalemia or remove the need for urgent management.",
+        "rationale": "The ECG helps assess immediate cardiac effects but does not reliably exclude severe hyperkalemia. Evaluate the confirmed result, clinical context and need for monitored treatment."
+      }
+    ],
+    "answer": "D",
+    "rationale": "The ECG helps assess immediate cardiac effects but does not reliably exclude severe hyperkalemia. Evaluate the confirmed result, clinical context and need for monitored treatment.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "G02-hyperkalemia-2023",
+        "locator": "Guideline 14.1; rationale on ECG sensitivity"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-AB-001",
+    "version": 1,
+    "family_id": "RN-AB-001.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T04",
+    "secondary_topic_ids": [
+      "T08"
+    ],
+    "objective_ids": [
+      "T04.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A stable adult with CKD has repeatedly measured bicarbonate of 17 mmol/L after other explanations are evaluated. Which approach is consistent with KDIGO 2024?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Consider pharmacologic treatment, with or without dietary intervention, for clinically important acidosis.",
+        "rationale": "The guidance suggests considering treatment when acidosis has potential clinical implications, with bicarbonate below 18 mmol/L as an adult example. Evaluate the clinical context rather than treating an isolated number."
+      },
+      {
+        "id": "B",
+        "text": "Ignore the result because all acidosis in CKD is harmless.",
+        "rationale": "A bicarbonate below 18 is given as an example of potentially important acidosis."
+      },
+      {
+        "id": "C",
+        "text": "Give unlimited alkali without monitoring.",
+        "rationale": "Treatment can affect fluid status, blood pressure and electrolytes."
+      },
+      {
+        "id": "D",
+        "text": "Promise that alkali is proven to prevent kidney failure in this individual.",
+        "rationale": "A practice point does not establish that outcome for an individual patient."
+      }
+    ],
+    "answer": "A",
+    "rationale": "The guidance suggests considering treatment when acidosis has potential clinical implications, with bicarbonate below 18 mmol/L as an adult example. Evaluate the clinical context rather than treating an isolated number.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K01-2024",
+        "locator": "Practice Point 3.10.1"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-AB-002",
+    "version": 1,
+    "family_id": "RN-AB-002.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T04",
+    "secondary_topic_ids": [
+      "T08",
+      "T19"
+    ],
+    "objective_ids": [
+      "T04.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult with CKD begins oral alkali for metabolic acidosis. What should follow-up include?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Bicarbonate only, with no attention to volume or blood pressure.",
+        "rationale": "The treatment can adversely affect these domains."
+      },
+      {
+        "id": "B",
+        "text": "Bicarbonate, potassium, blood pressure and fluid status, avoiding bicarbonate above the normal range.",
+        "rationale": "Monitoring should assess correction and treatment harms. Achieving a bicarbonate value is not sufficient if blood pressure, potassium or congestion worsens."
+      },
+      {
+        "id": "C",
+        "text": "Titrate to the highest bicarbonate possible.",
+        "rationale": "Overshooting the upper normal limit is not the treatment goal."
+      },
+      {
+        "id": "D",
+        "text": "Stop monitoring potassium because alkali cannot affect it.",
+        "rationale": "Potassium is explicitly part of the monitoring recommendation."
+      }
+    ],
+    "answer": "B",
+    "rationale": "Monitoring should assess correction and treatment harms. Achieving a bicarbonate value is not sufficient if blood pressure, potassium or congestion worsens.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K01-2024",
+        "locator": "Practice Point 3.10.2"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-NA-001",
+    "version": 1,
+    "family_id": "RN-NA-001.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T03",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T03.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult's sodium is 124 mmol/L, measured serum osmolality is 263 mOsm/kg, and there is no hyperglycemia or exogenous effective osmole. What category is established?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Hypertonic hyponatremia.",
+        "rationale": "The measured osmolality is low in this specified setting."
+      },
+      {
+        "id": "B",
+        "text": "A specific diagnosis of SIAD solely from serum values.",
+        "rationale": "Etiology requires further assessment, including urine data and exclusions."
+      },
+      {
+        "id": "C",
+        "text": "Hypotonic hyponatremia.",
+        "rationale": "The low measured osmolality confirms hypotonicity in the absence of another effective osmole. Serum findings classify the disorder but do not identify its cause by themselves."
+      },
+      {
+        "id": "D",
+        "text": "Normal tonicity because sodium is above 120.",
+        "rationale": "Tonicity is not defined by that sodium cutoff."
+      }
+    ],
+    "answer": "C",
+    "rationale": "The low measured osmolality confirms hypotonicity in the absence of another effective osmole. Serum findings classify the disorder but do not identify its cause by themselves.",
+    "difficulty": "foundation",
+    "sources": [
+      {
+        "source_id": "G01-hyponatremia-2014",
+        "locator": "Section 6.2: confirmation of hypotonic hyponatremia"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-NA-002",
+    "version": 1,
+    "family_id": "RN-NA-002.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T03",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T03.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "In confirmed hypotonic hyponatremia, a contemporaneous urine osmolality is 70 mOsm/kg. Which interpretation is most appropriate?",
+    "options": [
+      {
+        "id": "A",
+        "text": "This alone proves persistent inappropriate antidiuresis.",
+        "rationale": "Markedly dilute urine does not support that conclusion."
+      },
+      {
+        "id": "B",
+        "text": "The urine value has no diagnostic relevance.",
+        "rationale": "Urine osmolality is an early discriminator in the diagnostic pathway."
+      },
+      {
+        "id": "C",
+        "text": "It establishes adrenal failure without additional tests.",
+        "rationale": "A urine osmolality cannot establish that endocrine diagnosis."
+      },
+      {
+        "id": "D",
+        "text": "The urine is strongly diluted; consider excess water intake relative to available solute.",
+        "rationale": "Urine osmolality at or below 100 indicates strongly suppressed antidiuresis and directs attention to water intake and solute availability. Clinical history and further evaluation still determine the cause."
+      }
+    ],
+    "answer": "D",
+    "rationale": "Urine osmolality at or below 100 indicates strongly suppressed antidiuresis and directs attention to water intake and solute availability. Clinical history and further evaluation still determine the cause.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "G01-hyponatremia-2014",
+        "locator": "Recommendations 6.3.1.1-6.3.1.2 and diagnostic rationale"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-NA-003",
+    "version": 1,
+    "family_id": "RN-NA-003.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T03",
+    "secondary_topic_ids": [
+      "T07"
+    ],
+    "objective_ids": [
+      "T03.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult with hypotonic hyponatremia has a seizure attributed to the sodium disturbance. What is the immediate treatment principle?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Use monitored hypertonic saline to obtain a modest early rise and reassess symptoms, while limiting total correction.",
+        "rationale": "Severe attributable symptoms justify urgent monitored hypertonic treatment. The initial goal is symptom control with a limited sodium rise; subsequent management must prevent overcorrection and address the cause."
+      },
+      {
+        "id": "B",
+        "text": "Normalize sodium completely as fast as possible.",
+        "rationale": "Rapid excessive correction can cause osmotic demyelination."
+      },
+      {
+        "id": "C",
+        "text": "Use fluid restriction alone while waiting for every etiologic test.",
+        "rationale": "Severe attributable neurologic symptoms require urgent treatment."
+      },
+      {
+        "id": "D",
+        "text": "Give treatment without repeat sodium measurement.",
+        "rationale": "The response and cumulative correction need close monitoring."
+      }
+    ],
+    "answer": "A",
+    "rationale": "Severe attributable symptoms justify urgent monitored hypertonic treatment. The initial goal is symptom control with a limited sodium rise; subsequent management must prevent overcorrection and address the cause.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "G01-hyponatremia-2014",
+        "locator": "Section 7.1.1-7.1.2: severe symptoms and first-day follow-up"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-MBD-001",
+    "version": 1,
+    "family_id": "RN-MBD-001.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T05",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T05.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A person with CKD has several changing PTH, calcium and phosphate results. What is the best basis for CKD-MBD treatment decisions?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Treat only the latest PTH result regardless of other values.",
+        "rationale": "The parameters interact and a single result can mislead."
+      },
+      {
+        "id": "B",
+        "text": "Interpret serial phosphate, calcium and PTH measurements together.",
+        "rationale": "Serial joint assessment informs both the disturbance and the effects of treatment. An isolated value should not dictate an intervention without its clinical and biochemical context."
+      },
+      {
+        "id": "C",
+        "text": "Ignore trends whenever one calcium measurement is normal.",
+        "rationale": "A normal value does not settle the overall CKD-MBD assessment."
+      },
+      {
+        "id": "D",
+        "text": "Use serum creatinine as the only bone-treatment target.",
+        "rationale": "Creatinine does not replace assessment of mineral metabolism."
+      }
+    ],
+    "answer": "B",
+    "rationale": "Serial joint assessment informs both the disturbance and the effects of treatment. An isolated value should not dictate an intervention without its clinical and biochemical context.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K13-2017",
+        "locator": "Recommendation 4.1.1"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-MBD-002",
+    "version": 1,
+    "family_id": "RN-MBD-002.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T05",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T05.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult with CKD G3b has repeatedly normal phosphate levels. Which phosphate-lowering principle is supported?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Every patient with G3b needs a binder even with normal phosphate.",
+        "rationale": "The guideline does not recommend this routine preventive strategy."
+      },
+      {
+        "id": "B",
+        "text": "One historical high phosphate makes current trends irrelevant.",
+        "rationale": "Persistence and progression are part of the decision."
+      },
+      {
+        "id": "C",
+        "text": "Base phosphate-lowering treatment on progressively or persistently elevated phosphate, rather than preventive binders for a normal value.",
+        "rationale": "Treatment decisions should be driven by sustained or progressive hyperphosphatemia and the overall CKD-MBD picture. This avoids assuming that treating a normal laboratory value improves outcomes."
+      },
+      {
+        "id": "D",
+        "text": "Phosphate treatment decisions need no attention to diet or other therapies.",
+        "rationale": "Treatments and sources of phosphate require individualized assessment."
+      }
+    ],
+    "answer": "C",
+    "rationale": "Treatment decisions should be driven by sustained or progressive hyperphosphatemia and the overall CKD-MBD picture. This avoids assuming that treating a normal laboratory value improves outcomes.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K13-2017",
+        "locator": "Recommendation 4.1.5"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-MBD-003",
+    "version": 1,
+    "family_id": "RN-MBD-003.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T05",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T05.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult with CKD G3b not on dialysis has a mildly increased PTH, without severe progressive hyperparathyroidism. What is the best principle regarding calcitriol?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Calcitriol is mandatory for any PTH above the assay range.",
+        "rationale": "Routine active vitamin D use is not recommended in this population."
+      },
+      {
+        "id": "B",
+        "text": "The dialysis and nondialysis treatment pathways are identical.",
+        "rationale": "The recommendations distinguish these settings."
+      },
+      {
+        "id": "C",
+        "text": "Ignore calcium, phosphate and vitamin D status.",
+        "rationale": "These modifiable factors help interpret the elevated PTH."
+      },
+      {
+        "id": "D",
+        "text": "Do not use it routinely; first evaluate modifiable factors and the biochemical trend.",
+        "rationale": "Routine calcitriol or vitamin D analog treatment is discouraged in adult nondialysis G3a-G5 CKD. Selected G4-G5 patients with severe progressive hyperparathyroidism are a different situation."
+      }
+    ],
+    "answer": "D",
+    "rationale": "Routine calcitriol or vitamin D analog treatment is discouraged in adult nondialysis G3a-G5 CKD. Selected G4-G5 patients with severe progressive hyperparathyroidism are a different situation.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K13-2017",
+        "locator": "Recommendation 4.2.2"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-BP-001",
+    "version": 1,
+    "family_id": "RN-BP-001.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T09",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T09.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A rushed single office reading is 132/76 mmHg in an adult with CKD. A clinician wants to apply the KDIGO systolic target directly. What should be clarified first?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Whether blood pressure was measured using a standardized office protocol.",
+        "rationale": "The target is tied to standardized measurement. Reassess technique and use appropriate complementary out-of-office readings rather than mechanically intensifying treatment from a rushed value."
+      },
+      {
+        "id": "B",
+        "text": "The target applies unchanged to every measurement technique.",
+        "rationale": "Applying the standardized target to nonstandardized readings can be hazardous."
+      },
+      {
+        "id": "C",
+        "text": "Diastolic pressure alone establishes the standardized systolic result.",
+        "rationale": "It cannot establish how the systolic measurement was obtained."
+      },
+      {
+        "id": "D",
+        "text": "Albuminuria automatically corrects measurement error.",
+        "rationale": "Risk information does not standardize a blood pressure reading."
+      }
+    ],
+    "answer": "A",
+    "rationale": "The target is tied to standardized measurement. Reassess technique and use appropriate complementary out-of-office readings rather than mechanically intensifying treatment from a rushed value.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K11-2021",
+        "locator": "Recommendation 1.1; Practice Point 3.1.1"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-BP-002",
+    "version": 1,
+    "family_id": "RN-BP-002.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T09",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T09.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult with hypertension and nondialysis CKD develops symptomatic postural hypotension during treatment. Which interpretation of the systolic target is correct?",
+    "options": [
+      {
+        "id": "A",
+        "text": "The target must be pursued despite symptomatic hypotension.",
+        "rationale": "Tolerance and symptoms are explicit qualifications."
+      },
+      {
+        "id": "B",
+        "text": "The suggested standardized-office target below 120 mmHg is qualified by tolerance; less intensive treatment can be appropriate.",
+        "rationale": "The 2021 recommendation suggests a standardized systolic target below 120 when tolerated. Symptomatic postural hypotension supports reconsidering treatment intensity and the person's circumstances."
+      },
+      {
+        "id": "C",
+        "text": "All CKD blood pressure guidance is invalid if one patient cannot tolerate the target.",
+        "rationale": "Individual adaptation does not invalidate the population recommendation."
+      },
+      {
+        "id": "D",
+        "text": "A nonstandardized reading below 120 guarantees safe treatment.",
+        "rationale": "Both measurement quality and clinical tolerance matter."
+      }
+    ],
+    "answer": "B",
+    "rationale": "The 2021 recommendation suggests a standardized systolic target below 120 when tolerated. Symptomatic postural hypotension supports reconsidering treatment intensity and the person's circumstances.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K11-2021",
+        "locator": "Recommendation 3.1.1; Practice Point 3.1.2"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-DM-001",
+    "version": 1,
+    "family_id": "RN-DM-001.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T14",
+    "secondary_topic_ids": [
+      "T19"
+    ],
+    "objective_ids": [
+      "T14.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult with type 2 diabetes and stable CKD has eGFR 24 mL/min/1.73 m2. Which statement about metformin fits KDIGO diabetes guidance?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Start metformin because it is recommended at every CKD stage.",
+        "rationale": "The guideline's recommended eGFR boundary is at least 30."
+      },
+      {
+        "id": "B",
+        "text": "Double the dose to compensate for reduced filtration.",
+        "rationale": "Reduced kidney function does not justify increasing exposure."
+      },
+      {
+        "id": "C",
+        "text": "This is below the eGFR range recommended for metformin; review discontinuation and alternatives.",
+        "rationale": "KDIGO recommends metformin in type 2 diabetes with CKD when eGFR is at least 30; below 30 it should be stopped. Choose an individualized alternative and assess whether an acute change contributes."
+      },
+      {
+        "id": "D",
+        "text": "The HbA1c alone overrides the kidney-function boundary.",
+        "rationale": "Glycemic need does not remove the safety constraint."
+      }
+    ],
+    "answer": "C",
+    "rationale": "KDIGO recommends metformin in type 2 diabetes with CKD when eGFR is at least 30; below 30 it should be stopped. Choose an individualized alternative and assess whether an acute change contributes.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K09-2022",
+        "locator": "Recommendation 4.1.1; Practice Point 4.1.3"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-DM-002",
+    "version": 1,
+    "family_id": "RN-DM-002.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T14",
+    "secondary_topic_ids": [
+      "T19"
+    ],
+    "objective_ids": [
+      "T14.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult with type 2 diabetes has eGFR 42, normal potassium and persistent ACR 160 mg/g despite maximally tolerated RAS inhibition. Which additional kidney-protective class can be considered if appropriate?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Any MRA without checking potassium.",
+        "rationale": "Hyperkalemia risk and evidence for the selected agent matter."
+      },
+      {
+        "id": "B",
+        "text": "A second RAS blocker added routinely.",
+        "rationale": "Combining ACE inhibitor and ARB therapy is not the recommended strategy."
+      },
+      {
+        "id": "C",
+        "text": "No additional treatment is ever considered once a RAS inhibitor is used.",
+        "rationale": "Persistent albuminuria can justify layered kidney-protective treatment."
+      },
+      {
+        "id": "D",
+        "text": "A nonsteroidal mineralocorticoid receptor antagonist with demonstrated kidney or cardiovascular benefit, with potassium monitoring.",
+        "rationale": "The recommendation applies to type 2 diabetes, eGFR above 25, normal potassium and albuminuria despite tolerated RAS blockade. Agent selection and ongoing potassium monitoring are essential."
+      }
+    ],
+    "answer": "D",
+    "rationale": "The recommendation applies to type 2 diabetes, eGFR above 25, normal potassium and albuminuria despite tolerated RAS blockade. Agent selection and ongoing potassium monitoring are essential.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K01-2024",
+        "locator": "Recommendation 3.8.1; Practice Points 3.8.1-3.8.3"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-DM-003",
+    "version": 1,
+    "family_id": "RN-DM-003.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T14",
+    "secondary_topic_ids": [
+      "T19"
+    ],
+    "objective_ids": [
+      "T14.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A person taking an SGLT2 inhibitor will undergo surgery with prolonged fasting. Which plan is reasonable?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Temporarily withhold the SGLT2 inhibitor according to the perioperative plan and document when it can be restarted.",
+        "rationale": "Prolonged fasting, surgery and critical illness are settings in which withholding SGLT2 inhibition is reasonable. Follow the local perioperative protocol and a clear review/restart plan."
+      },
+      {
+        "id": "B",
+        "text": "Continue regardless of fasting or illness.",
+        "rationale": "These circumstances can increase the risk of ketosis."
+      },
+      {
+        "id": "C",
+        "text": "Permanently stop every kidney-protective medicine after any surgery.",
+        "rationale": "Temporary interruption and appropriate restarting are distinct decisions."
+      },
+      {
+        "id": "D",
+        "text": "A normal glucose always excludes SGLT2-related ketosis.",
+        "rationale": "Glucose alone does not remove that risk."
+      }
+    ],
+    "answer": "A",
+    "rationale": "Prolonged fasting, surgery and critical illness are settings in which withholding SGLT2 inhibition is reasonable. Follow the local perioperative protocol and a clear review/restart plan.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K01-2024",
+        "locator": "Practice Point 3.7.2"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-PKD-001",
+    "version": 1,
+    "family_id": "RN-PKD-001.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T12",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T12.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A 38-year-old with confirmed ADPKD has eGFR 54 and verified evidence of rapid progression. There is no contraindication to treatment. Which statement best fits tolvaptan selection?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Tolvaptan is recommended for every incidental renal cyst.",
+        "rationale": "The diagnosis and risk of rapid progression must be established."
+      },
+      {
+        "id": "B",
+        "text": "This is an appropriate setting for discussing tolvaptan after individualized benefit-risk assessment.",
+        "rationale": "The 2025 guideline recommends initiation in adults with ADPKD, eGFR at least 25 and risk of rapid progression. The scenario supplies those criteria; the decision still includes contraindications and monitoring burden."
+      },
+      {
+        "id": "C",
+        "text": "It can first be considered only after dialysis starts.",
+        "rationale": "Disease-modifying eligibility is defined before kidney replacement."
+      },
+      {
+        "id": "D",
+        "text": "Risk assessment and safety monitoring are unnecessary.",
+        "rationale": "Treatment requires selection, education and monitoring."
+      }
+    ],
+    "answer": "B",
+    "rationale": "The 2025 guideline recommends initiation in adults with ADPKD, eGFR at least 25 and risk of rapid progression. The scenario supplies those criteria; the decision still includes contraindications and monitoring burden.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K03-2025",
+        "locator": "Recommendation 4.1.1.1"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-PKD-002",
+    "version": 1,
+    "family_id": "RN-PKD-002.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T12",
+    "secondary_topic_ids": [
+      "T06",
+      "T19"
+    ],
+    "objective_ids": [
+      "T12.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A person taking tolvaptan develops vomiting and cannot maintain adequate drinking. Which instruction is appropriate?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Continue unchanged despite inability to replace water losses.",
+        "rationale": "Aquaresis can worsen volume depletion."
+      },
+      {
+        "id": "B",
+        "text": "Restrict all drinking further to increase treatment effect.",
+        "rationale": "That increases dehydration risk rather than supporting safe treatment."
+      },
+      {
+        "id": "C",
+        "text": "Temporarily interrupt tolvaptan during the volume-depleting illness and seek advice on recovery and restarting.",
+        "rationale": "People using tolvaptan need an interruption plan for circumstances that prevent adequate water intake or cause volume depletion. Assess illness and hydration before deciding when treatment can resume."
+      },
+      {
+        "id": "D",
+        "text": "Replace the sick-day plan with an unsupervised higher dose.",
+        "rationale": "Dose escalation is not a response to volume depletion."
+      }
+    ],
+    "answer": "C",
+    "rationale": "People using tolvaptan need an interruption plan for circumstances that prevent adequate water intake or cause volume depletion. Assess illness and hydration before deciding when treatment can resume.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K03-2025",
+        "locator": "Practice Points 4.1.4.2-4.1.4.4"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-DRUG-001",
+    "version": 1,
+    "family_id": "RN-DRUG-001.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T19",
+    "secondary_topic_ids": [
+      "T08"
+    ],
+    "objective_ids": [
+      "T19.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult with CKD and albuminuria is already taking an ACE inhibitor. Which proposal should be avoided?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Check potassium after dose adjustment.",
+        "rationale": "Monitoring is appropriate; it is not the contraindicated proposal."
+      },
+      {
+        "id": "B",
+        "text": "Review blood pressure and creatinine.",
+        "rationale": "These are appropriate safety and response checks."
+      },
+      {
+        "id": "C",
+        "text": "Use the maximally tolerated dose of one indicated RAS inhibitor.",
+        "rationale": "Single-agent dose optimization differs from dual blockade."
+      },
+      {
+        "id": "D",
+        "text": "Add an ARB solely to intensify RAS blockade.",
+        "rationale": "Avoid combinations of ACE inhibitor, ARB and direct renin inhibitor in CKD. Greater blockade is not automatically better and can increase adverse effects."
+      }
+    ],
+    "answer": "D",
+    "rationale": "Avoid combinations of ACE inhibitor, ARB and direct renin inhibitor in CKD. Greater blockade is not automatically better and can increase adverse effects.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K01-2024",
+        "locator": "Recommendation 3.6.4"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-DRUG-002",
+    "version": 1,
+    "family_id": "RN-DRUG-002.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T19",
+    "secondary_topic_ids": [
+      "T06"
+    ],
+    "objective_ids": [
+      "T19.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "Several regular medicines are temporarily stopped during an acute dehydrating illness. What should be included before the person leaves acute care?",
+    "options": [
+      {
+        "id": "A",
+        "text": "A clear documented plan for reviewing and restarting appropriate medicines.",
+        "rationale": "Temporary discontinuation requires explicit communication about reassessment and restart. This preserves benefit while avoiding unsafe resumption before recovery."
+      },
+      {
+        "id": "B",
+        "text": "Assume all stopped medicines will restart automatically.",
+        "rationale": "Without a plan, beneficial treatment may remain unintentionally discontinued."
+      },
+      {
+        "id": "C",
+        "text": "Discard the medication list to avoid confusion.",
+        "rationale": "Medication reconciliation and communication reduce rather than create uncertainty."
+      },
+      {
+        "id": "D",
+        "text": "Restart every medicine immediately without checking the illness or kidney function.",
+        "rationale": "Restarting must consider recovery and drug-specific safety."
+      }
+    ],
+    "answer": "A",
+    "rationale": "Temporary discontinuation requires explicit communication about reassessment and restart. This preserves benefit while avoiding unsafe resumption before recovery.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K01-2024",
+        "locator": "Practice Point 4.3.2"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-NUTR-001",
+    "version": 1,
+    "family_id": "RN-NUTR-001.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T25",
+    "secondary_topic_ids": [
+      "T08"
+    ],
+    "objective_ids": [
+      "T25.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A nutritionally stable adult with CKD G3b who is not on dialysis asks about usual protein intake. Which starting recommendation fits KDIGO 2024?",
+    "options": [
+      {
+        "id": "A",
+        "text": "A very high-protein diet is required for every nondialysis patient.",
+        "rationale": "Routine excessive protein is not recommended in this setting."
+      },
+      {
+        "id": "B",
+        "text": "About 0.8 g/kg/day, individualized with nutritional assessment.",
+        "rationale": "The adult G3-G5 recommendation is approximately 0.8 g/kg/day. Avoid extrapolating it without assessment to dialysis, frailty, catabolism or malnutrition."
+      },
+      {
+        "id": "C",
+        "text": "A very low-protein diet is safe for every frail or malnourished patient.",
+        "rationale": "Nutritional instability changes the risk-benefit assessment."
+      },
+      {
+        "id": "D",
+        "text": "Dialysis and nondialysis protein needs are always identical.",
+        "rationale": "Dialysis changes protein losses and nutritional requirements."
+      }
+    ],
+    "answer": "B",
+    "rationale": "The adult G3-G5 recommendation is approximately 0.8 g/kg/day. Avoid extrapolating it without assessment to dialysis, frailty, catabolism or malnutrition.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K01-2024",
+        "locator": "Recommendation 3.3.1.1; Practice Points 3.3.1.3 and 3.3.1.5"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-CARE-001",
+    "version": 1,
+    "family_id": "RN-CARE-001.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T26",
+    "secondary_topic_ids": [
+      "T20",
+      "T24"
+    ],
+    "objective_ids": [
+      "T26.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "After informed discussion, a person with kidney failure chooses comprehensive conservative care. What does this mean?",
+    "options": [
+      {
+        "id": "A",
+        "text": "The person receives no further kidney care.",
+        "rationale": "Conservative care is active care, not abandonment."
+      },
+      {
+        "id": "B",
+        "text": "The choice prevents every future discussion of goals.",
+        "rationale": "Preferences and circumstances can be reviewed."
+      },
+      {
+        "id": "C",
+        "text": "Active symptom management, support and care planning without dialysis, aligned with the person's goals.",
+        "rationale": "Comprehensive conservative care includes symptom-focused treatment, communication, psychological and social support, and planning. It is a positive care option that deserves the same attention to the person's priorities."
+      },
+      {
+        "id": "D",
+        "text": "It is identical to maintenance hemodialysis.",
+        "rationale": "The care approach does not include dialysis."
+      }
+    ],
+    "answer": "C",
+    "rationale": "Comprehensive conservative care includes symptom-focused treatment, communication, psychological and social support, and planning. It is a positive care option that deserves the same attention to the person's priorities.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K01-2024",
+        "locator": "Practice Points 5.5.1-5.5.2; Table 43"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-EVID-001",
+    "version": 1,
+    "family_id": "RN-EVID-001.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T26",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T26.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A learner finds a KDIGO practice point next to a graded recommendation. What distinction should guide interpretation?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Every practice point is necessarily backed by high-certainty trial evidence.",
+        "rationale": "The format does not establish that level of certainty."
+      },
+      {
+        "id": "B",
+        "text": "An ungraded point has no possible practical value.",
+        "rationale": "Ungraded guidance can address useful questions not suited to systematic grading."
+      },
+      {
+        "id": "C",
+        "text": "A recommendation grade proves an outcome for every individual.",
+        "rationale": "Population evidence still requires individual interpretation."
+      },
+      {
+        "id": "D",
+        "text": "A practice point is ungraded practical guidance and should not be presented as a formally graded evidence recommendation.",
+        "rationale": "KDIGO distinguishes graded recommendations from ungraded practice points. Preserve the statement type, evidence limits and clinical context when teaching or citing either."
+      }
+    ],
+    "answer": "D",
+    "rationale": "KDIGO distinguishes graded recommendations from ungraded practice points. Preserve the statement type, evidence limits and clinical context when teaching or citing either.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K01-2024",
+        "locator": "Introduction: graded recommendations and ungraded practice points"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-AAV-001",
+    "version": 1,
+    "family_id": "RN-AAV-001.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T16",
+    "secondary_topic_ids": [
+      "T10",
+      "T06"
+    ],
+    "objective_ids": [
+      "T16.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult has a rapidly deteriorating kidney presentation compatible with small-vessel vasculitis, positive MPO-ANCA and low suspicion of an alternative mimic. Biopsy cannot be reported until tomorrow. Which principle is appropriate?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Urgent specialist-directed treatment should not be delayed solely while awaiting biopsy or its report.",
+        "rationale": "The amended 2024 guidance balances the value of biopsy against urgent treatment in a compatible MPO/PR3-positive presentation. It does not license treatment solely from an isolated antibody result."
+      },
+      {
+        "id": "B",
+        "text": "Always withhold treatment until histology is reported, regardless of deterioration.",
+        "rationale": "Delay can be inappropriate in this compatible, rapidly deteriorating scenario."
+      },
+      {
+        "id": "C",
+        "text": "Any positive ANCA alone proves vasculitis in every patient.",
+        "rationale": "Clinical compatibility and alternative diagnoses still matter."
+      },
+      {
+        "id": "D",
+        "text": "Biopsy has no diagnostic or prognostic role once treatment begins.",
+        "rationale": "Biopsy should still be considered and can provide valuable information."
+      }
+    ],
+    "answer": "A",
+    "rationale": "The amended 2024 guidance balances the value of biopsy against urgent treatment in a compatible MPO/PR3-positive presentation. It does not license treatment solely from an isolated antibody result.",
+    "difficulty": "integration",
+    "sources": [
+      {
+        "source_id": "K05-2024-amended",
+        "locator": "Practice Point 9.1.1"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-LN-001",
+    "version": 1,
+    "family_id": "RN-LN-001.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T16",
+    "secondary_topic_ids": [
+      "T10",
+      "T22"
+    ],
+    "objective_ids": [
+      "T16.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult with SLE has newly confirmed proteinuria of 0.8 g/day and abnormal urinary sediment. Kidney function is currently preserved. What is an appropriate next diagnostic consideration?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Preserved eGFR excludes lupus nephritis.",
+        "rationale": "Active kidney disease can occur before filtration falls."
+      },
+      {
+        "id": "B",
+        "text": "Consider kidney biopsy as part of evaluation for lupus nephritis.",
+        "rationale": "The diagnostic pathway suggests considering biopsy at proteinuria at least 500 mg/day, while integrating urine, kidney function and clinical findings. Tissue can define disease and guide management; the threshold is not an isolated automatic rule."
+      },
+      {
+        "id": "C",
+        "text": "Wait for nephrotic-range proteinuria before any further assessment.",
+        "rationale": "The guideline prompts consideration at lower proteinuria with the clinical context."
+      },
+      {
+        "id": "D",
+        "text": "Serum complement alone establishes the histologic class.",
+        "rationale": "Serology does not determine the tissue classification."
+      }
+    ],
+    "answer": "B",
+    "rationale": "The diagnostic pathway suggests considering biopsy at proteinuria at least 500 mg/day, while integrating urine, kidney function and clinical findings. Tissue can define disease and guide management; the threshold is not an isolated automatic rule.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K06-2024",
+        "locator": "Practice Point 10.1.1; Figure 1 diagnostic thresholds"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-ANEMIA-001",
+    "version": 1,
+    "family_id": "RN-ANEMIA-001.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T08",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T08.O03"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult with CKD G4 has a newly recognized hemoglobin of 9.6 g/dL. What is an appropriate initial kidney-anemia investigation strategy?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Assume every low hemoglobin in CKD is erythropoietin deficiency.",
+        "rationale": "Iron deficiency, blood loss and other causes can coexist or predominate."
+      },
+      {
+        "id": "B",
+        "text": "Start ESA solely from the eGFR without evaluating anemia.",
+        "rationale": "Anemia assessment and individualized treatment decisions are required."
+      },
+      {
+        "id": "C",
+        "text": "Assess a complete blood count, reticulocytes, ferritin and transferrin saturation; investigate further if the cause remains unclear.",
+        "rationale": "The 2026 guidance starts with CBC, reticulocytes and iron indices. Persistent unexplained anemia needs a broader cause assessment rather than automatic attribution to CKD."
+      },
+      {
+        "id": "D",
+        "text": "A normal ferritin alone excludes all iron-related problems.",
+        "rationale": "Ferritin interpretation requires context and other iron indices."
+      }
+    ],
+    "answer": "C",
+    "rationale": "The 2026 guidance starts with CBC, reticulocytes and iron indices. Persistent unexplained anemia needs a broader cause assessment rather than automatic attribution to CKD.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K02-2026",
+        "locator": "Practice Points 1.2.1-1.2.2"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  },
+  {
+    "id": "RN-ANEMIA-002",
+    "version": 1,
+    "family_id": "RN-ANEMIA-002.family",
+    "family_version": 1,
+    "key_version": 1,
+    "topic_id": "T08",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T08.O04"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult with anemia in CKD is treated with an ESA. Which maintenance-target principle is recommended in KDIGO 2026?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Normalize hemoglobin to 15 g/dL in every adult.",
+        "rationale": "Routine high targets increase risk and are not recommended."
+      },
+      {
+        "id": "B",
+        "text": "Ignore thrombotic and cardiovascular risks once treatment starts.",
+        "rationale": "Treatment benefits and harms remain part of target selection."
+      },
+      {
+        "id": "C",
+        "text": "Use the same target and dose without follow-up in every patient.",
+        "rationale": "Both target and dosing require individual assessment and monitoring."
+      },
+      {
+        "id": "D",
+        "text": "Individualize the target while keeping hemoglobin below 11.5 g/dL.",
+        "rationale": "KDIGO 2026 recommends an ESA-treated adult hemoglobin target below 11.5 g/dL. Select the individual target by balancing symptoms and transfusion avoidance against treatment risks."
+      }
+    ],
+    "answer": "D",
+    "rationale": "KDIGO 2026 recommends an ESA-treated adult hemoglobin target below 11.5 g/dL. Select the individual target by balancing symptoms and transfusion avoidance against treatment risks.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "K02-2026",
+        "locator": "Recommendation 3.3.1; Practice Point 3.3.1"
+      }
+    ],
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-04",
+      "method": "Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.",
+      "source_key_checked": true,
+      "independent_human_review": false
+    }
+  }
+]

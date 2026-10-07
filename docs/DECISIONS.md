@@ -1,6 +1,6 @@
 # Renulus decisions
 
-Updated on 2026-10-04. The [recorded user answers](planning/2026-10-04-user-answers.md)
+Updated on 2026-10-07. The [recorded user answers](planning/2026-10-04-user-answers.md)
 are the evidence for the new product decisions. Earlier assistant suggestions
 remain proposals unless accepted here.
 
@@ -50,15 +50,26 @@ remain proposals unless accepted here.
 | Record authority | Canonical source and learner records stay in local SQLite. Mem0/Qdrant and LanceDB representations are derived and rebuildable. |
 | Supermemory | Excluded from adoption by the user in the later 2026-10-04 research round; the reusable engine itself must be open source. Earlier evaluation remains dated evidence. |
 | Delivery standard | Real working product. Prototypes inform production work; mock screens, hardcoded responses and disconnected modules do not establish completion. |
+| Current Windows acceptance | On October 5, 2026 the owner chose an unsigned build installed and validated on the current Windows PC. A signing identity and a separate clean PC/VM are not required for this delivery. Matching source/artifact provenance, bundled runtime with developer tools absent from the app PATH, installation, shutdown/reopen, recovery and connected journeys remain required. Signing and separate clean-machine tests are optional future distribution work. |
+| Development app control | On October 6, 2026 the owner requested app-scoped Playwright/Electron control through MCP so testing can continue while they use the same PC. Use hidden, non-focusable test windows, a separate synthetic profile and its owned backend. App screenshots and renderer input replace shared desktop control for UI work. Native Windows installation, dialogs and external handoffs retain separate acceptance scopes. See [app control](implementation/APP_CONTROL.md). |
+| Historical October 6 delivery disposition | The owner accepted the then-runnable local Windows app with the selected Codex `subscription_limit` documented. That handover did not establish successful generation or full product validation. Its failed receipts remain historical; it is superseded by the resumed October 7 scope below. |
+| Resumed October 7 delivery | The owner restored access and resumed full delivery, explicitly approving OpenCode Go personal-agent use and real validation of the exact selected models. Sol learning/capture and both Go Case discussions now have source evidence; installed acceptance remains separate. No model/subscription fallback or credential transport is authorised. Finish the connected flows, content coverage, Windows usability and matching release; see [current finish scope](implementation/FINISH_20261007.md). |
 | Work organisation | Staged vertical implementation slices, clear module ownership, parallel worktree plan and multiple adversarial review waves. |
 | Licensing | MIT for Renulus's own code; CC BY 4.0 for original Renulus teaching content. Permissive commercial reuse with attribution; third-party terms remain independent. |
 | Design workflow | Figma with Impeccable and Interface Design. |
 | Review | User and assistant lead review and validation using concrete evidence; no external-panel prerequisite. |
 | Brand | C — Renal flow, with the selected teal treatment; modern medical, calm, precise and approachable, with a subtle renal reference. |
-| Separation | Preserve the inherited clinical MVP and batch/research project outside the active repository. The desktop launcher opens that baseline explicitly as a reference. |
-| Current scope | Finalise the source/acquisition register and align planning with ERA user downloads, source currency and optional retrieval API keys. Application implementation and provider usage are separate work. |
+| Separation | Preserve the inherited clinical MVP and batch/research project outside the active repository. The normal desktop launcher opens Renulus; the optional legacy reference launcher stays separate. |
+| Current scope | Complete the backend, Flow frontend and connected Windows app in bounded parallel lanes and worktrees. GitHub issues hold the adjustable execution queue and evidence. |
+| Heartbeat | Exactly one implementation heartbeat every 20 minutes, per the October 5 owner instruction; earlier 15- and 30-minute settings remain historical. |
 
 ## Unresolved work
+
+Implementation is authorised and active. The stage/architecture documents remain
+adjustable engineering baselines; product choices above stay confirmed. Current
+working flows, actual acquired-data checks, selected-engine verification and
+remaining delivery/account gates are recorded in `docs/implementation/` and
+GitHub issues #1–#12. Earlier planning descriptions are not completion claims.
 
 Hermes integration and Windows packaging, source/content acquisition, curriculum
 mapping detail, attachment processing, memory deletion semantics and content
@@ -95,6 +106,40 @@ No acquired teaching corpus, validated assessment set, educational-effectiveness
 result or clinical-performance result is established by this cleanup.
 
 ## Dated evidence
+
+On October 7, 2026 the owner resumed full delivery and explicitly confirmed
+OpenCode Go use for Renulus as a personal learning agent. Remove the earlier
+app-imposed learning-eligibility pause and its active warning copy. The app
+approval is not a claim of a separate vendor confirmation. Validate the exact
+`mimo-v2.6-pro` and `deepseek-v4.1-flash` models through the existing Renulus
+connection, with the truthful Renulus User-Agent and stable conversation header.
+Approved model catalogues are advisory; preserve the selected exact model and
+report actual authentication, quota and model rejection without fallback.
+Real account results and matching installed acceptance remain evidence tasks.
+This supersedes the October 5 precautionary Go release decision.
+
+On October 6, 2026 the app-scoped development controller completed a real
+39-operation MCP journey with hidden, unfocused windows, synthetic Case
+save/reopen without duplication, ESENeph track selection, cancelled native
+backup and owned shutdown/disconnect cleanup. An interactive local MCP
+client separately completed seven Library/control operations and normal
+close. This is the default development control path while the owner uses
+the PC. Existing-chat MCP code caching is recorded with a validated local
+client alternative. These receipts establish source-app control; physical
+dialogs, installed/live generation and PDF/image journeys keep separate
+acceptance. See [the control report](implementation/app-control-20261006.md).
+
+On October 6, 2026 the owner requested removal of image-input capability probes
+and selection from the exact approved models inside Renulus. Codex model
+catalogue presence is advisory: an approved exact model may be selected even
+when omitted from the display catalogue. A real `gpt-6.1-sol` request through
+the existing Renulus connection succeeded despite that omission. Connections
+stores the chosen default model for Explain and generated practice; Cases can
+override it within the same approved list. Documented text/image modalities
+replace prerequisite probes. Actual authentication, quota, model or image
+rejections remain visible without automatic retries, fallback models or
+subscription changes. This supersedes the earlier observed-capability
+prerequisite; it does not establish clinical image accuracy.
 
 The [reference shelf](../references/README.md) preserves selected public-source
 links, vocabulary and observations from earlier notes. Their recorded cutoffs

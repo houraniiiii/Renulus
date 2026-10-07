@@ -1,0 +1,260 @@
+"""A narrow local source-status journal, independent of source fetching."""
+import hashlib
+import json
+import re
+from urllib.parse import unquote, urldefrag, urlparse
+
+from pydantic import ValidationError
+
+from ..contracts import ApiError
+from ..storage import utc_now
+from .models import SourceMetadata
+
+CHANGE_FIELDS = {
+    "publication_status", "publication_date", "revision_date",
+    "latest_final_verified", "content_reviewed", "review_due", "correction",
+    "retracted", "superseded", "repository_removed", "access_changed",
+    "supersedes", "replaced_topics", "excluded_pages",
+}
+IDENTITY_FIELDS = {"canonical_url", "pinned_source_id", "doi", "pmid", "pmcid",
+                   "edition", "original_sha256"}
+PUBLICATION_RESTRICTIONS = {"retracted", "repository_removed", "access_changed"}
+
+
+def canonical(value):
+    return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+
+
+def article_ids(value):
+    result = {}
+    for key in ("doi", "pmid", "pmcid"):
+        raw = value.get(key)
+        if not raw:
+            continue
+        text = str(raw).strip()
+        if key == "doi":
+            text = re.sub(r"^(?:https?://(?:dx\.)?doi\.org/|doi:\s*)", "", text, flags=re.I).lower()
+            pattern = r"10\.\d{4,9}/[^\s\"<>]+"
+        else:
+            text = text.upper() if key == "pmcid" else text
+            pattern = r"PMC[1-9]\d{0,11}" if key == "pmcid" else r"[1-9]\d{0,11}"
+        if not re.fullmatch(pattern, text):
+            raise ValueError("Invalid publication identity")
+        result[key] = text
+    return result
+
+
+def url_ids(url):
+    parts = urlparse(url or "")
+    path = unquote(parts.path).strip("/")
+    if parts.hostname in ("doi.org", "dx.doi.org"):
+        return article_ids({"doi": path})
+    if parts.hostname == "pubmed.ncbi.nlm.nih.gov" and path.isdigit():
+        return article_ids({"pmid": path})
+    match = re.fullmatch(r"article/(MED|PMC)/([A-Za-z0-9]+)", path, re.I)
+    if parts.hostname in ("europepmc.org", "www.europepmc.org") and match:
+        return article_ids({"pmid" if match[1].upper() == "MED" else "pmcid": match[2]})
+    match = re.search(r"(?:^|/)articles/(PMC\d+)(?:/|$)", path, re.I)
+    if parts.hostname in ("pmc.ncbi.nlm.nih.gov", "www.ncbi.nlm.nih.gov") and match:
+        return article_ids({"pmcid": match[1]})
+    return {}
+
+
+def validate_event(payload):
+    try:
+        if not isinstance(payload, dict) or type(payload.get("contract_version")) is not int or payload["contract_version"] != 1:
+            raise ValueError()
+        if not isinstance(payload.get("event_id"), str) or not 1 <= len(payload["event_id"]) <= 200:
+            raise ValueError()
+        if not re.fullmatch(r"[A-Z]\d{2}", payload["source_id"]):
+            raise ValueError()
+        identity, changes = payload["identity"], payload["changes"]
+        if not isinstance(identity, dict) or set(identity) - IDENTITY_FIELDS or not identity:
+            raise ValueError()
+        if not isinstance(changes, dict) or not changes or set(changes) - CHANGE_FIELDS:
+            raise ValueError()
+        edition, digest = identity.get("edition"), identity.get("original_sha256")
+        if "edition" in identity or "original_sha256" in identity:
+            if (not isinstance(edition, str) or not edition.strip() or len(edition) > 160
+                    or not isinstance(digest, str) or not re.fullmatch(r"[a-f0-9]{64}", digest)):
+                raise ValueError()
+        explicit = article_ids(identity)
+        inferred = url_ids(identity.get("canonical_url"))
+        if any(key in explicit and explicit[key] != value for key, value in inferred.items()):
+            raise ValueError()
+        if "retracted" in changes and not (explicit or inferred):
+            raise ValueError()
+        SourceMetadata.model_validate({"source_id": payload["source_id"], **changes}, strict=True)
+        scope = payload.get("scope", {})
+        if not isinstance(scope, dict) or set(scope) - {"topic_ids", "locators"}:
+            raise ValueError()
+        if any(not isinstance(items, list) or len(items) > 100 or any(not isinstance(x, str) or len(x) > 1000 for x in items) for items in scope.values()):
+            raise ValueError()
+        observed_only = set(changes) <= {"latest_final_verified", "content_reviewed"} and all(value is False for value in changes.values())
+        evidence = payload.get("evidence")
+        # Updates retains reviewer/date provenance around the inspected
+        # references. Only that reviewed envelope can assert a status; an
+        # observed digest still only invalidates the previous review.
+        if isinstance(evidence, dict) and evidence.get("kind") == "reviewed-publication":
+            evidence = evidence.get("references")
+        if not observed_only and (not isinstance(evidence, list) or not evidence or not all(isinstance(item, dict) and item.get("inspected") is True for item in evidence)):
+            raise ValueError()
+        canonical(payload)
+        return payload
+    except (KeyError, TypeError, ValueError, ValidationError):
+        raise ApiError("source_status_invalid", "Check exact publication identity, reviewed evidence and source-status fields", 422) from None
+
+
+def publication_matches(metadata, event):
+    if metadata["source_id"] != event["source_id"]:
+        return False
+    identity = event["identity"]
+    try:
+        wanted = {**url_ids(identity.get("canonical_url")), **article_ids(identity)}
+        actual = {**url_ids(metadata.get("canonical_url")), **article_ids(metadata)}
+    except ValueError:
+        return False
+    if wanted:
+        if any(key in actual and actual[key] != value for key, value in wanted.items()):
+            return False
+        identified = any(actual.get(key) == value for key, value in wanted.items())
+    else:
+        identified = bool(identity.get("canonical_url")) and urldefrag(identity["canonical_url"])[0] == urldefrag(metadata.get("canonical_url") or "")[0]
+    if not identified:
+        return False  # Pack-only IDs do not identify a Library revision.
+    return True
+
+
+def scope_matches(metadata, event):
+    scope = event.get("scope", {})
+    if scope.get("topic_ids") and metadata.get("topic_ids") and not set(scope["topic_ids"]) & set(metadata["topic_ids"]):
+        return False
+    if scope.get("locators") and not set(scope["locators"]) & {metadata.get("collection_chapter"), metadata.get("collection_section")}:
+        return False  # Unmapped chapter/page identities require explicit review.
+    return True
+
+
+def acquired_binding(metadata):
+    """Bind historical acquired imports without rewriting their provenance."""
+    edition, digest = metadata.get("edition"), metadata.get("original_sha256")
+    if digest:
+        return edition, digest
+    for note in metadata.get("notes", []):
+        if not isinstance(note, str) or not note.startswith("renulus-acquired-v1:"):
+            continue
+        try:
+            evidence = json.loads(note.removeprefix("renulus-acquired-v1:"))
+            digest = evidence.get("original_sha256")
+            if (evidence.get("adapter") == "pmc-acquired-jats-v1"
+                    and evidence.get("article_version") == edition
+                    and isinstance(digest, str) and re.fullmatch(r"[a-f0-9]{64}", digest)):
+                return edition, digest
+        except (ValueError, TypeError, AttributeError):
+            continue
+    return edition, None
+
+
+def applicable_changes(metadata, event):
+    if not publication_matches(metadata, event):
+        return {}
+    identity, changes = event["identity"], event["changes"]
+    acquired = "acquired-jats" in metadata.get("asset_role", [])
+    bound = "edition" in identity and "original_sha256" in identity
+    exact = bound and acquired_binding(metadata) == (identity["edition"], identity["original_sha256"])
+    scoped = scope_matches(metadata, event)
+    if scoped and (exact or (not acquired and not bound)):
+        return changes
+    # Publication-level loss of access or retraction applies to every acquired
+    # version, even when the notice was inspected against a particular file.
+    result = {key: value for key, value in changes.items()
+              if acquired and key in PUBLICATION_RESTRICTIONS and value is True}
+    if scoped and acquired:
+        for key, value in changes.items():
+            if (key in ("latest_final_verified", "content_reviewed") and value is False
+                    or key == "publication_status" and value != "final"
+                    or key == "superseded" and value is True and not bound
+                    or key == "correction" and isinstance(value, str) and value.strip()):
+                result[key] = value
+    return result
+
+
+def matches(metadata, event):
+    return bool(applicable_changes(metadata, event))
+
+
+class SourceStatusJournal:
+    def __init__(self, repository):
+        self.repository, self.db = repository, repository.db
+
+    def version_targets(self, source_id, identity):
+        """Expose bounded imported file identities without document bodies."""
+        event = validate_event({"contract_version": 1, "event_id": "version-targets",
+            "source_id": source_id, "identity": identity,
+            "changes": {"content_reviewed": False}})
+        wanted = {**url_ids(identity.get("canonical_url")), **article_ids(identity)}
+        clauses, arguments = [], [source_id]
+        for key, value in wanted.items():
+            expression = "json_extract(r.metadata_json, '$." + key + "')"
+            clauses.append(("lower(" + expression + ")" if key == "doi" else expression) + "=?")
+            arguments.append(value)
+        if identity.get("canonical_url"):
+            clauses.append("json_extract(r.metadata_json, '$.canonical_url')=?")
+            arguments.append(urldefrag(identity["canonical_url"])[0])
+        if not clauses:
+            raise ApiError("source_identity_required", "Identify the exact publication to choose an acquired version", 422)
+        rows = self.db.fetch_all(
+            "SELECT r.id AS revision_id,r.document_id,r.status,r.metadata_json,d.title "
+            "FROM knowledge_revisions r JOIN knowledge_documents d ON d.id=r.document_id "
+            "WHERE d.source_id=? AND d.deleted_at IS NULL AND d.reserved=0 "
+            "AND d.scope_kind='personal-library' "
+            "AND (r.id=d.active_revision OR r.id=d.latest_revision) "
+            "AND EXISTS(SELECT 1 FROM json_each(r.metadata_json, '$.asset_role') WHERE value='acquired-jats') "
+            "AND (" + " OR ".join(clauses) + ") ORDER BY r.created_at DESC,r.id LIMIT 101", arguments)
+        versions = []
+        for row in rows[:100]:
+            metadata = json.loads(row.pop("metadata_json"))
+            edition, digest = acquired_binding(metadata)
+            if not publication_matches(metadata, event) or not edition or not digest:
+                continue
+            versions.append({**row, "edition": edition, "original_sha256": digest,
+                **{key: metadata.get(key) for key in ("canonical_url", "doi", "pmid", "pmcid")}})
+        return {"versions": versions, "limit": 100, "truncated": len(rows) > 100}
+
+    def events(self, source_id, conn=None):
+        if conn is not None:
+            rows = conn.execute("SELECT payload_json FROM knowledge_source_status_events WHERE source_id=? ORDER BY created_at,rowid", (source_id,)).fetchall()
+        elif self.db.fetch_one("SELECT 1 FROM sqlite_master WHERE type='table' AND name='knowledge_source_status_events'"):
+            rows = self.db.fetch_all("SELECT payload_json FROM knowledge_source_status_events WHERE source_id=? ORDER BY created_at,rowid", (source_id,))
+        else:
+            rows = []  # Explicit isolated engine fixtures can have only base DDL.
+        return [json.loads(row["payload_json"]) for row in rows]
+
+    def effective(self, metadata, events=None):
+        value = metadata.model_dump() if isinstance(metadata, SourceMetadata) else dict(metadata)
+        for event in events if events is not None else self.events(value["source_id"]):
+            changes = applicable_changes(value, event)
+            if changes:
+                value.update(changes)
+                if value["publication_status"] != "final" or any(value[key] for key in ("retracted", "superseded", "repository_removed")):
+                    value["latest_final_verified"] = False
+        return SourceMetadata.model_validate(value, strict=True)
+
+    def update(self, payload):
+        event = validate_event(payload)
+        serialized = canonical(event)
+        digest = hashlib.sha256(serialized.encode()).hexdigest()
+        with self.repository._lock, self.db.transaction() as conn:
+            previous = conn.execute("SELECT request_hash FROM knowledge_source_status_events WHERE id=?", (event["event_id"],)).fetchone()
+            if previous and previous["request_hash"] != digest:
+                raise ApiError("source_status_conflict", "That source event belongs to different evidence", 409)
+            conn.execute("INSERT OR IGNORE INTO knowledge_source_status_events VALUES(?,?,?,?,?)",
+                         (event["event_id"], event["source_id"], digest, serialized, utc_now()))
+            events = self.events(event["source_id"], conn)
+            rows = conn.execute("SELECT r.id,r.metadata_json FROM knowledge_revisions r JOIN knowledge_documents d ON d.id=r.document_id WHERE d.deleted_at IS NULL AND d.source_id=?", (event["source_id"],)).fetchall()
+            matched = 0
+            for row in rows:
+                metadata = json.loads(row["metadata_json"])
+                matched += int(matches(metadata, event))
+                effective = self.effective(metadata, events)
+                conn.execute("UPDATE knowledge_revisions SET metadata_json=? WHERE id=?", (effective.model_dump_json(), row["id"]))
+        return {"state": "applied" if matched else "no-match", "event_id": event["event_id"], "revisions": matched}

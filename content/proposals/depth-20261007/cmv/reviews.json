@@ -1,0 +1,2604 @@
+[
+  {
+    "id": "RN15-CMV-001",
+    "version": 1,
+    "kind": "question",
+    "reviewed_on": "2026-10-07",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "review_status": "assistant_claim_key_distractor_stage_checked",
+    "source_locators": [
+      {
+        "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+        "locator": "Pretransplant CMV Laboratory Testing, sec3/p[1], p[5]; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+      }
+    ],
+    "skill": "clinical_reasoning",
+    "key_text": "D+/R− is high risk, D−/R+ is intermediate risk and D−/R− is low risk.",
+    "checked_claim": "Use both donor and recipient IgG results to classify CMV risk. A negative DNA test at one time does not remove the need for a risk-based prevention plan.",
+    "objective_support": [
+      {
+        "objective_id": "T17.O02",
+        "checked_claim": "Use both donor and recipient IgG results to classify CMV risk. A negative DNA test at one time does not remove the need for a risk-based prevention plan.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Pretransplant CMV Laboratory Testing, sec3/p[1], p[5]; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+          }
+        ]
+      }
+    ],
+    "claims": [
+      {
+        "field": "rationale",
+        "authored_claim": "Use both donor and recipient IgG results to classify CMV risk. A negative DNA test at one time does not remove the need for a risk-based prevention plan.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Pretransplant CMV Laboratory Testing, sec3/p[1], p[5]; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+          }
+        ]
+      },
+      {
+        "field": "options[0].rationale",
+        "authored_claim": "Immunosuppression matters, but it does not erase the donor/recipient serostatus risk groups.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Pretransplant CMV Laboratory Testing, sec3/p[1], p[5]; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+          }
+        ]
+      },
+      {
+        "field": "options[1].rationale",
+        "authored_claim": "The recipient without prior CMV exposure who receives a seropositive organ has the highest serologic risk; recipient seropositivity still carries risk.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Pretransplant CMV Laboratory Testing, sec3/p[1], p[5]; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+          }
+        ]
+      },
+      {
+        "field": "options[2].rationale",
+        "authored_claim": "An R+ kidney recipient remains at intermediate serologic risk even with a D− organ.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Pretransplant CMV Laboratory Testing, sec3/p[1], p[5]; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+          }
+        ]
+      },
+      {
+        "field": "options[3].rationale",
+        "authored_claim": "Routine CMV prevention is not recommended for D−/R− when leukoreduced or CMV-seronegative blood products are used; other herpesvirus prevention is a separate consideration.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Pretransplant CMV Laboratory Testing, sec3/p[1], p[5]; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+          }
+        ]
+      },
+      {
+        "field": "options[4].rationale",
+        "authored_claim": "A negative DNA result does not replace IgG-based donor/recipient risk assessment.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Pretransplant CMV Laboratory Testing, sec3/p[1], p[5]; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+          }
+        ]
+      }
+    ],
+    "notice_review": [
+      {
+        "checked_on": "2026-10-07",
+        "routes": [
+          "https://tts.org/9-tts/general/1616-fourth-international-consensus-guidelines-on-the-management-of-cytomegalovirus-in-solid-organ-transplantation",
+          "https://pubmed.ncbi.nlm.nih.gov/40200403/",
+          "https://pmc.ncbi.nlm.nih.gov/articles/PMC12180710/",
+          "https://journals.lww.com/transplantjournal/fulltext/2025/07000/the_fourth_international_consensus_guidelines_on.6.aspx"
+        ],
+        "finding": "TTS still lists the fourth consensus; PubMed records final 2025 publication. No linked erratum/retraction or correction text was identified in the inspected PubMed/PMC records, and targeted title/DOI correction searches returned no relevant same-work notice. Direct publisher page failed with an internal-access error.",
+        "limit": "No exhaustive notice or latest-clinical-guidance clearance. Absence of an indexed notice is not proof that none exists. No Crossmark-only inference; exact corrected publisher PDF bytes were not reviewed."
+      }
+    ],
+    "rights_review": [
+      {
+        "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+        "disposition": "Kotton et al., 2025; Wolters Kluwer publication, CC BY-NC-ND 4.0. Primary text remains external for bounded research. Original scenarios, options and explanations are Renulus CC BY 4.0; no source prose, table, figure, translation or adapted guideline is distributed. The source licence is not relabelled or extended to commercial reuse."
+      }
+    ],
+    "scope_disposition": "Shared D32/D34 CMV slice only; reuse existing BK credit. No T21 pretransplant objective, complete aftercare, publication or installed acceptance claim.",
+    "synthetic_context": "Names, ages, events and dialogue are invented teaching context, not research findings or patient records.",
+    "answer": "B",
+    "key_review": {
+      "answer": "B",
+      "exact_option": {
+        "id": "B",
+        "text": "D+/R− is high risk, D−/R+ is intermediate risk and D−/R− is low risk.",
+        "rationale": "The recipient without prior CMV exposure who receives a seropositive organ has the highest serologic risk; recipient seropositivity still carries risk."
+      },
+      "single_best_answer_reason": "Use both donor and recipient IgG results to classify CMV risk. A negative DNA test at one time does not remove the need for a risk-based prevention plan.",
+      "source_locators": [
+        {
+          "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+          "locator": "Pretransplant CMV Laboratory Testing, sec3/p[1], p[5]; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+        }
+      ]
+    },
+    "distractor_review": [
+      {
+        "option_id": "A",
+        "exact_text": "All three have the same CMV risk because they receive immunosuppression.",
+        "rejected_because": "Immunosuppression matters, but it does not erase the donor/recipient serostatus risk groups.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Pretransplant CMV Laboratory Testing, sec3/p[1], p[5]; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+          }
+        ]
+      },
+      {
+        "option_id": "C",
+        "exact_text": "D−/R+ is low risk and needs no prevention plan.",
+        "rejected_because": "An R+ kidney recipient remains at intermediate serologic risk even with a D− organ.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Pretransplant CMV Laboratory Testing, sec3/p[1], p[5]; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+          }
+        ]
+      },
+      {
+        "option_id": "D",
+        "exact_text": "D−/R− requires the same routine CMV prophylaxis as D+/R−.",
+        "rejected_because": "Routine CMV prevention is not recommended for D−/R− when leukoreduced or CMV-seronegative blood products are used; other herpesvirus prevention is a separate consideration.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Pretransplant CMV Laboratory Testing, sec3/p[1], p[5]; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+          }
+        ]
+      },
+      {
+        "option_id": "E",
+        "exact_text": "A negative blood CMV DNA result at discharge makes all three low risk.",
+        "rejected_because": "A negative DNA result does not replace IgG-based donor/recipient risk assessment.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Pretransplant CMV Laboratory Testing, sec3/p[1], p[5]; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "RN15-CMV-002",
+    "version": 1,
+    "kind": "question",
+    "reviewed_on": "2026-10-07",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "review_status": "assistant_claim_key_distractor_stage_checked",
+    "source_locators": [
+      {
+        "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+        "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations, sec26; Preemptive Therapy recommendations, sec30"
+      }
+    ],
+    "skill": "clinical_reasoning",
+    "key_text": "Arrange at least weekly testing with prompt review and a treatment pathway, or select a feasible prophylaxis strategy with the transplant team.",
+    "checked_claim": "Preemptive care requires at least weekly CMV testing for 12–16 weeks after transplant, with longer monitoring when risk persists, prompt result review and timely treatment. Prophylaxis is an accepted alternative; choice depends on patient risk and practical delivery.",
+    "objective_support": [
+      {
+        "objective_id": "T17.O02",
+        "checked_claim": "Preemptive care requires at least weekly CMV testing for 12–16 weeks after transplant, with longer monitoring when risk persists, prompt result review and timely treatment. Prophylaxis is an accepted alternative; choice depends on patient risk and practical delivery.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations, sec26; Preemptive Therapy recommendations, sec30"
+          }
+        ]
+      },
+      {
+        "objective_id": "T27.O02",
+        "checked_claim": "Preemptive care requires at least weekly CMV testing for 12–16 weeks after transplant, with longer monitoring when risk persists, prompt result review and timely treatment. Prophylaxis is an accepted alternative; choice depends on patient risk and practical delivery.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations, sec26; Preemptive Therapy recommendations, sec30"
+          }
+        ]
+      }
+    ],
+    "claims": [
+      {
+        "field": "rationale",
+        "authored_claim": "Preemptive care requires at least weekly CMV testing for 12–16 weeks after transplant, with longer monitoring when risk persists, prompt result review and timely treatment. Prophylaxis is an accepted alternative; choice depends on patient risk and practical delivery.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations, sec26; Preemptive Therapy recommendations, sec30"
+          }
+        ]
+      },
+      {
+        "field": "options[0].rationale",
+        "authored_claim": "Preemptive care aims to detect replication before symptoms; monthly sampling is too infrequent for the consensus strategy.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations, sec26; Preemptive Therapy recommendations, sec30"
+          }
+        ]
+      },
+      {
+        "field": "options[1].rationale",
+        "authored_claim": "The consensus accepts either prophylaxis or preemptive therapy for this population when the strategy can be delivered reliably.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations, sec26; Preemptive Therapy recommendations, sec30"
+          }
+        ]
+      },
+      {
+        "field": "options[2].rationale",
+        "authored_claim": "Starting treatment after surveillance detects replication is the preemptive approach, not primary prophylaxis.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations, sec26; Preemptive Therapy recommendations, sec30"
+          }
+        ]
+      },
+      {
+        "field": "options[3].rationale",
+        "authored_claim": "Reliable sampling, rapid result review and timely treatment are essential. The patient and team must choose a strategy the service can deliver.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations, sec26; Preemptive Therapy recommendations, sec30"
+          }
+        ]
+      },
+      {
+        "field": "options[4].rationale",
+        "authored_claim": "An arbitrary trigger does not correct delayed testing, and thresholds depend on assay, specimen and risk.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations, sec26; Preemptive Therapy recommendations, sec30"
+          }
+        ]
+      }
+    ],
+    "notice_review": [
+      {
+        "checked_on": "2026-10-07",
+        "routes": [
+          "https://tts.org/9-tts/general/1616-fourth-international-consensus-guidelines-on-the-management-of-cytomegalovirus-in-solid-organ-transplantation",
+          "https://pubmed.ncbi.nlm.nih.gov/40200403/",
+          "https://pmc.ncbi.nlm.nih.gov/articles/PMC12180710/",
+          "https://journals.lww.com/transplantjournal/fulltext/2025/07000/the_fourth_international_consensus_guidelines_on.6.aspx"
+        ],
+        "finding": "TTS still lists the fourth consensus; PubMed records final 2025 publication. No linked erratum/retraction or correction text was identified in the inspected PubMed/PMC records, and targeted title/DOI correction searches returned no relevant same-work notice. Direct publisher page failed with an internal-access error.",
+        "limit": "No exhaustive notice or latest-clinical-guidance clearance. Absence of an indexed notice is not proof that none exists. No Crossmark-only inference; exact corrected publisher PDF bytes were not reviewed."
+      }
+    ],
+    "rights_review": [
+      {
+        "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+        "disposition": "Kotton et al., 2025; Wolters Kluwer publication, CC BY-NC-ND 4.0. Primary text remains external for bounded research. Original scenarios, options and explanations are Renulus CC BY 4.0; no source prose, table, figure, translation or adapted guideline is distributed. The source licence is not relabelled or extended to commercial reuse."
+      }
+    ],
+    "scope_disposition": "Shared D32/D34 CMV slice only; reuse existing BK credit. No T21 pretransplant objective, complete aftercare, publication or installed acceptance claim.",
+    "synthetic_context": "Names, ages, events and dialogue are invented teaching context, not research findings or patient records.",
+    "answer": "D",
+    "key_review": {
+      "answer": "D",
+      "exact_option": {
+        "id": "D",
+        "text": "Arrange at least weekly testing with prompt review and a treatment pathway, or select a feasible prophylaxis strategy with the transplant team.",
+        "rationale": "Reliable sampling, rapid result review and timely treatment are essential. The patient and team must choose a strategy the service can deliver."
+      },
+      "single_best_answer_reason": "Preemptive care requires at least weekly CMV testing for 12–16 weeks after transplant, with longer monitoring when risk persists, prompt result review and timely treatment. Prophylaxis is an accepted alternative; choice depends on patient risk and practical delivery.",
+      "source_locators": [
+        {
+          "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+          "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations, sec26; Preemptive Therapy recommendations, sec30"
+        }
+      ]
+    },
+    "distractor_review": [
+      {
+        "option_id": "A",
+        "exact_text": "Accept the plan because the absence of symptoms makes monthly testing sufficient.",
+        "rejected_because": "Preemptive care aims to detect replication before symptoms; monthly sampling is too infrequent for the consensus strategy.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations, sec26; Preemptive Therapy recommendations, sec30"
+          }
+        ]
+      },
+      {
+        "option_id": "B",
+        "exact_text": "Reject all preemptive strategies because D+/R− kidney recipients must always receive prophylaxis.",
+        "rejected_because": "The consensus accepts either prophylaxis or preemptive therapy for this population when the strategy can be delivered reliably.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations, sec26; Preemptive Therapy recommendations, sec30"
+          }
+        ]
+      },
+      {
+        "option_id": "C",
+        "exact_text": "Use prophylaxis only after DNAemia has already crossed the treatment threshold.",
+        "rejected_because": "Starting treatment after surveillance detects replication is the preemptive approach, not primary prophylaxis.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations, sec26; Preemptive Therapy recommendations, sec30"
+          }
+        ]
+      },
+      {
+        "option_id": "E",
+        "exact_text": "Keep monthly testing but use any positive result from any laboratory as a universal trigger.",
+        "rejected_because": "An arbitrary trigger does not correct delayed testing, and thresholds depend on assay, specimen and risk.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations, sec26; Preemptive Therapy recommendations, sec30"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "RN15-CMV-003",
+    "version": 1,
+    "kind": "question",
+    "reviewed_on": "2026-10-07",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "review_status": "assistant_claim_key_distractor_stage_checked",
+    "source_locators": [
+      {
+        "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+        "locator": "Diagnostics Consensus Statements, sec6: same specimen/assay and centre-specific thresholds; Preemptive Therapy, sec14/p[1]–p[2]; Thresholds for Triggering Preemptive Therapy, sec17/p[1]; sec30"
+      }
+    ],
+    "skill": "clinical_reasoning",
+    "key_text": "Apply the local assay/specimen and risk-specific pathway, assess the trend with consistent testing, and ensure timely clinical review.",
+    "checked_claim": "Use one specimen type and a consistent assay for trends. The centre defines intervention thresholds using assay performance and patient risk; D+/R− generally warrants a lower threshold than R+. Avoid equating a signal below quantification with either proven disease or guaranteed safety.",
+    "objective_support": [
+      {
+        "objective_id": "T17.O02",
+        "checked_claim": "Use one specimen type and a consistent assay for trends. The centre defines intervention thresholds using assay performance and patient risk; D+/R− generally warrants a lower threshold than R+. Avoid equating a signal below quantification with either proven disease or guaranteed safety.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Diagnostics Consensus Statements, sec6: same specimen/assay and centre-specific thresholds; Preemptive Therapy, sec14/p[1]–p[2]; Thresholds for Triggering Preemptive Therapy, sec17/p[1]; sec30"
+          }
+        ]
+      }
+    ],
+    "claims": [
+      {
+        "field": "rationale",
+        "authored_claim": "Use one specimen type and a consistent assay for trends. The centre defines intervention thresholds using assay performance and patient risk; D+/R− generally warrants a lower threshold than R+. Avoid equating a signal below quantification with either proven disease or guaranteed safety.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Diagnostics Consensus Statements, sec6: same specimen/assay and centre-specific thresholds; Preemptive Therapy, sec14/p[1]–p[2]; Thresholds for Triggering Preemptive Therapy, sec17/p[1]; sec30"
+          }
+        ]
+      },
+      {
+        "field": "options[0].rationale",
+        "authored_claim": "Standardisation does not remove specimen and assay differences.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Diagnostics Consensus Statements, sec6: same specimen/assay and centre-specific thresholds; Preemptive Therapy, sec14/p[1]–p[2]; Thresholds for Triggering Preemptive Therapy, sec17/p[1]; sec30"
+          }
+        ]
+      },
+      {
+        "field": "options[1].rationale",
+        "authored_claim": "Low-level detection requires interpretation in context, especially in higher-risk recipients.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Diagnostics Consensus Statements, sec6: same specimen/assay and centre-specific thresholds; Preemptive Therapy, sec14/p[1]–p[2]; Thresholds for Triggering Preemptive Therapy, sec17/p[1]; sec30"
+          }
+        ]
+      },
+      {
+        "field": "options[2].rationale",
+        "authored_claim": "There is no universal treatment threshold. Very low results do not invariably require treatment, but neither are they automatically benign.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Diagnostics Consensus Statements, sec6: same specimen/assay and centre-specific thresholds; Preemptive Therapy, sec14/p[1]–p[2]; Thresholds for Triggering Preemptive Therapy, sec17/p[1]; sec30"
+          }
+        ]
+      },
+      {
+        "field": "options[3].rationale",
+        "authored_claim": "Detection of DNA alone is not a diagnosis of tissue-invasive disease.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Diagnostics Consensus Statements, sec6: same specimen/assay and centre-specific thresholds; Preemptive Therapy, sec14/p[1]–p[2]; Thresholds for Triggering Preemptive Therapy, sec17/p[1]; sec30"
+          }
+        ]
+      },
+      {
+        "field": "options[4].rationale",
+        "authored_claim": "The consensus recommends lower thresholds in D+/R− recipients, with the actual threshold set by the centre.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Diagnostics Consensus Statements, sec6: same specimen/assay and centre-specific thresholds; Preemptive Therapy, sec14/p[1]–p[2]; Thresholds for Triggering Preemptive Therapy, sec17/p[1]; sec30"
+          }
+        ]
+      }
+    ],
+    "notice_review": [
+      {
+        "checked_on": "2026-10-07",
+        "routes": [
+          "https://tts.org/9-tts/general/1616-fourth-international-consensus-guidelines-on-the-management-of-cytomegalovirus-in-solid-organ-transplantation",
+          "https://pubmed.ncbi.nlm.nih.gov/40200403/",
+          "https://pmc.ncbi.nlm.nih.gov/articles/PMC12180710/",
+          "https://journals.lww.com/transplantjournal/fulltext/2025/07000/the_fourth_international_consensus_guidelines_on.6.aspx"
+        ],
+        "finding": "TTS still lists the fourth consensus; PubMed records final 2025 publication. No linked erratum/retraction or correction text was identified in the inspected PubMed/PMC records, and targeted title/DOI correction searches returned no relevant same-work notice. Direct publisher page failed with an internal-access error.",
+        "limit": "No exhaustive notice or latest-clinical-guidance clearance. Absence of an indexed notice is not proof that none exists. No Crossmark-only inference; exact corrected publisher PDF bytes were not reviewed."
+      }
+    ],
+    "rights_review": [
+      {
+        "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+        "disposition": "Kotton et al., 2025; Wolters Kluwer publication, CC BY-NC-ND 4.0. Primary text remains external for bounded research. Original scenarios, options and explanations are Renulus CC BY 4.0; no source prose, table, figure, translation or adapted guideline is distributed. The source licence is not relabelled or extended to commercial reuse."
+      }
+    ],
+    "scope_disposition": "Shared D32/D34 CMV slice only; reuse existing BK credit. No T21 pretransplant objective, complete aftercare, publication or installed acceptance claim.",
+    "synthetic_context": "Names, ages, events and dialogue are invented teaching context, not research findings or patient records.",
+    "answer": "C",
+    "key_review": {
+      "answer": "C",
+      "exact_option": {
+        "id": "C",
+        "text": "Apply the local assay/specimen and risk-specific pathway, assess the trend with consistent testing, and ensure timely clinical review.",
+        "rationale": "There is no universal treatment threshold. Very low results do not invariably require treatment, but neither are they automatically benign."
+      },
+      "single_best_answer_reason": "Use one specimen type and a consistent assay for trends. The centre defines intervention thresholds using assay performance and patient risk; D+/R− generally warrants a lower threshold than R+. Avoid equating a signal below quantification with either proven disease or guaranteed safety.",
+      "source_locators": [
+        {
+          "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+          "locator": "Diagnostics Consensus Statements, sec6: same specimen/assay and centre-specific thresholds; Preemptive Therapy, sec14/p[1]–p[2]; Thresholds for Triggering Preemptive Therapy, sec17/p[1]; sec30"
+        }
+      ]
+    },
+    "distractor_review": [
+      {
+        "option_id": "A",
+        "exact_text": "Use the other cutoff directly because all WHO-standardised results are interchangeable.",
+        "rejected_because": "Standardisation does not remove specimen and assay differences.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Diagnostics Consensus Statements, sec6: same specimen/assay and centre-specific thresholds; Preemptive Therapy, sec14/p[1]–p[2]; Thresholds for Triggering Preemptive Therapy, sec17/p[1]; sec30"
+          }
+        ]
+      },
+      {
+        "option_id": "B",
+        "exact_text": "Ignore the result because low-level detection can never precede disease.",
+        "rejected_because": "Low-level detection requires interpretation in context, especially in higher-risk recipients.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Diagnostics Consensus Statements, sec6: same specimen/assay and centre-specific thresholds; Preemptive Therapy, sec14/p[1]–p[2]; Thresholds for Triggering Preemptive Therapy, sec17/p[1]; sec30"
+          }
+        ]
+      },
+      {
+        "option_id": "D",
+        "exact_text": "Treat every detectable signal as established tissue-invasive CMV disease.",
+        "rejected_because": "Detection of DNA alone is not a diagnosis of tissue-invasive disease.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Diagnostics Consensus Statements, sec6: same specimen/assay and centre-specific thresholds; Preemptive Therapy, sec14/p[1]–p[2]; Thresholds for Triggering Preemptive Therapy, sec17/p[1]; sec30"
+          }
+        ]
+      },
+      {
+        "option_id": "E",
+        "exact_text": "Use a higher treatment threshold for D+/R− than for R+ recipients.",
+        "rejected_because": "The consensus recommends lower thresholds in D+/R− recipients, with the actual threshold set by the centre.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Diagnostics Consensus Statements, sec6: same specimen/assay and centre-specific thresholds; Preemptive Therapy, sec14/p[1]–p[2]; Thresholds for Triggering Preemptive Therapy, sec17/p[1]; sec30"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "RN15-CMV-004",
+    "version": 1,
+    "kind": "question",
+    "reviewed_on": "2026-10-07",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "review_status": "assistant_claim_key_distractor_stage_checked",
+    "source_locators": [
+      {
+        "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+        "locator": "Lower-dose Valganciclovir Prophylaxis, sec21 and Table 5; Kidney Function Monitoring, sec65/p[1]"
+      }
+    ],
+    "skill": "medication_safety",
+    "key_text": "Reassess current kidney function using the method and units specified by the product dosing guidance, verify prophylaxis versus treatment, and adjust with the transplant team.",
+    "checked_claim": "Confirm indication, formulation, current renal assessment and the applicable product guidance before dosing. Renal adjustment is appropriate; arbitrary mini-dosing is different. A changing graft and any dialysis require repeated specialist/pharmacy reassessment rather than a fixed dose inferred from this scenario.",
+    "objective_support": [
+      {
+        "objective_id": "T19.O01",
+        "checked_claim": "Confirm indication, formulation, current renal assessment and the applicable product guidance before dosing. Renal adjustment is appropriate; arbitrary mini-dosing is different. A changing graft and any dialysis require repeated specialist/pharmacy reassessment rather than a fixed dose inferred from this scenario.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Lower-dose Valganciclovir Prophylaxis, sec21 and Table 5; Kidney Function Monitoring, sec65/p[1]"
+          }
+        ]
+      }
+    ],
+    "claims": [
+      {
+        "field": "rationale",
+        "authored_claim": "Confirm indication, formulation, current renal assessment and the applicable product guidance before dosing. Renal adjustment is appropriate; arbitrary mini-dosing is different. A changing graft and any dialysis require repeated specialist/pharmacy reassessment rather than a fixed dose inferred from this scenario.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Lower-dose Valganciclovir Prophylaxis, sec21 and Table 5; Kidney Function Monitoring, sec65/p[1]"
+          }
+        ]
+      },
+      {
+        "field": "options[0].rationale",
+        "authored_claim": "A dose selected at one level of kidney function may become inappropriate as function changes.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Lower-dose Valganciclovir Prophylaxis, sec21 and Table 5; Kidney Function Monitoring, sec65/p[1]"
+          }
+        ]
+      },
+      {
+        "field": "options[1].rationale",
+        "authored_claim": "The consensus dosing table uses Cockcroft–Gault creatinine clearance in mL/min; indexed eGFR cannot simply be substituted as the same number. Indication and changing function both matter.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Lower-dose Valganciclovir Prophylaxis, sec21 and Table 5; Kidney Function Monitoring, sec65/p[1]"
+          }
+        ]
+      },
+      {
+        "field": "options[2].rationale",
+        "authored_claim": "Absolute clearance in mL/min and indexed eGFR in mL/min/1.73 m² are different quantities.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Lower-dose Valganciclovir Prophylaxis, sec21 and Table 5; Kidney Function Monitoring, sec65/p[1]"
+          }
+        ]
+      },
+      {
+        "field": "options[3].rationale",
+        "authored_claim": "Routine low-dose prophylaxis below the recommended renal-adjusted dose is not recommended.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Lower-dose Valganciclovir Prophylaxis, sec21 and Table 5; Kidney Function Monitoring, sec65/p[1]"
+          }
+        ]
+      },
+      {
+        "field": "options[4].rationale",
+        "authored_claim": "The consensus table distinguishes treatment from maintenance/prevention schedules.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Lower-dose Valganciclovir Prophylaxis, sec21 and Table 5; Kidney Function Monitoring, sec65/p[1]"
+          }
+        ]
+      }
+    ],
+    "notice_review": [
+      {
+        "checked_on": "2026-10-07",
+        "routes": [
+          "https://tts.org/9-tts/general/1616-fourth-international-consensus-guidelines-on-the-management-of-cytomegalovirus-in-solid-organ-transplantation",
+          "https://pubmed.ncbi.nlm.nih.gov/40200403/",
+          "https://pmc.ncbi.nlm.nih.gov/articles/PMC12180710/",
+          "https://journals.lww.com/transplantjournal/fulltext/2025/07000/the_fourth_international_consensus_guidelines_on.6.aspx"
+        ],
+        "finding": "TTS still lists the fourth consensus; PubMed records final 2025 publication. No linked erratum/retraction or correction text was identified in the inspected PubMed/PMC records, and targeted title/DOI correction searches returned no relevant same-work notice. Direct publisher page failed with an internal-access error.",
+        "limit": "No exhaustive notice or latest-clinical-guidance clearance. Absence of an indexed notice is not proof that none exists. No Crossmark-only inference; exact corrected publisher PDF bytes were not reviewed."
+      }
+    ],
+    "rights_review": [
+      {
+        "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+        "disposition": "Kotton et al., 2025; Wolters Kluwer publication, CC BY-NC-ND 4.0. Primary text remains external for bounded research. Original scenarios, options and explanations are Renulus CC BY 4.0; no source prose, table, figure, translation or adapted guideline is distributed. The source licence is not relabelled or extended to commercial reuse."
+      }
+    ],
+    "scope_disposition": "Shared D32/D34 CMV slice only; reuse existing BK credit. No T21 pretransplant objective, complete aftercare, publication or installed acceptance claim.",
+    "synthetic_context": "Names, ages, events and dialogue are invented teaching context, not research findings or patient records.",
+    "answer": "B",
+    "key_review": {
+      "answer": "B",
+      "exact_option": {
+        "id": "B",
+        "text": "Reassess current kidney function using the method and units specified by the product dosing guidance, verify prophylaxis versus treatment, and adjust with the transplant team.",
+        "rationale": "The consensus dosing table uses Cockcroft–Gault creatinine clearance in mL/min; indexed eGFR cannot simply be substituted as the same number. Indication and changing function both matter."
+      },
+      "single_best_answer_reason": "Confirm indication, formulation, current renal assessment and the applicable product guidance before dosing. Renal adjustment is appropriate; arbitrary mini-dosing is different. A changing graft and any dialysis require repeated specialist/pharmacy reassessment rather than a fixed dose inferred from this scenario.",
+      "source_locators": [
+        {
+          "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+          "locator": "Lower-dose Valganciclovir Prophylaxis, sec21 and Table 5; Kidney Function Monitoring, sec65/p[1]"
+        }
+      ]
+    },
+    "distractor_review": [
+      {
+        "option_id": "A",
+        "exact_text": "Keep the discharge dose for the whole course because it was initially appropriate.",
+        "rejected_because": "A dose selected at one level of kidney function may become inappropriate as function changes.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Lower-dose Valganciclovir Prophylaxis, sec21 and Table 5; Kidney Function Monitoring, sec65/p[1]"
+          }
+        ]
+      },
+      {
+        "option_id": "C",
+        "exact_text": "Replace the creatinine-clearance value with the indexed eGFR number without checking units.",
+        "rejected_because": "Absolute clearance in mL/min and indexed eGFR in mL/min/1.73 m² are different quantities.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Lower-dose Valganciclovir Prophylaxis, sec21 and Table 5; Kidney Function Monitoring, sec65/p[1]"
+          }
+        ]
+      },
+      {
+        "option_id": "D",
+        "exact_text": "Choose a routine half-dose regardless of kidney function to reduce adverse effects.",
+        "rejected_because": "Routine low-dose prophylaxis below the recommended renal-adjusted dose is not recommended.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Lower-dose Valganciclovir Prophylaxis, sec21 and Table 5; Kidney Function Monitoring, sec65/p[1]"
+          }
+        ]
+      },
+      {
+        "option_id": "E",
+        "exact_text": "Use the treatment schedule because it is interchangeable with prophylaxis.",
+        "rejected_because": "The consensus table distinguishes treatment from maintenance/prevention schedules.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Lower-dose Valganciclovir Prophylaxis, sec21 and Table 5; Kidney Function Monitoring, sec65/p[1]"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "RN15-CMV-005",
+    "version": 1,
+    "kind": "question",
+    "reviewed_on": "2026-10-07",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "review_status": "assistant_claim_key_distractor_stage_checked",
+    "source_locators": [
+      {
+        "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+        "locator": "Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25"
+      }
+    ],
+    "skill": "clinical_reasoning",
+    "key_text": "Reassess adherence, absorption and clinical status promptly with the transplant team and consider testing for breakthrough DNAemia.",
+    "checked_claim": "Appropriate prophylaxis does not usually require routine DNA surveillance. New absorption or adherence concerns, variable kidney function or increased immunosuppression can justify targeted testing and review. Symptoms require clinical assessment rather than reassurance from the prophylaxis label.",
+    "objective_support": [
+      {
+        "objective_id": "T17.O02",
+        "checked_claim": "Appropriate prophylaxis does not usually require routine DNA surveillance. New absorption or adherence concerns, variable kidney function or increased immunosuppression can justify targeted testing and review. Symptoms require clinical assessment rather than reassurance from the prophylaxis label.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25"
+          }
+        ]
+      },
+      {
+        "objective_id": "T27.O02",
+        "checked_claim": "Appropriate prophylaxis does not usually require routine DNA surveillance. New absorption or adherence concerns, variable kidney function or increased immunosuppression can justify targeted testing and review. Symptoms require clinical assessment rather than reassurance from the prophylaxis label.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25"
+          }
+        ]
+      }
+    ],
+    "claims": [
+      {
+        "field": "rationale",
+        "authored_claim": "Appropriate prophylaxis does not usually require routine DNA surveillance. New absorption or adherence concerns, variable kidney function or increased immunosuppression can justify targeted testing and review. Symptoms require clinical assessment rather than reassurance from the prophylaxis label.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25"
+          }
+        ]
+      },
+      {
+        "field": "options[0].rationale",
+        "authored_claim": "The usual policy does not cover new adherence or absorption concerns without reassessment.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25"
+          }
+        ]
+      },
+      {
+        "field": "options[1].rationale",
+        "authored_claim": "Routine CMV DNAemia monitoring is not recommended during appropriate prophylaxis; it differs from the preemptive strategy.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25"
+          }
+        ]
+      },
+      {
+        "field": "options[2].rationale",
+        "authored_claim": "A previous result cannot establish current adherence or absorption.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25"
+          }
+        ]
+      },
+      {
+        "field": "options[3].rationale",
+        "authored_claim": "The cited prevention guidance does not support indiscriminate immunosuppression cessation.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25"
+          }
+        ]
+      },
+      {
+        "field": "options[4].rationale",
+        "authored_claim": "Adherence and absorption concerns are recognised reasons to consider CMV testing during prophylaxis.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25"
+          }
+        ]
+      }
+    ],
+    "notice_review": [
+      {
+        "checked_on": "2026-10-07",
+        "routes": [
+          "https://tts.org/9-tts/general/1616-fourth-international-consensus-guidelines-on-the-management-of-cytomegalovirus-in-solid-organ-transplantation",
+          "https://pubmed.ncbi.nlm.nih.gov/40200403/",
+          "https://pmc.ncbi.nlm.nih.gov/articles/PMC12180710/",
+          "https://journals.lww.com/transplantjournal/fulltext/2025/07000/the_fourth_international_consensus_guidelines_on.6.aspx"
+        ],
+        "finding": "TTS still lists the fourth consensus; PubMed records final 2025 publication. No linked erratum/retraction or correction text was identified in the inspected PubMed/PMC records, and targeted title/DOI correction searches returned no relevant same-work notice. Direct publisher page failed with an internal-access error.",
+        "limit": "No exhaustive notice or latest-clinical-guidance clearance. Absence of an indexed notice is not proof that none exists. No Crossmark-only inference; exact corrected publisher PDF bytes were not reviewed."
+      }
+    ],
+    "rights_review": [
+      {
+        "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+        "disposition": "Kotton et al., 2025; Wolters Kluwer publication, CC BY-NC-ND 4.0. Primary text remains external for bounded research. Original scenarios, options and explanations are Renulus CC BY 4.0; no source prose, table, figure, translation or adapted guideline is distributed. The source licence is not relabelled or extended to commercial reuse."
+      }
+    ],
+    "scope_disposition": "Shared D32/D34 CMV slice only; reuse existing BK credit. No T21 pretransplant objective, complete aftercare, publication or installed acceptance claim.",
+    "synthetic_context": "Names, ages, events and dialogue are invented teaching context, not research findings or patient records.",
+    "answer": "E",
+    "key_review": {
+      "answer": "E",
+      "exact_option": {
+        "id": "E",
+        "text": "Reassess adherence, absorption and clinical status promptly with the transplant team and consider testing for breakthrough DNAemia.",
+        "rationale": "Adherence and absorption concerns are recognised reasons to consider CMV testing during prophylaxis."
+      },
+      "single_best_answer_reason": "Appropriate prophylaxis does not usually require routine DNA surveillance. New absorption or adherence concerns, variable kidney function or increased immunosuppression can justify targeted testing and review. Symptoms require clinical assessment rather than reassurance from the prophylaxis label.",
+      "source_locators": [
+        {
+          "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+          "locator": "Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25"
+        }
+      ]
+    },
+    "distractor_review": [
+      {
+        "option_id": "A",
+        "exact_text": "Routine DNA testing is unnecessary during appropriate prophylaxis, so these new problems never change the plan.",
+        "rejected_because": "The usual policy does not cover new adherence or absorption concerns without reassessment.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25"
+          }
+        ]
+      },
+      {
+        "option_id": "B",
+        "exact_text": "Weekly DNA testing is compulsory for every stable recipient receiving prophylaxis.",
+        "rejected_because": "Routine CMV DNAemia monitoring is not recommended during appropriate prophylaxis; it differs from the preemptive strategy.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25"
+          }
+        ]
+      },
+      {
+        "option_id": "C",
+        "exact_text": "A negative test last month proves the medicine has been absorbed since then.",
+        "rejected_because": "A previous result cannot establish current adherence or absorption.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25"
+          }
+        ]
+      },
+      {
+        "option_id": "D",
+        "exact_text": "Stop all immunosuppressants until the vomiting settles.",
+        "rejected_because": "The cited prevention guidance does not support indiscriminate immunosuppression cessation.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "RN15-CMV-006",
+    "version": 1,
+    "kind": "question",
+    "reviewed_on": "2026-10-07",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "review_status": "assistant_claim_key_distractor_stage_checked",
+    "source_locators": [
+      {
+        "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+        "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis recommendations, sec31"
+      }
+    ],
+    "skill": "clinical_reasoning",
+    "key_text": "Consider weekly CMV DNA surveillance for 8–12 weeks after prophylaxis, with a named team to review results; this is a weak recommendation based on low-quality evidence.",
+    "checked_claim": "Discuss an individual postprophylaxis plan. For increased-risk recipients, weekly surveillance for 8–12 weeks is suggested, with low-certainty evidence; the plan needs workable sampling, prompt result review and local action thresholds.",
+    "objective_support": [
+      {
+        "objective_id": "T17.O02",
+        "checked_claim": "Discuss an individual postprophylaxis plan. For increased-risk recipients, weekly surveillance for 8–12 weeks is suggested, with low-certainty evidence; the plan needs workable sampling, prompt result review and local action thresholds.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis recommendations, sec31"
+          }
+        ]
+      },
+      {
+        "objective_id": "T27.O02",
+        "checked_claim": "Discuss an individual postprophylaxis plan. For increased-risk recipients, weekly surveillance for 8–12 weeks is suggested, with low-certainty evidence; the plan needs workable sampling, prompt result review and local action thresholds.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis recommendations, sec31"
+          }
+        ]
+      }
+    ],
+    "claims": [
+      {
+        "field": "rationale",
+        "authored_claim": "Discuss an individual postprophylaxis plan. For increased-risk recipients, weekly surveillance for 8–12 weeks is suggested, with low-certainty evidence; the plan needs workable sampling, prompt result review and local action thresholds.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis recommendations, sec31"
+          }
+        ]
+      },
+      {
+        "field": "options[0].rationale",
+        "authored_claim": "The suggestion targets recipients at increased postprophylaxis risk; weekly sampling is likely most useful and requires an actionable local pathway.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis recommendations, sec31"
+          }
+        ]
+      },
+      {
+        "field": "options[1].rationale",
+        "authored_claim": "Neither an indefinite universal programme nor that evidence strength is recommended.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis recommendations, sec31"
+          }
+        ]
+      },
+      {
+        "field": "options[2].rationale",
+        "authored_claim": "Late CMV remains a reason to consider surveillance after prophylaxis in higher-risk recipients.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis recommendations, sec31"
+          }
+        ]
+      },
+      {
+        "field": "options[3].rationale",
+        "authored_claim": "The consensus states that two- or four-weekly monitoring may be insufficient for timely preemptive intervention.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis recommendations, sec31"
+          }
+        ]
+      },
+      {
+        "field": "options[4].rationale",
+        "authored_claim": "Postprophylaxis intervention thresholds remain local and assay dependent.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis recommendations, sec31"
+          }
+        ]
+      }
+    ],
+    "notice_review": [
+      {
+        "checked_on": "2026-10-07",
+        "routes": [
+          "https://tts.org/9-tts/general/1616-fourth-international-consensus-guidelines-on-the-management-of-cytomegalovirus-in-solid-organ-transplantation",
+          "https://pubmed.ncbi.nlm.nih.gov/40200403/",
+          "https://pmc.ncbi.nlm.nih.gov/articles/PMC12180710/",
+          "https://journals.lww.com/transplantjournal/fulltext/2025/07000/the_fourth_international_consensus_guidelines_on.6.aspx"
+        ],
+        "finding": "TTS still lists the fourth consensus; PubMed records final 2025 publication. No linked erratum/retraction or correction text was identified in the inspected PubMed/PMC records, and targeted title/DOI correction searches returned no relevant same-work notice. Direct publisher page failed with an internal-access error.",
+        "limit": "No exhaustive notice or latest-clinical-guidance clearance. Absence of an indexed notice is not proof that none exists. No Crossmark-only inference; exact corrected publisher PDF bytes were not reviewed."
+      }
+    ],
+    "rights_review": [
+      {
+        "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+        "disposition": "Kotton et al., 2025; Wolters Kluwer publication, CC BY-NC-ND 4.0. Primary text remains external for bounded research. Original scenarios, options and explanations are Renulus CC BY 4.0; no source prose, table, figure, translation or adapted guideline is distributed. The source licence is not relabelled or extended to commercial reuse."
+      }
+    ],
+    "scope_disposition": "Shared D32/D34 CMV slice only; reuse existing BK credit. No T21 pretransplant objective, complete aftercare, publication or installed acceptance claim.",
+    "synthetic_context": "Names, ages, events and dialogue are invented teaching context, not research findings or patient records.",
+    "answer": "A",
+    "key_review": {
+      "answer": "A",
+      "exact_option": {
+        "id": "A",
+        "text": "Consider weekly CMV DNA surveillance for 8–12 weeks after prophylaxis, with a named team to review results; this is a weak recommendation based on low-quality evidence.",
+        "rationale": "The suggestion targets recipients at increased postprophylaxis risk; weekly sampling is likely most useful and requires an actionable local pathway."
+      },
+      "single_best_answer_reason": "Discuss an individual postprophylaxis plan. For increased-risk recipients, weekly surveillance for 8–12 weeks is suggested, with low-certainty evidence; the plan needs workable sampling, prompt result review and local action thresholds.",
+      "source_locators": [
+        {
+          "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+          "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis recommendations, sec31"
+        }
+      ]
+    },
+    "distractor_review": [
+      {
+        "option_id": "B",
+        "exact_text": "All recipients must undergo indefinite weekly testing supported by high-quality evidence.",
+        "rejected_because": "Neither an indefinite universal programme nor that evidence strength is recommended.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis recommendations, sec31"
+          }
+        ]
+      },
+      {
+        "option_id": "C",
+        "exact_text": "Completion of prophylaxis eliminates later CMV risk.",
+        "rejected_because": "Late CMV remains a reason to consider surveillance after prophylaxis in higher-risk recipients.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis recommendations, sec31"
+          }
+        ]
+      },
+      {
+        "option_id": "D",
+        "exact_text": "Testing every four weeks is known to offer equivalent protection to weekly surveillance.",
+        "rejected_because": "The consensus states that two- or four-weekly monitoring may be insufficient for timely preemptive intervention.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis recommendations, sec31"
+          }
+        ]
+      },
+      {
+        "option_id": "E",
+        "exact_text": "Use a single universal viral threshold irrespective of the local assay.",
+        "rejected_because": "Postprophylaxis intervention thresholds remain local and assay dependent.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis recommendations, sec31"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "RN15-CMV-007",
+    "version": 1,
+    "kind": "question",
+    "reviewed_on": "2026-10-07",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "review_status": "assistant_claim_key_distractor_stage_checked",
+    "source_locators": [
+      {
+        "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+        "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin interaction rows; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+      }
+    ],
+    "skill": "medication_safety",
+    "key_text": "Arrange frequent tacrolimus whole-blood concentration monitoring during coadministration and at letermovir discontinuation, with specialist dose adjustment.",
+    "checked_claim": "Review the full medication list with transplant pharmacy. The EU SmPC specifies frequent tacrolimus concentration monitoring during letermovir coadministration and at discontinuation; adjust immunosuppression using measured exposure and clinical context. Ciclosporin requires its own interaction and letermovir-dose review.",
+    "objective_support": [
+      {
+        "objective_id": "T19.O01",
+        "checked_claim": "Review the full medication list with transplant pharmacy. The EU SmPC specifies frequent tacrolimus concentration monitoring during letermovir coadministration and at discontinuation; adjust immunosuppression using measured exposure and clinical context. Ciclosporin requires its own interaction and letermovir-dose review.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin interaction rows; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          }
+        ]
+      },
+      {
+        "objective_id": "T27.O02",
+        "checked_claim": "Review the full medication list with transplant pharmacy. The EU SmPC specifies frequent tacrolimus concentration monitoring during letermovir coadministration and at discontinuation; adjust immunosuppression using measured exposure and clinical context. Ciclosporin requires its own interaction and letermovir-dose review.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin interaction rows; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          }
+        ]
+      }
+    ],
+    "claims": [
+      {
+        "field": "rationale",
+        "authored_claim": "Review the full medication list with transplant pharmacy. The EU SmPC specifies frequent tacrolimus concentration monitoring during letermovir coadministration and at discontinuation; adjust immunosuppression using measured exposure and clinical context. Ciclosporin requires its own interaction and letermovir-dose review.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin interaction rows; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          }
+        ]
+      },
+      {
+        "field": "options[0].rationale",
+        "authored_claim": "The interaction must be managed when letermovir is started and when it is discontinued.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin interaction rows; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          }
+        ]
+      },
+      {
+        "field": "options[1].rationale",
+        "authored_claim": "The EU information calls for concentration monitoring and dose adjustment according to findings; it does not supply one universal tacrolimus reduction for all recipients.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin interaction rows; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          }
+        ]
+      },
+      {
+        "field": "options[2].rationale",
+        "authored_claim": "Letermovir can increase tacrolimus exposure. Starting and stopping the interacting drug both require planned monitoring.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin interaction rows; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          }
+        ]
+      },
+      {
+        "field": "options[3].rationale",
+        "authored_claim": "Ciclosporin has a clinically relevant bidirectional interaction and requires a letermovir dose adjustment plus ciclosporin concentration monitoring.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin interaction rows; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          }
+        ]
+      },
+      {
+        "field": "options[4].rationale",
+        "authored_claim": "Kidney function monitoring does not replace tacrolimus concentration monitoring.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin interaction rows; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          }
+        ]
+      }
+    ],
+    "notice_review": [
+      {
+        "checked_on": "2026-10-07",
+        "routes": [
+          "https://www.ema.europa.eu/en/medicines/human/EPAR/prevymis",
+          "https://www.ema.europa.eu/en/documents/product-information/prevymis-epar-product-information_en.pdf",
+          "https://www.ema.europa.eu/en/medicines/dhpc/prevymis",
+          "https://www.ema.europa.eu/en/about-us/about-website/legal-notice"
+        ],
+        "finding": "Live EPAR displayed English product-information update 2025-12-12, revision 18, procedure N/0000304418 dated 2025-12-05. SmPC section 10 has no populated revision date. EMA lists a 2020-09-11 IV in-line PES filter notice; listing and corresponding current-label passages checked, separate notice PDF not downloaded. That administration detail is outside the authored oral-prophylaxis slice. Later translation dates do not establish a later English revision.",
+        "limit": "No exhaustive EU/national notice clearance. Live EMA product-information URL is mutable. This snapshot does not establish all national availability, reimbursement, use outside the EU kidney indication or unrestricted third-party reuse."
+      }
+    ],
+    "rights_review": [
+      {
+        "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+        "disposition": "EMA public product information; EMA legal notice permits attributed reproduction subject to excluded/third-party content. The document retains its own terms; no full product information or source table is bundled. Original Renulus scenarios and explanations are CC BY 4.0."
+      }
+    ],
+    "scope_disposition": "Shared D32/D34 CMV slice only; reuse existing BK credit. No T21 pretransplant objective, complete aftercare, publication or installed acceptance claim.",
+    "synthetic_context": "Names, ages, events and dialogue are invented teaching context, not research findings or patient records.",
+    "answer": "C",
+    "key_review": {
+      "answer": "C",
+      "exact_option": {
+        "id": "C",
+        "text": "Arrange frequent tacrolimus whole-blood concentration monitoring during coadministration and at letermovir discontinuation, with specialist dose adjustment.",
+        "rationale": "Letermovir can increase tacrolimus exposure. Starting and stopping the interacting drug both require planned monitoring."
+      },
+      "single_best_answer_reason": "Review the full medication list with transplant pharmacy. The EU SmPC specifies frequent tacrolimus concentration monitoring during letermovir coadministration and at discontinuation; adjust immunosuppression using measured exposure and clinical context. Ciclosporin requires its own interaction and letermovir-dose review.",
+      "source_locators": [
+        {
+          "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+          "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin interaction rows; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+        }
+      ]
+    },
+    "distractor_review": [
+      {
+        "option_id": "A",
+        "exact_text": "Check tacrolimus only before letermovir starts, because stopping letermovir cannot change exposure.",
+        "rejected_because": "The interaction must be managed when letermovir is started and when it is discontinued.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin interaction rows; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          }
+        ]
+      },
+      {
+        "option_id": "B",
+        "exact_text": "Give every patient the same fixed tacrolimus dose reduction.",
+        "rejected_because": "The EU information calls for concentration monitoring and dose adjustment according to findings; it does not supply one universal tacrolimus reduction for all recipients.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin interaction rows; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          }
+        ]
+      },
+      {
+        "option_id": "D",
+        "exact_text": "Avoid reviewing ciclosporin if it later replaces tacrolimus, because it has no letermovir interaction.",
+        "rejected_because": "Ciclosporin has a clinically relevant bidirectional interaction and requires a letermovir dose adjustment plus ciclosporin concentration monitoring.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin interaction rows; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          }
+        ]
+      },
+      {
+        "option_id": "E",
+        "exact_text": "Use serum creatinine alone to exclude an interaction.",
+        "rejected_because": "Kidney function monitoring does not replace tacrolimus concentration monitoring.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin interaction rows; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "RN15-CMV-008",
+    "version": 1,
+    "kind": "question",
+    "reviewed_on": "2026-10-07",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "review_status": "assistant_claim_key_distractor_stage_checked",
+    "source_locators": [
+      {
+        "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+        "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+      },
+      {
+        "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+        "locator": "Letermovir, sec12/p[2]; Other Strategies to Prevent CMV, sec32; Adult CMV Treatment Consensus Statements, sec66: insufficient evidence for letermovir monotherapy"
+      }
+    ],
+    "skill": "clinical_reasoning",
+    "key_text": "Letermovir is an EU prophylaxis option for adult D+/R− kidney recipients weighing at least 40 kg; suspected breakthrough disease needs a separate treatment assessment and HSV/VZV prevention needs its own review.",
+    "checked_claim": "Keep prevention, treatment and pathogen coverage distinct. The adult EU kidney-transplant indication for letermovir concerns D+/R− CMV prophylaxis in recipients weighing at least 40 kg. It does not provide HSV/VZV protection, and evidence for prophylaxis must not be extrapolated to treating established CMV disease.",
+    "objective_support": [
+      {
+        "objective_id": "T17.O02",
+        "checked_claim": "Keep prevention, treatment and pathogen coverage distinct. The adult EU kidney-transplant indication for letermovir concerns D+/R− CMV prophylaxis in recipients weighing at least 40 kg. It does not provide HSV/VZV protection, and evidence for prophylaxis must not be extrapolated to treating established CMV disease.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Letermovir, sec12/p[2]; Other Strategies to Prevent CMV, sec32; Adult CMV Treatment Consensus Statements, sec66: insufficient evidence for letermovir monotherapy"
+          }
+        ]
+      },
+      {
+        "objective_id": "T19.O01",
+        "checked_claim": "Keep prevention, treatment and pathogen coverage distinct. The adult EU kidney-transplant indication for letermovir concerns D+/R− CMV prophylaxis in recipients weighing at least 40 kg. It does not provide HSV/VZV protection, and evidence for prophylaxis must not be extrapolated to treating established CMV disease.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Letermovir, sec12/p[2]; Other Strategies to Prevent CMV, sec32; Adult CMV Treatment Consensus Statements, sec66: insufficient evidence for letermovir monotherapy"
+          }
+        ]
+      }
+    ],
+    "claims": [
+      {
+        "field": "rationale",
+        "authored_claim": "Keep prevention, treatment and pathogen coverage distinct. The adult EU kidney-transplant indication for letermovir concerns D+/R− CMV prophylaxis in recipients weighing at least 40 kg. It does not provide HSV/VZV protection, and evidence for prophylaxis must not be extrapolated to treating established CMV disease.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Letermovir, sec12/p[2]; Other Strategies to Prevent CMV, sec32; Adult CMV Treatment Consensus Statements, sec66: insufficient evidence for letermovir monotherapy"
+          }
+        ]
+      },
+      {
+        "field": "options[0].rationale",
+        "authored_claim": "Antiviral indications and activity differ; prophylaxis does not establish treatment efficacy.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Letermovir, sec12/p[2]; Other Strategies to Prevent CMV, sec32; Adult CMV Treatment Consensus Statements, sec66: insufficient evidence for letermovir monotherapy"
+          }
+        ]
+      },
+      {
+        "field": "options[1].rationale",
+        "authored_claim": "The EU kidney-transplant indication is prophylaxis in D+/R− recipients, and letermovir lacks activity against these other herpesviruses. Do not infer a disease-treatment regimen.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Letermovir, sec12/p[2]; Other Strategies to Prevent CMV, sec32; Adult CMV Treatment Consensus Statements, sec66: insufficient evidence for letermovir monotherapy"
+          }
+        ]
+      },
+      {
+        "field": "options[2].rationale",
+        "authored_claim": "The cited EU kidney-transplant indication is D+/R−; consensus discussion of broader use does not widen the EU label.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Letermovir, sec12/p[2]; Other Strategies to Prevent CMV, sec32; Adult CMV Treatment Consensus Statements, sec66: insufficient evidence for letermovir monotherapy"
+          }
+        ]
+      },
+      {
+        "field": "options[3].rationale",
+        "authored_claim": "Prophylaxis does not exclude breakthrough disease and does not replace assessment.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Letermovir, sec12/p[2]; Other Strategies to Prevent CMV, sec32; Adult CMV Treatment Consensus Statements, sec66: insufficient evidence for letermovir monotherapy"
+          }
+        ]
+      },
+      {
+        "field": "options[4].rationale",
+        "authored_claim": "Whether another herpesvirus prophylaxis is indicated and how it should be prescribed require a separate clinical and medication review.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Letermovir, sec12/p[2]; Other Strategies to Prevent CMV, sec32; Adult CMV Treatment Consensus Statements, sec66: insufficient evidence for letermovir monotherapy"
+          }
+        ]
+      }
+    ],
+    "notice_review": [
+      {
+        "checked_on": "2026-10-07",
+        "routes": [
+          "https://www.ema.europa.eu/en/medicines/human/EPAR/prevymis",
+          "https://www.ema.europa.eu/en/documents/product-information/prevymis-epar-product-information_en.pdf",
+          "https://www.ema.europa.eu/en/medicines/dhpc/prevymis",
+          "https://www.ema.europa.eu/en/about-us/about-website/legal-notice"
+        ],
+        "finding": "Live EPAR displayed English product-information update 2025-12-12, revision 18, procedure N/0000304418 dated 2025-12-05. SmPC section 10 has no populated revision date. EMA lists a 2020-09-11 IV in-line PES filter notice; listing and corresponding current-label passages checked, separate notice PDF not downloaded. That administration detail is outside the authored oral-prophylaxis slice. Later translation dates do not establish a later English revision.",
+        "limit": "No exhaustive EU/national notice clearance. Live EMA product-information URL is mutable. This snapshot does not establish all national availability, reimbursement, use outside the EU kidney indication or unrestricted third-party reuse."
+      },
+      {
+        "checked_on": "2026-10-07",
+        "routes": [
+          "https://tts.org/9-tts/general/1616-fourth-international-consensus-guidelines-on-the-management-of-cytomegalovirus-in-solid-organ-transplantation",
+          "https://pubmed.ncbi.nlm.nih.gov/40200403/",
+          "https://pmc.ncbi.nlm.nih.gov/articles/PMC12180710/",
+          "https://journals.lww.com/transplantjournal/fulltext/2025/07000/the_fourth_international_consensus_guidelines_on.6.aspx"
+        ],
+        "finding": "TTS still lists the fourth consensus; PubMed records final 2025 publication. No linked erratum/retraction or correction text was identified in the inspected PubMed/PMC records, and targeted title/DOI correction searches returned no relevant same-work notice. Direct publisher page failed with an internal-access error.",
+        "limit": "No exhaustive notice or latest-clinical-guidance clearance. Absence of an indexed notice is not proof that none exists. No Crossmark-only inference; exact corrected publisher PDF bytes were not reviewed."
+      }
+    ],
+    "rights_review": [
+      {
+        "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+        "disposition": "EMA public product information; EMA legal notice permits attributed reproduction subject to excluded/third-party content. The document retains its own terms; no full product information or source table is bundled. Original Renulus scenarios and explanations are CC BY 4.0."
+      },
+      {
+        "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+        "disposition": "Kotton et al., 2025; Wolters Kluwer publication, CC BY-NC-ND 4.0. Primary text remains external for bounded research. Original scenarios, options and explanations are Renulus CC BY 4.0; no source prose, table, figure, translation or adapted guideline is distributed. The source licence is not relabelled or extended to commercial reuse."
+      }
+    ],
+    "scope_disposition": "Shared D32/D34 CMV slice only; reuse existing BK credit. No T21 pretransplant objective, complete aftercare, publication or installed acceptance claim.",
+    "synthetic_context": "Names, ages, events and dialogue are invented teaching context, not research findings or patient records.",
+    "answer": "B",
+    "key_review": {
+      "answer": "B",
+      "exact_option": {
+        "id": "B",
+        "text": "Letermovir is an EU prophylaxis option for adult D+/R− kidney recipients weighing at least 40 kg; suspected breakthrough disease needs a separate treatment assessment and HSV/VZV prevention needs its own review.",
+        "rationale": "The EU kidney-transplant indication is prophylaxis in D+/R− recipients, and letermovir lacks activity against these other herpesviruses. Do not infer a disease-treatment regimen."
+      },
+      "single_best_answer_reason": "Keep prevention, treatment and pathogen coverage distinct. The adult EU kidney-transplant indication for letermovir concerns D+/R− CMV prophylaxis in recipients weighing at least 40 kg. It does not provide HSV/VZV protection, and evidence for prophylaxis must not be extrapolated to treating established CMV disease.",
+      "source_locators": [
+        {
+          "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+          "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+        },
+        {
+          "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+          "locator": "Letermovir, sec12/p[2]; Other Strategies to Prevent CMV, sec32; Adult CMV Treatment Consensus Statements, sec66: insufficient evidence for letermovir monotherapy"
+        }
+      ]
+    },
+    "distractor_review": [
+      {
+        "option_id": "A",
+        "exact_text": "The statement is correct because all antiviral medicines have the same indications.",
+        "rejected_because": "Antiviral indications and activity differ; prophylaxis does not establish treatment efficacy.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Letermovir, sec12/p[2]; Other Strategies to Prevent CMV, sec32; Adult CMV Treatment Consensus Statements, sec66: insufficient evidence for letermovir monotherapy"
+          }
+        ]
+      },
+      {
+        "option_id": "C",
+        "exact_text": "Switch all R+ kidney recipients to letermovir because the EU kidney indication covers every serostatus.",
+        "rejected_because": "The cited EU kidney-transplant indication is D+/R−; consensus discussion of broader use does not widen the EU label.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Letermovir, sec12/p[2]; Other Strategies to Prevent CMV, sec32; Adult CMV Treatment Consensus Statements, sec66: insufficient evidence for letermovir monotherapy"
+          }
+        ]
+      },
+      {
+        "option_id": "D",
+        "exact_text": "No further assessment is needed if CMV symptoms occur during prophylaxis.",
+        "rejected_because": "Prophylaxis does not exclude breakthrough disease and does not replace assessment.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Letermovir, sec12/p[2]; Other Strategies to Prevent CMV, sec32; Adult CMV Treatment Consensus Statements, sec66: insufficient evidence for letermovir monotherapy"
+          }
+        ]
+      },
+      {
+        "option_id": "E",
+        "exact_text": "Add a second antiviral automatically without considering indication or kidney function.",
+        "rejected_because": "Whether another herpesvirus prophylaxis is indicated and how it should be prescribed require a separate clinical and medication review.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Letermovir, sec12/p[2]; Other Strategies to Prevent CMV, sec32; Adult CMV Treatment Consensus Statements, sec66: insufficient evidence for letermovir monotherapy"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "RN15-CASE-CMV-PREVENTION",
+    "version": 1,
+    "kind": "case",
+    "reviewed_on": "2026-10-07",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "review_status": "assistant_claim_key_distractor_stage_checked",
+    "source_locators": [
+      {
+        "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+        "locator": "sec3/p[1], p[5]; R+ Recommendations and Durations, sec28–sec29; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+      },
+      {
+        "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+        "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations and Durations, sec26–sec27; sec30"
+      },
+      {
+        "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+        "locator": "Diagnostics Consensus Statements, sec6: assay/specimen consistency and local thresholds; sec14/p[1]–p[2]; sec17/p[1]; sec30"
+      },
+      {
+        "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+        "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis, sec31; preemptive delivery logistics, sec14/p[3]"
+      }
+    ],
+    "skill": "mixed_domain_reasoning",
+    "key_text": null,
+    "checked_claim": "D denotes donor and R recipient. D+/R− indicates high serologic risk; either D+/R+ or D−/R+ is intermediate risk. A negative DNA test today does not erase the donor/recipient risk category. For R+ adult kidney recipients, prophylaxis or a reliable preemptive strategy is accepted. If routine prophylaxis is chosen, the consensus recommends three months; stronger immunosuppression can justify a longer individual plan. D−/R− is low risk. Routine CMV prevention is not recommended when leukoreduced or CMV-seronegative blood products are used. Prevention of herpes simplex and varicella-zoster is considered separately. Prophylaxis gives an antiviral before detected replication. Preemptive care uses scheduled blood testing and starts treatment when the local intervention criteria are met, ideally before symptoms. Either approach is accepted for D+/R− adult kidney recipients. Preemptive care needs at least weekly CMV testing for 12–16 weeks after transplantation, longer if risk remains high, plus prompt result review and access to treatment. Agree who receives each result and how missed samples are followed up. Greater immunosuppression can favour prophylaxis; this is a conditional consensus suggestion. For D+/R− kidney recipients choosing prophylaxis, the consensus recommends six months. An individual medicine must also follow its applicable product information; six months is not a universal product-specific stop instruction. Use the same specimen type and assay for an individual trend. Laboratories and specimen types can yield different values even when calibrated to an international standard; do not import another method's cutoff unchanged. The transplant programme specifies its threshold using assay, specimen and patient risk. D+/R− recipients generally need a lower threshold than R+ recipients. A very low signal is neither automatically harmless nor an automatic diagnosis of tissue-invasive disease; arrange timely review through the local pathway. For recipients at increased risk after prophylaxis, discuss weekly CMV DNA surveillance for 8–12 weeks. This is a weak recommendation with low-quality evidence, not proof that every recipient requires the same schedule. Debrief: record the exact medicine stop plan, subsequent sampling arrangements, named result reviewer and local action threshold. Explain how to contact the transplant team if symptoms develop or a sample is missed. Completing prophylaxis does not eliminate later CMV risk.",
+    "objective_support": [
+      {
+        "objective_id": "T17.O02",
+        "stage_ids": [
+          "stage-1",
+          "stage-2",
+          "stage-3",
+          "stage-4"
+        ],
+        "checked_claim": "D denotes donor and R recipient. D+/R− indicates high serologic risk; either D+/R+ or D−/R+ is intermediate risk. A negative DNA test today does not erase the donor/recipient risk category. For R+ adult kidney recipients, prophylaxis or a reliable preemptive strategy is accepted. If routine prophylaxis is chosen, the consensus recommends three months; stronger immunosuppression can justify a longer individual plan. D−/R− is low risk. Routine CMV prevention is not recommended when leukoreduced or CMV-seronegative blood products are used. Prevention of herpes simplex and varicella-zoster is considered separately. Prophylaxis gives an antiviral before detected replication. Preemptive care uses scheduled blood testing and starts treatment when the local intervention criteria are met, ideally before symptoms. Either approach is accepted for D+/R− adult kidney recipients. Preemptive care needs at least weekly CMV testing for 12–16 weeks after transplantation, longer if risk remains high, plus prompt result review and access to treatment. Agree who receives each result and how missed samples are followed up. Greater immunosuppression can favour prophylaxis; this is a conditional consensus suggestion. For D+/R− kidney recipients choosing prophylaxis, the consensus recommends six months. An individual medicine must also follow its applicable product information; six months is not a universal product-specific stop instruction. Use the same specimen type and assay for an individual trend. Laboratories and specimen types can yield different values even when calibrated to an international standard; do not import another method's cutoff unchanged. The transplant programme specifies its threshold using assay, specimen and patient risk. D+/R− recipients generally need a lower threshold than R+ recipients. A very low signal is neither automatically harmless nor an automatic diagnosis of tissue-invasive disease; arrange timely review through the local pathway. For recipients at increased risk after prophylaxis, discuss weekly CMV DNA surveillance for 8–12 weeks. This is a weak recommendation with low-quality evidence, not proof that every recipient requires the same schedule. Debrief: record the exact medicine stop plan, subsequent sampling arrangements, named result reviewer and local action threshold. Explain how to contact the transplant team if symptoms develop or a sample is missed. Completing prophylaxis does not eliminate later CMV risk.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "sec3/p[1], p[5]; R+ Recommendations and Durations, sec28–sec29; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations and Durations, sec26–sec27; sec30"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Diagnostics Consensus Statements, sec6: assay/specimen consistency and local thresholds; sec14/p[1]–p[2]; sec17/p[1]; sec30"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis, sec31; preemptive delivery logistics, sec14/p[3]"
+          }
+        ]
+      },
+      {
+        "objective_id": "T27.O02",
+        "stage_ids": [
+          "stage-2",
+          "stage-4"
+        ],
+        "checked_claim": "Prophylaxis gives an antiviral before detected replication. Preemptive care uses scheduled blood testing and starts treatment when the local intervention criteria are met, ideally before symptoms. Either approach is accepted for D+/R− adult kidney recipients. Preemptive care needs at least weekly CMV testing for 12–16 weeks after transplantation, longer if risk remains high, plus prompt result review and access to treatment. Agree who receives each result and how missed samples are followed up. Greater immunosuppression can favour prophylaxis; this is a conditional consensus suggestion. For D+/R− kidney recipients choosing prophylaxis, the consensus recommends six months. An individual medicine must also follow its applicable product information; six months is not a universal product-specific stop instruction. For recipients at increased risk after prophylaxis, discuss weekly CMV DNA surveillance for 8–12 weeks. This is a weak recommendation with low-quality evidence, not proof that every recipient requires the same schedule. Debrief: record the exact medicine stop plan, subsequent sampling arrangements, named result reviewer and local action threshold. Explain how to contact the transplant team if symptoms develop or a sample is missed. Completing prophylaxis does not eliminate later CMV risk.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations and Durations, sec26–sec27; sec30"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis, sec31; preemptive delivery logistics, sec14/p[3]"
+          }
+        ]
+      }
+    ],
+    "claims": [
+      {
+        "field": "stages[0].teaching_points[0]",
+        "authored_claim": "D denotes donor and R recipient. D+/R− indicates high serologic risk; either D+/R+ or D−/R+ is intermediate risk. A negative DNA test today does not erase the donor/recipient risk category.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "sec3/p[1], p[5]; R+ Recommendations and Durations, sec28–sec29; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+          }
+        ]
+      },
+      {
+        "field": "stages[0].teaching_points[1]",
+        "authored_claim": "For R+ adult kidney recipients, prophylaxis or a reliable preemptive strategy is accepted. If routine prophylaxis is chosen, the consensus recommends three months; stronger immunosuppression can justify a longer individual plan.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "sec3/p[1], p[5]; R+ Recommendations and Durations, sec28–sec29; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+          }
+        ]
+      },
+      {
+        "field": "stages[0].teaching_points[2]",
+        "authored_claim": "D−/R− is low risk. Routine CMV prevention is not recommended when leukoreduced or CMV-seronegative blood products are used. Prevention of herpes simplex and varicella-zoster is considered separately.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "sec3/p[1], p[5]; R+ Recommendations and Durations, sec28–sec29; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+          }
+        ]
+      },
+      {
+        "field": "stages[1].teaching_points[0]",
+        "authored_claim": "Prophylaxis gives an antiviral before detected replication. Preemptive care uses scheduled blood testing and starts treatment when the local intervention criteria are met, ideally before symptoms. Either approach is accepted for D+/R− adult kidney recipients.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations and Durations, sec26–sec27; sec30"
+          }
+        ]
+      },
+      {
+        "field": "stages[1].teaching_points[1]",
+        "authored_claim": "Preemptive care needs at least weekly CMV testing for 12–16 weeks after transplantation, longer if risk remains high, plus prompt result review and access to treatment. Agree who receives each result and how missed samples are followed up.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations and Durations, sec26–sec27; sec30"
+          }
+        ]
+      },
+      {
+        "field": "stages[1].teaching_points[2]",
+        "authored_claim": "Greater immunosuppression can favour prophylaxis; this is a conditional consensus suggestion. For D+/R− kidney recipients choosing prophylaxis, the consensus recommends six months. An individual medicine must also follow its applicable product information; six months is not a universal product-specific stop instruction.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations and Durations, sec26–sec27; sec30"
+          }
+        ]
+      },
+      {
+        "field": "stages[2].teaching_points[0]",
+        "authored_claim": "Use the same specimen type and assay for an individual trend. Laboratories and specimen types can yield different values even when calibrated to an international standard; do not import another method's cutoff unchanged.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Diagnostics Consensus Statements, sec6: assay/specimen consistency and local thresholds; sec14/p[1]–p[2]; sec17/p[1]; sec30"
+          }
+        ]
+      },
+      {
+        "field": "stages[2].teaching_points[1]",
+        "authored_claim": "The transplant programme specifies its threshold using assay, specimen and patient risk. D+/R− recipients generally need a lower threshold than R+ recipients. A very low signal is neither automatically harmless nor an automatic diagnosis of tissue-invasive disease; arrange timely review through the local pathway.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Diagnostics Consensus Statements, sec6: assay/specimen consistency and local thresholds; sec14/p[1]–p[2]; sec17/p[1]; sec30"
+          }
+        ]
+      },
+      {
+        "field": "stages[3].teaching_points[0]",
+        "authored_claim": "For recipients at increased risk after prophylaxis, discuss weekly CMV DNA surveillance for 8–12 weeks. This is a weak recommendation with low-quality evidence, not proof that every recipient requires the same schedule.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis, sec31; preemptive delivery logistics, sec14/p[3]"
+          }
+        ]
+      },
+      {
+        "field": "stages[3].teaching_points[1]",
+        "authored_claim": "Debrief: record the exact medicine stop plan, subsequent sampling arrangements, named result reviewer and local action threshold. Explain how to contact the transplant team if symptoms develop or a sample is missed. Completing prophylaxis does not eliminate later CMV risk.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis, sec31; preemptive delivery logistics, sec14/p[3]"
+          }
+        ]
+      },
+      {
+        "field": "take_home[0]",
+        "authored_claim": "Start with donor/recipient serostatus, then consider immunosuppression and the ability to deliver the plan.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "sec3/p[1], p[5]; R+ Recommendations and Durations, sec28–sec29; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations and Durations, sec26–sec27; sec30"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Diagnostics Consensus Statements, sec6: assay/specimen consistency and local thresholds; sec14/p[1]–p[2]; sec17/p[1]; sec30"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis, sec31; preemptive delivery logistics, sec14/p[3]"
+          }
+        ]
+      },
+      {
+        "field": "take_home[1]",
+        "authored_claim": "Specify the assay, sample schedule, action pathway and responsible team.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "sec3/p[1], p[5]; R+ Recommendations and Durations, sec28–sec29; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations and Durations, sec26–sec27; sec30"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Diagnostics Consensus Statements, sec6: assay/specimen consistency and local thresholds; sec14/p[1]–p[2]; sec17/p[1]; sec30"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis, sec31; preemptive delivery logistics, sec14/p[3]"
+          }
+        ]
+      },
+      {
+        "field": "take_home[2]",
+        "authored_claim": "Reassess risk when prophylaxis ends; preserve the low-certainty evidence boundary.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "sec3/p[1], p[5]; R+ Recommendations and Durations, sec28–sec29; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations and Durations, sec26–sec27; sec30"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Diagnostics Consensus Statements, sec6: assay/specimen consistency and local thresholds; sec14/p[1]–p[2]; sec17/p[1]; sec30"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis, sec31; preemptive delivery logistics, sec14/p[3]"
+          }
+        ]
+      }
+    ],
+    "notice_review": [
+      {
+        "checked_on": "2026-10-07",
+        "routes": [
+          "https://tts.org/9-tts/general/1616-fourth-international-consensus-guidelines-on-the-management-of-cytomegalovirus-in-solid-organ-transplantation",
+          "https://pubmed.ncbi.nlm.nih.gov/40200403/",
+          "https://pmc.ncbi.nlm.nih.gov/articles/PMC12180710/",
+          "https://journals.lww.com/transplantjournal/fulltext/2025/07000/the_fourth_international_consensus_guidelines_on.6.aspx"
+        ],
+        "finding": "TTS still lists the fourth consensus; PubMed records final 2025 publication. No linked erratum/retraction or correction text was identified in the inspected PubMed/PMC records, and targeted title/DOI correction searches returned no relevant same-work notice. Direct publisher page failed with an internal-access error.",
+        "limit": "No exhaustive notice or latest-clinical-guidance clearance. Absence of an indexed notice is not proof that none exists. No Crossmark-only inference; exact corrected publisher PDF bytes were not reviewed."
+      }
+    ],
+    "rights_review": [
+      {
+        "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+        "disposition": "Kotton et al., 2025; Wolters Kluwer publication, CC BY-NC-ND 4.0. Primary text remains external for bounded research. Original scenarios, options and explanations are Renulus CC BY 4.0; no source prose, table, figure, translation or adapted guideline is distributed. The source licence is not relabelled or extended to commercial reuse."
+      }
+    ],
+    "scope_disposition": "Shared D32/D34 CMV slice only; reuse existing BK credit. No T21 pretransplant objective, complete aftercare, publication or installed acceptance claim.",
+    "synthetic_context": "Names, ages, events and dialogue are invented teaching context, not research findings or patient records.",
+    "stage_review": [
+      {
+        "stage_id": "stage-1",
+        "narrative": "Mara, 46, has received a kidney transplant. The donor was CMV IgG positive and Mara was negative immediately before transplantation. She feels well and asks whether a negative discharge CMV DNA test means that prevention is unnecessary.",
+        "prompts": [
+          "What do D and R mean, and what is her serologic risk?",
+          "How would reliable R+ or D−/R− results change the prevention discussion?"
+        ],
+        "reveal": "Each subsequent narrative discloses new context before its prompts.",
+        "debrief": false,
+        "teaching_claims": [
+          {
+            "field": "stages[0].teaching_points[0]",
+            "authored_claim": "D denotes donor and R recipient. D+/R− indicates high serologic risk; either D+/R+ or D−/R+ is intermediate risk. A negative DNA test today does not erase the donor/recipient risk category.",
+            "source_locators": [
+              {
+                "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+                "locator": "sec3/p[1], p[5]; R+ Recommendations and Durations, sec28–sec29; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+              }
+            ]
+          },
+          {
+            "field": "stages[0].teaching_points[1]",
+            "authored_claim": "For R+ adult kidney recipients, prophylaxis or a reliable preemptive strategy is accepted. If routine prophylaxis is chosen, the consensus recommends three months; stronger immunosuppression can justify a longer individual plan.",
+            "source_locators": [
+              {
+                "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+                "locator": "sec3/p[1], p[5]; R+ Recommendations and Durations, sec28–sec29; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+              }
+            ]
+          },
+          {
+            "field": "stages[0].teaching_points[2]",
+            "authored_claim": "D−/R− is low risk. Routine CMV prevention is not recommended when leukoreduced or CMV-seronegative blood products are used. Prevention of herpes simplex and varicella-zoster is considered separately.",
+            "source_locators": [
+              {
+                "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+                "locator": "sec3/p[1], p[5]; R+ Recommendations and Durations, sec28–sec29; Prevention Strategies for CMV D−/R−, sec18/p[1]"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "stage_id": "stage-2",
+        "narrative": "Reveal: Mara received lymphocyte-depleting induction. She lives far from the laboratory, which currently offers her a visit every four weeks. The clinic has discussed both antiviral prophylaxis and preemptive care.",
+        "prompts": [
+          "What has to change before preemptive care is a feasible choice?",
+          "How does the intensity of immunosuppression affect the discussion?"
+        ],
+        "reveal": "Each subsequent narrative discloses new context before its prompts.",
+        "debrief": false,
+        "teaching_claims": [
+          {
+            "field": "stages[1].teaching_points[0]",
+            "authored_claim": "Prophylaxis gives an antiviral before detected replication. Preemptive care uses scheduled blood testing and starts treatment when the local intervention criteria are met, ideally before symptoms. Either approach is accepted for D+/R− adult kidney recipients.",
+            "source_locators": [
+              {
+                "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+                "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations and Durations, sec26–sec27; sec30"
+              }
+            ]
+          },
+          {
+            "field": "stages[1].teaching_points[1]",
+            "authored_claim": "Preemptive care needs at least weekly CMV testing for 12–16 weeks after transplantation, longer if risk remains high, plus prompt result review and access to treatment. Agree who receives each result and how missed samples are followed up.",
+            "source_locators": [
+              {
+                "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+                "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations and Durations, sec26–sec27; sec30"
+              }
+            ]
+          },
+          {
+            "field": "stages[1].teaching_points[2]",
+            "authored_claim": "Greater immunosuppression can favour prophylaxis; this is a conditional consensus suggestion. For D+/R− kidney recipients choosing prophylaxis, the consensus recommends six months. An individual medicine must also follow its applicable product information; six months is not a universal product-specific stop instruction.",
+            "source_locators": [
+              {
+                "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+                "locator": "Preemptive Therapy, sec14/p[1], p[3]; D+/R− Recommendations and Durations, sec26–sec27; sec30"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "stage_id": "stage-3",
+        "narrative": "Reveal: The team establishes a workable prevention plan. During teaching, Mara compares two future reports: a plasma result from her usual laboratory and a whole-blood result from another centre. A small detectable signal is presented as a reason to use the other centre's treatment threshold.",
+        "prompts": [
+          "Which information is needed before comparing results?",
+          "Why is a detectable signal different from proven organ disease?"
+        ],
+        "reveal": "Each subsequent narrative discloses new context before its prompts.",
+        "debrief": false,
+        "teaching_claims": [
+          {
+            "field": "stages[2].teaching_points[0]",
+            "authored_claim": "Use the same specimen type and assay for an individual trend. Laboratories and specimen types can yield different values even when calibrated to an international standard; do not import another method's cutoff unchanged.",
+            "source_locators": [
+              {
+                "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+                "locator": "Diagnostics Consensus Statements, sec6: assay/specimen consistency and local thresholds; sec14/p[1]–p[2]; sec17/p[1]; sec30"
+              }
+            ]
+          },
+          {
+            "field": "stages[2].teaching_points[1]",
+            "authored_claim": "The transplant programme specifies its threshold using assay, specimen and patient risk. D+/R− recipients generally need a lower threshold than R+ recipients. A very low signal is neither automatically harmless nor an automatic diagnosis of tissue-invasive disease; arrange timely review through the local pathway.",
+            "source_locators": [
+              {
+                "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+                "locator": "Diagnostics Consensus Statements, sec6: assay/specimen consistency and local thresholds; sec14/p[1]–p[2]; sec17/p[1]; sec30"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "stage_id": "stage-4",
+        "narrative": "Reveal: Mara chose prophylaxis and is approaching the planned end of that course. She has no current symptoms. The team prepares a handover to the local nephrology clinic.",
+        "prompts": [
+          "What should the handover say about surveillance and ownership of results?",
+          "How certain is the evidence for monitoring after prophylaxis?"
+        ],
+        "reveal": "Each subsequent narrative discloses new context before its prompts.",
+        "debrief": true,
+        "teaching_claims": [
+          {
+            "field": "stages[3].teaching_points[0]",
+            "authored_claim": "For recipients at increased risk after prophylaxis, discuss weekly CMV DNA surveillance for 8–12 weeks. This is a weak recommendation with low-quality evidence, not proof that every recipient requires the same schedule.",
+            "source_locators": [
+              {
+                "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+                "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis, sec31; preemptive delivery logistics, sec14/p[3]"
+              }
+            ]
+          },
+          {
+            "field": "stages[3].teaching_points[1]",
+            "authored_claim": "Debrief: record the exact medicine stop plan, subsequent sampling arrangements, named result reviewer and local action threshold. Explain how to contact the transplant team if symptoms develop or a sample is missed. Completing prophylaxis does not eliminate later CMV risk.",
+            "source_locators": [
+              {
+                "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+                "locator": "Surveillance After Prophylaxis, sec16; Surveillance After Primary Prophylaxis, sec31; preemptive delivery logistics, sec14/p[3]"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "RN15-CASE-CMV-MEDICINES",
+    "version": 1,
+    "kind": "case",
+    "reviewed_on": "2026-10-07",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "review_status": "assistant_claim_key_distractor_stage_checked",
+    "source_locators": [
+      {
+        "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+        "locator": "Lower-dose Valganciclovir Prophylaxis, sec21 and Table 5; Kidney Function Monitoring, sec65/p[1]"
+      },
+      {
+        "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+        "locator": "D+/R− Recommendations, sec26: intolerance; sec21"
+      },
+      {
+        "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+        "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+      },
+      {
+        "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+        "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+      },
+      {
+        "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+        "locator": "Letermovir, sec12/p[2]; Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25; Adult CMV Treatment Consensus Statements, sec66"
+      },
+      {
+        "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+        "locator": "Prevymis SmPC sections 4.1, 4.4 and 4.5; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+      },
+      {
+        "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+        "locator": "Prevymis tablet SmPC section 4.2, kidney-transplant subsection, printed/PDF p.4"
+      }
+    ],
+    "skill": "mixed_domain_reasoning",
+    "key_text": null,
+    "checked_claim": "Review prophylaxis versus treatment, formulation, the current kidney-function estimate and units required by the product guidance, and any dialysis. The consensus renal-dose table uses Cockcroft–Gault creatinine clearance in mL/min, which is not the same quantity as indexed eGFR in mL/min/1.73 m². A renal-adjusted dose may need to change as graft function changes. Routine mini-dosing below the appropriate renal dose is not recommended. This case supplies no complete dosing calculation; use the actual product guidance with transplant/pharmacy review. In a D+/R− kidney recipient intolerant of valganciclovir or ganciclovir prophylaxis, the consensus suggests switching to a deliverable preemptive strategy or letermovir prophylaxis; the recommendation is weak with low-quality evidence. Do not replace a full review with an arbitrary low valganciclovir dose. The adult EU kidney-transplant letermovir indication is CMV prophylaxis in D+/R− recipients weighing at least 40 kg. The transplant team must check current product information and the individual situation; this is not permission to apply the same indication to all R+ recipients. For this EU kidney-transplant indication, letermovir starts on the transplant day or by day 7 and continues through day 200. A later switch discussed in the consensus needs a separate specialist and regulatory assessment; do not silently treat it as the same labelled start schedule. Letermovir can increase tacrolimus exposure. Arrange frequent whole-blood tacrolimus concentration measurements during coadministration and at letermovir discontinuation, with specialist dose adjustment. A universal percentage reduction is not a substitute for measured exposure. The SmPC calls for increased monitoring during the first two weeks after starting and stopping; route changes also require monitoring. Ciclosporin has a bidirectional interaction with letermovir: review the required letermovir dose adjustment and monitor ciclosporin concentrations. Kidney-function measurements alone do not replace immunosuppressant-level monitoring. Letermovir does not protect against herpes simplex or varicella-zoster. Review separate prophylaxis when indicated. CMV prophylaxis evidence does not establish treatment of breakthrough CMV disease. Routine DNA monitoring is not recommended while appropriate prophylaxis is being taken reliably. New absorption or adherence concerns, changing kidney function or augmented immunosuppression can justify testing for breakthrough DNAemia and clinical reassessment. Debrief: write down the current indication, renal-dose review process, interaction monitoring at letermovir initiation and discontinuation, other herpesvirus prevention if indicated, and the named team to contact for new symptoms. Do not wait for a routine sample to seek assessment of persistent vomiting.",
+    "objective_support": [
+      {
+        "objective_id": "T17.O02",
+        "stage_ids": [
+          "stage-2",
+          "stage-4"
+        ],
+        "checked_claim": "In a D+/R− kidney recipient intolerant of valganciclovir or ganciclovir prophylaxis, the consensus suggests switching to a deliverable preemptive strategy or letermovir prophylaxis; the recommendation is weak with low-quality evidence. Do not replace a full review with an arbitrary low valganciclovir dose. The adult EU kidney-transplant letermovir indication is CMV prophylaxis in D+/R− recipients weighing at least 40 kg. The transplant team must check current product information and the individual situation; this is not permission to apply the same indication to all R+ recipients. For this EU kidney-transplant indication, letermovir starts on the transplant day or by day 7 and continues through day 200. A later switch discussed in the consensus needs a separate specialist and regulatory assessment; do not silently treat it as the same labelled start schedule. Letermovir does not protect against herpes simplex or varicella-zoster. Review separate prophylaxis when indicated. CMV prophylaxis evidence does not establish treatment of breakthrough CMV disease. Routine DNA monitoring is not recommended while appropriate prophylaxis is being taken reliably. New absorption or adherence concerns, changing kidney function or augmented immunosuppression can justify testing for breakthrough DNAemia and clinical reassessment. Debrief: write down the current indication, renal-dose review process, interaction monitoring at letermovir initiation and discontinuation, other herpesvirus prevention if indicated, and the named team to contact for new symptoms. Do not wait for a routine sample to seek assessment of persistent vomiting.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "D+/R− Recommendations, sec26: intolerance; sec21"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis tablet SmPC section 4.2, kidney-transplant subsection, printed/PDF p.4"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Letermovir, sec12/p[2]; Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25; Adult CMV Treatment Consensus Statements, sec66"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.1, 4.4 and 4.5; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          }
+        ]
+      },
+      {
+        "objective_id": "T19.O01",
+        "stage_ids": [
+          "stage-1",
+          "stage-2",
+          "stage-3",
+          "stage-4"
+        ],
+        "checked_claim": "Review prophylaxis versus treatment, formulation, the current kidney-function estimate and units required by the product guidance, and any dialysis. The consensus renal-dose table uses Cockcroft–Gault creatinine clearance in mL/min, which is not the same quantity as indexed eGFR in mL/min/1.73 m². A renal-adjusted dose may need to change as graft function changes. Routine mini-dosing below the appropriate renal dose is not recommended. This case supplies no complete dosing calculation; use the actual product guidance with transplant/pharmacy review. In a D+/R− kidney recipient intolerant of valganciclovir or ganciclovir prophylaxis, the consensus suggests switching to a deliverable preemptive strategy or letermovir prophylaxis; the recommendation is weak with low-quality evidence. Do not replace a full review with an arbitrary low valganciclovir dose. The adult EU kidney-transplant letermovir indication is CMV prophylaxis in D+/R− recipients weighing at least 40 kg. The transplant team must check current product information and the individual situation; this is not permission to apply the same indication to all R+ recipients. For this EU kidney-transplant indication, letermovir starts on the transplant day or by day 7 and continues through day 200. A later switch discussed in the consensus needs a separate specialist and regulatory assessment; do not silently treat it as the same labelled start schedule. Letermovir can increase tacrolimus exposure. Arrange frequent whole-blood tacrolimus concentration measurements during coadministration and at letermovir discontinuation, with specialist dose adjustment. A universal percentage reduction is not a substitute for measured exposure. The SmPC calls for increased monitoring during the first two weeks after starting and stopping; route changes also require monitoring. Ciclosporin has a bidirectional interaction with letermovir: review the required letermovir dose adjustment and monitor ciclosporin concentrations. Kidney-function measurements alone do not replace immunosuppressant-level monitoring. Letermovir does not protect against herpes simplex or varicella-zoster. Review separate prophylaxis when indicated. CMV prophylaxis evidence does not establish treatment of breakthrough CMV disease. Routine DNA monitoring is not recommended while appropriate prophylaxis is being taken reliably. New absorption or adherence concerns, changing kidney function or augmented immunosuppression can justify testing for breakthrough DNAemia and clinical reassessment. Debrief: write down the current indication, renal-dose review process, interaction monitoring at letermovir initiation and discontinuation, other herpesvirus prevention if indicated, and the named team to contact for new symptoms. Do not wait for a routine sample to seek assessment of persistent vomiting.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Lower-dose Valganciclovir Prophylaxis, sec21 and Table 5; Kidney Function Monitoring, sec65/p[1]"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "D+/R− Recommendations, sec26: intolerance; sec21"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis tablet SmPC section 4.2, kidney-transplant subsection, printed/PDF p.4"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Letermovir, sec12/p[2]; Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25; Adult CMV Treatment Consensus Statements, sec66"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.1, 4.4 and 4.5; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          }
+        ]
+      },
+      {
+        "objective_id": "T27.O02",
+        "stage_ids": [
+          "stage-3",
+          "stage-4"
+        ],
+        "checked_claim": "Letermovir can increase tacrolimus exposure. Arrange frequent whole-blood tacrolimus concentration measurements during coadministration and at letermovir discontinuation, with specialist dose adjustment. A universal percentage reduction is not a substitute for measured exposure. The SmPC calls for increased monitoring during the first two weeks after starting and stopping; route changes also require monitoring. Ciclosporin has a bidirectional interaction with letermovir: review the required letermovir dose adjustment and monitor ciclosporin concentrations. Kidney-function measurements alone do not replace immunosuppressant-level monitoring. Letermovir does not protect against herpes simplex or varicella-zoster. Review separate prophylaxis when indicated. CMV prophylaxis evidence does not establish treatment of breakthrough CMV disease. Routine DNA monitoring is not recommended while appropriate prophylaxis is being taken reliably. New absorption or adherence concerns, changing kidney function or augmented immunosuppression can justify testing for breakthrough DNAemia and clinical reassessment. Debrief: write down the current indication, renal-dose review process, interaction monitoring at letermovir initiation and discontinuation, other herpesvirus prevention if indicated, and the named team to contact for new symptoms. Do not wait for a routine sample to seek assessment of persistent vomiting.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Letermovir, sec12/p[2]; Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25; Adult CMV Treatment Consensus Statements, sec66"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.1, 4.4 and 4.5; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          }
+        ]
+      }
+    ],
+    "claims": [
+      {
+        "field": "stages[0].teaching_points[0]",
+        "authored_claim": "Review prophylaxis versus treatment, formulation, the current kidney-function estimate and units required by the product guidance, and any dialysis. The consensus renal-dose table uses Cockcroft–Gault creatinine clearance in mL/min, which is not the same quantity as indexed eGFR in mL/min/1.73 m².",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Lower-dose Valganciclovir Prophylaxis, sec21 and Table 5; Kidney Function Monitoring, sec65/p[1]"
+          }
+        ]
+      },
+      {
+        "field": "stages[0].teaching_points[1]",
+        "authored_claim": "A renal-adjusted dose may need to change as graft function changes. Routine mini-dosing below the appropriate renal dose is not recommended. This case supplies no complete dosing calculation; use the actual product guidance with transplant/pharmacy review.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Lower-dose Valganciclovir Prophylaxis, sec21 and Table 5; Kidney Function Monitoring, sec65/p[1]"
+          }
+        ]
+      },
+      {
+        "field": "stages[1].teaching_points[0]",
+        "authored_claim": "In a D+/R− kidney recipient intolerant of valganciclovir or ganciclovir prophylaxis, the consensus suggests switching to a deliverable preemptive strategy or letermovir prophylaxis; the recommendation is weak with low-quality evidence. Do not replace a full review with an arbitrary low valganciclovir dose.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "D+/R− Recommendations, sec26: intolerance; sec21"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis tablet SmPC section 4.2, kidney-transplant subsection, printed/PDF p.4"
+          }
+        ]
+      },
+      {
+        "field": "stages[1].teaching_points[1]",
+        "authored_claim": "The adult EU kidney-transplant letermovir indication is CMV prophylaxis in D+/R− recipients weighing at least 40 kg. The transplant team must check current product information and the individual situation; this is not permission to apply the same indication to all R+ recipients.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "D+/R− Recommendations, sec26: intolerance; sec21"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis tablet SmPC section 4.2, kidney-transplant subsection, printed/PDF p.4"
+          }
+        ]
+      },
+      {
+        "field": "stages[1].teaching_points[2]",
+        "authored_claim": "For this EU kidney-transplant indication, letermovir starts on the transplant day or by day 7 and continues through day 200. A later switch discussed in the consensus needs a separate specialist and regulatory assessment; do not silently treat it as the same labelled start schedule.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "D+/R− Recommendations, sec26: intolerance; sec21"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis tablet SmPC section 4.2, kidney-transplant subsection, printed/PDF p.4"
+          }
+        ]
+      },
+      {
+        "field": "stages[2].teaching_points[0]",
+        "authored_claim": "Letermovir can increase tacrolimus exposure. Arrange frequent whole-blood tacrolimus concentration measurements during coadministration and at letermovir discontinuation, with specialist dose adjustment. A universal percentage reduction is not a substitute for measured exposure. The SmPC calls for increased monitoring during the first two weeks after starting and stopping; route changes also require monitoring.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          }
+        ]
+      },
+      {
+        "field": "stages[2].teaching_points[1]",
+        "authored_claim": "Ciclosporin has a bidirectional interaction with letermovir: review the required letermovir dose adjustment and monitor ciclosporin concentrations. Kidney-function measurements alone do not replace immunosuppressant-level monitoring.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          }
+        ]
+      },
+      {
+        "field": "stages[3].teaching_points[0]",
+        "authored_claim": "Letermovir does not protect against herpes simplex or varicella-zoster. Review separate prophylaxis when indicated. CMV prophylaxis evidence does not establish treatment of breakthrough CMV disease.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Letermovir, sec12/p[2]; Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25; Adult CMV Treatment Consensus Statements, sec66"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.1, 4.4 and 4.5; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          }
+        ]
+      },
+      {
+        "field": "stages[3].teaching_points[1]",
+        "authored_claim": "Routine DNA monitoring is not recommended while appropriate prophylaxis is being taken reliably. New absorption or adherence concerns, changing kidney function or augmented immunosuppression can justify testing for breakthrough DNAemia and clinical reassessment.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Letermovir, sec12/p[2]; Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25; Adult CMV Treatment Consensus Statements, sec66"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.1, 4.4 and 4.5; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          }
+        ]
+      },
+      {
+        "field": "stages[3].teaching_points[2]",
+        "authored_claim": "Debrief: write down the current indication, renal-dose review process, interaction monitoring at letermovir initiation and discontinuation, other herpesvirus prevention if indicated, and the named team to contact for new symptoms. Do not wait for a routine sample to seek assessment of persistent vomiting.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Letermovir, sec12/p[2]; Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25; Adult CMV Treatment Consensus Statements, sec66"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.1, 4.4 and 4.5; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          }
+        ]
+      },
+      {
+        "field": "take_home[0]",
+        "authored_claim": "Renal adjustment, avoidance of arbitrary underdosing and the prevention/treatment distinction belong in each medication review.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Lower-dose Valganciclovir Prophylaxis, sec21 and Table 5; Kidney Function Monitoring, sec65/p[1]"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "D+/R− Recommendations, sec26: intolerance; sec21"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Letermovir, sec12/p[2]; Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25; Adult CMV Treatment Consensus Statements, sec66"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.1, 4.4 and 4.5; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis tablet SmPC section 4.2, kidney-transplant subsection, printed/PDF p.4"
+          }
+        ]
+      },
+      {
+        "field": "take_home[1]",
+        "authored_claim": "Plan interaction monitoring when letermovir starts and when it stops.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Lower-dose Valganciclovir Prophylaxis, sec21 and Table 5; Kidney Function Monitoring, sec65/p[1]"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "D+/R− Recommendations, sec26: intolerance; sec21"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Letermovir, sec12/p[2]; Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25; Adult CMV Treatment Consensus Statements, sec66"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.1, 4.4 and 4.5; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis tablet SmPC section 4.2, kidney-transplant subsection, printed/PDF p.4"
+          }
+        ]
+      },
+      {
+        "field": "take_home[2]",
+        "authored_claim": "Coordinate symptoms, absorption, adherence and viral testing through the transplant team.",
+        "source_locators": [
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Lower-dose Valganciclovir Prophylaxis, sec21 and Table 5; Kidney Function Monitoring, sec65/p[1]"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "D+/R− Recommendations, sec26: intolerance; sec21"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+            "locator": "Letermovir, sec12/p[2]; Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25; Adult CMV Treatment Consensus Statements, sec66"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis SmPC sections 4.1, 4.4 and 4.5; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+          },
+          {
+            "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+            "locator": "Prevymis tablet SmPC section 4.2, kidney-transplant subsection, printed/PDF p.4"
+          }
+        ]
+      }
+    ],
+    "notice_review": [
+      {
+        "checked_on": "2026-10-07",
+        "routes": [
+          "https://tts.org/9-tts/general/1616-fourth-international-consensus-guidelines-on-the-management-of-cytomegalovirus-in-solid-organ-transplantation",
+          "https://pubmed.ncbi.nlm.nih.gov/40200403/",
+          "https://pmc.ncbi.nlm.nih.gov/articles/PMC12180710/",
+          "https://journals.lww.com/transplantjournal/fulltext/2025/07000/the_fourth_international_consensus_guidelines_on.6.aspx"
+        ],
+        "finding": "TTS still lists the fourth consensus; PubMed records final 2025 publication. No linked erratum/retraction or correction text was identified in the inspected PubMed/PMC records, and targeted title/DOI correction searches returned no relevant same-work notice. Direct publisher page failed with an internal-access error.",
+        "limit": "No exhaustive notice or latest-clinical-guidance clearance. Absence of an indexed notice is not proof that none exists. No Crossmark-only inference; exact corrected publisher PDF bytes were not reviewed."
+      },
+      {
+        "checked_on": "2026-10-07",
+        "routes": [
+          "https://www.ema.europa.eu/en/medicines/human/EPAR/prevymis",
+          "https://www.ema.europa.eu/en/documents/product-information/prevymis-epar-product-information_en.pdf",
+          "https://www.ema.europa.eu/en/medicines/dhpc/prevymis",
+          "https://www.ema.europa.eu/en/about-us/about-website/legal-notice"
+        ],
+        "finding": "Live EPAR displayed English product-information update 2025-12-12, revision 18, procedure N/0000304418 dated 2025-12-05. SmPC section 10 has no populated revision date. EMA lists a 2020-09-11 IV in-line PES filter notice; listing and corresponding current-label passages checked, separate notice PDF not downloaded. That administration detail is outside the authored oral-prophylaxis slice. Later translation dates do not establish a later English revision.",
+        "limit": "No exhaustive EU/national notice clearance. Live EMA product-information URL is mutable. This snapshot does not establish all national availability, reimbursement, use outside the EU kidney indication or unrestricted third-party reuse."
+      }
+    ],
+    "rights_review": [
+      {
+        "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+        "disposition": "Kotton et al., 2025; Wolters Kluwer publication, CC BY-NC-ND 4.0. Primary text remains external for bounded research. Original scenarios, options and explanations are Renulus CC BY 4.0; no source prose, table, figure, translation or adapted guideline is distributed. The source licence is not relabelled or extended to commercial reuse."
+      },
+      {
+        "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+        "disposition": "EMA public product information; EMA legal notice permits attributed reproduction subject to excluded/third-party content. The document retains its own terms; no full product information or source table is bundled. Original Renulus scenarios and explanations are CC BY 4.0."
+      }
+    ],
+    "scope_disposition": "Shared D32/D34 CMV slice only; reuse existing BK credit. No T21 pretransplant objective, complete aftercare, publication or installed acceptance claim.",
+    "synthetic_context": "Names, ages, events and dialogue are invented teaching context, not research findings or patient records.",
+    "stage_review": [
+      {
+        "stage_id": "stage-1",
+        "narrative": "Leon, 59 and weighing 74 kg, receives valganciclovir prophylaxis after a kidney transplant. The donor was CMV IgG positive and Leon was negative (D+/R−). His initial prescription reflected poor graft function. On day 4, kidney function is improving, but the same prescription has been copied forward. The blood report displays indexed eGFR.",
+        "prompts": [
+          "Which prescription details and renal information must be checked?",
+          "Why is an automatic half-dose or an unchanged discharge dose unsafe reasoning?"
+        ],
+        "reveal": "Each subsequent narrative discloses new context before its prompts.",
+        "debrief": false,
+        "teaching_claims": [
+          {
+            "field": "stages[0].teaching_points[0]",
+            "authored_claim": "Review prophylaxis versus treatment, formulation, the current kidney-function estimate and units required by the product guidance, and any dialysis. The consensus renal-dose table uses Cockcroft–Gault creatinine clearance in mL/min, which is not the same quantity as indexed eGFR in mL/min/1.73 m².",
+            "source_locators": [
+              {
+                "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+                "locator": "Lower-dose Valganciclovir Prophylaxis, sec21 and Table 5; Kidney Function Monitoring, sec65/p[1]"
+              }
+            ]
+          },
+          {
+            "field": "stages[0].teaching_points[1]",
+            "authored_claim": "A renal-adjusted dose may need to change as graft function changes. Routine mini-dosing below the appropriate renal dose is not recommended. This case supplies no complete dosing calculation; use the actual product guidance with transplant/pharmacy review.",
+            "source_locators": [
+              {
+                "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+                "locator": "Lower-dose Valganciclovir Prophylaxis, sec21 and Table 5; Kidney Function Monitoring, sec65/p[1]"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "stage_id": "stage-2",
+        "narrative": "Reveal: On day 5, after the dose is reassessed, Leon develops clinically important intolerance with cytopenia. The team reviews the blood count, renal function and other medicines. He is asymptomatic for CMV, and the transplant service is considering an alternative prevention strategy.",
+        "prompts": [
+          "Which prevention alternatives does the consensus support for intolerance?",
+          "Which population boundary must be checked before using EU letermovir information?"
+        ],
+        "reveal": "Each subsequent narrative discloses new context before its prompts.",
+        "debrief": false,
+        "teaching_claims": [
+          {
+            "field": "stages[1].teaching_points[0]",
+            "authored_claim": "In a D+/R− kidney recipient intolerant of valganciclovir or ganciclovir prophylaxis, the consensus suggests switching to a deliverable preemptive strategy or letermovir prophylaxis; the recommendation is weak with low-quality evidence. Do not replace a full review with an arbitrary low valganciclovir dose.",
+            "source_locators": [
+              {
+                "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+                "locator": "D+/R− Recommendations, sec26: intolerance; sec21"
+              },
+              {
+                "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+                "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+              },
+              {
+                "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+                "locator": "Prevymis tablet SmPC section 4.2, kidney-transplant subsection, printed/PDF p.4"
+              }
+            ]
+          },
+          {
+            "field": "stages[1].teaching_points[1]",
+            "authored_claim": "The adult EU kidney-transplant letermovir indication is CMV prophylaxis in D+/R− recipients weighing at least 40 kg. The transplant team must check current product information and the individual situation; this is not permission to apply the same indication to all R+ recipients.",
+            "source_locators": [
+              {
+                "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+                "locator": "D+/R− Recommendations, sec26: intolerance; sec21"
+              },
+              {
+                "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+                "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+              },
+              {
+                "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+                "locator": "Prevymis tablet SmPC section 4.2, kidney-transplant subsection, printed/PDF p.4"
+              }
+            ]
+          },
+          {
+            "field": "stages[1].teaching_points[2]",
+            "authored_claim": "For this EU kidney-transplant indication, letermovir starts on the transplant day or by day 7 and continues through day 200. A later switch discussed in the consensus needs a separate specialist and regulatory assessment; do not silently treat it as the same labelled start schedule.",
+            "source_locators": [
+              {
+                "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+                "locator": "D+/R− Recommendations, sec26: intolerance; sec21"
+              },
+              {
+                "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+                "locator": "Prevymis SmPC section 4.1: kidney-transplant indication; tablet SmPC printed/PDF p.2"
+              },
+              {
+                "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+                "locator": "Prevymis tablet SmPC section 4.2, kidney-transplant subsection, printed/PDF p.4"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "stage_id": "stage-3",
+        "narrative": "Reveal: The team selects oral letermovir prophylaxis on day 6. Leon takes tacrolimus. At the medication handover, a clinician asks whether a standard tacrolimus dose reduction can replace drug-level monitoring. A second patient on ciclosporin is discussed for comparison.",
+        "prompts": [
+          "What monitoring is needed when letermovir starts and later stops?",
+          "Why does the ciclosporin combination require a separate check?"
+        ],
+        "reveal": "Each subsequent narrative discloses new context before its prompts.",
+        "debrief": false,
+        "teaching_claims": [
+          {
+            "field": "stages[2].teaching_points[0]",
+            "authored_claim": "Letermovir can increase tacrolimus exposure. Arrange frequent whole-blood tacrolimus concentration measurements during coadministration and at letermovir discontinuation, with specialist dose adjustment. A universal percentage reduction is not a substitute for measured exposure. The SmPC calls for increased monitoring during the first two weeks after starting and stopping; route changes also require monitoring.",
+            "source_locators": [
+              {
+                "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+                "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+              }
+            ]
+          },
+          {
+            "field": "stages[2].teaching_points[1]",
+            "authored_claim": "Ciclosporin has a bidirectional interaction with letermovir: review the required letermovir dose adjustment and monitor ciclosporin concentrations. Kidney-function measurements alone do not replace immunosuppressant-level monitoring.",
+            "source_locators": [
+              {
+                "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+                "locator": "Prevymis SmPC sections 4.4 and 4.5, Table 1: tacrolimus and ciclosporin; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "stage_id": "stage-4",
+        "narrative": "Reveal: Leon asks whether letermovir also prevents herpes simplex and whether routine weekly CMV DNA tests are mandatory. Later he reports persistent vomiting and asks if being on prophylaxis rules out a problem.",
+        "prompts": [
+          "Separate routine monitoring, testing for new concerns and other herpesvirus prevention.",
+          "What should the written shared plan contain?"
+        ],
+        "reveal": "Each subsequent narrative discloses new context before its prompts.",
+        "debrief": true,
+        "teaching_claims": [
+          {
+            "field": "stages[3].teaching_points[0]",
+            "authored_claim": "Letermovir does not protect against herpes simplex or varicella-zoster. Review separate prophylaxis when indicated. CMV prophylaxis evidence does not establish treatment of breakthrough CMV disease.",
+            "source_locators": [
+              {
+                "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+                "locator": "Letermovir, sec12/p[2]; Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25; Adult CMV Treatment Consensus Statements, sec66"
+              },
+              {
+                "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+                "locator": "Prevymis SmPC sections 4.1, 4.4 and 4.5; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+              }
+            ]
+          },
+          {
+            "field": "stages[3].teaching_points[1]",
+            "authored_claim": "Routine DNA monitoring is not recommended while appropriate prophylaxis is being taken reliably. New absorption or adherence concerns, changing kidney function or augmented immunosuppression can justify testing for breakthrough DNAemia and clinical reassessment.",
+            "source_locators": [
+              {
+                "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+                "locator": "Letermovir, sec12/p[2]; Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25; Adult CMV Treatment Consensus Statements, sec66"
+              },
+              {
+                "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+                "locator": "Prevymis SmPC sections 4.1, 4.4 and 4.5; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+              }
+            ]
+          },
+          {
+            "field": "stages[3].teaching_points[2]",
+            "authored_claim": "Debrief: write down the current indication, renal-dose review process, interaction monitoring at letermovir initiation and discontinuation, other herpesvirus prevention if indicated, and the named team to contact for new symptoms. Do not wait for a routine sample to seek assessment of persistent vomiting.",
+            "source_locators": [
+              {
+                "source_id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+                "locator": "Letermovir, sec12/p[2]; Universal Prophylaxis, sec9/p[1]; General CMV Prevention Recommendations, sec25; Adult CMV Treatment Consensus Statements, sec66"
+              },
+              {
+                "source_id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+                "locator": "Prevymis SmPC sections 4.1, 4.4 and 4.5; tablet SmPC printed/PDF pp.5, 7, 12–13 (indication p.2 where cited)"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "RN15-CMV-SOURCE-CONSENSUS-2025-20261007",
+    "kind": "source",
+    "reviewed_on": "2026-10-07",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "authored_scope": "Adult kidney recipient serologic risk, prophylaxis/preemptive strategy, assay-specific monitoring, renal-dose principles, intolerance alternatives and postprophylaxis surveillance. No comprehensive treatment, resistant CMV, pediatric or other-organ algorithm.",
+    "checked_claim": "Adult kidney recipient serologic risk, prophylaxis/preemptive strategy, assay-specific monitoring, renal-dose principles, intolerance alternatives and postprophylaxis surveillance. No comprehensive treatment, resistant CMV, pediatric or other-organ algorithm.",
+    "notice_review": {
+      "checked_on": "2026-10-07",
+      "routes": [
+        "https://tts.org/9-tts/general/1616-fourth-international-consensus-guidelines-on-the-management-of-cytomegalovirus-in-solid-organ-transplantation",
+        "https://pubmed.ncbi.nlm.nih.gov/40200403/",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC12180710/",
+        "https://journals.lww.com/transplantjournal/fulltext/2025/07000/the_fourth_international_consensus_guidelines_on.6.aspx"
+      ],
+      "finding": "TTS still lists the fourth consensus; PubMed records final 2025 publication. No linked erratum/retraction or correction text was identified in the inspected PubMed/PMC records, and targeted title/DOI correction searches returned no relevant same-work notice. Direct publisher page failed with an internal-access error.",
+      "limit": "No exhaustive notice or latest-clinical-guidance clearance. Absence of an indexed notice is not proof that none exists. No Crossmark-only inference; exact corrected publisher PDF bytes were not reviewed."
+    },
+    "rights_review": "Kotton et al., 2025; Wolters Kluwer publication, CC BY-NC-ND 4.0. Primary text remains external for bounded research. Original scenarios, options and explanations are Renulus CC BY 4.0; no source prose, table, figure, translation or adapted guideline is distributed. The source licence is not relabelled or extended to commercial reuse.",
+    "consumers": [
+      "RN15-CMV-001",
+      "RN15-CMV-002",
+      "RN15-CMV-003",
+      "RN15-CMV-004",
+      "RN15-CMV-005",
+      "RN15-CMV-006",
+      "RN15-CMV-008",
+      "RN15-CASE-CMV-PREVENTION",
+      "RN15-CASE-CMV-MEDICINES"
+    ],
+    "exact_artifact": {
+      "path": "C:\\rn-finish-20261007\\evidence\\depth-cmv\\PMC12180710.xml",
+      "sha256": "5e9508b814eadde6b06cc1cabbd96f2f1ed23dcb1e783718c8c5fd2f619759a9"
+    }
+  },
+  {
+    "id": "RN15-CMV-SOURCE-EMA-PREVYMIS-20261007",
+    "kind": "source",
+    "reviewed_on": "2026-10-07",
+    "reviewer_kind": "assistant",
+    "independent_human_review": false,
+    "authored_scope": "Adult D+/R− kidney recipients weighing at least 40 kg: CMV prophylaxis indication, start by day 7/continue through day 200, and tacrolimus/ciclosporin interaction planning. Not CMV treatment or approval of broader consensus populations, late-switch timing, a fixed dose, full interaction list or renal/IV administration algorithm.",
+    "checked_claim": "Adult D+/R− kidney recipients weighing at least 40 kg: CMV prophylaxis indication, start by day 7/continue through day 200, and tacrolimus/ciclosporin interaction planning. Not CMV treatment or approval of broader consensus populations, late-switch timing, a fixed dose, full interaction list or renal/IV administration algorithm.",
+    "notice_review": {
+      "checked_on": "2026-10-07",
+      "routes": [
+        "https://www.ema.europa.eu/en/medicines/human/EPAR/prevymis",
+        "https://www.ema.europa.eu/en/documents/product-information/prevymis-epar-product-information_en.pdf",
+        "https://www.ema.europa.eu/en/medicines/dhpc/prevymis",
+        "https://www.ema.europa.eu/en/about-us/about-website/legal-notice"
+      ],
+      "finding": "Live EPAR displayed English product-information update 2025-12-12, revision 18, procedure N/0000304418 dated 2025-12-05. SmPC section 10 has no populated revision date. EMA lists a 2020-09-11 IV in-line PES filter notice; listing and corresponding current-label passages checked, separate notice PDF not downloaded. That administration detail is outside the authored oral-prophylaxis slice. Later translation dates do not establish a later English revision.",
+      "limit": "No exhaustive EU/national notice clearance. Live EMA product-information URL is mutable. This snapshot does not establish all national availability, reimbursement, use outside the EU kidney indication or unrestricted third-party reuse."
+    },
+    "rights_review": "EMA public product information; EMA legal notice permits attributed reproduction subject to excluded/third-party content. The document retains its own terms; no full product information or source table is bundled. Original Renulus scenarios and explanations are CC BY 4.0.",
+    "consumers": [
+      "RN15-CMV-007",
+      "RN15-CMV-008",
+      "RN15-CASE-CMV-MEDICINES"
+    ],
+    "exact_artifact": {
+      "path": "C:\\rn-finish-20261007\\evidence\\depth-cmv\\prevymis-epar-product-information_en.pdf",
+      "sha256": "db4998a6cb590006789107af9f09c4196d815ed441a57d076042c2223b8d34a9"
+    }
+  }
+]

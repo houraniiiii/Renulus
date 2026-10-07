@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "pack_id": "renulus-foundations",
+  "pack_version": "1.1.1",
+  "checked_on": "2026-10-05",
+  "method": "Assistant formal curriculum/item alignment review. Existing clinical source/key reviews are inherited without a new clinical-source currency claim.",
+  "independent_human_review": false,
+  "inherited_review": "All 160 questions, 26 cases and their exact clinical source/key snapshots are unchanged from 1.1.0. That release and its predecessor review evidence remain unchanged.",
+  "access_limits": "Only the public official hub-linked curriculum and blueprint were read for mapping. No primary source originals, official sample questions, exam bank or restricted teaching content is distributed. No independent clinician review.",
+  "sources": [],
+  "items": [],
+  "programme_mapping": {
+    "id": "esen_eph",
+    "version": "2026-10-05",
+    "checked_on": "2026-10-05",
+    "evidence_sha256": {
+      "C01-linked-blueprint-20261005": "20e0d68613b660c9df1669a0958ec594e5cc317ea4f6e261ad9e994154482d9c",
+      "C01-renal-curriculum-2022": "1723591e724a1d27e40e80648c5c2854a2ac3dad211dcbc7fd077d02b9d74d16"
+    },
+    "excluded_question_ids": [
+      "RN-EVID-001",
+      "RN11-T17-004",
+      "RN11-T20-001",
+      "RN11-T20-003",
+      "RN11-T23-004",
+      "RN11-T26-001",
+      "RN11-T26-003",
+      "RN11-T26-004"
+    ]
+  }
+}

@@ -1,0 +1,328 @@
+[
+  {
+    "version": 1,
+    "topic_id": "T20",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T20.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus bounded HD content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-07",
+      "source_key_checked": true,
+      "independent_human_review": false,
+      "method": "Exact primary loci, authored claims, unique key and each distractor checked in reviews.json. Synthetic original teaching; parent integration pending. No independent human review or practical certification."
+    },
+    "id": "RN15-HD-001",
+    "family_id": "RN15-HD-001.family",
+    "family_version": 1,
+    "key_version": 1,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "An adult receiving maintenance haemodialysis suddenly becomes breathless and confused. Staff see air in the return tubing after a connection has loosened. Air embolism is suspected. Which immediate response is best?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Pause ultrafiltration but continue pumping blood while checking the connection.",
+        "rationale": "This leaves the suspected route of air delivery active."
+      },
+      {
+        "id": "B",
+        "text": "Return the circuit blood before calling for assistance.",
+        "rationale": "Suspected air embolism is a reason to withhold circuit blood, not perform routine reinfusion."
+      },
+      {
+        "id": "C",
+        "text": "Stop the blood pump, clamp access and bloodlines, withhold circuit blood and summon emergency help while assessing and supporting oxygenation.",
+        "rationale": "This combines interruption of air entry with urgent patient assessment and support by trained staff."
+      },
+      {
+        "id": "D",
+        "text": "Reset the air alarm once and observe whether symptoms settle.",
+        "rationale": "A symptomatic patient and visible air require action before any restart."
+      },
+      {
+        "id": "E",
+        "text": "Wait for imaging to prove an embolus before interrupting treatment.",
+        "rationale": "Clinical suspicion in this setting warrants immediate protective action."
+      }
+    ],
+    "answer": "C",
+    "rationale": "Treat this as suspected air embolism. Trained staff interrupt the circuit and prevent further air entry while emergency assessment and oxygen support proceed; diagnostic confirmation must not delay this response. This is educational reasoning, not a machine-specific operating sequence.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "RN15-HD-SRC-BCR-202607",
+        "locator": "Section 2.2 Air Embolus, printed p2 / physical PDF p4: signs, causes and immediate management steps 1, 2, 5-7; positioning and aspiration steps 3-4 excluded"
+      },
+      {
+        "source_id": "RN15-HD-SRC-NDT-2025",
+        "locator": "Treatment standards > First actions > Additional first actions, specific to the hemodialysis population, and Box 1, When to stop dialysis: suspected air embolism/hemolysis"
+      }
+    ]
+  },
+  {
+    "version": 1,
+    "topic_id": "T20",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T20.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus bounded HD content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-07",
+      "source_key_checked": true,
+      "independent_human_review": false,
+      "method": "Exact primary loci, authored claims, unique key and each distractor checked in reviews.json. Synthetic original teaching; parent integration pending. No independent human review or practical certification."
+    },
+    "id": "RN15-HD-002",
+    "family_id": "RN15-HD-002.family",
+    "family_version": 1,
+    "key_version": 1,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "During an otherwise stable dialysis session, a patient develops back pain and nausea. The post-dialyser blood looks unusually translucent and burgundy; staff identify kinked tubing. Acute haemolysis is suspected. Which plan best addresses the immediate hazard?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Straighten the tubing and resume the same circuit if its appearance improves.",
+        "rationale": "A mechanical clue does not establish that the blood or equipment is now safe."
+      },
+      {
+        "id": "B",
+        "text": "Stop dialysis, clamp the venous line, do not return circuit blood, and obtain urgent clinical assessment with potassium, haemolysis investigations and ECG monitoring.",
+        "rationale": "The response limits further exposure and addresses potentially dangerous potassium release."
+      },
+      {
+        "id": "C",
+        "text": "Reinfuse the circuit blood to prevent anaemia before requesting laboratory tests.",
+        "rationale": "Reinfusion of haemolysed blood can add released potassium to the patient."
+      },
+      {
+        "id": "D",
+        "text": "Wait for a low blood pressure before treating this as an emergency.",
+        "rationale": "Early haemolysis can occur with hypertension; absence of hypotension does not exclude it."
+      },
+      {
+        "id": "E",
+        "text": "Treat the finding as a laboratory collection artefact because the sample has not yet been analysed.",
+        "rationale": "Symptoms and a change in the extracorporeal blood cannot be dismissed as an isolated sampling problem."
+      }
+    ],
+    "answer": "B",
+    "rationale": "The combination warrants an immediate suspected-haemolysis response. A kink is a possible cause, not proof of the entire mechanism. Investigate the patient and circuit before deciding how further dialysis can safely proceed.",
+    "difficulty": "integration",
+    "sources": [
+      {
+        "source_id": "RN15-HD-SRC-BCR-202607",
+        "locator": "Section 2.10 Hemolysis, printed pp8-9 / physical PDF pp10-11: definition, signs, immediate management, bloodwork/ECG and equipment investigation"
+      },
+      {
+        "source_id": "RN15-HD-SRC-CJASN-2017",
+        "locator": "Hemolysis section, final paragraph beginning Patients with severe intradialytic hemolysis: diagnostic laboratory findings, no circuit-blood return, potassium mechanism and root-cause investigation"
+      }
+    ]
+  },
+  {
+    "version": 1,
+    "topic_id": "T20",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T20.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus bounded HD content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-07",
+      "source_key_checked": true,
+      "independent_human_review": false,
+      "method": "Exact primary loci, authored claims, unique key and each distractor checked in reviews.json. Synthetic original teaching; parent integration pending. No independent human review or practical certification."
+    },
+    "id": "RN15-HD-003",
+    "family_id": "RN15-HD-003.family",
+    "family_version": 1,
+    "key_version": 1,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A dialysis circuit has already been stopped for suspected haemolysis. The patient asks why the team is withholding its blood even though anaemia is a concern. Which explanation best addresses that specific decision?",
+    "options": [
+      {
+        "id": "A",
+        "text": "The withheld blood can safely be given back after cooling it.",
+        "rationale": "Cooling does not establish that haemolysed blood is safe for reinfusion."
+      },
+      {
+        "id": "B",
+        "text": "Withholding blood itself guarantees that the potassium is normal.",
+        "rationale": "Potassium released into the patient still needs assessment and management."
+      },
+      {
+        "id": "C",
+        "text": "Only visible clotting can make extracorporeal blood unsuitable for return.",
+        "rationale": "Haemolysis is a separate reason to withhold it."
+      },
+      {
+        "id": "D",
+        "text": "Damaged red cells release potassium; reinfusing haemolysed circuit blood can worsen hyperkalaemia.",
+        "rationale": "This is the relevant mechanism behind the no-return decision."
+      },
+      {
+        "id": "E",
+        "text": "Every interruption of dialysis requires discarding all circuit blood.",
+        "rationale": "The decision depends on the cause and circuit safety; it is not a universal interruption rule."
+      }
+    ],
+    "answer": "D",
+    "rationale": "Potassium release explains the immediate reinfusion hazard. Assessment of anaemia and any transfusion decision is separate; this item sets no transfusion threshold or hyperkalaemia drug regimen.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "RN15-HD-SRC-CJASN-2017",
+        "locator": "Hemolysis section, final paragraph beginning Patients with severe intradialytic hemolysis: diagnostic laboratory findings, no circuit-blood return, potassium mechanism and root-cause investigation"
+      },
+      {
+        "source_id": "RN15-HD-SRC-BCR-202607",
+        "locator": "Section 2.10 Hemolysis, printed pp8-9 / physical PDF pp10-11: definition, signs, immediate management, bloodwork/ECG and equipment investigation"
+      }
+    ]
+  },
+  {
+    "version": 1,
+    "topic_id": "T20",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T20.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus bounded HD content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-07",
+      "source_key_checked": true,
+      "independent_human_review": false,
+      "method": "Exact primary loci, authored claims, unique key and each distractor checked in reviews.json. Synthetic original teaching; parent integration pending. No independent human review or practical certification."
+    },
+    "id": "RN15-HD-004",
+    "family_id": "RN15-HD-004.family",
+    "family_version": 1,
+    "key_version": 1,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "A maintenance-HD patient reports sudden wetness at the fistula. Staff find the venous needle out, ongoing blood loss and a blood pump that is still running. There has been no pressure alarm. Which response is best?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Stop the blood pump, call for help and apply pressure to the bleeding fistula site while urgently assessing circulation.",
+        "rationale": "The visible event requires immediate control of blood loss and assessment even without an alarm."
+      },
+      {
+        "id": "B",
+        "text": "Continue treatment because the absence of an alarm excludes significant blood loss.",
+        "rationale": "The pressure change may be insufficient to trigger an alarm."
+      },
+      {
+        "id": "C",
+        "text": "Widen the alarm limits before inspecting the access.",
+        "rationale": "Changing alarm limits does not control the observed bleeding."
+      },
+      {
+        "id": "D",
+        "text": "Cover the access and wait for the scheduled observation round.",
+        "rationale": "This delays recognition of continued blood loss."
+      },
+      {
+        "id": "E",
+        "text": "Increase pump speed to compensate for the interrupted venous return.",
+        "rationale": "Continuing the pump can worsen external blood loss."
+      }
+    ],
+    "answer": "A",
+    "rationale": "Needle dislodgement can bleed without triggering a pressure alarm. The appropriate first response addresses the patient and bleeding site immediately; a later equipment review cannot substitute for haemostasis.",
+    "difficulty": "application",
+    "sources": [
+      {
+        "source_id": "RN15-HD-SRC-BCR-202607",
+        "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture"
+      },
+      {
+        "source_id": "RN15-HD-SRC-UKKA-STOP-2023",
+        "locator": "Physical PDF pp4-5: Observation, Pressure Monitoring, and Principles of Safe Alarm Handling (MARC); review date April 2026 on physical p5"
+      }
+    ]
+  },
+  {
+    "version": 1,
+    "topic_id": "T20",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T20.O02"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus bounded HD content lane assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-07",
+      "source_key_checked": true,
+      "independent_human_review": false,
+      "method": "Exact primary loci, authored claims, unique key and each distractor checked in reviews.json. Synthetic original teaching; parent integration pending. No independent human review or practical certification."
+    },
+    "id": "RN15-HD-005",
+    "family_id": "RN15-HD-005.family",
+    "family_version": 1,
+    "key_version": 1,
+    "kind": "single_best_answer",
+    "usage": "assessment_reserved",
+    "stem": "After a venous needle becomes dislodged during dialysis, the emergency team stops the pump and controls the fistula bleeding. The detached circuit end has fallen onto the floor and is contaminated. What is the best decision about the blood in that circuit?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Reconnect it immediately because all blood loss must be reversed first.",
+        "rationale": "This would reconnect a contaminated circuit."
+      },
+      {
+        "id": "B",
+        "text": "Return it if the blood still looks normal.",
+        "rationale": "Normal appearance does not establish freedom from contamination."
+      },
+      {
+        "id": "C",
+        "text": "Withhold it, continue urgent assessment of blood loss and arrange further care through the treating team.",
+        "rationale": "Contamination is an explicit reason not to return circuit blood after disconnection."
+      },
+      {
+        "id": "D",
+        "text": "Wait for a culture from the circuit before deciding whether to reinfuse it.",
+        "rationale": "A culture result is not a prerequisite for avoiding this contaminated circuit."
+      },
+      {
+        "id": "E",
+        "text": "Infer from this event that circuit blood must never be returned after any kind of bleeding.",
+        "rationale": "This scenario supports a contamination-specific decision, not a universal rule for every haemorrhage."
+      }
+    ],
+    "answer": "C",
+    "rationale": "Do not return blood from this contaminated circuit. The clinical team separately determines circulatory support, blood tests and any transfusion need; this question does not prescribe those interventions.",
+    "difficulty": "integration",
+    "sources": [
+      {
+        "source_id": "RN15-HD-SRC-BCR-202607",
+        "locator": "Section 2.16.1 VA Disconnection/Needle Dislodgement (Arterial or Venous), printed p15 / physical PDF p17: signs, management and prevention; excludes section 2.16.2 rupture"
+      }
+    ]
+  }
+]

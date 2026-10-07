@@ -1,0 +1,15 @@
+# Selected CPU stack; resolve transitive Windows wheels before adoption.
+docling==2.133.0
+docling-core[chunking]==2.99.0
+fastembed==0.8.1
+lancedb==0.39.0
+mem0ai==2.2.1
+qdrant-client==1.19.1
+onnxruntime==1.30.0
+tokenizers==0.23.2
+# RapidOCR assigns Path values; OmegaConf 2.0.6 selected by a wheel-only resolver
+# imports but fails at runtime. Bundle the tested stable parser pair instead.
+omegaconf==2.3.1
+antlr4-python3-runtime==4.9.3
+# ANTLR 4.9.3 is pure Python but PyPI publishes only an sdist for that version.
+# Build its py3-none-any wheel once during developer packaging; doctors never build.

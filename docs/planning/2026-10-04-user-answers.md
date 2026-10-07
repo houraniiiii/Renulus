@@ -271,3 +271,103 @@ Recorded later on 2026-10-04 from the owner's acquisition instruction.
   sample or unavailable export must not be reported as a complete dataset.
 - This acquisition instruction does not implement the app, authorise incidental
   billed provider calls or restore unspecified private/archive datasets.
+
+## End-to-end implementation authorisation
+
+Recorded on October 4, 2026 from the subsequent implementation instruction.
+This supersedes the earlier planning-only implementation status.
+
+- The user selected **Flow** from the design exploration. Reuse its artifacts
+  and the agreed Renulus brand in one coherent product design system.
+- Implementation of the complete backend, frontend and connected app is now
+  authorised. Orchestrate bounded subagents in parallel lanes, several waves
+  and isolated worktrees, owning engineering decisions, testing and validation.
+- Keep planning basic and flexible. Actual implementation evidence may change
+  proposed interfaces and sequencing without reopening settled product choices.
+- Use GitHub issues as the dynamic work queue and record decisions and evidence.
+  Start unblocked work in available lanes. Prioritise working product flows and
+  maintained reusable components over redundant infrastructure or trivial tests.
+- Work autonomously over the next eight hours. The later explicit goal instruction
+  sets the heartbeat to **15 minutes**, superseding the initial 30-minute request.
+  The UI session is `7cc53cdb-4edb-4770-b48e-b1cf925f0021`; source acquisition
+  continues separately in `33c2315f-f369-42d0-bf80-818205301d18`. Preserve their
+  work and integrate available artifacts through explicit ownership boundaries.
+- The owner has added the nephrology manual and wants the app to use the
+  acquired data. Import authorised selected files locally, preserve external
+  originals and acquisition metadata, and keep restricted files out of the
+  public repository. No paid-provider use, training or copied private/native
+  account state is implied by implementation authorisation.
+
+Live execution and delivery evidence belong in GitHub issue #1 and
+`docs/implementation/`, not in an assertion that the old planning gates passed.
+
+## October 5 finalisation and storage instruction
+
+The owner renewed the same end-to-end delivery goal on October 5, 2026.
+
+- Move the active delivery checkout from E to the C SSD now that the earlier
+  storage shortage is resolved. Preserve the raw collection on the second SSD,
+  original files, other sessions and app-owned credentials.
+- Recover existing worktrees, commits, incomplete checks and receipts before
+  assigning replacement work. Continue autonomously with Ultra reasoning and
+  up to eight bounded parallel lanes in separate worktrees.
+- Use the existing GitHub issues and draft PR #13 as the live queue, with
+  exactly one heartbeat every **20 minutes**. This is the current interval.
+- Complete backend regression, matching packaging/installation, normal-queue
+  shutdown/reopen, Library originals and citations, ESENeph mapping, approved
+  subscription generation and learning capture, recovery and connected flows.
+- Preserve Flow, the selected engines and exact subscription/model boundaries,
+  source permissions and temporary-case retention. Update the launcher only
+  after acceptance of the matching installed source.
+- Finish with a requirement-by-requirement evidence audit, runnable delivery
+  and honest external blockers. Partial or synthetic evidence does not establish
+  completed release acceptance.
+
+The integration owner relocated the active checkout to
+`C:/Renulus-native-delivery/desktop-20261005/repo` and repaired the existing Git
+worktree links. The old E checkout path is a junction for launcher compatibility;
+the learning profile and acquired originals remain on E. This storage change
+does not update the installed product revision.
+
+## October 5 Windows acceptance update
+
+The owner confirmed that only the current PC is available and explicitly asked
+to remove signing and separate clean Windows PC/VM acceptance requirements.
+
+- Deliver an unsigned Windows app and validate it on this PC.
+- Keep matching source/artifact provenance, bundled runtime with developer tools
+  absent from the app PATH, fresh isolated installation, normal shutdown/reopen,
+  recovery and the connected product journeys as acceptance requirements.
+- A second isolated installation/profile on this machine can establish restore
+  and instance isolation; do not call that a separate clean-machine test.
+- Signing and a separate clean-machine test are optional future distribution
+  work and are not blockers or missing inputs for this goal.
+- Preserve historical signed-release/clean-machine planning and observations as
+  dated evidence; the updated DECISIONS and implementation plan govern current
+  acceptance. No subscription, stack, source-use or retention constraint changed.
+
+## October 6 local delivery with the live blocker
+
+The installed app's selected Codex GPT 6 Astra attempt returned
+`subscription_limit`. Asked whether to restore the existing connection or deliver
+with the blocker documented, the owner answered: **“Deliver with the live blocker.”**
+
+Complete the runnable local Windows handover with the observed acceptance scopes
+and limits. Successful generation, automatic capture and dependent live journeys
+stay unperformed; account access is not required for this handover. Preserve
+the original failed attempt and exact model/subscription constraints, with no
+retry, silent switch, fallback or Go activation. The decision supplies no live
+success or full product validation claim.
+
+## October 7 full delivery continuation and Go approval
+
+The owner resumed full product delivery and explicitly instructed us to enable
+and test OpenCode Go for personal-agent learning, removing the earlier overly
+cautious app pause and notes. Test the two approved Go models using Renulus's
+existing saved connection; keep exact subscription/model choices and preserve
+credentials. App approval does not invent a vendor confirmation or a live pass.
+The prior October 6 limited handover remains historical; complete Explain,
+practice, automatic Memory, connected evidence/Cases/Updates, required content,
+Windows usability and matching release acceptance are now the active goal.
+Use bounded parallel lanes, integrate their work, keep GitHub current and clean
+completed worktrees after preserving useful evidence.

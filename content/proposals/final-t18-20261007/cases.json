@@ -1,0 +1,105 @@
+[
+  {
+    "version": 1,
+    "topic_id": "T18",
+    "secondary_topic_ids": [],
+    "objective_ids": [
+      "T18.O01"
+    ],
+    "license": "CC-BY-4.0",
+    "original": true,
+    "review": {
+      "status": "assistant_reviewed",
+      "reviewer": "Renulus final T18 content assistant",
+      "reviewer_kind": "assistant",
+      "reviewed_on": "2026-10-07",
+      "source_key_checked": true,
+      "independent_human_review": false,
+      "method": "Scoped official EMA IV SmPC clinical-locus reading and exact claim/key/distractor/stage review in proposal reviews.json. Original synthetic teaching. No independent human review, full oncology curriculum or global-currentness clearance."
+    },
+    "id": "RN16-CASE-T18-TREATMENT-INJURY",
+    "synthetic": true,
+    "usage": "teaching",
+    "title": "The cancer is responding, but kidney function changes",
+    "summary": "A synthetic adult receiving pembrolizumab develops renal dysfunction: connect the treatment exposure, investigate competing explanations and plan the response with the treating team.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "narrative": "Elena, 62, is receiving intravenous pembrolizumab monotherapy for advanced melanoma. Her latest tumour assessment shows response. A scheduled blood test now shows a clear creatinine rise from her usual level. She asks whether the improving cancer scan means that the kidney result can be ignored.",
+        "prompts": [
+          "How can cancer treatment itself belong in the kidney differential?",
+          "What does the tumour response fail to establish?"
+        ],
+        "teaching_points": [
+          "Pembrolizumab-associated immune-mediated nephritis is a possible explanation. A treatment can benefit the cancer and still cause renal harm.",
+          "The exposure and timing do not prove the lesion. Assess the kidney change rather than attributing it automatically to either the cancer or its treatment."
+        ],
+        "sources": [
+          {
+            "source_id": "RN16-T18-SRC-EMA-KEYTRUDA-20261007",
+            "locator": "IV SmPC section 4.1, printed/PDF p2, Melanoma: adult advanced melanoma monotherapy; section 4.2 p5 opening supervision requirement."
+          },
+          {
+            "source_id": "RN16-T18-SRC-EMA-KEYTRUDA-20261007",
+            "locator": "IV SmPC section 4.4, printed/PDF p10, Immune-mediated adverse reactions; p11, Immune-mediated nephritis: evaluate aetiology, exclude other causes and monitor renal function."
+          }
+        ]
+      },
+      {
+        "id": "stage-2",
+        "narrative": "Elena reports reduced intake and an additional medicine from another prescriber. The oncology and kidney teams review her renal trajectory and the clinical context before deciding whether an immune-mediated process explains it.",
+        "prompts": [
+          "What needs evaluation before assigning the cause?",
+          "How would you keep the different prescribers working from the same assessment?"
+        ],
+        "teaching_points": [
+          "Review other explanations for renal dysfunction alongside the suspected adverse effect, using the exposure history and appropriate clinical investigations. Monitoring a trend is different from assuming a diagnosis.",
+          "Share the findings and unresolved alternatives with the oncology team. A specific cancer-treatment association should sharpen the assessment without closing it prematurely."
+        ],
+        "sources": [
+          {
+            "source_id": "RN16-T18-SRC-EMA-KEYTRUDA-20261007",
+            "locator": "IV SmPC section 4.4, printed/PDF p10, Immune-mediated adverse reactions; p11, Immune-mediated nephritis: evaluate aetiology, exclude other causes and monitor renal function."
+          }
+        ]
+      },
+      {
+        "id": "stage-3",
+        "narrative": "Following that evaluation, the treating team identifies immune-mediated nephritis and explicitly classifies this first episode as Grade 2 under the pembrolizumab product information. Elena asks whether the next infusion should simply be given at half dose and whether today settles all future cancer-treatment choices.",
+        "prompts": [
+          "What immediate treatment decision follows from the stated classification?",
+          "Which later decisions remain separate from that immediate action?"
+        ],
+        "teaching_points": [
+          "Withhold pembrolizumab for the stated Grade 2 nephritis and arrange supervised treatment of the renal event. Routine pembrolizumab dose reduction is not the label's adverse-reaction strategy.",
+          "Further treatment decisions depend on response and the full product-information criteria. This case does not supply a steroid regimen, numeric toxicity grading, a mandatory biopsy rule or a decision to rechallenge."
+        ],
+        "sources": [
+          {
+            "source_id": "RN16-T18-SRC-EMA-KEYTRUDA-20261007",
+            "locator": "IV SmPC section 4.2, printed/PDF p7, Table 1 nephritis row and preceding dose-modification text; section 4.4 p11, Immune-mediated nephritis: Grade 2 withholding, severity-dependent management. No numerical grading or corticosteroid dose taught."
+          }
+        ]
+      }
+    ],
+    "take_home": [
+      "Keep treatment-related kidney injury in the differential even when the cancer is responding.",
+      "Investigate competing causes and communicate the renal findings across the treating teams.",
+      "Match the immediate action to the established adverse-reaction severity; do not turn this example into a rule for every cancer drug or every creatinine rise."
+    ],
+    "sources": [
+      {
+        "source_id": "RN16-T18-SRC-EMA-KEYTRUDA-20261007",
+        "locator": "IV SmPC section 4.1, printed/PDF p2, Melanoma: adult advanced melanoma monotherapy; section 4.2 p5 opening supervision requirement."
+      },
+      {
+        "source_id": "RN16-T18-SRC-EMA-KEYTRUDA-20261007",
+        "locator": "IV SmPC section 4.4, printed/PDF p10, Immune-mediated adverse reactions; p11, Immune-mediated nephritis: evaluate aetiology, exclude other causes and monitor renal function."
+      },
+      {
+        "source_id": "RN16-T18-SRC-EMA-KEYTRUDA-20261007",
+        "locator": "IV SmPC section 4.2, printed/PDF p7, Table 1 nephritis row and preceding dose-modification text; section 4.4 p11, Immune-mediated nephritis: Grade 2 withholding, severity-dependent management. No numerical grading or corticosteroid dose taught."
+      }
+    ]
+  }
+]

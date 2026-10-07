@@ -1,0 +1,38 @@
+{
+  "verified_on": "2026-10-04",
+  "python": "3.14.4",
+  "platform": "Windows x64",
+  "embedding_fingerprint": "25b40d98b74669a55bb1cc39fb0c53564deede37b1e221b24683dfd8f48455ba",
+  "docling_fingerprint": "dac182ddf8ecc911404169678fc29b116396cd82ba490bdae820e60f3b2ac5e0",
+  "cpu_threads": 2,
+  "embedding": {
+    "passed": true,
+    "vectors": 2,
+    "dimensions": 384,
+    "model_id": "BAAI/bge-small-en-v1.5"
+  },
+  "native_pdf": {
+    "passed": true,
+    "seconds": 27.679,
+    "pages": 1,
+    "characters": 278
+  },
+  "scanned_pdf": {
+    "passed": true,
+    "seconds": 5.198,
+    "pages": 1,
+    "characters": 178
+  },
+  "chunking_index": {
+    "passed": true,
+    "chunks": 1,
+    "page_locators": [
+      1
+    ],
+    "index_rows": 1
+  },
+  "network_connection_attempts": 0,
+  "elapsed_seconds": 150.479,
+  "peak_process_rss_bytes": 1489821696,
+  "all_passed": true
+}
