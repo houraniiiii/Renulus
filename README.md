@@ -13,15 +13,15 @@ interface, original teaching packs and dated implementation evidence. The local
 backend and renderer connect study discussions, document retrieval, cases,
 assessment, learner memory, study planning and source updates. The current
 integration build is on `build/renulus-integration`. The normal Windows shortcut
-selects matching installed1dde6d90 with the existing E: learning profile. Installed
+selects matching installed0d4b171e with the existing E: learning profile. Installed
 Sol Explain, Stop/retry, generated practice, automatic Memory capture/recall and
 normal reopen have real evidence. Both approved Go models have source responses;
 installed saved DeepSeek, Library/originals and correction/delete scopes are
 recorded separately. Matching b8 adds successful dated public-body citations and
 capture;1dde adds the exact reviewed-update handoff and retained quiz/manual plan.
 Relevant unchanged-source evidence is qualified without repeating provider calls.
-A later fresh-profile bootstrap failure is fixed in source0d4b171e; matching
-installed acceptance is pending. See the current delivery for its exact scope.
+Matching0d4 fixes fresh-profile bootstrap and accepts source-review eligibility/
+history effects and normal reopen. See the current delivery for its exact scope.
 Content1.3.0 has230 questions and52 cases across27 topics, with honest partial
 ESENeph/source-depth limits. Draft PR13 tracks the remaining full-product scope.
 Read the [delivery](docs/implementation/DELIVERY_20261007.md),

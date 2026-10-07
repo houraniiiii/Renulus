@@ -109,11 +109,13 @@ deletion, reader and ordinary lifecycle acceptance. On October 7, actual source
 journeys completed with Sol and both approved Go models. Explain, follow-up,
 Stop/retry, generated practice, automatic capture/recall, Case/image discussion
 and Library citation/original access have individually scoped live evidence.
-The 1.2.0 content release adds depth across eleven domains and resolves four
-objective mismatches; complete content/currency and successful dated external
-body retrieval remain open. The matching cb59beb2 Windows installation passed
-the real Sol core learning/capture/reopen journey and is selected by the normal
-launcher. Its profile and original collection remain on E:.
+The1.3.0 content release contains230 questions/52 cases across27 topics, with
+four objective repairs and bounded MGRS/IKMG/ISTH application. Actual installed
+Sol dated public-body retrieval and automatic capture passed. Matching0d4b171e
+is selected by the normal launcher after actual fresh-profile content activation,
+source-review eligibility/history effects and normal reopen. Its profile and
+original collection remain on E:. Named clinical/source-depth and further
+accessibility/robustness scopes remain open in the original requirement audit.
 See [the implementation run](implementation/EXECUTION.md),
 [startup guidance](implementation/RUNNING.md) and
 [current continuation](implementation/FINISH_20261007.md).

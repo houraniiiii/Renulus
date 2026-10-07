@@ -1,11 +1,10 @@
 # Running Renulus
 
-Current checkpoint: installed1dde passed existing-profile handoff and bounded
-cb59 compatibility, but a new empty profile exposed missing content ancestry.
-Fix0d4b171e passed11 guarded checks and actual source startup/reopen. Its matching
-installer is running in session4089; installed fresh-profile/effect acceptance
-and promotion are pending. Read [the exact failure, fix and receipts](finish-fresh-bootstrap-20261007.md).
-The normal launcher still selects1dde; E account/data is unchanged.
+Current checkpoint: matching installed0d4b171e passed fresh1.3 activation,
+synthetic reviewed-source eligibility/history effects and normal reopen; the
+normal launcher selects it as of 2026-10-07T16:23:27.3575531Z. E data/account remains unchanged.
+Read [the current artifact and exact acceptance](finish-installed-0d4b171e-20261007.md).
+Retain original failures and qualified previous live/engine/recovery receipts.
 
 Renulus is the Flow Windows learning application. For its controls and everyday
 workflows, see [Using Renulus](USING_RENULUS.md).
@@ -64,13 +63,11 @@ Contributor development must use a separate profile.
 
 ## Delivery status
 
-The normal launcher selects matching **1dde6d90** on C:, preserving the E:
-learning profile. Manufacture/install,39,268-file inventories, exact reviewed
-update handoff, retained quiz/manual plan and normal reopen passed. Promotion
-was checked at **2026-10-07T15:43:53.1299832Z**. Existing successful installed Sol/Go/Memory/Library and
-b8 dated evidence keep their precise qualification; no provider rerun was needed.
-Read [the current delivery](DELIVERY_20261007.md) for artifacts, evidence and
-remaining clinical/source-depth/accessibility work.
+The normal launcher selects matching **0d4b171e** on C:, preserving the E:
+learning profile. Fresh installation, matching inventories, actual empty-profile
+content activation, source-review effects, history retention and normal reopen
+passed. Prior successful Sol/Go/Memory/Library and dated-source evidence keeps
+its exact qualification. Read [the current delivery](DELIVERY_20261007.md).
 The following table preserves the earlier installation/recovery evidence.
 
 At the October 6, 2026 handover, product source was frozen at

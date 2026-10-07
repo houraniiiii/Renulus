@@ -1,13 +1,12 @@
 # Requirement audit — October 7, 2026
 
-Current checkpoint: installed1dde passed existing-profile handoff and bounded
-cb59 compatibility, but a new empty profile exposed missing content ancestry.
-Fix0d4b171e passed11 guarded checks and actual source startup/reopen. Its matching
-installer is running in session4089; installed fresh-profile/effect acceptance
-and promotion are pending. Read [the exact failure, fix and receipts](finish-fresh-bootstrap-20261007.md).
-The normal launcher still selects1dde; E account/data is unchanged.
+Current checkpoint: matching installed0d4b171e passed fresh1.3 activation,
+synthetic reviewed-source eligibility/history effects and normal reopen; the
+normal launcher selects it as of 2026-10-07T16:23:27.3575531Z. E data/account remains unchanged.
+Read [the current artifact and exact acceptance](finish-installed-0d4b171e-20261007.md).
+Retain original failures and qualified previous live/engine/recovery receipts.
 
-The matching **1dde6d90 Windows installation is selected by the normal launcher** [Z].
+The matching **0d4b171e Windows installation is selected by the normal launcher** [FB].
 Its exact reviewed-update/retained-plan/reopen acceptance passes. Prior cb59 core
 connected learning and b8 freshness keep their qualified original attribution. Installed Sol direct/guided
 Explain, Stop/new request, generated practice, completed automatic Memory
@@ -19,7 +18,7 @@ follow-up/reopen [I]. All original 64 requirement IDs/order/wording are retained
 **The full product goal remains open.** Matching b8 installed dated-body
 generation/capture/reopen and individual content/Study/keyboard operations passed [N].
 The Today→reviewed Updates fix, matching installed reopen and promotion pass [Z].
-Content/currency criteria, correction effects and broader accessibility limits
+Content/currency criteria, exact-copy/source-effect limits and broader accessibility limits
 remain below; the [target audit][T] distinguishes finite minima from undefined depth.
 Installed explicit Updates review passed [P]. A working installed
 release is not full clinical or curriculum acceptance. Failed/partial historical
@@ -208,7 +207,7 @@ open. No inherited accepted scope is reopened merely by listing its limitation.
 | S3.02 | Actual immutable original pack installs/activates and consumers share it | Installed b8 activates1.3.0; new case and reviewed feedback consumers pass. Current1dde preserves the active manifest and retained quiz/plan across normal reopen [N,Z]. | Full curriculum sufficiency remains separate from successful pack activation/consumers. |
 | S3.03 | Committed deterministic scoring, rationale sources, mistakes, pause/resume | Historical deterministic scoring/rationale/history and installed reviewed wrong-answer→plan producer accepted [H]. | CONTENT/RELEASE: matching new-pack feedback/pause/resume scope; retained sessions are not a new attempted assessment. |
 | S3.04 | Idempotent restart avoids duplicate answers/exposure; stable item/family/key versions | Stable versions/ancestors retained; four repaired objective records preserve keys/families. Installed capture/thread and saved Case reopen are stable [I]. | Broader new-pack assessment commit/resume/history upgrade not inferred from metadata. |
-| S3.05 | Corrected/withdrawn keys annotate historical results without rewriting them | Local source/key annotation with immutable recorded scores/keys retained [H]; source notices now have narrower item-impact analysis [S]. | CONTENT/FRESHNESS: actual affected historical feedback and genuine key transitions where applicable; notice metadata is not a changed key. |
+| S3.05 | Corrected/withdrawn keys annotate historical results without rewriting them | Actual installed synthetic source-review annotation updates retained RN-DIAL-001@1 feedback while canonical body/key/score remain identical [FB]. Rationale-only1.3 successor preserves answerA/history [CA,N]. | BOUNDED PASS for actual notice/history effects; a synthetic notice is not a genuine changed scoring key or clinical publisher correction. |
 | S3.06 | Fresh, assisted, repeat and generated aggregates remain separate after mode switches | Installed generated practice generation/answer/end leaves reviewed score aggregate unchanged [I]. | Broader help/repeat/mode transitions retain historical controlled scopes. |
 | S3.07 | Reserved bank never leaks into Explain/practice context | Local reserved-bank context exclusion/key-free mapping retained [E], [H]. | CONTENT/LIVE: preserve exclusions with new pack and live Explain/practice; no completed full-loop boundary claim. |
 | S3.08 | Generated practice is labelled, uses approved generation and keeps unreviewed keys separate | Installed live Sol practice is generated-unreviewed, answered/ended, with observed matching identity and separate scores [I]. | Not a reviewed-bank key or all-Go/cross-domain practice matrix. |
@@ -235,7 +234,7 @@ open. No inherited accepted scope is reopened merely by listing its limitation.
 | S5.01 | Bounded in-app source checks, explicit opt-in, durable successes/failures and topic-only queries | Qualified bounded offline retries, retained success, shutdown/cancel and interrupted-restart rules; actual topic discovery, reviewed T21 and unchanged refresh/reopen retained [FD,P,N]. | Installed active-check transport failure/reopen is unobserved. Current-only clinical/source review remains separate from successful discovery. |
 | S5.02 | Final/draft, chapter replacement, corrigenda, expiry, removal/retraction remain separate | Local invalidation/final-draft-replacement/correction/retraction states [H]; dated47-record status/notice review narrows gaps [S]. | CURRENCY/FRESHNESS: apply scoped relationships and inspect required current evidence; corrected bytes and unavailable notice status stay unknown. |
 | S5.03 | Detected changes separate from explicitly reviewed educational entries, with dates/source links | Installed actual T21 public discovery→inspection→review→dedup/reopen passes [P]. Repaired T11 discovery returns21pending records [N]. Current1dde Today opens exact saved reviewed entry before/after reopen [Z]. | Affected-source correction scenarios have separate acceptance; discovery alone does not verify clinical currency. |
-| S5.04 | Correction flags bank/learning history without rewriting keys/results | Local feedback/history annotation preserves recorded keys/results [H]; source impact proposals do not alter immutable pack [S]. | FRESHNESS: actual affected-item/feedback/history/eligibility effects. Study projection remains optional; no new Study-specific release gate. |
+| S5.04 | Correction flags bank/learning history without rewriting keys/results | Installed review applies both journal events, flags the exact source/question and excludes only the affected Library document; original keys/results remain unchanged through retry/reopen [FB]. | BOUNDED PASS for declared synthetic notice; live publisher/exact-copy and provider-history scopes keep their separate proof/limits. Study-specific projection remains optional. |
 | S5.05 | Offline/failed/stale/restricted reimport accurate, same-URL change and exact-copy review reproducible | Exact-byte review invalidation, same-URL change, restricted binding denial, corrected-copy gate and failed-outbox order/retry have qualified local proof [FD,H]; actual sources retain dated access limits [S]. | Current installed notice effects are parent-owned; they establish only performed transitions, not an acquired corrected copy, restriction event or global-current source claim. |
 
 ### S6 — Complete installed product
@@ -244,11 +243,11 @@ open. No inherited accepted scope is reopened merely by listing its limitation.
 | --- | --- | --- | --- |
 | S6.01 | Required broad-topic and ESENeph cells: explanation/evidence/questions/cases/update sources | Installed1.3.0 has230questions/52cases; all57objectives have question/case pins and original finite bank minima are met [N,T]. Eleven partial domains/27 review labels are unconditional derivations, not measured failure counts. | OPEN #20: reconcile bounded launch depth/currency acceptance against adopted objectives and concrete gaps. No target reduction, partial-curriculum completion or invented full-exam quota. |
 | S6.02 | Case → Explain → practice/Test → feedback → Memory → plan → Updates across domains | Installed learning/practice/Memory/Library/Cases [I], reviewed Updates [P], b8 dated-body/capture and case/mistake/manual plan [N], current1dde exact review handoff/retained feedback/reopen [Z] pass at their named scopes. | Remaining source-effect and personalisation/curriculum boundaries stay explicit; no full product pass from a composite alone. |
-| S6.03 | Completed relevant backend/renderer/regression on integrated source, failures/exclusions adjudicated | Qualified backend/renderer/engine checks plus54selection/28topic-query, one real content-history check and27handoff checks retained. Current matching manufacture/inventories and actual installed handoff/reopen pass [Z]. | Original failed Study/source/driver aggregates stay failed; only performed stages get individual credit. No broad repeat sweep. |
+| S6.03 | Completed relevant backend/renderer/regression on integrated source, failures/exclusions adjudicated | Qualified earlier backend/renderer/engines plus11 guarded0d4 ancestry/history checks, matching manufacture/inventories and actual installed fresh/effect/reopen pass [FB]. | Failed Study/source/1dde empty-profile aggregates stay failed; only performed stages receive credit. No repeated broad sweep. |
 | S6.04 | One Flow system; keyboard, screen reader, text scaling/resize/reduced motion; loading/empty/errors | Flow mounted checks retained. Actual installed b8 native dialog Tab/Shift+Tab, Escape/composer return, same-destination focus,690px compact rail/return and zero horizontal overflow pass [N]; earlier input/resize/Memory/Library checks retained [I]. | Spoken Narrator/NVDA, Windows DPI/high-contrast/settings and physical dialogs remain unperformed beyond historical scopes. |
-| S6.05 | New source freeze → exact payload → manufacture/install → normal lifecycle matching that source | 1dde source→matching renderer/native/backend→unsigned NSIS→fresh install→39,268-file inventories→actual handoff/lifecycle→launcher promotion passes [Z]. | Current-PC changed-scope acceptance with exact qualified prior core/freshness; no full-product or full-current regression claim. |
+| S6.05 | New source freeze → exact payload → manufacture/install → normal lifecycle matching that source | 0d4 source→matching renderer/native/backend→unsigned NSIS→fresh install→39,268-file inventories→actual empty-profile/effect/lifecycle→launcher promotion passes [FB]. | Current-PC changed-scope acceptance with qualified prior core/freshness/handoff; no full-product or fresh aggregate regression claim. |
 | S6.06 | Unsigned current-PC delivery, update provenance, static distribution and complete notices | Unsigned current-PC package has exact installer/EXE/ASAR/backend identity and bundled ANTLR notice; old notice supplement no longer needed for this installer [I]. | Static external publication not performed; broader third-party obligations retain their review limits. |
-| S6.07 | Install/upgrade/rollback, database migration, uninstall/data-retention and isolated installation identity | Fresh isolated cb59 install uses revision-specific identity and existing preserved E profile. Unchanged storage/recovery/helper trees qualify retained6999 evidence [I,H]. | Bounded cb59→1dde rollback/Memory recall passed; populated Library rollback is unproved. Fresh-content startup failed on1dde;0d4 source fix passes, matching installed acceptance pending. |
+| S6.07 | Install/upgrade/rollback, database migration, uninstall/data-retention and isolated installation identity | Revision-specific matching0d4 install and actual fresh content startup pass; E data stays in place. Bounded cb59→1dde rollback/Memory recall and unchanged storage/recovery/helper proofs retained [FB,H]. | Populated Library-index rollback and arbitrary-schema downgrade are unproved; no accepted uninstall/restore/migration sweep repeated. |
 | S6.08 | Backup/restore incl. Office/image originals, citations and both derived indexes; recovery disclosure | Historical populated recovery/originals/indexes/deletion suppression retained under exact unchanged storage/knowledge/memory trees [H,I]. | Qualification is not new restore execution or whole-runtime equivalence. |
 | S6.09 | Plain-language onboarding/running/recovery and truthful capability controls | Delivery/running/README/handoff now identify accepted1dde, existing E profile and precise retained connected scope. Launcher CheckOnly passes after matching installed acceptance [Z]. | Full clinical/source-depth and remaining accessibility/performance limits remain explicit in the audit. |
 | S6.10 | Fresh isolated installation on this Windows PC completes required real journeys with bundled runtime | Fresh matching cb59 installation runs real Sol core and saved DeepSeek follow-up using bundled Python and OS-only PATH; qualified retained recovery and installed content/originals pass [I]. | Full required content/currency and remaining connected/accessibility scopes remain open; no complete-product claim. |
@@ -256,9 +255,10 @@ open. No inherited accepted scope is reopened merely by listing its limitation.
 ## Parent disposition
 
 The runnable matching release and the core learning vertical slice are accepted.
-Remaining work is substantive: #20 required content/currency, successful eligible
-public-body evidence and reviewed Updates effects, the remaining connected
-plan/personalisation chain, and explicit broader accessibility/performance limits.
+Remaining work is scoped: #20 named content/currency disposition, exact-copy
+and source-effect limits beyond accepted synthetic review, further connected
+personalisation and physical accessibility/performance boundaries. Installed
+dated public-body evidence and actual review effects now pass at their stated scopes.
 Physical desktop input remains prohibited while the owner uses this PC; hidden
 controls do not claim spoken screen-reader or OS-dialog proof.
 
@@ -283,7 +283,7 @@ The completed 1.2.0 candidate implements all four mapping repairs as version2:
 `RN11-T20-001`→`T20.O02`, `RN11-T20-003`→`T23.O01`,
 `RN11-T17-004`→`T21.O02`, and `RN11-T23-004`→new`T23.O03`
 with `RN13-CASE-CITRATE`. Answers/choices/families remain unchanged [D].
-These holds are resolved in the active installed1.2.0 release.
+These holds remain resolved in active installed1.3.0.
 Broader domain gaps remain, including complete treatment pathways, further rare
 diseases, dialysis operations, transplant aftercare and supportive/sexual-health
 breadth; question counts and repaired mappings do not close them. No external
@@ -352,3 +352,5 @@ qualification is in `evidence/orchestration/runtime-qualification.json`.
 [LC]: finish-launch-criteria-20261007.md
 
 [FD]: finish-failure-disposition-20261007.md
+
+[FB]: finish-installed-0d4b171e-20261007.md
