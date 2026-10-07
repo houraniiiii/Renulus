@@ -1,6 +1,30 @@
 # Original Renulus learning content
 
-The latest authored pack is **1.2.0**: 27 topics, 57 objectives, 222 reserved
+The latest authored pack is **1.3.0**: 27 topics, 57 objectives, 230 reserved
+questions, 52 staged cases and 69 source snapshots. This bounded release applies
+the recovered eight-record 2026 MGRS diagnostic comparison and IKMG/ISTH correction
+relationships to eleven question/two case successors. It narrows both copies of
+RN11-T11-001's unsupported ancillary rationale. Every prior answer and option text
+is retained; the rationale-only correction has an explicit version-1 replacement
+declaration. All six earlier packs and 64 source snapshots are preserved.
+
+Two existing gaps gain original teaching: anti-GBM decisions and ADPKD family
+testing, each with four five-option questions and a three-stage case. The
+`2026-10-07-application1` map selects 226 questions, including 52 five-option
+items. All eleven domains remain partial, all 27 currency cells remain open,
+and no new exam quota or complete-simulation claim is introduced. Review remains
+assistant review. Primary prose, figures and source bodies are excluded from Git.
+
+The [application handoff](../docs/implementation/finish-content-application-20261007.md)
+records exact identities, locators, checks, evidence and remaining work.
+`content/authoring/author_application.py` reuses the existing static publisher and
+validators; its code is MIT and original teaching text is CC BY 4.0. Publication
+requires the recovered external 1.2.0 and MGRS evidence. Parent owns integration,
+activation and matching release; this lane leaves installed 1.2.0 unchanged.
+
+## Historical 1.2.0 authoring and integration record
+
+The previous authored pack **1.2.0** contains 27 topics, 57 objectives, 222 reserved
 assessment questions and 50 staged synthetic teaching cases. It adds 44 original
 five-option questions and 12 independent three-stage cases, with explanations
 for every choice, primary-source locators and explicit case-stage support for
