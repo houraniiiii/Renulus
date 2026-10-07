@@ -27,8 +27,12 @@ engine/restore replay solely to change the artifact label.
 External current roots: C:/rn-finish-20261007/evidence/release-0d4b171e and
 update-effects-0d4b171e. Preserve package-result, terminal/result/controller
 receipts, qualification, promotion and previous launcher selector. Recover
-evidence/orchestration/active-finish-1516.json for current lane/run handles before
-starting replacements. Completed worktrees are retired after receipt preservation.
+evidence/orchestration/depth-wave-1626.json for current lane/run handles before
+starting replacements. Three completed content proposals feed one active bounded
+publication lane in depth-hd. The installed temporary-retention run66635 completed
+exit0; no native check is running at this checkpoint. See
+[temporary-case interruption](finish-temporary-retention-20261007.md). Earlier
+driver attempts remain failed. Completed worktrees retire after receipt preservation.
 The one ACTIVE heartbeat is renulus-final-delivery, every20 minutes; no duplicate.
 
 User waived mandatory signing/separate clean PC, not runtime/provenance/actual
