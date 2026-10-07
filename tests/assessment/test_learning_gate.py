@@ -6,6 +6,8 @@ from renulus.assessment.generated_repository import GeneratedPracticeRepository
 from renulus.assessment.generated_streaming import safe_error
 from renulus.contracts import ApiError
 from renulus.runtime.policy import learning_usage
+from renulus.runtime.manager import ProviderManager
+from renulus.storage import AppPaths
 
 
 @pytest.mark.parametrize("selected,eligibility,available", [
@@ -34,3 +36,26 @@ def test_provider_gate_during_generation_preserves_public_code_without_private_m
     result = safe_error(ApiError("learning_use_unverified", "PRIVATE_SYNTHETIC_DETAIL", 403, False))
     assert result["code"] == "learning_use_unverified" and result["retryable"] is False
     assert "PRIVATE_SYNTHETIC_DETAIL" not in result["message"]
+
+
+@pytest.mark.parametrize("selected,model", [
+    ("codex", "gpt-6.1-sol"),
+    ("opencode-go", "mimo-v2.6-pro"),
+    ("opencode-go", "deepseek-v4.1-flash"),
+])
+def test_saved_learning_connection_can_generate_without_catalogue_refresh(tmp_path, selected, model):
+    provider = ProviderManager(AppPaths.create(tmp_path))
+    provider._settings["connections"][selected] = {"access_token": "synthetic-not-used"}
+    provider.select(selected, model)
+    # Actual restart drops process-local catalogue state but retains the account.
+    provider = ProviderManager(provider.paths)
+    connection = next(row for row in provider.connections()["connections"] if row["provider"] == selected)
+    assert connection["status"] == "configured"
+    assert provider.connections()["selected_models"][selected] == model
+    repo = GeneratedPracticeRepository(SimpleNamespace(registry={"provider": provider}, db=None))
+    assert repo.capabilities()["available"] is True
+    assert repo.capabilities()["live_provider_verified"] is False
+    provider._catalog_errors[selected] = "provider_unavailable"
+    assert repo.capabilities()["available"] is True
+    provider._settings["connections"].pop(selected)
+    assert repo.capabilities()["available"] is False

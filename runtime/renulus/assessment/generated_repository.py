@@ -62,9 +62,11 @@ class GeneratedPracticeRepository:
             if status.get("test_adapter") is True:
                 available, blocked = True, False
             else:
-                available = (not blocked and connection.get("status") == "connected"
-                             and any(model.get("availability") == "available"
-                                     for model in connection.get("models", [])))
+                # Runtime availability reflects the saved account and exact
+                # allowlist. Catalogue refresh is advisory, including after a
+                # restart; it must not block a working learning connection.
+                available = (not blocked and any(model.get("availability") == "available"
+                                                for model in connection.get("models", [])))
             verified = status.get("live_provider_verified") is True
         return {"available": available, "reason": None if available else
                 "OpenCode Go learning use is not confirmed. Renulus has paused learning requests."
