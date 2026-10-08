@@ -1,12 +1,36 @@
 # Working in Renulus
 
 Renulus now has its own repository, `houraniiiii/Renulus`, and its own independent
-Git history. Main is the shared default branch. The active Windows delivery
-checkout at C:/Renulus-native-delivery/desktop-20261005/repo stays on
-build/renulus-integration; its learning profile and originals remain on E:.
+Git history. Main is the shared default branch and includes the accepted PR #13.
+The canonical checkout is `C:/Renulus/dev/repo`. The installed app, development
+tools, acquired collection and retained evidence are organised under `C:/Renulus`.
+The learning/account profile is preserved at `C:/Renulus/data/learning` with its
+saved subscriptions/model selections and records verified after normal reopen.
 `origin` is the sole remote. No inherited
 MVP branches, recovery remotes, sparse-checkout rules or old Git checkpoints are
 part of this repository.
+
+## This PC's storage layout
+
+| Location under `C:/Renulus` | Purpose |
+| --- | --- |
+| `app/` | One unchanged accepted installed app, including its bundled runtime |
+| `dev/repo/` | One active Git checkout; create bounded worktrees only when needed |
+| `dev/python/`, `dev/node_modules/`, `dev/helper-assets/` | Shared contributor environment and pinned public CPU helpers |
+| `data/sources/` | Valuable acquired originals, acquisition metadata and reports; outside Git |
+| `data/learning/` | Migrated learning/account profile, canonical records, Library originals and derived indexes |
+| `releases/f1c49444/` | Current installer and provenance |
+| `evidence/` | Preserved successful and failed receipts, source snapshots and required synthetic state |
+| `archive/` | Unique earlier Git history/edits, canonical state and separate inherited reference |
+| `scratch/` | New owned synthetic control sessions |
+| `maintenance/cleanup-20261008/` | Private preservation manifests and cleanup ledger |
+
+`C:/Renulus/Start-Renulus.cmd` launches the delivered app;
+`C:/Renulus/tools/Control-Renulus.cmd` controls a hidden synthetic development app.
+The old checkout roots contain compatibility pointers and directory junctions.
+Git resolves them to the canonical checkout; use the canonical path for edits.
+Historical receipt aliases preserve references without another full copy.
+See [the relocation and deletion report](implementation/storage-cleanup-20261008.md).
 
 ## What belongs here
 
@@ -50,7 +74,8 @@ they are separate from generative subscriptions and remain explicitly enabled.
 
 ## Where the old work lives
 
-The inherited copy is preserved as a separate local archive. It contains its
+The inherited copy is preserved at `C:/Renulus/archive/inherited-clinical-reference`
+as a separate local archive. It contains its
 original code, uncommitted changes, old documentation, Git history, native state
 and installed dependencies. Its dated instructions and earlier clinical MVP
 scope do not govern this workspace. See [cleanup record](CLEANUP.md).
@@ -78,7 +103,9 @@ provenance and applicable rights. Do not copy historical datasets, outputs,
 dependency trees, private emails or private records into active source folders.
 
 Collect source originals outside the checkout under
-`%USERPROFILE%\Documents\Renulus-data`, using source IDs from the register.
+`C:/Renulus/data/sources`, using source IDs from the register. The former
+`%USERPROFILE%\Documents\Renulus-data` and G: raw-data paths are compatibility
+junctions to this collection.
 The current machine's folder is recorded in ignored `.local/data-location.txt`.
 See [local collection and storage](SOURCES.md#local-collection-and-storage) for
 the ERA manual folder, acquisition notes and the proposed installed-app location.

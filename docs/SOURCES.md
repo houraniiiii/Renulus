@@ -273,7 +273,9 @@ ERA supplies a supported interface.
 
 Source files can be collected before the application import flow is built. Use
 an external collection folder, separate from the code checkout:
-`%USERPROFILE%\Documents\Renulus-data`. The current machine's absolute location
+`C:/Renulus/data/sources` on the owner's PC after the October 8 storage cleanup.
+The former `%USERPROFILE%\Documents\Renulus-data` and G: raw-collection paths
+are compatibility junctions to the consolidated C: collection. The absolute location
 is recorded in the ignored `.local/data-location.txt`; this is a human-readable
 location pointer, not implemented application configuration.
 

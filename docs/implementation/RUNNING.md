@@ -4,7 +4,10 @@ Current delivery: matching **installed-f1c49444**, source
 `f1c49444ba77f03fe0f35f4657e564c1b26724dc` and content **1.4.2**. Final matching installation,
 new T18 teaching/ESENeph assessment, retained history, ready corrected-record
 Memory recall and normal reopen passed. Launcher promotion/check passed at
-`2026-10-07T21:12:25.8283773Z`; E: account/profile/originals remain.
+`2026-10-07T21:12:25.8283773Z`. On October 8 the unchanged app moved to
+`C:/Renulus/app` and acquired originals to `C:/Renulus/data/sources`.
+The learning/account profile is now `C:/Renulus/data/learning`, with saved state
+and connections verified after two normal starts/closes.
 Read [the exact artifact and acceptance](finish-installed-f1c49444-20261007.md) and
 [the current64-requirement ledger](finish-requirements-20261007.md).
 Physical Windows speech/scaling/high-contrast observations remain issue21.
@@ -49,11 +52,16 @@ without a generative connection. See [connection instructions](USING_RENULUS.md#
 
 ## Preserve data and account profiles
 
-The source checkout and replacement binaries are on C:. Preserve the existing
-E: collection, learning data and private Renulus account profile in place. The
-normal learning profile is:
+The source checkout is `C:/Renulus/dev/repo`, the installed app is `C:/Renulus/app`,
+and acquired originals are `C:/Renulus/data/sources`. The normal learning profile
+is `C:/Renulus/data/learning`. Its complete copy was verified before locally
+rebinding its saved connection encryption to the new path. Normal startup/reopen,
+unchanged saved records and subscription/model settings passed; the old physical
+profile and app copies are removed. Old paths are compatibility junctions.
 
-`E:/Renulus-native-delivery/desktop-20261005/data/learning`
+For a future profile move, close the app first and preserve its path-bound
+connection encryption; simply changing a folder or launcher path is insufficient.
+See the [completed cleanup report](storage-cleanup-20261008.md).
 
 The shortcut and `Start-Renulus.cmd` use `scripts/start-renulus.ps1`. Its ignored
 `.local/delivery.json` selects the installed executable and this learning
@@ -70,8 +78,8 @@ Contributor development must use a separate profile.
 
 ## Delivery status
 
-The normal launcher selects matching **f1c49444** on C:, preserving the E:
-learning profile. Content1.4.2, new T18/ESENeph teaching/Test, retained history,
+The normal launcher selects matching **f1c49444** and the preserved learning
+profile under `C:/Renulus`. Content1.4.2, new T18/ESENeph teaching/Test, retained history,
 ready corrected Memory and normal reopen passed. Earlier actual connected and
 recovery proof keeps its recorded qualification. Physical observations remain
 issue21. Read [the current delivery](DELIVERY_20261007.md).
@@ -148,7 +156,7 @@ These commands prepare a source development build. From the repository root,
 run `uv sync --extra test`. In `apps/desktop`, run `npm ci` and
 `npm run dev:electron`. This builds the renderer/Electron entry points and opens
 an isolated development profile. To retain a chosen development profile, set
-an absolute `RENULUS_PROFILE` before starting; keep it separate from the E:
+an absolute `RENULUS_PROFILE` before starting; keep it separate from the normal C:
 learning/account profile. Without a delivery record, `Start-Renulus.cmd` uses
 the prepared contributor build. The launcher's `-CheckOnly` option checks its
 selection without opening the app.
