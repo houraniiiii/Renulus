@@ -34,16 +34,13 @@ evidence. Use the errors tool after a journey. Do not add focus(), bringToFront(
 SetForegroundWindow, OS key/mouse helpers or the legacy foreground dialog scripts
 to this path.
 
-The owner's current Codex project configuration is in
-`C:/Users/karol/Documents/t3-workspaces/Renulus/.codex/config.toml`; it points
-to the active C checkout. A chat which loaded the earlier MCP code needs a
-fresh server connection. The current chat's cached connection returned
-`Transport closed` after its verified idle old servers were stopped. This
-does not require controlling or restarting the user's desktop. Use the
-validated local client immediately:
+The local Codex MCP registration points to `C:/Renulus/dev/repo` and uses the
+retained development Python at `C:/Renulus/dev/python`. It has no account secrets.
+A chat which cached an earlier MCP server can use the local client without
+restarting the user's desktop. From the canonical checkout:
 
 ```powershell
-node tools/renulus-control/client.mjs --repo C:/Renulus-native-delivery/desktop-20261005/repo --python C:/Users/karol/Documents/t3-workspaces/Renulus-wt-integration/.venv/Scripts/python.exe --state-root C:/rn-control --helper-assets C:/Renulus-native-delivery/desktop-20261005/payloads/backend-699938f2/helper-assets
+node tools/renulus-control/client.mjs --repo C:/Renulus/dev/repo --python C:/Renulus/dev/python/Scripts/python.exe --state-root C:/Renulus/scratch/control --helper-assets C:/Renulus/dev/helper-assets
 ```
 
 Send `{"name":"renulus_start","arguments":{}}`, then the documented
@@ -57,7 +54,7 @@ and [lane handoff](finish-control-inputs-20261007.md) before the parent's first
 actual upload/resize check.
 
 For PDF/PNG/JPEG input, start a fresh client/server with the same configuration
-plus `--fixture-root C:/rn-finish-20261007/evidence/control/synthetic-inputs`.
+plus `--fixture-root C:/Renulus/evidence/runs/rn-finish-20261007/evidence/control/synthetic-inputs`.
 That external directory contains original synthetic files and the required
 size/SHA-256 manifest. No personal/acquired source is part of it. The root is
 fixed by CLI, separate from profiles and dependencies; tool arguments accept

@@ -25,14 +25,14 @@ never start Electron, Python, providers or real ingestion.
 Source mode, after the parent builds the renderer and native main:
 
 ```powershell
-node C:/Renulus-native-delivery/desktop-20261005/repo/tools/renulus-control/server.mjs --repo C:/Renulus-native-delivery/desktop-20261005/repo --python C:/path/to/dev/python.exe --state-root C:/rn-control --helper-assets C:/path/to/reviewed/public/helper-assets
+node C:/Renulus/dev/repo/tools/renulus-control/server.mjs --repo C:/Renulus/dev/repo --python C:/Renulus/dev/python/Scripts/python.exe --state-root C:/Renulus/scratch/control --helper-assets C:/Renulus/dev/helper-assets
 ```
 
 Replace the example Python/helper paths with the parent's prepared public inputs.
 Packaged mode uses the bundled Python/helpers, so --python is optional:
 
 ```powershell
-node C:/Renulus-native-delivery/desktop-20261005/repo/tools/renulus-control/server.mjs --repo C:/Renulus-native-delivery/desktop-20261005/repo --executable C:/path/to/background-build/Renulus.exe --state-root C:/rn-control
+node C:/Renulus/dev/repo/tools/renulus-control/server.mjs --repo C:/Renulus/dev/repo --executable "C:/Renulus/app/Renulus Development.exe" --state-root C:/Renulus/scratch/installed-control
 ```
 
 | CLI option | Contract |

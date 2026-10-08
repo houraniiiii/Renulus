@@ -4,7 +4,9 @@ Current delivery: matching **installed-f1c49444**, source
 `f1c49444ba77f03fe0f35f4657e564c1b26724dc` and content **1.4.2**. Final matching installation,
 new T18 teaching/ESENeph assessment, retained history, ready corrected-record
 Memory recall and normal reopen passed. Launcher promotion/check passed at
-`2026-10-07T21:12:25.8283773Z`; E: account/profile/originals remain.
+`2026-10-07T21:12:25.8283773Z`. On October 8 the unchanged app moved to
+`C:/Renulus/app` and acquired originals to `C:/Renulus/data/sources`.
+The learning/account profile still uses E: pending safe shutdown and migration.
 Read [the exact artifact and acceptance](finish-installed-f1c49444-20261007.md) and
 [the current64-requirement ledger](finish-requirements-20261007.md).
 Physical Windows speech/scaling/high-contrast observations remain issue21.
@@ -49,11 +51,16 @@ without a generative connection. See [connection instructions](USING_RENULUS.md#
 
 ## Preserve data and account profiles
 
-The source checkout and replacement binaries are on C:. Preserve the existing
-E: collection, learning data and private Renulus account profile in place. The
-normal learning profile is:
+The source checkout is `C:/Renulus/dev/repo`, the installed app is `C:/Renulus/app`,
+and acquired originals are `C:/Renulus/data/sources`. The current normal learning
+profile is still:
 
 `E:/Renulus-native-delivery/desktop-20261005/data/learning`
+
+Its destination is `C:/Renulus/data/learning`. Do not copy a running profile or
+simply change the launcher path: the protected connection records are bound to
+the resolved profile path and require an in-memory local rebind during migration.
+The [cleanup report](storage-cleanup-20261008.md) records the exact pending step.
 
 The shortcut and `Start-Renulus.cmd` use `scripts/start-renulus.ps1`. Its ignored
 `.local/delivery.json` selects the installed executable and this learning
