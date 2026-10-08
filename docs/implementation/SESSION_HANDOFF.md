@@ -1,30 +1,37 @@
 # Renulus current handoff — October 8, 2026
 
-Current maintenance is [storage cleanup](storage-cleanup-20261008.md), tracked
-in [issue #22](https://github.com/houraniiiii/Renulus/issues/22). Work from
-`C:/Renulus/dev/repo`; the cleanup branch is `codex/storage-cleanup-20261008`.
-The unchanged accepted app is at `C:/Renulus/app`, acquired originals at
-`C:/Renulus/data/sources`, retained evidence at `C:/Renulus/evidence` and unique
-earlier work at `C:/Renulus/archive`. Old checkout roots are compatibility
-entries resolving Git to this one checkout. All 45 earlier linked worktrees
-are retired and no worker remains active.
+The [storage cleanup](storage-cleanup-20261008.md) is complete under
+[issue #22](https://github.com/houraniiiii/Renulus/issues/22) and
+[PR #23](https://github.com/houraniiiii/Renulus/pull/23). Work from
+`C:/Renulus/dev/repo` on `main`. The unchanged
+accepted app is `C:/Renulus/app`, learning/account profile is
+`C:/Renulus/data/learning`, acquired originals are `C:/Renulus/data/sources`,
+retained evidence is `C:/Renulus/evidence`, and unique earlier work is archived
+under `C:/Renulus/archive`. Old paths are compatibility entries. All 45 earlier
+linked worktrees are retired; one canonical checkout remains.
 
-The owner app is still open from the former installation. Safe shutdown is
-awaiting the owner's answer about unsaved temporary cases. Do not close it,
-copy its running E: profile, or run the prepared DPAPI rebind yet. Finish the
-profile cutover to `C:/Renulus/data/learning` using the report's steps, then
-remove the last old physical app/profile copies. Recover any active maintenance
-process and receipts under `C:/Renulus/maintenance/cleanup-20261008` first.
-Source and relocated installed-app synthetic lifecycle checks already passed;
-do not repeat them just to manufacture an aggregate. The one twenty-minute
-heartbeat has updated paths and remains **paused**.
+The owner closed the app before migration. All 14,993 profile files (26,550,364,321
+bytes) matched their source hashes. The one present protected connection record
+was rebound locally with its plaintext unchanged and never logged. Two normal
+packaged starts/closes passed on the migrated profile; all 62 table counts,
+saved learning/case/Library/Memory record digests and subscription/model settings
+remained unchanged. The old physical profile/app copies are removed, the normal
+launcher selects C:, and no owned app/backend/check remains running.
+The post-startup profile is 1.79 GB after derived-index maintenance; every
+Library/helper file is unchanged. The final whole-workspace inventory is
+148.03 GB logical / 141.77 GB counting hardlinked files once, down 356.33 GB
+logical from the baseline. Exact measurements and limitations are in the cleanup report.
+Private operation receipts are under `C:/Renulus/maintenance/cleanup-20261008`.
+Source and installed synthetic control checks also passed at their prior scopes.
+Do not repeat completed checks just to manufacture a new aggregate. The single
+twenty-minute heartbeat has updated paths and remains **paused**.
 
 Current delivery: matching **installed-f1c49444**, source
 `f1c49444ba77f03fe0f35f4657e564c1b26724dc` and content **1.4.2**. Final matching installation,
 new T18 teaching/ESENeph assessment, retained history, ready corrected-record
 Memory recall and normal reopen passed. Launcher promotion/check passed at
 `2026-10-07T21:12:25.8283773Z`. The October 8 relocation preserves the product
-bytes; the owner learning/account profile remains E: pending safe cutover.
+bytes; the owner learning/account profile is preserved at C:/Renulus/data/learning.
 Read [the exact artifact and acceptance](finish-installed-f1c49444-20261007.md) and
 [the current64-requirement ledger](finish-requirements-20261007.md).
 Physical Windows speech/scaling/high-contrast observations remain issue21.
@@ -54,16 +61,15 @@ remains. The final review worktree was retired after confirming clean tracked,
 untracked and ignored state; its external writer/review artifacts are preserved.
 GitHub issues #3, #12 and #20 are closed at their implemented scopes. Issue #1
 remains open for the physical observations in #21. PR #13 merged the accepted
-integration. No owned synthetic app/backend is running; the owner's ordinary
-app remains open for the pending migration decision. Current orchestration and tracker
+integration. No owned app/backend or check is running. Current orchestration and tracker
 receipts are under C:/rn-finish-20261007/evidence/orchestration and
 C:/rn-finish-20261007/evidence/release-f1c49444/github-handover.json. Completed
 source tests, providers, imports, installed journeys and manufacture must not be
 repeated merely to make a new aggregate. The paused single 20-minute heartbeat
 must not be reactivated without an owner request.
 
-The normal profile stays E:/Renulus-native-delivery/desktop-20261005/data/learning.
-It was not read/copied for synthetic acceptance. Acquired originals are now at
+The normal profile is C:/Renulus/data/learning. Its authorised migration and
+read-only persistence/lifecycle checks are separate from synthetic acceptance. Acquired originals are now at
 C:/Renulus/data/sources, with the old collection paths kept as junctions.
 Use hidden app-scoped Playwright/MCP with declared owned profiles for development;
 no foreground input, account reset or incidental paid access. Desktop use for

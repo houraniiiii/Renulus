@@ -12,7 +12,8 @@ This repository contains the Windows app, selected Flow interface, original
 teaching packs and dated evidence. The accepted integration is merged into `main`.
 The canonical checkout is `C:/Renulus/dev/repo`; the normal shortcut selects the
 unchanged validated **f1c49444** app at `C:/Renulus/app`. The learning/account
-profile still uses E: while its safe shutdown and migration are pending.
+profile is preserved at `C:/Renulus/data/learning`; normal startup/reopen and
+saved-state/connection checks passed after migration.
 See the [October 8 storage cleanup](docs/implementation/storage-cleanup-20261008.md).
 Content1.4.2 has251 questions and59 cases across27
 topics, with General and partial ESENeph preparation. The final bounded composite accepts

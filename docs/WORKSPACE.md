@@ -4,7 +4,8 @@ Renulus now has its own repository, `houraniiiii/Renulus`, and its own independe
 Git history. Main is the shared default branch and includes the accepted PR #13.
 The canonical checkout is `C:/Renulus/dev/repo`. The installed app, development
 tools, acquired collection and retained evidence are organised under `C:/Renulus`.
-The learning/account profile remains on E: pending safe shutdown and migration.
+The learning/account profile is preserved at `C:/Renulus/data/learning` with its
+saved subscriptions/model selections and records verified after normal reopen.
 `origin` is the sole remote. No inherited
 MVP branches, recovery remotes, sparse-checkout rules or old Git checkpoints are
 part of this repository.
@@ -17,7 +18,7 @@ part of this repository.
 | `dev/repo/` | One active Git checkout; create bounded worktrees only when needed |
 | `dev/python/`, `dev/node_modules/`, `dev/helper-assets/` | Shared contributor environment and pinned public CPU helpers |
 | `data/sources/` | Valuable acquired originals, acquisition metadata and reports; outside Git |
-| `data/learning/` | Reserved destination for the existing E: learning/account profile; migration pending |
+| `data/learning/` | Migrated learning/account profile, canonical records, Library originals and derived indexes |
 | `releases/f1c49444/` | Current installer and provenance |
 | `evidence/` | Preserved successful and failed receipts, source snapshots and required synthetic state |
 | `archive/` | Unique earlier Git history/edits, canonical state and separate inherited reference |

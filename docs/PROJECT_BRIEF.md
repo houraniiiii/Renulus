@@ -118,7 +118,8 @@ at their retained source-qualified scope. The normal launcher now selects matchi
 installed-f1c49444 after final content/history/ESENeph/reopen acceptance and an
 actual ready corrected-record Memory search. The unchanged app is now at
 `C:/Renulus/app` and acquired originals at `C:/Renulus/data/sources`. The existing
-E: learning/account profile is awaiting safe shutdown and migration; see the
+learning/account profile is preserved at `C:/Renulus/data/learning` after verified
+migration and normal reopen; see the
 [storage cleanup](implementation/storage-cleanup-20261008.md).
 The original 64-requirement audit retains bounded live/engine/recovery evidence
 and failed receipts. Physical Narrator/NVDA speech, Windows scaling and high

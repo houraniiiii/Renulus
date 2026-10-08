@@ -16,6 +16,7 @@ not extend the accepted product, provider or physical-accessibility scopes.
 | `C:/Renulus/dev/node_modules` | Retained desktop dependencies |
 | `C:/Renulus/dev/helper-assets` | Pinned public CPU helper files |
 | `C:/Renulus/data/sources` | Acquired originals, acquisition metadata, reports and source ZIP |
+| `C:/Renulus/data/learning` | Migrated learning/account profile, canonical records and derived indexes |
 | `C:/Renulus/releases/f1c49444` | One current installer and delivery provenance |
 | `C:/Renulus/evidence` | Successful/failed receipts, source snapshots and required synthetic state |
 | `C:/Renulus/archive` | Unique earlier history/edits, canonical state and separate inherited reference |
@@ -24,9 +25,8 @@ not extend the accepted product, provider or physical-accessibility scopes.
 
 `C:/Renulus/Start-Renulus.cmd` and the repaired desktop shortcut select the new
 app. `C:/Renulus/tools/Control-Renulus.cmd` starts the app-scoped development
-controller. The existing owner learning/account profile remains at
-`E:/Renulus-native-delivery/desktop-20261005/data/learning`; its destination is
-`C:/Renulus/data/learning`. See the pending cutover below.
+controller. The owner learning/account profile is now `C:/Renulus/data/learning`.
+The former E: profile path is a compatibility junction to the new location.
 
 Old acquisition and evidence directories are mostly junctions, so their retained
 references do not create extra large copies. Two old checkout roots were held
@@ -61,18 +61,18 @@ both to the canonical checkout. Use `C:/Renulus/dev/repo` for development.
 
 ## Verified identities and operation
 
-The final metadata inventory at **15:31:50 UTC on October 8** reported no scan
-errors. Renulus-related logical file sizes fell from **504.36 GB to 172.96 GB**,
-a **331.40 GB reduction**. Counting each volume/file identity once gives
-**166.69 GB** retained file content: **142.57 GB on C:** and **24.12 GB on E:**;
-the former G: collection now contains only its compatibility link. These are
+The final metadata inventory at **16:11:49 UTC on October 8** reported no scan
+errors. Renulus-related logical file sizes fell from **504.36 GB to 148.03 GB**,
+a **356.33 GB reduction**. Counting each volume/file identity once gives
+**141.77 GB** retained file content, all on C: except **439,025 bytes** of
+compatibility receipts on E:. The former G: collection contains only its
+compatibility link. These are
 decimal GB and file-size measurements, not an exact NTFS cluster-allocation or
 drive-free-space claim. The live owner profile may change after this snapshot.
 
 | Main retained category | GB, counting hardlinked files once |
 | --- | ---: |
 | Acquired source collection and metadata | 88.15 |
-| E: owner profile and small compatibility receipts | 24.12 |
 | Earlier development history/source/state archive | 13.57 |
 | Retained run evidence | 12.22 |
 | C: delivery evidence/preparation | 8.53 |
@@ -80,11 +80,12 @@ drive-free-space claim. The live owner profile may change after this snapshot.
 | Separate inherited reference | 2.63 |
 | Older canonical state/originals and recovery preparation | 2.41 |
 | Current installed app | 2.60 |
-| Old app still in use, pending shutdown/removal | 2.60 |
+| Current learning/account profile | 1.79 |
 
 Development tools, the current installer, new synthetic control state and
 maintenance records account for the remainder. `before.json` and `after.json`
-contain the complete inventory. The first after-scan hit Windows long-path
+contain the complete inventory; `after-before-profile-cutover.json` preserves
+the intermediate measurement. The first after-scan hit Windows long-path
 limits; its receipt is retained as `after-preliminary-longpath-failed.json`.
 The corrected final scan used extended paths and had zero errors.
 
@@ -122,25 +123,54 @@ Private receipts include `app-source.json`, `app-destination.json`,
 and `file-actions.jsonl`. They contain the exact per-file mappings and operation
 details; public Git contains this summary only. Interrupted attempts are retained.
 
-## Pending owner-profile cutover
+## Completed owner-profile cutover
 
-The existing app was still running from the old installation when cleanup began.
-The owner was asked whether temporary cases/attachments needed saving; no answer
-has been received. Closing it could discard deliberately volatile case work, so
-the app and its E: profile remain intact.
+The owner closed Renulus and explicitly requested completion. App/backend absence
+was verified before copying. The complete profile contained **14,993 files** and
+**26,550,364,321 bytes**, larger than the earlier snapshot because the owner app
+had remained in use. Source and destination inventory SHA256 identities matched:
+`a5b08a53dbc39e33712353da9750e4f0e204925f136654434a8a19e447a6f7e3`.
 
-After the owner confirms it can close:
+One protected subscription record was present; the retrieval-key record was
+absent. The existing record was decrypted/re-encrypted locally in memory for
+the C: resolved path, with exact plaintext equality checked. Only ciphertext
+rollback material was retained privately; no plaintext credentials were logged
+or written. Owner/SYSTEM/Administrators access restrictions were verified.
 
-1. Close normally and verify its backend has stopped.
-2. Copy the complete profile to `C:/Renulus/data/learning` and compare full hashes.
-3. Rebind the two path-dependent DPAPI connection stores locally in memory.
-   Keep encrypted rollback copies; never write or log plaintext credentials.
-4. Cut over the old profile path, update the launcher and verify ordinary startup,
-   saved-state presence and connection readability without provider requests.
-5. Remove the superseded physical app/profile copies after successful verification,
-   record final storage accounting, and finish issue #22.
+The actual packaged app opened the migrated owner profile twice and reached
+Today with authenticated local API readiness. Both normal quits completed.
+All **62 table counts** and content digests for saved learning, Memory, Cases
+and Library revision records remained unchanged; SQLite integrity, configured
+connections and exact selected provider/model settings passed. No provider
+generation, model refresh, imports, synthetic content or account resets were
+performed. These checks do not re-establish live provider availability.
 
-The prepared private rebind script has not run. A junction alone would change the
-resolved-path entropy and break stored account access, so a simple folder move
-is insufficient. No owner account or profile was copied for synthetic checks.
-Issue #21 and its physical speech/display observations remain separate and open.
+The ordinary startups also compacted/replaced derived search-index files. The
+post-lifecycle inventory is **7,413 files / 1,792,755,283 bytes**. Comparison with
+the verified copy shows that **all 7,339 Library files and all 20 helper files
+are byte-for-byte unchanged**. Removed paths were exclusively derived indexes:
+24,953,058,334 bytes of old Lance search-index/data/version files and 164,447
+bytes of the previous learner-memory generation. Current index files remain
+(195,581,104 bytes); canonical records retain the checks above. Most removed
+bytes were old full-text index files within the same Lance generation. The
+existing app implements Lance history compaction and rebuilds its derived
+Memory index on restart. No cleanup script deleted files from the migrated
+profile. This maintenance does not claim a new retrieval/provider test.
+
+Only after those checks passed were the old physical profile and installation
+copies removed. Their old paths are compatibility junctions. The desktop
+shortcut and `C:/Renulus/Start-Renulus.cmd` select the C: app/profile; executable
+and ASAR hashes still match the accepted product. The app/backend are closed
+after validation, and the normal launcher is ready for the owner.
+
+Final private receipts: `owner-shutdown-confirmation.json`,
+`learning-profile-{source,destination,transfer,cutover}.json`,
+`protected-profile-rebinding.json`, `profile-before-open.json`,
+`owner-profile-lifecycle.json`, `profile-after-reopen.json`,
+`learning-profile-after-lifecycle.json`, `profile-lifecycle-file-delta.json`,
+`learning-profile-acl.json` and `final-retirement.json`. The transfer receipt
+records the state at initial copy; cutover/final-retirement receipts establish
+later removal and completion. Failed attempts and prior snapshots remain.
+
+Issue #22 is complete. Issue #21's physical speech/display observations and the
+corresponding product acceptance qualification remain separate and open.
