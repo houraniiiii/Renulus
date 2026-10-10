@@ -20,3 +20,11 @@ class GoalInput(GoalState):
     title: str = Field(min_length=1, max_length=240)
     topic_id: Identifier | None = None
     target_date: date | None = None
+
+
+class GoalEdit(GoalInput):
+    goal_revision: int = Field(ge=1)
+
+
+class GoalDelete(Mutation):
+    goal_revision: int = Field(ge=1)

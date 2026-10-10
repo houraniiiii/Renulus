@@ -82,3 +82,48 @@ def test_shared_document_unlink_stays_unlinked_through_older_zip_restore(tmp_pat
         assert len(second['documents']) == 1
         assert client.delete('/api/v1/study/projects/' + second['id'],params={'expected_revision':second['revision']}).status_code == 200
         assert client.get('/api/v1/library/documents/fictional-document').status_code == 200
+
+
+def test_project_goal_keeps_manual_and_real_evidence_progress_with_retry_and_restart(tmp_path):
+    from test_design_c_conversations import ConversationProvider,event_payloads
+    from renulus.storage.backup import export_records,restore_records
+    profile=tmp_path/'project-goals'
+    app=project_app(profile)
+    app.state.services.registry.update(provider=ConversationProvider(),knowledge=None,retrieval=None,memory=None)
+    with TestClient(app) as client:
+        project=client.post('/api/v1/study/projects',json={'title':'Fictional transplant study'}).json()
+        path='/api/v1/study/projects/'+project['id']
+        chat=client.post('/api/v1/conversations',json={'project_id':project['id']}).json()
+        sent=event_payloads(client.post('/api/v1/conversations/learning/'+chat['identity']['id']+'/messages',
+            json={'expected_revision':chat['revision'],'text':'Fictional transplant learning','request_id':'goal-evidence-request-123'}))
+        assert sent[-1]['type']=='completed'
+        evidence_id='learn:'+sent[-1]['run_id']
+        project=client.get(path).json()
+        body={'expected_revision':project['revision'],'title':'Review transplant learning',
+            'target_date':'2026-11-01','progress':{'manual_intent':'Review my saved discussion','evidence_ids':[evidence_id]}}
+        headers={'Idempotency-Key':'create-project-goal-123'}
+        created=client.post(path+'/goals',json=body,headers=headers)
+        assert created.status_code==201,created.text
+        assert client.post(path+'/goals',json=body,headers=headers).json()==created.json()
+        detail=client.get(path).json()
+        assert len(detail['goals'])==1
+        goal=detail['goals'][0]
+        assert goal['progress']=={'manual_intent':'Review my saved discussion','evidence_ids':[evidence_id]}
+        invalid={**body,'expected_revision':detail['revision'],'progress':{'evidence_ids':['missing-evidence']}}
+        assert client.post(path+'/goals',json=invalid).status_code==409
+    app=project_app(profile)
+    with TestClient(app) as client:
+        detail=client.get(path).json()
+        goal=detail['goals'][0]
+        completed=client.put(path+'/goals/'+goal['id'],json={**body,'expected_revision':detail['revision'],
+            'goal_revision':goal['revision'],'status':'completed','progress':{'manual_intent':'I reviewed the discussion','evidence_ids':[evidence_id]}})
+        assert completed.status_code==200,completed.text
+        detail=client.get(path).json()
+        assert detail['goals'][0]['status']=='completed'
+        assert 'percent' not in json.dumps(detail['goals'][0])
+        older=export_records(app.state.services)
+        removed=client.delete(path+'/goals/'+goal['id'],params={'expected_revision':detail['revision'],'goal_revision':detail['goals'][0]['revision']})
+        assert removed.status_code==200,removed.text
+        restore_records(app.state.services,older,confirm_older=True)
+        assert client.get(path).json()['goals']==[]
+        assert client.get('/api/v1/conversations/learning/'+chat['identity']['id']).status_code==200

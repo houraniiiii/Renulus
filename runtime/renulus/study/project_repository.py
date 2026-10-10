@@ -171,3 +171,58 @@ class ProjectRepository:
                 if knowledge and knowledge._eligible(json.loads(source['metadata_json']), json.loads(source['rights_json']), None, False):
                     revisions.append(source['id'])
         return {'project_id': row['project_id'] if row else None, 'revision_ids': revisions, 'context_epoch': context_epoch_in(conn)}
+
+    def goal(self, identifier, request, operation, goal_id=None, key=None):
+        with self.db.transaction() as conn:
+            def mutate():
+                project=self._get(conn,identifier)
+                self._expected(project,request.expected_revision)
+                if project['lifecycle']!='active':
+                    raise ApiError('project_archived','Restore the project before editing goals',409)
+                if goal_id is not None:
+                    row=conn.execute('SELECT * FROM study_project_goals WHERE id=? AND project_id=?',(goal_id,identifier)).fetchone()
+                    if not row or conn.execute(
+                            "SELECT 1 FROM deletion_ledger WHERE entity_type='goal' AND entity_id=?",(goal_id,)).fetchone():
+                        raise ApiError('goal_missing','This goal is no longer available',404)
+                    if row['revision']!=request.goal_revision:
+                        raise ApiError('goal_revision_conflict','Reload the goal before saving',409,True)
+                if operation=='delete-goal':
+                    self.db.mark_deleted('goal',goal_id,conn)
+                    conn.execute('DELETE FROM study_project_goals WHERE id=?',(goal_id,))
+                else:
+                    for evidence_id in request.progress.evidence_ids:
+                        self._goal_evidence(conn,evidence_id)
+                    now=utc_now()
+                    progress=json.dumps(request.progress.model_dump(mode='json',exclude_none=True))
+                    target_date=request.target_date.isoformat() if request.target_date else None
+                    if goal_id is None:
+                        conn.execute('INSERT INTO study_project_goals VALUES(?,?,?,?,?,?,?,1,?,?)',
+                            (durable_id('goal'),identifier,request.title,request.topic_id,target_date,request.status,progress,now,now))
+                    else:
+                        conn.execute('UPDATE study_project_goals SET title=?,topic_id=?,target_date=?,status=?,progress_json=?,revision=revision+1,updated_at=? WHERE id=?',
+                            (request.title,request.topic_id,target_date,request.status,progress,now,goal_id))
+                self._touch(conn,identifier)
+                bump_context_epoch(conn)
+                return self._get(conn,identifier)
+            return command(conn,'study_project_commands',key,operation,'goal' if goal_id else 'project',goal_id or identifier,request,mutate)
+
+    def _goal_evidence(self, conn, identifier):
+        row=conn.execute('SELECT * FROM learning_evidence WHERE id=?',(identifier,)).fetchone()
+        valid=False
+        if row and not conn.execute(
+                "SELECT 1 FROM deletion_ledger WHERE entity_type='learning_evidence' AND entity_id=?",(identifier,)).fetchone():
+            try:
+                payload=json.loads(row['payload_json'])
+                scope=payload.get('scope',{})
+                if row['kind']=='study-interest' and scope=={'kind':'study','entity_id':row['entity_id']} and payload.get('activity')=='explain':
+                    valid=bool(conn.execute(
+                        "SELECT 1 FROM learn_threads t WHERE t.id=? AND NOT EXISTS(SELECT 1 FROM deletion_ledger WHERE entity_type='learn_thread' AND entity_id=t.id)",
+                        (row['entity_id'],)).fetchone())
+                elif row['kind']=='assessment-answer' and scope.get('kind')=='reviewed-assessment' and payload.get('mode')=='reviewed' and type(payload.get('correct')) is bool:
+                    valid=bool(conn.execute(
+                        "SELECT 1 FROM assessment_attempts a WHERE a.id=? AND NOT EXISTS(SELECT 1 FROM deletion_ledger WHERE entity_type='assessment_attempt' AND entity_id=a.id)",
+                        (row['entity_id'],)).fetchone())
+            except (ValueError,TypeError,AttributeError):
+                pass
+        if not valid:
+            raise ApiError('goal_evidence_unavailable','Use committed learning activity as evidence for this goal',409)

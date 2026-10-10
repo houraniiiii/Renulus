@@ -2,7 +2,7 @@
 from typing import Literal
 from fastapi import APIRouter, Depends, Header, Query, Response
 from renulus.learn.conversation_models import Mutation, Rename
-from .project_models import NewProject, DocumentLink
+from .project_models import NewProject, DocumentLink, GoalInput, GoalEdit, GoalDelete
 from .project_repository import ProjectRepository
 
 
@@ -49,5 +49,18 @@ def create_router(services):
     @router.delete('/{identifier}/documents/{revision_id}')
     def unlink(identifier: str, revision_id: str, expected_revision: int = Query(ge=1), idempotency_key: str | None = Header(default=None)):
         return repository.document(identifier, DocumentLink(expected_revision=expected_revision,revision_id=revision_id), 'unlink', idempotency_key)
+
+    @router.post('/{identifier}/goals',status_code=201)
+    def create_goal(identifier: str, body: GoalInput, idempotency_key: str | None = Header(default=None)):
+        return repository.goal(identifier,body,'create-goal',key=idempotency_key)
+
+    @router.put('/{identifier}/goals/{goal_id}')
+    def edit_goal(identifier: str, goal_id: str, body: GoalEdit, idempotency_key: str | None = Header(default=None)):
+        return repository.goal(identifier,body,'edit-goal',goal_id,idempotency_key)
+
+    @router.delete('/{identifier}/goals/{goal_id}')
+    def delete_goal(identifier: str, goal_id: str, expected_revision: int = Query(ge=1), goal_revision: int = Query(ge=1),
+                    idempotency_key: str | None = Header(default=None)):
+        return repository.goal(identifier,GoalDelete(expected_revision=expected_revision,goal_revision=goal_revision),'delete-goal',goal_id,idempotency_key)
 
     return router
