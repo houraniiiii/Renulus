@@ -15,6 +15,28 @@ Use [parallel-work rules](../planning/PARALLEL_WORK.md) and record prerequisite
 commits, integrated evidence and remaining limits in the ticket handoff or its
 linked issue. Update this current section when execution starts.
 
+### Current integration checkpoint — 08d9272f
+
+The earlier reservations below are historical. Active work remains against the
+same DC01–DC21 backlog. Canonical root/branch and baseline 528025ff ancestry were
+rechecked; the 18 pre-existing normalization-only flags remain unstaged.
+
+| Owner | Current exact lease / prerequisite | Current evidence and next gate |
+| --- | --- | --- |
+| Lead | Shared shell/platform/server, migration/release paths; new modules/notes; study/service.py + study conftest/whole progress test; R9 CandidateEditor/types/owned renderer test | Study `77e139d9` 20 actual checks; Notes backend `7116e427` + retention `820d1906` six actual checks, frontend and mounted Workspace validation continuing. Home policy draft `434dc41a` eight focused checks; Workspace Files `1b0d22d3` seven actual checks. |
+| Aquinas / dc01-design | TestSetupPane.tsx; attempts/session.ts + session.test.ts and AttemptRun/connected test only if needed; existing integration review report | R4 preview stylesheet and R6 durable action errors; independent recheck after source checkpoint. |
+| Zeno / dc02-contracts | docs/implementation/design-c-windows-review.md only after completed Chat lease | Case image `c4b5f1df` and Save retry `08d9272f` integrated. 55 affected checks, five final image checks, two legacy image checks, 18 renderer then nine final Chat checks (overlapping counts). DC21 report identifies concrete verifier/path gaps; no packaging/profile/default mutations delegated. |
+| Pauli / dc-review-data | tests/integration/test_design_c_populated_upgrade.py + docs/implementation/design-c-review-data.md only | C4 `a2a5f2d4` 35 actual checks, C1 `1b12c19f` independent report native pins; hidden import normal close, two personal results and original hashes retained. Current full populated upgrade/restore harness uses real producers. |
+| Russell / dc-review-assessment | memory/repository.py + memory/service.py + focused Memory tests; report-only independent C1/C4 recheck after commit | C3 fresh canonical fingerprint after boundary cancellation; terminal explicit cancellation/suppression/source invalidity must not retry. |
+| Poincare / dc-review-readers | Notes owner note_api/models/service and Knowledge CAS/retention; existing Reader source/test lease for R7 | Backend notes published; original prerequisite e0e51784 integrated separately as820d1906. R7 typed page/sheet/row position rehydrate/report remains active. |
+| Kant / dc-home | study/home_service.py + tests/study/test_home_suggestions.py only | C2 actual captured whole-attempt Memory scope/correction repair; 24 focused checks passed, full Home/Nightly including actual connected Home run underway. |
+
+The hidden c3 controller closed normally after real Study pause/reopen/finish and
+Test normal restart/deadline results. Narrow/200% results were inspected; receipt
+index and final readonly persistence audit are still being assembled. No live
+provider/account or owner profile was used. DC20 is active; DC21 preparation is
+an audit, with no matching C package/default cutover claimed.
+
 ### Active reservations — initial prerequisite wave
 
 | Owner/lane | Branch and worktree under `C:/Renulus/dev/worktrees/` | Exact write reservation | Synthetic profile under `C:/Renulus/scratch/design-c/` |
