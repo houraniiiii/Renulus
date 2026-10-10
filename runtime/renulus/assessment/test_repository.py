@@ -405,16 +405,25 @@ class SavedTestRepository:
                 raise ApiError("idempotency_conflict", "This report key was used for different text or a different item", 409)
             return {"id": previous["id"], "status": "saved", "created_at": previous["created_at"]}
         live = conn.execute("SELECT provenance_json FROM assessment_test_versions WHERE id=?", (version.id,)).fetchone()
-        snapshot = {"schema": "question-report-snapshot/1", "question": item.model_dump(mode="json"),
+        snapshot = {"schema": "question-report-snapshot/2", "question": item.model_dump(mode="json"),
                     "version_id": version.id, "test_id": version.test_id, "origin": version.origin,
                     "review_quality": version.review_quality, "terms": version.terms,
                     "producer": version.provenance.model_dump(mode="json"),
                     "source_refs": [reference.model_dump(mode="json") for reference in version.source_refs]}
         if provenance is None and live:
             provenance = json.loads(live[0])
-        if provenance is not None:
-            snapshot["provenance"] = {"schema": provenance.get("schema"), "item": next(
-                (raw for raw in provenance.get("items", []) if raw.get("item_id") == item_id), None)}
+        if isinstance(provenance, dict):
+            # Only trusted native pins enter this writer. Keep their import/source
+            # and fictional privacy receipts even when the live version disappears.
+            # Other questions do not belong in this independent report snapshot.
+            snapshot["provenance"] = {key: value for key, value in provenance.items() if key != "items"}
+            snapshot["provenance"]["item"] = next(
+                (raw for raw in provenance.get("items", []) if raw.get("item_id") == item_id), None)
+            reason = ("legacy_conversion" if provenance.get("legacy") or version.provenance.method == "legacy_conversion"
+                      else "unsupported_native_schema" if provenance.get("schema") != "saved-test-provenance/1" else None)
+            snapshot["provenance_status"] = {"state": "incomplete", "reason": reason} if reason else {"state": "retained", "reason": "native_envelope"}
+        else:
+            snapshot["provenance_status"] = {"state": "incomplete", "reason": "native_envelope_unavailable"}
         identifier, now = durable_id("question_report"), utc_now()
         live_attempt = attempt_id if attempt_id and _exists(conn, "assessment_test_attempts") and conn.execute(
             "SELECT 1 FROM assessment_test_attempts WHERE id=?", (attempt_id,)).fetchone() else None
@@ -425,6 +434,22 @@ class SavedTestRepository:
             attempt_id, live_attempt, item_id, item.question_id, item.question_version, item.key_version,
             item.family_id, item.family_version, report_text, idempotency_key, request_hash, encode(snapshot), now))
         return {"id": identifier, "status": "saved", "created_at": now}
+
+    def pinned_report_snapshot(self, conn, report_id):
+        """PRIVATE: independent native provenance, never a renderer report response.
+
+        Older projections cannot recover discarded headers. Label that limit
+        without rewriting history or guessing from a possibly changed live version.
+        """
+        row = conn.execute("SELECT question_snapshot_json FROM assessment_question_reports WHERE id=?", (report_id,)).fetchone()
+        if row is None:
+            raise ApiError("not_found", "This local question report is unavailable", 404)
+        snapshot = json.loads(row[0])
+        if snapshot.get("schema") == "question-report-snapshot/1":
+            snapshot["provenance_status"] = {"state": "incomplete", "reason": "legacy_report_projection"}
+        elif snapshot.get("schema") != "question-report-snapshot/2":
+            raise ApiError("question_report_unavailable", "This report snapshot needs a compatible application version", 409)
+        return snapshot
 
     def report_question(self, test_id, version_id, request):
         with self.db.transaction() as conn:
