@@ -307,17 +307,27 @@ async function normalClose(current, report) {
   return receipt;
 }
 
+export function validateBundledInterpreter(interpreter, backend) {
+  check(interpreter.version === '3.14.4' && interpreter.isolated === 1 && interpreter.no_user_site === 1
+    && samePath(interpreter.prefix, interpreter.base_prefix) && inside(backend, interpreter.prefix)
+    && interpreter.paths.length > 0 && interpreter.paths.every(value => inside(backend, value))
+    && inside(backend, interpreter.pillow), 'The actual bundled interpreter and Pillow must be isolated inside the verified installation.');
+}
+function inspectBundledInterpreter(identity, env) {
+  const python = path.join(identity.backend, 'python/python.exe');
+  const interpreter = json(execFileSync(python, ['-I', '-B', '-X', 'utf8', '-c',
+    'import sys,json,importlib.util;print(json.dumps(dict(version=sys.version.split()[0],prefix=sys.prefix,base_prefix=sys.base_prefix,isolated=sys.flags.isolated,no_user_site=sys.flags.no_user_site,paths=sys.path,pillow=importlib.util.find_spec("PIL").origin)))'],
+  { env, windowsHide: true, timeout: 30_000 }));
+  validateBundledInterpreter(interpreter, identity.backend);
+  return interpreter;
+}
 async function launch(request, identity, evidence, profileName, report) {
   const profile = path.join(evidence, profileName), env = isolatedEnvironment(process.env, evidence, profile);
   const absentTools = ['python', 'python3', 'py', 'uv', 'node', 'npm'];
   for (const name of absentTools) check(spawnSync(path.join(env.SystemRoot ?? env.SYSTEMROOT, 'System32/where.exe'),
     [name], { env, windowsHide: true }).status === 1, 'A developer tool resolves on the app PATH: ' + name);
   const python = path.join(identity.backend, 'python/python.exe');
-  const interpreter = json(execFileSync(python, ['-I', '-B', '-X', 'utf8', '-c',
-    'import sys,json;print(json.dumps(dict(version=sys.version.split()[0],prefix=sys.prefix,base_prefix=sys.base_prefix,isolated=sys.flags.isolated,no_user_site=sys.flags.no_user_site,paths=sys.path)))'],
-  { env, windowsHide: true, timeout: 30_000 }));
-  check(interpreter.version === '3.14.4' && interpreter.isolated === 1 && interpreter.no_user_site === 1
-    && samePath(interpreter.prefix, interpreter.base_prefix) && interpreter.paths.every(value => inside(identity.backend, value)), 'The actual bundled interpreter is not isolated.');
+  const interpreter = inspectBundledInterpreter(identity, env);
   const { _electron: electron } = await import('@playwright/test');
   const startedAt = Date.now();
   const application = await electron.launch({ executablePath: request.executable, args: [], cwd: path.dirname(request.executable), env, timeout: 360_000 });
@@ -614,13 +624,15 @@ async function generateReaderFixtures(identity, evidence) {
     'The frozen fixture generator changed before execution.');
   const python = path.join(identity.backend, 'python/python.exe');
   const env = isolatedEnvironment(process.env, evidence, path.join(evidence, 'p'));
+  // Inspect isolation and Pillow resolution before the generator can import it.
+  const interpreter = inspectBundledInterpreter(identity, env);
   const generated = json(execFileSync(python, ['-I', '-B', '-X', 'utf8', script, '--output', directory],
     { env, windowsHide: true, timeout: 30_000, maxBuffer: 1024 * 1024 }));
   const manifest = validateReaderManifest(json(await readFile(path.join(directory, 'manifest.json'))));
   check(generated.schema === manifest.schema && generated.files === manifest.files.length && generated.pillow_version === manifest.pillow_version,
     'The bundled fixture generator returned a mismatched receipt.');
   for (const fixture of manifest.files) await checkedReaderOriginal(directory, fixture);
-  return { directory, manifest, generator: { python, scriptSha256: sha(await readFile(script)), ...generated } };
+  return { directory, manifest, generator: { python, interpreter, scriptSha256: sha(await readFile(script)), ...generated } };
 }
 
 async function checkedReaderOriginal(directory, fixture) {

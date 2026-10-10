@@ -8,7 +8,7 @@ import { installedAcceptancePlan, validateInstalledRequest, validateInstallation
   validateCompleteReport, validateFrozenScript, requiredGates, remainingOwnedIdentities, inside,
   coreGates, readerGates, deferredGates, completeCoreReceipt, designCEvidenceRoot, ownedArtifact, validateHiddenWindows, waitForDesignCWindow,
   validateConversation, validateSavedTest, validateActiveTest, validateFinalAttempt, safeFailure,
-  validateReaderManifest, validateReaderOriginal, validateReaderDocument, validateReaderPassage, validateReaderRaster } from './verify-installed-product.mjs';
+  validateReaderManifest, validateReaderOriginal, validateReaderDocument, validateReaderPassage, validateReaderRaster, validateBundledInterpreter } from './verify-installed-product.mjs';
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
 const desktop = path.resolve(directory, '..');
@@ -252,6 +252,20 @@ test('compact installed helper profile paths fail before any launch when over 60
   assert.equal(env.RENULUS_PROFILE, profile);
   assert.equal(env.TEMP, path.join(root, 't'));
   assert.throws(() => isolatedEnvironment({ SystemRoot: 'C:/Windows' }, root, path.join(root, 'profile-name-that-is-too-long')), /60 characters/);
+});
+
+test('fixture generation refuses a developer Pillow or interpreter path before importing the encoder', () => {
+  const backend = path.join(designCEvidenceRoot, 'installed-aaaaaaaa/resources/backend');
+  const value = { version: '3.14.4', isolated: 1, no_user_site: 1,
+    prefix: path.join(backend, 'python'), base_prefix: path.join(backend, 'python'),
+    paths: [path.join(backend, 'python/python314.zip'), path.join(backend, 'python/Lib/site-packages')],
+    pillow: path.join(backend, 'python/Lib/site-packages/PIL/__init__.py') };
+  validateBundledInterpreter(value, backend);
+  for (const mutate of [v => { v.pillow = 'C:/Renulus/dev/python/Lib/site-packages/PIL/__init__.py'; },
+    v => { v.paths.push('C:/Renulus/dev/repo'); }, v => { v.paths = []; }, v => { v.isolated = 0; },
+    v => { v.no_user_site = 0; }, v => { v.prefix = v.base_prefix = 'C:/Renulus/dev/python'; }]) {
+    const changed = structuredClone(value); mutate(changed); assert.throws(() => validateBundledInterpreter(changed, backend));
+  }
 });
 
 const media = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
