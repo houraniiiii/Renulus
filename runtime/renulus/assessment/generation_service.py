@@ -61,6 +61,24 @@ class SavedGenerationService:
         self.db.execute("UPDATE assessment_test_jobs SET state='failed',error_code='interrupted',updated_at=? "
             "WHERE operation IN ('generate_test','nightly_test') AND state IN ('queued','running')", (utc_now(),))
 
+    def reconcile_nightly(self, conn) -> int:
+        """Neutral owner hook for status/tick; never start or inspect provider work.
+
+        Imported epoch numbers are not execution ownership. Preserve live local
+        tasks, and fail orphaned work even if a foreign epoch happens to match.
+        The caller owns the transaction; checkpoints and counts remain intact.
+        """
+        epoch, changed = context_epoch_in(conn), 0
+        rows = conn.execute("SELECT id,context_epoch FROM assessment_test_jobs "
+            "WHERE operation='nightly_test' AND state IN ('queued','running')").fetchall()
+        for row in rows:
+            task = self.tasks.get(row["id"])
+            if row["context_epoch"] == epoch and task is not None and not task.done():
+                continue
+            changed += conn.execute("UPDATE assessment_test_jobs SET state='failed',error_code='interrupted',updated_at=? "
+                "WHERE id=? AND operation='nightly_test' AND state IN ('queued','running')", (utc_now(), row["id"])).rowcount
+        return changed
+
     def _route(self):
         status = self.services.get("provider").status()
         provider = status.get("selected_provider")
@@ -215,11 +233,13 @@ class SavedGenerationService:
     def read(self, identifier):
         with self.db.transaction() as conn:
             require_assistance(conn)
+            self.reconcile_nightly(conn)
             return self._view(conn, self._row(conn, identifier))
 
     def list_jobs(self):
         with self.db.transaction() as conn:
             require_assistance(conn)
+            self.reconcile_nightly(conn)
             rows = conn.execute("SELECT * FROM assessment_test_jobs j WHERE operation IN ('generate_test','nightly_test') AND NOT EXISTS "
                 "(SELECT 1 FROM deletion_ledger WHERE entity_type='job' AND entity_id=j.id) ORDER BY created_at DESC,id DESC LIMIT 50")
             return {"items": [self._view(conn, dict(row)) for row in rows]}
@@ -244,6 +264,7 @@ class SavedGenerationService:
         digest = canonical_digest({"request": intent, "nightly": nightly}) if nightly is not None else canonical_digest(intent)
         with self.db.transaction() as conn:
             require_assistance(conn)  # Current policy precedes every outcome replay.
+            self.reconcile_nightly(conn)
             previous = conn.execute("SELECT * FROM assessment_test_jobs WHERE idempotency_key=?", (request.idempotency_key,)).fetchone()
             if previous:
                 if previous["operation"] != operation or previous["request_hash"] != digest:
@@ -527,6 +548,7 @@ class SavedGenerationService:
             return await self._cancel(identifier, request)
         with self.db.transaction() as conn:
             require_assistance(conn)
+            self.reconcile_nightly(conn)
             row = self._row(conn, identifier)
             checkpoint = self._checkpoint(row)
             self._nightly_guard(conn, row)

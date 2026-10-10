@@ -2,9 +2,11 @@
 """Real migrations, repositories and ProviderManager with an installed synthetic transport."""
 import asyncio
 from copy import deepcopy
+from datetime import datetime, timezone
 import json
 
 from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 from pydantic import ValidationError
 import pytest
 
@@ -19,6 +21,8 @@ from renulus.storage import utc_now
 from renulus.storage.assessment_policy import advance_policy
 from renulus.storage.invalidation import bump_context_epoch
 from renulus.storage.backup import export_records
+from renulus.study.nightly_api import create_router as create_nightly_router
+from renulus.study.nightly_models import PreferencesUpdate
 
 
 def batch(start=0, count=5):
@@ -667,4 +671,174 @@ async def test_nightly_restart_and_actual_restore_never_replay_provider(nightly_
         result = restarted.read(row["id"])
         assert result["state"] == "failed" and result["error_code"] == "interrupted"
         assert restarted.tasks == {} and len(transport.calls) == 1
+    assert service.db.fetch_all("SELECT id FROM assessment_test_versions") == []
+
+
+@pytest.fixture
+def connected_nightly(generation):
+    """Actual scheduler/guard, migrations, eligibility and generation; transport only is synthetic."""
+    app, service, transport = generation
+    if "nightly" not in app.state.services.registry:
+        app.include_router(create_nightly_router(app.state.services), prefix="/api/v1")
+    nightly = app.state.services.get("nightly")
+    clock = [datetime(2026, 10, 10, 20, tzinfo=timezone.utc)]
+    nightly.local_now = lambda: clock[0]
+    return app, service, transport, nightly, clock
+
+
+async def scheduled(nightly, clock, *, count=5):
+    await nightly.update_preferences(PreferencesUpdate(enabled=True, question_count=count, expected_revision=1),
+                                     "synthetic-connected-nightly-enable")
+    clock[0] = clock[0].replace(hour=23)
+    result = await nightly.tick()
+    assert result["last_job"] is not None, result
+    return result["last_job"]["id"]
+
+
+async def provider_started(service, transport, identifier):
+    observed = asyncio.create_task(transport.started.wait())
+    try:
+        await asyncio.wait((observed, service.tasks[identifier]), timeout=20, return_when=asyncio.FIRST_COMPLETED)
+        assert transport.started.is_set(), service.db.fetch_one("SELECT state,error_code FROM assessment_test_jobs WHERE id=?", (identifier,))
+    finally:
+        if not observed.done():
+            observed.cancel()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("count", [5, 10, 20])
+async def test_actual_nightly_scheduler_provider_publication_and_generation_routes(connected_nightly, count):
+    app, service, transport, nightly, clock = connected_nightly
+    identifier = await scheduled(nightly, clock, count=count)
+    result = await finish(service, identifier)
+    assert result["state"] == "published", result
+    assert len(transport.calls) == count // 5
+    assert nightly.read()["last_job"]["result"]["version"]["id"] == result["result"]["version_id"]
+    with service.db.transaction() as conn:
+        version = app.state.services.get("saved_tests").pinned_version(conn, result["result"]["version_id"])
+    assert version.origin == version.provenance.method == "nightly"
+    assert version.item_count == count and version.review_quality == "personal"
+    async with AsyncClient(transport=ASGITransport(app), base_url="http://testserver") as client:
+        progress = await client.get("/api/v1/assessment/generation/jobs/" + identifier)
+        assert progress.status_code == 200 and progress.json() == result, progress.text
+        assert progress.headers["cache-control"] == "no-store"
+        assert (await client.get("/api/v1/assessment/generation/jobs")).json()["items"] == [result]
+        forbidden = await client.post("/api/v1/assessment/generation/jobs", json=nightly_request().model_dump(mode="json"))
+        assert forbidden.status_code == 422
+        assert not any(value in progress.text for value in ("correct_option", "PRIVATE_", "eligibility_token"))
+    for _ in range(3):
+        await nightly.tick()
+    assert len(transport.calls) == count // 5
+    assert service.db.fetch_all("SELECT id FROM assessment_test_attempts") == [], "Publication does not start an attempt or timer"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("change", ["off", "memory", "epoch", "policy"])
+async def test_actual_nightly_owner_and_context_revocation_stop_provider_wait(connected_nightly, change):
+    app, service, transport, nightly, clock = connected_nightly
+    stamp = utc_now()
+    service.db.execute("INSERT INTO memory_facts VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+        ("nightly_connected_memory", "Synthetic general dialysis learning", "synthetic-hash", "learning-point", "T01", "study", 1, "manual", None, stamp, stamp))
+    service.db.execute("INSERT INTO memory_history VALUES(?,?,?,?,?)",
+        ("nightly_connected_memory", 1, "Synthetic general dialysis learning", "added", stamp))
+    transport.release = asyncio.Event()
+    identifier = await scheduled(nightly, clock, count=10)
+    await provider_started(service, transport, identifier)
+    stored = service.db.fetch_one("SELECT inputs_json FROM assessment_test_jobs WHERE id=?", (identifier,))
+    assert json.loads(stored["inputs_json"])[0]["kind"] == "memory"
+    if change == "off":
+        await nightly.update_preferences(PreferencesUpdate(enabled=False, expected_revision=2), "synthetic-connected-nightly-disable")
+    else:
+        with service.db.transaction() as conn:
+            if change == "memory":
+                conn.execute("DELETE FROM memory_history WHERE record_id='nightly_connected_memory'")
+            elif change == "epoch":
+                bump_context_epoch(conn)
+            else:
+                advance_policy(conn)
+        await asyncio.wait_for(service.tasks[identifier], timeout=3)
+    result = service.read(identifier)
+    assert result["state"] in ("failed", "cancelled") and result["result"] is None
+    assert not result["can_retry"] and len(transport.calls) == 1
+    assert service.db.fetch_all("SELECT id FROM assessment_test_versions") == []
+    assert app.state.services.get("provider").status()["active_runs"] == []
+
+
+@pytest.mark.asyncio
+async def test_actual_nightly_guard_rechecks_final_write_and_retains_complete_draft(connected_nightly, monkeypatch):
+    _, service, transport, nightly, clock = connected_nightly
+    publish = service._publish
+    def changed(conn, row, checkpoint, **kwargs):
+        # A real write-snapshot mutation at the seam, not a replacement guard.
+        conn.execute("UPDATE preferences SET value=json_set(value,'$.enabled',json('false')) WHERE key='nightly.preferences'")
+        return publish(conn, row, checkpoint, **kwargs)
+    monkeypatch.setattr(service, "_publish", changed)
+    identifier = await scheduled(nightly, clock)
+    result = await finish(service, identifier)
+    assert result["state"] == "failed" and result["validated_count"] == 5
+    assert result["error_code"] == "nightly_invalidated"
+    assert service.db.fetch_all("SELECT id FROM assessment_tests") == []
+    assert service.db.fetch_all("SELECT id FROM assessment_test_versions") == [] and len(transport.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_actual_nightly_published_replay_old_token_and_neutral_stop_winner(connected_nightly):
+    _, service, transport, nightly, clock = connected_nightly
+    identifier = await scheduled(nightly, clock)
+    result = await finish(service, identifier)
+    checkpoint = json.loads(service.db.fetch_one("SELECT checkpoint_json FROM assessment_test_jobs WHERE id=?", (identifier,))["checkpoint_json"])
+    intent = CreateGenerationRequest.model_validate(checkpoint["request"])
+    await nightly.update_preferences(PreferencesUpdate(enabled=False, expected_revision=2), "synthetic-published-nightly-off")
+    assert await service.create_nightly(intent, schedule=checkpoint["nightly"]) == result
+    assert await nightly.cancel(identifier, "synthetic-published-nightly-stop") == {"id": identifier, "state": "published"}
+    stamp = utc_now()
+    service.db.execute("INSERT INTO assessment_test_attempts(id,version_id,version_snapshot_json,mode,clock_high_water_at,created_at,updated_at) "
+        "VALUES('synthetic-active-test','synthetic-version','{}','test',?,?,?)", (stamp, stamp, stamp))
+    with pytest.raises(ApiError) as error:
+        await service.create_nightly(intent, schedule=checkpoint["nightly"])
+    assert error.value.code == "assistance_restricted"
+    assert await nightly.cancel(identifier, "synthetic-published-test-stop") == {"id": identifier, "state": "published"}
+    assert len(transport.calls) == 1
+    service.db.execute("DELETE FROM assessment_test_attempts WHERE id='synthetic-active-test'")
+    service.db.mark_deleted("job", identifier)
+    with pytest.raises(ApiError) as error:
+        await service.create_nightly(intent, schedule=checkpoint["nightly"])
+    assert error.value.code == "not_found" and len(transport.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_actual_nightly_reconciliation_preserves_unfinished_local_execution(connected_nightly):
+    _, service, transport, nightly, clock = connected_nightly
+    transport.release = asyncio.Event()
+    identifier = await scheduled(nightly, clock)
+    await provider_started(service, transport, identifier)
+    with service.db.transaction() as conn:
+        assert service.reconcile_nightly(conn) == 0
+    assert service.read(identifier)["state"] == "running"
+    transport.release.set()
+    assert (await finish(service, identifier))["state"] == "published"
+    assert len(transport.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_nightly_orphan_restore_epoch_collision_fails_without_provider_replay(connected_nightly):
+    app, service, transport, nightly, clock = connected_nightly
+    stamp = utc_now()
+    # Source and destination profiles can have different local epoch histories.
+    service.db.execute("INSERT INTO preferences VALUES('design_c.context_epoch','5',?)", (stamp,))
+    transport.release = asyncio.Event()
+    identifier = await scheduled(nightly, clock)
+    await provider_started(service, transport, identifier)
+    bundle = export_records(app.state.services)
+    await service.close()
+    service.db.execute("DELETE FROM assessment_test_jobs WHERE id=?", (identifier,))
+    service.db.execute("UPDATE preferences SET value='4' WHERE key='design_c.context_epoch'")
+    nightly.recover()  # Destination eligibility belongs to its own epoch history.
+    app.state.services.get("data_recovery").restore_json(bundle, confirm_backup_date=True, confirmed_exported_at=bundle["exported_at"])
+    restored = service.db.fetch_one("SELECT context_epoch FROM assessment_test_jobs WHERE id=?", (identifier,))
+    assert restored["context_epoch"] == 5
+    assert service.db.fetch_one("SELECT value FROM preferences WHERE key='design_c.context_epoch'")["value"] == "5"
+    result = service.read(identifier)
+    assert result["state"] == "failed" and result["error_code"] == "interrupted"
+    assert len(transport.calls) == 1 and service.tasks == {}
     assert service.db.fetch_all("SELECT id FROM assessment_test_versions") == []
