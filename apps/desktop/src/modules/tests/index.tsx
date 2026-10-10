@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { Suspense, lazy, useEffect, useState, type FormEvent } from 'react';
 import { ArrowRight, ClipboardCheck, Plus } from 'lucide-react';
 import { api } from '../../platform/api';
 import { useResource } from '../../platform/useResource';
@@ -10,6 +10,7 @@ import { NightlyStatus } from '../nightly';
 import { useTestMutation } from './useTestMutation';
 import { originLabel, type PublishedTest, type TestOrigin, type TestPage, type TestSelection } from './types';
 import './tests.css';
+const ImportPanel = lazy(() => import('../imports/ImportPanel'));
 
 const base = '/assessment/tests';
 
@@ -24,6 +25,7 @@ export default function Tests() {
   const [selected, setSelected] = useState<TestSelection | null>(null);
   const [creating, setCreating] = useState(false), [title, setTitle] = useState('Reviewed practice'), [count, setCount] = useState('5');
   const [generating, setGenerating] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [generationJob, setGenerationJob] = useState<string>();
   const [notice, setNotice] = useState('');
   const mutation = useTestMutation();
@@ -49,13 +51,20 @@ export default function Tests() {
   }
   return <div className="saved-tests">
     <PageHeader title="Tests" description="Return to a saved set or choose reviewed questions for your next session."
-      actions={<div className="tests-actions"><Button variant="secondary" onClick={() => { setCreating(value => !value); setGenerating(false); }} disabled={mutation.locked}>New reviewed test</Button>
-        <Button aria-expanded={generating} aria-controls="tests-generation" onClick={() => { setGenerating(value => !value); setGenerationJob(undefined); setCreating(false); }} disabled={mutation.locked}><Plus size={18} aria-hidden="true" />Create test</Button></div>} />
+      actions={<div className="tests-actions"><Button variant="secondary" onClick={() => { setCreating(value => !value); setGenerating(false); setImporting(false); }} disabled={mutation.locked}>New reviewed test</Button>
+        <Button variant="secondary" aria-expanded={importing} aria-controls="tests-import" onClick={() => { setImporting(value => !value); setCreating(false); setGenerating(false); }}>Import a test</Button>
+        <Button aria-expanded={generating} aria-controls="tests-generation" onClick={() => { setGenerating(value => !value); setGenerationJob(undefined); setCreating(false); setImporting(false); }} disabled={mutation.locked}><Plus size={18} aria-hidden="true" />Create test</Button></div>} />
     {notice && <Notice>{notice}</Notice>}
     {mutation.error !== null && <ErrorState error={mutation.error} title="Your request needs a retry" onRetry={mutation.retry} />}
     <NightlyStatus onPreferences={() => navigate('connections', { payload: { settings_section: 'preferences' } })}
       onOpenTest={selection => { setSelected(selection); setGenerating(false); setCreating(false); retry(); }}
-      onReviewJob={id => { setGenerationJob(id); setGenerating(true); setCreating(false); }} />
+      onReviewJob={id => { setGenerationJob(id); setGenerating(true); setCreating(false); setImporting(false); }} />
+    {importing && <section id="tests-import" aria-label="Import a test" className="tests-import">
+      <div className="tests-generation-heading"><h2>Import and review</h2><Button variant="ghost" onClick={() => setImporting(false)}>Close import</Button></div>
+      <Suspense fallback={<LoadingState label="Opening private import review" />}><ImportPanel
+        onSaved={version => { setSelected({ test_id: version.test_id, version_id: version.version_id }); retry(); }}
+        onOpenVersion={version => { setSelected({ test_id: version.test_id, version_id: version.version_id }); setImporting(false); retry(); }} /></Suspense>
+    </section>}
     {generating && <section id="tests-generation" aria-label="Create a test" className="tests-generation">
       <div className="tests-generation-heading"><p>Personal practice uses the selected connection. Reviewed scores remain separate.</p>
         <Button variant="ghost" onClick={() => setGenerating(false)}>Close generation</Button></div>
