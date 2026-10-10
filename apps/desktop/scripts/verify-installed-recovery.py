@@ -536,11 +536,79 @@ def legacy_assertions(services, old, *, deleted_fact=None):
         assert_preserved_rows(expected, rows(services.db, table), table)
 
 
+def validate_old_conversations(records):
+    """Admit real saved exchanges before opening the seed with current owners."""
+    tables = ("learn_threads", "learn_runs", "learn_messages", "case_sessions")
+    require(all(isinstance(records.get(table), list) for table in tables),
+            "Old Learn/Case canonical history is required")
+    require(0 < len(records["learn_threads"]) + len(records["case_sessions"]) <= 100
+            and len(records["learn_messages"]) <= 10000 and len(records["learn_runs"]) <= 10000,
+            "Old Learn/Case history exceeds its bound")
+
+    def indexed(items, label):
+        result = {}
+        for item in items:
+            require(isinstance(item, dict) and isinstance(item.get("id"), str)
+                    and re.fullmatch(r"[a-zA-Z0-9_-]{1,128}", item["id"])
+                    and item["id"] not in result, "Invalid/duplicate old identity: " + label)
+            result[item["id"]] = item
+        return result
+
+    def message_order(message):
+        require(message.get("role") in ("user", "assistant")
+                and isinstance(message.get("content"), str) and message["content"].strip()
+                and isinstance(message.get("created_at"), str), "Invalid/empty old user/assistant message")
+        try:
+            timestamp = datetime.fromisoformat(message["created_at"])
+        except ValueError as exc:
+            raise ProofError("Invalid old message timestamp") from exc
+        require(timestamp.utcoffset() is not None, "Old message timestamp must include its timezone")
+        # Match the old Learn reader and current canonical conversation reader.
+        return message["created_at"], message["id"]
+
+    threads = indexed(records["learn_threads"], "Learn threads")
+    runs = indexed(records["learn_runs"], "Learn runs")
+    messages = indexed(records["learn_messages"], "Learn messages")
+    cases = indexed(records["case_sessions"], "Cases")
+    require(all(isinstance(run.get("thread_id"), str) and run["thread_id"] in threads
+                for run in runs.values()), "Orphan old Learn run")
+    by_run = {identifier: [] for identifier in runs}
+    for message in messages.values():
+        require(isinstance(message.get("thread_id"), str) and message["thread_id"] in threads
+                and isinstance(message.get("run_id"), str) and message["run_id"] in runs
+                and runs[message["run_id"]]["thread_id"] == message["thread_id"],
+                "Orphan/cross-thread old Learn message")
+        message_order(message)
+        by_run[message["run_id"]].append(message)
+    learned = False
+    for identifier, exchange in by_run.items():
+        roles = [message["role"] for message in sorted(exchange, key=message_order)]
+        require(roles in ([], ["user"], ["user", "assistant"]), "Old Learn exchange order/roles changed")
+        learned |= roles == ["user", "assistant"] and runs[identifier].get("state") == "completed"
+    require(learned, "Old Learn seed needs a completed user/assistant exchange")
+
+    discussed, case_message_ids = False, set()
+    for case in cases.values():
+        try:
+            exchange = json.loads(case["messages_json"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ProofError("Invalid old Case messages JSON") from exc
+        require(isinstance(exchange, list) and len(exchange) <= 10000, "Invalid/unbounded old Case history")
+        identities = indexed(exchange, "Case messages")
+        require(not case_message_ids.intersection(identities), "Duplicate old Case message across sessions")
+        case_message_ids.update(identities)
+        require(exchange == sorted(exchange, key=message_order), "Old Case canonical message order changed")
+        discussed |= any(first["role"] == "user" and second["role"] == "assistant"
+                         for first, second in zip(exchange, exchange[1:]))
+    require(discussed, "Old Case seed needs a saved user/assistant exchange")
+
+
 def validate_old_seed(root, seed):
     old = read_json(root / "old.json")
     require(old.get("format") == "renulus-canonical-export" and old.get("schema_version") == 1
             and old.get("format_version") == 1 and isinstance(old.get("records"), dict), "Genuine old JSON export required")
     records = old["records"]
+    validate_old_conversations(records)
     require(records.get("assessment_items") and records.get("assessment_attempts")
             and records.get("assessment_generated_items") and records.get("memory_facts")
             and records.get("case_attachments") and records.get("knowledge_revisions"),

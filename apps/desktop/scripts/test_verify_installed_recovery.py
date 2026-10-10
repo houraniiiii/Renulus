@@ -252,6 +252,139 @@ class FileGuardTests(unittest.TestCase):
             driver.validate_seed_files(self.root, seed)
 
 
+class OldConversationTests(unittest.TestCase):
+    def records(self):
+        # Canonical row descriptors test admission only; no database, fake DDL,
+        # application owners or provider transport is loaded by these units.
+        messages = [{"id": "message_" + str(index), "thread_id": "thread_populated",
+                     "run_id": "run_" + str(index // 2), "role": role,
+                     "content": "SYNTHETIC saved " + role + " turn " + str(index // 2),
+                     "created_at": "2026-10-10T18:00:0%d.000+00:00" % index,
+                     "citations_json": "[]"}
+                    for index, role in enumerate(("user", "assistant", "user", "assistant"))]
+        case_messages = [{key: value for key, value in message.items()
+                          if key not in ("thread_id", "run_id", "citations_json")}
+                         for message in messages]
+        return {"learn_threads": [{"id": "thread_populated"}, {"id": "thread_empty"}],
+                "learn_runs": [{"id": "run_" + str(index), "thread_id": "thread_populated",
+                                "state": "completed"} for index in range(2)],
+                "learn_messages": messages,
+                "case_sessions": [{"id": "case_populated", "messages_json": driver.json.dumps(case_messages)},
+                                  {"id": "case_empty", "messages_json": "[]"}]}
+
+    def test_populated_owners_pass_with_unpopulated_fixture_conversations(self):
+        records = self.records()
+        before = copy.deepcopy(records)
+        driver.validate_old_conversations(records)
+        self.assertEqual(records, before)
+        # SQL export array order is not conversation order: Learn reads the
+        # canonical created_at/id order, while Case saves an ordered JSON array.
+        records["learn_messages"].reverse()
+        driver.validate_old_conversations(records)
+        # The minimum is one actual user/assistant exchange per owner.
+        records = self.records()
+        records["learn_messages"] = records["learn_messages"][:2]
+        records["learn_runs"] = records["learn_runs"][:1]
+        case = records["case_sessions"][0]
+        case["messages_json"] = driver.json.dumps(driver.json.loads(case["messages_json"])[:2])
+        driver.validate_old_conversations(records)
+
+    def test_old_empty_histories_are_refused_before_archives_or_profile_open(self):
+        for owner in ("learn", "case", "both"):
+            records = self.records()
+            if owner in ("learn", "both"):
+                records["learn_messages"], records["learn_runs"] = [], []
+            if owner in ("case", "both"):
+                for case in records["case_sessions"]:
+                    case["messages_json"] = "[]"
+            old = {"format": "renulus-canonical-export", "format_version": 1,
+                   "schema_version": 1, "records": records}
+            with self.subTest(owner=owner), mock.patch.object(driver, "read_json", return_value=old), \
+                    mock.patch.object(driver.zipfile, "ZipFile") as archive, \
+                    mock.patch.object(driver.sqlite3, "connect") as database:
+                with self.assertRaisesRegex(driver.ProofError, "user/assistant exchange"):
+                    driver.validate_old_seed(Path("C:/Renulus/scratch/design-c/delivery/r-0123abcd"), {})
+                archive.assert_not_called()
+                database.assert_not_called()
+
+    def test_orphan_and_cross_thread_learn_ids_are_refused(self):
+        changes = (("learn_runs", "thread_id", "missing"),
+                   ("learn_messages", "thread_id", "missing"),
+                   ("learn_messages", "run_id", "missing"),
+                   ("learn_messages", "thread_id", "thread_empty"))
+        for table, field, value in changes:
+            records = self.records()
+            records[table][0][field] = value
+            with self.subTest(table=table, field=field, value=value), \
+                    self.assertRaisesRegex(driver.ProofError, "Orphan"):
+                driver.validate_old_conversations(records)
+
+    def test_invalid_duplicate_and_reused_case_ids_are_refused(self):
+        for table in ("learn_threads", "learn_runs", "learn_messages", "case_sessions"):
+            for identifier in (None, "", "../outside", self.records()[table][1]["id"]):
+                records = self.records()
+                records[table][0]["id"] = identifier
+                with self.subTest(table=table, identifier=identifier), self.assertRaises(driver.ProofError):
+                    driver.validate_old_conversations(records)
+        records = self.records()
+        records["case_sessions"][1]["messages_json"] = records["case_sessions"][0]["messages_json"]
+        with self.assertRaisesRegex(driver.ProofError, "Duplicate old Case message across sessions"):
+            driver.validate_old_conversations(records)
+        records = self.records()
+        case = records["case_sessions"][0]
+        messages = driver.json.loads(case["messages_json"])
+        messages[1]["id"] = messages[0]["id"]
+        case["messages_json"] = driver.json.dumps(messages)
+        with self.assertRaisesRegex(driver.ProofError, "duplicate old identity"):
+            driver.validate_old_conversations(records)
+
+    def test_blank_tool_single_role_and_reversed_messages_cannot_establish_coverage(self):
+        for owner in ("learn", "case"):
+            for field, value in (("content", "  "), ("role", "tool"), ("created_at", "bad-time"),
+                                 ("created_at", "2026-10-10T18:00:00")):
+                records = self.records()
+                messages = records["learn_messages"] if owner == "learn" else driver.json.loads(
+                    records["case_sessions"][0]["messages_json"])
+                messages[0][field] = value
+                if owner == "case":
+                    records["case_sessions"][0]["messages_json"] = driver.json.dumps(messages)
+                with self.subTest(owner=owner, field=field, value=value), self.assertRaises(driver.ProofError):
+                    driver.validate_old_conversations(records)
+            records = self.records()
+            if owner == "learn":
+                for message in records["learn_messages"]:
+                    message["role"] = "user"
+            else:
+                case = records["case_sessions"][0]
+                messages = driver.json.loads(case["messages_json"])
+                for message in messages:
+                    message["role"] = "user"
+                case["messages_json"] = driver.json.dumps(messages)
+            with self.subTest(owner=owner, failure="single-role"), self.assertRaises(driver.ProofError):
+                driver.validate_old_conversations(records)
+        records = self.records()
+        records["learn_messages"][0]["created_at"] = "2026-10-10T18:00:09.000+00:00"
+        with self.assertRaisesRegex(driver.ProofError, "Learn exchange order"):
+            driver.validate_old_conversations(records)
+        records = self.records()
+        case = records["case_sessions"][0]
+        case["messages_json"] = driver.json.dumps(list(reversed(driver.json.loads(case["messages_json"]))))
+        with self.assertRaisesRegex(driver.ProofError, "Case canonical message order"):
+            driver.validate_old_conversations(records)
+
+    def test_malformed_case_history_and_uncompleted_learn_do_not_pass(self):
+        for value in (None, "not-json", "{}", '[{"id":"case_message"}]'):
+            records = self.records()
+            records["case_sessions"][0]["messages_json"] = value
+            with self.subTest(value=value), self.assertRaises(driver.ProofError):
+                driver.validate_old_conversations(records)
+        records = self.records()
+        for run in records["learn_runs"]:
+            run["state"] = "running"
+        with self.assertRaisesRegex(driver.ProofError, "completed user/assistant exchange"):
+            driver.validate_old_conversations(records)
+
+
 class EvidenceAssertions(unittest.TestCase):
     def original_fixture(self):
         # Descriptors exercise driver guards only, never an invented database.
