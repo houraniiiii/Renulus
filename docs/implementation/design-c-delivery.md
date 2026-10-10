@@ -143,6 +143,19 @@ incorrectly required bytes for that known-absent record. Its correction must
 freeze original expectations before upgrade and retain strict present/new-byte
 checks. No recovery pass or owner-profile operation is inferred from admission.
 
+Correction `bcbd005e` passes fourteen guard checks. Its copied QA driver is
+53,059 bytes with SHA256
+`3d44dc173b8d2235b5ce3a96f7a79ba2893c301f5eac28c8affac95ce0071996`.
+Fresh actual run `r-c2bbe529` has passed installed identity/seed and legacy
+upgrade/reopen. Its current producer, restore and rebuild gates remain pending.
+Core QA `76cfdff2` passes 49 guard checks; actual run `c-a2284830` passes installed
+identity, isolated hidden C startup, saved Learn/Case conversations and project
+membership, then fails on Playwright response-body capture during the first PDF
+upload. The original was committed intact; Workspace had not opened. Cleanup
+closed the owned app/backend. Neither this failure nor the earlier preflights
+establish reader acceptance. Response capture is being repaired within the
+bounded verifier lease.
+
 Manufacture and installation use fresh `matching-<revision>` and
 `installed-<revision>` destinations. A matching receipt must compare backend,
 renderer, native, executable, archive and installed inventory hashes. The hidden

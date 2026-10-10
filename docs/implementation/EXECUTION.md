@@ -29,9 +29,14 @@ serial work. The first core preflight falsely compared a declared CRLF export
 with raw Git bytes; independent complete export parity passed. Bounded verifier
 repair `21242708` passes 46 guard checks and is the separate QA freeze for the
 second installed run. All product identity checks remain pinned to `4c289868`.
-Recovery run `r-4246ec46` passed identity/seed admission, preserved the schema-1
-snapshot, then stopped with `original_missing`; diagnosis remains open and no
-upgrade pass is claimed. Aquinas' report-only
+Recovery run `r-4246ec46` stopped because its driver incorrectly required bytes
+for a records-only old revision; the preserved genuine original was unchanged.
+Correction `bcbd005e` freezes expected availability from the old snapshot and
+archive inventories; fourteen guards pass. Fresh installed run `r-c2bbe529`
+now passes identity/seed and legacy upgrade/reopen, with current producers and
+all-format restore/rebuild still running. Core run `c-a2284830` passed hidden
+startup, saved conversations and project membership before a Playwright response
+capture failure on the first attachment; no reader pass is claimed. Aquinas' report-only
 `bc149c91` adds bounded DC10 hidden restriction/keyboard evidence; that controller
 closed normally and freed the helper slot. No production bytes changed after
 the freeze. Completed review workers are closed; Zeno/Pauli remain available
@@ -65,11 +70,10 @@ acceptance reservations. The lead retains all other shared and release paths:
 
 | Owner | Exact current reservation | Required result |
 | --- | --- | --- |
-| Aquinas | `docs/implementation/design-c-review-integration.md` only | Hidden DC10 Memory/Updates/Settings navigation, local failure states and real active-Test restrictions. |
-| Zeno | Existing four verifier/fixture paths above | Actual-execution findings and a bounded normal-ingestion lifecycle proposal; parent owns installed runs. `75c05797` integrates two upgraded-profile Electron launches; 35 JS boundary checks pass. |
-| Pauli | New `apps/desktop/src/shell/assessment-producers.connected.test.tsx` only | Actual mounted Generation Ready/setup/Study and Chat Create Test/card/workspace/Study with production HTTP/SQLite and a synthetic external provider transport. |
-| Russell | New `tests/integration/test_design_c_policy_inventory.py`; `runtime/renulus/assessment/generated_repository.py` and `generated_streaming.py` | Actual assembled route inventory and repair of legacy generation prepared before Test but published during it. Capture policy/context and recheck at event/replay and atomic publication boundaries. |
-| Poincare | New `apps/desktop/src/shell/search.connected.test.tsx` only | Actual displayed search-result navigation after source deletion and project reassignment; production destination authorization. |
+| Lead | Shared release records, spec and eventual default pointer | Serial installed checks against unchanged product `4c289868`; preserve failed receipts and old default. |
+| Zeno | `apps/desktop/scripts/verify-installed-product.mjs` and `test-verify-installed-product.mjs` only | QA freeze `76cfdff2` passes 49 guards; current amendment captures real response bodies promptly and records the failure stage. Parent owns app/helper execution. |
+| Pauli | `apps/desktop/scripts/verify-installed-recovery.py` and `test_verify_installed_recovery.py` only | QA correction `bcbd005e` passes 14 guards; standby for actual fresh installed recovery findings. |
+| Aquinas, Russell, Poincare, Kant | Completed; no active source reservation | Their integrated source/review evidence remains indexed above and below. Resume only for a concrete new finding with an exact reservation. |
 
 Manufacture of `75c05797` passed the full-factory NSIS preflight, then was
 deliberately stopped during public inventory verification on the DC14 finding,
