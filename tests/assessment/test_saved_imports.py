@@ -35,7 +35,7 @@ def command(row, key):
 
 def normalized(text=TEXT):
     return {"candidates": [{"span": item["original"]["span"], "stem_span": item["original"]["stem_span"],
-        "stem": item["stem"].upper(),
+        "stem": " \n" + item["stem"] + "\n ",
         "options": [{**option, "span": item["original"]["options"][index]["span"]} for index, option in enumerate(item["options"])],
         "explanation": "", "explanation_span": None} for item in parse_original(text)]}
 
@@ -204,6 +204,23 @@ async def test_invalid_normalization_retains_original_edits_and_bounded_retry(im
     with pytest.raises(ApiError) as error:
         await service.normalize(row["id"], command(row, "synthetic-budget-final"), retry=True)
     assert error.value.code == "import_budget_exhausted" and len(transport.calls) == MAX_CALLS
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("source", "changed"), [("-1 mmol/L", "+1 mmol/L"), ("1.5 mmol/L", "15 mmol/L"), ("1 mM", "1 MM")])
+async def test_normalization_cannot_change_sign_decimal_or_case_sensitive_unit(imports, source, changed):
+    _, service, transport = imports
+    text = f"1. Which supplied value is preserved?\nA. {source}\nB. Unchanged alternative\nAnswer: A\n"
+    row = service.create(request(text=text))
+    value = normalized(text)
+    value["candidates"][0]["options"][0]["text"] = changed
+    transport.responses = [value]
+    await service.normalize(row["id"], command(row, "synthetic-sign-check"))
+    result = await finish(service, row["id"])
+    assert result["state"] == "failed" and result["error_code"] == "import_invalid_output"
+    assert result["candidates"] == row["candidates"]
+    assert service.original(row["id"])["text"] == text
+    assert len(transport.calls) == 1
 
 
 @pytest.mark.asyncio

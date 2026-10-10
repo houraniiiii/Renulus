@@ -39,7 +39,13 @@ def encode(value):
 
 
 def text_key(value):
-    return re.sub(r"[\W_]+", " ", unicodedata.normalize("NFKC", value).casefold()).strip()
+    return " ".join(unicodedata.normalize("NFC", value).casefold().split())
+
+
+def source_text(value):
+    # Signs, decimal punctuation and case-sensitive units are original content.
+    # Only whitespace and canonical Unicode composition are formatting here.
+    return " ".join(unicodedata.normalize("NFC", value).split())
 
 
 def unique_keys(pairs):
@@ -418,7 +424,7 @@ class SavedImportService:
             supplied = [(item.stem, item.stem_span), *((option.text, option.span) for option in item.options)]
             if item.explanation:
                 supplied.append((item.explanation, item.explanation_span))
-            if any(text_key(value) != text_key(text[field.start:field.end]) for value, field in supplied):
+            if any(source_text(value) != source_text(text[field.start:field.end]) for value, field in supplied):
                 raise ValueError("Formatting cannot add or remove original content")
             if any(span.start < previous.end and previous.start < span.end for previous in spans):
                 raise ValueError("Question source spans overlap")
