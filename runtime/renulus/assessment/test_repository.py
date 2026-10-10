@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from renulus.contracts import ApiError, durable_id
 from renulus.design_c_contracts import QuestionSnapshot, SavedTestVersion, canonical_digest
 from renulus.storage.database import utc_now
+from renulus.storage.assessment_policy import require_assistance
 from renulus.storage.invalidation import bump_context_epoch
 from renulus.storage.relations import reconcile_unavailable_references
 from .content import ContentGateway
@@ -41,10 +42,7 @@ class SavedTestRepository:
 
     @staticmethod
     def _require_disclosure(conn):
-        # Also protect standalone module use before shared policy integration.
-        if _exists(conn, "assessment_test_attempts") and conn.execute(
-                "SELECT 1 FROM assessment_test_attempts WHERE mode='test' AND status<>'submitted' LIMIT 1").fetchone():
-            raise ApiError("attempt_restricted", "Finish or resume your Test before opening study content", 409)
+        require_assistance(conn)
 
     @staticmethod
     def _test(conn, test_id, *, deleted=False):
@@ -80,9 +78,18 @@ class SavedTestRepository:
         if row is None or _deleted(conn, "saved_test_version", version_id):
             raise ApiError("not_found", "The selected version is unavailable; retained attempts remain unchanged", 404)
         self._test(conn, row["test_id"])
-        return SavedTestVersion(id=row["id"], test_id=row["test_id"], ordinal=row["ordinal"], origin=row["origin"],
-            review_quality=row["review_quality"], status=row["status"], items=json.loads(row["items_json"]),
-            source_refs=json.loads(row["source_refs_json"]), terms=row["terms"], created_at=row["created_at"])
+        try:
+            return SavedTestVersion(id=row["id"], test_id=row["test_id"], ordinal=row["ordinal"], origin=row["origin"],
+                review_quality=row["review_quality"], status=row["status"], items=json.loads(row["items_json"]),
+                source_refs=json.loads(row["source_refs_json"]), provenance=json.loads(row["provenance_json"])["producer"],
+                terms=row["terms"], created_at=row["created_at"])
+        except (KeyError, TypeError, ValueError):
+            raise ApiError("test_version_unavailable", "The saved manifest is incomplete. Retained history stays unchanged", 409) from None
+
+    def pinned_provenance(self, conn, version_id):
+        """PRIVATE: capture native pack/source metadata beside an attempt's version pin."""
+        self.pinned_version(conn, version_id)
+        return json.loads(conn.execute("SELECT provenance_json FROM assessment_test_versions WHERE id=?", (version_id,)).fetchone()[0])
 
     @staticmethod
     def _version_summary(row):
@@ -118,8 +125,17 @@ class SavedTestRepository:
         with closing(self.db.connect()) as conn:
             conn.execute("BEGIN")
             row = self._test(conn, test_id)
-            versions = conn.execute("SELECT * FROM assessment_test_versions WHERE test_id=? ORDER BY ordinal DESC", (test_id,))
+            versions = conn.execute("SELECT * FROM assessment_test_versions WHERE test_id=? ORDER BY ordinal DESC LIMIT 50", (test_id,))
             return {**self._summary(conn, row), "versions": [self._version_summary(version) for version in versions]}
+
+    def list_versions(self, test_id, *, limit=50, before=None):
+        with closing(self.db.connect()) as conn:
+            conn.execute("BEGIN")
+            self._test(conn, test_id)
+            rows = conn.execute("SELECT * FROM assessment_test_versions WHERE test_id=? AND (? IS NULL OR ordinal<?) "
+                                "ORDER BY ordinal DESC LIMIT ?", (test_id, before, before, limit + 1)).fetchall()
+            return {"items": [self._version_summary(row) for row in rows[:limit]],
+                    "next_before": rows[limit - 1]["ordinal"] if len(rows) > limit else None}
 
     def preview_version(self, test_id, version_id):
         with closing(self.db.connect()) as conn:
@@ -148,7 +164,7 @@ class SavedTestRepository:
             provenance = json.loads(conn.execute("SELECT provenance_json FROM assessment_test_versions WHERE id=?", (version_id,)).fetchone()[0])
             legacy = provenance.get("legacy")
             warnings = []
-            if version.origin == "reviewed_bank":
+            if version.bank_cohort_eligible:
                 for item in version.items:
                     annotation = self.content.annotation(item.model_dump())
                     if annotation["status"] != "current":
@@ -188,9 +204,23 @@ class SavedTestRepository:
                 bucket = answer["score_bucket"] if legacy["kind"] == "reviewed" else "personal"
                 current = scores.setdefault(bucket, {"answered": 0, "correct": 0})
                 current["answered"] += 1; current["correct"] += answer["correct"]
+            by_id = {item["id"]: item for item in items}
+            feedback = []
+            for answer in answers:
+                item = by_id.get(answer["item_id"])
+                if item is None:
+                    continue
+                question = json.loads(item["snapshot_json"])
+                feedback.append({"answer_id": answer["id"], "item_id": item["id"], "ordinal": item["ordinal"],
+                    "stem": question["stem"], "options": [{"id": option["id"], "text": option["text"]} for option in question["options"]],
+                    "selected_option_ids": json.loads(answer["answer_json"]),
+                    "correct_option_ids": question.get("correct_option_ids") or ([question["correct_option_id"]] if question.get("correct_option_id") else []),
+                    "correct": bool(answer["correct"]), "assisted": bool(answer["assisted"]),
+                    "score_bucket": answer["score_bucket"] if legacy["kind"] == "reviewed" else "personal",
+                    "explanation": question.get("explanation", ""), "committed_at": answer["committed_at"]})
             return {"legacy": legacy, "available": True, "compatibility": "legacy_study", "status": session["status"],
                 "item_count": len(items), "denominator": len(answers), "unanswered_not_scored": len(items) - len(answers),
-                "committed_answer_ids": [row["id"] for row in answers], "scores": scores,
+                "committed_answer_ids": [row["id"] for row in answers], "scores": scores, "feedback": feedback,
                 "presented_item_ids": [row["id"] for row in items if row["presented_at"]] if legacy["kind"] == "reviewed" else [row["id"] for row in items if row["presented"]],
                 "assisted_item_ids": [row["id"] for row in items if row["assisted"]]}
 
@@ -202,6 +232,10 @@ class SavedTestRepository:
         Publication never changes an existing manifest, result or attempt.
         """
         version = SavedTestVersion.model_validate(version)
+        producer = version.provenance.model_dump(mode="json")
+        if "producer" in provenance and provenance["producer"] != producer:
+            raise ApiError("invalid_request", "Producer provenance must match the pinned version", 422)
+        provenance = {**provenance, "producer": producer}
         manifest = version.model_dump(mode="json")
         digest = canonical_digest({"version": manifest, "provenance": provenance})
         request_hash = canonical_digest({"version": manifest, "provenance": provenance, "title": title,
@@ -267,6 +301,7 @@ class SavedTestRepository:
                 original.append({"item_id": item_id, "ordinal": index, "original_snapshot": question})
             version = SavedTestVersion(id=version_id, test_id=test_id, ordinal=1, origin="reviewed_bank",
                 review_quality="reviewed", status="ready", items=items,
+                provenance={"method": "reviewed_pack"},
                 terms="Original published content and source terms are retained in provenance.", created_at=now)
             result = self.publish_version(conn, version, title=request.title,
                 provenance={"schema": "saved-test-provenance/1", "items": original,
@@ -340,18 +375,22 @@ class SavedTestRepository:
             try:
                 version = SavedTestVersion(id=version_id, test_id=test_id, ordinal=next_ordinal, origin=base.origin,
                     review_quality="personal" if ready else "needs_review", status="ready" if ready else "needs_review",
-                    items=items, source_refs=base.source_refs, terms=base.terms, created_at=utc_now())
+                    items=items, source_refs=base.source_refs, provenance=base.provenance,
+                    terms=base.terms, created_at=utc_now())
             except ValidationError:
                 raise ApiError("invalid_request", "Use distinct items and families with valid options and keys", 422) from None
             original = json.loads(conn.execute("SELECT provenance_json FROM assessment_test_versions WHERE id=?", (base.id,)).fetchone()[0])
+            item_ids = {item.item_id for item in items}
             result = self.publish_version(conn, version, title=test["title"],
-                provenance={"schema": "saved-test-provenance/1", "derived_from": base.id, "original_provenance": original},
+                provenance={"schema": "saved-test-provenance/1", "derived_from": base.id,
+                            "items": [item for item in original.get("items", []) if item.get("item_id") in item_ids]},
                 idempotency_key="internal:" + canonical_digest(["edit-version", request.idempotency_key]), expected_revision=request.expected_revision)
             bump_context_epoch(conn)
             self._record(conn, request.idempotency_key, "edit_version", "saved_test", test_id, digest, result)
             return result
 
-    def save_question_report(self, conn, *, version: SavedTestVersion, attempt_id, item_id, report_text, idempotency_key):
+    def save_question_report(self, conn, *, version: SavedTestVersion, attempt_id, item_id, report_text, idempotency_key,
+                             provenance=None):
         """Trusted callers resolve the attempt pin before invoking this neutral writer."""
         item = next((item for item in version.items if item.item_id == item_id), None)
         if item is None:
@@ -369,9 +408,11 @@ class SavedTestRepository:
         snapshot = {"schema": "question-report-snapshot/1", "question": item.model_dump(mode="json"),
                     "version_id": version.id, "test_id": version.test_id, "origin": version.origin,
                     "review_quality": version.review_quality, "terms": version.terms,
+                    "producer": version.provenance.model_dump(mode="json"),
                     "source_refs": [reference.model_dump(mode="json") for reference in version.source_refs]}
-        if live:
+        if provenance is None and live:
             provenance = json.loads(live[0])
+        if provenance is not None:
             snapshot["provenance"] = {"schema": provenance.get("schema"), "item": next(
                 (raw for raw in provenance.get("items", []) if raw.get("item_id") == item_id), None)}
         identifier, now = durable_id("question_report"), utc_now()
@@ -387,6 +428,15 @@ class SavedTestRepository:
 
     def report_question(self, test_id, version_id, request):
         with self.db.transaction() as conn:
+            # A saved receipt remains replayable if deletion follows a lost acknowledgement.
+            previous = conn.execute("SELECT * FROM assessment_question_reports WHERE idempotency_key=?",
+                                    (request.idempotency_key,)).fetchone()
+            if previous:
+                digest = canonical_digest({"version_id": version_id, "attempt_id": None,
+                    "item_id": request.item_id, "report_text": request.report_text})
+                if previous["request_hash"] != digest or json.loads(previous["question_snapshot_json"])["test_id"] != test_id:
+                    raise ApiError("idempotency_conflict", "This report key was used for a different question or text", 409)
+                return {"id": previous["id"], "status": "saved", "created_at": previous["created_at"]}
             version = self.pinned_version(conn, version_id)
             if version.test_id != test_id:
                 raise ApiError("not_found", "This version belongs to another test", 404)
@@ -411,24 +461,27 @@ class SavedTestRepository:
                     rows = conn.execute(f"SELECT * FROM {prefix}_items WHERE session_id=? ORDER BY ordinal", (session["id"],)).fetchall()
                     if not rows:
                         counts["unavailable"] += 1; continue
-                    snapshots, originals = [], []
-                    for raw in rows:
-                        original = json.loads(raw["snapshot_json"])
-                        if kind == "reviewed":
-                            original = {**original, "id": raw["question_id"], "version": raw["question_version"],
-                                "key_version": raw["key_version"], "family_id": raw["family_id"], "family_version": raw["family_version"],
-                                "topic_id": raw["topic_id"]}
-                        else:
-                            original = {**original, "topic_id": session["topic_id"] or "general"}
-                        snapshots.append(self._snapshot(raw["id"], original))
-                        originals.append({"item_id": raw["id"], "ordinal": raw["ordinal"],
-                                          "original_snapshot": json.loads(raw["snapshot_json"])})
                     try:
+                        snapshots, originals = [], []
+                        for raw in rows:
+                            original = json.loads(raw["snapshot_json"])
+                            if kind == "reviewed":
+                                original = {**original, "id": raw["question_id"], "version": raw["question_version"],
+                                    "key_version": raw["key_version"], "family_id": raw["family_id"], "family_version": raw["family_version"],
+                                    "topic_id": raw["topic_id"]}
+                            else:
+                                original = {**original, "topic_id": session["topic_id"] or "general"}
+                            snapshots.append(self._snapshot(raw["id"], original))
+                            originals.append({"item_id": raw["id"], "ordinal": raw["ordinal"],
+                                              "original_snapshot": json.loads(raw["snapshot_json"])})
+                        ready = all(item.correct_option_ids for item in snapshots)
                         version = SavedTestVersion(id=version_id, test_id=test_id, ordinal=1,
                             origin="reviewed_bank" if kind == "reviewed" else "generated",
-                            review_quality="reviewed" if kind == "reviewed" else "personal", status="ready",
+                            review_quality=("reviewed" if kind == "reviewed" else "personal") if ready else "needs_review",
+                            status="ready" if ready else "needs_review",
+                            provenance={"method": "legacy_conversion"},
                             items=snapshots, terms="Retained original source terms; no new licence is granted.", created_at=session["created_at"])
-                    except ValidationError:
+                    except (KeyError, TypeError, ValueError):
                         counts["unavailable"] += 1; continue
                     self.publish_version(conn, version, title="Previous reviewed quiz" if kind == "reviewed" else "Previous generated practice",
                         provenance={"schema": "saved-test-provenance/1", "legacy": {"kind": kind, "session_id": session["id"]}, "items": originals},

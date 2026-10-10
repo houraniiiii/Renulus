@@ -73,6 +73,7 @@ export default function Tests() {
         {resource.status === 'loading' && <LoadingState label="Loading saved tests" />}
         {resource.status === 'error' && <ErrorState error={resource.error} onRetry={retry} />}
         {resource.status === 'ready' && <>
+          {resource.data.legacy_unavailable > 0 && <Notice tone="warning">{resource.data.legacy_unavailable} previous sessions could not be adapted to a saved version. Their original records and scores are retained.</Notice>}
           {resource.data.items.length === 0 ? <EmptyState title={search || origin ? 'No tests match these filters' : lifecycle === 'archived' ? 'No archived tests' : 'Your saved sets will appear here'}>
             <p>{search || origin ? 'Try another title or origin.' : 'Save a reviewed set to begin. Generated, imported and nightly sets share this collection when available.'}</p>
           </EmptyState> : <ul className="tests-list">{resource.data.items.map(test => <li key={test.id}>
@@ -90,6 +91,7 @@ export default function Tests() {
         </>}
       </section>
       {selected && <TestSetupPane key={selected.test_id + ':' + (selected.version_id ?? '')} selected={selected}
+        onVersionSelected={version_id => setSelected({ version_id })}
         onClose={() => setSelected(null)} onChanged={() => { retry(); setNotice('Your collection is up to date.'); }} />}
     </div>
   </div>;

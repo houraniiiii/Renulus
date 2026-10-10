@@ -39,8 +39,9 @@ def create_router(services) -> APIRouter:
                 before = value["last"]
             except (ValueError, KeyError, TypeError):
                 raise ApiError("invalid_request", "Reopen the collection to restart this filtered page", 422) from None
-        call(repository.backfill_legacy)
+        legacy = call(repository.backfill_legacy)
         result = call(repository.list_tests, lifecycle=lifecycle, origin=origin, query=q, limit=limit, before=before)
+        result["legacy_unavailable"] = legacy["unavailable"]
         if result["next_cursor"]:
             result["next_cursor"] = base64.urlsafe_b64encode(encode({"last": result["next_cursor"], "scope": scope}).encode()).decode().rstrip("=")
         return result
@@ -66,8 +67,8 @@ def create_router(services) -> APIRouter:
         return call(repository.legacy_history, test_id)
 
     @router.get("/{test_id}/versions")
-    def versions(test_id: str):
-        return {"items": call(repository.get_test, test_id)["versions"]}
+    def versions(test_id: str, limit: int = Query(default=50, ge=1, le=100), before: int | None = Query(default=None, ge=1)):
+        return call(repository.list_versions, test_id, limit=limit, before=before)
 
     @router.get("/{test_id}/versions/{version_id}/preview")
     def preview(test_id: str, version_id: str):

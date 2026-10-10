@@ -1,17 +1,17 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { api } from '../../platform/api';
 import { useResource } from '../../platform/useResource';
 import { routes, useNavigation } from '../../shell/navigation';
 import { Badge, Button, ErrorState, Input, LoadingState, Notice, Select, Textarea } from '../../ui';
 import TestVersionEditor from './TestVersionEditor';
 import { useTestMutation } from './useTestMutation';
-import { originLabel, type PreviewItem, type TestSetup, type TestSelection } from './types';
+import { originLabel, type PreviewItem, type TestSetup, type TestSelection, type VersionSummary } from './types';
 
-interface Props { selected: TestSelection; onClose: () => void; onChanged: () => void }
+interface Props { selected: TestSelection; onClose: () => void; onChanged: () => void; onVersionSelected: (id: string) => void }
 
-export default function TestSetupPane({ selected, onClose, onChanged }: Props) {
+export default function TestSetupPane({ selected, onClose, onChanged, onVersionSelected }: Props) {
   const { navigate } = useNavigation();
-  const setupPath = selected.test_id ? '/assessment/tests/' + encodeURIComponent(selected.test_id) + '/setup' +
+  const setupPath = selected.test_id !== undefined ? '/assessment/tests/' + encodeURIComponent(selected.test_id) + '/setup' +
     (selected.version_id ? '?version_id=' + encodeURIComponent(selected.version_id) : '') :
     '/assessment/tests/versions/' + encodeURIComponent(selected.version_id) + '/setup';
   const { resource, retry } = useResource(signal => api<TestSetup>(setupPath, { signal }));
@@ -41,6 +41,7 @@ export default function TestSetupPane({ selected, onClose, onChanged }: Props) {
   return <aside className="test-setup" aria-label="Selected test setup">
     <div className="test-setup-heading"><span className="test-eyebrow">Version {setup.version.ordinal}</span><Button variant="ghost" onClick={onClose}>Close</Button></div>
     <h2>{setup.test.title}</h2>
+    <VersionHistory testId={setup.test.id} versionId={setup.version.id} onSelected={onVersionSelected} />
     <div className="test-row-meta"><Badge tone={setup.version.status === 'ready' ? 'default' : 'warning'}>{setup.version.status === 'ready' ? 'Ready' : 'Needs review'}</Badge>
       <span>{originLabel[setup.version.origin]}</span><span>{setup.version.review_quality === 'reviewed' ? 'Reviewed' : 'Personal practice'}</span></div>
     <p className="test-length">{setup.version.item_count}<span>questions in this version</span></p>
@@ -54,8 +55,8 @@ export default function TestSetupPane({ selected, onClose, onChanged }: Props) {
       {timed && <Input label="Minutes" type="number" value={minutes} min={1} max={1440} onChange={event => setMinutes(event.target.value)} />}</div>
     <p className="muted">{mode === 'study' ? 'Submit each answer deliberately and learn from its feedback.' : 'Choices remain editable until you submit the whole Test. Help is unavailable before submission.'}</p>
     <Button onClick={start} disabled={!setup.can_start || mutation.locked || (timed && (!Number.isInteger(Number(minutes)) || Number(minutes) < 1 || Number(minutes) > 1440))}>Continue to {mode === 'study' ? 'Study' : 'Test'}</Button>
-    {setup.legacy && <LegacyHistory testId={setup.test.id} onOpen={() => navigate('assessment', {
-      payload: { legacy_session_id: setup.legacy!.session_id, legacy_kind: setup.legacy!.kind } })} />}
+    {setup.legacy && <LegacyHistory testId={setup.test.id} onResume={() => navigate('assessment', {
+      payload: { legacy_session_id: setup.legacy!.session_id, legacy_kind: setup.legacy!.kind, legacy_action: 'resume' } })} />}
     <div className="test-management actions"><Button variant="ghost" disabled={mutation.locked} onClick={() => { setTitle(setup.test.title); setRenaming(value => !value); }}>Rename</Button>
       <Button variant="ghost" disabled={mutation.locked} onClick={() => setEditing(value => !value)}>Edit personal version</Button>
       <Button variant="ghost" disabled={mutation.locked} onClick={() => setReporting(value => !value)}>Question seems wrong</Button>
@@ -70,8 +71,35 @@ export default function TestSetupPane({ selected, onClose, onChanged }: Props) {
   </aside>;
 }
 
-function LegacyHistory({ testId, onOpen }: { testId: string; onOpen: () => void }) {
+function VersionHistory({ testId, versionId, onSelected }: { testId: string; versionId: string; onSelected: (id: string) => void }) {
+  const [before, setBefore] = useState<number | null>(null);
+  const { resource, retry } = useResource(signal => api<{ items: VersionSummary[]; next_before: number | null }>(
+    '/assessment/tests/' + encodeURIComponent(testId) + '/versions' + (before ? '?before=' + before : ''), { signal }));
+  useEffect(() => { retry(); }, [before, retry]);
+  if (resource.status === 'loading') return <LoadingState label="Loading version history" />;
+  if (resource.status === 'error') return <ErrorState error={resource.error} onRetry={retry} />;
+  return <section className="test-history" aria-label="Saved versions"><h3>Saved versions</h3>
+    <ul className="tests-list">{resource.data.items.map(version => <li key={version.id}><Button variant="ghost"
+      aria-pressed={version.id === versionId} onClick={() => onSelected(version.id)}>
+      Version {version.ordinal} · {version.item_count} questions · {version.review_quality === 'reviewed' ? 'Reviewed' : 'Personal'} · {version.status === 'ready' ? 'Ready' : 'Needs review'}
+    </Button></li>)}</ul>
+    {(before !== null || resource.data.next_before !== null) && <div className="actions">
+      <Button variant="ghost" disabled={before === null} onClick={() => setBefore(null)}>Newest versions</Button>
+      <Button variant="ghost" disabled={resource.data.next_before === null} onClick={() => setBefore(resource.data.next_before)}>Older versions</Button>
+    </div>}
+  </section>;
+}
+
+interface LegacyFeedback {
+  answer_id: string; ordinal: number; stem: string; options: { id: string; text: string }[];
+  selected_option_ids: string[]; correct_option_ids: string[]; correct: boolean;
+  assisted: boolean; score_bucket: string; explanation: string; committed_at: string;
+}
+
+function LegacyHistory({ testId, onResume }: { testId: string; onResume: () => void }) {
+  const [showing, setShowing] = useState(false);
   const { resource, retry } = useResource(signal => api<{ available: boolean; denominator: number; unanswered_not_scored: number;
+    status: string; feedback: LegacyFeedback[]; legacy: { kind: string };
     scores: Record<string, { answered: number; correct: number }> }>('/assessment/tests/' + encodeURIComponent(testId) + '/history', { signal }));
   if (resource.status === 'loading') return <LoadingState label="Loading original history" />;
   if (resource.status === 'error') return <ErrorState error={resource.error} onRetry={retry} />;
@@ -79,7 +107,17 @@ function LegacyHistory({ testId, onOpen }: { testId: string; onOpen: () => void 
   return <section className="test-history"><h3>Original Study history</h3>
     <p>{resource.data.denominator} committed answers · {resource.data.unanswered_not_scored} unscored blanks</p>
     {Object.entries(resource.data.scores).map(([bucket, score]) => <p key={bucket}>{bucket}: {score.correct} / {score.answered}</p>)}
-    <Button variant="secondary" onClick={onOpen}>Open original history</Button></section>;
+    <Button variant="secondary" onClick={() => setShowing(value => !value)}>{showing ? 'Hide original answers' : 'View original committed answers'}</Button>
+    {showing && <div className="test-history"><p>Original commitments and scores are retained. Blanks have no feedback.</p>
+      {resource.data.feedback.length === 0 && <p>No answers were committed in this original Study.</p>}
+      {resource.data.feedback.map(answer => <article key={answer.answer_id} className="section"><h4>Question {answer.ordinal}</h4>
+        <p>{answer.stem}</p><ul>{answer.options.map(option => <li key={option.id}>{option.id}. {option.text}</li>)}</ul>
+        <p>Committed choice: {answer.selected_option_ids.join(', ')} · {resource.data.legacy.kind === 'generated' ? 'Personal key comparison' : 'Original reviewed result'}: {answer.correct ? 'Correct' : 'Incorrect'}</p>
+        <p>Original key: {answer.correct_option_ids.join(', ')} · {answer.score_bucket}{answer.assisted ? ' · Assisted' : ''}</p>
+        <p>{answer.explanation}</p>
+      </article>)}</div>}
+    {resource.data.status !== 'ended' && <Button variant="ghost" onClick={onResume}>Resume original Study</Button>}
+  </section>;
 }
 
 function QuestionReport({ setup, onSaved }: { setup: TestSetup; onSaved: () => void }) {

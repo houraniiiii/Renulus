@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { api } from '../../platform/api';
 import { useResource } from '../../platform/useResource';
-import { Button, ErrorState, LoadingState, Notice, Select, Textarea } from '../../ui';
+import { Button, ErrorState, Input, LoadingState, Notice, Select, Textarea } from '../../ui';
 import { useTestMutation } from './useTestMutation';
 import type { PreviewItem, TestSetup } from './types';
 
@@ -22,7 +22,8 @@ export default function TestVersionEditor({ setup, onSaved }: { setup: TestSetup
     {items.map((item, index) => <fieldset key={item.item_id} disabled={mutation.locked}>
       <legend>Question {index + 1}</legend>
       <Textarea label="Question text" value={item.stem} required maxLength={6000} onChange={event => update(index, { stem: event.target.value })} />
-      <ul>{item.options.map(option => <li key={option.id}>{option.id}. {option.text}</li>)}</ul>
+      {item.options.map(option => <Input key={option.id} label={'Option ' + option.id} value={option.text} required maxLength={2000}
+        onChange={event => update(index, { options: item.options.map(current => current.id === option.id ? { ...current, text: event.target.value } : current) })} />)}
       <Select label="Personal answer key" value={item.correct_option_ids[0] ?? ''} onChange={event => update(index, {
         correct_option_ids: event.target.value ? [event.target.value] : [], key_version: event.target.value ? '1' : null })}>
         <option value="">Unresolved — needs review</option>{item.options.map(option => <option key={option.id} value={option.id}>{option.id}. {option.text}</option>)}

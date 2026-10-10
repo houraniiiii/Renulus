@@ -10,7 +10,7 @@ export interface TestSummary {
   id: string; title: string; lifecycle: Lifecycle; revision: number; updated_at: string;
   latest_version: VersionSummary | null;
 }
-export interface TestPage { items: TestSummary[]; next_cursor: string | null }
+export interface TestPage { items: TestSummary[]; next_cursor: string | null; legacy_unavailable: number }
 export interface TestSetup {
   test: TestSummary; version: VersionSummary; can_start: boolean;
   content_warnings: { item_id: string; status: string }[];
