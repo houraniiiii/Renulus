@@ -54,6 +54,38 @@ def read_body(receipt):
     return {"reference": receipt["reference"], "conversation": receipt["conversation"]}
 
 
+def test_inventory_supplies_actual_upload_pins_and_stale_restore_pin_fails(app):
+    services = app.state.services
+    chat = conversation(app)
+    client = TestClient(app)
+    path = "/api/v1/attachments/learning/" + chat["identity"]["id"]
+    response = client.get(path)
+    assert response.status_code == 200, response.text
+    inventory = response.json()
+    assert inventory["items"] == []
+    options = {"conversation": inventory["conversation"],
+        "expected_conversation_revision": inventory["conversation_revision"],
+        "expected_policy_revision": inventory["policy_revision"],
+        "expected_context_epoch": inventory["context_epoch"],
+        "idempotency_key": "SYNTHETIC_inventory_upload", "filename": "SYNTHETIC.md",
+        "title": "SYNTHETIC selected file", "rights": own_text_rights().model_dump(), "metadata": {}}
+    uploaded = client.post("/api/v1/attachments", content=b"SYNTHETIC Attach selection",
+        headers={"x-renulus-attachment-options": json.dumps(options)})
+    assert uploaded.status_code == 201, uploaded.text
+    receipt = uploaded.json()
+    assert receipt["conversation_revision"] == inventory["conversation_revision"] + 1
+    assert receipt["reference"] == {"target": {"type": "attachment", "id": receipt["id"]}, "locator": None}
+    refreshed = client.get(path).json()
+    options["expected_conversation_revision"] = refreshed["conversation_revision"]
+    options["idempotency_key"] = "SYNTHETIC_inventory_stale"
+    with services.db.transaction() as conn:
+        bump_context_epoch(conn)
+    stale = client.post("/api/v1/attachments", content=b"SYNTHETIC second selection",
+        headers={"x-renulus-attachment-options": json.dumps(options)})
+    assert stale.status_code == 409 and stale.json()["error"]["code"] == "attachment_context_changed"
+    assert len(client.get(path).json()["items"]) == 1
+
+
 def test_saved_upload_persists_exact_original_sidecar_and_reopens_without_extraction(app):
     services = app.state.services
     chat = conversation(app)

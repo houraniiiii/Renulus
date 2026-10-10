@@ -748,6 +748,34 @@ and DC08/DC10 closure remain open.
 - tests/knowledge/test_reader_grids.py
 - docs/implementation/design-c-review-readers.md
 
+### Chat Attach inventory pins
+
+GET /api/v1/attachments/{learning|case}/{chat_id} now returns policy_revision
+and context_epoch beside conversation, conversation_revision and items, all
+from the same canonical transaction. Chat may use this existing owner read
+to construct an explicit upload; Home hands off the File in memory and creates
+no separate attachment/permission authority. /assessment/policy remains the
+shared assistance read and does not expose context_epoch at this baseline.
+
+The frontend upload is POST /api/v1/attachments with raw file bytes and
+x-renulus-attachment-options JSON: conversation (learn_thread/case identity),
+expected_conversation_revision, expected_policy_revision, expected_context_epoch,
+idempotency_key, filename, title, rights and metadata. Returned reference is
+{target:{type:attachment,id},locator:null}, with original id/bytes/sha256,
+retention and updated conversation_revision. Required reader accept extensions
+are pdf/docx/csv/xlsx/txt/md/html/htm/xml/png/jpg/jpeg/tif/tiff. Producer PPTX
+admission is inherited but does not establish an in-app PPTX reader.
+
+Two connected API checks passed in attach-inventory-run1-results.xml: actual
+inventory pins permit ordinary upload and canonical reference publication;
+an actual context-epoch bump rejects a second stale upload without adding a
+row. Saved original/reader/passage/reopen proof also remains passing. Zeno owns
+the Chat attachment UI/source rights and Home's owner owns volatile File intent
+handoff. No frontend adapter or source DDL is added by this change.
+
+Exact follow-up paths are runtime/renulus/knowledge/attachments.py,
+tests/knowledge/test_attachment_producer.py and this report.
+
 These are lane edits only. Shared merges preserve the parent's schema, recovery,
 contracts, shell/server and other owners' changes. No source schema/migration,
 root dependency manifest/lock or shared UI file was edited by this lane.

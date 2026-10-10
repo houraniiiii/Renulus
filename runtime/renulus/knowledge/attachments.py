@@ -325,7 +325,8 @@ class KnowledgeAttachments(KnowledgeAttachmentAccess):
 
     def list(self, conversation):
         with self._locked() as owner, self.db.transaction() as conn:
-            require_assistance(conn)
+            policy_revision = require_assistance(conn)
+            epoch = context_epoch_in(conn)
             kind, identifier = self.kind(conversation), conversation.id
             summary, _ = owner._get(conn, kind, identifier)
             if summary["retention"] == "temporary":
@@ -338,6 +339,7 @@ class KnowledgeAttachments(KnowledgeAttachmentAccess):
                     "WHERE a.chat_kind=? AND a.chat_id=? ORDER BY a.created_at,a.id LIMIT 20", (kind, identifier))
                 records = [dict(row) for row in rows]
             return {"conversation": summary["identity"], "conversation_revision": summary["revision"],
+                "policy_revision": policy_revision, "context_epoch": epoch,
                 "items": [{**self._public(record, summary), "access": self.authorize_in(conn, record["id"], context=conversation)}
                     for record in records]}
 
