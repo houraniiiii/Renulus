@@ -55,7 +55,8 @@ class SyntheticTransport:
 def generation(tmp_path, monkeypatch):
     monkeypatch.setattr("renulus.server.MODULE_ORDER", ("runtime", "content", "knowledge", "learn", "cases", "assessment", "memory", "study"))
     app = create_app(tmp_path / "synthetic-generation")
-    app.include_router(create_router(app.state.services), prefix="/api/v1")
+    if "saved_generation" not in app.state.services.registry:
+        app.include_router(create_router(app.state.services), prefix="/api/v1")
     services = app.state.services
     service = services.get("saved_generation")
     provider = services.get("provider")
