@@ -1,10 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { ArrowRight, BookOpen, Plus } from 'lucide-react';
+import { ArrowRight, ClipboardCheck, Plus } from 'lucide-react';
 import { api } from '../../platform/api';
 import { useResource } from '../../platform/useResource';
 import { useNavigation } from '../../shell/navigation';
 import { Badge, Button, EmptyState, ErrorState, Input, LoadingState, Notice, PageHeader, Select } from '../../ui';
 import TestSetupPane from './TestSetupPane';
+import GenerationPanel from '../generation/GenerationPanel';
 import { useTestMutation } from './useTestMutation';
 import { originLabel, type PublishedTest, type TestOrigin, type TestPage, type TestSelection } from './types';
 import './tests.css';
@@ -21,6 +22,7 @@ export default function Tests() {
   const [cursor, setCursor] = useState<string | null>(null);
   const [selected, setSelected] = useState<TestSelection | null>(null);
   const [creating, setCreating] = useState(false), [title, setTitle] = useState('Reviewed practice'), [count, setCount] = useState('5');
+  const [generating, setGenerating] = useState(false);
   const [notice, setNotice] = useState('');
   const mutation = useTestMutation();
   const { resource, retry } = useResource(signal => {
@@ -45,9 +47,16 @@ export default function Tests() {
   }
   return <div className="saved-tests">
     <PageHeader title="Tests" description="Return to a saved set or choose reviewed questions for your next session."
-      actions={<Button onClick={() => setCreating(value => !value)} disabled={mutation.locked}><Plus size={18} aria-hidden="true" />New reviewed test</Button>} />
+      actions={<div className="tests-actions"><Button variant="secondary" onClick={() => { setCreating(value => !value); setGenerating(false); }} disabled={mutation.locked}>New reviewed test</Button>
+        <Button aria-expanded={generating} aria-controls="tests-generation" onClick={() => { setGenerating(value => !value); setCreating(false); }} disabled={mutation.locked}><Plus size={18} aria-hidden="true" />Create test</Button></div>} />
     {notice && <Notice>{notice}</Notice>}
     {mutation.error !== null && <ErrorState error={mutation.error} title="Your request needs a retry" onRetry={mutation.retry} />}
+    {generating && <section id="tests-generation" aria-label="Create a test" className="tests-generation">
+      <div className="tests-generation-heading"><p>Personal practice uses the selected connection. Reviewed scores remain separate.</p>
+        <Button variant="ghost" onClick={() => setGenerating(false)}>Close generation</Button></div>
+      <GenerationPanel onPublished={version => { setSelected({ test_id: version.test_id, version_id: version.version_id }); retry(); }}
+        onOpenVersion={version => { setSelected({ test_id: version.test_id, version_id: version.version_id }); setGenerating(false); retry(); }} />
+    </section>}
     {creating && <form className="tests-create panel" onSubmit={create}>
       <h2>Save a reviewed set</h2>
       <p>Select 1–50 eligible questions. The set is saved before an attempt starts.</p>
@@ -78,7 +87,7 @@ export default function Tests() {
             <p>{search || origin ? 'Try another title or origin.' : 'Save a reviewed set to begin. Generated, imported and nightly sets share this collection when available.'}</p>
           </EmptyState> : <ul className="tests-list">{resource.data.items.map(test => <li key={test.id}>
             <button className="test-row" aria-pressed={selected?.test_id === test.id} onClick={() => setSelected({ test_id: test.id })}>
-              <BookOpen size={20} aria-hidden="true" /><span className="test-row-content">
+              <ClipboardCheck size={20} aria-hidden="true" /><span className="test-row-content">
                 <strong>{test.title}</strong>
                 {test.latest_version && <><span className="test-row-meta">{test.latest_version.item_count} questions · {originLabel[test.latest_version.origin]} · Version {test.latest_version.ordinal}</span>
                   <span className="test-row-topics">{test.latest_version.topic_ids.join(' · ')}</span></>}

@@ -34,12 +34,11 @@ beforeAll(async () => {
     'import renulus',
     'assert Path(renulus.__file__).resolve().parent.parent == Path(' + JSON.stringify(runtimeRoot) + ').resolve()',
     'import renulus.server as server',
-    'server.MODULE_ORDER = ("content", "updates", "assessment")',
     'from conftest import SyntheticContentRepository',
     'from renulus.assessment.test_api import create_router',
     'app = server.create_app(' + JSON.stringify(profile) + ', token="saved-tests-fixture")',
     'app.state.services.registry["content"] = SyntheticContentRepository()',
-    'app.include_router(create_router(app.state.services), prefix="/api/v1")',
+    'if "saved_tests" not in app.state.services.registry: app.include_router(create_router(app.state.services), prefix="/api/v1")',
     'import uvicorn',
     'uvicorn.run(app, host="127.0.0.1", port=' + address.port + ', access_log=False, log_level="warning")',
   ].join('\n');
@@ -89,6 +88,18 @@ function mount(versionId?: string) {
 }
 
 describe('saved collection against the real local router and schema', () => {
+  it('opens the connected generation controls without creating or starting an attempt', async () => {
+    mount(); await screen.findByLabelText('Find a saved test');
+    const before = requests.length;
+    fireEvent.click(screen.getByRole('button', { name: 'Create test' }));
+    await screen.findByRole('heading', { name: 'Create personal practice' });
+    expect(Array.from((screen.getByLabelText('Question count') as HTMLSelectElement).options).map(option => option.value)).toEqual(['5', '10', '20']);
+    await screen.findByRole('heading', { name: 'Your generation jobs' });
+    expect(requests.slice(before).every(request => request.method === 'GET')).toBe(true);
+    expect(requests.slice(before).some(request => request.path === '/api/v1/assessment/generation/jobs')).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Close generation' }));
+    expect(screen.queryByRole('heading', { name: 'Create personal practice' })).toBeNull();
+  });
   it('retries the exact create command, renames, archives and restores the real saved set', async () => {
     const before = (await request<TestPage>('')).items.length;
     mount(); await screen.findByLabelText('Find a saved test');
