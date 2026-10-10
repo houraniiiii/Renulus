@@ -27,7 +27,7 @@ function Asset({ assetId, request, sha256, zoom, studyHelpContext }: { assetId: 
       } catch (caught) { if (!controller.signal.aborted && !isCancelled(caught)) setError(caught); }
     })();
     return () => { controller.abort(); if (ownedUrl) URL.revokeObjectURL(ownedUrl); };
-  }, [key]);
+  }, [key, studyContext]);
   const drag = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
   if (error) return <ErrorState title="The page image could not be loaded" error={error} />;
   if (!url) return <LoadingState label="Loading page image" />;
@@ -54,6 +54,20 @@ function Highlight({ text, query }: { text: string; query: string }) {
 }
 
 function TextBlock({ block, query }: { block: ReaderBlock; query: string }) {
+  if (block.kind === 'table' && block.grid) {
+    const { rows, header_rows: headers } = block.grid;
+    return <div className="reader-table-scroll" tabIndex={0} aria-label="Source table">
+      <table className="reader-prose-table" aria-label="Source document table">
+        {headers > 0 && <thead>{rows.slice(0, headers).map((row, index) => <tr key={index}>
+          {row.map((text, column) => <th scope="col" key={column}><Highlight text={text} query={query} /></th>)}
+        </tr>)}</thead>}
+        <tbody>{rows.slice(headers).map((row, index) => <tr key={index}>
+          {row.map((text, column) => <td key={column}><Highlight text={text} query={query} /></td>)}
+        </tr>)}</tbody>
+      </table>
+      {/* Grid text has canonical separators; DOM selections must not invent offsets. */}
+    </div>;
+  }
   const content = <Highlight text={block.text} query={query} />;
   const attributes = { 'data-reader-item': block.item_ref, className: 'reader-text-item' };
   if (block.kind === 'code') return <pre {...attributes}>{content}</pre>;
@@ -88,11 +102,11 @@ function ReaderSession(props: ReaderProps) {
     const controller = new AbortController();
     setError(undefined); setSelection(null); setLoadedKey(undefined); setBusy(false); setActionError(undefined);
     pendingAction.current?.abort();
-    void api<ReaderDocument>('/readers/resolve', { method: 'POST', body: JSON.parse(requestKey), signal: controller.signal }).then(result => {
+    void api<ReaderDocument>('/readers/resolve', { method: 'POST', body: JSON.parse(requestKey), signal: controller.signal, headers }).then(result => {
       if (!controller.signal.aborted) { setDocument(result); setLoadedKey(requestKey); }
     }).catch(caught => { if (!controller.signal.aborted && !isCancelled(caught)) setError(caught); });
     return () => controller.abort();
-  }, [requestKey, retry]);
+  }, [requestKey, retry, studyContext]);
   useEffect(() => () => {
     pendingAction.current?.abort();
     if (download.current) URL.revokeObjectURL(download.current);
@@ -103,7 +117,7 @@ function ReaderSession(props: ReaderProps) {
     const controller = new AbortController(); pendingAction.current = controller;
     setBusy(true); setActionError(undefined);
     try {
-      const passage = await api<PassageDraft>('/readers/passage', { method: 'POST', signal: controller.signal,
+      const passage = await api<PassageDraft>('/readers/passage', { method: 'POST', signal: controller.signal, headers,
         body: { ...request, locator: selected, original_sha256: document.original.sha256,
           expected_policy_revision: document.policy_revision, expected_context_epoch: document.context_epoch } });
       if (!controller.signal.aborted) onPassage(passage);
@@ -116,7 +130,7 @@ function ReaderSession(props: ReaderProps) {
     const controller = new AbortController(); pendingAction.current = controller;
     setBusy(true); setActionError(undefined);
     try {
-      const response = await apiResponse('/readers/original', { method: 'POST', body: request, signal: controller.signal });
+      const response = await apiResponse('/readers/original', { method: 'POST', body: request, signal: controller.signal, headers });
       const blob = await response.blob();
       if (controller.signal.aborted) return;
       if (download.current) URL.revokeObjectURL(download.current);

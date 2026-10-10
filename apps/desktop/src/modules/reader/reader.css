@@ -20,6 +20,8 @@ pre.reader-text-item { background: var(--paper); padding: var(--space-12); font-
 .reader-table-scroll th { background: var(--paper); color: var(--ink-secondary); font-weight: 600; padding: var(--space-8); text-align: left; }
 .reader-table-scroll thead { position: sticky; top: 0; }
 .reader-table-scroll td { border: 1px solid var(--line-subtle); }
+.reader-prose-table td { padding: var(--space-8); max-width: 36ch; min-width: 8ch; white-space: pre-wrap; overflow-wrap: anywhere; vertical-align: top; }
+.reader-prose-table th { color: var(--ink-strong); }
 .reader-cell { appearance: none; border: 0; background: transparent; color: inherit; font: inherit; padding: var(--space-8); text-align: left; white-space: pre-wrap; max-width: 30ch; cursor: text; }
 .reader-cell:hover { background: var(--renal-teal-soft); }
 .reader-selection { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-12); background: var(--surface); border-top: 1px solid var(--line); padding: var(--space-12); }

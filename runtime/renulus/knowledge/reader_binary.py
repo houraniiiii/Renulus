@@ -11,7 +11,7 @@ import warnings
 from ..contracts import ApiError
 from .office import validate_office
 from .reader_models import ReaderBlock, ReaderCell, ReaderDiagnostic, ReaderPayload, ReaderTable
-from .reader_text import block
+from .reader_text import block, table_block
 
 PDF_LOCK = RLock()  # PDFium calls are process-serial, including rasterisation.
 MAX_PIXELS = 12_000_000
@@ -158,10 +158,13 @@ def docx_payload(data, request):
     blocks, characters = [], 0
     for item in document.iter_inner_content():
         if isinstance(item, Table):
-            for row in item.rows:
-                text = " | ".join(cell.text for cell in row.cells)
-                if text.strip():
-                    blocks.append(block("code", text, len(blocks), section="Document table"))
+            if item.rows:
+                if any(cell._tc.xpath("./w:tcPr/w:gridSpan | ./w:tcPr/w:vMerge")
+                       for row in item.rows for cell in row.cells):
+                    raise ApiError("reader_table_unsupported", "Merged DOCX table cells are not supported by this reader", 422)
+                header = bool(item.rows[0]._tr.xpath("./w:trPr/w:tblHeader"))
+                blocks.append(table_block([[cell.text for cell in row.cells] for row in item.rows],
+                    len(blocks), header_rows=int(header)))
         else:
             text = item.text
             style = item.style.name if item.style else ""

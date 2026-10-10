@@ -90,7 +90,7 @@ def test_registered_volatile_case_access_uses_matching_owner_without_persistence
         assert result == {"allowed": True}
         assert not conn.execute("SELECT 1 FROM case_attachments WHERE id=?", (original["id"],)).fetchone()
     assert authorize(services, original["id"], Identity(type="case", id="SYNTHETIC_other")) == {
-        "allowed": False, "reason": "unavailable"}
+        "allowed": False, "reason": "not_found"}
 
 
 def test_saved_case_uses_canonical_metadata_and_parts_after_volatile_eviction(services, monkeypatch):
@@ -148,11 +148,40 @@ def test_real_shared_test_policy_denies_access_before_metadata_lookup(services, 
             assert result == {"allowed": False, "reason": "restricted"}
 
 
-def test_project_is_not_conversation_authority_and_missing_schema_is_explicit(services):
+def test_project_is_not_conversation_authority_and_missing_attachment_is_explicit(services):
     case, original = case_original(services, saved=True)
     assert authorize(services, original["id"], Identity(type="project", id="SYNTHETIC_project")) == {
         "allowed": False, "reason": "access_denied"}
-    assert authorize(services, "SYNTHETIC_no_attachment") == {"allowed": False, "reason": "unavailable"}
+    assert authorize(services, "SYNTHETIC_no_attachment") == {"allowed": False, "reason": "not_found"}
+
+
+def test_absent_core_schema_is_unavailable_inside_isolated_rollback(services):
+    # Use the actual migrated profile, deliberately remove a table in this
+    # transaction, then roll it back. No substitute schema is created.
+    conn = services.db.connect()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute("DROP TABLE knowledge_attachments")
+        assert services.get("knowledge_attachments").authorize_in(conn, "SYNTHETIC_no_attachment") == {
+            "allowed": False, "reason": "unavailable"}
+    finally:
+        conn.rollback()
+        conn.close()
+    assert services.db.fetch_all("PRAGMA table_info(knowledge_attachments)")
+    assert authorize(services, "SYNTHETIC_no_attachment") == {"allowed": False, "reason": "not_found"}
+
+
+def test_missing_attachment_precedes_absent_metadata_inside_isolated_rollback(services):
+    conn = services.db.connect()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute("DROP TABLE knowledge_attachment_metadata")
+        assert services.get("knowledge_attachments").authorize_in(conn, "SYNTHETIC_no_attachment") == {
+            "allowed": False, "reason": "not_found"}
+    finally:
+        conn.rollback()
+        conn.close()
+    assert services.db.fetch_all("PRAGMA table_info(knowledge_attachment_metadata)")
 
 
 def test_contended_case_lock_fails_closed_without_waiting_in_caller_transaction(services):

@@ -135,7 +135,8 @@ class ReaderRepository:
                 if reason == "not_found":
                     raise ApiError("reader_content_missing", "This attachment is unavailable", 404)
                 columns = {row["name"] for row in conn.execute("PRAGMA table_info(knowledge_attachment_metadata)")}
-                if not legacy and conversation is None and "rights_json" not in columns:
+                core = {row["name"] for row in conn.execute("PRAGMA table_info(knowledge_attachments)")}
+                if not legacy and ("rights_json" not in columns or "id" not in core):
                     raise ApiError("reader_schema_unavailable", "The attachment storage update is not installed", 503, True)
                 raise ApiError("reader_original_unavailable", "The attachment original is currently unavailable", 409, True)
         volatile = getattr(access, "volatile_original", None)

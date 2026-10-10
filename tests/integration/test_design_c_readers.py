@@ -95,7 +95,7 @@ def test_malicious_html_is_inert_and_invalid_xml_reports_failure_while_retaining
     assert client.post("/api/v1/readers/original", json={"reference": xml}).status_code == 200
 
 
-def test_hash_mismatch_missing_original_and_uninstalled_attachment_schema_are_honest(reader_app, tmp_path):
+def test_hash_mismatch_missing_original_and_missing_attachment_are_honest(reader_app, tmp_path):
     reference = saved_source(reader_app, tmp_path, "SYNTHETIC.txt", b"SYNTHETIC transplant note")
     client = TestClient(reader_app); db = reader_app.state.services.db
     row = db.fetch_one("SELECT original_path FROM knowledge_revisions WHERE id=?", (reference["target"]["id"],))
@@ -106,7 +106,8 @@ def test_hash_mismatch_missing_original_and_uninstalled_attachment_schema_are_ho
     path.unlink()
     assert client.post("/api/v1/readers/original", json={"reference": reference}).status_code == 404
     response = client.post("/api/v1/readers/resolve", json={"reference": {"target": {"type": "attachment", "id": "SYNTHETIC_missing"}}})
-    assert response.status_code == 503 and response.json()["error"]["code"] == "reader_schema_unavailable"
+    assert response.status_code == 404 and response.json()["error"]["code"] == "reader_content_missing"
+    assert "source_id" not in response.text and "original_path" not in response.text
 
 
 def test_persisted_shared_policy_and_restore_epoch_refuse_stale_passages(reader_app, tmp_path):

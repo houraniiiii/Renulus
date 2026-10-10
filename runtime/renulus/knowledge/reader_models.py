@@ -2,7 +2,7 @@
 """Inert, bounded reader transport. No paths, HTML, URLs or executable markup."""
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from ..design_c_contracts import (Contract, ContentReference, ConversationIdentity,
                                  Locator)
@@ -29,13 +29,25 @@ class ReaderSelectionRequest(ReaderRequest):
     original_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
 
 
+class ReaderGrid(Contract):
+    rows: tuple[tuple[str, ...], ...] = Field(min_length=1, max_length=200)
+    header_rows: int = Field(default=0, ge=0, le=1)
+
+    @model_validator(mode="after")
+    def bounded_cells(self):
+        if any(not 1 <= len(row) <= 200 or any(len(cell) > 20000 for cell in row) for row in self.rows):
+            raise ValueError("Document tables require 1–200 columns and bounded plain text cells")
+        return self
+
+
 class ReaderBlock(Contract):
-    kind: Literal["paragraph", "heading", "list_item", "code", "image"]
+    kind: Literal["paragraph", "heading", "list_item", "code", "image", "table"]
     item_ref: str = Field(min_length=1, max_length=256)
     text: str = Field(default="", max_length=200000)
     level: int | None = Field(default=None, ge=1, le=6)
     locator: Locator | None = None
     asset_id: str | None = Field(default=None, max_length=160)
+    grid: ReaderGrid | None = None
 
 
 class ReaderDiagnostic(Contract):

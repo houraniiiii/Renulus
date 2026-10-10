@@ -56,7 +56,8 @@ def test_actual_docx_headings_table_image_and_source_text_locations():
     data = BytesIO(); document.save(data)
     payload = docx_payload(data.getvalue(), request())
     assert payload.blocks[0].kind == "heading" and payload.blocks[0].level == 1
-    assert any("marker | SYNTHETIC value" in item.text for item in payload.blocks)
+    grid = next(item for item in payload.blocks if item.kind == "table")
+    assert grid.grid.rows == (("SYNTHETIC marker", "SYNTHETIC value"),)
     picture = next(item for item in payload.blocks if item.kind == "image")
     assert binary_asset(data.getvalue(), ".docx", picture.asset_id).startswith(b"\x89PNG")
     assert all(item.locator.kind == "text" for item in payload.blocks if item.text)

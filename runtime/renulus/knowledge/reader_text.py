@@ -5,7 +5,7 @@ from html.parser import HTMLParser
 from io import StringIO
 
 from ..contracts import ApiError
-from .reader_models import ReaderBlock, ReaderCell, ReaderDiagnostic, ReaderPayload, ReaderTable
+from .reader_models import ReaderBlock, ReaderCell, ReaderDiagnostic, ReaderGrid, ReaderPayload, ReaderTable
 
 MAX_TEXT_BYTES = 4 * 1024 * 1024
 MAX_CHARACTERS = 2_000_000
@@ -26,11 +26,22 @@ def decode_text(data):
     return text.replace("\r\n", "\n").replace("\r", "\n")
 
 
-def block(kind, text, number, *, level=None, section=None):
+def block(kind, text, number, *, level=None, section=None, grid=None):
     ref = f"reader-v1:item:{number}"
-    return ReaderBlock(kind=kind, text=text, item_ref=ref, level=level,
+    return ReaderBlock(kind=kind, text=text, item_ref=ref, level=level, grid=grid,
         locator={"kind": "text", "item_ref": ref, "section": section,
                  "start": 0, "end": len(text)} if text else None)
+
+
+def table_block(rows, number, *, header_rows=0):
+    if (not 1 <= len(rows) <= 200 or any(not 1 <= len(row) <= MAX_COLUMNS
+            or any(len(cell) > 20000 for cell in row) for row in rows)):
+        raise ApiError("reader_table_limit", "Document tables support up to 200 rows/columns and 20,000 characters per cell", 413)
+    text = "\n".join("\t".join(row) for row in rows)
+    if len(text) > 200000:
+        raise ApiError("reader_table_limit", "The document table exceeds 200,000 characters", 413)
+    return block("table", text, number, section="Document table",
+        grid=ReaderGrid(rows=tuple(tuple(row) for row in rows), header_rows=header_rows))
 
 
 class InertHTML(HTMLParser):
@@ -45,6 +56,37 @@ class InertHTML(HTMLParser):
         self.parts, self.blocks = [], []
         self.kind, self.level = "paragraph", None
         self.events = 0
+        self.table_rows, self.row, self.cell = None, None, None
+        self.row_headers, self.header_rows, self.cell_header = [], 0, False
+
+    def finish_cell(self):
+        if self.cell is not None:
+            if self.row is None:
+                self.row = []
+            self.row.append("".join(self.cell).strip())
+            self.row_headers.append(self.cell_header)
+            if len(self.row) > MAX_COLUMNS:
+                raise ApiError("reader_table_limit", "The document table exceeds 200 columns", 413)
+            self.cell = None
+
+    def finish_row(self):
+        self.finish_cell()
+        if self.row:
+            if len(self.table_rows) >= 200:
+                raise ApiError("reader_table_limit", "The document table exceeds 200 rows", 413)
+            if not self.table_rows and all(self.row_headers):
+                self.header_rows = 1
+            self.table_rows.append(self.row)
+        self.row, self.row_headers = None, []
+
+    def finish_table(self):
+        if self.table_rows is not None:
+            self.finish_row()
+            if self.table_rows:
+                if len(self.blocks) >= 4000:
+                    raise ApiError("reader_markup_limit", "The document contains too many blocks", 413)
+                self.blocks.append(table_block(self.table_rows, len(self.blocks), header_rows=self.header_rows))
+            self.table_rows, self.header_rows = None, 0
 
     def tick(self):
         self.events += 1
@@ -69,6 +111,25 @@ class InertHTML(HTMLParser):
             if tag != "embed":
                 self.skip.append(tag)
             return
+        if tag == "table":
+            if self.table_rows is not None:
+                raise ApiError("reader_table_unsupported", "Nested HTML tables are not supported by this reader", 422)
+            self.flush()
+            self.table_rows = []
+            return
+        if self.table_rows is not None:
+            if tag == "tr":
+                self.finish_row()
+                self.row = []
+            elif tag in {"td", "th"}:
+                spans = dict(attrs)
+                if any(spans.get(name, "1") != "1" for name in ("rowspan", "colspan")):
+                    raise ApiError("reader_table_unsupported", "HTML table row/column spans are not supported by this reader", 422)
+                self.finish_cell()
+                self.cell, self.cell_header = [], tag == "th"
+            elif tag in {"br", "p", "div"} and self.cell:
+                self.cell.append("\n")
+            return
         if tag in self.breaks or tag in {"h1", "h2", "h3", "h4", "h5", "h6"}:
             self.flush()
             self.kind = "heading" if tag.startswith("h") else "list_item" if tag == "li" else "code" if tag == "pre" else "paragraph"
@@ -82,19 +143,32 @@ class InertHTML(HTMLParser):
             if tag == self.skip[-1]:
                 self.skip.pop()
             return
+        if self.table_rows is not None:
+            if tag in {"td", "th"}:
+                self.finish_cell()
+            elif tag == "tr":
+                self.finish_row()
+            elif tag == "table":
+                self.finish_table()
+            return
         if tag in self.breaks or tag in {"h1", "h2", "h3", "h4", "h5", "h6"}:
             self.flush()
             self.kind, self.level = "paragraph", None
 
     def handle_data(self, data):
         if not self.skip:
-            self.parts.append(data)
+            if self.table_rows is not None:
+                if self.cell is not None:
+                    self.cell.append(data)
+            else:
+                self.parts.append(data)
 
 
 def html_payload(text):
     parser = InertHTML()
     parser.feed(text)
     parser.close()
+    parser.finish_table()
     parser.flush()
     return ReaderPayload(kind="text", blocks=tuple(parser.blocks), diagnostics=(ReaderDiagnostic(
         code="inert_markup", message="Scripts, forms, embedded content and external resources are omitted."),))
@@ -109,7 +183,28 @@ def markdown_payload(text):
     blocks = []
     kind, level = "paragraph", None
     list_depth = 0
+    table_rows, row = None, None
+
+    def inline_text(token):
+        # Attributes are never exported as navigation/resource authority.
+        return "".join("\n" if child.type in ("softbreak", "hardbreak") else child.content
+            for child in token.children or [] if child.type not in ("html_inline", "image"))
+
     for token in tokens:
+        if token.type == "table_open":
+            table_rows = []
+            continue
+        if table_rows is not None:
+            if token.type == "tr_open":
+                row = []
+            elif token.type == "inline" and row is not None:
+                row.append(inline_text(token))
+            elif token.type == "tr_close":
+                table_rows.append(row)
+            elif token.type == "table_close":
+                blocks.append(table_block(table_rows, len(blocks), header_rows=1))
+                table_rows = None
+            continue
         if token.type in ("bullet_list_open", "ordered_list_open"):
             list_depth += 1
         elif token.type in ("bullet_list_close", "ordered_list_close"):
@@ -122,9 +217,7 @@ def markdown_payload(text):
             blocks.append(block("code", token.content.rstrip("\n"), len(blocks)))
         elif token.type == "inline":
             # Ignore href/src attributes: inline text/code only, never HTML/URLs.
-            content = "".join("\n" if child.type in ("softbreak", "hardbreak") else child.content
-                              for child in token.children or []
-                              if child.type not in ("html_inline", "image"))
+            content = inline_text(token)
             if content:
                 blocks.append(block(kind, content, len(blocks), level=level))
         if len(blocks) > 4000:

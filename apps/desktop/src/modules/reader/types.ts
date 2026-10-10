@@ -1,9 +1,10 @@
 import type { ContentLocator, ContentReference } from '../../platform/designC';
 
 export interface ReaderBlock {
-  kind: 'paragraph' | 'heading' | 'list_item' | 'code' | 'image';
+  kind: 'paragraph' | 'heading' | 'list_item' | 'code' | 'image' | 'table';
   item_ref: string; text: string; level: number | null;
   locator: ContentLocator | null; asset_id: string | null;
+  grid?: { rows: string[][]; header_rows: number } | null;
 }
 export interface ReaderCell {
   display: string; value: string | number | boolean | null;
