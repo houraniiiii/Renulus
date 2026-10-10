@@ -7,6 +7,7 @@ import json
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 import pytest
+from httpx import ASGITransport, AsyncClient
 
 from renulus.contracts import ApiError
 from renulus.assessment.generation_models import CreateGenerationRequest
@@ -14,7 +15,8 @@ from renulus.design_c_contracts import canonical_digest
 from renulus.server import create_app
 from renulus.storage import utc_now
 from renulus.storage.assessment_policy import advance_policy
-from renulus.storage.invalidation import bump_context_epoch
+from renulus.storage.invalidation import bump_context_epoch, context_epoch_in
+from renulus.storage.backup import export_records
 from renulus.study.nightly_api import create_router
 from renulus.study.nightly_models import NightlyPreferences, NightlySchedule, NightlyState, PreferencesUpdate
 from renulus.study.nightly_service import COMMANDS, PREFERENCES, STATE, _load, _save
@@ -400,3 +402,90 @@ async def test_enabled_restart_after_due_waits_for_next_future_night(nightly):
     assert next_service.read()["next_eligible_at"] == "2026-10-16T22:00:00+00:00"
     await next_service.tick()
     assert next_service.read()["last_job"] is None and not transport.calls
+
+
+@pytest.mark.asyncio
+async def test_actual_export_restore_epoch_collision_interrupts_and_waits_for_future_night(nightly, tmp_path):
+    app, service, clock, transport = nightly
+    with service.db.transaction() as conn:
+        while context_epoch_in(conn) < 5:
+            bump_context_epoch(conn)
+    transport.release = asyncio.Event()
+    job = await due_job(service, clock)
+    await asyncio.wait_for(transport.started.wait(), timeout=20)
+    bundle = export_records(app.state.services)
+    preferences = {row["key"]: json.loads(row["value"]) for row in bundle["records"]["preferences"]}
+    assert preferences[PREFERENCES] == {"enabled": True, "local_time": "22:00", "question_count": 5, "revision": 2}
+    assert STATE not in preferences and COMMANDS not in preferences and "home.suggestions" not in preferences
+    original = next(row for row in bundle["records"]["assessment_test_jobs"] if row["id"] == job["id"])
+    assert original["state"] == "running" and original["context_epoch"] == 5
+    restored = create_app(tmp_path / "restored-synthetic-nightly")
+    destination = restored.state.services.get("nightly")
+    destination.local_now = clock
+    with destination.db.transaction() as conn:
+        while context_epoch_in(conn) < 4:
+            bump_context_epoch(conn)
+    restored.state.services.get("data_recovery").restore_json(bundle, confirm_backup_date=True, confirmed_exported_at=bundle["exported_at"])
+    with destination.db.transaction() as conn:
+        assert context_epoch_in(conn) == 5  # Same integer, different local process.
+    row = destination.db.fetch_one("SELECT * FROM assessment_test_jobs WHERE id=?", (job["id"],))
+    assert row["state"] == "failed" and row["error_code"] == "interrupted"
+    assert row["checkpoint_json"] == original["checkpoint_json"]
+    assert row["validated_count"] == original["validated_count"]
+    assert destination.read()["last_job"]["state"] == "failed"
+    await destination.tick()
+    assert destination.read()["next_eligible_at"] == "2026-10-11T22:00:00+00:00"
+    assert restored.state.services.get("saved_generation").tasks == {}
+    assert restored.state.services.get("provider").status()["active_runs"] == []
+    assert len(transport.calls) == 1
+    await service.services.get("saved_generation").close()
+    assert not destination.db.fetch_one("SELECT id FROM assessment_test_versions WHERE origin='nightly'")
+
+
+@pytest.mark.asyncio
+async def test_cold_status_reconciles_same_epoch_orphan_without_generation_ui(nightly):
+    app, service, clock, transport = nightly
+    transport.release = asyncio.Event()
+    job = await due_job(service, clock)
+    await asyncio.wait_for(transport.started.wait(), timeout=20)
+    # An actual pending job has no process-local task in this new owner.
+    cold = create_app(app.state.services.paths.root)
+    cold_service = cold.state.services.get("nightly")
+    cold_service.local_now = clock
+    assert cold_service.services.get("saved_generation").tasks == {}
+    final = cold_service.read()["last_job"]
+    assert final["state"] == "failed" and final["error_code"] == "interrupted"
+    await finish_job(service, job["id"])
+    await cold_service.tick()
+    assert len(transport.calls) == 1 and cold_service.services.get("saved_generation").tasks == {}
+    clock.now += timedelta(days=1)
+    await cold_service.tick()
+    assert cold_service.read()["error_code"] != "generation_capacity"
+    with cold_service.db.transaction() as conn:
+        assert conn.execute("SELECT COUNT(*) FROM assessment_test_jobs WHERE state IN ('queued','running') AND operation='nightly_test'").fetchone()[0] == 0
+
+
+@pytest.mark.asyncio
+async def test_assembled_status_and_disable_cancel_are_neutral_during_active_test(nightly):
+    app, service, clock, transport = nightly
+    job = await due_job(service, clock)
+    await finish_job(service, job["id"])
+    result = service.read()["last_job"]["result"]
+    # Real policy-row specimen; the separate DC13 attempt consumer is not proof here.
+    stamp = utc_now()
+    service.db.execute("INSERT INTO assessment_test_attempts(id,version_id,version_snapshot_json,mode,clock_high_water_at,created_at,updated_at) "
+        "VALUES('synthetic-nightly-active-test',?,'{}','test',?,?,?)", (result["version"]["id"], stamp, stamp, stamp))
+    async with AsyncClient(transport=ASGITransport(app), base_url="http://testserver") as client:
+        status = await client.get("/api/v1/nightly")
+        assert status.status_code == 200 and status.json()["assistance_allowed"] is False
+        assert "PRIVATE_GENERATED_NIGHTLY_EXPLANATION" not in status.text
+        assert status.headers["cache-control"] == "no-store"
+        off = await client.put("/api/v1/nightly/preferences",
+            json={"enabled": False, "local_time": "22:00", "question_count": 5, "expected_revision": 2},
+            headers={"Idempotency-Key": "synthetic-nightly-test-off"})
+        assert off.status_code == 200 and off.json()["enabled"] is False
+        stop = await client.post("/api/v1/nightly/jobs/" + job["id"] + "/cancel", headers={"Idempotency-Key": "synthetic-nightly-test-stop"})
+        assert stop.status_code == 200 and stop.json() == {"id": job["id"], "state": "published"}
+    clock.now += timedelta(days=1)
+    await service.tick()
+    assert len(transport.calls) == 1

@@ -178,6 +178,9 @@ class NightlyService:
         with self.db.transaction() as conn:
             preferences = self._preferences(conn)
             state = _load(conn, STATE, NightlyState)
+            owner = self.services.registry.get("saved_generation")
+            if owner is not None:
+                owner.reconcile_nightly(conn)
             if state is None or (state.context_epoch != context_epoch_in(conn) or
                     state.preferences_revision != preferences.revision or state.timezone != str(now.tzinfo)):
                 self._reset(conn, now, preferences)
@@ -221,6 +224,9 @@ class NightlyService:
         with self.db.transaction() as conn:
             preferences = self._preferences(conn)
             state = _load(conn, STATE, NightlyState)
+            owner = self.services.registry.get("saved_generation")
+            if owner is not None:
+                owner.reconcile_nightly(conn)
             row = conn.execute("SELECT id,state,requested_count,validated_count,error_code,published_version_id "
                 "FROM assessment_test_jobs j WHERE operation='nightly_test' AND NOT EXISTS "
                 "(SELECT 1 FROM deletion_ledger WHERE entity_type='job' AND entity_id=j.id) "
