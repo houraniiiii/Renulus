@@ -60,9 +60,9 @@ class ShutdownRequest(_Input):
 def register(services: Services) -> ProviderManager:
     if "provider" not in services.registry:
         services.registry["provider"] = ProviderManager(services.paths)
-        services.on_shutdown_dependencies.append(services.registry["provider"].close)
+        manager = services.registry["provider"]
+        services.on_shutdown_dependencies.append(manager.close)
         async def cancel_requests():
-            manager = services.registry['provider']
             for run_id in tuple(manager.status()['active_runs']):
                 await manager.cancel(run_id)
         services.on_shutdown.append(cancel_requests)

@@ -129,6 +129,7 @@ Each numbered cycle added one behavioral scenario before its implementation:
 | 19 | Callback failure escaped as generic HTTP 500 | Explicit failed drain, retained admission and blocked application owner |
 | 20 | Shutdown acknowledged while an accepted Library original writer was held | Connected and cancelled-client requests retain real writer ownership through settlement |
 | 21 | An unbounded library join left existing memory provider admission open | Signal admission closure immediately, then join producers before releasing dependencies |
+| 22 | Replacing a consumer provider adapter made shutdown fail on its capability-only status | Cancellation and final release retain the same registered provider instance |
 
 Receipts are `receipts/red-01b.txt`, `red-02.txt` through `red-11.txt`, and the
 corresponding `green-01.txt` through `green-11.txt`. The initial `red-01.txt`
@@ -144,6 +145,15 @@ reproduces premature acknowledgement during an actual original-file write;
 `green-21.txt` passes with no outbound attempt and closed public memory admission.
 The latest shutdown-focused regression (`final-shutdown.txt`) passed **38 tests**
 across application shutdown, memory settlement, Test policy and runtime auth.
+The first full run at `ecc3367b` then stalled in the retained generated-practice
+test because the new cancellation hook read a replacement consumer adapter's
+capability-only status. This was an H24 callback ownership regression, not a
+baseline failure. `red-22.txt` reproduces the explicit failed drain; `green-22.txt`
+passes after binding cancellation to the same provider instance as final release.
+Only that verified synthetic pytest process was stopped to replace its loaded
+runtime; this run has no full-suite totals (`full-final.txt`).
+The correction passes all ten shutdown integration cases and the actual retained
+practice journey that exposed it: **11 passed** (`green-22b.txt`).
 The earlier combined affected run collected at `36777c27` finished with
 **219 passed, 7 skipped, 1 failed** (`regression-final.txt`). Its single failure
 is the parent-owned route inventory fixture treating the authenticated neutral

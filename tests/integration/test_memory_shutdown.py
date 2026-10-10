@@ -179,6 +179,22 @@ async def test_blocked_library_join_cannot_delay_memory_or_provider_admission_cl
 
 
 @pytest.mark.asyncio
+async def test_shutdown_cancels_the_registered_provider_owner_after_a_consumer_adapter_is_replaced(tmp_path):
+    app = create_app(tmp_path / 'registered-provider-profile', token='synthetic-session')
+
+    class ConsumerAdapter:
+        def status(self):
+            return {'test_adapter': True, 'live_provider_verified': False}
+
+    app.state.services.registry['provider'] = ConsumerAdapter()
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),
+            base_url='http://testserver', headers={'x-renulus-token': 'synthetic-session'}) as client:
+        result = await client.post('/api/v1/runtime/shutdown', json={'timeout_seconds': 1})
+        assert result.status_code == 200, result.text
+        assert result.json() == {'state': 'settled', 'api_version': 1}
+
+
+@pytest.mark.asyncio
 async def test_failed_drain_is_explicit_and_never_reopens_admission(tmp_path):
     app = create_app(tmp_path / 'failed-drain-profile', token='synthetic-session')
     def unavailable_finalizer():
