@@ -19,6 +19,16 @@ BASE = "/api/v1/assessment/practice"
 SENTINEL = "ORIGINAL_GENERATED_KEY_NOT_REVIEWED"
 
 
+@pytest.fixture(autouse=True)
+def assessment_modules():
+    """Use the complete production assembly for the retained practice journey.
+
+    Override the old assessment-only fixture: Design C conversation adapters
+    also require the actual Learn and Case owners during router assembly.
+    Providers and retrieval are replaced explicitly by each existing test.
+    """
+
+
 def output(count=1, source_indices=None):
     return {"items": [{"stem": "Original token exercise " + str(index),
             "options": [{"id": "a", "text": "Marked token", "rationale": "Original marked token"},
