@@ -122,6 +122,14 @@ function FeedbackView({ feedback, focus = false }: { feedback: PracticeFeedback;
 export function GeneratedPractice({ onBack }: { onBack?: () => void }) {
   const nav = useNavigation();
   const ticket = typeof nav.handoff?.case_handoff_id === 'string' ? nav.handoff.case_handoff_id : undefined;
+  const sourceConversation = nav.handoff?.conversation as { type?: unknown; id?: unknown } | undefined;
+  const returnsToChat = sourceConversation && ['learn_thread', 'case'].includes(String(sourceConversation.type))
+    && typeof sourceConversation.id === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(sourceConversation.id)
+    && (nav.handoff?.retention === 'saved' || nav.handoff?.retention === 'temporary');
+  function returnToCase() {
+    if (returnsToChat) nav.navigate('chat', { payload: { conversation: sourceConversation, retention: nav.handoff?.retention } });
+    else nav.navigate('cases', { payload: { case_id: nav.handoff?.case_id ?? nav.scope.entity_id } });
+  }
   const topic = typeof nav.handoff?.topic_id === 'string' ? nav.handoff.topic_id : undefined;
   const scopeKind = nav.scope.kind === 'study' ? handoffScope(nav.handoff?.scope) ?? 'study' : nav.scope.kind;
   const context: PracticeContext = scopeKind === 'unclassified' ? 'unclassified'
@@ -417,9 +425,7 @@ export function GeneratedPractice({ onBack }: { onBack?: () => void }) {
           onClick={() => void cancelGeneration()}><Square size={16} />Cancel generation</Button></div></div>}
       {generation.error && <div className="section"><ErrorState error={generation.error}
         title={generation.status === 'failed' ? 'Practice generation failed' : 'Generation could not be confirmed'} />
-        {ticket && <div className="actions"><Button variant="secondary" onClick={() => nav.navigate('cases', {
-          payload: { case_id: nav.handoff?.case_id ?? nav.scope.entity_id },
-        })}>Return to Cases</Button></div>}
+        {ticket && <div className="actions"><Button variant="secondary" onClick={returnToCase}>Return to {returnsToChat ? 'chat' : 'Cases'}</Button></div>}
         {generation.status === 'interrupted' && <><p>The runtime may already have completed this request. Reconnect using the same request and key to recover its result.</p>
           <div className="actions"><Button disabled={generating} onClick={() => { if (attempt.current) void generate(attempt.current); }}>Reconnect same request</Button>
             {attempt.current?.runId && <Button variant="secondary" disabled={generating} onClick={() => void cancelGeneration()}>Cancel generation</Button>}</div></>}
@@ -480,6 +486,7 @@ export function GeneratedPractice({ onBack }: { onBack?: () => void }) {
           {session.status === 'active' && <Button variant="ghost" disabled={locked} onClick={() => transition('pause')}>Pause<Pause size={16} /></Button>}
           {session.status !== 'ended' && <Button variant="ghost" disabled={locked} onClick={() => transition('end')}>End practice</Button>}
           <Button variant="ghost" disabled={locked} onClick={() => { setSession(null); setFeedback(null); setHelp(null); setReview(null); }}>Back to practice request</Button>
+          {ticket && <Button variant="ghost" disabled={locked} onClick={returnToCase}>Return to {returnsToChat ? 'chat' : 'Cases'}</Button>}
         </div>
         {review && <section className="assessment-review section"><h3 ref={reviewHeading} tabIndex={-1}>Committed answer review</h3>
           {review.feedback.length ? review.feedback.map(entry => <FeedbackView key={entry.attempt_id} feedback={entry} />)

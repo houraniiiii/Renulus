@@ -18,9 +18,17 @@ export interface PageResult<T> { items: T[]; next_cursor: string | null }
 export interface ProjectSummary { id: string; title: string; lifecycle: Lifecycle; revision: number }
 export interface PassageDraft { text: string; reference: ContentReference; title: string }
 export interface AssessmentPolicy { active_test_id: string | null; revision: number; assistance_allowed: boolean }
+/** Volatile receipt from one recorded Study-help exposure. */
+export interface StudyHelpContext {
+  attempt_id: string; item_id: string; version_id: string; draft_revision: number; policy_revision: number;
+  kind: 'hint' | 'sources' | 'notes' | 'chat';
+}
+export const studyHelpHeaders = (context?: StudyHelpContext): Record<string, string> => context
+  ? { 'X-Renulus-Study-Context': JSON.stringify(context) } : {};
 /** Readers only open canonical references; passage use is explicit and does not send. */
 export interface ReaderProps {
   reference: ContentReference; conversation?: ConversationIdentity;
+  studyHelpContext?: StudyHelpContext;
   onPassage?: (passage: PassageDraft) => void;
 }
 export const conversationKey = (identity: ConversationIdentity) => identity.type + ':' + identity.id;

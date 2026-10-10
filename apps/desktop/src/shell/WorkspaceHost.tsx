@@ -1,6 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { api, ApiError, isCancelled } from '../platform/api';
-import type { PassageDraft } from '../platform/designC';
+import { studyHelpHeaders, type PassageDraft } from '../platform/designC';
 import { createConversation } from '../modules/chat/api';
 import { WorkspacePanel, WorkspaceProvider, useWorkspace, workspaceLayout } from '../modules/workspace';
 import { validContext } from '../modules/workspace/state';
@@ -9,11 +9,15 @@ import TestSetupPane from '../modules/tests/TestSetupPane';
 import { Button, ErrorState, LoadingState, Notice } from '../ui';
 import { useAssessmentPolicy } from './AssessmentPolicy';
 import { useNavigation } from './navigation';
+import { useStudyHelp } from './StudyHelp';
 
 const readerImports = import.meta.glob<{ default: ComponentType<WorkspaceReaderProps> }>('../modules/reader/index.tsx');
 const readerLoader = readerImports['../modules/reader/index.tsx'];
 const Reader = readerLoader ? lazy(readerLoader) : undefined;
-const authorize: WorkspaceAuthorizer = (body, signal) => api<WorkspaceAccessDecision>('/workspace/authorize', { method: 'POST', body, signal });
+function StudyReader(props: WorkspaceReaderProps) {
+  const studyHelp = useStudyHelp();
+  return Reader ? <Reader {...props} studyHelpContext={studyHelp.context} /> : null;
+}
 
 function HydrateWorkspace() {
   const workspace = useWorkspace();
@@ -33,6 +37,10 @@ function HydrateWorkspace() {
 export function ShellWorkspaceProvider({ children }: { children: ReactNode }) {
   const navigation = useNavigation();
   const { policy } = useAssessmentPolicy();
+  const studyHelp = useStudyHelp();
+  const authorize: WorkspaceAuthorizer = useCallback((body, signal) => api<WorkspaceAccessDecision>('/workspace/authorize', {
+    method: 'POST', body, signal, headers: studyHelpHeaders(studyHelp.context),
+  }), [studyHelp.context]);
   const [context, setContext] = useState<import('../modules/workspace').WorkspaceContext | null>(null);
   const [saveError, setSaveError] = useState(false);
   const pending = useRef<WorkspacePreferences | undefined>(undefined);
@@ -76,6 +84,7 @@ function WorkspaceEntries({ section, ...props }: WorkspaceEntryProps & { section
   const [error, setError] = useState<unknown>(null);
   const [retry, setRetry] = useState(0);
   const navigation = useNavigation();
+  const studyHelp = useStudyHelp();
   useEffect(() => {
     const controller = new AbortController();
     const abort = () => controller.abort(); props.signal.addEventListener('abort', abort, { once: true });
@@ -84,10 +93,10 @@ function WorkspaceEntries({ section, ...props }: WorkspaceEntryProps & { section
     if (props.context?.retention === 'saved') {
       query.set('context_type', props.context.identity.type); query.set('context_id', props.context.identity.id);
     }
-    void api<NonNullable<typeof result>>('/workspace/entries?' + query, { signal: controller.signal }).then(setResult)
+    void api<NonNullable<typeof result>>('/workspace/entries?' + query, { signal: controller.signal, headers: studyHelpHeaders(studyHelp.context) }).then(setResult)
       .catch(failure => { if (!isCancelled(failure)) setError(failure); });
     return () => { controller.abort(); props.signal.removeEventListener('abort', abort); };
-  }, [section, props.context?.identity.type, props.context?.identity.id, props.context?.retention, props.signal, retry]);
+  }, [section, props.context?.identity.type, props.context?.identity.id, props.context?.retention, props.signal, retry, studyHelp.context]);
   if (error) return <ErrorState error={error} onRetry={() => setRetry(value => value + 1)} />;
   if (!result) return <LoadingState label={'Loading ' + section.toLowerCase()} />;
   return <div className="workspace-entries"><h3>{section}</h3>
@@ -149,7 +158,7 @@ export function WorkspaceHost({ contentRef }: { contentRef: React.RefObject<HTML
     } catch (failure) { setError(failure instanceof ApiError ? failure : new Error('The selected passage could not be added. Your reader is kept.')); }
   }
   return <>{error && <Notice><p>{error instanceof Error ? error.message : 'The selected passage could not be added.'}</p></Notice>}
-    <Suspense fallback={<LoadingState label="Opening the reader" />}><WorkspacePanel availableWidth={width} Reader={Reader}
+    <Suspense fallback={<LoadingState label="Opening the reader" />}><WorkspacePanel availableWidth={width} Reader={Reader ? StudyReader : undefined}
       SavedTestPreview={TestPreview} adapters={{ Files, Sources, Notes, Goals }} onPassage={passage => { void passageToDraft(passage); }}
       onReturnToChat={() => document.getElementById('learning-content')?.focus({ preventScroll: true })}
       onResumeTest={attemptId => navigation.navigate('attempts', { payload: { attempt_id: attemptId } })} /></Suspense>

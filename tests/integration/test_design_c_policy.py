@@ -3,20 +3,31 @@
 from fastapi.testclient import TestClient
 
 from renulus.server import create_app
-from renulus.storage.assessment_policy import advance_policy
+from renulus.assessment.attempt_models import StartAttempt
+from renulus.design_c_contracts import QuestionSnapshot, SavedTestVersion
+from renulus.storage import utc_now
 
 
-def start_test(db):
-    with db.transaction() as conn:
-        conn.execute("INSERT INTO assessment_test_attempts(id,version_id,version_snapshot_json,mode,clock_high_water_at,created_at,updated_at) VALUES('test','version','{}','test','now','now','now')")
-        advance_policy(conn)
+def start_test(services):
+    version = SavedTestVersion(id='policy_version', test_id='policy_test', ordinal=1, origin='imported',
+        review_quality='personal', status='ready', provenance={'method':'import'}, created_at=utc_now(),
+        terms='Synthetic owned educational fixture',
+        items=[QuestionSnapshot(item_id='policy_item', question_id='policy_question', question_version='1',
+            key_version='1', family_id='policy_family', family_version='1', topic_id='general',
+            stem='Which synthetic learning statement is correct?', options=[{'id':'a','text':'First option'},
+            {'id':'b','text':'Second option'}], correct_option_ids=['a'], explanation='Synthetic explanation')])
+    with services.db.transaction() as conn:
+        services.get('saved_tests').publish_version(conn, version, title='Synthetic policy practice',
+            provenance={'schema':'saved-test-provenance/1'}, idempotency_key='policy-version-create')
+    return services.get('whole_attempts').start(StartAttempt(version={'type':'saved_test_version','id':version.id},
+        mode='test', timing={'kind':'untimed'}), 'policy-start-test')
 
 
 def test_active_test_blocks_all_legacy_help_and_recovery_disclosures(tmp_path):
     app = create_app(tmp_path / "policy")
     client = TestClient(app)
     assert client.get("/api/v1/assessment/policy").json()["assistance_allowed"] is True
-    start_test(app.state.services.db)
+    start_test(app.state.services)
     for path in ("/assessment/aggregates", "/assessment/progress", "/assessment/mistakes",
                  "/assessment/sessions", "/assessment/practice/sessions", "/study",
                  "/memory", "/learn/threads", "/cases/saved", "/knowledge/documents",
@@ -36,7 +47,7 @@ def test_late_read_cannot_publish_help_after_policy_changes(tmp_path):
     app = create_app(tmp_path / "late")
     @app.get("/api/v1/synthetic-late-help")
     def late():
-        start_test(app.state.services.db)
+        start_test(app.state.services)
         return {"explanation": "SYNTHETIC_PRIVATE_KEY_SENTINEL"}
     response = TestClient(app).get("/api/v1/synthetic-late-help")
     assert response.status_code == 409
@@ -45,7 +56,7 @@ def test_late_read_cannot_publish_help_after_policy_changes(tmp_path):
 
 def test_active_test_permits_typed_chat_cancellation_but_no_run_disclosure(tmp_path):
     app = create_app(tmp_path / "cancel")
-    start_test(app.state.services.db)
+    start_test(app.state.services)
     client = TestClient(app)
     response = client.post("/api/v1/conversations/learning/synthetic_chat/runs/synthetic_run/cancel")
     assert response.status_code == 404
@@ -74,7 +85,7 @@ def test_active_test_neutral_receipts_and_nightly_off_keep_exact_safe_shapes(tmp
     root = f"/api/v1/conversations/learning/{identifier}/runs"
     assert client.get(root + "/synthetic_run?neutral=true").json() == {"run_id": "synthetic_run", "state": "failed"}
     assert client.get(root + "/synthetic_run").json()["conversation"]["title"] == conversation["title"]
-    start_test(services.db)
+    start_test(services)
     assert client.get(root).json() == {"items": [{"run_id": "synthetic_run", "state": "failed"}], "next_cursor": None}
     assert client.get(root + "/synthetic_run?neutral=true").json() == {"run_id": "synthetic_run", "state": "failed"}
     assert client.get(root + "/synthetic_run").status_code == 409
@@ -86,3 +97,16 @@ def test_active_test_neutral_receipts_and_nightly_off_keep_exact_safe_shapes(tmp
     assert response.status_code == 200
     assert response.json()["enabled"] is False
     assert set(response.json()) == set(preferences)
+
+
+def test_volatile_test_stop_and_status_are_neutral_during_real_test(tmp_path):
+    app = create_app(tmp_path / 'volatile-neutral')
+    start_test(app.state.services)
+    client = TestClient(app)
+    root = '/api/v1/conversations/test-drafts/runs/synthetic_run'
+    for method, path in ((client.get, root), (client.post, root + '/cancel')):
+        response = method(path)
+        assert response.status_code == 404
+        assert response.json()['error']['code'] == 'chat_test_run_missing'
+    assert client.get(root + '/result').json()['error']['code'] == 'assistance_restricted'
+    assert client.post('/api/v1/conversations/test-drafts', json={}).json()['error']['code'] == 'assistance_restricted'

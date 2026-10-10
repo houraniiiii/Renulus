@@ -82,6 +82,9 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
                 r"/api/v1/assessment/generation/jobs/[A-Za-z0-9_-]{1,128}/cancel", path):
             return False  # Owner always returns only {id, state}, even on replay.
         if request.method == "POST" and re.fullmatch(
+                r"/api/v1/assessment/imports/[A-Za-z0-9_-]{1,128}/cancel", path):
+            return False  # The import owner returns only {id, state}.
+        if request.method == "POST" and re.fullmatch(
                 r"/api/v1/nightly/jobs/[A-Za-z0-9_-]{1,128}/cancel", path):
             return False
         if request.method == "GET" and re.fullmatch(
@@ -90,11 +93,20 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
         if request.method == "GET" and request.query_params.get("neutral") == "true" and re.fullmatch(
                 r"/api/v1/conversations/(?:learning|case)/[A-Za-z0-9_-]{1,128}/runs/[A-Za-z0-9_-]{1,128}", path):
             return False  # Producer guarantees exactly {run_id, state}.
+        if request.method in {"GET", "POST"} and re.fullmatch(
+                r"/api/v1/conversations/test-drafts/runs/[A-Za-z0-9_-]{1,128}"
+                + (r"/cancel" if request.method == "POST" else ""), path):
+            return False  # Volatile producer always returns exactly {run_id, state}.
         return path.startswith("/api/v1/")
 
     def captured_policy(expected=None):
         with services.db.transaction() as conn:
             return require_assistance(conn, expected_revision=expected)
+
+    def captured_help(context):
+        from .storage.study_help import require_context_in
+        with services.db.transaction() as conn:
+            return require_context_in(services, conn, context)
 
     def policy_error(error):
         return JSONResponse({"error": {"code": error.code, "message": error.message,
@@ -121,12 +133,23 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
         guarded = needs_assistance(request)
         try:
             revision = await asyncio.to_thread(captured_policy) if guarded else None
+            from .storage.study_help import parse_context, require_context_in
+            help_context = parse_context(request.headers.get('x-renulus-study-context') if guarded else None)
+            if help_context is not None:
+                await asyncio.to_thread(captured_help, help_context)
         except ApiError as error:
             return policy_error(error)
-        response = await call_next(request)
+        from .storage.publication import bind_publication_guard
+        if help_context is not None:
+            with bind_publication_guard(services.db, lambda conn: require_context_in(services, conn, help_context)):
+                response = await call_next(request)
+        else:
+            response = await call_next(request)
         if guarded:
             try:
                 await asyncio.to_thread(captured_policy, revision)
+                if help_context is not None:
+                    await asyncio.to_thread(captured_help, help_context)
             except ApiError as error:
                 await response.body_iterator.aclose()
                 return policy_error(error)
@@ -136,6 +159,8 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
                     async for chunk in iterator:
                         try:
                             await asyncio.to_thread(captured_policy, revision)
+                            if help_context is not None:
+                                await asyncio.to_thread(captured_help, help_context)
                         except ApiError as error:
                             if response.headers.get("content-type", "").startswith("text/event-stream"):
                                 yield ("event: error\ndata: " + json.dumps({"type": "error", "payload": {"code": error.code, "message": error.message, "retryable": error.retryable}}) + "\n\n").encode()
@@ -200,7 +225,7 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
     # Separate feature routers preserve the existing module/legacy APIs. Their
     # schemas have already been checked and applied before any startup backfill.
     for name in ("learn.conversation_api", "study.project_api", "study.home_api", "study.nightly_api",
-                 "assessment.test_api", "assessment.attempt_api", "assessment.generation_api", "knowledge.reader_api", "knowledge.attachment_api", "storage.workspace_api", "storage.search_api"):
+                 "assessment.test_api", "assessment.attempt_api", "assessment.generation_api", "assessment.import_api", "learn.chat_test_api", "knowledge.reader_api", "knowledge.attachment_api", "storage.workspace_api", "storage.search_api", "storage.study_help_api"):
         path = Path(__file__).parent.joinpath(*name.split(".")).with_suffix(".py")
         if path.exists():
             feature = importlib.import_module("renulus." + name)

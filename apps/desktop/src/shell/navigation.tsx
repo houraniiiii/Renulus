@@ -27,7 +27,7 @@ export interface Navigation {
   handoff?: Record<string, unknown>;
   revision: number;
   navigate: (route: RouteId, options?: NavigationOptions) => void;
-  consumeIntent: (kind: 'sendIntent' | 'passageIntent', id: string) => void;
+  consumeIntent: (kind: 'sendIntent' | 'passageIntent' | 'attachmentIntent', id: string) => void;
   selectConversation: (conversation: ConversationSummary | null) => void;
   startFreshStudy: () => void;
 }
@@ -79,7 +79,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const [scope, setScope] = useState<ContextScope>(() => nextScope({ kind: 'study' }, route, { payload: savedHandoffFromHash(window.location.hash) }));
   const [handoff, setHandoff] = useState<Record<string, unknown> | undefined>(() => savedHandoffFromHash(window.location.hash));
   const [revision, setRevision] = useState(0);
-  const ownHash = useRef<string | undefined>(undefined);
+  const ownHashes = useRef<string[]>([]);
   function navigate(next: RouteId, options: NavigationOptions = {}) {
     setScope(current => nextScope(current, next, options));
     setHandoff(options.freshStudy ? undefined : options.payload);
@@ -87,11 +87,14 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setRevision(value => value + 1);
     // Only validated saved identities enter history; drafts/temporary IDs never do.
     const hash = destinationHash(next, options.payload);
-    if (window.location.hash !== hash) { ownHash.current = hash; window.location.hash = hash; }
+    if (window.location.hash !== hash) { ownHashes.current.push(hash); window.location.hash = hash; }
   }
   useEffect(() => {
-    const onHash = () => {
-      if (ownHash.current === window.location.hash) { ownHash.current = undefined; return; }
+    const onHash = (event: HashChangeEvent) => {
+      const changed = event.newURL ? new URL(event.newURL).hash : window.location.hash;
+      const ownIndex = ownHashes.current.indexOf(changed);
+      if (ownIndex !== -1) { ownHashes.current.splice(ownIndex, 1); return; }
+      if (changed !== window.location.hash) return;
       const next = routeFromHash(window.location.hash);
       setRoute(next);
       const payload = savedHandoffFromHash(window.location.hash);
@@ -102,12 +105,12 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
-  function consumeIntent(kind: 'sendIntent' | 'passageIntent', id: string) {
+  function consumeIntent(kind: 'sendIntent' | 'passageIntent' | 'attachmentIntent', id: string) {
     setHandoff(current => {
       const intent = current?.[kind];
       if (!intent || typeof intent !== 'object') return current;
       const value = intent as { request_id?: unknown; id?: unknown };
-      if ((kind === 'sendIntent' ? value.request_id : value.id) !== id) return current;
+      if ((kind === 'passageIntent' ? value.id : value.request_id) !== id) return current;
       const next = { ...current }; delete next[kind]; return next;
     });
   }
@@ -121,7 +124,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     });
     setScope(current => conversation ? nextScope(current, 'chat', { payload }) : { kind: 'study' });
     const hash = destinationHash('chat', payload);
-    if (window.location.hash !== hash) { ownHash.current = hash; window.location.hash = hash; }
+    if (window.location.hash !== hash) { ownHashes.current.push(hash); window.location.hash = hash; }
   }
   return <NavigationContext.Provider value={{ route, scope, handoff, revision, navigate, consumeIntent, selectConversation, startFreshStudy: () => navigate('study', { freshStudy: true }) }}>{children}</NavigationContext.Provider>;
 }

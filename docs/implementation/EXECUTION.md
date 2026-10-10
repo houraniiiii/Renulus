@@ -56,6 +56,37 @@ Six existing workers continue disjoint leases. No ticket is closed by these
 prerequisites. The historical 18 normalization flags remain unstaged. Controller
 c02 was closed normally before loading the new backend; owner state is untouched.
 
+### Connected assessment, private practice and Study help — continuation from efada051
+
+The lead integrated private paste imports, canonical whole-attempt evidence, the
+volatile ChatTest producer and actual File review/upload. Trusted fictionalisation
+and independent review are committed at dce4d88f; actual 5/10/20 publication to
+saved versions and whole Study replay is integrated at 6cdf0d35. Raw source/request
+identities remain volatile. Home consumes scalar evidence at 5fbcd42a; actual Chat
+attachment review is efada051. Library import extraction and connected default
+Home consumers remain with their owners.
+
+The lead reserves storage/publication.py, storage/study_help.py,
+storage/study_help_api.py, database.py, server.py and shared shell/platform paths
+for current recorded-exposure receipts, key-free question preparation and inherited
+publication guards. Receipts and File handoffs live only in React memory. The
+shared routing slice forwards matching attachment intents, guards reader/workspace
+requests and restores wrapper Case practice to its typed Chat. Lead additionally
+reserves learn/conversation_stream.py temporarily for neutral interruption
+bookkeeping when a Study receipt becomes stale; Zeno continues disjoint Chat UI
+and API callers. Notes creation/editing remains a real prerequisite.
+
+Validation: seven actual Recovery JSON migration checks, 31 whole-attempt/policy
+checks, five focused neutral-route checks and seven Study-help checks pass. The
+first imports/policy aggregate had four fixture errors (missing terms), corrected
+before the 31-pass run; its receipt is retained. Renderer checks pass 43/43, and
+the exact canonical TypeScript/Vite/Electron build passes. Receipts are under
+C:/Renulus/scratch/design-c/integration/: import005-actual-recovery.xml,
+imports-policy-assembled.xml, whole-policy-final.xml, policy-neutral-final.xml and
+study-help-01.xml. Actual delayed Chat completion and safe failure bookkeeping,
+Notes, full reader help and combined hidden acceptance remain open. No ticket
+closure or installed default cutover is claimed.
+
 ### DC02 foundation slice — validated before dependent feature writes
 
 The lead added a schema-2/known-migration compatibility gate, exact schema-1

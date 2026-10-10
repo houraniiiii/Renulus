@@ -1,8 +1,12 @@
-import { Component, Suspense, lazy, type ComponentType, type ReactNode } from 'react';
+import { Component, Suspense, lazy, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { ArrowRight, Stethoscope } from 'lucide-react';
 import { Button, EmptyState, ErrorState, LoadingState, PageHeader } from '../ui';
 import { ConnectionsPage } from '../platform/ConnectionsPage';
-import type { ConversationIdentity } from '../platform/designC';
+import { studyHelpHeaders, type ConversationIdentity, type ConversationSummary } from '../platform/designC';
+import { api } from '../platform/api';
+import type { HelpReceipt } from '../modules/attempts/types';
+import { useWorkspace } from '../modules/workspace';
+import { useStudyHelp } from './StudyHelp';
 import { validReference } from '../modules/workspace/state';
 import { routes, useNavigation, type RouteId } from './navigation';
 
@@ -56,16 +60,27 @@ function MorePage() {
 
 export function ModuleOutlet({ assistanceAllowed }: { assistanceAllowed?: boolean } = {}) {
   const { route, handoff, navigate, consumeIntent, selectConversation } = useNavigation();
+  const studyHelp = useStudyHelp();
+  const workspace = useWorkspace();
+  const [helpError, setHelpError] = useState<unknown>();
+  const helpCommands = useRef(new Map<string, string>());
   const module = routes.find(item => item.id === route)!.module;
   const Page = pages['../modules/' + module + '/index.tsx'];
   const props: Record<string, unknown> = {};
   if (route === 'chat') {
     props.onConversation = selectConversation;
+    if (handoff?.studyHelpContext) props.studyHelpContext = studyHelp.context;
     const identity = handoff?.conversation as ConversationIdentity | undefined;
     if (identity && ['learn_thread', 'case'].includes(identity.type) && typeof identity.id === 'string') props.identity = identity;
     const send = handoff?.sendIntent as { text?: unknown; request_id?: unknown } | undefined;
     if (send && typeof send.text === 'string' && send.text.length <= 16000 && typeof send.request_id === 'string' && send.request_id.length >= 8) {
       props.sendIntent = send; props.onSendIntentConsumed = (id: string) => consumeIntent('sendIntent', id);
+    }
+    const attachment = handoff?.attachmentIntent as { file?: unknown; request_id?: unknown } | undefined;
+    if (attachment && attachment.file instanceof File && typeof attachment.request_id === 'string'
+      && /^[A-Za-z0-9_-]{8,128}$/.test(attachment.request_id)) {
+      props.attachmentIntent = attachment;
+      props.onAttachmentIntentConsumed = (id: string) => consumeIntent('attachmentIntent', id);
     }
     const passage = handoff?.passageIntent as { id?: unknown; text?: unknown; reference?: unknown; title?: unknown } | undefined;
     if (passage && typeof passage.id === 'string' && typeof passage.text === 'string' && passage.text.length <= 16000 && typeof passage.title === 'string' && validReference(passage.reference)) {
@@ -80,8 +95,34 @@ export function ModuleOutlet({ assistanceAllowed }: { assistanceAllowed?: boolea
   if (route === 'attempts') {
     props.attemptId = handoff?.attempt_id; props.versionId = handoff?.version_id;
     props.mode = handoff?.mode; props.timing = handoff?.timing;
+    props.onHelp = async (receipt: HelpReceipt) => {
+      setHelpError(undefined);
+      try {
+        const prepared = await api<{ context: HelpReceipt['context']; seed_text: string }>('/study/help-context', { method: 'POST', body: receipt.context });
+        if (receipt.context.kind === 'notes') { studyHelp.setContext(prepared.context); workspace.showSection('Notes'); return; }
+        if (receipt.context.kind === 'chat') {
+          const contextKey = JSON.stringify(prepared.context);
+          let key = helpCommands.current.get(contextKey);
+          if (!key) { key = crypto.randomUUID(); if (helpCommands.current.size >= 32) helpCommands.current.clear(); helpCommands.current.set(contextKey, key); }
+          const conversation = await api<ConversationSummary>('/conversations', { method: 'POST',
+            body: { kind: 'learning', title: 'Study question' },
+            headers: { ...studyHelpHeaders(prepared.context), 'Idempotency-Key': key } });
+          studyHelp.setContext(prepared.context);
+          navigate('chat', { payload: { conversation: conversation.identity, retention: conversation.retention, prefill: prepared.seed_text, studyHelpContext: prepared.context } });
+        }
+      } catch (error) { setHelpError(error); }
+    };
+    props.onOpenReference = async (reference: unknown, context: HelpReceipt['context']) => {
+      setHelpError(undefined);
+      try {
+        if (!validReference(reference)) throw new Error('This source reference is unavailable.');
+        const prepared = await api<{ context: HelpReceipt['context'] }>('/study/help-context', { method: 'POST', body: context });
+        studyHelp.setContext(prepared.context); workspace.open(reference);
+      } catch (error) { setHelpError(error); }
+    };
   }
   return <ModuleBoundary key={route}><Suspense fallback={<LoadingState />}>
+    {!!helpError && <ErrorState error={helpError} title="Study help could not open" />}
     {Page ? <Page {...props} /> : route === 'connections' ? <ConnectionsPage assistanceAllowed={assistanceAllowed}
       initialSection={handoff?.settings_section === 'preferences' ? 'preferences' : undefined} /> : route === 'more' ? <MorePage /> : <PendingPage />}
   </Suspense></ModuleBoundary>;

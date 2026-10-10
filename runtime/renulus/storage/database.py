@@ -6,6 +6,8 @@ from pathlib import Path
 import sqlite3
 from typing import Iterable
 
+from .publication import check_publication
+
 SUPPORTED_SCHEMA = 2
 
 
@@ -51,7 +53,9 @@ class Database:
         conn = self.connect()
         try:
             conn.execute("BEGIN IMMEDIATE")
+            check_publication(self, conn)
             yield conn
+            check_publication(self, conn)
             conn.commit()
         except BaseException:
             conn.rollback()

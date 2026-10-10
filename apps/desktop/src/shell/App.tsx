@@ -9,6 +9,7 @@ import { useResource } from '../platform/useResource';
 import { ModuleOutlet } from './ModuleOutlet';
 import { NavigationProvider, destinationHash, routes, useNavigation, type RouteId } from './navigation';
 import { ShellWorkspaceProvider, WorkspaceHost } from './WorkspaceHost';
+import { StudyHelpProvider } from './StudyHelp';
 import { useWorkspace } from '../modules/workspace';
 import { LocalSearchResults, type SearchResult } from './LocalSearchResults';
 
@@ -131,4 +132,4 @@ function Shell() {
     </dialog>
   </div>;
 }
-export function App() { return <NavigationProvider><AssessmentPolicyProvider><ShellWorkspaceProvider><Shell /></ShellWorkspaceProvider></AssessmentPolicyProvider></NavigationProvider>; }
+export function App() { return <NavigationProvider><AssessmentPolicyProvider><StudyHelpProvider><ShellWorkspaceProvider><Shell /></ShellWorkspaceProvider></StudyHelpProvider></AssessmentPolicyProvider></NavigationProvider>; }
