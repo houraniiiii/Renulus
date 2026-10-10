@@ -18,7 +18,8 @@ from typing import Any, Literal
 from renulus.contracts import ApiError, ContextScope, Event, Scope, durable_id
 from renulus.storage.database import utc_now
 from renulus.storage.assessment_policy import require_assistance
-from renulus.storage.invalidation import context_epoch_in
+from renulus.storage.invalidation import context_epoch_in, bump_context_epoch
+from renulus.storage.attachment_cleanup import drain
 
 from .currency import pinned_currency
 from .models import DiscussCase, EditCase, HandoffCase, StartCase
@@ -400,8 +401,10 @@ class CaseRepository:
                 self._deferred_context = parent
 
     def delete(self, case_id: str, revision: int | None = None) -> dict:
-        with self._lock:
+        conversations = self.services.registry.get('conversations')
+        with conversations._lock if conversations is not None else nullcontext(), self._lock:
             if self._is_deleted(case_id):
+                drain(self.services)
                 return {"id": case_id, "deleted": True, "purge_pending": not self._checkpoint()}
             session = self._load(case_id)
             if revision is not None:
@@ -411,9 +414,16 @@ class CaseRepository:
                                         (case_id,)).fetchone()
                 if previous and previous[0] != session.saved_revision:
                     raise ApiError("case_revision_conflict", "The saved case has changed; reopen it", 409, True)
+                if conversations is not None:
+                    conversations.owner_removed(conn, 'case', case_id)
                 conn.execute("INSERT OR IGNORE INTO deletion_ledger VALUES('case',?,?)",
                              (case_id, utc_now()))
                 conn.execute("DELETE FROM case_sessions WHERE id=?", (case_id,))
+                bump_context_epoch(conn)
+            attachments = self.services.registry.get('chat_attachments')
+            if attachments is not None:
+                attachments.discard_volatile('case', case_id)
+            drain(self.services)
             self._deleted.add(case_id)
             self._sessions.pop(case_id, None)
             self._changed_scope(session)

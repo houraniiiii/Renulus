@@ -35,7 +35,139 @@ def app_at(profile):
     app = create_app(profile)
     if "conversations" not in app.state.services.registry:
         app.include_router(create_router(app.state.services), prefix="/api/v1")
+    if not any(getattr(route, 'path', '') == '/api/v1/attachments' for route in app.routes):
+        from renulus.knowledge.attachment_api import create_router as attachment_router
+        app.include_router(attachment_router(app.state.services), prefix='/api/v1')
     return app
+
+
+def upload_chat_file(client, app, chat, *, key='fictional-upload-command'):
+    from renulus.knowledge.models import own_text_rights
+    from renulus.storage.assessment_policy import policy_snapshot
+    from renulus.storage.invalidation import context_epoch_in
+    with app.state.services.db.transaction() as conn:
+        options = {'conversation': chat['identity'], 'expected_conversation_revision': chat['revision'],
+            'expected_policy_revision': policy_snapshot(conn)['revision'], 'expected_context_epoch': context_epoch_in(conn),
+            'idempotency_key': key, 'filename': 'fictional.md', 'title': 'Fictional owned original',
+            'rights': own_text_rights().model_dump(mode='json'), 'metadata': {}}
+    response = client.post('/api/v1/attachments', content=b'# FICTIONAL OWNED CHAT FILE' + bytes([10]) + b'Educational text only.',
+        headers={'x-renulus-attachment-options': json.dumps(options)})
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+@pytest.mark.parametrize('kind,legacy', [('learning', False), ('case', False), ('learning', True), ('case', True)])
+def test_chat_and_legacy_owner_delete_journal_actual_attachment_cleanup_after_commit(tmp_path, monkeypatch, kind, legacy):
+    import renulus.storage.attachment_cleanup as cleanup
+    app = app_at(tmp_path / 'owned-file-delete')
+    services = app.state.services
+    with TestClient(app) as client:
+        project = client.post('/api/v1/study/projects', json={'title': 'Fictional attachment project'}).json()
+        chat = client.post('/api/v1/conversations', json={'kind': kind, 'project_id': project['id']}).json()
+        identifier = chat['identity']['id']
+        route = '/api/v1/conversations/' + kind + '/' + identifier
+        uploaded = upload_chat_file(client, app, chat)
+        original = services.db.fetch_one('SELECT * FROM knowledge_attachment_originals WHERE attachment_id=?', (uploaded['id'],))
+        directory = services.paths.library / 'attachments' / uploaded['id']
+        assert directory.is_dir()
+        membership = services.db.fetch_one('SELECT id FROM study_project_chats WHERE chat_kind=? AND chat_id=?', (kind, identifier))
+        remove_tree, observed = cleanup.remove_owned_tree, []
+        def postcommit_only(paths, target):
+            # A new connection sees the complete deletion before filesystem work.
+            with services.db.connect() as conn:
+                owner = 'learn_threads' if kind == 'learning' else 'case_sessions'
+                assert not conn.in_transaction
+                assert conn.execute('SELECT id FROM ' + owner + ' WHERE id=?', (identifier,)).fetchone() is None
+                assert conn.execute('SELECT id FROM knowledge_attachments WHERE id=?', (uploaded['id'],)).fetchone() is None
+                assert conn.execute("SELECT 1 FROM deletion_ledger WHERE entity_type='attachment' AND entity_id=?", (uploaded['id'],)).fetchone()
+                assert conn.execute('SELECT id FROM study_project_chats WHERE id=?', (membership['id'],)).fetchone() is None
+            observed.append(str(target))
+            remove_tree(paths, target)
+        monkeypatch.setattr(cleanup, 'remove_owned_tree', postcommit_only)
+        if legacy:
+            owner_route = '/api/v1/learn/threads/' + identifier if kind == 'learning' else '/api/v1/cases/sessions/' + identifier
+            removed = client.delete(owner_route)
+        else:
+            removed = client.delete(route, params={'expected_revision': uploaded['conversation_revision']},
+                headers={'Idempotency-Key': 'delete-owned-chat-command'})
+        assert removed.status_code == 200, removed.text
+        assert observed and not directory.exists()
+        assert services.db.is_deleted('attachment', uploaded['id'])
+        assert services.db.is_deleted('attachment_original', original['id'])
+        assert services.db.is_deleted('project_chat', membership['id'])
+        assert not services.db.fetch_all('SELECT * FROM knowledge_attachment_metadata WHERE attachment_id=?', (uploaded['id'],))
+        assert services.db.fetch_one('SELECT value FROM preferences WHERE key=?', (cleanup.JOURNAL,)) is None
+
+
+@pytest.mark.parametrize('kind', ['learning', 'case'])
+def test_temporary_chat_delete_discards_actual_attachment_bytes_and_upload_receipts(tmp_path, kind):
+    from renulus.storage.backup import export_records
+    app = app_at(tmp_path / 'temporary-attachment-delete')
+    with TestClient(app) as client:
+        chat = client.post('/api/v1/conversations', json={'kind': kind, 'temporary': True}).json()
+        uploaded = upload_chat_file(client, app, chat)
+        repository = app.state.services.get('chat_attachments')
+        assert uploaded['id'] in repository._volatile and repository._volatile_commands
+        route = '/api/v1/conversations/' + kind + '/' + chat['identity']['id']
+        removed = client.delete(route, params={'expected_revision': uploaded['conversation_revision']})
+        assert removed.status_code == 200, removed.text
+        assert not repository._volatile and not repository._volatile_commands
+        exported = json.dumps(export_records(app.state.services))
+        assert uploaded['id'] not in exported and chat['identity']['id'] not in exported
+        assert 'FICTIONAL OWNED CHAT FILE' not in exported
+
+
+def test_owned_attachment_cleanup_pending_journal_drains_after_actual_restart(tmp_path, monkeypatch):
+    import renulus.storage.attachment_cleanup as cleanup
+    profile = tmp_path / 'restart-file-cleanup'
+    app = app_at(profile)
+    remove_tree = cleanup.remove_owned_tree
+    with TestClient(app) as client:
+        chat = client.post('/api/v1/conversations', json={}).json()
+        uploaded = upload_chat_file(client, app, chat)
+        directory = app.state.services.paths.library / 'attachments' / uploaded['id']
+        def locked_file(*args):
+            raise OSError('Fictional temporary file lock')
+        monkeypatch.setattr(cleanup, 'remove_owned_tree', locked_file)
+        removed = client.delete('/api/v1/conversations/learning/' + chat['identity']['id'],
+            params={'expected_revision': uploaded['conversation_revision']})
+        assert removed.status_code == 200 and directory.exists()
+        assert app.state.services.db.fetch_one('SELECT value FROM preferences WHERE key=?', (cleanup.JOURNAL,))
+    monkeypatch.setattr(cleanup, 'remove_owned_tree', remove_tree)
+    reopened = app_at(profile)
+    with TestClient(reopened):
+        assert not directory.exists()
+        assert reopened.state.services.db.fetch_one('SELECT value FROM preferences WHERE key=?', (cleanup.JOURNAL,)) is None
+
+
+@pytest.mark.parametrize('failure_point', ['journal', 'owner_tombstone'])
+def test_attachment_and_owner_deletion_roll_back_when_journal_enqueue_fails(tmp_path, monkeypatch, failure_point):
+    import renulus.learn.conversation_repository as owner_module
+    app = app_at(tmp_path / 'journal-rollback')
+    with TestClient(app) as client:
+        chat = client.post('/api/v1/conversations', json={'kind': 'case'}).json()
+        uploaded = upload_chat_file(client, app, chat)
+        directory = app.state.services.paths.library / 'attachments' / uploaded['id']
+        enqueue = owner_module.enqueue_in
+        def fail_after_enqueue(conn, plan):
+            enqueue(conn, plan)
+            raise RuntimeError('Fictional transaction refusal')
+        if failure_point == 'journal':
+            monkeypatch.setattr(owner_module, 'enqueue_in', fail_after_enqueue)
+        else:
+            mark_deleted = app.state.services.db.mark_deleted
+            def fail_after_owner_delete(entity_type, identifier, conn=None):
+                mark_deleted(entity_type, identifier, conn)
+                if entity_type == 'case':
+                    raise RuntimeError('Fictional transaction refusal')
+            monkeypatch.setattr(app.state.services.db, 'mark_deleted', fail_after_owner_delete)
+        with pytest.raises(RuntimeError, match='Fictional transaction refusal'):
+            client.delete('/api/v1/conversations/case/' + chat['identity']['id'],
+                params={'expected_revision': uploaded['conversation_revision']})
+        assert client.get('/api/v1/conversations/case/' + chat['identity']['id']).status_code == 200
+        assert app.state.services.db.fetch_one('SELECT id FROM knowledge_attachments WHERE id=?', (uploaded['id'],))
+        assert not app.state.services.db.is_deleted('attachment', uploaded['id'])
+        assert directory.is_dir()
 
 
 def test_neutral_run_detail_has_exact_keys_before_and_during_active_test(tmp_path):

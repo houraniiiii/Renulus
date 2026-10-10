@@ -11,6 +11,7 @@ from renulus.contracts import ApiError, durable_id
 from renulus.design_c_contracts import ConversationDraft, ContentReference, canonical_digest
 from renulus.storage.database import utc_now
 from renulus.storage.invalidation import bump_context_epoch
+from renulus.storage.attachment_cleanup import enqueue_in, drain
 
 from .conversation_models import Mutation, NewConversation
 
@@ -354,21 +355,33 @@ class ConversationRepository:
                     return {"identity": summary["identity"], "deleted": True}
                 table, _, _, target_type = self._owner(kind)
                 self.owner_removed(conn, kind, identifier)
-                if kind == "case":
-                    session = self.cases._sessions.pop(identifier, None)
-                    if session:
-                        self.cases._invalidate_runs(session)
-                        self.cases._changed_scope(session)
-                    self.cases._deleted.add(identifier)
                 conn.execute(f"DELETE FROM {table} WHERE id=?", (identifier,))
                 self.db.mark_deleted(target_type, identifier, conn)
                 bump_context_epoch(conn)
                 return {"identity": summary["identity"], "deleted": True}
             if temporary:
-                return self._volatile_command(idempotency_key, "delete", kind, identifier, request, remove)
-            return command(conn, "conversation_commands", idempotency_key, "delete", self._owner(kind)[3], identifier, request, remove)
+                result = self._volatile_command(idempotency_key, "delete", kind, identifier, request, remove)
+            else:
+                result = command(conn, "conversation_commands", idempotency_key, "delete", self._owner(kind)[3], identifier, request, remove)
+        with self._lock, self.cases._lock:
+            if kind == 'case' and not temporary:
+                session = self.cases._sessions.pop(identifier, None)
+                if session:
+                    self.cases._invalidate_runs(session)
+                    self.cases._changed_scope(session)
+                self.cases._deleted.add(identifier)
+            attachments = self.services.registry.get('chat_attachments')
+            if attachments is not None:
+                attachments.discard_volatile(kind, identifier)
+        drain(self.services)
+        return result
 
     def owner_removed(self, conn, kind, identifier):
+        attachments = self.services.registry.get('chat_attachments')
+        if attachments is not None:
+            enqueue_in(conn, attachments.delete_chat_in(conn, kind, identifier))
+        elif conn.execute('SELECT 1 FROM knowledge_attachments WHERE chat_kind=? AND chat_id=?', (kind, identifier)).fetchone():
+            raise ApiError('attachment_cleanup_unavailable', 'Attachment cleanup is not connected. Reopen Renulus before deleting this chat.', 503, True)
         for row in conn.execute("SELECT id FROM study_project_chats WHERE chat_kind=? AND chat_id=?", (kind, identifier)):
             self.db.mark_deleted("project_chat", row["id"], conn)
         conn.execute("DELETE FROM study_project_chats WHERE chat_kind=? AND chat_id=?", (kind, identifier))

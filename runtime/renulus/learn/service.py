@@ -9,7 +9,8 @@ import json
 from renulus.contracts import ApiError, ContextScope, Event, Scope, durable_id
 from renulus.storage import utc_now
 from renulus.storage.assessment_policy import require_assistance
-from renulus.storage.invalidation import context_epoch_in
+from renulus.storage.invalidation import context_epoch_in, bump_context_epoch
+from renulus.storage.attachment_cleanup import drain
 from .evidence import check_citations, conversation_history, freshness_requested, source_context
 from .memory_context import MemoryContext, guarded_stream
 
@@ -71,9 +72,18 @@ class LearnService:
         for run in list(self.active.values()):
             if run.thread_id == identifier:
                 await self.cancel(run.id)
-        with self.db.transaction() as conn:
-            conn.execute("DELETE FROM learn_threads WHERE id=?", (identifier,))
-            self.db.mark_deleted("learn_thread", identifier, conn)
+        conversations = self.services.registry.get('conversations')
+        with conversations._lock if conversations is not None else nullcontext():
+            with self.db.transaction() as conn:
+                if conversations is not None:
+                    conversations.owner_removed(conn, 'learning', identifier)
+                conn.execute("DELETE FROM learn_threads WHERE id=?", (identifier,))
+                self.db.mark_deleted("learn_thread", identifier, conn)
+                bump_context_epoch(conn)
+            attachments = self.services.registry.get('chat_attachments')
+            if attachments is not None:
+                attachments.discard_volatile('learning', identifier)
+        drain(self.services)
         return {"deleted": True}
 
     def prepare(self, question, scope, thread_id, topic_id, style, idempotency_key, *, case_handoff_id=None, conn=None):
