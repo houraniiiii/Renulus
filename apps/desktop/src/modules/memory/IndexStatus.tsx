@@ -1,16 +1,30 @@
 import { useEffect, useState } from 'react';
 import { RefreshCw, Square } from 'lucide-react';
 import { api } from '../../platform/api';
+import type { ContextScope } from '../../platform/contracts';
 import { Badge, Button, ErrorState, LoadingState, Notice } from '../../ui';
 import { useMemoryRequest, useMemoryResource } from './requests';
 import { readableState, type MemoryJob, type MemoryStatus } from './types';
 
-function JobItem({ job, onChanged }: { job: MemoryJob; onChanged: (job: MemoryJob) => void }) {
+function restoredScope(job: MemoryJob): ContextScope | undefined {
+  if (job.state !== 'cancelled' || job.error_code !== 'restore_interrupted' || !job.evidence_id || !job.scope) return;
+  try {
+    const value = JSON.parse(job.scope);
+    if (value && ['study', 'personal-library', 'generated-practice', 'reviewed-assessment'].includes(value.kind)
+        && (value.entity_id == null || typeof value.entity_id === 'string')
+        && Object.keys(value).every(key => key === 'kind' || key === 'entity_id')) return value;
+  } catch { /* A malformed receipt never supplies a guessed capture scope. */ }
+}
+
+function JobItem({ job, onChanged, onCaptured }: { job: MemoryJob; onChanged: (job: MemoryJob) => void; onCaptured: (job: MemoryJob) => void }) {
   const request = useMemoryRequest();
+  const [action, setAction] = useState<'cancel' | 'capture'>('cancel');
+  const scope = restoredScope(job);
   return <li className="memory-job"><div className="memory-job-heading"><span className="memory-job-id" title={job.id}>Job {job.id}</span><Badge tone={job.state === 'failed' ? 'error' : job.state === 'queued' || job.state === 'running' ? 'warning' : 'neutral'}>{readableState(job.state)}</Badge></div>
-    {job.error_code && <p className="muted">{readableState(job.error_code)}</p>}
-    {(job.state === 'queued' || job.state === 'running') && <Button variant="ghost" busy={request.busy} onClick={() => { void request.run(signal => api<MemoryJob>('/memory/jobs/' + encodeURIComponent(job.id) + '/cancel', { method: 'POST', signal }), onChanged); }}><Square size={14} aria-hidden="true" />Cancel job</Button>}
-    {request.error !== null && <ErrorState title="Job could not be cancelled" error={request.error} />}
+    {job.error_code && <p className="muted">{scope ? 'Restore paused this capture. Capturing it may use your selected model.' : readableState(job.error_code)}</p>}
+    {scope && <Button variant="secondary" busy={request.busy} onClick={() => { setAction('capture'); void request.run(signal => api<MemoryJob>('/memory/captures', { method: 'POST', signal, body: { evidence_id: job.evidence_id, scope } }), onCaptured); }}>Capture this learning</Button>}
+    {(job.state === 'queued' || job.state === 'running') && <Button variant="ghost" busy={request.busy} onClick={() => { setAction('cancel'); void request.run(signal => api<MemoryJob>('/memory/jobs/' + encodeURIComponent(job.id) + '/cancel', { method: 'POST', signal }), onChanged); }}><Square size={14} aria-hidden="true" />Cancel job</Button>}
+    {request.error !== null && <ErrorState title={action === 'capture' ? 'Learning could not be captured' : 'Job could not be cancelled'} error={request.error} />}
   </li>;
 }
 
@@ -57,6 +71,10 @@ export function IndexStatus({ pendingFacts, refreshRecords, refreshKey }: { pend
     setNotice(result.state === 'cancelled' ? 'Job cancelled.' : 'Job is ' + readableState(result.state) + '.');
     refreshStatus(); refreshRecords();
   }
+  function captured(result: MemoryJob) {
+    setNotice(result.state === 'completed' ? 'This learning was already captured.' : 'Capture is ' + readableState(result.state) + '.');
+    refresh();
+  }
 
   return <aside className="memory-support" aria-label="Memory index and recovery">
     <section className="memory-status section"><div className="memory-section-heading"><h2>Recall status</h2><Button variant="ghost" disabled={request.busy} onClick={refresh} aria-label="Refresh memory status"><RefreshCw size={16} aria-hidden="true" />Refresh</Button></div>
@@ -77,7 +95,7 @@ export function IndexStatus({ pendingFacts, refreshRecords, refreshKey }: { pend
     <details className="memory-jobs"><summary>Memory jobs{jobs.data ? ' (' + jobs.data.jobs.length + ')' : ''}</summary>
       {jobs.error !== null && <ErrorState error={jobs.error} title="Jobs could not be loaded" onRetry={refreshJobs} />}
       {!jobs.data && jobs.loading && <LoadingState label="Loading memory jobs" />}
-      {jobs.data && (jobs.data.jobs.length ? <ul className="memory-job-list">{jobs.data.jobs.map(job => <JobItem key={job.id} job={job} onChanged={jobChanged} />)}</ul> : <p className="muted">No memory jobs are recorded.</p>)}
+      {jobs.data && (jobs.data.jobs.length ? <ul className="memory-job-list">{jobs.data.jobs.map(job => <JobItem key={job.id} job={job} onChanged={jobChanged} onCaptured={captured} />)}</ul> : <p className="muted">No memory jobs are recorded.</p>)}
     </details>
   </aside>;
 }

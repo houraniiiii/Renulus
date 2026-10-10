@@ -23,6 +23,8 @@ export interface MemoryStatus {
 
 export interface MemoryJob {
   id: string;
+  evidence_id?: string;
+  scope?: string;
   state: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
   error_code?: string;
 }

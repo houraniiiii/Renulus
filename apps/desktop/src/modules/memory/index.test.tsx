@@ -32,6 +32,38 @@ function deferred<T>() { let resolve!: (value: T) => void; const promise = new P
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); window.localStorage.clear(); window.sessionStorage.clear(); });
 
 describe('Learning memory API page', () => {
+  it('requires an explicit restored-capture action and retains the exact source after a failed acknowledgement', async () => {
+    const scope = { kind: 'study', entity_id: 'synthetic-chat' };
+    let job: MemoryJob = { id: 'old-capture', evidence_id: 'synthetic-evidence', scope: JSON.stringify(scope), state: 'cancelled', error_code: 'restore_interrupted' };
+    let attempts = 0;
+    const fetch = transport((path, options) => {
+      if (path === '/api/v1/memory/jobs') return json({ jobs: [job] });
+      if (path === '/api/v1/memory/captures') {
+        expect(body(options)).toEqual({ evidence_id: 'synthetic-evidence', scope });
+        if (++attempts === 1) return json({ error: { code: 'connection_lost', message: 'Capture acknowledgement was lost.', retryable: true } }, 503);
+        job = { ...job, id: 'new-capture', state: 'queued', error_code: undefined };
+        return json(job, 202);
+      }
+    });
+    open(); await screen.findByText(retained.text);
+    fireEvent.click(screen.getByText('Memory jobs (1)'));
+    expect(fetch.mock.calls.filter(([, options]) => options.method === 'POST')).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Capture this learning' }));
+    await screen.findByText('Capture acknowledgement was lost.');
+    fireEvent.click(screen.getByRole('button', { name: 'Capture this learning' }));
+    await screen.findByText('Capture is queued.');
+    await screen.findByText('Job new-capture');
+    expect(screen.queryByRole('button', { name: 'Capture this learning' })).toBeNull();
+    expect(attempts).toBe(2);
+  });
+
+  it.each(['{"kind":"temporary-case"}', '{bad', '{"kind":"study","text":"private"}'])('never guesses eligibility for a malformed restored receipt %s', async scope => {
+    transport(path => path === '/api/v1/memory/jobs' ? json({ jobs: [{ id: 'old-capture', evidence_id: 'synthetic-evidence', scope, state: 'cancelled', error_code: 'restore_interrupted' }] }) : undefined);
+    open(); await screen.findByText(retained.text);
+    fireEvent.click(screen.getByText('Memory jobs (1)'));
+    expect(screen.queryByRole('button', { name: 'Capture this learning' })).toBeNull();
+  });
+
   it('keeps keyboard context through deletion confirmation, failure, cancellation and success', async () => {
     let attempts = 0;
     transport((path, options) => {
