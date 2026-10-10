@@ -31,6 +31,9 @@ it('renders exact greeting/composer/Attach/Send and switches exactly five sugges
   await screen.findByRole('heading', { name: 'Welcome back, Dr. Ada' });
   expect(composer().placeholder).toBe('How can I help you today');
   expect(screen.getByRole('button', { name: 'Attach' })).toBeTruthy();
+  const upload = screen.getByLabelText('Attach file') as HTMLInputElement;
+  expect(upload.id).toBe('home-attachment');
+  expect(upload.labels?.[0].textContent).toBe('Attach file');
   expect((screen.getByRole('button', { name: 'Send' }) as HTMLButtonElement).disabled).toBe(true);
   for (const category of ['Explain a topic', 'Discuss a case', 'Quick practice']) {
     fireEvent.click(screen.getByRole('button', { name: category }));

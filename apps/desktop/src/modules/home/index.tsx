@@ -185,7 +185,8 @@ export default function Home({ adapters = {} }: { adapters?: HomeAdapters }) {
           value={text} maxLength={16000} disabled={busy || !allowed} rows={2} className="home-message"
           onChange={event => { setText(event.target.value); hasDraft.current = !!event.target.value; }} />
         <div className="home-toolbar">
-          <input ref={fileInput} type="file" aria-label="Attach file" hidden disabled={busy || !allowed}
+          <label className="sr-only" htmlFor="home-attachment">Attach file</label>
+          <input ref={fileInput} id="home-attachment" type="file" hidden disabled={busy || !allowed}
             accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.docx,.xlsx,.csv,.md,.html,.htm,.xml"
             onChange={event => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; if (file) void attach(file); }} />
           <Button variant="ghost" disabled={busy || !allowed} onClick={() => fileInput.current?.click()}><Paperclip size={20} aria-hidden="true" />Attach</Button>
