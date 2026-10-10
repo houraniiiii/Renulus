@@ -116,7 +116,9 @@ const recoveryFixture = () => {
   const evidence = path.join(designCEvidenceRoot, 'r-0123abcd'), backend = path.join(designCEvidenceRoot, 'installed-0123abcd/resources/backend');
   const env = { ...requestEnv(), RENULUS_RECOVERY_RECEIPT: path.join(evidence, 'recovery-evidence.json'), RENULUS_RECOVERY_RECEIPT_SHA256: digest };
   const request = validateRecoveryRequest(env, 'win32');
-  const identity = { backend, inventoryFiles: 1, actual: { inventory: digest }, bundle: { python: { executable_sha256: digest } } };
+  const identity = { backend, inventoryFiles: 1, actual: { inventory: digest }, bundle: { python: { executable_sha256: digest } },
+    productRevision: request.revision, acceptanceRevision: request.acceptanceRevision,
+    driverHashes: { 'verify-installed-recovery.py': { frozenSha256: digest, executedSha256: digest } } };
   const runtime = { platform: 'win32', version: '3.14.4', isolated: 1, no_site: 1, no_user_site: 1, bytecode_disabled: true,
     executable: path.join(backend, 'python/python.exe'), prefix: path.join(backend, 'python'), base_prefix: path.join(backend, 'python'),
     sys_path: ['python/python314.zip', 'python', 'dependencies', 'dependencies/win32', 'dependencies/win32/lib',
@@ -320,9 +322,10 @@ test('optional acceptance revision defaults to the product and accepts only an e
   }
 });
 
-test('dual freeze permits only descendant verifier/test and Markdown docs changes', () => {
+test('dual freeze permits only descendant exact product/recovery verifier/test and Markdown docs changes', () => {
   const acceptanceRevision = 'c'.repeat(40), changedPaths = [
     'apps/desktop/scripts/verify-installed-product.mjs', 'apps/desktop/scripts/test-verify-installed-product.mjs',
+    'apps/desktop/scripts/verify-installed-recovery.py', 'apps/desktop/scripts/test_verify_installed_recovery.py',
     'docs/planning/DESIGN_C_IMPLEMENTATION_SPEC.md', 'docs/implementation/design-c-windows-review.md',
   ];
   assert.deepEqual(validateAcceptanceChanges(revision, acceptanceRevision, changedPaths, true),
@@ -340,7 +343,9 @@ test('acceptance diff cannot admit runtime, renderer, native, packaging, depende
     'packaging/runtime/bundle.json', 'apps/desktop/scripts/stage-backend.py', 'apps/desktop/package.json',
     'package-lock.json', 'uv.lock', 'pyproject.toml', '.gitattributes', 'upstream/hermes/activate.ps1',
     'content/packs/test.json', 'apps/desktop/scripts/native-evidence-directory.mjs',
-    'apps/desktop/scripts/design-c-reader-fixtures.py', 'apps/desktop/scripts/verify-installed-recovery.py',
+    'apps/desktop/scripts/design-c-reader-fixtures.py', 'apps/desktop/scripts/verify-installed-recovery-other.py',
+    'apps/desktop/scripts/verify-installed-recovery.py/extra', 'apps/desktop/scripts/test_verify_installed_recovery_extra.py',
+    'apps/desktop/scripts/verify-old-recovery-seed.py',
     'apps/desktop/scripts/verify-installed-product.mjs/extra', 'README.md', 'docs/build.mjs', 'docs/data.json',
     'docs/x.MD', 'docs/../runtime/hidden.md', 'docs//extra.md', 'docs/./extra.md', 'docs/C:/extra.md',
     'docs/..\\extra.md', 'docs-other/report.md', undefined, null, []]) {
@@ -356,9 +361,33 @@ test('QA revision never substitutes the product revision in install or recovery 
   f.delivery.source_revision = f.request.acceptanceRevision;
   assert.throws(() => validate(f), /exact freeze/);
   const recovery = recoveryFixture(); recovery.request.acceptanceRevision = 'c'.repeat(40);
+  recovery.identity.acceptanceRevision = recovery.request.acceptanceRevision;
   validateRecoveryReceipt(recovery.request, recovery.receipt, recovery.identity, recovery.hashes);
   recovery.receipt.identity.source_revision = recovery.request.acceptanceRevision;
   assert.throws(() => validateRecoveryReceipt(recovery.request, recovery.receipt, recovery.identity, recovery.hashes));
+});
+
+test('copied recovery proof must match the acceptance driver, rejecting stale-product or arbitrary driver bytes', () => {
+  const f = recoveryFixture(), productBytes = Buffer.from('synthetic old recovery driver\n');
+  const acceptanceBytes = Buffer.from('synthetic corrected recovery driver\n'), expected = hash(acceptanceBytes);
+  f.request.acceptanceRevision = 'c'.repeat(40); f.identity.acceptanceRevision = f.request.acceptanceRevision;
+  f.identity.driverHashes['verify-installed-recovery.py'] = validateFrozenScript('verify-installed-recovery.py', acceptanceBytes, acceptanceBytes);
+  f.hashes.driver = expected; f.receipt.identity.driver_sha256 = expected;
+  validateRecoveryReceipt(f.request, f.receipt, f.identity, f.hashes);
+  for (const bytes of [productBytes, Buffer.from('arbitrary replacement driver\n'),
+    Buffer.from(acceptanceBytes.toString().replaceAll('\n', '\r\n'))]) {
+    assert.throws(() => validateFrozenScript('verify-installed-recovery.py', acceptanceBytes, bytes), /parent freeze/);
+    const receipt = structuredClone(f.receipt); receipt.identity.driver_sha256 = hash(bytes);
+    assert.throws(() => validateRecoveryReceipt(f.request, receipt, f.identity, f.hashes), /driver identity/);
+    // Matching caller-provided hashes still cannot replace the separately frozen acceptance source.
+    assert.throws(() => validateRecoveryReceipt(f.request, receipt, f.identity, { ...f.hashes, driver: hash(bytes) }), /acceptance freeze/);
+  }
+  for (const change of [v => { v.acceptanceRevision = f.request.revision; },
+    v => { v.productRevision = f.request.acceptanceRevision; }, v => { delete v.driverHashes; },
+    v => { v.driverHashes['verify-installed-recovery.py'].executedSha256 = hash(productBytes); }]) {
+    const identity = structuredClone(f.identity); change(identity);
+    assert.throws(() => validateRecoveryReceipt(f.request, f.receipt, identity, f.hashes), /acceptance freeze/);
+  }
 });
 
 const exportAttributes = () => ({ text: 'set', eol: 'crlf', filter: 'unspecified',
@@ -626,6 +655,26 @@ test('fixture generation refuses a developer Pillow or interpreter path before i
     v => { v.no_user_site = 0; }, v => { v.prefix = v.base_prefix = 'C:/Renulus/dev/python'; }]) {
     const changed = structuredClone(value); mutate(changed); assert.throws(() => validateBundledInterpreter(changed, backend));
   }
+});
+
+test('frozen embedded sys.path may include exact backend root, but prefix and Pillow must remain descendants', () => {
+  const backend = path.join(designCEvidenceRoot, 'installed-aaaaaaaa/resources/backend');
+  const value = { version: '3.14.4', isolated: 1, no_user_site: 1,
+    prefix: path.join(backend, 'python'), base_prefix: path.join(backend, 'python'),
+    paths: ['python/python314.zip', 'python', 'dependencies', 'dependencies/win32', 'dependencies/win32/lib',
+      'dependencies/pywin32_system32', 'runtime', 'upstream/hermes', '.'].map(name => path.join(backend, name)),
+    pillow: path.join(backend, 'dependencies/PIL/__init__.py') };
+  validateBundledInterpreter(value, backend);
+  assert.equal(inside(backend, backend), false); // The general containment guard remains strict.
+  for (const replacement of ['', '.', '..', backend + '-sibling', path.dirname(backend),
+    'C:/synthetic-outside/python', null, undefined, [], {}]) {
+    assert.throws(() => validateBundledInterpreter({ ...value, paths: [...value.paths, replacement] }, backend));
+  }
+  for (const paths of [[], null, undefined, backend, {}]) {
+    assert.throws(() => validateBundledInterpreter({ ...value, paths }, backend));
+  }
+  assert.throws(() => validateBundledInterpreter({ ...value, prefix: backend, base_prefix: backend }, backend));
+  assert.throws(() => validateBundledInterpreter({ ...value, pillow: backend }, backend));
 });
 
 const media = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',

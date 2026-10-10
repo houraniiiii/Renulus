@@ -43,7 +43,7 @@ export function installedAcceptancePlan() {
     requiredEnvironment: ['RENULUS_NATIVE_SLOT', 'RENULUS_EXPECT_SOURCE_REVISION', 'RENULUS_INSTALLED_PROOF=1',
       'RENULUS_PACKAGED_EXECUTABLE', 'RENULUS_DELIVERY_PROVENANCE', 'RENULUS_INSTALLER_EVIDENCE',
       'RENULUS_NATIVE_EVIDENCE_ROOT=' + designCEvidenceRoot],
-    optionalEnvironment: ['RENULUS_ACCEPTANCE_REVISION (defaults to product revision; product ancestor, verifier/test and docs-only changes)'],
+    optionalEnvironment: ['RENULUS_ACCEPTANCE_REVISION (defaults to product revision; product ancestor, exact product/recovery verifier/test and Markdown docs-only changes)'],
     evidenceRoot: designCEvidenceRoot,
     resourceBound: 'One owned hidden app/backend at a time; two saved draft chats, one project, eleven deterministic synthetic originals covering eight reader categories, one Library import reusing that two-page PDF, and one real two-question reviewed set; no providers or simulated producer results.',
     receipt: 'installed-product-evidence.json; absent reader/migration/native gates remain not-run and make the aggregate incomplete/exit 1.',
@@ -187,11 +187,12 @@ export function validateFrozenScript(name, expectedBytes, actualBytes) {
 export function validateAcceptanceChanges(productRevision, acceptanceRevision, changes, productIsAncestor) {
   check([productRevision, acceptanceRevision].every(value => typeof value === 'string' && /^[0-9a-f]{40}$/.test(value))
     && productIsAncestor === true, 'The exact product commit must be an ancestor of the acceptance commit.');
-  const allowedScripts = ['apps/desktop/scripts/verify-installed-product.mjs', 'apps/desktop/scripts/test-verify-installed-product.mjs'];
+  const allowedScripts = ['apps/desktop/scripts/verify-installed-product.mjs', 'apps/desktop/scripts/test-verify-installed-product.mjs',
+    'apps/desktop/scripts/verify-installed-recovery.py', 'apps/desktop/scripts/test_verify_installed_recovery.py'];
   check(Array.isArray(changes) && changes.every(name => typeof name === 'string'
     && (allowedScripts.includes(name) || name.startsWith('docs/') && name.endsWith('.md')
       && !name.includes('\\') && !name.includes(':') && name.split('/').every(part => part && part !== '.' && part !== '..'))),
-  'Acceptance-only changes may touch only this verifier, its tests and Markdown documentation; product changes require a new manufacture.');
+  'Acceptance-only changes may touch only the exact product/recovery verifiers, their tests and Markdown documentation; product changes require a new manufacture.');
   check(productRevision !== acceptanceRevision || changes.length === 0, 'A single freeze cannot claim a separate acceptance diff.');
   return { productRevision, acceptanceRevision, changedPaths: changes };
 }
@@ -257,7 +258,7 @@ async function verifyArtifacts(request) {
   const scripts = ['native-journeys.mjs', 'verify-installed-product.mjs', 'native-replacement-evidence.mjs',
     'native-evidence-directory.mjs', 'wait-for-flow-window.mjs', 'synthetic-pdf.mjs', 'pdf-viewer-evidence.mjs',
     'native-product-backup.mjs', 'operate-owned-save-dialog.ps1', 'inspect-native-backup.py', 'design-c-reader-fixtures.py',
-    'test-verify-installed-product.mjs'];
+    'test-verify-installed-product.mjs', 'verify-installed-recovery.py', 'test_verify_installed_recovery.py'];
   const driverHashes = {};
   for (const name of scripts) {
     const file = 'apps/desktop/scripts/' + name;
@@ -424,7 +425,10 @@ async function normalClose(current, report) {
 export function validateBundledInterpreter(interpreter, backend) {
   check(interpreter.version === '3.14.4' && interpreter.isolated === 1 && interpreter.no_user_site === 1
     && samePath(interpreter.prefix, interpreter.base_prefix) && inside(backend, interpreter.prefix)
-    && interpreter.paths.length > 0 && interpreter.paths.every(value => inside(backend, value))
+    // The frozen embedded _pth includes '..', which resolves to this exact backend root.
+    && Array.isArray(interpreter.paths) && interpreter.paths.length > 0
+    && interpreter.paths.every(value => typeof value === 'string' && path.isAbsolute(value)
+      && (samePath(backend, value) || inside(backend, value)))
     && inside(backend, interpreter.pillow), 'The actual bundled interpreter and Pillow must be isolated inside the verified installation.');
 }
 function inspectBundledInterpreter(identity, env, evidence) {
@@ -1278,6 +1282,10 @@ export function validateRecoveryReceipt(request, receipt, identity, hashes) {
   for (const name of ['bundle', 'inventory', 'python', 'driver']) {
     check(exactDigest(hashes[name]) && claimed[name + '_sha256'] === hashes[name], 'Recovery ' + name + ' identity differs.');
   }
+  const driver = identity.driverHashes?.['verify-installed-recovery.py'];
+  check(identity.productRevision === request.revision && identity.acceptanceRevision === request.acceptanceRevision
+    && hashes.driver === driver?.frozenSha256 && hashes.driver === driver?.executedSha256,
+  'Copied recovery driver differs from the exact acceptance freeze.');
   check(hashes.inventory === identity.actual.inventory && hashes.python === identity.bundle.python.executable_sha256,
     'Recovery hashes differ from the verified installation.');
   check(runtime?.platform === 'win32' && runtime.version === '3.14.4'
@@ -1432,7 +1440,7 @@ export async function runInstalledRecoveryReopen() {
   const identity = await verifyArtifacts(request);
   const hashes = { bundle: await hashFile(path.join(identity.backend, 'bundle.json')), inventory: identity.actual.inventory,
     python: await hashFile(path.join(identity.backend, 'python/python.exe')),
-    driver: sha(git(['show', request.revision + ':apps/desktop/scripts/verify-installed-recovery.py'])) };
+    driver: sha(git(['show', request.acceptanceRevision + ':apps/desktop/scripts/verify-installed-recovery.py'])) };
   validateRecoveryReceipt(request, receipt, identity, hashes);
   const seed = await readRecoveryFile(path.join(request.evidence, 'seed.json'), receipt.seed_sha256, 256 * 1024);
   const original = validateRecoverySeed(request, seed);
