@@ -4,6 +4,23 @@
 OpenCode v2 and requested at least six adaptive waves of at most six agents each.
 No product implementation, live provider use or deployment is part of this run.
 
+**Later handoff reconciliation:** H00 is consumed at `fa3b590c`. The
+[dated inspection](h00-handoff-reconciliation.md) preserves the preliminary
+source/receipt record and appends the subsequent final-closeout note: the final
+Design C handoff `c2bd8964` records the passing 2/2 App producer rerun with clean
+shutdown in `connected-ui03.xml`. Earlier failed receipts and the immutable
+99-file snapshot remain unchanged.
+
+**Subsequent implementation:** the owner authorised the first foundation tickets,
+and the integration task selected H01/H24 from
+`c2bd896420fb88f76d63ca576414dbbba182f4c2` using the existing planned test seams.
+Both now have local foundation acceptance in the
+[implementation handoff](../../implementation/OPENCODE_FOUNDATIONS_HANDOFF.md).
+H02 is planned next; remaining uncompleted tickets stay planned. No tracker
+publication is needed. See the [recorded instruction](../../planning/2026-10-04-user-answers.md#october-10-first-opencode-foundation-implementation-authorisation).
+This later host/worker evidence is separate from the research run below;
+selected-account, migration and packaged release acceptance remain open.
+
 Start with the [integration plan](../../planning/OPENCODE_V2_INTEGRATION_PLAN.md).
 The [side-chat findings](../2026-10-10-pi-opencode-v2-side-chat-findings.md) and
 earlier thirty-agent comparison are inputs; their earlier undecided/Pi statuses
@@ -12,7 +29,7 @@ do not override the user's later OpenCode selection.
 ## Evidence discipline
 
 - Earlier research source: `528025ff0b22477c12ee1512e0e7d15297a6e888` (waves 1–2).
-- Current committed Design C source: `76cfdff23e259700bec820e174c200540c7c1e1b`
+- Committed Design C source inspected in the research: `76cfdff23e259700bec820e174c200540c7c1e1b`
   (wave 3 delta and wave 4 focused tests). A frozen committed source copy under
   ignored `.local/research` isolates tests from the active integration worktree.
 - OpenCode source candidate: `4b6fea2875e4f2e3e8a8fee181803e54f7056845`.

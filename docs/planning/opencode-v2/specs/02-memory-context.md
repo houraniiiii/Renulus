@@ -1,6 +1,6 @@
 # S2 — Evidence, learner memory and long conversation context
 
-Status: draft for review; implementation is not authorised by this document.
+Status: reviewed specification. H24 has local worker-settlement acceptance in the [implementation handoff](../../../implementation/OPENCODE_FOUNDATIONS_HANDOFF.md). Lineage, corrected-memory behavior, migrated conversations, long context and complete paired restore remain their owning tickets.
 
 ## Problem Statement
 
@@ -64,7 +64,7 @@ Retain the approved domain engines and canonical records. Connect OpenCode messa
 
 ## Out of Scope
 
-Implementing now; replacing the selected memory/index engines; a universal never-delete log; using generated summaries as scientific truth; claiming lossless semantic recall; or changing clinical content/review standards.
+Implementing the remaining planned memory/context slices in the initial H01/H24 batch; replacing the selected memory/index engines; a universal never-delete log; using generated summaries as scientific truth; claiming lossless semantic recall; or changing clinical content/review standards.
 
 ## Further Notes
 

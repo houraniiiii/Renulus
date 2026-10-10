@@ -1,12 +1,12 @@
 # H12 — Adapt five-question saved generation to OpenCode
 
-**Status:** draft — review pending; implementation not authorised by this research request.
+**Status:** planned — not started. H00 is a satisfied prerequisite; H02/H04/H05 remain blockers. The initial H01/H24 authorisation does not complete or start this ticket.
 
 **Spec:** [S3](../specs/03-workflows-migration.md)
 
 **Owner:** M4 + integration
 
-**Current source baseline:** `76cfdff23e259700bec820e174c200540c7c1e1b`. Reconcile later changes before implementation.
+**Reconciled source baseline:** `c2bd896420fb88f76d63ca576414dbbba182f4c2` includes H00 and the completed Design C handoff. The original research baseline was `76cfdff23e259700bec820e174c200540c7c1e1b`; reconcile later implementation changes when this planned ticket starts.
 
 ## What to build
 
@@ -23,11 +23,11 @@ SavedGenerationService, SavedTestRepository and existing DC16 chat/Tests produce
 - [ ] Recheck source revisions, cancellation epoch and tombstones inside that publication transaction.
 - [ ] Record operation/payload digest, candidate receipt and one artifact/version identity; lost acknowledgements return the existing result.
 - [ ] Preserve reviewed-bank distinction and existing deterministic scoring; coordinate with DC16 instead of implementing a competing producer.
-- [ ] H00's current retrieval regression is green before migration; preserve the already implemented final source/publication transaction across IPC.
+- [ ] Consume H00's existing `fa3b590cd40de145c198a64168aa46b82384e2bc` repair from the current canonical baseline; preserve and revalidate its caller-specific guard and final source/publication transaction across IPC. Do not implement H00 again.
 
 ## Blocked by
 
-- [H00](00-restore-the-existing-saved-generation-retrieval-path.md)
+- [H00](00-restore-the-existing-saved-generation-retrieval-path.md) — satisfied at `fa3b590cd40de145c198a64168aa46b82384e2bc`; preserve and revalidate it, do not implement again.
 - [H02](02-answer-with-an-eligible-library-passage.md)
 - [H04](04-adjust-roles-and-configuration-with-visible-activation.md)
 - [H05](05-complete-a-learning-turn-whose-memory-stays-corrected.md)

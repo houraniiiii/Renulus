@@ -1,6 +1,6 @@
 # S3 — Durable learning workflows and safe migration
 
-Status: draft for review; implementation is not authorised by this document.
+Status: reviewed specification. H00 is consumed; H01/H24 have local foundation acceptance from `c2bd8964` under the [later instruction](../../2026-10-04-user-answers.md#october-10-first-opencode-foundation-implementation-authorisation), recorded in the [implementation handoff](../../../implementation/OPENCODE_FOUNDATIONS_HANDOFF.md). H02 and the remaining workflow/migration tickets stay planned; their acceptance is not completed by this document.
 
 ## Problem Statement
 
@@ -38,7 +38,7 @@ Use OpenCode for execution and bounded child work while existing domain modules 
 - Preserve current saved-generation jobs, command IDs, checkpoints, saved-version identities, conversation run receipts and Home/nightly occurrence ownership. Adapt their submission/provider-task boundary to OpenCode and extend existing records with engine/attempt references. Keep fictionalisation, test imports and active-Test assistance checks connected through the same authority.
 - Give test import/refinement and temporary fictionalisation/review explicit vertical adapter slices. Preserve their purposes, bounded stages, validators, edit/resolve and canonical publication; do not retire the old generation route while either consumer still needs it. Initial learning admission, then child and MCP slices, each prove the current active-Test and Study exposure guard before becoming usable.
 - A workflow definition lists bounded domain stages, validator versions and permitted child roles. It is not a replacement agent scheduler. Generated tests checkpoint inputs/source versions, validated batches, model-attempt identities and one publication identity.
-- Repair and retest the current shared-retrieval guard mismatch as a bounded prerequisite slice. The existing source/publication fence already runs inside the canonical transaction; preserve and bind it across IPC. Earlier missing-fence claims describe the old source, not the current saved producer.
+- Consume H00's existing current-product repair at `fa3b590cd40de145c198a64168aa46b82384e2bc`; do not implement its shared-retrieval guard a second time. Preserve and revalidate the explicit caller-specific guard and existing canonical source/publication transaction across IPC. Earlier mismatch and missing-fence claims remain dated source evidence, not new work at the repaired baseline.
 - Preserve batches of up to five, the existing twelve batch-call counter, three-active-job bound, explicit retry and shorter-set acceptance. Nominal successful batching uses 1/2/4 slots for 5/10/20 sets; auxiliary inference consumes separately recorded shared permits. Daily suggestions retain the existing fifteen-prompt global bundle; project-specific filtering is a separate extension. Partial sets require an explicit accepted count.
 - Operation receipts use stable IDs plus payload digests. A repeated ID with a different payload is rejected. Executors recheck scope, revisions and cancellation before effects. Repeated delivery returns the canonical receipt rather than repeating the effect.
 - Cross-store consistency uses receipts and an outbox/reconciliation protocol. A runtime acknowledgement cannot establish canonical commit by itself. A crash after domain commit and before acknowledgement recovers the committed result. Two SQLite stores are not assumed to share a transaction.
@@ -50,7 +50,7 @@ Use OpenCode for execution and bounded child work while existing domain modules 
 - A consumed daily occurrence is stable across settings/input changes, timezone/DST changes and clock rollback. One catch-up coalesces missed dates; disabling scheduling fences pending dispatch and publication.
 - Preserve one latest-due catch-up after sleep while running and future-only arming on cold restart. Reconcile a claimed-but-unsubmitted occurrence to its stable keyed job without treating a possibly sent model call as safe to repeat. Current occurrence/cache ownership remains; no Home UI dependency is needed for backend scheduling.
 - Design C IDs and module owners remain stable. Shared identity/scope contracts, conversation migration, saved tests, suggestions, readers and integrated acceptance are coordinated contributions to its backlog, not competing implementations.
-- Current-code baseline is the committed Design C integration source at 76cfdff. Source presence and prior test receipts do not imply installed acceptance. Reconcile later changes before implementation; do not recreate already landed producers from the older research snapshot.
+- The research baseline was Design C source `76cfdff`. The reconciled foundation implementation baseline is `c2bd896420fb88f76d63ca576414dbbba182f4c2`, with H00 and the final passing App producer rerun recorded in the [handoff](../../../implementation/DESIGN_C_OPENCODE_HANDOFF.md). Preserve that evidence and existing producers. DC21 final default acceptance remains deferred to H20; source receipts do not imply installed acceptance.
 - Migrate legacy saved history through stable mappings and exact citation/provenance references. Do not migrate temporary buffers or trigger generation. Freeze legacy writes per migrated conversation; preserve read access without two writable transcript authorities.
 - Preserve saved observation-disconnect continuation, temporary disconnect cancellation/discard and explicit Stop. Temporary Save settles descendants, stages the retained family/originals and commits one persistent mapping, retaining volatile state on failure. Current single-store Save tests do not prove this new cross-store transfer.
 - Saved migration/receipt retirement and temporary execution/Save are separate slices. Promotion uses a stable ID and freeze, settle, stage, map, activate, retire states; recheck current epochs at map/activation. Stage is non-admitted, orphan cleanup precedes recovery/export, and replay cannot regenerate. A failed transfer preserves volatile originals only while their process survives; a hard crash cannot preserve RAM.
@@ -70,7 +70,7 @@ Use OpenCode for execution and bounded child work while existing domain modules 
 
 ## Out of Scope
 
-Implementing now; rewriting Design C's visual specification or file readers; replacing assessment standards; adding another general workflow engine; background OS services; or incidental deployment/provider usage.
+Implementing the remaining planned workflow/migration tickets in the initial H01/H24 wave; rewriting Design C's visual specification or file readers; replacing assessment standards; adding another general workflow engine; background OS services; or incidental deployment/provider usage.
 
 ## Further Notes
 

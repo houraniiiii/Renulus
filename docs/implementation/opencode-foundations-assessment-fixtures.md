@@ -1,12 +1,14 @@
 # Assessment fixture repair — 2026-10-10
 
 Branch: `codex/opencode-foundations`; reviewed production baseline: `9a10562a`.
-Concurrent work advanced HEAD to `f6bdb589` before this fixture-only commit.
+Concurrent production work advanced HEAD through `f6bdb589` and `b6a4a7da`
+before this fixture-only commit.
 Owned changes: `tests/assessment/conftest.py`, `serve_fixture.py`,
 `serve_currency_fixture.py`, this note, and the subsequently authorised
 `test_source_currency.py` and `test_original_pack.py`. No production edits.
-After verification, the user explicitly requested a commit of these five Python
-files and this note; the initial no-commit instruction was superseded.
+After verification, the parent integration task requested a commit of these
+five Python files and this note within the owner's original commit authority;
+that replaced the lane's initial instruction to leave changes uncommitted.
 
 ## Failure and baseline distinction
 
@@ -91,3 +93,13 @@ introduce that activation. The two test files and content bootstrap code are
 unchanged between the baseline commits. Selecting the declared historical
 release before bootstrap resolves the collision and retains the real `1.0.0`
 currency fixture used by the renderer, including its immutable restart evidence.
+
+## Parent renderer closeout
+
+The later complete configured desktop run at `e57e4d89` passed **691 cases**, with
+**12 intentional opt-in skips and zero failures** (62 passing files, three skipped
+files). Both assessment renderer files executed: 13 assessment cases and the
+source-currency case. The five fixture hashes still match the focused backend
+evidence. Receipts: `C:/Renulus/scratch/oc-foundations/parent/frontend-final-02.xml`,
+`frontend-final-02-receipt.json` and `frontend-final-02-source.json`. This later
+successful run is separate from the retained zero-test local driver failure.

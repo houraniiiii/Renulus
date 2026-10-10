@@ -14,9 +14,9 @@ migrated transcripts, tools, children and context. The current working Hermes
 adapters remain until their H-ticket replacements are connected; this selection
 does not authorize migration implementation in the Design C task.
 
-The current task now finishes the connected Design C UI and a committed
-integration handoff, including the bounded H00 retrieval-guard repair. It no
-longer pursues a separate exhaustive Hermes Windows release or default cutover.
+The Design C task completed the bounded connected UI closeout and committed
+integration handoff at `c2bd8964`, including the H00 retrieval-guard repair. That
+closeout did not pursue a separate exhaustive Hermes Windows release or default cutover.
 DC21 final delivery is deferred to combined H20 acceptance, with all DC
 requirements retained as regression obligations. The normal launcher, owner
 profile and credentials stay unchanged. See the [scope amendment](planning/DESIGN_C_IMPLEMENTATION_SPEC.md#october-10-scope-amendment--connected-ui-and-opencode-handoff)
@@ -25,6 +25,23 @@ and [exact read-only planning snapshot](implementation/opencode-plan-snapshot/RE
 The snapshot preserves proposed migration choices separately from confirmed
 decisions and newer canonical work. It does not authorize new model roles,
 plugins, MCP controls, schedules or configuration authorities here.
+
+### October 10 first OpenCode foundation implementation authorisation
+
+The owner's later instruction authorises the first important foundation tickets.
+The integration task selected **H01 and H24** from
+`c2bd896420fb88f76d63ca576414dbbba182f4c2` in the isolated foundation worktree.
+Both now have **local foundation acceptance**, recorded in the
+[implementation handoff](implementation/OPENCODE_FOUNDATIONS_HANDOFF.md).
+The existing planned public domain/conversation and Harness test seams were
+accepted by the instruction; no new seam approval or tracker publication was
+needed. H00 is consumed. H02 is planned next, and the other uncompleted H tickets
+remain planned. Live account, migrated-client and packaged acceptance remain open.
+
+The [recorded instruction](planning/2026-10-04-user-answers.md#october-10-first-opencode-foundation-implementation-authorisation)
+sets the lane, synthetic-state and hidden-testing boundaries. It supersedes the
+historical research-only restriction for this first implementation wave;
+DC21/H20 release gates and the immutable snapshot remain unchanged.
 
 | Subject | Decision |
 | --- | --- |
@@ -64,12 +81,15 @@ plugins, MCP controls, schedules or configuration authorities here.
 | Operations | Open-source harness; the project owner will not host a service or model inference. |
 | Background document models | Small CPU models for embeddings/OCR may be bundled and managed entirely by Renulus, with no GPU, Docker, model server or setup for doctors. Conversation and other generative work keep the selected subscription/model rules. |
 | Backend preference | Straightforward integration of suitable existing components. |
-| Backend foundation | Fork and adopt Hermes; retain upstream licence and acknowledge the fork. Reuse before building replacements. |
-| Learner-memory engine | Mem0 OSS through Hermes's existing in-process integration. Initial derived memory storage uses its local Qdrant client; no Qdrant server is required. |
+| Harness direction | Renulus primarily provides data, retrieval, tools, execution and subagents, with the application as a client. The owner selected OpenCode v2 on October 10; the earlier Pi recommendation remains historical research. Initial H01/H24 implementation is now authorised as recorded above. |
+| Backend foundation | OpenCode v2 is selected for the harness migration using supported embedding/configuration and minimal necessary changes. The Design C baseline still uses the attributed Hermes integration. Preserve reusable Python domain modules, upstream licences/provenance and working adapters until their replacements are connected. |
+| Harness configurability | Models by purpose, routing/fallback policies, subagents, instructions, skills, MCP and plugins must be reliably adjustable. Target 128K–256K context with developed context/memory management; actual limits remain route-specific validation work and later tickets remain planned. |
+| Future providers/local inference | Plan for additional providers and optional vLLM/Ollama connections later. This does not require doctors to run a model server, change current selected subscription defaults or authorise incidental inference/provider charges. |
+| Learner-memory engine | Retain Mem0 OSS and its local Qdrant client; no Qdrant server is required. Existing code uses Hermes's in-process integration. The OpenCode plan retains the Python memory adapter and canonical records, routing extraction through the new harness when its owning slice is connected. |
 | Document pipeline | Docling structured CPU conversion and Docling-core HybridChunker for ingestion, OCR, tables, chunking and source-item provenance. One primary pipeline; validate on varied nephrology material. |
 | Embeddings | FastEmbed with a pinned app-managed CPU model and tokenizer. Exact weights remain an engineering selection; BGE-small is an evaluation baseline. |
 | Document retrieval | LanceDB OSS for embedded full-text/vector search and hybrid ranking. |
-| Personalised and conversation context | Reuse Hermes memory-provider/context hooks and its existing compressor; Renulus controls scope, evidence and token budgets. |
+| Personalised and conversation context | Retain canonical learner memory and its approved engines. Migrated conversations will have one OpenCode context owner replacing the Hermes compressor while preserving scope, evidence, corrections and retention. Keep the current hooks/compressor for unmigrated consumers. Hierarchical history ideas remain an evaluated strategy, not a confirmed algorithm. |
 | Record authority | Canonical source and learner records stay in local SQLite. Mem0/Qdrant and LanceDB representations are derived and rebuildable. |
 | Supermemory | Excluded from adoption by the user in the later 2026-10-04 research round; the reusable engine itself must be open source. Earlier evaluation remains dated evidence. |
 | Delivery standard | Real working product. Prototypes inform production work; mock screens, hardcoded responses and disconnected modules do not establish completion. |
@@ -83,12 +103,16 @@ plugins, MCP controls, schedules or configuration authorities here.
 | Review | User and assistant lead review and validation using concrete evidence; no external-panel prerequisite. |
 | Brand | C — Renal flow, with the selected teal treatment; modern medical, calm, precise and approachable, with a subtle renal reference. |
 | Separation | Preserve the inherited clinical MVP and batch/research project outside the active repository. The normal desktop launcher opens Renulus; the optional legacy reference launcher stays separate. |
-| Current scope | Finish the bounded connected Design C UI and preserve its reusable domain backend, then commit the OpenCode handoff. The later October 10 scope amendment above supersedes standalone Hermes default delivery. DC21 final release is deferred to H20; no OpenCode implementation or default-installation change belongs to this closeout. |
+| Current scope | The first OpenCode foundation tickets H01/H24 have local acceptance from the completed Design C handoff `c2bd8964`. H02 is planned next; remaining tickets stay planned. Preserve the connected UI and Python domain owners. DC21 final default delivery remains deferred to H20. |
 | Historical implementation heartbeat | The October 5 owner instruction selected one 20-minute heartbeat for that implementation run; its 15- and 30-minute predecessors are historical. This record does not create or reactivate an automation for the C handoff. |
 
 ## Unresolved work
 
-Implementation is authorised and active. The stage/architecture documents remain
+H01/H24 have local host, store, IPC and worker-settlement evidence. Clean-checkout
+reproduction, packaged delivery, production routing, memory/context migration
+and complete paired-store recovery still require their later-ticket evidence.
+The foundation handoff retains 18 classified inherited backend failures; it does
+not claim a green broad suite. The stage/architecture documents remain
 adjustable engineering baselines; product choices above stay confirmed. Current
 working flows, actual acquired-data checks, selected-engine verification and
 remaining delivery/account gates are recorded in `docs/implementation/` and
@@ -98,9 +122,10 @@ Hermes integration and Windows packaging, source/content acquisition, curriculum
 mapping detail, attachment processing, memory deletion semantics and content
 coverage require engineering work. Round 3 has settled the major interaction
 behaviour. The later research round excludes Supermemory and accepts invisible,
-app-managed CPU embeddings/OCR. The user subsequently selected **Hermes + Mem0
-OSS + Docling/HybridChunker + FastEmbed + LanceDB OSS**. Component selection is
-settled; compatible version pins, model artifacts, provider routing, CPU
+app-managed CPU embeddings/OCR. The October 4 selection was **Hermes + Mem0
+OSS + Docling/HybridChunker + FastEmbed + LanceDB OSS**. The later OpenCode choice
+replaces the future execution foundation while retaining those data engines.
+Compatible version pins, model artifacts, provider routing, CPU
 footprint and retention/citation behaviour still need implementation evidence.
 See the [framework comparison](research/2026-10-04-context-framework-recommendation.md)
 and [decision evidence](research/2026-10-04-starting-stack-evidence.md).

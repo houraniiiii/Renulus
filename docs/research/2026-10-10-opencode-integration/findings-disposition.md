@@ -1,6 +1,8 @@
 # Findings disposition and implementation gates
 
-This ledger distinguishes research resolution from implementation completion. Assigning a finding to a specification/ticket closes a planning gap; it does not repair the product or satisfy that ticket. Current source is `76cfdff`; earlier findings retain their dated scope.
+This ledger distinguishes research resolution from implementation completion. Assigning a finding to a specification/ticket closes a planning gap; it does not repair the product or satisfy that ticket. The six-wave source baseline is `76cfdff`; earlier findings retain their dated scope.
+
+H00 is consumed at `fa3b590c` and included in the final Design C handoff `c2bd8964`. The [dated reconciliation](h00-handoff-reconciliation.md) retains the preliminary inspection and appends the later passing App evidence. The later [implementation handoff](../../implementation/OPENCODE_FOUNDATIONS_HANDOFF.md) records local H01/H24 acceptance from `c2bd8964`; H02 and other uncompleted tickets remain planned. The table below preserves the research findings; the bounded implementation disposition follows it.
 
 | Finding | Verified observation / limitation | Evidence class | Owner slice | Disposition |
 | --- | --- | --- | --- | --- |
@@ -14,8 +16,8 @@ This ledger distinguishes research resolution from implementation completion. As
 | [Memory recapture](w4-01-current-memory.md) | Old consumed text reappears after edit/delete under new ID | 4 current service/worker reproductions | H05 | Persist transitive dependencies and terminal invalidation; preserve existing restore barrier |
 | [Typed cascades](w3-01-migration-retention.md) | Old generic cascade fixtures are fixed in current code | 8 helper assertions + current selected tests | H18 | Extend typed relations rather than recreate or repeat obsolete defect |
 | [Deleted receipt payload](w4-03-current-conversations.md) | Deleted draft text/hash remains in receipts/new export | 2 current-kind reproductions | H06/H18 | Reference-only live receipts; opaque retired-operation tombstones; creation receipts included |
-| [Generation retrieval](w4-02-current-workflows.md) | SavedGenerationService lacked helper-required guard_run at the research snapshot | Current failing tests + direct probe; later actual producer rechecks | H00 then H12 | Repaired in Design C `fa3b590c` with explicit real caller authority; H12 consumes the completed prerequisite. See [handoff](../../implementation/DESIGN_C_OPENCODE_HANDOFF.md). |
-| [Publication fence](w4-02-current-workflows.md) | Current saved generation already fences source in commit | Current source, runtime path blocked upstream | H12/H13 | Preserve transaction and bind authority across IPC; retest after H00 |
+| [Generation retrieval](w4-02-current-workflows.md) | SavedGenerationService lacked helper-required guard_run at the research snapshot | Current failing tests + direct probe; later actual producer rechecks | H00 consumed; H12 preserves it | Repaired in Design C `fa3b590c` with explicit real caller authority; H12 consumes the completed prerequisite. See [handoff](../../implementation/DESIGN_C_OPENCODE_HANDOFF.md). |
+| [Publication fence](w4-02-current-workflows.md) | Current saved generation already fences source in commit | Historical current-source inspection; later H00 and App producer receipts | H12/H13 | Preserve transaction and bind authority across IPC; consume H00 and revalidate the migrated path |
 | [Nightly semantics](w4-02-current-workflows.md) | Sleep catch-up differs from future-only cold restart | Source + 2 passing recovery tests | H17 | Preserve semantics; reconcile claim-to-submit gap without inference replay |
 | [Capability reset](w3-02-capabilities-evaluation.md) | Stored credential can restore available after mocked401 | Current-unchanged methods + earlier suite failure | H03 | Separate documented support/access/observations; new credential epoch |
 | [Model roles](w3-02-capabilities-evaluation.md) | No measured best model or verified selected-account256K | Evidence limit | H03/H04/H10 | Inherit selected model, explicit role evaluation, independent capability evidence |
@@ -46,9 +48,29 @@ No claim of educational efficacy, live selected-account context capacity or inst
 - W6-04's exact Automatic ordering and standalone one-permit preflight refinements were applied. The initial numeric budgets remain proposals and all runtime/quality gates remain open.
 
 The research frontier was H00 (generation guard), H24 (memory-worker settlement)
-and H01 (actual embedded host). The separately authorised Design C closeout now
-completes H00 (`fa3b590c`); H24 and H01 remain unchecked. Research/specification
-review is complete; the requested skill's human seam/breakdown review and GitHub
-publication remain pending. H20 final default delivery is deferred under the
-revised task scope; no OpenCode implementation or release acceptance is claimed.
+and H01 (actual embedded host). The final Design C closeout consumes H00 at
+`fa3b590c`; its final App producer rerun passes 2/2 with clean shutdown. The
+[later owner instruction](../../planning/2026-10-04-user-answers.md#october-10-first-opencode-foundation-implementation-authorisation)
+authorised the first foundation batch using the existing seams, with no tracker
+publication prerequisite.
+
+## Later H01/H24 implementation disposition
+
+H01 now supplies actual source-cohort, SDK/store, policy, full-sweep recovery,
+ownership and authenticated IPC evidence. Its direct SDK/store suite passes
+13/13, actual SDK-through-IPC suite 14/14, transport suite 46/46 and shared
+contract/profile suite 102/102. Inference is synthetic. Selective recovery and
+packaged/native delivery remain unproved; prepared identities still require
+H02's real-store validation and activation before saved mappings.
+
+H24's actual worker/finalizer settlement finding is repaired, including the
+application/desktop shutdown path and repeated calls after event-loop teardown.
+The final focused run passes 34 cases. The implementation ledger keeps original
+failures, repairs, baseline reproductions and hidden UI evidence separate.
+See the [foundation handoff](../../implementation/OPENCODE_FOUNDATIONS_HANDOFF.md)
+for the complete validation limits and 18 remaining inherited backend failures.
+
+H02 is planned next. H05 lineage/recapture, H06/H18 deleted receipts and complete
+paired restore, and H03 selected-account authentication remain open. H20 final
+default delivery remains deferred; neither it nor DC21 is passed.
 

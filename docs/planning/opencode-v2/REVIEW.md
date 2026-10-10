@@ -1,16 +1,16 @@
 # Reviewable ticket breakdown
 
-The [three specs and coverage matrix](README.md) and [integration plan](../OPENCODE_V2_INTEGRATION_PLAN.md) provide the supporting decisions. Proposed test seam: existing domain/conversation commands plus the shared Harness facade, real local state/validators, counting synthetic inference; separate native/account/model acceptance. This review is for scope, seams, granularity and blockers, not implementation permission.
+The [three specs and coverage matrix](README.md) and [integration plan](../OPENCODE_V2_INTEGRATION_PLAN.md) provide the supporting decisions. The owner's [later instruction](../2026-10-04-user-answers.md#october-10-first-opencode-foundation-implementation-authorisation) authorises H01/H24 and accepts the existing test seams: domain/conversation commands plus the shared Harness facade, real local state/validators and counting synthetic inference. Native/account/model acceptance remains separate. Tracker publication is not required.
 
-The 25 slices below are in dependency order. H00/H24/H01 are independent initial work; H11/H19 are later optional strategies. Stable IDs preserve references from the adaptive reviews.
+The 25 tracked slices below are in dependency order. H00 is consumed at `fa3b590cd40de145c198a64168aa46b82384e2bc`. H24/H01 have local foundation acceptance from `c2bd896420fb88f76d63ca576414dbbba182f4c2`; the [implementation handoff](../../implementation/OPENCODE_FOUNDATIONS_HANDOFF.md) records tested commits and limits. H02 is planned next and the other 21 slices remain planned. H11/H19 are later optional strategies. Stable IDs preserve references from the adaptive reviews.
 
-1. **[H00 — Restore the existing saved-generation retrieval path](tickets/00-restore-the-existing-saved-generation-retrieval-path.md)** — Blocked by: none. Delivers: An existing five-question request reaches its selected synthetic provider, validates its citations and publishes one saved test before execution is migrated.
+1. **[H00 — Consumed saved-generation retrieval repair](tickets/00-restore-the-existing-saved-generation-retrieval-path.md)** — Satisfied at `fa3b590`; do not implement again. Retains the explicit saved/legacy caller guards and tested existing publication path for H12 to consume.
 
-2. **[H24 — Keep memory-worker ownership until extraction actually settles](tickets/24-keep-memory-worker-ownership-until-extraction-settles.md)** — Blocked by: none. Delivers: Stopping or closing a memory capture either settles the actual extraction worker or visibly blocks store handoff until it does.
+2. **[H24 — Keep memory-worker ownership until extraction actually settles](tickets/24-keep-memory-worker-ownership-until-extraction-settles.md)** — Completed local foundation. Blocked by: none. Delivers: Stopping or closing a memory capture either settles the actual extraction worker or visibly blocks store handoff until it does.
 
-3. **[H01 — Run a persistent headless OpenCode conversation](tickets/01-run-a-persistent-headless-opencode-conversation.md)** — Blocked by: none. Delivers: A client submits a synthetic learning request to the pinned, managed OpenCode host, observes its result, closes and reopens it with the same execution identity.
+3. **[H01 — Run a persistent headless OpenCode conversation](tickets/01-run-a-persistent-headless-opencode-conversation.md)** — Completed local foundation. Blocked by: none. Delivers: A client submits a synthetic learning request to the pinned, managed OpenCode host, observes its result, closes and reopens it with the same execution identity.
 
-4. **[H02 — Answer with an eligible Library passage](tickets/02-answer-with-an-eligible-library-passage.md)** — Blocked by: H01. Delivers: The same headless and existing desktop learning flow retrieves a real synthetic Library passage through a registered native tool and opens its citation.
+4. **[H02 — Answer with an eligible Library passage](tickets/02-answer-with-an-eligible-library-passage.md)** — Planned next; H01 prerequisite satisfied. Delivers: The same headless and existing desktop learning flow retrieves a real synthetic Library passage through a registered native tool and opens its citation.
 
 5. **[H03 — Use the selected subscription for tools and images](tickets/03-use-the-selected-subscription-for-tools-and-images.md)** — Blocked by: H01, H02. Delivers: A user chooses an existing permitted subscription/model and completes a text/tool or image learning turn through the new harness.
 
@@ -26,7 +26,7 @@ The 25 slices below are in dependency order. H00/H24/H01 are independent initial
 
 11. **[H09 — Use and revoke an explicitly connected MCP tool](tickets/09-use-and-revoke-an-explicitly-connected-mcp-tool.md)** — Blocked by: H04, H07. Delivers: A user connects a selected MCP server, approves a scoped operation and can disable or revoke it with a defined in-flight outcome.
 
-12. **[H12 — Adapt five-question saved generation to OpenCode](tickets/12-publish-one-validated-five-question-saved-test.md)** — Blocked by: H00, H02, H04, H05. Delivers: The existing chat/Tests producer sends its five-question generation through OpenCode and retains one canonical saved test in both destinations.
+12. **[H12 — Adapt five-question saved generation to OpenCode](tickets/12-publish-one-validated-five-question-saved-test.md)** — Satisfied prerequisite: H00. Blocked by: H02, H04, H05. Delivers: The existing chat/Tests producer sends its five-question generation through OpenCode and retains one canonical saved test in both destinations.
 
 13. **[H13 — Preserve existing 10- and 20-question checkpoints through OpenCode](tickets/13-resume-10-and-20-question-generation-without-duplicate-work.md)** — Blocked by: H12. Delivers: The existing generated-test job retains its validated 10/20-question batches through interruption while OpenCode owns execution and explicit retry.
 
@@ -54,5 +54,5 @@ The 25 slices below are in dependency order. H00/H24/H01 are independent initial
 
 25. **[H19 — Validate an optional additional or local provider](tickets/19-validate-an-optional-additional-or-local-provider.md)** — Blocked by: H04, H10. Delivers: An advanced user explicitly enables a supported extra provider or vLLM/Ollama endpoint under the same purpose and capability controls.
 
-The requested to-spec skill requires checking the proposed test seams; to-tickets requires approval of granularity and blockers before publication. Pending that review, these remain local GitHub-target drafts. The normal next step is publishing three spec issues and one issue per approved slice, with the ready-for-agent label and blocker references. Publication alone does not start execution.
+The earlier research requested seam/breakdown review before tracker publication. The later implementation instruction accepts the existing seams for H01/H24, so publication is not a prerequisite for this authorised local work. No tracker publication is requested. Retain H00 as a consumed prerequisite, not duplicate ready-for-agent work; the remaining planned tickets and all unproved acceptance stay open.
 

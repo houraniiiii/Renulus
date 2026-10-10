@@ -1,12 +1,16 @@
 # OpenCode integration specifications and vertical slices
 
-**Canonical Design C handoff:** H00 is already repaired in `fa3b590c`. H01–H24
-remain future work, and DC21 final delivery is deferred to H20. Consume the
+**Canonical Design C handoff:** H00 is already repaired in `fa3b590c`. H01/H24
+are complete for their local foundation scope from
+`c2bd896420fb88f76d63ca576414dbbba182f4c2`; see the
+[implementation handoff](../../implementation/OPENCODE_FOUNDATIONS_HANDOFF.md).
+H02 is the next planned slice; other uncompleted tickets remain planned. DC21 final
+delivery remains deferred to H20. Consume the
 [integration handoff](../../implementation/DESIGN_C_OPENCODE_HANDOFF.md) and
 [exact captured planning snapshot](../../implementation/opencode-plan-snapshot/README.md)
 before implementation; the dated review text below is preserved for context.
 
-2026-10-10. **Reviewed planning draft: three specs, 56 user stories and 25 vertical slices. All six adaptive research waves are complete; publication awaits the requested skill review. Implementation is not authorised.**
+2026-10-10. **Reviewed baseline: three specs, 56 user stories and 25 tracked slices.** All six adaptive research waves are complete. H00 is consumed, H01/H24 have local foundation acceptance, and 22 slices remain planned. The owner's [implementation instruction](../2026-10-04-user-answers.md#october-10-first-opencode-foundation-implementation-authorisation) accepts the existing seams for this initial work. Tracker publication is not required. Live account, migrated-client and packaged acceptance remain separate gates.
 
 Read the [integration plan](../OPENCODE_V2_INTEGRATION_PLAN.md), then the three specifications:
 
@@ -14,18 +18,18 @@ Read the [integration plan](../OPENCODE_V2_INTEGRATION_PLAN.md), then the three 
 2. [S2 — Evidence, memory and long context](specs/02-memory-context.md): answer lineage, correction/deletion, retrieval, temporary scope, educational compaction and history navigation.
 3. [S3 — Existing workflows and migration](specs/03-workflows-migration.md): generation/results/Home/nightly/Updates adapters, receipts, backup and Windows cutover.
 
-These are GitHub-target issue drafts under the requested to-spec/to-tickets workflow. GitHub Issues is the repository's existing queue; no issue is created and no ready-for-agent label applied before the required seam/breakdown review. This does not change the tracker or authorize implementation. Use stable H IDs until actual issue numbers are assigned, then replace blocker references with native GitHub relationships where supported.
+The files retain stable H IDs and their acceptance criteria. GitHub Issues remains the repository's queue, but no issue creation or ready-for-agent label is needed for the authorised local H01/H24 work. Remaining tickets stay planned; tracker publication is outside this task.
 
 ## Vertical slices
 
-Each ticket connects an observable outcome through the existing client/domain facade and OpenCode, with explicit acceptance and current-owner reuse. All inspect current source `76cfdff23e259700bec820e174c200540c7c1e1b`; older `528025ff` tests are dated separately. Reconcile later source changes before execution. DC IDs are coordination/contract obligations, not an assertion that those implementations are still missing.
+Each ticket connects an observable outcome through the existing client/domain facade and OpenCode, with explicit acceptance and current-owner reuse. The research inspected `76cfdff23e259700bec820e174c200540c7c1e1b`; older `528025ff` tests remain dated separately. The first implementation wave starts from the reconciled Design C baseline `c2bd896420fb88f76d63ca576414dbbba182f4c2`. DC IDs are coordination/contract obligations, not an assertion that those implementations are still missing.
 
 | Ticket | Connected outcome | Blocked by | Spec | Owner |
 | --- | --- | --- | --- | --- |
 | [H00](tickets/00-restore-the-existing-saved-generation-retrieval-path.md) | Completed prerequisite `fa3b590c`: existing saved-generation retrieval | — | S3 | M4 + integration |
-| [H24](tickets/24-keep-memory-worker-ownership-until-extraction-settles.md) | Keep memory-worker ownership until extraction actually settles | — | S2/S3 | M5 + F0/integration |
-| [H01](tickets/01-run-a-persistent-headless-opencode-conversation.md) | Run a persistent headless OpenCode conversation | — | S1 | F0 + integration |
-| [H02](tickets/02-answer-with-an-eligible-library-passage.md) | Answer with an eligible Library passage | H01 | S1/S2 | M2 + M1/F0 |
+| [H24](tickets/24-keep-memory-worker-ownership-until-extraction-settles.md) | Completed local foundation: retain memory-worker ownership through actual settlement | — | S2/S3 | M5 + F0/integration |
+| [H01](tickets/01-run-a-persistent-headless-opencode-conversation.md) | Completed local foundation: persistent headless OpenCode host | — | S1 | F0 + integration |
+| [H02](tickets/02-answer-with-an-eligible-library-passage.md) | Planned next: answer with an eligible Library passage | H01 satisfied | S1/S2 | M2 + M1/F0 |
 | [H03](tickets/03-use-the-selected-subscription-for-tools-and-images.md) | Use the selected subscription for tools and images | H01, H02 | S1 | F0 |
 | [H04](tickets/04-adjust-roles-and-configuration-with-visible-activation.md) | Adjust roles and configuration with visible activation | H01, H03 | S1 | F0 + integration |
 | [H05](tickets/05-complete-a-learning-turn-whose-memory-stays-corrected.md) | Complete a learning turn whose memory stays corrected | H02, H04, H24 | S2 | M5 + M1 + integration |
@@ -33,7 +37,7 @@ Each ticket connects an observable outcome through the existing client/domain fa
 | [H07](tickets/07-delegate-a-bounded-evidence-review-and-stop-its-children.md) | Delegate a bounded evidence review and stop its children | H02, H04, H05 | S1/S3 | F0 + M1/M2 |
 | [H08](tickets/08-apply-versioned-instructions-and-skills-to-a-learning-task.md) | Apply versioned instructions and skills to a learning task | H04, H06 | S1/S2 | F0 + M1 |
 | [H09](tickets/09-use-and-revoke-an-explicitly-connected-mcp-tool.md) | Use and revoke an explicitly connected MCP tool | H04, H07 | S1 | F0 + integration |
-| [H12](tickets/12-publish-one-validated-five-question-saved-test.md) | Adapt five-question saved generation to OpenCode | H00, H02, H04, H05 | S3 | M4 + integration |
+| [H12](tickets/12-publish-one-validated-five-question-saved-test.md) | Adapt five-question saved generation to OpenCode | H02, H04, H05; H00 satisfied | S3 | M4 + integration |
 | [H13](tickets/13-resume-10-and-20-question-generation-without-duplicate-work.md) | Preserve existing 10- and 20-question checkpoints through OpenCode | H12 | S3 | M4 + F0/integration |
 | [H14](tickets/14-explain-deterministic-reviewed-test-results.md) | Explain deterministic reviewed-test results | H03, H04, H05 | S3 | M4 + M5/F0 |
 | [H15](tickets/15-generate-daily-suggestions-from-eligible-learning.md) | Route existing daily suggestions and Quick practice through the harness | H05, H12 | S3 | M6/M1 + M4/M5 |
@@ -48,7 +52,7 @@ Each ticket connects an observable outcome through the existing client/domain fa
 | [H11](tickets/11-recover-older-detail-through-a-derived-history-view.md) | Recover older detail through a derived history view | H10, H18 | S2 | M1/M5 + F0 |
 | [H19](tickets/19-validate-an-optional-additional-or-local-provider.md) | Validate an optional additional or local provider | H04, H10 | S1/S2 | F0 future optional lane |
 
-H00 repairs the current generation guard mismatch; H24 repairs actual memory-worker settlement; H01 proves the managed host. These three initial slices can proceed independently. H01 establishes paired-store contracts before H06 migrates saved history. H21 separately proves temporary execution and Save; H22/H23 explicitly migrate fictionalisation/import producers. H18 consumes all default producers' proofs for paired-store restore, and H20 performs Windows cutover. One M5/integration owner controls shared lineage schema.
+H00 is a satisfied prerequisite; H12 consumes its repaired guard without repeating the work. H24 (actual memory-worker settlement) and H01 (managed host proof) are completed local foundation slices from `c2bd8964`; H02 is the next planned slice. Preserve the repair and landed Design C owners. H01 establishes paired-store contracts; H02 validates and activates the first saved generation before H06 migrates saved history. H21 separately proves temporary execution and Save; H22/H23 explicitly migrate fictionalisation/import producers. H18 consumes all default producers' proofs for paired-store restore, and H20 performs Windows cutover. One M5/integration owner controls shared lineage schema.
 
 H11 (evaluated history tree) and H19 (optional future providers) do not block default cutover. H10 supplies mandatory exact-history retrieval and context accounting; tree activation requires H11's extended H18 retention/restore acceptance. The table is in dependency order even though stable H identifiers reflect discovery order.
 
@@ -68,9 +72,9 @@ H11 (evaluated history tree) and H19 (optional future providers) do not block de
 | Minimal upstream edits | S1; H01/H07/H09/H10/H18 | Supported composition first; a failing connected test, narrow patch and removal condition if needed |
 | End-to-end Windows harness | All; H20 | Matching packaged artifact, native install/auth acceptance and existing varied-domain client flows |
 
-## Proposed review seam
+## Accepted foundation test seams
 
 Use the existing public domain/conversation commands plus the small Harness facade as the highest useful test seam. The headless client and desktop use the same operations and receipts. Keep actual SQLite, validators and selected local engines where relevant; substitute only external inference with a counting scripted transport. Use lower-level failure injection for dispatch, plugin readiness, temporary spills and packaging where the public interface cannot express a failure precisely. Record actual account/model/window and native Windows acceptance separately.
 
-Publication review asks whether these seams and this vertical breakdown match the owner's expectations. It does not ask to implement. The full source and check ledger is [here](../../research/2026-10-10-opencode-integration/README.md).
+The owner's instruction to implement H01/H24 accepts these existing planned seams; no new seam approval or tracker publication is needed. Use one behavioural failing test followed by minimal implementation per cycle. The full source and check ledger is [here](../../research/2026-10-10-opencode-integration/README.md).
 

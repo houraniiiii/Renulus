@@ -39,3 +39,12 @@ Preserve the canonical DC owner and acceptance in the [Design C spec](../../DESI
 ## Evidence and validation
 
 [Focused evidence](../../../research/2026-10-10-opencode-integration/w1-05-model-routing.md); [integration plan](../../OPENCODE_V2_INTEGRATION_PLAN.md). Exercise observable behavior through the existing public domain/conversation facade and shared Harness interface. Record scripted transport, real engine, real account and packaged acceptance separately. Existing failures remain open until the corresponding acceptance proves their resolution.
+
+The subsequent [foundation regression sweep](../../../implementation/opencode-foundations-h24.md)
+reproduced four existing provider catalogue/capability assertions on the Design C
+baseline: image catalogue after inference authentication failure, two failed-auth
+availability variants, and capability after a transient refresh failure. The
+provider/auth/policy/adapter sources are unchanged from that baseline. H03 must
+resolve the distinction between documented modality support and current account
+access when repairing these tests and behavior. H01's scripted SDK proof does
+not close this acceptance or establish a working subscription connection.

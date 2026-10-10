@@ -1,6 +1,6 @@
 # S1 — Configurable OpenCode execution harness
 
-Status: draft for review; implementation is not authorised by this document.
+Status: reviewed specification. H01 has local foundation acceptance in the [implementation handoff](../../../implementation/OPENCODE_FOUNDATIONS_HANDOFF.md). H02 and the remaining configuration, routing, extension and release slices stay planned; their acceptance is not completed by the host foundation.
 
 ## Problem Statement
 
@@ -37,6 +37,7 @@ Embed the selected OpenCode v2 runtime behind one small Renulus harness interfac
 
 - The Harness module owns admission, observation, permission/resume decisions and cancellation semantics. The OpenCode implementation owns the loop, transcript, inbox/claims, tool lifecycle, children and recovery. Domain operations that do not need inference remain directly callable.
 - One managed local host owns each persistent runtime store. A separate existing Python process owns domain engines and records. Readiness includes policy and domain availability, not merely a listening endpoint. Host shutdown waits for bounded settlement and prevents competing owners.
+- H01 establishes a prepared paired-store manifest, without asserting either store is validated. H02 validates the actual stores and activates the initial selection before its first saved conversation mapping, including safe reopen and interrupted-activation reconciliation. H06 consumes this selection for legacy migration; H18 later proves complete paired backup/restore. Parsing the manifest does not validate the underlying stores.
 - Reuse current conversation commands, run receipts and domain policy/context epochs. A separate in-memory runtime graph owns temporary sessions, children and volatile tool outputs; a selected instance in the persistent host is insufficient. Keep retained event payloads disabled initially and redact diagnostic attributes.
 - The proof uses one source-built OpenCode dependency cohort. Published SDK 2.0.26 is not interchangeable with the newer inspected source. Pin build/runtime/native/WASM artifacts and licence provenance before acceptance. A successful source inspection is not packaged acceptance.
 - One Configuration module stores immutable versions and the active pointer. Stage, validate, construct, health-check and activate a complete candidate. Preserve a known healthy version on failure. A session binds a version; current revocations narrow it. Credentials remain protected references outside session metadata.
@@ -73,7 +74,7 @@ Embed the selected OpenCode v2 runtime behind one small Renulus harness interfac
 
 ## Out of Scope
 
-Implementing now; replacing approved data engines; a hosted Renulus service; mandatory local inference; automatic provider purchases; arbitrary untrusted code containment; adopting OpenCode's application UI; or claiming persistent Windows terminal support.
+Implementing the remaining planned harness slices in the initial H01/H24 batch; replacing approved data engines; a hosted Renulus service; mandatory local inference; automatic provider purchases; arbitrary untrusted code containment; adopting OpenCode's application UI; or claiming persistent Windows terminal support.
 
 ## Further Notes
 

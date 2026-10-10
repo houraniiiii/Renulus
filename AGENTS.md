@@ -49,9 +49,12 @@ work. Keep edits scoped to the user's current request.
   The older Round 3 implementation plan retains foundation guidance but does not
   override later UI or retention decisions. Use `codex/` branches from the shared
   committed baseline. Every feature must deliver a connected working flow.
-- Hermes is the confirmed fork foundation. Reuse its runtime and suitable
-  existing Electron/React desktop components before building replacements.
-  Preserve the upstream licence and patch provenance. Supermemory was evaluated
+- OpenCode v2 is the selected replacement harness target as of 2026-10-10;
+  follow `docs/planning/OPENCODE_V2_INTEGRATION_PLAN.md` and its tickets.
+  The completed Design C baseline still uses Hermes. Preserve its working
+  adapters and Electron/React components until the connected migration replaces
+  them; a foundation host does not authorize default cutover. Preserve upstream
+  licences and patch provenance. Supermemory was evaluated
   and is now excluded from adoption by the user's later research request;
   replacement engines must themselves be open source.
 - The user approved the starting stack on 2026-10-04: Mem0 OSS through Hermes's

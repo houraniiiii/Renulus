@@ -1,12 +1,12 @@
 # H02 — Answer with an eligible Library passage
 
-**Status:** draft — review pending; implementation not authorised by this research request.
+**Status:** planned next — H01's local foundation prerequisite is satisfied. H02 is not implemented in the first foundation batch.
 
 **Spec:** [S1](../specs/01-harness-control.md), [S2](../specs/02-memory-context.md)
 
 **Owner:** M2 + M1/F0
 
-**Current source baseline:** `76cfdff23e259700bec820e174c200540c7c1e1b`. Reconcile later changes before implementation.
+**Implementation input:** consume the [foundation handoff](../../../implementation/OPENCODE_FOUNDATIONS_HANDOFF.md) on `codex/opencode-foundations`, including the final Design C baseline `c2bd8964`, H01's `b5101da0` and H24's `756c8ebc`. The older research baseline `76cfdff23e259700bec820e174c200540c7c1e1b` is historical. Reconcile subsequent changes before implementation.
 
 ## What to build
 
@@ -19,6 +19,7 @@ Existing Library, retrieval and passage-opening APIs plus the landed conversatio
 ## Acceptance criteria
 
 - [ ] Retain the existing Python Library/rights/index implementations; direct listing/import still works without an agent turn.
+- [ ] Before the first saved mapping, validate the actual canonical schema-2 store and native runtime store against H01's prepared manifest, select the initial active generation under the existing writer/admission barrier, and support reopening that validated selection. Failed validation or interrupted activation must remain non-admitted and reconcile without generation. H01's prepared file alone is not an active-store proof. This initial activation belongs here; H06 migrates legacy conversations and H18 later proves complete paired backup/restore.
 - [ ] Tool calls carry host-derived scope, revision and cancellation data; changed eligibility before read or publication blocks the result.
 - [ ] Persist one completed-answer/publication receipt and stable engine mapping, with digest conflict detection and lost-ack reconciliation.
 - [ ] Expose progress, tool activity and terminal result through one event mapping; a client disconnect does not invent cancellation or repeat the effect.

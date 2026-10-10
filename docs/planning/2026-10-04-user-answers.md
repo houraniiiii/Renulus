@@ -554,3 +554,110 @@ context, structures the implemented design record and separates old execution
 instructions from current work. Parallel implementation should start from the
 committed baseline, retain stable DC ticket IDs and use the spec's dependency,
 ownership and adversarial-review rules. Historical evidence retains its dates.
+
+## October 10 harness direction and foundation reassessment
+
+After reviewing the Renulus/Hermes/Pi/OpenCode comparison, the owner clarified
+that Renulus should primarily be a harness with data, retrieval, tools,
+execution and subagents. The application should be a client of that capability,
+rather than the main architectural centre of the project.
+
+The owner requested a study of Hermes, Pi and OpenCode v2, a recommendation of
+the best foundation to adopt, and a reasoned account of what to take from the
+other approaches. At least 30 subagent reviews were explicitly requested before
+the recommendation. This reopens the foundation evaluation; it does not select
+a replacement, approve dependencies or authorise a runtime migration. Earlier
+product, model/subscription and data-ownership constraints remain in force.
+The resulting recommendations belong in dated research until selected.
+
+The [completed October 10 source study](../research/2026-10-10-harness-foundation-recommendation.md)
+records thirty distinct completed subagent reviews. Its recommendation is Pi
+architecture with pi-durable as a conditional first proof candidate, retaining
+Renulus's Python domain services and borrowing specific Hermes/OpenCode patterns.
+This is the research outcome, not an additional confirmed user decision.
+
+## October 10 OpenCode v2 selection and integration planning
+
+After reading the main study and a deeper [side-conversation record](../research/2026-10-10-pi-opencode-v2-side-chat-findings.md),
+the owner explicitly selected **OpenCode v2 as Renulus's intended harness**.
+This supersedes Hermes as the future execution-foundation decision and the
+assistant's earlier Pi recommendation. Existing delivered code and its dated
+evidence remain Hermes-based until migration is implemented and verified.
+
+The owner requested research, tests, validation and an end-to-end plan, then
+specs and vertical-slice tickets using the `to-spec` and `to-tickets` workflows.
+Do not start implementation. Run at least six waves of up to six parallel
+subagents, choosing later investigations from findings rather than fixing all
+waves in advance. Review findings and decisions for gaps and errors, cite
+primary evidence and concentrate the spec on the main integration pieces.
+
+Confirmed needs:
+
+- Integrate current work without duplicate engines, records or orchestration.
+- Make learner memory work correctly, retaining the approved open-source data
+  stack and canonical ownership unless a separate change is justified.
+- Support instructions, skills, MCP, plugins, model routing, agent loops,
+  fallbacks, subagents and deterministic orchestration.
+- Make purpose-specific model choices configurable for images, test generation,
+  test summaries, updates and other backend tasks. A named model's suitability
+  or account capability must be evidenced, not guessed from its name.
+- Make model, provider, policy and extension changes reliable and inspectable.
+- Enable future optional local inference through vLLM/Ollama and additional
+  providers. Current subscription defaults remain, and ordinary doctors are
+  not required to install or operate inference infrastructure.
+- Target 128K–256K context windows with deliberate injection/instruction/context
+  management. Study the [requested history/memory article](https://gist.github.com/VictorTaelin/91837951a5ce5b38f341ec1ba1df6449)
+  and verify what should be adapted for Renulus.
+- Keep upstream edits minimal and limited to demonstrated integration needs.
+
+Exact artifact/runtime pins, provider capability evidence, role model mappings,
+retry/fallback defaults, context algorithms and ticket sequencing remain
+engineering proposals until recorded with their evidence. Historical no-silent-
+subscription-switch and visible rejection rules remain the starting defaults;
+the new request opens configurable fallback design without authorising arbitrary
+cross-provider dispatch, paid calls or automatic replay of uncertain work.
+
+## October 10 first OpenCode foundation implementation authorisation
+
+After the Design C handoff, the owner requested that several subagents read that
+session and the current plans, merge or commit its work, implement the most
+important first foundation tickets in a worktree using the named skills, and
+test the UI. The integration task selected **H01 and H24** as the independent
+initial frontier from `c2bd896420fb88f76d63ca576414dbbba182f4c2`, in
+`C:/Users/karol/.codex/worktrees/opencode-foundations/repo`. This ticket selection
+is an engineering decision within that authorisation, not a separately stated
+user preference. They were dispatched as the first implementation batch.
+**H02 remains planned as the next dependent slice after H01**;
+all other uncompleted H tickets remain planned. H00 is an already completed
+prerequisite in this baseline and must not be implemented again.
+
+The instruction to implement accepts the existing planned public test seams:
+existing domain/conversation commands plus the small Harness facade, actual
+local state and validators, and counting synthetic external inference. Existing
+lower-level failure-injection seams remain as specified. No new seam approval
+or tracker publication is needed for this authorised foundation work. Use one
+behavioural failing test followed by minimal implementation per cycle.
+
+The parent implementation task may use subagents, commits in the isolated
+foundation worktree and hidden app-scoped UI testing. Canonical
+`C:/Renulus/dev/repo` and research `C:/Users/karol/.codex/worktrees/a11f/repo` remain
+read-only to these lanes; preserve others' changes and let the parent integrate
+shared paths. Use `C:/Renulus/dev/python/Scripts/python.exe` and owned synthetic
+state under `C:/Renulus/scratch/oc-foundations/<lane>`. Private profiles and
+credentials, live providers, the default launcher, installation, pushes,
+tracker publication and cross-chat messaging are outside this authorisation.
+
+This batch applies the later implementation instruction to **H01/H24**. The
+instruction itself does not establish a working OpenCode host, settlement proof,
+H02 acceptance or migration/release completion. Preserve the final Design C
+[handoff](../implementation/DESIGN_C_OPENCODE_HANDOFF.md), including its passing
+App producer rerun, the immutable 99-file planning snapshot and the transfer of
+DC21's final default Windows acceptance to H20. Neither DC21 nor H20 is passed.
+
+The subsequent [implementation handoff](../implementation/OPENCODE_FOUNDATIONS_HANDOFF.md)
+records H01/H24's completed local scope, source commits, real SDK/store and IPC
+tests, memory/application settlement tests, hidden UI checks and remaining
+baseline failures. This is an engineering result under the instruction above,
+not a new user decision. The default application still uses the existing
+execution path; H02, selected-account integration, migration and release remain
+later work.
