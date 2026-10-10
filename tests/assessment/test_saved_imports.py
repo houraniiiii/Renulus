@@ -612,17 +612,23 @@ async def test_actual_cpu_ocr_import_preserves_image_location_and_partial_source
     assert len(transport.calls) == before + 1
     blank_path = services.paths.root / "synthetic-empty-ocr.png"
     Image.new("RGB", (640, 480), "white").save(blank_path)
-    failed = services.get("knowledge").import_file(blank_path, rights=own_text_rights(), title="Synthetic image with no extractable test")
-    assert failed["status"] == "failed", failed
+    empty = services.get("knowledge").import_file(blank_path, rights=own_text_rights(), title="Synthetic image with no extractable test")
+    # An image can finish the Library pipeline without yielding any OCR text.
+    # DC17 uses the canonical-text capability rather than the ready label alone.
+    assert empty["status"] == "ready", empty
+    assert services.db.fetch_one("SELECT COUNT(*) AS n FROM knowledge_passages WHERE revision_id=?", (empty["revision_id"],))["n"] == 0
     with pytest.raises(ApiError) as error:
-        service.create(CreateImportRequest(idempotency_key="actual-failed-ocr-refusal",
-            original={"kind": "library_revision", "revision_id": failed["revision_id"]}))
-    assert error.value.code == "saved_extraction_failed"
+        service.create(CreateImportRequest(idempotency_key="actual-empty-ocr-refusal",
+            original={"kind": "library_revision", "revision_id": empty["revision_id"]}))
+    assert error.value.code == "saved_extraction_unavailable"
     assert len(transport.calls) == before + 1
 
 
 @pytest.mark.parametrize("format_version", [1, 2])
-def test_actual_library_import_original_reopens_after_zip_without_reextracting(extracted_imports, tmp_path, format_version):
+def test_actual_library_import_original_reopens_after_zip_without_reextracting(extracted_imports, tmp_path, monkeypatch, format_version):
+    # The directory's autouse assessment-only fixture overrides the module-scoped
+    # extraction fixture between cases. Reopen the same assembled feature graph.
+    monkeypatch.setattr("renulus.server.MODULE_ORDER", ("runtime", "content", "knowledge", "learn", "cases", "assessment", "memory", "study"))
     services, service, transport, note, _ = extracted_imports
     row = service.create(CreateImportRequest(idempotency_key=f"actual-library-zip-{format_version}",
         original={"kind": "library_revision", "revision_id": note["revision_id"]}))
