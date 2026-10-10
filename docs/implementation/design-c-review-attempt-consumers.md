@@ -1,0 +1,251 @@
+# Design C attempt consumers — independent backend/data review, pass 2
+
+October 10, 2026. Assigned integration baseline
+**84be584e90d54192305495eec58dc6c929b4e5ed**, normally merged into
+`codex/dc-review-assessment` as **940841d49b081da2831ada0d4b69f6b28f8a5164**.
+`git diff 84be584e HEAD -- runtime apps tests packages` was empty before this
+report: the reviewed production/test sources match the assigned baseline.
+Worktree/root: `C:/Renulus/dev/worktrees/dc-review-assessment`. The sole edit
+reservation for this pass is this report. No attempt, consumer, shared code,
+test, spec, schema, manifest or ticket status was edited; no push was performed.
+
+**Disposition:** preserve the passing scalar/policy/history boundaries, repair
+the report provenance projection, connect Home's Memory adapter to the new
+canonical producer, and settle automatic recovery of interrupted capture. This
+pass does not close DC06 or DC12–DC20. Findings were sent to the parent as the
+actual producer probes completed; Home findings were also sent to its owner.
+
+## Scope and evidence
+
+Read the workspace/product/design rules and the current C spec/execution/app
+control records; inspected the integrated Home, Memory, import, fictionalisation,
+saved-generation, saved-test/report, Study-help/publication and typed recovery
+implementations. This is backend/data review. No renderer, hidden Electron,
+installation, physical input, live provider or owner-profile acceptance is claimed.
+
+All writable runtime/test state, scripts and receipts are under
+`C:/Renulus/scratch/design-c/dc-review-assessment/pass2/`. The independent script
+uses actual `create_app`, installed migrations, ProviderManager, HTTP routers and
+canonical SQLite producers. Reviewed questions are original synthetic tokens
+through the existing synthetic content fixture. Imports use actual paste parsing,
+explicit resolution and Save. Fictional tests use the actual trusted transform,
+independent review and private publisher, with only the external subscription
+transport replaced by original synthetic responses. No provider credentials were
+read or copied; the fixture's synthetic token is held in process.
+
+Memory observations execute the actual `scan/enqueue/claim/material/commit_capture`
+repository path, without starting its background worker, embedding engine or
+derived index. Home's delayed-publication observation runs its actual
+ProviderManager/job/cache producer. No fixture DDL or fabricated saved-version
+publication outcomes are used by the independent script. Privileged SQL mutation
+is confined to the explicit forged-evidence test in the owned synthetic profile.
+
+Retained receipts:
+
+- `probe.py`, `probe03.txt`, `probe-results.json`, `profile-probe03/`: ten final
+  observations R21–R30; final process exit 0. The script refuses an existing
+  profile name, making reproduction use a fresh profile.
+- `probe01.txt`, `probe-partial-results.json`, `profile-probe01/`: the first run
+  completed R21–R29, then failed at harness cleanup because the conversation
+  property is `streaming`, not `streams`. This is a harness error, not a product
+  failure. Only scratch code was corrected.
+- `probe02.txt`, `profile-probe02/`: corrected R21–R29 run, exit 0. The final
+  script adds fictional completion/deletion/restore observation R30.
+- `regression01.txt`, `pytest01/`: **132 passed, 1 skipped, 1 warning in
+  428.89 seconds**. The skip is the explicitly opt-in assembled Home
+  loopback-renderer test requiring `RENULUS_HOME_CONNECTED=1`; it was not
+  silently counted as acceptance. The warning is installed Starlette/httpx
+  deprecation. Existing regression fixtures have their separately bounded scopes.
+
+Regression command:
+
+```text
+python -m pytest tests/study/test_home_suggestions.py
+  tests/memory/test_whole_attempt_evidence.py
+  tests/assessment/test_saved_imports.py
+  tests/integration/test_design_c_chat_tests.py
+  tests/integration/test_design_c_study_help.py
+  tests/integration/test_design_c_import_migration.py
+  -q -p no:cacheprovider
+  --basetemp C:/Renulus/scratch/design-c/dc-review-assessment/pass2/pytest01
+```
+
+Reproduce the independent script with
+`C:/Renulus/dev/python/Scripts/python.exe <scratch>/probe.py <fresh-profile-name>`,
+`PYTHONPATH=C:/Renulus/dev/worktrees/dc-review-assessment/runtime`,
+`PYTHONDONTWRITEBYTECODE=1`, TMP/TEMP in the stated scratch root, and
+`HF_HUB_OFFLINE=1`/`TRANSFORMERS_OFFLINE=1`. It makes no external requests.
+
+## Material findings and remediation
+
+### C1 — P1: independent reports discard the producer provenance envelope
+
+The report writer receives the attempt's full frozen producer envelope, but
+`save_question_report` projects it to only `schema` and one `items` entry.
+Question text/options/key, terms, origin, review quality and source references
+remain pinned; this is specifically a loss of producer/source authority, not
+loss of the report row or a public key disclosure.
+
+**R24 reproduction:** actual paste import → explicitly resolve both keys →
+Save → start whole Test → atomically submit the two latest answers → POST
+`/api/v1/assessment/test-attempts/{id}/reports`. The response is correctly neutral
+with exactly `id/status/created_at`. The attempt's private pinned envelope has
+`schema/producer/import/items`, including the original SHA-256, import ID/revision,
+source pin and private flag. The report's `question_snapshot_json.provenance` has
+only `schema/item`; its retained character spans are no longer independently
+bound to that original hash.
+
+**R26 reproduction:** actual private Quick practice → trusted transform plus
+separate independent review (two actual ProviderManager calls with synthetic
+transport) → publish exactly five → whole Study answer commitment → local
+report. The attempt's envelope retains `fictionalisation` with boundary version,
+validation ID, artifact SHA, selected route and privacy-review method. The
+report stores exactly `{schema: saved-test-provenance/1, item: null}` because
+this producer has no `items` envelope. It loses the privacy-boundary receipt.
+
+R25/R30 prove reports and attempts survive collection deletion and restore with
+nullable live version pointers. Survival makes the truncated report an
+independent historical row; resolving the missing metadata through the deleted
+version is no longer possible. The attempt currently retains it, but that
+separate record is not an appropriate hidden ownership prerequisite for the
+report's own immutable provenance.
+
+**Required repair, collection/report owner:** retain the validated frozen native
+producer envelope in the private report snapshot, including origin-specific
+import/fictionalisation/generation/reviewed-pack metadata and the relevant item.
+Keep the public acknowledgement neutral. Do not add raw chat/case source, private
+input text or a renderer attestation. Use the already trusted pinned envelope,
+with a documented snapshot version/compatibility rule. Existing snapshots need
+an explicit incomplete-provenance treatment; do not invent missing validation.
+No DDL expansion is needed to store the repair in the existing snapshot JSON.
+
+**Required proof:** actual imported and fictional report, then remove both live
+version and any live attempt dependency and restore an older bundle. Report row,
+question pin, original hash/source pin or fictional receipt, terms and origin
+must survive unchanged; public replay remains neutral and policy guarded.
+
+Source: [saved report writer](../../runtime/renulus/assessment/test_repository.py),
+lines 392–427, especially 416–417; [import publication](../../runtime/renulus/assessment/import_service.py),
+lines 515–524; [fictional publication](../../runtime/renulus/assessment/generation_service.py),
+lines 64–85. C spec DC12 requires delete/restore to preserve required provenance
+or explicit unavailable references; DC13 requires reports to survive restart
+unchanged. Section 10 explicitly gives independently pinned provenance to
+attempts/reports/job outcomes.
+
+### C2 — P2: Home accepts whole-attempt activity but drops its canonical Memory fact
+
+The new activity branch correctly uses `committed_evidence_in`. The separate
+Memory branch still requires a legacy `payload.scope` and restricts sources to
+`study-interest/study-answer/assessment-answer/learning-point`. New
+`assessment-test-answer` deliberately has no legacy scope object and is absent
+from that allowlist.
+
+**R21 reproduction:** actual saved reviewed version → whole Study start →
+explicit Submit answer → actual Memory enqueue/claim/material/capture. Canonical
+Memory has one fact, in `reviewed-assessment`, and capture ignores a supplied
+forged text sentinel. `HomeService._context(conn)` returns learning activity 1,
+Memory 0, and no `memory_revision` pin. Home still receives the scalar activity;
+this is an omitted consumer path, not complete loss of the initial answer signal.
+
+**R22 reproduction:** edit that actual canonical fact to a personal corrected
+learning interest through `MemoryRepository.edit`. Revision 2 remains inspectable
+as the sole canonical fact. Suppression correctly excludes regeneration/direct
+old evidence, but Home now returns both activity 0 and Memory 0. The retained
+correction is not passed to personalisation. Independently edited facts need an
+explicit eligibility decision rather than inheriting permanent exclusion from
+their superseded producer.
+
+**Required repair, Home owner:** resolve the new source through the trusted
+scalar helper inside `_context` and publication transactions; validate the exact
+captured scope/cohort and pin both source digest and canonical Memory revision.
+Never read raw commitments or private attempt snapshots. Define how an explicit
+canonical correction establishes independent fact authority while keeping the
+old source suppressed; preserve scope/retention exclusions. Memory deletion
+must still remove both the fact and applicable activity. Do not simply add the
+new string to the legacy allowlist or accept a fabricated legacy scope field.
+
+**Required proof:** actual reviewed and personal whole commitments → automatic
+Memory capture → Home prompt/pins; correct the fact, then delete it; change
+source availability, suppression, policy and epoch during generation. Updated
+eligible correction should be used without resurrecting old text; stale output
+must not publish. Retain assisted/repeat independently and personal practice as
+unreviewed key comparison.
+
+Source: [Home context](../../runtime/renulus/study/home_service.py), lines 160–181
+and 185–226, especially 205–208; [canonical capture](../../runtime/renulus/memory/repository.py),
+lines 176–216 and 382–401; [Memory correction](../../runtime/renulus/memory/repository.py),
+lines 129–146. C spec DC06 uses eligible usage/Memory and DC10 preserves
+inspection/edit/delete/provenance; the completion matrix requires Memory edits
+and deletion to affect later personalisation.
+
+### C3 — P2: safe boundary cancellation becomes permanent automatic-capture loss
+
+**R27 reproduction:** obtain actual fictional whole-Study evidence; enqueue and
+claim a Memory job; start and finalise another whole Test; attempt late capture.
+The old job is correctly rejected during Test and remains stale after Test ends
+because its policy fingerprint changed. `commit_capture` writes no fact and
+marks the old job cancelled. Calling `scan()` leaves only that cancelled job.
+Explicitly enqueueing the same still-eligible evidence succeeds with a distinct
+fingerprint and state `queued`.
+
+The scanner excludes any evidence having any historical job, regardless of
+state/fingerprint. `retry()` only changes failed jobs; the worker's normal scan
+therefore cannot recover this valid commitment after a temporary boundary.
+Restore similarly records `restore_interrupted` cancellation. This finding is
+loss of automatic recovery, not a reason to weaken the publication guard.
+
+**Bounded repair proposal, Memory/shared worker owners:** distinguish explicit
+user cancellation and suppression from policy/restore interruption. Permit a
+fresh job only for eligible boundary-interrupted evidence with a new canonical
+fingerprint, while deduplicating queued/running/completed captures. Do not loop
+on permanently missing/forged/deleted sources, or undo a user cancellation.
+Current state/error columns can carry the distinction; establish semantics
+before changing the worker's cancellation path.
+
+**Required proof:** active Test never captures; one fresh capture occurs after
+finalisation/recovery; repeated scans deduplicate; explicit cancellation,
+correction/suppression and deletion never auto-requeue. No inference is needed
+for these structured scalar commitments.
+
+Source: [scanner](../../runtime/renulus/memory/repository.py), lines 320–330;
+[capture cancellation/retry](../../runtime/renulus/memory/repository.py), lines
+382–419; [worker cancellation](../../runtime/renulus/memory/service.py), lines
+199–239; [restore interruption](../../runtime/renulus/storage/invalidation.py),
+lines 35–56. No worker or shared-policy changes are included here.
+
+## Passing observations and limits
+
+| Probe | Actual result at this baseline |
+| --- | --- |
+| R23 imported whole Test | Start omits keys/commitments/results. Home, Memory facts, private import, saved collection and a different Study attempt all return 409 during active Test. Final submission commits the latest two choices atomically: personal correct 2/denominator 2; fresh reviewed denominator 0; scalar evidence `reviewed=false`, `bank_cohort_eligible=false`. |
+| R25 imported deletion/recovery | Delete collection and private import, then actual restore of older records: neither deleted root returns; attempt and report remain; result digest unchanged; report live version null; attempt marks unavailable provenance; trusted scalar evidence is ineligible. |
+| R26 fictional boundary | Actual transform and independent review publish exact five; source text and source request ID are absent from exported records, and source text is absent from profile files. Saved/attempt origin is generated, quality personal. The report provenance defect is C1. |
+| R28 forgery | Mutating the evidence payload to claim reviewed/fresh eligibility and include a private key is rejected by the attempt authority and Memory currentness; the sentinel never enters Home material. |
+| R29 epoch | Hold an actual Home ProviderManager response, bump context epoch, then release: job fails `dependency_changed`, with no published suggestion cache. |
+| R30 fictional result/recovery | End Study after one of five explicit answers, delete the actual saved collection, restore older records: result hash unchanged; personal correct 1/denominator 1; four remain not submitted; attempt retains the fictional privacy envelope and marks unavailable provenance; report survives with null live version. |
+
+The selected regression also covers drafts, unanswered/excluded commitments,
+assisted/repeat flags, typed overlapping Learn tombstones, missing/deleted
+sources, suppression, policy cycles, import retry/permission gates, both ZIP
+formats, and current/stale/forged Study-help transaction/publication checks.
+These passes do not repair C1–C3; the independent probes exercise combinations
+not asserted by the existing tests.
+
+Actual Library extraction/import with pinned helper assets, derived Memory
+index/recall, all legacy bypass routes, hidden UI handoffs, timed app closure/
+reopen and installed recovery were not independently rerun in this pass. Paste
+import and private fictional saved versions were exercised through production
+consumers. No new timer defect was reproduced, and no all-consumer, clinical,
+live-provider or ticket-completion claim is made.
+
+## Handoff
+
+The parent owns integration, shared storage/publication/policy and acceptance.
+Collection/report ownership should handle C1; Home owns C2; Memory/shared-worker
+owners should agree the bounded C3 recovery semantics. Use small disjoint fixes
+and preserve this baseline/receipts. Do not remove immutable history or loosen
+the passing scalar/active-Test/epoch guards to make consumer tests green.
+
+This report is the only changed path. Testcase scripts, profiles and receipts
+remain in the owned scratch directory. Local report commit follows explicit
+file staging; dependent implementation is not included.
