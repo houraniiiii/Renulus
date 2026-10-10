@@ -8,6 +8,8 @@
     "mode": "test",
     "status": "active",
     "draft_revision": 2,
+    "committed": [],
+    "result": null,
     "timing": {
       "kind": "timed",
       "duration_seconds": 600,
@@ -36,6 +38,27 @@
         "marked": true
       }
     ]
+  },
+  "study_committed": [
+    {
+      "item_id": "fiction_item_1",
+      "option_ids": [
+        "a"
+      ],
+      "committed_at": "2026-10-10T12:00:00Z",
+      "correct": true,
+      "assisted": true,
+      "repeat": false
+    }
+  ],
+  "study_result": {
+    "item_count": 5,
+    "answered_count": 1,
+    "unanswered_count": 4,
+    "excluded_count": 0,
+    "scored_count": 1,
+    "correct_count": 1,
+    "completed_at": "2026-10-10T12:00:00Z"
   },
   "exposure": {
     "id": "exposure_fiction_1",

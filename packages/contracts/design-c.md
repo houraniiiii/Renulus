@@ -135,6 +135,11 @@ Lost save acknowledgements reconcile against backend revision/outcome.
   no score/evidence. Manual final submit supplies the latest displayed full draft
   or requires the matching durable revision; transactionally save-and-finalise or
   return `saving_incomplete`. Delayed saves cannot mutate a terminal attempt.
+  `assessment_test_attempts.committed_json` stores independent Study answer
+  commitments (and Test answers after final commit); `result_json` stores the
+  terminal result with answered/unanswered/excluded/scored counts. Draft updates
+  never write either field. Public `committed` and `result` are withheld during
+  active Test; Study resume returns committed work without making it editable.
 - Exposure pins question/key/family/item/version and records presented/help
   before returning content. Study assistance precedes hints/sources/notes/chat;
   answer commit precedes feedback/evidence. Test final commit precedes all keys,

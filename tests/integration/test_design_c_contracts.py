@@ -312,6 +312,19 @@ def test_deleted_version_keeps_original_pin_payload_report_and_job_outcome(versi
         PersistedAttemptPin.model_validate({**data["attempt_pin"], "version_id": "rewritten_pin"})
 
 
+def test_study_commit_and_result_payloads_survive_resume_without_test_disclosure():
+    data = fixture("attempt-and-draft.json")
+    raw = {**data["attempt"], "mode": "study", "status": "paused", "committed": data["study_committed"]}
+    resumed = Attempt.model_validate(raw)
+    assert resumed.committed[0].assisted and resumed.committed[0].correct
+    final = Attempt.model_validate({**raw, "status": "ended", "result": data["study_result"]})
+    assert final.result.scored_count == 1 and final.result.unanswered_count == 4
+    with pytest.raises(ValidationError, match="scored answers"):
+        Attempt.model_validate({**raw, "mode": "test", "status": "active"})
+    assert "committed_json" in TABLE_COLUMNS["assessment_test_attempts"]
+    assert "result_json" in TABLE_COLUMNS["assessment_test_attempts"]
+
+
 def test_test_policy_and_clock_shapes_cover_precommit_disclosure_and_backward_clock():
     attempt = Attempt.model_validate(fixture("attempt-and-draft.json")["attempt"])
     for operation in ("chat", "sources", "notes", "search_snippets", "legacy_feedback", "command_replay",

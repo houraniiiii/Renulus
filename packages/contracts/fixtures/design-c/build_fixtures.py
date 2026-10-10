@@ -26,7 +26,7 @@ DATE = "2026-10-10T12:00:00Z"
 
 
 def write(name, value):
-    (ROOT / name).write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (ROOT / name).write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
 def fictional_questions():
@@ -55,6 +55,10 @@ def derived_fixtures():
         answers=({"item_id": version.items[0].item_id, "option_ids": ["a"], "marked": False},
                  {"item_id": version.items[1].item_id, "option_ids": [], "marked": True}))
     write("attempt-and-draft.json", {"attempt": attempt.model_dump(mode="json"), "draft": draft.model_dump(mode="json"),
+        "study_committed": [{"item_id": version.items[0].item_id, "option_ids": ["a"],
+            "committed_at": DATE, "correct": True, "assisted": True, "repeat": False}],
+        "study_result": {"item_count": 5, "answered_count": 1, "unanswered_count": 4,
+            "excluded_count": 0, "scored_count": 1, "correct_count": 1, "completed_at": DATE},
         "exposure": {"id": "exposure_fiction_1", "attempt_id": attempt.id, "version_id": version.id,
             "item_id": version.items[0].item_id, "question_id": version.items[0].question_id,
             "question_version": "1", "key_version": "1", "family_id": version.items[0].family_id,
@@ -75,6 +79,9 @@ def derived_fixtures():
              "conversation.json", "saved-test-version.json", "fictional-artifact.json",
              "locators.json", "attempt-and-draft.json", "unavailable-references.json",
              "job.json", "relations-and-rows.json")
+    for name in names:
+        path = ROOT / name
+        path.write_bytes(path.read_bytes().replace(b"\r\n", b"\n"))
     write("fixture-manifest.json", {"contract_version": CONTRACT_VERSION,
         "source_baseline": "1b30a896", "provider_calls": 0,
         "files": {name: {"bytes": len((ROOT / name).read_bytes()),

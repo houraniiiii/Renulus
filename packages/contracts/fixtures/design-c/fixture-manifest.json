@@ -4,44 +4,44 @@
   "provider_calls": 0,
   "files": {
     "legacy-schema1-records.json": {
-      "bytes": 66032,
-      "sha256": "127e35ce47f6813b30a5f4472a52464a9f289f415370cbcfcbe4671266f42660"
+      "bytes": 65137,
+      "sha256": "ad97bd1b36c5f19f2288234a3bce445cb0b4bac69ed76c33f6dd9d9a9a013bd5"
     },
     "legacy-schema1-inventory.json": {
-      "bytes": 12010,
-      "sha256": "cb55c3bfc3dd68c415eb44b8448b73c4f0be57b8b37b08cfccdb426fe4f0e597"
+      "bytes": 11447,
+      "sha256": "f894a47729a518a0112e120c1138535e1d751168c2e2212b1945722f4c10cc45"
     },
     "conversation.json": {
-      "bytes": 360,
-      "sha256": "bfea05a3f35dd0883c7d3a95229afcb41f0df3749897c5cee989736d39e2dbe5"
+      "bytes": 346,
+      "sha256": "b33abe29d30b78490e4d12775186a02442b3ece41836ae61188bab681b6791b6"
     },
     "saved-test-version.json": {
-      "bytes": 4002,
-      "sha256": "4bda4b52e3773f7ef6525a077ff39d4635a528e64b581b64d85f088fd3912075"
+      "bytes": 3869,
+      "sha256": "307111db60bedbd48925f439db4158b148f71e5abb4695363482b5fca11694f7"
     },
     "fictional-artifact.json": {
-      "bytes": 3886,
-      "sha256": "f8fd24c2075e01a7223db56662810bcde6319680e76cb74d149a031024beeff6"
+      "bytes": 3758,
+      "sha256": "005838a02ba212a2b19a8922ff80c4ab0ec579c6fab7ba7c66c0925856346f81"
     },
     "locators.json": {
-      "bytes": 1297,
-      "sha256": "70b6d9bde0ca62602a2a663541bf93d8f8c1e0347772c3c3c57d09275d00bfdb"
+      "bytes": 1226,
+      "sha256": "5851c7fba6857c9378e059eb47e1d1372cc88e30b19998d46a1673b65afb9c86"
     },
     "attempt-and-draft.json": {
-      "bytes": 1300,
-      "sha256": "bb8af2616913ca4774500be2c389236a75c3f4c328233c1318954eda2210c750"
+      "bytes": 1734,
+      "sha256": "3c80426f68a2331a8ee5a5073815ddb2986c1dbbcb3a8883712bb2bebe5be139"
     },
     "unavailable-references.json": {
-      "bytes": 5182,
-      "sha256": "3ef1936a326e6e2da32a72d562e868a703e2d1c1d1907a4235b0c52f07ff8234"
+      "bytes": 5026,
+      "sha256": "4e4daaa84185a2b7831a2671293723703a27084237a87c81eac0a3e7e91cbd24"
     },
     "job.json": {
-      "bytes": 628,
-      "sha256": "73e1f3d424a993a24da425be53e5579719942b6c1f74d69e23bed4b8725c69b0"
+      "bytes": 601,
+      "sha256": "feeba7d69ed378ae7d11ad542964c64567e720031aff6e9d327dc6fce673b847"
     },
     "relations-and-rows.json": {
-      "bytes": 8747,
-      "sha256": "2374235e1162458a1c5c9381b6f576f9908c003a661b5d16d680b1ed00781095"
+      "bytes": 8447,
+      "sha256": "e89335920f546c75c6703f472ebe25ed188fc0e9101e0325d14f234e5e102954"
     }
   }
 }

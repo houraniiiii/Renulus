@@ -277,6 +277,8 @@
       "mode",
       "status",
       "draft_revision",
+      "committed_json",
+      "result_json",
       "timing_kind",
       "duration_seconds",
       "started_at",

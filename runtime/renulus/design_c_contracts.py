@@ -288,7 +288,7 @@ TABLE_COLUMNS = {
     "knowledge_attachment_originals": ("id", "attachment_id", "role", "original_path", "sha256", "bytes", "created_at"),
     "assessment_tests": ("id", "title", "lifecycle", "revision", "created_at", "updated_at"),
     "assessment_test_versions": ("id", "test_id", "ordinal", "origin", "review_quality", "status", "items_json", "source_refs_json", "terms", "sha256", "created_at"),
-    "assessment_test_attempts": ("id", "version_id", "live_version_id", "version_snapshot_json", "mode", "status", "draft_revision", "timing_kind", "duration_seconds", "started_at", "deadline_at", "paused_seconds", "last_reconciled_at", "created_at", "updated_at", "finalized_at"),
+    "assessment_test_attempts": ("id", "version_id", "live_version_id", "version_snapshot_json", "mode", "status", "draft_revision", "committed_json", "result_json", "timing_kind", "duration_seconds", "started_at", "deadline_at", "paused_seconds", "last_reconciled_at", "created_at", "updated_at", "finalized_at"),
     "assessment_attempt_drafts": ("attempt_id", "revision", "position", "answers_json", "updated_at"),
     "assessment_attempt_exposure": ("id", "attempt_id", "item_id", "question_id", "question_version", "key_version", "family_id", "family_version", "kind", "created_at"),
     "assessment_question_reports": ("id", "version_id", "live_version_id", "attempt_id", "live_attempt_id", "item_id", "question_id", "question_version", "key_version", "family_id", "family_version", "report_text", "idempotency_key", "created_at"),
@@ -398,18 +398,59 @@ class Timing(Contract):
         return self
 
 
+class CommittedAnswer(Contract):
+    item_id: Identifier
+    option_ids: tuple[Identifier, ...] = Field(min_length=1, max_length=20)
+    committed_at: AwareDatetime
+    correct: Annotated[bool, Field(strict=True)]
+    assisted: Annotated[bool, Field(strict=True)]
+    repeat: Annotated[bool, Field(strict=True)]
+
+    @model_validator(mode="after")
+    def unique(self):
+        if len(set(self.option_ids)) != len(self.option_ids):
+            raise ValueError("Committed choices must be unique")
+        return self
+
+
+class AttemptResult(Contract):
+    item_count: Annotated[int, Field(ge=1, le=50, strict=True)]
+    answered_count: Annotated[int, Field(ge=0, le=50, strict=True)]
+    unanswered_count: Annotated[int, Field(ge=0, le=50, strict=True)]
+    excluded_count: Annotated[int, Field(ge=0, le=50, strict=True)]
+    scored_count: Annotated[int, Field(ge=0, le=50, strict=True)]
+    correct_count: Annotated[int, Field(ge=0, le=50, strict=True)]
+    completed_at: AwareDatetime
+
+    @model_validator(mode="after")
+    def coherent_counts(self):
+        if self.answered_count + self.unanswered_count + self.excluded_count != self.item_count:
+            raise ValueError("Result categories must cover the actual selected count")
+        if not self.correct_count <= self.scored_count <= self.item_count - self.excluded_count:
+            raise ValueError("Result denominator must exclude invalid items")
+        return self
+
+
 class TestAttempt(Contract):
     id: Identifier
     version: TestVersionIdentity
     mode: Literal["study", "test"]
     status: Literal["active", "paused", "timer_expired", "submitted", "ended"]
     draft_revision: Annotated[int, Field(ge=0, strict=True)] = 0
+    committed: tuple[CommittedAnswer, ...] = Field(default=(), max_length=50)
+    result: AttemptResult | None = None
     timing: Timing = Field(default_factory=Timing)
 
     @model_validator(mode="after")
     def test_never_pauses(self):
         if self.mode == "test" and (self.status in ("paused", "timer_expired", "ended") or self.timing.paused_seconds):
             raise ValueError("Test deadlines cannot pause or leave an unsubmitted expiry")
+        if self.mode == "test" and self.status == "active" and (self.committed or self.result is not None):
+            raise ValueError("Active Test responses cannot expose scored answers or results")
+        if len({answer.item_id for answer in self.committed}) != len(self.committed):
+            raise ValueError("Committed answers must be unique per item")
+        if self.result is not None and self.status not in ("submitted", "ended"):
+            raise ValueError("Only finalised attempts have terminal results")
         return self
 
 

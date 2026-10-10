@@ -18,7 +18,8 @@ used. This directory is inside the DC02 reservation.
 | job.json | Eligible memory revision input, full validated count and captured settings/policy/context epoch. Pure publication guard fixture, not a running provider job. |
 | relations-and-rows.json | Frozen proposed scalar column names, reserved additive migrations, disposable/owned relation columns and separately retained unavailable provenance columns. No DDL. |
 
-`fixture-manifest.json` pins sizes and SHA-256 values for the ten JSON fixtures.
+`fixture-manifest.json` pins sizes and SHA-256 values for the ten JSON fixtures
+using the repository's UTF-8 LF bytes. The generator writes LF explicitly.
 `build_fixtures.py` generates the legacy records through real module repositories
 and validates a locally authored practice batch through the existing generated
 producer. It never invokes its model/provider. The full installed bank is not
@@ -29,7 +30,7 @@ without regenerating the captured original IDs/history.
 The initial focused integration run had two failed assertions: newer local
 update-schedule timestamps are retained by restore, and ZIP1 previews omit a
 format_version field. After correcting those test expectations, the run passed
-**23 tests in 31.35 seconds**, with the existing FastAPI/Starlette httpx
+**24 tests in 29.71 seconds**, with the existing FastAPI/Starlette httpx
 deprecation warning. No dependency change is proposed for that warning.
 The tests exercised actual baseline JSON restore/repeat/deletion, ZIP1 and ZIP2
 preview/restore with one digest-checked owned original, original column/ledger
@@ -52,6 +53,13 @@ typed restore registration, source-dirty rebuild checks and connected migration
 acceptance. Producers must implement the reserved tables/APIs, serialise
 publication/finalisation and run semantic privacy checks before durable writes.
 These fixtures do not close DC02 or any feature ticket.
+The final proposal also reserves `committed_json`/`result_json` on the new
+attempt row for durable Study commitments and terminal results, with an active
+Test disclosure guard and an explicit partial-Study fixture.
+After that final schema/manifest adjustment, all eight affected shape checks
+passed in 0.64 seconds; the 17 other tests were deselected. Receipts are
+`C:/Renulus/scratch/design-c/contracts/contract-results.xml` (24-test run) and
+`C:/Renulus/scratch/design-c/contracts/final-contract-shapes.xml` (final checks).
 
 Renulus code and synthetic contract scaffolding use MIT. Original Renulus bank
 teaching text/key snapshots inside the legacy export retain CC BY 4.0 and their
