@@ -69,10 +69,13 @@ interrupts a response. Read partial-response and retry notices.
 In a conversation's **Manage** controls, **Rename**, **Project**, **Archive** and
 **Delete conversation** have separate effects. Archive retains messages, draft
 and originals, makes the chat read-only and removes it from active recents.
-Restore it before continuing. Project-linked archived chats can be reopened
-from the project's **Chats** list; a general archived-chat browser is not
-connected in this source snapshot. Deleting a conversation removes its owned
-originals; separately retained learning in Memory remains inspectable.
+To find an archived chat, open **Search** with **Ctrl+K**, enter a search term
+and enable **Include archived**. Results label archived conversations; select
+the chat, then **Manage → Restore** to continue, including after reopening the
+app. Project-linked archived chats also open from the project's **Chats** list.
+Search supplies this restoration path; there is no standalone Archive page.
+Deleting a conversation removes its owned originals; separately retained
+learning in Memory remains inspectable.
 
 The empty Chat view offers **Start saved chat** and **Start temporary chat**.
 Temporary work is explicitly labelled and excluded from ordinary Memory and
