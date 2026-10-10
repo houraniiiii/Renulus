@@ -1,0 +1,53 @@
+.import-page, .import-panel { display: grid; gap: var(--space-24); min-width: 0; }
+.import-panel { container-type: inline-size; }
+.import-panel h2, .import-panel h3, .import-panel p { margin: 0; }
+.import-panel h2 { font-size: 24px; color: var(--ink-strong); }
+.import-panel h3 { font-size: 21px; color: var(--ink-strong); }
+.import-heading { display: flex; justify-content: space-between; align-items: start; gap: var(--space-16); }
+.import-heading > div { display: grid; gap: var(--space-8); }
+.import-create summary { font-size: 21px; font-weight: 600; cursor: pointer; }
+.import-create form { display: grid; gap: var(--space-16); margin-top: var(--space-16); }
+.import-create-fields { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-16); }
+.import-check { display: flex; align-items: center; gap: var(--space-12); min-height: 44px; font-size: 15px; cursor: pointer; }
+.import-check input { width: 18px; height: 18px; flex: 0 0 auto; accent-color: var(--renal-teal); }
+.import-caption, .import-history-row span, .import-candidates span { font-size: 14px; color: var(--ink-muted); }
+.import-history { display: grid; gap: var(--space-12); }
+.import-history-list { display: flex; gap: var(--space-12); overflow-x: auto; padding: var(--space-4); }
+.import-history-row { display: grid; text-align: left; gap: var(--space-4); min-width: 200px; max-width: 300px;
+  padding: var(--space-12) var(--space-16); background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius-control); cursor: pointer; }
+.import-history-row[aria-pressed=true] { border-color: var(--renal-teal); background: var(--renal-teal-soft); }
+.import-review { display: grid; gap: var(--space-24); min-width: 0; }
+.import-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-16); padding-bottom: var(--space-16); border-bottom: 1px solid var(--line); }
+.import-toolbar > span { font-size: 14px; color: var(--ink-secondary); }
+.import-review-layout { display: grid; grid-template-columns: 168px minmax(300px, 1fr) minmax(260px, .75fr); gap: var(--space-24); align-items: start; }
+.import-candidates { display: grid; gap: var(--space-4); }
+.import-candidates button { display: grid; gap: var(--space-4); text-align: left; padding: var(--space-12); min-height: 64px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--ink); cursor: pointer; }
+.import-candidates button[aria-current] { background: var(--renal-teal-soft); color: var(--renal-teal); }
+.import-candidates button:hover, .import-history-row:hover { background: var(--rail-hover); }
+.import-question { display: grid; gap: var(--space-16); min-width: 0; padding: var(--space-24); border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--surface); }
+.import-options { display: grid; gap: var(--space-8); padding: 0; margin: 0; border: 0; min-width: 0; }
+.import-options legend { padding: 0 0 var(--space-8); font-size: 15px; font-weight: 600; }
+.import-option { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: var(--space-12); align-items: end; }
+.import-option > .import-check { padding-bottom: var(--space-4); }
+.import-option > .field .field-label { font-size: 13px; color: var(--ink-muted); }
+.import-resolution, .import-edit-actions { display: grid; gap: var(--space-12); }
+.import-original { display: grid; gap: var(--space-12); min-width: 0; padding: var(--space-16); background: var(--paper); border-left: 1px solid var(--line); }
+.import-original pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.65; color: var(--ink-secondary); max-height: 640px; overflow-y: auto; }
+.import-original details { border-top: 1px solid var(--line); padding-top: var(--space-12); }
+.import-original summary, .import-delete summary { cursor: pointer; font-weight: 600; }
+.import-original details pre { margin: var(--space-12) 0; }
+.import-delete { border-top: 1px solid var(--line); padding-top: var(--space-16); color: var(--ink-secondary); }
+.import-delete p { margin: var(--space-12) 0; }
+.import-panel button:focus-visible, .import-panel summary:focus-visible, .import-check input:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.import-panel button:disabled { cursor: default; }
+@container (max-width: 960px) {
+  .import-review-layout { grid-template-columns: minmax(0, 1fr) minmax(0, .8fr); gap: var(--space-16); }
+  .import-candidates { grid-column: 1 / -1; display: flex; flex-wrap: wrap; }
+  .import-candidates button { min-width: 148px; }
+}
+@container (max-width: 640px) {
+  .import-review-layout, .import-create-fields { grid-template-columns: minmax(0, 1fr); }
+  .import-question { padding: var(--space-16); }
+  .import-original { border-left: 0; border-top: 1px solid var(--line); }
+  .import-heading { flex-wrap: wrap; }
+}
