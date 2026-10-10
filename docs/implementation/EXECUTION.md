@@ -4,11 +4,35 @@
 
 The [Design C implementation spec](../planning/DESIGN_C_IMPLEMENTATION_SPEC.md)
 is the current UI replacement backlog and delivery sequence. Tickets DC01–DC21
-are not started at this documentation handoff. Track execution against those
-IDs, with one owner for each reserved path and a shared committed baseline.
+are now in implementation under the owner's October 10 request authorising
+local commits and matching Windows delivery. Starting canonical checkout:
+`C:/Renulus/dev/repo`, clean `main` at `528025ff0b22477c12ee1512e0e7d15297a6e888`.
+The integration branch is `codex/design-c-integration`. Existing newer work and
+uncommitted changes were absent at start; the personal profile remains outside
+all implementation tests. Track execution against those IDs, with one owner
+for each reserved path and a shared committed baseline.
 Use [parallel-work rules](../planning/PARALLEL_WORK.md) and record prerequisite
 commits, integrated evidence and remaining limits in the ticket handoff or its
 linked issue. Update this current section when execution starts.
+
+### Active reservations — initial prerequisite wave
+
+| Owner/lane | Branch and worktree under `C:/Renulus/dev/worktrees/` | Exact write reservation | Synthetic profile under `C:/Renulus/scratch/design-c/` |
+| --- | --- | --- | --- |
+| Integration lead | `codex/design-c-integration`, canonical checkout | `docs/planning/DESIGN_C_IMPLEMENTATION_SPEC.md`, this execution record, `runtime/renulus/storage/`, `runtime/renulus/server.py`, `runtime/renulus/services.py`, `apps/desktop/src/shell/`, `apps/desktop/src/ui/`, `apps/desktop/src/platform/`, root manifests/locks, build/release configuration | `integration` |
+| DC01 design reconciliation | `codex/dc01-design`, `dc01-design` | editable C Figma page; `docs/implementation/design-c-reconciliation.md` | `design` |
+| DC02 contract proposals/foundation fixtures | `codex/dc02-contracts`, `dc02-contracts` | `packages/contracts/design-c.md`, `packages/contracts/fixtures/design-c/`, `runtime/renulus/design_c_contracts.py`, `tests/integration/test_design_c_contracts.py` | `contracts` |
+| Pass 1 migration/data reviewer | `codex/dc-review-data`, `dc-review-data` | `docs/implementation/design-c-review-data.md` only | `review-data` |
+| Pass 1 assessment reviewer | `codex/dc-review-assessment`, `dc-review-assessment` | `docs/implementation/design-c-review-assessment.md` only | `review-assessment` |
+| Pass 1 reader/platform reviewer | `codex/dc-review-readers`, `dc-review-readers` | `docs/implementation/design-c-review-readers.md` only | `review-readers` |
+
+The lead publishes reviewed shared contracts and migration sequencing before
+dependent implementation. Reviewers challenge actual source seams and identify
+reproductions; their notes are evidence, not another backlog. Every ticket starts
+open. DC01 and DC02 are in progress; dependent feature tickets stay open until
+their real producers/consumers and required evidence are integrated. No live
+provider request, personal-profile migration or launcher promotion is part of
+this prerequisite wave.
 
 The entries below preserve earlier implementation evidence. Their Flow selection,
 branches, paths, issue status, time windows and heartbeat instructions describe
