@@ -5,7 +5,8 @@ import type { ContextScope } from '../../platform/contracts';
 import type { ConversationSummary } from '../../platform/designC';
 import { routes, useNavigation } from '../../shell/navigation';
 import { Button, Notice } from '../../ui';
-import { createConversation } from '../chat/api';
+import { cancelChatTestRun, createConversation, type ChatTestRun } from '../chat/api';
+import { prepareQuickPractice, type QuickPracticeCommand } from './practice';
 import { readHome, refreshHome } from './requests';
 import type { HomeAdapters, HomeState, SuggestionCategory } from './types';
 import './home.css';
@@ -30,8 +31,20 @@ export default function Home({ adapters = {} }: { adapters?: HomeAdapters }) {
   const greetingChosen = useRef(false);
   const hasDraft = useRef(false);
   const composer = useRef<HTMLTextAreaElement>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
   const sending = useRef(false);
-  const command = useRef<{ text: string; kind: 'learning' | 'case'; request_id: string; conversation?: ConversationSummary }>(undefined);
+  const stopping = useRef(false);
+  const [stopPending, setStopPending] = useState(false);
+  const command = useRef<{ text: string; kind: 'learning' | 'case'; request_id: string; creation_key: string; conversation?: ConversationSummary }>(undefined);
+  const practice = useRef<QuickPracticeCommand>(undefined);
+  const active = useRef<AbortController>(undefined);
+  const mounted = useRef(true);
+  const [practiceRun, setPracticeRun] = useState<ChatTestRun>();
+  const attachment = useRef<{ file: File; text: string; kind: 'learning' | 'case';
+    request_id: string; creation_key: string; conversation?: ConversationSummary }>(undefined);
+  const [attachmentRetry, setAttachmentRetry] = useState(false);
+
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; active.current?.abort(); }; }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -83,18 +96,25 @@ export default function Home({ adapters = {} }: { adapters?: HomeAdapters }) {
     const draft = text;
     const kind = intent === 'case' ? 'case' : 'learning';
     sending.current = true; setBusy(true); setMessage('');
+    const controller = new AbortController(); active.current = controller;
     try {
       if (intent === 'practice') {
-        if (!adapters.practice) throw new ApiError('Quick practice is awaiting the saved five-question Study flow. Your draft is kept.', 0, 'prerequisite_unavailable');
-        const result = await adapters.practice(draft);
-        go('attempts', { attempt_id: result.attempt_id });
+        if (!practice.current || practice.current.text !== draft ||
+            ['failed', 'cancelled'].includes(practice.current.run?.state ?? '')) {
+          practice.current = { text: draft, request_id: crypto.randomUUID() };
+        }
+        const result = await (adapters.practice ?? prepareQuickPractice)(practice.current, controller.signal, setPracticeRun);
+        if (controller.signal.aborted || !mounted.current) return;
+        go('attempts', { attempt_id: result.id, version_id: result.version_id },
+          { kind: 'generated-practice', entity_id: result.id });
       } else {
         if (!command.current || command.current.text !== draft || command.current.kind !== kind) {
-          command.current = { text: draft, kind, request_id: crypto.randomUUID() };
+          command.current = { text: draft, kind, request_id: crypto.randomUUID(), creation_key: crypto.randomUUID() };
         }
         const current = command.current;
         // Home creates only. Chat consumes the volatile intent and owns streaming.
-        current.conversation ??= await (adapters.create ?? createConversation)({ kind });
+        current.conversation ??= await (adapters.create ?? createConversation)({ kind }, controller.signal, current.creation_key);
+        if (controller.signal.aborted || !mounted.current) return;
         const conversation = current.conversation;
         const scope: ContextScope = conversation.kind === 'case'
           ? { kind: conversation.retention === 'temporary' ? 'temporary-case' : 'saved-case', entity_id: conversation.identity.id }
@@ -102,16 +122,57 @@ export default function Home({ adapters = {} }: { adapters?: HomeAdapters }) {
         go('chat', { conversation: conversation.identity, retention: conversation.retention,
           sendIntent: { text: draft, request_id: current.request_id } }, scope);
       }
-      setText(''); hasDraft.current = false; setPending(undefined); command.current = undefined;
+      setText(''); hasDraft.current = false; setPending(undefined); command.current = undefined; practice.current = undefined;
     } catch (error) {
-      setMessage(error instanceof ApiError ? error.message : 'Your message could not be sent. Your draft is kept.');
-    } finally { sending.current = false; setBusy(false); }
+      if (mounted.current && !stopping.current) setMessage(isCancelled(error) ? 'Preparation was interrupted. Your draft is kept; retry to check this request.' :
+        error instanceof ApiError ? error.message : 'Your message could not be sent. Your draft is kept.');
+    } finally {
+      if (!stopping.current) { sending.current = false; if (mounted.current) { setBusy(false); setPracticeRun(undefined); } }
+    }
   }
-  async function attach() {
-    setMessage('');
-    if (!adapters.attach) { setMessage('Attachments are awaiting the chat file connection. Your draft is kept.'); return; }
-    try { await adapters.attach({ text, kind: intent === 'case' ? 'case' : 'learning' }); }
-    catch (error) { setMessage(error instanceof ApiError ? error.message : 'This file could not be attached. Your draft is kept.'); }
+  async function stopPractice() {
+    const current = practice.current, run = current?.run;
+    if (!current || !run || stopping.current) return;
+    stopping.current = true; setStopPending(true); setMessage('');
+    active.current?.abort();
+    try {
+      const winner = await cancelChatTestRun(run.run_id);
+      current.run = winner;
+      if (mounted.current) setMessage(winner.state === 'cancelled' ? 'Quick practice stopped. Your draft is kept.' :
+        winner.state === 'published' ? 'The five-question set finished before Stop. Your draft is kept; Send opens its Study attempt.' :
+          'The stop could not be confirmed. Your draft is kept; retry to check this request.');
+    } catch { if (mounted.current) setMessage('The stop could not be confirmed. Your draft is kept; retry to check this request.'); }
+    finally {
+      stopping.current = false; sending.current = false;
+      if (mounted.current) { setStopPending(false); setBusy(false); setPracticeRun(undefined); }
+    }
+  }
+  async function attach(file?: File) {
+    if (sending.current || state?.assistance_allowed === false) return;
+    if (file) attachment.current = { file, text, kind: intent === 'case' ? 'case' : 'learning',
+      request_id: crypto.randomUUID(), creation_key: crypto.randomUUID() };
+    const current = attachment.current;
+    if (!current) return;
+    // Capture the current draft again on an explicit retry; creation/file receipts stay stable.
+    current.text = text;
+    sending.current = true; setBusy(true); setMessage(''); setAttachmentRetry(false);
+    const controller = new AbortController(); active.current = controller;
+    try {
+      current.conversation ??= await (adapters.create ?? createConversation)({ kind: current.kind }, controller.signal, current.creation_key);
+      if (controller.signal.aborted || !mounted.current) return;
+      const conversation = current.conversation;
+      const scope: ContextScope = conversation.kind === 'case'
+        ? { kind: conversation.retention === 'temporary' ? 'temporary-case' : 'saved-case', entity_id: conversation.identity.id }
+        : { kind: 'study', entity_id: conversation.identity.id };
+      go('chat', { conversation: conversation.identity, retention: conversation.retention, prefill: current.text,
+        attachmentIntent: { file: current.file, request_id: current.request_id } }, scope);
+      setText(''); hasDraft.current = false; setPending(undefined); attachment.current = undefined;
+    } catch (error) {
+      if (mounted.current && !isCancelled(error)) {
+        setMessage(error instanceof ApiError ? error.message : 'This attachment could not be opened. Your draft is kept.');
+        setAttachmentRetry(true);
+      }
+    } finally { sending.current = false; if (mounted.current) setBusy(false); }
   }
   const prompts = expanded && state?.suggestions?.[expanded];
   const allowed = state?.assistance_allowed !== false;
@@ -124,7 +185,10 @@ export default function Home({ adapters = {} }: { adapters?: HomeAdapters }) {
           value={text} maxLength={16000} disabled={busy || !allowed} rows={2} className="home-message"
           onChange={event => { setText(event.target.value); hasDraft.current = !!event.target.value; }} />
         <div className="home-toolbar">
-          <Button variant="ghost" disabled={busy || !allowed} onClick={() => { void attach(); }}><Paperclip size={20} aria-hidden="true" />Attach</Button>
+          <input ref={fileInput} type="file" aria-label="Attach file" hidden disabled={busy || !allowed}
+            accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.docx,.xlsx,.csv,.md,.html,.htm,.xml"
+            onChange={event => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; if (file) void attach(file); }} />
+          <Button variant="ghost" disabled={busy || !allowed} onClick={() => fileInput.current?.click()}><Paperclip size={20} aria-hidden="true" />Attach</Button>
           <Button type="submit" busy={busy} disabled={!text.trim() || !allowed}><ArrowUp size={20} aria-hidden="true" />Send</Button>
         </div>
       </form>
@@ -154,7 +218,11 @@ export default function Home({ adapters = {} }: { adapters?: HomeAdapters }) {
         </div>
       </div>}
       {!allowed && <Notice>Chat and daily suggestions are paused during an active Test.</Notice>}
+      {busy && practiceRun && <p className="home-status" role="status">{stopPending ? 'Stopping Quick practice…' : 'Preparing five fictional Study questions…'}
+        {['queued', 'running'].includes(practiceRun.state) && <Button variant="ghost" disabled={stopPending} onClick={() => { void stopPractice(); }}>Stop practice</Button>}
+      </p>}
       {message && <p className="home-status" role="status">{message}</p>}
+      {attachmentRetry && <Button variant="secondary" disabled={busy || !allowed} onClick={() => { void attach(); }}>Retry attachment</Button>}
     </div>
   </section>;
 }
