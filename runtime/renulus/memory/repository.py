@@ -3,6 +3,8 @@ import json
 
 from renulus.contracts import ApiError, ContextScope, Scope, durable_id
 from renulus.storage import utc_now
+from renulus.storage.assessment_policy import policy_snapshot
+from renulus.storage.invalidation import context_epoch_in
 
 from .models import ManualFact, clean_text, digest, require_eligible
 from .study_answers import answer_text
@@ -166,15 +168,62 @@ class MemoryRepository:
             self.invalidate(conn)
         return {'purged': True}
 
-    def material(self, evidence_id, scope: ContextScope):
+    @staticmethod
+    def _whole_scope(metadata):
+        return ContextScope(kind=Scope.REVIEWED_ASSESSMENT if metadata['payload']['bank_cohort_eligible']
+                            else Scope.GENERATED_PRACTICE, entity_id=metadata['entity_id'])
+
+    def _whole_material_in(self, conn, evidence_id, scope):
+        resolver = self.services.registry.get('whole_attempts')
+        if resolver is None:
+            raise ApiError('memory_evidence_ineligible', 'Whole-attempt evidence is not available', 409)
+        metadata = resolver.committed_evidence_in(conn, evidence_id)
+        if metadata is None:
+            raise ApiError('memory_evidence_invalid', 'This answer has no current eligible commitment', 409)
+        expected = self._whole_scope(metadata)
+        if scope != expected:
+            raise ApiError('memory_evidence_scope', 'Answer memory must retain its original practice cohort', 409)
+        if conn.execute('SELECT 1 FROM memory_suppression WHERE source_key=?', ('evidence:' + evidence_id,)).fetchone():
+            raise ApiError('memory_capture_suppressed', 'This source was removed or corrected in memory', 409)
+        payload = metadata['payload']
+        topic = metadata['topic_id']
+        if not isinstance(topic, str) or not topic or len(topic) > 200:
+            raise ApiError('memory_evidence_empty', 'This answer has no bounded learning topic', 409)
+        eligible = payload['bank_cohort_eligible']
+        if eligible:
+            text = ('Answered correctly' if payload['correct'] else 'Review needed after an incorrect answer')
+            text += ' on ' + topic + ' in reviewed practice.'
+            kind = 'study-interest' if payload['correct'] else 'mistake'
+        else:
+            text = 'Personal unreviewed practice on ' + topic + ': '
+            text += 'matched the saved key.' if payload['correct'] else 'did not match the saved key.'
+            kind = 'study-interest'
+        text += (' Mode: ' + payload['mode'] + '; origin: ' + payload['origin'] +
+                 '; review quality: ' + payload['review_quality'] + '; cohort: ' + payload['score_bucket'] +
+                 '; assisted: ' + ('yes' if payload['assisted'] else 'no') +
+                 '; repeat: ' + ('yes' if payload['repeat'] else 'no') + '.')
+        return {'text': text, 'kind': kind, 'topic_id': topic, 'infer': False,
+                'fingerprint': digest({'evidence': metadata['revision'],
+                    'policy_revision': policy_snapshot(conn)['revision'], 'context_epoch': context_epoch_in(conn)}),
+                'scope': expected, 'entity_id': metadata['entity_id'],
+                'assessment': {field: payload[field] for field in ('mode', 'origin', 'review_quality', 'reviewed',
+                    'bank_cohort_eligible', 'assisted', 'repeat', 'score_bucket', 'outcome', 'correct')}}
+
+    def material(self, evidence_id, scope: ContextScope, *, conn=None):
         require_eligible(scope)
-        metadata = self.db.fetch_one(
+        select = (lambda sql, args: conn.execute(sql, args).fetchone()) if conn is not None else self.db.fetch_one
+        metadata = select(
             'SELECT kind,json_valid(payload_json) AS payload_valid, CASE WHEN json_valid(payload_json) THEN '
             "json_extract(payload_json,'$.scope.kind') END AS scope_kind, "
             "CASE WHEN json_valid(payload_json) THEN json_type(payload_json,'$.scope') END AS scope_type "
             'FROM learning_evidence WHERE id=?', (evidence_id,))
         if not metadata:
             raise ApiError('memory_evidence_missing', 'This learning evidence is no longer available', 404)
+        if metadata['kind'] == 'assessment-test-answer':
+            if conn is not None:
+                return self._whole_material_in(conn, evidence_id, scope)
+            with self.db.transaction() as current:
+                return self._whole_material_in(current, evidence_id, scope)
         if metadata['kind'] not in ('study-interest', 'assessment-answer', 'learning-point', 'study-answer'):
             raise ApiError('memory_evidence_ineligible', 'This evidence type is not eligible for learner memory', 409)
         if metadata['kind'] == 'study-answer' and (scope.kind != Scope.STUDY or metadata['scope_kind'] != 'study'):
@@ -244,8 +293,8 @@ class MemoryRepository:
 
     def enqueue(self, evidence_id, scope: ContextScope):
         require_eligible(scope)
-        material = self.material(evidence_id, scope)
         with self.db.transaction() as conn:
+            material = self.material(evidence_id, scope, conn=conn)
             if conn.execute('SELECT 1 FROM memory_suppression WHERE source_key=?',
                             ('evidence:' + evidence_id,)).fetchone():
                 raise ApiError('memory_capture_suppressed', 'This source was removed or corrected in memory', 409)
@@ -275,8 +324,8 @@ class MemoryRepository:
             rows = self.db.fetch_all(
                 "SELECT e.id,e.kind,e.entity_id,json_extract(e.payload_json,'$.scope') AS declared_scope "
                 "FROM learning_evidence e WHERE e.id>? AND json_valid(e.payload_json) "
-                "AND e.kind IN ('study-interest','assessment-answer','learning-point','study-answer') "
-                "AND (json_extract(e.payload_json,'$.scope.kind') IN ('study','personal-library','generated-practice','reviewed-assessment') "
+                "AND e.kind IN ('study-interest','assessment-answer','learning-point','study-answer','assessment-test-answer') "
+                "AND (e.kind='assessment-test-answer' OR json_extract(e.payload_json,'$.scope.kind') IN ('study','personal-library','generated-practice','reviewed-assessment') "
                 "OR (e.kind='study-interest' AND json_extract(e.payload_json,'$.scope') IS NULL)) "
                 'AND NOT EXISTS (SELECT 1 FROM memory_jobs j WHERE j.evidence_id=e.id) '
                 "AND NOT EXISTS (SELECT 1 FROM memory_suppression s WHERE s.source_key='evidence:' || e.id) "
@@ -286,8 +335,18 @@ class MemoryRepository:
             for row in rows:
                 cursor = row['id']
                 try:
-                    scope = (ContextScope.model_validate_json(row['declared_scope']) if row['declared_scope'] else
-                             ContextScope(kind=Scope.STUDY, entity_id=row['entity_id']))
+                    if row['kind'] == 'assessment-test-answer':
+                        resolver = self.services.registry.get('whole_attempts')
+                        if resolver is None:
+                            continue
+                        with self.db.transaction() as conn:
+                            metadata = resolver.committed_evidence_in(conn, row['id'])
+                            if metadata is None:
+                                continue
+                            scope = self._whole_scope(metadata)
+                    else:
+                        scope = (ContextScope.model_validate_json(row['declared_scope']) if row['declared_scope'] else
+                                 ContextScope(kind=Scope.STUDY, entity_id=row['entity_id']))
                     self.enqueue(row['id'], scope)
                     queued += 1
                 except (ApiError, ValueError, TypeError, KeyError):
@@ -305,24 +364,34 @@ class MemoryRepository:
                          (utc_now(), identifier))
         return self.job(identifier)
 
-    def current(self, job):
-        row = self.job(job['id'])
-        if row['state'] != 'running' or self.db.fetch_one(
-                'SELECT 1 FROM memory_suppression WHERE source_key=?', ('evidence:' + job['evidence_id'],)):
+    def current(self, job, *, conn=None):
+        select = (lambda sql, args: conn.execute(sql, args).fetchone()) if conn is not None else self.db.fetch_one
+        row = select('SELECT * FROM memory_jobs WHERE id=?', (job['id'],))
+        if row is None or row['state'] != 'running':
+            return False
+        if any(row[field] != job.get(field) for field in ('evidence_id', 'evidence_hash', 'scope')):
+            return False
+        if select('SELECT 1 FROM memory_suppression WHERE source_key=?', ('evidence:' + job['evidence_id'],)):
             return False
         try:
-            return self.material(job['evidence_id'], ContextScope.model_validate_json(job['scope']))[
+            return self.material(job['evidence_id'], ContextScope.model_validate_json(job['scope']), conn=conn)[
                 'fingerprint'] == job['evidence_hash']
-        except ApiError:
+        except (ApiError, ValueError, TypeError, KeyError):
             return False
 
     def commit_capture(self, job, material, texts):
         with self.db.transaction() as conn:
             # Re-evaluate producer revision/scope and cancellation inside the commit transaction.
-            if not self.current(job):
+            if not self.current(job, conn=conn):
                 conn.execute("UPDATE memory_jobs SET state='cancelled',updated_at=? WHERE id=? AND state='running'",
                              (utc_now(), job['id']))
                 return []
+            source = conn.execute('SELECT kind FROM learning_evidence WHERE id=?', (job['evidence_id'],)).fetchone()
+            if source and source['kind'] == 'assessment-test-answer':
+                # Structured commitments never accept generated or caller-supplied
+                # text. Resolve the exact current scalar material in this write.
+                material = self.material(job['evidence_id'], ContextScope.model_validate_json(job['scope']), conn=conn)
+                texts = [material['text']]
             identifiers = []
             for text in texts:
                 identifiers.append(self._insert(conn, text, material['kind'], material['topic_id'],
