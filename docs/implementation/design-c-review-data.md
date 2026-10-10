@@ -443,3 +443,101 @@ lease owns that acceptance, and received the actual passing seams and resolved
 mount prerequisite. Worker/native/helper and final matching-source integration
 remain separately scoped. No source/schema changes or feature-ticket closure
 are part of this two-file checkpoint.
+
+### Pass 3 — source preflight before cutover, October 10, 2026
+
+This report-only review reads committed
+`eb20e0cffa55de4b2d27f17e459a3b2f8c4d30aa` through `git show`, together with
+Zeno's Windows preparation review. The integrated DC20 test bytes retain their
+eight-pass receipt above; that suite was not rerun. No package, installation,
+app/provider/helper execution, launcher mutation or owner-profile read occurred.
+Only this report changes. This is source preflight, not an installed pass.
+
+Two actionable findings were sent to the parent before this checkpoint:
+
+| Finding | Exact committed source and reproduction | Minimal action before execution |
+| --- | --- | --- |
+| P3-D1: synthetic environment does not confine inherited home paths | `apps/desktop/scripts/verify-installed-product.mjs:123-137` copies `USERPROFILE`, `APPDATA` and `LOCALAPPDATA`; `launch` calls it with `process.env` at line 316. Loading the complete committed modules in memory and supplying three synthetic sibling-home paths returns all three unchanged outside the selected evidence directory. `electron/profile.ts:19-22` forwards them to the backend. Explicit app profile, TEMP and known helper caches are confined, so this is a reproduced acceptance-boundary gap, not an observed owner-state write. | Rebase all three home directories beneath the fresh evidence root, or require and assert a parent-sanitized environment before the verifier runs. Create those owned directories before launch. Add a guard assertion for inherited outside-home values; the existing environment test at `test-verify-installed-product.mjs:83-97` supplies none of these three fields. Treat isolation as unresolved until that narrow boundary is checked. |
+| P3-D2: named delivery child cannot pass artifact validation | `delivery_paths.py:36-56,67-74` and `electron-builder.config.cjs:9-21` admit `C:/Renulus/scratch/design-c/delivery/deliveries/pass3/installed-aaaaaaaa/...`; `verify-installed-product.mjs:86-91` rejects it because its first component is `deliveries`. The actual Python guard accepts the never-created path, while the actual JS guard rejects it. | Use the exact base `C:/Renulus/scratch/design-c/delivery` for this cutover, whose installed/matching/proofs paths pass. If the parent selects a named child, narrowly align the verifier's public-artifact grammar before running; preserve the profile/reparse restrictions. This is conditional on the selected root, not a base-root manufacture blocker. |
+
+The complete committed verifier and evidence-root modules were evaluated with
+Node's in-memory module loader, then only exported pure guards were called. No
+runtime imports or real journey ran. Synthetic environment values remained
+beneath this lane's scratch family and were never opened. The positive/negative
+controls also verified: exact-base artifact accepted; profile artifact refused;
+app profile confined; provider/developer flags stripped; missing installed gates
+refused by the aggregate; eight reader gates retained. The module byte hashes
+were `18910d7fb64d7284cbc9fac92d01a8e303f38d7da26f6b780af9c65c5c10cf40`
+(verifier) and `f5ae9128b01995178d377a71c0cdae28af8b560d5d1a47a26674cc9e1075ff95`
+(evidence root). The Python guard hash was
+`1daa2fa6b494a33349d1dfd37f81b31c146fb1a185cc671a73fc4ca85470c50e`; its
+accepted named target remained absent. Initial audit scaffolding had a quoting
+error and an AST-selector error; both were corrected without production changes.
+
+Zeno's W1-W7 retain their historical scope. Relocation is now admitted by the
+Python/PowerShell guards, and `eb20e0cf` adds the matching builder root. The
+updated verifier uses hidden C readiness/journeys instead of obsolete Flow
+navigation; its `completeCoreReceipt` explicitly leaves unexecuted readers,
+upgrade/recovery, deletion, ingestion close and native Save gates not-run and
+returns incomplete. `prove_offline_helpers.py:94-98` now records actual UTC/date.
+These resolve the corresponding source defects; none is a fresh installed or
+CPU proof. The old restage wrapper still hardcodes its old source/interpreter
+defaults (`restage-delivery.ps1:8,107`); the parent should use the explicit current
+Python/direct staging interface documented by Zeno rather than assume those
+compatibility paths are usable. `test-installer.ps1:78-95` still requires
+`-InstallOnly` to avoid the old native journey.
+
+The source/package contract is coherent at this revision. Actual Git/AST checks
+enumerated the builder's admitted snapshot: 5,840 source blobs, no symlink or
+non-blob entries, and all 23 runtime SQL files, including Learn002, Cases003,
+Study002, Knowledge003 and Assessment003/004/005. The admitted tree includes
+the actual new attempts, collection, generation, import and Notes owners.
+`stage-backend.py:39-57,66-85,124-151` snapshots committed public source and
+refreshes only a generated payload; `stage-delivery.py:243-256` verifies and
+copies the admitted public base before source refresh. No application profile
+or credentials are snapshot roots. Comparing `f1c49444` with this revision found
+no change in Python/desktop manifests and locks or the helper contract. This
+supports source-only reuse of a verified payload; it does not validate any
+particular local payload.
+
+Before packaging, `stage-delivery.py:275-291` compares backend/renderer/native
+revision, refuses an unstaged adoption patch and verifies packaged inventory.
+The installed verifier at lines 106-120 and 180-214 compares actual EXE/ASAR/
+installer/inventory hashes, each listed file, and every admitted Git source
+blob. The final parent freeze must include the executed drivers; their byte
+guard at lines 151-168 permits only declared PowerShell checkout line endings.
+No actual package inventory or installed executable was opened in this review.
+Matching package/install receipts and final-source blob comparison therefore
+remain execution gates, not source findings that can be marked passed here.
+
+Rollback preserves an executable and a compatible profile separately.
+`storage/database.py:23-41,85-106` stamps schema2 and commits each migration
+script independently; DC20's real interruption proved failed-script rollback,
+not a whole-profile rollback. Before the first upgrade, the parent must retain
+a consistent complete synthetic schema1 snapshot, originals and prior selection,
+then rehearse restoring that snapshot before launching the old executable.
+An open-WAL file copy or schema2 export is not that snapshot. Preserve later C
+writes separately rather than merge them into old schema.
+`scripts/prepare_delivery_profile.py:29-42,164-190` intentionally filters to
+content/Library and cannot preserve learner/connection state for rollback.
+`runtime/protected.py:61-66` binds DPAPI entropy to the resolved profile path;
+normal-profile moves or retained-account acceptance remain parent-owned.
+`start-renulus.ps1:58-65` CheckOnly does not verify hashes/startup and may leave
+profile selection to the packaged fallback if no explicit profile is supplied.
+
+The eight-pass DC20 source proof closes its populated-record/media/deletion
+matrix at `4316fde0`; it does not establish final installed interpreter/helper
+behavior. Source changes between that baseline and this audit affect delivery
+drivers/helper receipt dating and Memory owners. Russell owns restore-to-ordinary
+Memory inference acceptance; Poincare owns mounted Notes/help and PDF selected
+position. Neither is duplicated here. The remaining matching installed work is
+real isolated-runtime/source identity, legacy upgrade/reopen, complete original
+recovery and effective local-index rebuild, hidden lifecycle/readers, plus the
+separately scoped native/physical and retained-account checks. Parent composes
+those receipts and controls cutover. This report closes no DC20/DC21 ticket.
+
+After the audit, Poincare reported disjoint Notes checkpoint
+`679c419fbfedca840be9bd5de6ae9e949271d69e`: twelve mounted rights/current-project/
+whole-Study context checks and two narrow ZIP deletion/recreation checks passed,
+with no Notes product failure. This is the peer's separate source receipt, not
+an independent rerun, an `eb20e0cf` installed observation or broad DC20 duplication.
