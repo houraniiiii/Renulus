@@ -119,6 +119,34 @@ tombstones prevent an old export reviving a removed shared-document link.
 Four focused checks passed in `integration/policy02.xml`; full attempt expiry,
 provider cancellation and integrated UI/reader publication still require DC14.
 
+### Connected slices and next reservations
+
+The lead integrated Home persistence/name receipts at `2702ff08`, conversation
+lifecycle/paged history at `ae1ee175`, and the collection/version/report slice at
+`dda7d8da` + `ea62d7ce`. The collection handoff includes 17 actual SQLite/router
+checks and five real-loopback renderer journeys; Home has 38 backend and ten
+renderer checks in its updated lane. These are bounded feature evidence, not
+closure of combined journeys. The C shell and shared Workspace wiring are still
+under integration. The historical normalization flags remain unstaged.
+
+The Workspace worker also reserves only
+`docs/implementation/design-c-review-integration.md` for independent pass 2
+review after its pending Workspace persistence slice, using hidden owned root
+`C:/Renulus/scratch/dcctl/rev1`. The lead reserves new
+`runtime/renulus/storage/workspace.py`, `workspace_api.py`,
+`tests/integration/test_design_c_workspace.py` and shared shell adapters for
+canonical Workspace access/preferences. No feature worker edits these paths.
+
+With DC12 contracts and real producers integrated, the collection worker moves
+to DC16. Its additional exact reservation is new
+`runtime/renulus/assessment/generation_service.py`, `generation_models.py`,
+`generation_api.py`, new `apps/desktop/src/modules/generation/`, and
+`tests/assessment/test_saved_generation.py`. Existing generated-practice files,
+collection/attempt routers and repositories, schema/migrations and server wiring
+remain with their current owners. The worker reuses the existing selected-provider
+and small-batch validators, and publishes through the trusted saved-version seam.
+No DC16 closure precedes actual integrated 5/10/20, recovery and cancellation proof.
+
 The entries below preserve earlier implementation evidence. Their Flow selection,
 branches, paths, issue status, time windows and heartbeat instructions describe
 those dated runs; they are not assignments or scheduling instructions for C.

@@ -918,7 +918,7 @@ This table records outcomes against the existing tickets, not a replacement plan
 | DC01 | Design prerequisite passed — design worker + lead | `fbdb99eb` reconciles editable C copy, 480px workspace, narrow/200% compositions and operational states. Lead reviewed representative pixels; connected code acceptance remains with feature owners. |
 | DC02 | Foundation published — lead + contract worker; connected acceptance open | `17f5d6a4` final contracts (27 cases, 11 blob digests); `db6852f9` exact sidecar/project/assessment DDL and policy seam (10 focused passes). Core typed graph, legacy conversion and invalidation evidence retained; Knowledge003 media and feature producers remain prerequisites. |
 | DC03–DC11 | In progress — reserved feature owners + lead | Contracts published through `17f5d6a4`; shell/controller, chats/projects, readers/Library, workspace and Home lanes hold separate leases. Real integration and feature evidence remain open. |
-| DC12–DC19 | DC12–DC15 in progress; later producers pending | Collection and attempts have separate repositories/routers. Generation/import/nightly reservations follow stable reader/attempt seams. |
+| DC12–DC19 | DC12–DC15 in progress; DC16 begins on published collection | Collection integrated at `dda7d8da` + `ea62d7ce` (17 actual DB and five real-loopback renderer journeys). Attempts retain separate ownership; DC16 new generation files are reserved in EXECUTION.md. Import/nightly depend on their real seams. |
 | DC20 | Not started — lead + independent reviewers | Requires all producer/consumer integrations and populated-profile coverage. |
 | DC21 | Not started — release lead | Current installed Flow app remains selected until DC20 and matching delivery evidence pass. |
 
