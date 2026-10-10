@@ -111,6 +111,11 @@ class ReaderRepository:
                 if not legacy and conversation is None and "rights_json" not in columns:
                     raise ApiError("reader_schema_unavailable", "The attachment storage update is not installed", 503, True)
                 raise ApiError("reader_original_unavailable", "The attachment original is currently unavailable", 409, True)
+        volatile = getattr(access, "volatile_original", None)
+        if callable(volatile) and (record := volatile(target.id, context=conversation)) is not None:
+            return Original("knowledge", record["original_id"], record["title"], record["filename"],
+                record["media_type"], record["sha256"], record["bytes"], record["rights"], data=record["data"],
+                revision=record["revision"], metadata=record["metadata"])
         if legacy:
             if conversation and (conversation.type != "case" or conversation.id != legacy["case_id"]):
                 raise ApiError("reader_context_mismatch", "This original belongs to another conversation", 403)

@@ -619,3 +619,99 @@ Case, then removal revokes it. The sidecar itself is not fabricated in tests;
 ordinary saved attachment persistence awaits the lead's published migration.
 The retrieval ID boundary now matches the shared 256-character Identifier;
 twenty scope/access checks passed in `scope-access-current-results.xml`.
+
+### Connected document grids
+
+The next reader slice preserves bounded native tables from Markdown, inert HTML
+and DOCX as plain cell DTOs and escaped React tables. Cells retain canonical
+tab/newline text and a shared TextLocator for whole-table passage requests. DOM
+table selections do not invent character offsets. CSV/XLSX retain their existing
+table coordinates. Nested/spanning HTML tables and merged DOCX cells fail
+explicitly rather than publish fabricated coordinates.
+
+Actual pinned parsers plus HTML resolve/passage routing passed fifteen checks in
+`reader-grids-connected-results.xml`; four React checks passed in
+`reader-grid-vitest-results.json`, and the full desktop TypeScript check passed.
+The initial five expected failures are retained in `reader-grids-red-results.xml`.
+All receipts and the external dependency-resolution harness are under this lane’s
+synthetic root. No package/lock change was made. Hidden packaged display and
+passage-to-conversation evidence remain integration work; DC08/DC10 remain open.
+
+### Published Knowledge003 semantic correction
+
+Merged the parent’s `8de5f0f6` baseline with all lane grid changes preserved.
+Missing ordinary attachment IDs now return metadata-free `not_found`/HTTP 404
+before sidecar lookup. Existing attachment records without usable sidecar or
+original authority remain `unavailable`; absent core tables remain explicitly
+unavailable. Two actual migrated-table removal checks run inside isolated SQLite
+transactions and roll back, without a fabricated schema. Thirty-three access,
+format/grid and connected router checks passed in
+`schema003-semantic-results.xml` against the published migration.
+
+### Ordinary attachment producer and live deletion seam
+
+KnowledgeAttachments registers one owner under knowledge_attachments and
+chat_attachments. The new attachment_api.create_router(services) exposes bounded
+raw upload, conversation attachment inventory and revisioned removal. The lead
+owns router assembly; tests mount only this new API explicitly. Reader tests use
+the published server assembly without a duplicate reader router.
+
+Upload options are conversation, expected_conversation_revision,
+expected_policy_revision, expected_context_epoch, idempotency_key, filename,
+title, rights and metadata, in x-renulus-attachment-options JSON alongside raw
+bytes. The canonical conversation owner decides retention. Saved originals use
+library/attachments/{id}/original.{extension}. Generated IDs satisfy
+[A-Za-z0-9_-]{1,128}; extensions/MIME come from the existing Knowledge allowlist.
+Filename never grants path authority. Aliases normalise to jpg, tiff and html.
+No dependency or schema change was made.
+
+Saved insertion uses the frozen core/original/sidecar inventories, explicit
+Rights and SourceMetadata, and the actual source hash. Saved upload requires
+display/cache rights. No extraction, indexing or provider operation runs
+automatically. Temporary Learning and Case uploads keep bytes and receipts in
+memory, with no row, file or durable command. Limits are 20 attachments per chat,
+64 MiB per saved original, 10 MiB per temporary original, 32 MiB temporary bytes
+per chat and 128 MiB total volatile bytes. Temporary reads require the actual
+matching owner context. Legacy Case bytes remain Case authority.
+
+The synchronous delete_chat_in(conn, kind, chat_id) hook validates at most 200
+IDs, emits attachment and attachment_original tombstones, and deletes core rows
+in the caller transaction. Cascade clears originals and metadata/processing. Its
+inert plan is a list of {attachment_id, relative_directory}, with each directory
+exactly library/attachments/{id}. It opens no connection, controls no transaction
+and performs no filesystem, thread or provider work. Call before original owner
+DELETE. The parent owns journal enqueue/commit and postcommit byte cleanup.
+cleanup_deleted(ids) is a scoped retry helper. discard_volatile(kind, chat_id)
+releases temporary bytes and upload receipts after success under owner locks.
+
+Promotion is a consumer prerequisite: take promotion_guard() before owner locks
+and SQLite; prepare_promotion_in(conn, kind, chat_id) stages records before draft
+reference validation and returns a lease. Call lease.commit() after caller commit
+or lease.rollback() after rollback. Cache rights are required; Case originals are
+excluded. The stage test uses the actual Learn caller-connection helper, but does
+not establish the full Chat promotion route. Zeno owns that wiring.
+
+Thirty-four producer/access/router checks passed in
+attachment-producer-run2-results.xml, including all required formats/assets,
+fresh Knowledge003 persistence/reopen, volatile isolation, retry, shared policy/
+context changes, written-original rollback, removal and promotion staging.
+Four final delete/forget checks passed in attachment-delete-seam-final-results.xml;
+filesystem operations and new connections are forbidden around delete_chat_in.
+Four React checks and the full desktop TypeScript check passed after merge.
+Three final passage/removal checks passed in
+attachment-passage-delete-final-results.xml. The saved original supplies a
+validated locator to the actual Conversation draft API, preserves prior draft
+text and persists the reference without creating a Learn message or provider run.
+The first producer run had nine passes and one faulty failure-injection fixture
+signature; the corrected fixture proves actual file/canonical rollback.
+
+Pending: parent mounts attachment_api; Zeno wires delete/forget and promotion;
+individual removal consumes the committed storage.attachment_cleanup journal.
+It currently commits revocation before scoped cleanup but does not yet enqueue
+that journal. Interrupted saved upload can leave an unreferenced owned folder;
+crash cleanup remains integration work. No durable preview/extraction cache or
+derived binary preview is claimed. Cache publication uses the frozen sidecar
+generations and inert reader/1 payload pinned to original ID/hash, attachment
+revision, rights and shared policy/context; derived rows use preview.{extension}.
+Actual OCR/helpers, safe active links, PDF text alignment, hidden packaged flows
+and DC08/DC10 closure remain open.

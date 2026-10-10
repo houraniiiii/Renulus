@@ -11,7 +11,7 @@ from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from ..contracts import ApiError, ContextScope, Event, Scope
-from .attachment_access import KnowledgeAttachmentAccess
+from .attachments import KnowledgeAttachments
 from .collection import CollectionCatalogue
 from .engines import MAX_BYTES
 from .models import Rights, SourceMetadata, own_text_rights
@@ -61,7 +61,8 @@ class NextAcquiredBatch(BaseModel):
 def create_router(services) -> APIRouter:
     repository = KnowledgeRepository(services)
     services.registry["knowledge"] = repository
-    services.registry["knowledge_attachments"] = KnowledgeAttachmentAccess(services)
+    services.registry["knowledge_attachments"] = KnowledgeAttachments(services)
+    services.registry["chat_attachments"] = services.registry["knowledge_attachments"]
     collection = CollectionCatalogue(repository)
     services.registry["knowledge_catalogue"] = collection
     worker = IngestionWorker(repository)

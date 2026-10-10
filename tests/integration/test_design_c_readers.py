@@ -8,7 +8,6 @@ import pytest
 
 from renulus.contracts import ApiError
 from renulus.knowledge.models import own_text_rights
-from renulus.knowledge.reader_api import create_router
 from renulus.server import create_app
 from renulus.storage.assessment_policy import advance_policy
 from renulus.storage.invalidation import bump_context_epoch
@@ -25,7 +24,6 @@ def reader_app(tmp_path, monkeypatch):
         raise AssertionError("Reader tests cannot use an external network/provider")
     monkeypatch.setattr(socket.socket, "connect", forbidden)
     app = create_app(tmp_path / "synthetic-reader-profile")
-    app.include_router(create_router(app.state.services), prefix="/api/v1")
     return app
 
 

@@ -21,6 +21,9 @@ class KnowledgeAttachmentAccess:
     def __init__(self, services):
         self.services, self.paths = services, services.paths
 
+    def _volatile_snapshot(self, conn, attachment_id, context):
+        return None
+
     @staticmethod
     def _deleted(conn, identifier, *types):
         placeholders = ",".join("?" for _ in types)
@@ -64,6 +67,10 @@ class KnowledgeAttachmentAccess:
             return denied("access_denied")
         if self._deleted(conn, attachment_id, "attachment", "case_attachment"):
             return denied("not_found")
+
+        ordinary = self._volatile_snapshot(conn, attachment_id, context)
+        if ordinary is not None:
+            return ordinary
 
         legacy = conn.execute("SELECT id,case_id,bytes FROM case_attachments WHERE id=?", (attachment_id,)).fetchone()
         if legacy:
