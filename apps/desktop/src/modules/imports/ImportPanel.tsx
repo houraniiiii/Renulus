@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { api } from '../../platform/api';
+import { api, ApiError } from '../../platform/api';
 import type { ContentReference } from '../../platform/designC';
 import { useResource } from '../../platform/useResource';
 import { Badge, Button, EmptyState, ErrorState, Input, LoadingState, Notice, Select, Textarea } from '../../ui';
@@ -51,10 +51,18 @@ export default function ImportPanel({ importId, sourceRevisionId, onSaved, onOpe
         setDraft(value); setOriginal(immutable); setReadError(null);
         setCandidateId(id => value.candidates.some(item => item.id === id) ? id : value.candidates[0]?.id ?? '');
         if (value.state === 'running') timer = setTimeout(() => void read(), 750);
-      } catch (error) { if (!controller.signal.aborted && current === sequence.current) setReadError(error); }
+      } catch (error) {
+        if (!controller.signal.aborted && current === sequence.current) {
+          setReadError(error);
+          if (error instanceof ApiError && [403, 404, 410].includes(error.status)) { setDraft(null); setOriginal(null); setDirty(false); }
+        }
+      }
     }
     void read(); return () => { controller.abort(); clearTimeout(timer); };
   }, [selected, refresh, denied]);
+  useEffect(() => {
+    if (mutation.error instanceof ApiError && [403, 404, 410].includes(mutation.error.status)) setRefresh(value => value + 1);
+  }, [mutation.error]);
   useEffect(() => {
     if (draft?.result && draft.result_available && !seen.current.has(draft.result.version_id)) {
       seen.current.add(draft.result.version_id); saved.current?.(draft.result);
@@ -143,6 +151,7 @@ export default function ImportPanel({ importId, sourceRevisionId, onSaved, onOpe
             onVisibility={removed => mutation.mutate<ImportDraft>(importPath(draft.id) + '/candidates/' + encodeURIComponent(candidate.id) + '/visibility',
               { removed, expected_revision: draft.revision }, received)} />}
           <aside className="import-original" aria-label="Immutable original"><div className="import-heading"><h3>Original text</h3><Badge tone="neutral">Unchanged</Badge></div>
+            {!original && <LoadingState label="Loading immutable original" />}
             <p className="import-caption">{location ? 'Characters ' + location.start + '–' + location.end + ' · end exclusive' : 'Exact retained original'}</p>
             <pre>{original && location ? originalSlice(original.text, location) : original?.text}</pre>
             {onOpenSource && sourceReference && <Button variant="secondary" onClick={() => onOpenSource(sourceReference)}>Open original location</Button>}

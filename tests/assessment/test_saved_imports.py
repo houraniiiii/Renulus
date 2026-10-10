@@ -414,7 +414,8 @@ def extracted_imports(tmp_path_factory):
         pytest.skip("Select pinned public offline assets explicitly; extraction is not simulated")
     root = tmp_path_factory.mktemp("private-saved-extraction")
     manifest = json.loads((Path(__file__).parents[2] / "packaging/runtime/helper-assets.json").read_text())
-    for record in manifest["groups"]["embedding"]["files"]:
+    groups = ["embedding", "docling", "ocr"] if os.environ.get("RENULUS_IMPORT_OCR") == "1" else ["embedding"]
+    for record in [record for group in groups for record in manifest["groups"][group]["files"]]:
         source = Path(selected) / record["path"]
         assert source.stat().st_size == record["size"] and hashlib.sha256(source.read_bytes()).hexdigest() == record["sha256"]
         target = root / "helpers" / record["path"]
@@ -568,3 +569,80 @@ async def test_actual_source_tombstone_refuses_new_work_and_publication(extracte
     stored = services.db.fetch_one("SELECT * FROM assessment_test_imports WHERE id=?", (row["id"],))
     assert stored["original_text"] and stored["source_revision_id"] == source["revision_id"]
     assert stored["published_version_id"] is None and len(transport.calls) == before
+
+
+@pytest.mark.asyncio
+async def test_actual_cpu_ocr_import_preserves_image_location_and_partial_source_refusal(extracted_imports):
+    if os.environ.get("RENULUS_IMPORT_OCR") != "1":
+        pytest.skip("Select pinned public OCR assets explicitly; OCR is not simulated")
+    from PIL import Image, ImageDraw, ImageFont
+    services, service, transport, _, _ = extracted_imports
+    image = Image.new("RGB", (1500, 480), "white")
+    drawing = ImageDraw.Draw(image)
+    font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 40)
+    for index, line in enumerate(("1. Which synthetic renal value is supplied?", "A. First sodium observation", "B. Second sodium observation", "Answer: A")):
+        drawing.text((48, 48 + index * 88), line, fill="black", font=font)
+    path = services.paths.root / "synthetic-private-ocr.png"
+    image.save(path)
+    source = services.get("knowledge").import_file(path, rights=own_text_rights(), title="Synthetic private OCR test")
+    assert source["status"] == "ready", source
+    row = service.create(CreateImportRequest(idempotency_key="actual-ocr-private-import",
+        original={"kind": "library_revision", "revision_id": source["revision_id"]}))
+    original = service.original(row["id"])
+    assert "synthetic renal value" in original["text"]
+    assert original["original"]["source_pin"]["original_sha256"] == hashlib.sha256(path.read_bytes()).hexdigest()
+    assert any(segment["reference"].get("locator", {}).get("kind") == "image" for segment in original["original"]["segments"])
+    output = normalized(original["text"])
+    assert output["candidates"], original["text"]
+    before = len(transport.calls)
+    transport.responses = [None] * before + [output]
+    await service.normalize(row["id"], command(row, "actual-ocr-normalize"))
+    row = await finish(service, row["id"])
+    assert row["state"] == "draft" and all(not item["review_confirmed"] for item in row["candidates"])
+    row = resolve_all(service, row)
+    published = service.save(row["id"], command(row, "actual-ocr-explicit-save"))
+    assert services.get("saved_tests").setup_version(published["result"]["version_id"])["can_start"]
+    metadata = json.loads(services.db.fetch_one("SELECT metadata_json FROM knowledge_revisions WHERE id=?", (source["revision_id"],))["metadata_json"])
+    services.db.execute("UPDATE knowledge_revisions SET metadata_json=? WHERE id=?", (json.dumps({**metadata, "excluded_pages": [1]}), source["revision_id"]))
+    assert service.original(row["id"])["text"] == original["text"]
+    with pytest.raises(ApiError) as error:
+        service.create(CreateImportRequest(idempotency_key="actual-partial-ocr-refusal",
+            original={"kind": "library_revision", "revision_id": source["revision_id"]}))
+    assert error.value.code == "saved_extraction_denied"
+    assert len(transport.calls) == before + 1
+    blank_path = services.paths.root / "synthetic-empty-ocr.png"
+    Image.new("RGB", (640, 480), "white").save(blank_path)
+    failed = services.get("knowledge").import_file(blank_path, rights=own_text_rights(), title="Synthetic image with no extractable test")
+    assert failed["status"] == "failed", failed
+    with pytest.raises(ApiError) as error:
+        service.create(CreateImportRequest(idempotency_key="actual-failed-ocr-refusal",
+            original={"kind": "library_revision", "revision_id": failed["revision_id"]}))
+    assert error.value.code == "saved_extraction_failed"
+    assert len(transport.calls) == before + 1
+
+
+@pytest.mark.parametrize("format_version", [1, 2])
+def test_actual_library_import_original_reopens_after_zip_without_reextracting(extracted_imports, tmp_path, format_version):
+    services, service, transport, note, _ = extracted_imports
+    row = service.create(CreateImportRequest(idempotency_key=f"actual-library-zip-{format_version}",
+        original={"kind": "library_revision", "revision_id": note["revision_id"]}))
+    original = service.original(row["id"])
+    before = len(transport.calls)
+    directory, _ = services.get("data_recovery").backup(format_version=format_version)
+    data = (directory / "backup.zip").read_bytes()
+    destination = create_app(tmp_path / f"actual-library-import-restored-{format_version}").state.services
+    recovery = destination.get("data_recovery")
+    identifier, upload = recovery.begin_preview()
+    keep = False
+    try:
+        (upload / "input.zip").write_bytes(data)
+        checked = recovery.complete_preview(identifier, upload)
+        keep = True
+    finally:
+        recovery.end_upload(upload, keep=keep)
+    recovery.restore_preview(checked["preview_token"], checked["exported_at"], True)
+    restored = destination.get("saved_imports")
+    assert restored.original(row["id"]) == original
+    assert restored.read(row["id"])["candidates"] == row["candidates"]
+    assert destination.db.fetch_one("SELECT extraction_json FROM knowledge_revisions WHERE id=?", (note["revision_id"],))["extraction_json"] is None
+    assert not restored.tasks and len(transport.calls) == before

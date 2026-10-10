@@ -30,13 +30,22 @@ beforeAll(async () => {
   origin = 'http://127.0.0.1:' + address.port;
   const runtimeRoot = join(repositoryRoot, 'runtime');
   const bootstrap = [
-    'import sys, asyncio, json', 'from pathlib import Path',
+    'import sys, asyncio, json, os, hashlib, shutil', 'from pathlib import Path',
     'sys.path[:0] = ' + JSON.stringify([runtimeRoot, join(repositoryRoot, 'tests/assessment')]),
     'import renulus', 'assert Path(renulus.__file__).resolve().parent.parent == Path(' + JSON.stringify(runtimeRoot) + ').resolve()',
     'import renulus.server as server',
     'server.MODULE_ORDER = ("runtime","content","knowledge","learn","cases","assessment","memory","study")',
     'from test_saved_imports import SyntheticTransport, normalized',
     'from renulus.assessment.import_api import create_router',
+    'root = Path(' + JSON.stringify(profile) + ')',
+    'assets = os.environ.get("RENULUS_SAVED_EXTRACTION_ASSETS")',
+    'if assets:',
+    '    manifest = json.loads(Path(' + JSON.stringify(join(repositoryRoot, 'packaging/runtime/helper-assets.json')) + ').read_text())',
+    '    for record in manifest["groups"]["embedding"]["files"]:',
+    '        source = Path(assets)/record["path"]',
+    '        assert source.stat().st_size == record["size"] and hashlib.sha256(source.read_bytes()).hexdigest() == record["sha256"]',
+    '        target = root/"helpers"/record["path"]', '        target.parent.mkdir(parents=True,exist_ok=True)', '        shutil.copyfile(source,target)',
+    '    (root/"helpers/manifest.json").write_text(json.dumps(manifest))',
     'app = server.create_app(' + JSON.stringify(profile) + ', token="imports-ui-fixture")',
     'services = app.state.services',
     'if "saved_imports" not in services.registry: app.include_router(create_router(services), prefix="/api/v1")',
@@ -44,6 +53,10 @@ beforeAll(async () => {
     'provider._settings["connections"]["codex"] = {"access_token":"synthetic-import-token","expires_at":9999999999}',
     'provider._settings["selected_provider"] = "codex"',
     'provider._settings.setdefault("selected_models",{})["codex"] = "gpt-6.1-sol"', 'provider._transport = transport',
+    'library_revision = None',
+    'if assets:',
+    '    result = services.get("knowledge").import_text(' + JSON.stringify(TEXT) + ',title="Synthetic renderer saved Library test")',
+    '    assert result["status"] == "ready", result', '    library_revision = result["revision_id"]',
     'services.on_startup = [services.get("saved_tests").backfill_legacy, imports.recover]',
     'services.on_shutdown = [provider.close, imports.close]',
     '@app.post("/__imports_fixture/scenario")', 'async def scenario(body: dict):',
@@ -54,7 +67,7 @@ beforeAll(async () => {
     '    if body["mode"] == "wait": transport.release = asyncio.Event()',
     '    transport.responses = [None] * len(transport.calls) + [value]', '    return {"calls":len(transport.calls)}',
     '@app.get("/__imports_fixture/stats")', 'async def stats():',
-    '    return {"calls":len(transport.calls),"imports":services.db.fetch_one("SELECT COUNT(*) AS n FROM assessment_test_imports")["n"],"versions":services.db.fetch_one("SELECT COUNT(*) AS n FROM assessment_test_versions")["n"]}',
+    '    return {"calls":len(transport.calls),"imports":services.db.fetch_one("SELECT COUNT(*) AS n FROM assessment_test_imports")["n"],"versions":services.db.fetch_one("SELECT COUNT(*) AS n FROM assessment_test_versions")["n"],"library_revision":library_revision}',
     'import uvicorn', 'uvicorn.run(app,host="127.0.0.1",port=' + address.port + ',access_log=False,log_level="warning")',
   ].join('\n');
   let startupError = '';
@@ -87,7 +100,7 @@ async function request<T>(path: string, method = 'GET', body?: object, key?: str
   expect(response.ok, await response.clone().text()).toBe(true);
   return response.json() as Promise<T>;
 }
-const stats = () => request<{ calls: number; imports: number; versions: number }>('/__imports_fixture/stats');
+const stats = () => request<{ calls: number; imports: number; versions: number; library_revision: string | null }>('/__imports_fixture/stats');
 const scenario = (id: string, mode: string) => request('/__imports_fixture/scenario', 'POST', { id, mode });
 const review = () => screen.getByRole('region', { name: 'Import review' });
 const question = () => screen.getByRole('region', { name: 'Question 1' });
@@ -200,4 +213,21 @@ it('consumes a real imported version in Test and hides content while neutral Sto
   } finally {
     await request('/api/v1/assessment/test-attempts/' + attempt.id + '/submit', 'POST', { expected_draft_revision: attempt.draft_revision }, crypto.randomUUID());
   }
+});
+
+it.skipIf(!process.env.RENULUS_SAVED_EXTRACTION_ASSETS)('imports an actual extracted saved Library revision and opens its typed original reference', async () => {
+  const before = await stats(), location = vi.fn();
+  expect(before.library_revision).toBeTruthy();
+  render(<ImportPanel sourceRevisionId={before.library_revision!} onOpenSource={location} />);
+  await waitFor(() => expect((screen.getByLabelText('Saved Library revision') as HTMLSelectElement).disabled).toBe(false));
+  fireEvent.click(screen.getByRole('button', { name: 'Save private original' }));
+  await screen.findByRole('region', { name: 'Question 1' });
+  const row = await draftFromUI();
+  expect(row.source_kind).toBe('library_revision'); expect(row.source_revision_id).toBe(before.library_revision);
+  fireEvent.click(await screen.findByRole('button', { name: 'Open original location' }));
+  expect(location).toHaveBeenCalledOnce(); expect(location.mock.calls[0][0].target).toEqual({ type: 'library_revision', id: before.library_revision });
+  await scenario(row.id, 'valid'); fireEvent.click(screen.getByRole('button', { name: 'Normalize with selected connection' }));
+  await waitFor(async () => expect((await request<ImportDraft>('/api/v1/assessment/imports/' + row.id)).state).toBe('draft'));
+  expect((await stats()).calls).toBe(before.calls + 1);
+  expect((screen.getByRole('button', { name: 'Save 2 reviewed questions' }) as HTMLButtonElement).disabled).toBe(true);
 });
