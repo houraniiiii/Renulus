@@ -1,0 +1,618 @@
+# Renulus product answers
+
+Recorded on 2026-10-04 from the user's answers in rounds 1–3 and the subsequent
+framework research and stack selection. This is a faithful
+record of the substantive decisions, with conversational wording normalised for
+project documentation. It supersedes earlier assistant assumptions about a
+hosted service, browser/mobile delivery and a workflow that could not discuss
+daily practice. Framework approval is recorded in its dated follow-up below;
+application implementation is not authorised by this documentation request.
+
+## Round 1 — initial product direction
+
+| Answer | Confirmed direction |
+| --- | --- |
+| 1. Users and curriculum | Nephrologists practising in the EU. The first product is English only. Other languages relevant to the EU may be added later. |
+| 2. Main purpose | Support all four activities: understanding topics, practising cases, preparing for examinations and following a study programme. The central purpose is assistance throughout education and learning during specialisation. |
+| 3. Use throughout the day | Support short visits and focused sessions, with particular emphasis on active study, learning and staying up to date. |
+| 4. Teaching behaviour | Separate Chat/Explain and Test modes. |
+| 5. Questions | Use a reviewed question bank for scored assessment. Generated questions serve practice. |
+| 6. Personalisation | Remember what matters without redundant information. The exact memory and retention rules still need design. |
+| 7. Daily practice | The product is educational and interactive. Users should also be able to ask about cases encountered in daily practice. It should not be limited to static reports. |
+| 8. Platform | Windows application is the final and only product platform. |
+| 9. Operating model | Open-source harness application. The project owner will not host a service or run model inference for users. The previous hosted-service funding question was based on an incorrect assumption. |
+| 10. Review and collaboration | The user and assistant will develop, review and validate the work together. Work should be direct and practical, without repeated generic medical disclaimers or an invented requirement for an external review panel. |
+
+The existing name Renulus, selected C — Renal flow logo, calm and approachable
+medical character, existing-model approach and no-retraining decision remain in
+force. The user wants Figma design work informed by Impeccable and Interface
+Design, and a straightforward backend that adopts suitable existing components.
+
+## What round 1 did not decide
+
+This section records the boundary at round 1. Round 2 below now settles the
+subscription providers, model list, curriculum direction, input formats and
+personal-PC target.
+
+An open-source harness does not by itself select an API, subscription connection,
+local model engine, endpoint or model. No mandatory local GPU or model download
+has been requested. The author-operated inference service is excluded; the
+connection methods and onboarding experience remain to be selected.
+
+Daily-practice discussion is confirmed. Importing identifiable patient files,
+persisting a clinical record or integrating with hospital systems has not been
+requested. Input formats, source access and what crosses a model-provider boundary
+remain concrete product decisions.
+
+The EU audience does not select a particular examination, a validated curriculum
+or a separate consultant/trainee interface. The retained taxonomy remains a
+historical reference. No external question-bank delivery, permission or society
+endorsement follows from these answers.
+
+User-and-assistant review is the working process. It does not make generated
+answers or question keys correct by declaration: source checks, reproducible
+examples and observed software behaviour provide the evidence for each claim.
+
+Research recommendations and unresolved decisions are tracked separately in
+[the planning decisions](DECISION_QUEUE.md).
+
+## Round 2 — confirmed decisions
+
+Recorded later on 2026-10-04. These answers supersede conflicting suggestions
+in the first planning/research notes.
+
+| Answer | Confirmed decision |
+| --- | --- |
+| 1. Model access | Existing subscriptions through OpenCode Go and/or Codex. Allowed Codex models: **GPT 6.1 Sol, GPT 6 Astra, GPT 6 Luna**. Allowed OpenCode Go models: **MiMo V2.6 Pro, DeepSeek V4.1 Flash**. This is the explicit provider/model list; do not silently substitute models or add other providers. |
+| 2. Curriculum | Accept the recommendation: general nephrology topic organisation with an **ESENeph examination track**, followed by specific national programme mappings where useful. No first national programme has been named. |
+| 3. Inputs | Support multiple methods, including **text, summaries, PDFs and images**, with other useful formats within the intended broad input experience. A typed-only product or blanket attachment deferral was not accepted. Exact additional formats, size limits and processing behaviour remain engineering/design work. |
+| 4. Staying current | Include **guidelines and selected important research**. |
+| 5. Computers | Target **personal Windows computers**. |
+| 6. Breadth and sequence | Renulus must support education across nephrology and be useful to practising nephrologists broadly. The proposal to perfect acid–base or any single subject first is **rejected**. Build reusable capabilities across domains; do not let a demonstration subject become the product scope. |
+
+Broad capability does not claim an already complete reviewed bank or guaranteed
+accuracy. Content coverage must be visible and developed across domains.
+Technical testing may use individual examples, but feature acceptance must
+include varied nephrology subjects and cross-topic questions.
+
+Subscription choices are confirmed product requirements. Authentication,
+account-specific model availability, usage-limit behaviour and attachment
+capabilities still need implementation verification. No paid API fallback,
+local-model requirement or automatic provider switching has been approved.
+
+Round 2 does not adopt the earlier proposed session-only case retention,
+automatic memory capture or offline behaviour merely by accepting input formats
+and personal computers. These remain explicit design choices or proposals.
+
+## Round 3 — all seven recommendations accepted
+
+The user explicitly accepted every recommendation in the preceding seven-row
+question round. These are confirmed product behaviour:
+
+| Subject | Accepted decision |
+| --- | --- |
+| Model selection | Automatically choose among allowed, available models within the user's chosen subscription, with an easy manual override. Do not silently switch subscriptions or use an unapproved/billed fallback. |
+| Learning memory | Automatically retain progress, preferences and useful deduplicated learning points. Users can inspect and edit them. |
+| Raw case retention | Raw daily-practice cases and attachments persist only after an explicit Save. |
+| Personal library | Users can add uploaded study documents to a reusable personal library, organised by topic, with passage/page references in answers. One-off case attachments remain separate. |
+| Teaching | Explain answers directly by default. Offer optional guided teaching and deeper explanations. Test remains separate. |
+| Study planning | Offer an adaptive plan using goals, available time, an optional exam date and observed mistakes. Preserve free exploration and manual changes. |
+| Evidence lookup | Automatically look up selected reliable sources when evidence or freshness matters, with citations and dates. Indicate failed retrieval or unverified information. |
+| Opening screen | A compact home with Ask, Resume, suggested review and relevant updates, plus quick access to topics and Test. |
+
+Explicit-only case retention must also govern derived transcripts, extraction
+caches and logs; this is its implementation consequence. It is not a promise
+about provider-side storage. Routine local study chat history, deletion/export
+mechanics and memory correction are engineering details to specify consistently.
+
+## Implementation-planning instructions
+
+The same request adds these confirmed directions:
+
+- Build a **real, working product**. Design alternatives and prototypes may guide
+  implementation, but completion means working software rather than a mock
+  screen or placeholder response.
+- Write comprehensive, concise implementation plans in stages, with vertical
+  slices and clear module ownership so changes and parallel worktrees stay local.
+- Use several subagent waves, second opinions and adversarial review. Ask the
+  user only for major decisions that evidence or reasonable engineering judgement
+  cannot resolve.
+- Adopt a **Hermes fork** as the backend foundation, preserving its upstream
+  attribution and licence. Inspect what it already supplies before adding code.
+- Reuse maintained existing work. Rebuild only where needed or where a concrete
+  comparison shows doing so is simpler.
+- Evaluate **Supermemory** for context/memory, ingestion, PDF extraction,
+  chunking, embeddings, retrieval and personalised context. It is a candidate,
+  not an accepted new hosted dependency or an approved licence change.
+
+This request authorises implementation planning and public-source investigation.
+It does not itself start model inference, deploy services or implement the app.
+
+## Ownership decision during implementation planning
+
+The user explicitly selected permissive reuse with attribution:
+**MIT for Renulus's own code; CC BY 4.0 for its original teaching content**.
+Commercial reuse is allowed without requiring derivatives to remain open.
+Third-party material retains its own terms. This does not relicense imported
+publications, user-uploaded documents or vendor packages.
+
+## Memory and document-framework research round
+
+Recorded later on 2026-10-04. The user requested deep web, public social-media
+and GitHub research into reusable frameworks for memory, document ingestion,
+RAG, PDF extraction/chunking/embeddings/vector search, personalised context
+injection and context management.
+
+- **Drop Supermemory from consideration for adoption.** The user requires the
+  reusable engine itself to be open source, rather than only a public client or
+  plugin. This supersedes the earlier optional-candidate status; retain the
+  earlier research as dated evidence.
+- Prioritise reliable, maintained open-source components that can be adapted
+  with minimal changes and compatible distribution terms. Build Renulus-specific
+  functionality where it adds value or closes a demonstrated gap.
+- The intended experience is routine, day-to-day use by clinicians throughout
+  their nephrology learning. Background processing and configuration should be
+  handled by the application; doctors should not need technical setup or ongoing
+  system administration.
+- **Small CPU models bundled and managed entirely by Renulus for embeddings
+  and OCR are accepted.** No GPU, Docker, model server or model setup is required
+  of doctors. Conversation and other generative work continue through the
+  selected subscriptions and allowed models. This clarifies the earlier
+  no-local-runtime requirement; it does not authorise local conversational LLMs.
+
+This round authorises research and a concrete framework recommendation for
+finalising the plan. It does not select a replacement framework by implication
+or authorise application implementation, model downloads or provider calls.
+
+## Starting-stack approval after the research
+
+Recorded on 2026-10-04 after the completed research recommendation. The user
+explicitly accepted the strongest starting stack and requested that the planning
+files be updated and the evidence kept in research. This supersedes the earlier
+unselected-candidate status for these components.
+
+| Capability | Confirmed starting stack |
+| --- | --- |
+| Runtime and conversation context | **Hermes**, including its memory-provider hooks, context selection and compressor |
+| Learner memory | **Mem0 OSS**, using the existing Hermes in-process integration |
+| Document ingestion, PDFs, OCR and structured extraction | **Docling**, configured for CPU and app-managed local artifacts |
+| Chunking | **Docling-core HybridChunker**, preserving structure and source-item references |
+| Embeddings | **FastEmbed**, with an explicit bundled CPU embedding model |
+| Document keyword/vector search and RAG retrieval | **LanceDB OSS**, using embedded hybrid search |
+
+The recommendation retains **canonical SQLite records** under Renulus ownership.
+The initial Mem0 integration uses its existing **local Qdrant client** as a
+derived memory index; LanceDB serves the document library. This is an integration
+baseline, not a request for a Qdrant server or a second record authority.
+
+Exact package versions, embedding weights/tokenizer, OCR backend/language data
+and Docling layout/table artifacts remain engineering selections to pin and
+verify. BGE-small-en-v1.5 is a research baseline, not a newly confirmed model.
+The selected generative subscription/model rules remain in force for chat,
+memory extraction, summarisation and other generative background work.
+
+Docling is the selected primary pipeline. A bounded comparison with LiteParse
+can resolve a demonstrated packaging, resource or extraction problem; it does
+not reopen the entire stack decision. Cognee and the other investigated engines
+remain alternatives, not additional dependencies.
+
+This approval authorises documenting the selected stack and its implementation
+work in the plan. It does not start application implementation, installation,
+model downloads, inference or deployment. Preserve the
+[research recommendation](../research/2026-10-04-context-framework-recommendation.md),
+its supporting investigations and the
+[stack evidence record](../research/2026-10-04-starting-stack-evidence.md).
+
+## Source register, ERA downloads and optional retrieval API keys
+
+Recorded later on 2026-10-04 from the owner's source-acquisition follow-up.
+
+- The owner reports several calls with ERA and states that ERA will agree to
+  support the project, at least through users being responsible for downloading
+  the material themselves. This is confirmed planning input from the owner;
+  record the edition, delivery format and applicable use scope when material is
+  obtained. Keep private correspondence and supplied restricted files outside
+  the public repository.
+- Maintain **one development source list**, covering all usable access levels,
+  rather than a list limited to content that can be bundled publicly. Include
+  developer acquisition and a concrete user acquisition method for every entry.
+- Use the latest KDIGO guidance and reliable maintained literature sources,
+  including the open full-text subset associated with PubMed. Do not present
+  superseded, expired, retracted or unverified-current material as current.
+  Distinguish the latest published final guideline from a newer public-review
+  draft; track corrigenda and chapter-level replacement.
+- Where possible, doctors should be able to download the same eligible material
+  themselves from an official link or supported dataset/API and add it locally.
+  Membership/institutional/user access belongs in the same register with its
+  relevant acquisition conditions.
+- **Optional user-supplied API keys are accepted for web search, literature
+  search and related retrieval tools**, including user-selected paid services.
+  The app must retain a useful route without optional keys. Activation, provider
+  selection and usage/cost controls are explicit; there is no incidental paid
+  usage or silent newly billed fallback.
+- Retrieval-tool credentials do not authorise other generative models, paid
+  model API fallbacks, owner-hosted inference or model training. The selected
+  subscriptions/models and temporary-case boundaries remain in force.
+
+The [single source register](../SOURCES.md) contains the dated primary-source
+verification and acquisition methods. Specific adapter priorities and check
+cadences are engineering recommendations; no API integration, acquired corpus
+or implementation is established by this planning update.
+
+## Starting local source collection
+
+Recorded later on 2026-10-04 from the owner's file-storage follow-up.
+
+- The owner has ERA Neph-Manual files and wants a concrete place to add them,
+  along with future dataset downloads. This authorises preparing acquisition
+  folders; no files have been supplied or imported by this step.
+- The assistant prepared an external collection at
+  `%USERPROFILE%\Documents\Renulus-data`, with the manual in
+  `raw/E01-era-neph-manual/` and separate `raw/E02-era-mcqs/` storage. Other
+  acquisition folders use the same source-register IDs. Original filenames and
+  editions are preserved, with provenance notes under `metadata/`.
+- Proposed engineering default for the installed application:
+  `%LOCALAPPDATA%\Renulus`, with a configurable library location and isolated
+  per-worktree development profiles. This is a storage recommendation in
+  response to the question; runtime configuration and import remain unimplemented.
+
+## Automated source acquisition responsibility
+
+Recorded later on 2026-10-04 from the owner's acquisition instruction.
+
+- ERA Neph-Manual E01 acquisition belongs to the owner; leave its files and
+  folder alone.
+- The assistant is responsible for acquiring the remaining source material,
+  using parallel subagents in waves, direct terminal downloads and suitable
+  browser tools where needed. This explicitly authorises actual public-source
+  downloads into the external collection, not just further source planning.
+- Record acquired originals, actual editions, access/processing conditions,
+  hashes, query coverage and concrete acquisition gaps. A source page, API
+  sample or unavailable export must not be reported as a complete dataset.
+- This acquisition instruction does not implement the app, authorise incidental
+  billed provider calls or restore unspecified private/archive datasets.
+
+## End-to-end implementation authorisation
+
+Recorded on October 4, 2026 from the subsequent implementation instruction.
+This supersedes the earlier planning-only implementation status.
+
+- The user selected **Flow** from the design exploration. Reuse its artifacts
+  and the agreed Renulus brand in one coherent product design system.
+- Implementation of the complete backend, frontend and connected app is now
+  authorised. Orchestrate bounded subagents in parallel lanes, several waves
+  and isolated worktrees, owning engineering decisions, testing and validation.
+- Keep planning basic and flexible. Actual implementation evidence may change
+  proposed interfaces and sequencing without reopening settled product choices.
+- Use GitHub issues as the dynamic work queue and record decisions and evidence.
+  Start unblocked work in available lanes. Prioritise working product flows and
+  maintained reusable components over redundant infrastructure or trivial tests.
+- Work autonomously over the next eight hours. The later explicit goal instruction
+  sets the heartbeat to **15 minutes**, superseding the initial 30-minute request.
+  The UI session is `7cc53cdb-4edb-4770-b48e-b1cf925f0021`; source acquisition
+  continues separately in `33c2315f-f369-42d0-bf80-818205301d18`. Preserve their
+  work and integrate available artifacts through explicit ownership boundaries.
+- The owner has added the nephrology manual and wants the app to use the
+  acquired data. Import authorised selected files locally, preserve external
+  originals and acquisition metadata, and keep restricted files out of the
+  public repository. No paid-provider use, training or copied private/native
+  account state is implied by implementation authorisation.
+
+Live execution and delivery evidence belong in GitHub issue #1 and
+`docs/implementation/`, not in an assertion that the old planning gates passed.
+
+## October 5 finalisation and storage instruction
+
+The owner renewed the same end-to-end delivery goal on October 5, 2026.
+
+- Move the active delivery checkout from E to the C SSD now that the earlier
+  storage shortage is resolved. Preserve the raw collection on the second SSD,
+  original files, other sessions and app-owned credentials.
+- Recover existing worktrees, commits, incomplete checks and receipts before
+  assigning replacement work. Continue autonomously with Ultra reasoning and
+  up to eight bounded parallel lanes in separate worktrees.
+- Use the existing GitHub issues and draft PR #13 as the live queue, with
+  exactly one heartbeat every **20 minutes**. This is the current interval.
+- Complete backend regression, matching packaging/installation, normal-queue
+  shutdown/reopen, Library originals and citations, ESENeph mapping, approved
+  subscription generation and learning capture, recovery and connected flows.
+- Preserve Flow, the selected engines and exact subscription/model boundaries,
+  source permissions and temporary-case retention. Update the launcher only
+  after acceptance of the matching installed source.
+- Finish with a requirement-by-requirement evidence audit, runnable delivery
+  and honest external blockers. Partial or synthetic evidence does not establish
+  completed release acceptance.
+
+The integration owner relocated the active checkout to
+`C:/Renulus-native-delivery/desktop-20261005/repo` and repaired the existing Git
+worktree links. The old E checkout path is a junction for launcher compatibility;
+the learning profile and acquired originals remain on E. This storage change
+does not update the installed product revision.
+
+## October 5 Windows acceptance update
+
+The owner confirmed that only the current PC is available and explicitly asked
+to remove signing and separate clean Windows PC/VM acceptance requirements.
+
+- Deliver an unsigned Windows app and validate it on this PC.
+- Keep matching source/artifact provenance, bundled runtime with developer tools
+  absent from the app PATH, fresh isolated installation, normal shutdown/reopen,
+  recovery and the connected product journeys as acceptance requirements.
+- A second isolated installation/profile on this machine can establish restore
+  and instance isolation; do not call that a separate clean-machine test.
+- Signing and a separate clean-machine test are optional future distribution
+  work and are not blockers or missing inputs for this goal.
+- Preserve historical signed-release/clean-machine planning and observations as
+  dated evidence; the updated DECISIONS and implementation plan govern current
+  acceptance. No subscription, stack, source-use or retention constraint changed.
+
+## October 6 local delivery with the live blocker
+
+The installed app's selected Codex GPT 6 Astra attempt returned
+`subscription_limit`. Asked whether to restore the existing connection or deliver
+with the blocker documented, the owner answered: **“Deliver with the live blocker.”**
+
+Complete the runnable local Windows handover with the observed acceptance scopes
+and limits. Successful generation, automatic capture and dependent live journeys
+stay unperformed; account access is not required for this handover. Preserve
+the original failed attempt and exact model/subscription constraints, with no
+retry, silent switch, fallback or Go activation. The decision supplies no live
+success or full product validation claim.
+
+## October 7 full delivery continuation and Go approval
+
+The owner resumed full product delivery and explicitly instructed us to enable
+and test OpenCode Go for personal-agent learning, removing the earlier overly
+cautious app pause and notes. Test the two approved Go models using Renulus's
+existing saved connection; keep exact subscription/model choices and preserve
+credentials. App approval does not invent a vendor confirmation or a live pass.
+The prior October 6 limited handover remains historical; complete Explain,
+practice, automatic Memory, connected evidence/Cases/Updates, required content,
+Windows usability and matching release acceptance are now the active goal.
+Use bounded parallel lanes, integrate their work, keep GitHub current and clean
+completed worktrees after preserving useful evidence.
+
+## October 9 Figma navigation refinement
+
+The owner asked to refine concept C in the existing Renulus Figma file, using
+the supplied ChatGPT, Codex and T3 Code screenshots as layout references.
+This request covers prototype design; it does not authorise app implementation
+or establish a final choice among the three concepts.
+
+Confirmed directions from the prototype discussion:
+
+- Place search and sidebar collapse beside the Renulus name at the top left.
+- Put relevant global destinations, including Library, Test and Updates, above
+  projects and chats in the left navigation.
+- Use the right side as a workspace for files and other useful learning
+  material, rather than a Library/Test navigation bar.
+- A project contains chats, shared documents and study goals; ESENeph
+  preparation is the shared comparison example.
+- Compare the three layouts with the same content. The existing comparison
+  board retains three design columns and nine matching screen rows.
+
+Design proposals built for review, not separately confirmed app requirements:
+
+- An optional workspace with Files, cited Sources, Study notes and project Goals.
+- Full Library and focused Test destinations reached through the left navigation.
+- A More menu for learning memory, study preferences, connections and settings.
+- Global search, source reading beside chat, and collapsed navigation examples.
+
+The editable C page is now **03 · C — Chat + workspace** in Figma file
+`zV8JiWybVHP1UxJtLbZjEt`, page `2:250`. The files-beside-chat example is
+`25:2522`, and the three-column comparison board is `13:23` on page `12:23`.
+The C column was refreshed; its Chat row shows the file workspace open.
+Visual and structural checks establish editable prototype layouts, not working
+app behaviour. Product code, installed builds and learning data are unchanged.
+
+## October 9 C new-chat and conversation simplification
+
+The owner reviewed C and authorised the following prototype changes and their
+implementation planning. This request does not authorise product-code changes.
+
+Confirmed UI decisions:
+
+- Replace the three introductory lines with a greeting using the doctor
+  name chosen by the user. Suggested wording includes a welcome-back greeting;
+  a small set of rotating greetings is acceptable.
+- Use **“How can I help you today”** as the new-chat composer placeholder.
+- Remove the Auto control while there is only one option; retain Attach.
+- Keep **Explain a topic**, **Discuss a case** and **Quick practice**, with
+  five suggestions revealed underneath when an action is selected.
+- Generate those suggestions with the backend model, update them daily and
+  personalise them from usage and learning memory.
+- Remove the tick and **Your learning space** row from C navigation.
+- Remove the redundant **Ask a follow-up** conversation button.
+
+Prototype examples and assistant implementation proposals:
+
+- The greeting **“Welcome back, Dr. Karol”** is an illustrative chosen name.
+  A local greeting rotation and a generic fallback are proposed.
+- The learning actions use compact pills and an expanded list. Selecting a
+  suggestion prefills the composer; Send remains a separate action. Selecting
+  the active category closes the list. These interaction choices are proposals.
+- Conversation composers use **“Message Renulus…”**. The follow-up button
+  is removed throughout the related C examples; Test this topic remains.
+- Auto is hidden consistently across C composers. Shared A/B components are
+  preserved. The three-column comparison retains its nine matching rows.
+- C26–C28 show five sample prompts per category. They are design fixtures,
+  not output from a live personalised backend or evidence of implementation.
+- A chosen-name preference and a daily suggestion generation/cache service
+  require new implementation. Existing model routing, eligible memory and
+  study evidence can support them.
+
+The scoped proposal, source evidence, prototype links and acceptance criteria
+are in [the C new-chat plan](2026-10-09-design-c-new-chat.md).
+
+## October 9 C Tests interaction and collection decisions
+
+The owner accepted the Test recommendation and authorised parallel subagents to
+create, edit and validate Figma prototypes. Product implementation is a later step.
+
+- One Tests collection includes reviewed-bank tests, agent-refined user imports,
+  opt-in overnight personalised tests and chat-created tests. Chat-created tests
+  appear in the right workspace and are saved to the same collection.
+- Separate immutable saved test versions from attempts; preserve prior attempts
+  when editing. Keep origin, quality and reviewed-bank scoring distinct.
+- Study uses explicit Submit answer, locked feedback and Next, with assistance
+  recorded before returning help. Next clears the previous question's help.
+- Test autosaves editable choices until final Submit test. Include navigation,
+  skip/mark for review, final confirmation, results, mistakes and Retake. Help,
+  sources, notes and keys remain unavailable until final submission.
+- Untimed is default; offer configurable timing starting at attempt start. Pause
+  Study/untimed Test. Timed Test keeps running after closure, submits saved
+  answers and blanks at expiry, and reopens results. Persist timing in backend.
+- Offer generated sets of 5/10/20 assembled from validated smaller batches;
+  five is Quick practice. Reviewed-bank count remains 1–50 where content allows.
+- Overnight generation is Off by default, with preferred time/count and one
+  bounded catch-up. Initial scope requires Renulus running; a closed-app Windows
+  worker is separate implementation work.
+- Include Generating/Ready/Needs review, resume, local Question seems wrong,
+  cancellation and recovery. Preserve imported originals and uncertain keys.
+- Generalise unsaved case content into fictional questions before saving a test,
+  or explicitly save the original case first.
+
+Prototype-specific UI choices and backend gaps remain separately labelled in
+[the C Tests plan](2026-10-09-design-c-tests.md).
+The completed Figma work includes 46 editable Test states, 14 passing saved-graph
+checks, and refreshed C Test/Question/Feedback cells in the preserved three-column,
+nine-row comparison. Links, prototype limits and validation are recorded in that
+plan. These are design artifacts; app implementation remains a separate step.
+
+## October 9 conversation retention preference
+
+During the backend-state questions, the owner clarified the required conversation
+behaviour:
+
+- Save chats and their context normally by default, including discussions that
+  currently enter temporary case context.
+- Provide an Archive option so users can keep conversations and their context.
+- Offer temporary conversations as an optional mode, never the default.
+
+This confirmed direction supersedes the earlier temporary-by-default conversation
+behaviour. It is a product requirement, not a claim of implementation. Current
+ordinary study chats persist, while case discussion and its Explain/practice
+handoffs retain their existing temporary/explicit-Save behaviour. Archive controls
+and the changed retention default still need implementation. The owner has not
+specified a conversation branching or subagent execution/storage design.
+
+## October 10 Workspace sizing and file readers
+
+The owner requested that these additional Design C Workspace decisions be
+recorded before implementation. This instruction covers the decision record;
+it does not request product-code or Figma changes.
+
+Confirmed requirements:
+
+- Workspace width must be adjustable, following the interaction direction of
+  the referenced ChatGPT/Codex, T3 Code and Hermes desktop layouts.
+- The default Workspace width must be wider than the current Design C prototype.
+- Workspace must render and read files within the app in these categories:
+  PDF, DOCX, CSV, XLSX, Markdown, HTML, XML and images.
+
+Unresolved implementation choices:
+
+- Exact default width, resize limits and behaviour in smaller windows.
+- Whether the chosen width is remembered across chats or app restarts.
+- Reader behaviour and fidelity for each format, including supported image
+  extensions. Visual preview and extracting content for the assistant are
+  separate capabilities to specify and verify; neither is established by
+  this decision record. File editing was not requested.
+
+The owner invited suggestions about other relevant formats. TXT, PPTX and EPUB
+are assistant suggestions for confirmation, not additions to the confirmed list.
+
+## October 10 Design C selection and implementation spec
+
+The owner selected Design C as the intended replacement for the current app UI,
+incorporating the notes and decisions already established. The immediate request
+is to read the relevant product, design and implementation evidence and create
+one detailed specification consisting of multiple actionable tickets.
+
+- Keep the spec concise, simple and adaptable so agents can make sound
+  implementation choices instead of following an unnecessarily rigid blueprint.
+- Use adversarial subagent reviews and iterate a few times to verify the plan.
+- Preserve the later saved-conversation default, Workspace sizing/file readers,
+  new-chat simplification and Tests decisions when older prototypes differ.
+
+The consolidated [Design C implementation spec](DESIGN_C_IMPLEMENTATION_SPEC.md)
+records source gaps, ticket ownership/dependencies, user outcomes and acceptance.
+Its explicitly labelled planning defaults are assistant proposals; selection of
+C does not retrospectively confirm every detail of an older prototype. The spec
+and its review establish implementation readiness, not a completed app migration.
+
+## October 10 documentation and implementation handoff
+
+After reviewing the repo guidance audit, the owner asked to make the recommended
+documentation changes, commit the work and provide a prompt for a new session
+to implement Design C with parallel lanes. This handoff covers the existing
+spec/decision documents and their instruction alignment. It does not itself
+claim product implementation or authorise incidental deployment/provider usage.
+
+The handoff makes the C spec the current build entry point, refreshes product
+context, structures the implemented design record and separates old execution
+instructions from current work. Parallel implementation should start from the
+committed baseline, retain stable DC ticket IDs and use the spec's dependency,
+ownership and adversarial-review rules. Historical evidence retains its dates.
+
+## October 10 harness direction and foundation reassessment
+
+After reviewing the Renulus/Hermes/Pi/OpenCode comparison, the owner clarified
+that Renulus should primarily be a harness with data, retrieval, tools,
+execution and subagents. The application should be a client of that capability,
+rather than the main architectural centre of the project.
+
+The owner requested a study of Hermes, Pi and OpenCode v2, a recommendation of
+the best foundation to adopt, and a reasoned account of what to take from the
+other approaches. At least 30 subagent reviews were explicitly requested before
+the recommendation. This reopens the foundation evaluation; it does not select
+a replacement, approve dependencies or authorise a runtime migration. Earlier
+product, model/subscription and data-ownership constraints remain in force.
+The resulting recommendations belong in dated research until selected.
+
+The [completed October 10 source study](../research/2026-10-10-harness-foundation-recommendation.md)
+records thirty distinct completed subagent reviews. Its recommendation is Pi
+architecture with pi-durable as a conditional first proof candidate, retaining
+Renulus's Python domain services and borrowing specific Hermes/OpenCode patterns.
+This is the research outcome, not an additional confirmed user decision.
+
+## October 10 OpenCode v2 selection and integration planning
+
+After reading the main study and a deeper [side-conversation record](../research/2026-10-10-pi-opencode-v2-side-chat-findings.md),
+the owner explicitly selected **OpenCode v2 as Renulus's intended harness**.
+This supersedes Hermes as the future execution-foundation decision and the
+assistant's earlier Pi recommendation. Existing delivered code and its dated
+evidence remain Hermes-based until migration is implemented and verified.
+
+The owner requested research, tests, validation and an end-to-end plan, then
+specs and vertical-slice tickets using the `to-spec` and `to-tickets` workflows.
+Do not start implementation. Run at least six waves of up to six parallel
+subagents, choosing later investigations from findings rather than fixing all
+waves in advance. Review findings and decisions for gaps and errors, cite
+primary evidence and concentrate the spec on the main integration pieces.
+
+Confirmed needs:
+
+- Integrate current work without duplicate engines, records or orchestration.
+- Make learner memory work correctly, retaining the approved open-source data
+  stack and canonical ownership unless a separate change is justified.
+- Support instructions, skills, MCP, plugins, model routing, agent loops,
+  fallbacks, subagents and deterministic orchestration.
+- Make purpose-specific model choices configurable for images, test generation,
+  test summaries, updates and other backend tasks. A named model's suitability
+  or account capability must be evidenced, not guessed from its name.
+- Make model, provider, policy and extension changes reliable and inspectable.
+- Enable future optional local inference through vLLM/Ollama and additional
+  providers. Current subscription defaults remain, and ordinary doctors are
+  not required to install or operate inference infrastructure.
+- Target 128K–256K context windows with deliberate injection/instruction/context
+  management. Study the [requested history/memory article](https://gist.github.com/VictorTaelin/91837951a5ce5b38f341ec1ba1df6449)
+  and verify what should be adapted for Renulus.
+- Keep upstream edits minimal and limited to demonstrated integration needs.
+
+Exact artifact/runtime pins, provider capability evidence, role model mappings,
+retry/fallback defaults, context algorithms and ticket sequencing remain
+engineering proposals until recorded with their evidence. Historical no-silent-
+subscription-switch and visible rejection rules remain the starting defaults;
+the new request opens configurable fallback design without authorising arbitrary
+cross-provider dispatch, paid calls or automatic replay of uncertain work.

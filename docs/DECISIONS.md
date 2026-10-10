@@ -6,6 +6,26 @@ remain proposals unless accepted here.
 
 ## Confirmed choices
 
+### October 10 superseding harness direction and Design C closeout
+
+The owner selected **OpenCode v2 for the next harness migration**, retaining
+Design C and the Python domain/data services. OpenCode will own execution,
+migrated transcripts, tools, children and context. The current working Hermes
+adapters remain until their H-ticket replacements are connected; this selection
+does not authorize migration implementation in the Design C task.
+
+The current task now finishes the connected Design C UI and a committed
+integration handoff, including the bounded H00 retrieval-guard repair. It no
+longer pursues a separate exhaustive Hermes Windows release or default cutover.
+DC21 final delivery is deferred to combined H20 acceptance, with all DC
+requirements retained as regression obligations. The normal launcher, owner
+profile and credentials stay unchanged. See the [scope amendment](planning/DESIGN_C_IMPLEMENTATION_SPEC.md#october-10-scope-amendment--connected-ui-and-opencode-handoff)
+and [exact read-only planning snapshot](implementation/opencode-plan-snapshot/README.md).
+
+The snapshot preserves proposed migration choices separately from confirmed
+decisions and newer canonical work. It does not authorize new model roles,
+plugins, MCP controls, schedules or configuration authorities here.
+
 | Subject | Decision |
 | --- | --- |
 | Identity | Renulus; an independent open-source project. |

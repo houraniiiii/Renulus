@@ -2,6 +2,35 @@
 
 ## Current work — Design C, October 10
 
+### Superseding instruction — bounded UI closeout
+
+The owner has replaced the old default-installation goal with a connected Design
+C review baseline and committed OpenCode integration handoff. Follow the finite
+C-01–C-05 list in the [existing spec](../planning/DESIGN_C_IMPLEMENTATION_SPEC.md#october-10-scope-amendment--connected-ui-and-opencode-handoff).
+The release checkpoints below are historical evidence, not an instruction to
+continue packaging. DC21 final default delivery is **deferred to H20**. No
+OpenCode implementation, default-launcher change or owner-profile operation is
+authorized by this closeout.
+
+Starting closeout source is `e09fe0b8da162259394f6785562f751949e0c2fe` on
+`codex/design-c-integration`. The 18 pre-existing normalization-only flags remain
+unstaged. H00 reproduces through the actual public generation route
+(`C:/Renulus/scratch/design-c/h00/red02.xml`); the preceding red01 receipt is a
+test-directory setup error. Lead owns the shared retrieval caller repair;
+Dalton owns the four-file saved Reader concurrency reproduction/repair. Zeno's
+audit is bounded to material UI gaps and existing evidence. Pauli's read-only
+research disposition confirms H05/H06/H24/H03 remain open at this HEAD. The
+20-minute heartbeat now follows this scope and will end at committed closeout.
+
+The a11f planning worktree at baseline `528025ff` is read-only. Its uncommitted
+working documents will be hash-pinned in a deliberate documentation handoff;
+its older source and whole DECISIONS file will not be merged. The current
+packaged candidate remains `4c289868`, older than the forthcoming repairs. Flow
+`f1c49444` remains the selected normal installation. Core07 ended with an actual
+Reader original-unavailable raster error; its five earlier gates and failure
+image remain evidence, not an eight-reader pass. Recovery `r-179af503` retains
+its nine scoped gates, excluding populated-transcript/fresh-Electron acceptance.
+
 The [Design C implementation spec](../planning/DESIGN_C_IMPLEMENTATION_SPEC.md)
 is the current UI replacement backlog and delivery sequence. Tickets DC01–DC21
 are now in implementation under the owner's October 10 request authorising

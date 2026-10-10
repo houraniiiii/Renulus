@@ -1,0 +1,58 @@
+# Review 11 — Canonical data, sessions and artifacts
+
+October 10, 2026. Source inspection only; no execution. Baselines: Renulus `528025ff0b22477c12ee1512e0e7d15297a6e888`; Hermes bundled **B** `af90026aa09949579bd423d24def3d38f743cde0`, upstream **C** `dce1e9b37581dd62e480a9064dc04a709c2940d3`; Pi **1.1.0** `abe508e1b89912adde45528136c3221eb69acdd7`; OpenCode **v2** `55dde8810d8a859c0a21e42491ae7d5801fb49ef`. OpenCode findings concern that source, not default CLI 1.18.35 or an assertion that published SDK 2.0.26 matches its dependencies. Reviews 01–08 and 10 supplied leads; decisive schemas were inspected directly. Links identify immutable files and raw line ranges.
+
+**Conclusion — judgment:** retain Renulus SQLite and owned originals as domain authority; isolate runtime storage as an execution/transcript ledger. Borrow **Pi durable's separate history and task-ownership edges** regardless of the chosen foundation. Pi durable deserves separate consideration from AgentSession, although its experimental API makes adoption conditional. None of these schemas justifies moving learner, source or assessment authority into the runtime.
+
+Five verified findings:
+
+1. **Renulus already distinguishes identities from revisions.** Knowledge separates document, revision and passage IDs, hashes, rights and physical locators [K]. Memory separates fact ID/revision from engine ID/generation [M]. Reviewed assessment pins question/key/family versions and snapshots; answer submission transactionally commits scoring and learning evidence [A][AC]. Generated practice uses separate tables [G]. These records should remain reusable across all three runtimes. Retrieval also rechecks canonical eligibility and memory revisions after derived searches [KR][MR].
+
+2. **Hermes has a compatible transcript store, with overloaded ancestry.** Both inspected pins have SQLite sessions with nullable directory fields, parent IDs and messages carrying stable message UIDs alongside integer row IDs [HB][HC]. The parent edge covers compression, delegation and branches [HP]. Bundled deletion cascades delegate children but orphans branch/compression children [HD]. **Coupling judgment:** Python service integration is convenient, but its SessionDB schema is not Renulus's domain schema; one parent field cannot represent every Renulus ownership distinction. Deleting one session is insufficient to purge all retained conversation copies.
+
+3. **Pi has two materially different persistence surfaces.** AgentSession's concrete SessionManager uses JSONL trees; file forks create a new session while copying entry IDs, so entry identity must be session-qualified [PS][PF]. Separately, **pi-durable** supplies conversations, entries, submissions, tasks and document revisions in SQLite [PD-S]. Its conversation record distinguishes fork ancestry/cutoff from creator task ownership [PD-T]; storage commits its records/documents atomically [PD-C]. Typed documents offer latest/rewindable history and initial/current/as-of fork semantics [PD-D]. **Coupling judgment:** retain those documents for execution state or projections; copying a score or learner fact into them must not create another authority. The write union exposes document retirement, without conversation/entry deletion; rewindable retirement retains revision content [PD-W][PD-R]. Privacy purge therefore needs additional design. The README explicitly calls the API experimental and changing without notice [PD-E]. This library is not stock AgentSession behavior.
+
+4. **OpenCode v2 offers richer execution records but compulsory project ownership.** Its SQLite sessions require project/directory identity; messages, pending work and inbox records reference sessions with deletion cascades [O-S]. Fork projection sets `parent_id=null`, records a separate fork boundary and copies messages [O-F]. Recursive session removal follows parent children [O-X], so it does not cover those independent forks. Plugin storage is plugin-ID-namespaced KV in the runtime database [O-P][O-K]. **Coupling judgment:** use a separate runtime database; project records, session instructions and plugin KV must not own educational collections, assessment keys or learner facts.
+
+5. **Existing recovery already reconciles canonical deletion.** Renulus merges deletion markers before accepting incoming records, checks immutable content/original conflicts and requires index rebuild [R]. Records-only exports omit original bytes and rebuildable structured extraction; a fresh installation cannot know deletions after an older backup [B]. Runtime stores are outside that recovery inventory: adoption requires an explicit, versioned transcript manifest and mapping migration, not an assumed complete backup.
+
+**Proposed boundary, not implemented:** keep existing domain IDs. SQLite owns conversation retention/Archive state and links to existing saved messages, source eligibility, learner corrections/suppression, assessment attempts and artifact manifests. Upstream may own raw model/tool transcripts, reasoning and compaction checkpoints; designate one transcript-byte owner and treat other views as projections. Keep library originals and committed outputs as separately owned artifacts: artifact ID/revision, hash, media type, rights, source/passage locators and producing run.
+
+Add stable conversation/run IDs, parent/root run, spawning tool call, attempt and ordered event sequence. Label delegation, fork and compression edges separately. Map foreign IDs through runtime pin, store UUID/generation and runtime session; qualify Hermes row IDs, Pi copied entry IDs and Pi durable's store-global numeric IDs. Record input source/fact revisions and assessment item/key versions on each run. Domain mutations use canonical transactions, revision fences and idempotency receipts; runtime completion is an acknowledgement, not proof of a committed score. Separate-store writes need reconciliation/outbox records, not presumed cross-database atomicity.
+
+Archive preserves records. Conversation deletion traverses owned children, forks, transcript copies and attachments; separately owned Library documents and assessment attempts follow their domain commands. Define whether deleting a chat also forgets derived learner facts; suppression must prevent recapture of deleted facts. Restore tombstones first, reconcile transcript mappings, then rebuild Mem0/Qdrant and LanceDB from surviving canonical revisions. Keep Docling/HybridChunker and FastEmbed as managed extraction/embedding assets. No restore should silently promote transcript text into learner evidence or restart generation in the conservative adoption proof.
+
+**Uncertainties/reversal evidence:** saved-default/Archive migration remains incomplete (Cases still saves explicitly [C]). The dated rule forbids automatic retries/fallback on authentication, quota, model or image rejection [POL]; it does not settle every network/restart case. Preserve the current retry-disabled proof baseline; broader recovery policy is a proposal. A subsequently authorised synthetic Windows round trip covering fork deletion, document retirement, duplicate effects and stale index hits would strengthen adoption. Failure to preserve canonical receipts or purge retained copies would weaken it, especially Pi durable without a stable migration/purge contract. No educational-quality conclusion follows.
+
+Handoff: `docs/research/2026-10-10-harness-adoption/review-11-canonical-data-authority.md`; preserve canonical SQLite; borrow Pi durable's distinct ancestry/ownership; strongest fact: Pi durable distinguishes history ancestry from creator ownership; unresolved risk: coordinated transcript purge/restore without resurrection.
+
+[K]: https://github.com/houraniiiii/Renulus/blob/528025ff0b22477c12ee1512e0e7d15297a6e888/runtime/renulus/knowledge/schema.sql#L2-L31
+[M]: https://github.com/houraniiiii/Renulus/blob/528025ff0b22477c12ee1512e0e7d15297a6e888/runtime/renulus/memory/schema.sql#L1-L63
+[A]: https://github.com/houraniiiii/Renulus/blob/528025ff0b22477c12ee1512e0e7d15297a6e888/runtime/renulus/assessment/schema.sql#L12-L44
+[AC]: https://github.com/houraniiiii/Renulus/blob/528025ff0b22477c12ee1512e0e7d15297a6e888/runtime/renulus/assessment/repository.py#L251-L303
+[G]: https://github.com/houraniiiii/Renulus/blob/528025ff0b22477c12ee1512e0e7d15297a6e888/runtime/renulus/assessment/migrations/002_generated.sql#L1-L35
+[KR]: https://github.com/houraniiiii/Renulus/blob/528025ff0b22477c12ee1512e0e7d15297a6e888/runtime/renulus/knowledge/repository.py#L531-L565
+[MR]: https://github.com/houraniiiii/Renulus/blob/528025ff0b22477c12ee1512e0e7d15297a6e888/runtime/renulus/memory/service.py#L278-L310
+[HB]: https://github.com/NousResearch/hermes-agent/blob/af90026aa09949579bd423d24def3d38f743cde0/hermes_state_common.py#L382-L479
+[HC]: https://github.com/NousResearch/hermes-agent/blob/dce1e9b37581dd62e480a9064dc04a709c2940d3/hermes_state_common.py#L382-L479
+[HP]: https://github.com/NousResearch/hermes-agent/blob/af90026aa09949579bd423d24def3d38f743cde0/hermes_state_sessions.py#L325-L352
+[HD]: https://github.com/NousResearch/hermes-agent/blob/af90026aa09949579bd423d24def3d38f743cde0/hermes_state_sessions.py#L1606-L1650
+[PS]: https://github.com/earendil-works/pi/blob/abe508e1b89912adde45528136c3221eb69acdd7/packages/coding-agent/src/core/session-manager.ts#L976-L1007
+[PF]: https://github.com/earendil-works/pi/blob/abe508e1b89912adde45528136c3221eb69acdd7/packages/coding-agent/src/core/session-manager.ts#L1838-L1865
+[PD-S]: https://github.com/earendil-works/pi/blob/abe508e1b89912adde45528136c3221eb69acdd7/packages/durable/src/storage/sqlite/migrations.ts#L9-L84
+[PD-T]: https://github.com/earendil-works/pi/blob/abe508e1b89912adde45528136c3221eb69acdd7/packages/durable/src/types.ts#L264-L332
+[PD-C]: https://github.com/earendil-works/pi/blob/abe508e1b89912adde45528136c3221eb69acdd7/packages/durable/src/storage/sqlite/storage.ts#L174-L196
+[PD-D]: https://github.com/earendil-works/pi/blob/abe508e1b89912adde45528136c3221eb69acdd7/packages/durable/src/types.ts#L562-L593
+[PD-W]: https://github.com/earendil-works/pi/blob/abe508e1b89912adde45528136c3221eb69acdd7/packages/durable/src/types.ts#L708-L724
+[PD-R]: https://github.com/earendil-works/pi/blob/abe508e1b89912adde45528136c3221eb69acdd7/packages/durable/src/storage/sqlite/storage.ts#L899-L925
+[PD-E]: https://github.com/earendil-works/pi/blob/abe508e1b89912adde45528136c3221eb69acdd7/packages/durable/README.md#L1-L7
+[O-S]: https://github.com/anomalyco/opencode/blob/55dde8810d8a859c0a21e42491ae7d5801fb49ef/packages/core/src/session/sql.ts#L22-L176
+[O-F]: https://github.com/anomalyco/opencode/blob/55dde8810d8a859c0a21e42491ae7d5801fb49ef/packages/core/src/session/projector.ts#L156-L224
+[O-X]: https://github.com/anomalyco/opencode/blob/55dde8810d8a859c0a21e42491ae7d5801fb49ef/packages/core/src/session.ts#L367-L377
+[O-P]: https://github.com/anomalyco/opencode/blob/55dde8810d8a859c0a21e42491ae7d5801fb49ef/packages/core/src/plugin/host.ts#L609-L625
+[O-K]: https://github.com/anomalyco/opencode/blob/55dde8810d8a859c0a21e42491ae7d5801fb49ef/packages/core/src/kv.ts#L36-L58
+[R]: https://github.com/houraniiiii/Renulus/blob/528025ff0b22477c12ee1512e0e7d15297a6e888/runtime/renulus/storage/backup.py#L262-L316
+[B]: https://github.com/houraniiiii/Renulus/blob/528025ff0b22477c12ee1512e0e7d15297a6e888/runtime/renulus/storage/backup.py#L19-L45
+[C]: https://github.com/houraniiiii/Renulus/blob/528025ff0b22477c12ee1512e0e7d15297a6e888/runtime/renulus/cases/schema.sql#L1-L15
+[POL]: https://github.com/houraniiiii/Renulus/blob/528025ff0b22477c12ee1512e0e7d15297a6e888/docs/DECISIONS.md#L142-L152
+

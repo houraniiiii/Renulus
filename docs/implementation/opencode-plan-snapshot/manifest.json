@@ -1,0 +1,817 @@
+{
+  "format": "renulus-opencode-documentation-snapshot/1",
+  "captured_at": "2026-10-10T18:32:49.222404+00:00",
+  "source_worktree": "C:\\Users\\karol\\.codex\\worktrees\\a11f\\repo",
+  "source_head": "528025ff0b22477c12ee1512e0e7d15297a6e888",
+  "source_status": [
+    " M docs/DECISIONS.md",
+    " M docs/planning/2026-10-04-user-answers.md",
+    "?? docs/planning/OPENCODE_V2_INTEGRATION_PLAN.md",
+    "?? docs/planning/opencode-v2/",
+    "?? docs/research/2026-10-10-backend-harness-comparison.md",
+    "?? docs/research/2026-10-10-harness-adoption/",
+    "?? docs/research/2026-10-10-harness-foundation-recommendation.md",
+    "?? docs/research/2026-10-10-opencode-integration/",
+    "?? docs/research/2026-10-10-opencode-v2-harness-evidence.md",
+    "?? docs/research/2026-10-10-pi-harness-evidence.md",
+    "?? docs/research/2026-10-10-pi-opencode-v2-side-chat-findings.md"
+  ],
+  "source_thread": "01a123f8-2409-7870-b688-57e632054d72",
+  "canonical_basis": "e09fe0b8da162259394f6785562f751949e0c2fe",
+  "authority": "Read-only documentation capture. No old source merge, migration implementation, remote publication or original worktree modification.",
+  "files": [
+    {
+      "source": "docs/planning/OPENCODE_V2_INTEGRATION_PLAN.md",
+      "destination": "docs/planning/OPENCODE_V2_INTEGRATION_PLAN.md",
+      "bytes": 41407,
+      "sha256": "48a40d8637c614a17098651e1fdfc97dc6b80f643d72da54096cb145cc77c2d3",
+      "committed_bytes": 41407,
+      "committed_sha256": "48a40d8637c614a17098651e1fdfc97dc6b80f643d72da54096cb145cc77c2d3"
+    },
+    {
+      "source": "docs/planning/opencode-v2/README.md",
+      "destination": "docs/planning/opencode-v2/README.md",
+      "bytes": 9845,
+      "sha256": "efcd7523fec5a85b02ac349d3f19349cfa190c12cde206e89dbcccbba5db4aaa",
+      "committed_bytes": 9845,
+      "committed_sha256": "efcd7523fec5a85b02ac349d3f19349cfa190c12cde206e89dbcccbba5db4aaa"
+    },
+    {
+      "source": "docs/planning/opencode-v2/REVIEW.md",
+      "destination": "docs/planning/opencode-v2/REVIEW.md",
+      "bytes": 9205,
+      "sha256": "f6ac2d30ceb53d76b8ad4948f5e7966f4f9f4c9e71ebb6d92b57bceca1bda999",
+      "committed_bytes": 9205,
+      "committed_sha256": "f6ac2d30ceb53d76b8ad4948f5e7966f4f9f4c9e71ebb6d92b57bceca1bda999"
+    },
+    {
+      "source": "docs/planning/opencode-v2/specs/01-harness-control.md",
+      "destination": "docs/planning/opencode-v2/specs/01-harness-control.md",
+      "bytes": 14354,
+      "sha256": "272f5eba3b1aa966b7b73aca640079b1f4cd1674030f29add2b9a11690e91694",
+      "committed_bytes": 14354,
+      "committed_sha256": "272f5eba3b1aa966b7b73aca640079b1f4cd1674030f29add2b9a11690e91694"
+    },
+    {
+      "source": "docs/planning/opencode-v2/specs/02-memory-context.md",
+      "destination": "docs/planning/opencode-v2/specs/02-memory-context.md",
+      "bytes": 12201,
+      "sha256": "e767bff5de89f518fcd06ade89b6d1b13c7c27d5dd4261fb2152025fc3b06369",
+      "committed_bytes": 12201,
+      "committed_sha256": "e767bff5de89f518fcd06ade89b6d1b13c7c27d5dd4261fb2152025fc3b06369"
+    },
+    {
+      "source": "docs/planning/opencode-v2/specs/03-workflows-migration.md",
+      "destination": "docs/planning/opencode-v2/specs/03-workflows-migration.md",
+      "bytes": 12817,
+      "sha256": "c62128a37f3d45873d74c9a26c43187ba4609365ee864a1f0dff1d2c0efb4fe6",
+      "committed_bytes": 12817,
+      "committed_sha256": "c62128a37f3d45873d74c9a26c43187ba4609365ee864a1f0dff1d2c0efb4fe6"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/00-restore-the-existing-saved-generation-retrieval-path.md",
+      "destination": "docs/planning/opencode-v2/tickets/00-restore-the-existing-saved-generation-retrieval-path.md",
+      "bytes": 2545,
+      "sha256": "f8e8f66c0148614e852a30271e0679431efea1563a3d8df6122a505516279937",
+      "committed_bytes": 2545,
+      "committed_sha256": "f8e8f66c0148614e852a30271e0679431efea1563a3d8df6122a505516279937"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/01-run-a-persistent-headless-opencode-conversation.md",
+      "destination": "docs/planning/opencode-v2/tickets/01-run-a-persistent-headless-opencode-conversation.md",
+      "bytes": 3459,
+      "sha256": "3f83679ab7f2ad7f582cfc31c7bced3b26f0bd34b494db080c7192333bcb14f5",
+      "committed_bytes": 3459,
+      "committed_sha256": "3f83679ab7f2ad7f582cfc31c7bced3b26f0bd34b494db080c7192333bcb14f5"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/02-answer-with-an-eligible-library-passage.md",
+      "destination": "docs/planning/opencode-v2/tickets/02-answer-with-an-eligible-library-passage.md",
+      "bytes": 2525,
+      "sha256": "548217a92b8289fa7ad7f3ac18491bb6d061316e65f7cb600217c2cd9d398c83",
+      "committed_bytes": 2525,
+      "committed_sha256": "548217a92b8289fa7ad7f3ac18491bb6d061316e65f7cb600217c2cd9d398c83"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/03-use-the-selected-subscription-for-tools-and-images.md",
+      "destination": "docs/planning/opencode-v2/tickets/03-use-the-selected-subscription-for-tools-and-images.md",
+      "bytes": 2632,
+      "sha256": "caaddaffed82bde56da514b5556458de7f1abeabf8cd4d64ea1dad5f825a532b",
+      "committed_bytes": 2632,
+      "committed_sha256": "caaddaffed82bde56da514b5556458de7f1abeabf8cd4d64ea1dad5f825a532b"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/04-adjust-roles-and-configuration-with-visible-activation.md",
+      "destination": "docs/planning/opencode-v2/tickets/04-adjust-roles-and-configuration-with-visible-activation.md",
+      "bytes": 3044,
+      "sha256": "3514c59c0edce4eb83e1f7f2edd2841ebb46c05497bec7a782f71b019b0d43cb",
+      "committed_bytes": 3044,
+      "committed_sha256": "3514c59c0edce4eb83e1f7f2edd2841ebb46c05497bec7a782f71b019b0d43cb"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/05-complete-a-learning-turn-whose-memory-stays-corrected.md",
+      "destination": "docs/planning/opencode-v2/tickets/05-complete-a-learning-turn-whose-memory-stays-corrected.md",
+      "bytes": 3175,
+      "sha256": "66d4678b58935f646f0469c36beadde49db9f88c44dc9c63471a52f66e98d525",
+      "committed_bytes": 3175,
+      "committed_sha256": "66d4678b58935f646f0469c36beadde49db9f88c44dc9c63471a52f66e98d525"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/06-continue-saved-and-temporary-chats-through-one-owner.md",
+      "destination": "docs/planning/opencode-v2/tickets/06-continue-saved-and-temporary-chats-through-one-owner.md",
+      "bytes": 2908,
+      "sha256": "7982a3144b650d92788aedaede6af3b10d9733a131cea398a4241594349c5da8",
+      "committed_bytes": 2908,
+      "committed_sha256": "7982a3144b650d92788aedaede6af3b10d9733a131cea398a4241594349c5da8"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/07-delegate-a-bounded-evidence-review-and-stop-its-children.md",
+      "destination": "docs/planning/opencode-v2/tickets/07-delegate-a-bounded-evidence-review-and-stop-its-children.md",
+      "bytes": 2650,
+      "sha256": "608e059507d60673ac61f5a618e3187f500cdcdbc504ccffa8331c5380f788ef",
+      "committed_bytes": 2650,
+      "committed_sha256": "608e059507d60673ac61f5a618e3187f500cdcdbc504ccffa8331c5380f788ef"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/08-apply-versioned-instructions-and-skills-to-a-learning-task.md",
+      "destination": "docs/planning/opencode-v2/tickets/08-apply-versioned-instructions-and-skills-to-a-learning-task.md",
+      "bytes": 2481,
+      "sha256": "b8dd3efd6c80587fe44b6eeb83484751bff3eaadfcfe7c38273ff121d463600a",
+      "committed_bytes": 2481,
+      "committed_sha256": "b8dd3efd6c80587fe44b6eeb83484751bff3eaadfcfe7c38273ff121d463600a"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/09-use-and-revoke-an-explicitly-connected-mcp-tool.md",
+      "destination": "docs/planning/opencode-v2/tickets/09-use-and-revoke-an-explicitly-connected-mcp-tool.md",
+      "bytes": 2552,
+      "sha256": "e7b1def29109794a15ee0849d6ea4930196ce9e3cf2534d71a4ba9a257a8cf40",
+      "committed_bytes": 2552,
+      "committed_sha256": "e7b1def29109794a15ee0849d6ea4930196ce9e3cf2534d71a4ba9a257a8cf40"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/10-continue-an-evidence-aware-128k-or-256k-conversation.md",
+      "destination": "docs/planning/opencode-v2/tickets/10-continue-an-evidence-aware-128k-or-256k-conversation.md",
+      "bytes": 3103,
+      "sha256": "1555c662a9853352c5b8eecc5ce324b494e340fd402c462132681320a90550de",
+      "committed_bytes": 3103,
+      "committed_sha256": "1555c662a9853352c5b8eecc5ce324b494e340fd402c462132681320a90550de"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/11-recover-older-detail-through-a-derived-history-view.md",
+      "destination": "docs/planning/opencode-v2/tickets/11-recover-older-detail-through-a-derived-history-view.md",
+      "bytes": 2656,
+      "sha256": "9fc63b9a1801edfd4b235edd3ae4034889b37507231dd2fdadacbbd171ec2263",
+      "committed_bytes": 2656,
+      "committed_sha256": "9fc63b9a1801edfd4b235edd3ae4034889b37507231dd2fdadacbbd171ec2263"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/12-publish-one-validated-five-question-saved-test.md",
+      "destination": "docs/planning/opencode-v2/tickets/12-publish-one-validated-five-question-saved-test.md",
+      "bytes": 2742,
+      "sha256": "2c76fd17cd463f8f8635c3d1fa136ed3b1f69ffbd21329faeb8c8a89a63c1134",
+      "committed_bytes": 2742,
+      "committed_sha256": "2c76fd17cd463f8f8635c3d1fa136ed3b1f69ffbd21329faeb8c8a89a63c1134"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/13-resume-10-and-20-question-generation-without-duplicate-work.md",
+      "destination": "docs/planning/opencode-v2/tickets/13-resume-10-and-20-question-generation-without-duplicate-work.md",
+      "bytes": 2387,
+      "sha256": "4bb663cf929f36095dde3883c980732c88e2557de11d2ef0e2f806e497fc5a4b",
+      "committed_bytes": 2387,
+      "committed_sha256": "4bb663cf929f36095dde3883c980732c88e2557de11d2ef0e2f806e497fc5a4b"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/14-explain-deterministic-reviewed-test-results.md",
+      "destination": "docs/planning/opencode-v2/tickets/14-explain-deterministic-reviewed-test-results.md",
+      "bytes": 2449,
+      "sha256": "26dbc299e13d19385b37b96531ce8cacc0a6fd352e8a553ff020535183606e58",
+      "committed_bytes": 2449,
+      "committed_sha256": "26dbc299e13d19385b37b96531ce8cacc0a6fd352e8a553ff020535183606e58"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/15-generate-daily-suggestions-from-eligible-learning.md",
+      "destination": "docs/planning/opencode-v2/tickets/15-generate-daily-suggestions-from-eligible-learning.md",
+      "bytes": 2409,
+      "sha256": "467d559980f70b612ade20b3b5004ebdfd209b7e449b9418c26af65e91da428f",
+      "committed_bytes": 2409,
+      "committed_sha256": "467d559980f70b612ade20b3b5004ebdfd209b7e449b9418c26af65e91da428f"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/16-produce-a-dated-updates-digest-without-altering-source-review.md",
+      "destination": "docs/planning/opencode-v2/tickets/16-produce-a-dated-updates-digest-without-altering-source-review.md",
+      "bytes": 2269,
+      "sha256": "e1702865dc5ef02cbe8bb5bdb26d6ef41c5b4602cd15bc45621e2d9760b70c5e",
+      "committed_bytes": 2269,
+      "committed_sha256": "e1702865dc5ef02cbe8bb5bdb26d6ef41c5b4602cd15bc45621e2d9760b70c5e"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/17-run-one-bounded-opt-in-nightly-practice-occurrence.md",
+      "destination": "docs/planning/opencode-v2/tickets/17-run-one-bounded-opt-in-nightly-practice-occurrence.md",
+      "bytes": 2396,
+      "sha256": "1c71c1d2219c244cbc611a8a9fadd3446f25413b31f2933110a25bafd732a53b",
+      "committed_bytes": 2396,
+      "committed_sha256": "1c71c1d2219c244cbc611a8a9fadd3446f25413b31f2933110a25bafd732a53b"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/18-delete-and-restore-a-consistent-migrated-learning-profile.md",
+      "destination": "docs/planning/opencode-v2/tickets/18-delete-and-restore-a-consistent-migrated-learning-profile.md",
+      "bytes": 3656,
+      "sha256": "6c0dc1740ead88e4132c9b89ec17d2e7a2fb084419faa9e2c1dc03e46cb816bf",
+      "committed_bytes": 3656,
+      "committed_sha256": "6c0dc1740ead88e4132c9b89ec17d2e7a2fb084419faa9e2c1dc03e46cb816bf"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/19-validate-an-optional-additional-or-local-provider.md",
+      "destination": "docs/planning/opencode-v2/tickets/19-validate-an-optional-additional-or-local-provider.md",
+      "bytes": 2663,
+      "sha256": "1a97caf6ff2bc7f61aac2d879dce132d7f8ac206ae48f2bef92f6004aca8c548",
+      "committed_bytes": 2663,
+      "committed_sha256": "1a97caf6ff2bc7f61aac2d879dce132d7f8ac206ae48f2bef92f6004aca8c548"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/20-cut-over-the-windows-client-with-a-recoverable-release.md",
+      "destination": "docs/planning/opencode-v2/tickets/20-cut-over-the-windows-client-with-a-recoverable-release.md",
+      "bytes": 2751,
+      "sha256": "85996b107ad4bdedbdf1647a827abffe1b787f476e1a7490c9dcf75db6fbda04",
+      "committed_bytes": 2751,
+      "committed_sha256": "85996b107ad4bdedbdf1647a827abffe1b787f476e1a7490c9dcf75db6fbda04"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/21-run-temporary-conversations-and-save-across-runtime-stores.md",
+      "destination": "docs/planning/opencode-v2/tickets/21-run-temporary-conversations-and-save-across-runtime-stores.md",
+      "bytes": 2901,
+      "sha256": "1b9b0a2824054be2525416f2dd00170eae50f56f1620d2ae16fb98141dc3e6bf",
+      "committed_bytes": 2901,
+      "committed_sha256": "1b9b0a2824054be2525416f2dd00170eae50f56f1620d2ae16fb98141dc3e6bf"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/22-route-explicit-fictional-test-preparation-through-the-harness.md",
+      "destination": "docs/planning/opencode-v2/tickets/22-route-explicit-fictional-test-preparation-through-the-harness.md",
+      "bytes": 2543,
+      "sha256": "6d9232847619ae633b50c11534864147fba8f253969c9bcd02732771877c55c7",
+      "committed_bytes": 2543,
+      "committed_sha256": "6d9232847619ae633b50c11534864147fba8f253969c9bcd02732771877c55c7"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/23-route-imported-test-refinement-through-the-harness.md",
+      "destination": "docs/planning/opencode-v2/tickets/23-route-imported-test-refinement-through-the-harness.md",
+      "bytes": 2447,
+      "sha256": "b27a0b966a4b284a7e3ac7b490cc941d36c617d2c2b60f2126ad06f601299227",
+      "committed_bytes": 2447,
+      "committed_sha256": "b27a0b966a4b284a7e3ac7b490cc941d36c617d2c2b60f2126ad06f601299227"
+    },
+    {
+      "source": "docs/planning/opencode-v2/tickets/24-keep-memory-worker-ownership-until-extraction-settles.md",
+      "destination": "docs/planning/opencode-v2/tickets/24-keep-memory-worker-ownership-until-extraction-settles.md",
+      "bytes": 2531,
+      "sha256": "2b1b23c5d802cbd11688b4452c0e26a6ae95a9a0e21b0ea6e3c396b612650887",
+      "committed_bytes": 2531,
+      "committed_sha256": "2b1b23c5d802cbd11688b4452c0e26a6ae95a9a0e21b0ea6e3c396b612650887"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/current-source-map.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/current-source-map.md",
+      "bytes": 5952,
+      "sha256": "d76cc06e8aba917b0d95de0489fddeab428fd57bd0305a028e3f1fbbb6a9d57c",
+      "committed_bytes": 5952,
+      "committed_sha256": "d76cc06e8aba917b0d95de0489fddeab428fd57bd0305a028e3f1fbbb6a9d57c"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/findings-disposition.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/findings-disposition.md",
+      "bytes": 9109,
+      "sha256": "48754c727050066a7835a860613e5b0ce566983d3e0fe9a0b9ae2c7b0677b561",
+      "committed_bytes": 9109,
+      "committed_sha256": "48754c727050066a7835a860613e5b0ce566983d3e0fe9a0b9ae2c7b0677b561"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/parent-context.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/parent-context.md",
+      "bytes": 9489,
+      "sha256": "58d325b34e648f166230c107d56d3dcf306d5b45801db2a08b9e75a85aa17f99",
+      "committed_bytes": 9489,
+      "committed_sha256": "58d325b34e648f166230c107d56d3dcf306d5b45801db2a08b9e75a85aa17f99"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/probes/context_intervals.py",
+      "destination": "docs/research/2026-10-10-opencode-integration/probes/context_intervals.py",
+      "bytes": 3635,
+      "sha256": "83eaca0811eda67d830e5ec136008df4ebc090cdf6814d8a05526f39b114751c",
+      "committed_bytes": 3635,
+      "committed_sha256": "83eaca0811eda67d830e5ec136008df4ebc090cdf6814d8a05526f39b114751c"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/README.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/README.md",
+      "bytes": 12069,
+      "sha256": "1fd184190e61f799d41e6c5a9106a4e328823eb93495f6ee322e1ec955030731",
+      "committed_bytes": 12069,
+      "committed_sha256": "1fd184190e61f799d41e6c5a9106a4e328823eb93495f6ee322e1ec955030731"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w1-01-current-integration.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w1-01-current-integration.md",
+      "bytes": 21052,
+      "sha256": "f0f57cbf33d8cf4d09bcef2f6cc698580497b44145ec780dcfda47c78790e0a9",
+      "committed_bytes": 21052,
+      "committed_sha256": "f0f57cbf33d8cf4d09bcef2f6cc698580497b44145ec780dcfda47c78790e0a9"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w1-02-memory.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w1-02-memory.md",
+      "bytes": 16402,
+      "sha256": "1e775986bfdc06497ba3cbb90d9261cf5b6ac906830de54f01ee2cef5674bc38",
+      "committed_bytes": 16402,
+      "committed_sha256": "1e775986bfdc06497ba3cbb90d9261cf5b6ac906830de54f01ee2cef5674bc38"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w1-03-artifact-host.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w1-03-artifact-host.md",
+      "bytes": 15778,
+      "sha256": "ffb1c7002ec39c5a9829b17d2d86612cdc3d811072fc9025ecc12ec87b009448",
+      "committed_bytes": 15778,
+      "committed_sha256": "ffb1c7002ec39c5a9829b17d2d86612cdc3d811072fc9025ecc12ec87b009448"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w1-04-extensions.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w1-04-extensions.md",
+      "bytes": 18524,
+      "sha256": "0fbc2c93c88119294a8ffc8679e773d334a6264c651bbc51cd6c723e9911c18f",
+      "committed_bytes": 18524,
+      "committed_sha256": "0fbc2c93c88119294a8ffc8679e773d334a6264c651bbc51cd6c723e9911c18f"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w1-05-model-routing.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w1-05-model-routing.md",
+      "bytes": 19400,
+      "sha256": "91e1bbb1545d9e621fd4a3fa31224b7e423890cb473000a27789af9c9e85399b",
+      "committed_bytes": 19400,
+      "committed_sha256": "91e1bbb1545d9e621fd4a3fa31224b7e423890cb473000a27789af9c9e85399b"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w2-01-memory-dependencies.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w2-01-memory-dependencies.md",
+      "bytes": 16909,
+      "sha256": "3496b7a39467a6bf6fe3ef7f87e690a27ab2fda36f62d48efe37527f5e207904",
+      "committed_bytes": 16909,
+      "committed_sha256": "3496b7a39467a6bf6fe3ef7f87e690a27ab2fda36f62d48efe37527f5e207904"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w2-02-dispatch-recovery.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w2-02-dispatch-recovery.md",
+      "bytes": 13977,
+      "sha256": "2bb8f9b67c9afd082722f0fa6a0f5e5f915a88df3a2b8d99e12389cc80f4263b",
+      "committed_bytes": 13977,
+      "committed_sha256": "2bb8f9b67c9afd082722f0fa6a0f5e5f915a88df3a2b8d99e12389cc80f4263b"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w2-03-workflows.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w2-03-workflows.md",
+      "bytes": 13550,
+      "sha256": "299fcefd691ab62c246e863c0160538fd234c16456255b200acc78b047587fd1",
+      "committed_bytes": 13550,
+      "committed_sha256": "299fcefd691ab62c246e863c0160538fd234c16456255b200acc78b047587fd1"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w2-04-context-integration.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w2-04-context-integration.md",
+      "bytes": 12340,
+      "sha256": "8930cf1450c9ac729e638a86230eda8fb5d7148796116ae83be17843deceb96a",
+      "committed_bytes": 12340,
+      "committed_sha256": "8930cf1450c9ac729e638a86230eda8fb5d7148796116ae83be17843deceb96a"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w2-05-configuration-revocation.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w2-05-configuration-revocation.md",
+      "bytes": 12966,
+      "sha256": "74f678eb0b334ae2f488b5dd8841d0cf035fafc20c8ff0d658cc71b1f64e3cc6",
+      "committed_bytes": 12966,
+      "committed_sha256": "74f678eb0b334ae2f488b5dd8841d0cf035fafc20c8ff0d658cc71b1f64e3cc6"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w3-01-migration-retention.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w3-01-migration-retention.md",
+      "bytes": 9043,
+      "sha256": "18c322d8c51c461302dc690d457f8c7c74e4c13a5e754aeae7080dfa37b0feeb",
+      "committed_bytes": 9043,
+      "committed_sha256": "18c322d8c51c461302dc690d457f8c7c74e4c13a5e754aeae7080dfa37b0feeb"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w3-02-capabilities-evaluation.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w3-02-capabilities-evaluation.md",
+      "bytes": 10718,
+      "sha256": "8526898fd6a90d8a093c7da2b85f367509a93a442539f2ac5091515e29073a0d",
+      "committed_bytes": 10718,
+      "committed_sha256": "8526898fd6a90d8a093c7da2b85f367509a93a442539f2ac5091515e29073a0d"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w3-03-minimality-design-c.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w3-03-minimality-design-c.md",
+      "bytes": 9006,
+      "sha256": "14a5e9e4acfedaa8133c187e4f3f8f58fbf516d5d8ba6e93df99001a33447565",
+      "committed_bytes": 9006,
+      "committed_sha256": "14a5e9e4acfedaa8133c187e4f3f8f58fbf516d5d8ba6e93df99001a33447565"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w3-04-host-proof-adversary.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w3-04-host-proof-adversary.md",
+      "bytes": 9829,
+      "sha256": "ff3eb2296504117388bed3e9b19c19254012359d9c7be5818cdfc162abdd932b",
+      "committed_bytes": 9829,
+      "committed_sha256": "ff3eb2296504117388bed3e9b19c19254012359d9c7be5818cdfc162abdd932b"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w4-01-current-memory.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w4-01-current-memory.md",
+      "bytes": 10435,
+      "sha256": "70420ec255f0b4e96cb2dc88f6be0942293e2e0803fcb1e44e682c5785fe5030",
+      "committed_bytes": 10435,
+      "committed_sha256": "70420ec255f0b4e96cb2dc88f6be0942293e2e0803fcb1e44e682c5785fe5030"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w4-02-current-workflows.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w4-02-current-workflows.md",
+      "bytes": 12785,
+      "sha256": "0af967f5fe1748d9575aa2b5b74c63a4e530245c3b4015f3ff1efe9eea9e4747",
+      "committed_bytes": 12785,
+      "committed_sha256": "0af967f5fe1748d9575aa2b5b74c63a4e530245c3b4015f3ff1efe9eea9e4747"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w4-03-current-conversations.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w4-03-current-conversations.md",
+      "bytes": 11051,
+      "sha256": "f0fbc12cb293f2a57748921faaedd93e020ef5a20963133e760d97e3cd54095a",
+      "committed_bytes": 11051,
+      "committed_sha256": "f0fbc12cb293f2a57748921faaedd93e020ef5a20963133e760d97e3cd54095a"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w5-01-ticket-review.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w5-01-ticket-review.md",
+      "bytes": 9282,
+      "sha256": "643c060139eea5e494ff283b6de7b15df8eeb90e671642e4d4c86ea90a4707c0",
+      "committed_bytes": 9282,
+      "committed_sha256": "643c060139eea5e494ff283b6de7b15df8eeb90e671642e4d4c86ea90a4707c0"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w5-02-ipc-lifetimes.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w5-02-ipc-lifetimes.md",
+      "bytes": 9357,
+      "sha256": "3a7a77f09efdbe06bafca7e5391f785b5d9730786823908776e5296ebbe89132",
+      "committed_bytes": 9357,
+      "committed_sha256": "3a7a77f09efdbe06bafca7e5391f785b5d9730786823908776e5296ebbe89132"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w5-03-route-context-audit.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w5-03-route-context-audit.md",
+      "bytes": 9593,
+      "sha256": "bcf7a0b3ba918be01be2d8a7d055b9ce5a931172231daf4704ca5ca1077cfde9",
+      "committed_bytes": 9593,
+      "committed_sha256": "bcf7a0b3ba918be01be2d8a7d055b9ce5a931172231daf4704ca5ca1077cfde9"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w5-04-current-defect-verification.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w5-04-current-defect-verification.md",
+      "bytes": 7561,
+      "sha256": "0d2faab204b8cadac452d314e841af937ef62d00c932afaf496edceb646b7813",
+      "committed_bytes": 7561,
+      "committed_sha256": "0d2faab204b8cadac452d314e841af937ef62d00c932afaf496edceb646b7813"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w6-01-completeness.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w6-01-completeness.md",
+      "bytes": 4986,
+      "sha256": "93ef92bee7c79932ae3ab64fc86aa77b2c8afb4a07c5a159ac998eb343dc59b2",
+      "committed_bytes": 4986,
+      "committed_sha256": "93ef92bee7c79932ae3ab64fc86aa77b2c8afb4a07c5a159ac998eb343dc59b2"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w6-02-lifecycle-closure.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w6-02-lifecycle-closure.md",
+      "bytes": 6422,
+      "sha256": "06c00a867d3b1fb64ca129d8c924c3b97e0db1bead6c175b9d24d5b94c4fd1ea",
+      "committed_bytes": 6422,
+      "committed_sha256": "06c00a867d3b1fb64ca129d8c924c3b97e0db1bead6c175b9d24d5b94c4fd1ea"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w6-03-fact-and-evidence.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w6-03-fact-and-evidence.md",
+      "bytes": 5221,
+      "sha256": "babd30faea414423e625c2e8d1e3ecd1396b19710cc0a7de234c5db38f08617c",
+      "committed_bytes": 5221,
+      "committed_sha256": "babd30faea414423e625c2e8d1e3ecd1396b19710cc0a7de234c5db38f08617c"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-integration/w6-04-minimality-routing.md",
+      "destination": "docs/research/2026-10-10-opencode-integration/w6-04-minimality-routing.md",
+      "bytes": 5836,
+      "sha256": "149f947e6f59fde618aee65ab0e4e1be423d76d42f05a540c74aa9b322e79cb0",
+      "committed_bytes": 5836,
+      "committed_sha256": "149f947e6f59fde618aee65ab0e4e1be423d76d42f05a540c74aa9b322e79cb0"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/README.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/README.md",
+      "bytes": 6592,
+      "sha256": "3f729b35fdd41bc0f5c9cd98a4e69fa0a9a6eda84ae066fde3ecff1fe5f6a346",
+      "committed_bytes": 6592,
+      "committed_sha256": "3f729b35fdd41bc0f5c9cd98a4e69fa0a9a6eda84ae066fde3ecff1fe5f6a346"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-01-hermes-runtime.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-01-hermes-runtime.md",
+      "bytes": 12677,
+      "sha256": "0ca37afc972bb47d29bce722e50bb6e50f372fe91138748af02bb2ce6fc1e689",
+      "committed_bytes": 12677,
+      "committed_sha256": "0ca37afc972bb47d29bce722e50bb6e50f372fe91138748af02bb2ce6fc1e689"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-02-pi-runtime.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-02-pi-runtime.md",
+      "bytes": 10289,
+      "sha256": "efb6d4b72a02b30c90efbbd1a2c709cf99bc1e1989a7e3c12c1151276d75f9f2",
+      "committed_bytes": 10289,
+      "committed_sha256": "efb6d4b72a02b30c90efbbd1a2c709cf99bc1e1989a7e3c12c1151276d75f9f2"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-03-opencode-runtime.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-03-opencode-runtime.md",
+      "bytes": 9523,
+      "sha256": "acc9393ff7580657f4a898ab97567c7348f0899be9e04907dcd16ef1f6129972",
+      "committed_bytes": 9523,
+      "committed_sha256": "acc9393ff7580657f4a898ab97567c7348f0899be9e04907dcd16ef1f6129972"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-04-renulus-reusable-core.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-04-renulus-reusable-core.md",
+      "bytes": 7973,
+      "sha256": "21fcc7ffb4b57e7da831717ed66f2e8c500bac2ec3e6a404fe15ef460d26d859",
+      "committed_bytes": 7973,
+      "committed_sha256": "21fcc7ffb4b57e7da831717ed66f2e8c500bac2ec3e6a404fe15ef460d26d859"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-05-decision-criteria.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-05-decision-criteria.md",
+      "bytes": 9084,
+      "sha256": "2a2d3dfae928365de92cdc496b7480bfea889bb4e1730a5aa555a196e55fa027",
+      "committed_bytes": 9084,
+      "committed_sha256": "2a2d3dfae928365de92cdc496b7480bfea889bb4e1730a5aa555a196e55fa027"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-06-hermes-tools-subagents.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-06-hermes-tools-subagents.md",
+      "bytes": 13065,
+      "sha256": "aa755e704bc00f2f4fbeb403bac23f89d0cf234d8a7c38aa07ca2ddb19ed72fe",
+      "committed_bytes": 13065,
+      "committed_sha256": "aa755e704bc00f2f4fbeb403bac23f89d0cf234d8a7c38aa07ca2ddb19ed72fe"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-07-pi-tools-subagents.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-07-pi-tools-subagents.md",
+      "bytes": 11700,
+      "sha256": "410780038eb9bbb070d70cc978d05f25196ed0858469d9d420dfae75d1700322",
+      "committed_bytes": 11700,
+      "committed_sha256": "410780038eb9bbb070d70cc978d05f25196ed0858469d9d420dfae75d1700322"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-08-opencode-tools-subagents.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-08-opencode-tools-subagents.md",
+      "bytes": 11213,
+      "sha256": "e4ebf455559b1d7d5bf72a80b4d424f85b2f22697f30739c50bbc2105af48495",
+      "committed_bytes": 11213,
+      "committed_sha256": "e4ebf455559b1d7d5bf72a80b4d424f85b2f22697f30739c50bbc2105af48495"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-09-route-control-authentication.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-09-route-control-authentication.md",
+      "bytes": 14528,
+      "sha256": "4ecf79cb926ee6b5d910191684b75a89452b583469c8d0305675b90247aef2c8",
+      "committed_bytes": 14528,
+      "committed_sha256": "4ecf79cb926ee6b5d910191684b75a89452b583469c8d0305675b90247aef2c8"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-10-execution-durability-cancellation.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-10-execution-durability-cancellation.md",
+      "bytes": 11232,
+      "sha256": "1fef99bc7e35094726ebb2b3631970ac08e29268676eedc5bcde19fb8bfd28b9",
+      "committed_bytes": 11232,
+      "committed_sha256": "1fef99bc7e35094726ebb2b3631970ac08e29268676eedc5bcde19fb8bfd28b9"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-11-canonical-data-authority.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-11-canonical-data-authority.md",
+      "bytes": 11638,
+      "sha256": "fd1996ff24d448364228ece3e6e38f2bf5c46db0c78e6515611e5cadbc538e37",
+      "committed_bytes": 11638,
+      "committed_sha256": "fd1996ff24d448364228ece3e6e38f2bf5c46db0c78e6515611e5cadbc538e37"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-12-retrieval-evidence-tools.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-12-retrieval-evidence-tools.md",
+      "bytes": 11322,
+      "sha256": "0a3cb30b30a62f5a7f9f0d7788ac9dcbe8cbb7aaa48eb43f1951b8fa04c14145",
+      "committed_bytes": 11322,
+      "committed_sha256": "0a3cb30b30a62f5a7f9f0d7788ac9dcbe8cbb7aaa48eb43f1951b8fa04c14145"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-13-context-caching-evidence-continuity.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-13-context-caching-evidence-continuity.md",
+      "bytes": 9884,
+      "sha256": "6e7466f0e56aa1d8824ca0c048cfde04535d02c0f763e6a13de41b54c1163411",
+      "committed_bytes": 9884,
+      "committed_sha256": "6e7466f0e56aa1d8824ca0c048cfde04535d02c0f763e6a13de41b54c1163411"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-14-learner-memory-integration.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-14-learner-memory-integration.md",
+      "bytes": 11769,
+      "sha256": "4edaebdc7342b9973449c91625218878aeb1add58a4195a5b72791ac8c0d129b",
+      "committed_bytes": 11769,
+      "committed_sha256": "4edaebdc7342b9973449c91625218878aeb1add58a4195a5b72791ac8c0d129b"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-15-assessment-artifacts-and-workers.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-15-assessment-artifacts-and-workers.md",
+      "bytes": 11691,
+      "sha256": "b7094aeeee44cab994e294cae88fb7fa561226e9220e3eb6accfecc7051483d5",
+      "committed_bytes": 11691,
+      "committed_sha256": "b7094aeeee44cab994e294cae88fb7fa561226e9220e3eb6accfecc7051483d5"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-16-windows-packaging-headless.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-16-windows-packaging-headless.md",
+      "bytes": 11309,
+      "sha256": "d37c24c62a33db351f78bf61a6c86f50b35713052964feb673b43e60635af5b0",
+      "committed_bytes": 11309,
+      "committed_sha256": "d37c24c62a33db351f78bf61a6c86f50b35713052964feb673b43e60635af5b0"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-17-testing-traces-evaluation.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-17-testing-traces-evaluation.md",
+      "bytes": 11170,
+      "sha256": "1ac9f6f304dfbac14cf0005f39827de65e4e3665cd8f2389457300192cf4b14c",
+      "committed_bytes": 11170,
+      "committed_sha256": "1ac9f6f304dfbac14cf0005f39827de65e4e3665cd8f2389457300192cf4b14c"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-18-maintenance-licensing-release.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-18-maintenance-licensing-release.md",
+      "bytes": 9281,
+      "sha256": "803ede02ad49f165bec83573f66790b4f04eaf220bfe933888d1928e50902496",
+      "committed_bytes": 9281,
+      "committed_sha256": "803ede02ad49f165bec83573f66790b4f04eaf220bfe933888d1928e50902496"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-19-capability-policy-and-extension-scope.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-19-capability-policy-and-extension-scope.md",
+      "bytes": 11382,
+      "sha256": "24cc952bc6051bb346356526eaea5f90c7aa6fdafd606243706eca53ad7ad2d6",
+      "committed_bytes": 11382,
+      "committed_sha256": "24cc952bc6051bb346356526eaea5f90c7aa6fdafd606243706eca53ad7ad2d6"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-20-clients-workspaces-and-harness-interface.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-20-clients-workspaces-and-harness-interface.md",
+      "bytes": 12615,
+      "sha256": "4813603d15c232298beee0cc8f47a1694fea9fcf2a54291aa4ad2ab5b6695d6b",
+      "committed_bytes": 12615,
+      "committed_sha256": "4813603d15c232298beee0cc8f47a1694fea9fcf2a54291aa4ad2ab5b6695d6b"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-21-hermes-first-design.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-21-hermes-first-design.md",
+      "bytes": 12410,
+      "sha256": "8154d42305d4b6291867144dcdb87eae88681a9de19ecdf469b4b8751327423b",
+      "committed_bytes": 12410,
+      "committed_sha256": "8154d42305d4b6291867144dcdb87eae88681a9de19ecdf469b4b8751327423b"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-22-pi-first-design.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-22-pi-first-design.md",
+      "bytes": 13051,
+      "sha256": "d7454884b2f3ac87ba2b2c60621b0910d4701c5d4a216b5ff69da0e79191a654",
+      "committed_bytes": 13051,
+      "committed_sha256": "d7454884b2f3ac87ba2b2c60621b0910d4701c5d4a216b5ff69da0e79191a654"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-23-opencode-first-design.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-23-opencode-first-design.md",
+      "bytes": 12620,
+      "sha256": "8e5252c5b5246f09a7d90c7c4e2ae5c13487b9ffbd6c73aeef4e4f3b6802129f",
+      "committed_bytes": 12620,
+      "committed_sha256": "8e5252c5b5246f09a7d90c7c4e2ae5c13487b9ffbd6c73aeef4e4f3b6802129f"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-24-challenge-hermes-preference.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-24-challenge-hermes-preference.md",
+      "bytes": 11724,
+      "sha256": "08e8fcf45f966f28f6f87c469d149acb30241c767d6512204fc2b705bd1af0d2",
+      "committed_bytes": 11724,
+      "committed_sha256": "08e8fcf45f966f28f6f87c469d149acb30241c767d6512204fc2b705bd1af0d2"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-25-challenge-runtime-combination.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-25-challenge-runtime-combination.md",
+      "bytes": 12770,
+      "sha256": "7a88c2eb2588fb2f5e09d0a333b2af5a9bf11ecddd4ec01fa4ee2323b0d7206f",
+      "committed_bytes": 12770,
+      "committed_sha256": "7a88c2eb2588fb2f5e09d0a333b2af5a9bf11ecddd4ec01fa4ee2323b0d7206f"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-26-adoption-transition-proof.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-26-adoption-transition-proof.md",
+      "bytes": 12241,
+      "sha256": "c0b6fae5d5f654fa511427d406462fa4447487b58d39ec5a493b880f61440d5b",
+      "committed_bytes": 12241,
+      "committed_sha256": "c0b6fae5d5f654fa511427d406462fa4447487b58d39ec5a493b880f61440d5b"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-27-clean-slate-vs-current-fit.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-27-clean-slate-vs-current-fit.md",
+      "bytes": 11607,
+      "sha256": "cec793a456f2e37b01b412606c47415f2d48eacac6ff6e409f08f0e4781d9417",
+      "committed_bytes": 11607,
+      "committed_sha256": "cec793a456f2e37b01b412606c47415f2d48eacac6ff6e409f08f0e4781d9417"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-28-accuracy-audit.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-28-accuracy-audit.md",
+      "bytes": 11767,
+      "sha256": "ef03a3df99ffd3b9b7d1e7fa9db18de5cfc5fa1a54106ff05f8e2e8c6e6f930d",
+      "committed_bytes": 11767,
+      "committed_sha256": "ef03a3df99ffd3b9b7d1e7fa9db18de5cfc5fa1a54106ff05f8e2e8c6e6f930d"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-29-intent-and-scope-audit.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-29-intent-and-scope-audit.md",
+      "bytes": 10855,
+      "sha256": "0339f621f2bbf10e4d72279ddcde534af02494fbf3434f5d84c4fecef1a99589",
+      "committed_bytes": 10855,
+      "committed_sha256": "0339f621f2bbf10e4d72279ddcde534af02494fbf3434f5d84c4fecef1a99589"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-adoption/review-30-final-adversarial-judge.md",
+      "destination": "docs/research/2026-10-10-harness-adoption/review-30-final-adversarial-judge.md",
+      "bytes": 12125,
+      "sha256": "7fc2889a00ad6eb29ec8230c7d6d521a5cdbeb06eb6f56593b659383070735af",
+      "committed_bytes": 12125,
+      "committed_sha256": "7fc2889a00ad6eb29ec8230c7d6d521a5cdbeb06eb6f56593b659383070735af"
+    },
+    {
+      "source": "docs/research/2026-10-10-backend-harness-comparison.md",
+      "destination": "docs/research/2026-10-10-backend-harness-comparison.md",
+      "bytes": 58745,
+      "sha256": "63ea63a6c8ce5da458ab471da553a20a36812bd25498b0d341a7502c5886f4b8",
+      "committed_bytes": 58745,
+      "committed_sha256": "63ea63a6c8ce5da458ab471da553a20a36812bd25498b0d341a7502c5886f4b8"
+    },
+    {
+      "source": "docs/research/2026-10-10-harness-foundation-recommendation.md",
+      "destination": "docs/research/2026-10-10-harness-foundation-recommendation.md",
+      "bytes": 28294,
+      "sha256": "fc634692bbbd9bf176be257c93df350182ae95c2f4b14a41bfe4c91f7bc6ed1f",
+      "committed_bytes": 28294,
+      "committed_sha256": "fc634692bbbd9bf176be257c93df350182ae95c2f4b14a41bfe4c91f7bc6ed1f"
+    },
+    {
+      "source": "docs/research/2026-10-10-opencode-v2-harness-evidence.md",
+      "destination": "docs/research/2026-10-10-opencode-v2-harness-evidence.md",
+      "bytes": 25643,
+      "sha256": "564b49ce6c5e11775fe86a63394d539e0b93c0110a690b5b970f13cd83296ff3",
+      "committed_bytes": 25643,
+      "committed_sha256": "564b49ce6c5e11775fe86a63394d539e0b93c0110a690b5b970f13cd83296ff3"
+    },
+    {
+      "source": "docs/research/2026-10-10-pi-harness-evidence.md",
+      "destination": "docs/research/2026-10-10-pi-harness-evidence.md",
+      "bytes": 40689,
+      "sha256": "bf04b8b4e7b88aef632ccc8ecc575324d731b7a602b440895aebcc0f375d773c",
+      "committed_bytes": 40689,
+      "committed_sha256": "bf04b8b4e7b88aef632ccc8ecc575324d731b7a602b440895aebcc0f375d773c"
+    },
+    {
+      "source": "docs/research/2026-10-10-pi-opencode-v2-side-chat-findings.md",
+      "destination": "docs/research/2026-10-10-pi-opencode-v2-side-chat-findings.md",
+      "bytes": 42400,
+      "sha256": "733cd24fb87db3d5de536139550d073a8afcc0ea20b32e62db562159b647b09a",
+      "committed_bytes": 42400,
+      "committed_sha256": "733cd24fb87db3d5de536139550d073a8afcc0ea20b32e62db562159b647b09a"
+    },
+    {
+      "source": "docs/DECISIONS.md",
+      "destination": "docs/implementation/opencode-plan-snapshot/source-documents/docs/DECISIONS.md",
+      "bytes": 18892,
+      "sha256": "5568116bd95bdaa52d15ac31f07b9424ada7f5f13e773b628dbef6934f1c8a76",
+      "committed_bytes": 18892,
+      "committed_sha256": "5568116bd95bdaa52d15ac31f07b9424ada7f5f13e773b628dbef6934f1c8a76"
+    },
+    {
+      "source": "docs/planning/2026-10-04-user-answers.md",
+      "destination": "docs/implementation/opencode-plan-snapshot/source-documents/docs/planning/2026-10-04-user-answers.md",
+      "bytes": 38680,
+      "sha256": "68ef6580d3111aeebdd879a8e355eecb04ebcc8300f11825d7f143680194caf0",
+      "committed_bytes": 38680,
+      "committed_sha256": "68ef6580d3111aeebdd879a8e355eecb04ebcc8300f11825d7f143680194caf0"
+    }
+  ],
+  "git_normalization": "source SHA/bytes identify exact working files; committed SHA/bytes identify staged text under existing repository attributes. Only existing Git line-ending normalization is applied."
+}

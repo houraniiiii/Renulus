@@ -8,6 +8,35 @@ memory and Windows capabilities. This is one implementation backlog. Each DC
 ticket below can become an issue; its ID stays stable when the work is split.
 This document defines the build; writing it does not establish implementation.
 
+## October 10 scope amendment — connected UI and OpenCode handoff
+
+The owner's later instruction replaces the standalone Hermes default-release
+completion condition. Finish the connected Design C experience and preserve its
+reusable domain backend, then commit an integration handoff for the selected
+OpenCode v2 phase. Do not implement that migration here. The existing adapters
+remain operational; the normal launcher, owner profile and credentials remain
+unchanged. DC01–DC21 requirements remain migration regression obligations.
+**DC21's original final default release is deferred to H20, not passed.**
+
+This finite closeout list supersedes the historical release work below. Add work
+only for a reproduced material interaction defect within these boundaries:
+
+| Closeout | Scope / owner | Completion evidence |
+| --- | --- | --- |
+| C-01 | Lead: DC16/DC19 prerequisite H00 | Reproduce the saved-generation retrieval guard mismatch; use explicit caller-specific execution checks before/after retrieval; rerun affected generation/nightly and legacy guard checks. |
+| C-02 | Dalton + lead: DC07/DC08 saved Reader failure | Reproduce saved attachment access under concurrent conversation ownership; repair without weakening temporary, rights, policy, epoch or original-integrity checks; verify affected Reader UI and reopen. |
+| C-03 | Zeno + lead: finite DC03–DC19 interaction audit | Reuse valid screen/journey evidence; resolve only remaining material connected gaps and verify affected narrow/zoom/keyboard/error/draft/source-navigation states with the hidden controller. |
+| C-04 | Lead: DC20 documentation handoff | Freeze the read-only uncommitted a11f plan snapshot; map accepted UI, retained backend evidence, unresolved defects and H owners; document domain identities/APIs, replaceable adapters and reproducible isolated review launch. |
+| C-05 | Lead: DC21/H20 disposition | Preserve installer/recovery receipts with exact revisions and limits; defer exhaustive release/default cutover; commit final handoff and end the continuity automation. |
+
+Memory transitive lineage/recapture (H05), deleted saved receipt payloads
+(H06/H18), actual worker settlement (H24) and authentication availability (H03)
+remain open until their owners repair them. Existing single-store recovery
+evidence does not close those findings or future two-store migration acceptance.
+Temporary execution graphs, spills and Save belong to H21 with H01 substrate;
+H06 owns saved migration. No new execution/configuration/transcript authority is
+introduced in this closeout.
+
 ## 1. How to use this spec
 
 - Read the relevant ticket, its dependencies and the shared rules below. Inspect
