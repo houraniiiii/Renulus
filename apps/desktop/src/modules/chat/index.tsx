@@ -238,10 +238,11 @@ export default function ChatPage(props: ChatPageProps) {
     const version=epoch.current;
     try {
       await draftWrite.current;
+      if(version!==epoch.current||!chatRef.current)return;
+      const identity=chatRef.current.kind+':'+chatRef.current.identity.id;
+      if(saveCommand.current?.identity!==identity)saveCommand.current=undefined;
       const latest=action==='save'&&!saveCommand.current?await flushDraft():chatRef.current;
       if(!latest||version!==epoch.current)return;
-      const identity=latest.kind+':'+latest.identity.id;
-      if(saveCommand.current?.identity!==identity)saveCommand.current=undefined;
       if(action==='save')saveCommand.current??={identity,key:crypto.randomUUID(),body:{expected_revision:latest.revision}};
       const path=conversationPath(latest)+(action==='rename'?'':'/'+action);
       const result=await api<ConversationSummary>(path,{method:action==='rename'?'PATCH':action==='project'?'PUT':'POST',body:action==='save'?saveCommand.current!.body:{expected_revision:latest.revision,...body},headers:{'Idempotency-Key':action==='save'?saveCommand.current!.key:crypto.randomUUID(),...helpHeaders}});

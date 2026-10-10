@@ -68,6 +68,27 @@ describe('Chat volatile handoffs',()=>{
     expect((screen.getByLabelText('Message Renulus') as HTMLTextAreaElement).value).toBe('Latest draft');
     expect(calls.send).not.toHaveBeenCalled();
   });
+
+  it('flushes the second conversation draft after leaving a failed Save in the first',async()=>{
+    setup();let active={...chat,retention:'temporary' as const};
+    calls.api.mockImplementation(async(path:string,options?:{method?:string})=>{
+      if(path.endsWith('/save'))throw new Error('Synthetic unavailable acknowledgement');
+      if(path.endsWith('/draft'))return {text:'Existing draft',content_refs:[],revision:0,conversation_revision:options?.method==='PUT'?2:1};
+      if(path.includes('/messages')||path.includes('/study/projects')||path.endsWith('/runs'))return {items:[],next_cursor:null};
+      return active;
+    });
+    const view=render(frame(<Chat identity={active.identity}/>));
+    fireEvent.click(await screen.findByRole('button',{name:'Save conversation'}));
+    await waitFor(()=>expect(calls.api.mock.calls.filter(([path])=>path.endsWith('/save'))).toHaveLength(1));
+    active={...active,identity:{type:'learn_thread',id:'second-temporary'}};
+    view.rerender(frame(<Chat identity={active.identity}/>));
+    fireEvent.change(await screen.findByLabelText('Message Renulus'),{target:{value:'Second conversation unsaved draft'}});
+    fireEvent.click(screen.getByRole('button',{name:'Save conversation'}));
+    await waitFor(()=>expect(calls.api.mock.calls.filter(([path])=>path.endsWith('/save'))).toHaveLength(2));
+    const saves=calls.api.mock.calls.filter(([path])=>path.endsWith('/save'));
+    expect(saves[1][1].body.expected_revision).toBe(2);
+    expect(saves[1][1].headers['Idempotency-Key']).not.toBe(saves[0][1].headers['Idempotency-Key']);
+  });
   it('carries Study help on reads, drafts and send while Stop stays neutral',async()=>{
     setup();
     const context:StudyHelpContext={attempt_id:'study-attempt',item_id:'current-item',version_id:'pinned-version',draft_revision:4,policy_revision:2,kind:'chat'};
