@@ -10,6 +10,7 @@ from pydantic import ValidationError
 import pytest
 
 from renulus.assessment.contracts import Command
+from renulus.assessment.attempt_models import StartAttempt, SubmitAttempt
 from renulus.assessment.import_api import create_router
 from renulus.assessment.import_models import (CandidateVisibilityRequest, CreateImportRequest,
     EditImportCandidateRequest, ImportRevisionCommand, ResolveImportCandidateRequest)
@@ -17,7 +18,6 @@ from renulus.assessment.import_service import MAX_CALLS, SavedImportService, par
 from renulus.contracts import ApiError
 from renulus.server import create_app
 from renulus.storage import utc_now
-from renulus.storage.assessment_policy import advance_policy
 from renulus.storage.backup import export_records, restore_records
 from renulus.storage.invalidation import bump_context_epoch
 
@@ -95,7 +95,7 @@ def resolve_all(service, row):
     for index, item in enumerate(row["candidates"]):
         if not item["removed"]:
             row = service.mutate_candidate(row["id"], item["id"], "resolve", ResolveImportCandidateRequest(
-                idempotency_key=f"synthetic-resolve-{index}", expected_revision=row["revision"],
+                idempotency_key=f'{row["id"]}:resolve-{index}', expected_revision=row["revision"],
                 correct_option_ids=("a",), review_confirmed=True))
     return row
 
@@ -241,17 +241,15 @@ async def test_remove_and_resolve_survive_explicit_normalization(imports):
 
 @pytest.mark.asyncio
 async def test_neutral_cancel_during_denied_policy_stops_real_transport(imports):
-    _, service, transport = imports
+    app, service, transport = imports
+    reviewed = resolve_all(service, service.create(request("synthetic-policy-published")))
+    version = service.save(reviewed["id"], command(reviewed, "synthetic-policy-publish"))["result"]
     transport.release = asyncio.Event()
     row = service.create(request())
     await service.normalize(row["id"], command(row, "synthetic-cancel-run"))
     await transport.started.wait()
-    stamp = utc_now()
-    # The other writer's row is in the real migrated table; no substitute DDL.
-    with service.db.transaction() as conn:
-        conn.execute("INSERT INTO assessment_test_attempts(id,version_id,version_snapshot_json,mode,clock_high_water_at,created_at,updated_at) "
-            "VALUES('synthetic-import-active-test','synthetic-version','{}','test',?,?,?)", (stamp, stamp, stamp))
-        advance_policy(conn)
+    attempts = app.state.services.get("whole_attempts")
+    attempt = attempts.start(StartAttempt(version={"type": "saved_test_version", "id": version["version_id"]}, mode="test"), "synthetic-import-active-test")
     cancel = Command(idempotency_key="synthetic-neutral-cancel")
     result = await service.cancel(row["id"], cancel)
     assert result == {"id": row["id"], "state": "cancelled"}
@@ -263,7 +261,7 @@ async def test_neutral_cancel_during_denied_policy_stops_real_transport(imports)
     with pytest.raises(ApiError) as error:
         service.create(request())
     assert error.value.code == "assistance_restricted"
-    service.db.execute("DELETE FROM assessment_test_attempts WHERE id='synthetic-import-active-test'")
+    attempts.submit(attempt["id"], SubmitAttempt(expected_draft_revision=attempt["draft_revision"]), "synthetic-policy-submit")
     assert service.original(row["id"])["text"] == TEXT
 
 
