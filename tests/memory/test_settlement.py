@@ -103,6 +103,70 @@ def recovery_is_busy(memory):
 
 
 @pytest.mark.asyncio
+async def test_provider_dispatch_rechecks_cancellation_on_the_reply_loop(settling_memory, services):
+    from renulus.memory.providers import ApprovedLLM, generation_binding
+
+    loop = asyncio.get_running_loop()
+    revoked = asyncio.Event()
+    streams = []
+
+    class Provider:
+        async def stream(self, *args, **kwargs):
+            streams.append(kwargs['run_id'])
+            yield '{"memory": []}'
+
+    services.registry['provider'] = Provider()
+
+    def current():
+        if revoked.is_set():
+            return False
+        async def cancel_before_dispatch():
+            revoked.set()
+        # The worker's earlier check can complete just before the loop handles
+        # Stop. The actual outbound dispatch must check its own admission.
+        asyncio.run_coroutine_threadsafe(cancel_before_dispatch(), loop).result(timeout=1)
+        return True
+
+    def extract():
+        token = generation_binding.set({'services': services, 'loop': loop,
+            'scope': ContextScope(kind=Scope.STUDY), 'run_id': 'cancelled-dispatch', 'current': current})
+        try:
+            return ApprovedLLM().generate_response([{'role': 'user', 'content': 'Synthetic learning point'}])
+        finally:
+            generation_binding.reset(token)
+
+    with pytest.raises(ApiError) as caught:
+        await asyncio.wait_for(asyncio.to_thread(extract), 3)
+    assert caught.value.code == 'memory_capture_cancelled'
+    assert streams == []
+
+
+@pytest.mark.asyncio
+async def test_public_reindex_fails_closed_during_cancelled_extraction(settling_memory, services):
+    memory, control = settling_memory
+    memory.enqueue('evidence-1', evidence(services))
+    capture = asyncio.create_task(memory.process_pending())
+    try:
+        assert await asyncio.to_thread(control.entered.wait, 3)
+        capture.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await capture
+        with pytest.raises(ApiError) as caught:
+            await asyncio.wait_for(asyncio.to_thread(memory.reindex), .5)
+        assert caught.value.code == 'recovery_busy'
+        assert caught.value.retryable
+        control.release.set()
+        assert await asyncio.to_thread(control.finalizing.wait, 3)
+        with pytest.raises(ApiError) as finalizing:
+            memory.reindex()
+        assert finalizing.value.code == 'recovery_busy'
+    finally:
+        control.release.set()
+        control.finish.set()
+        await asyncio.gather(capture, return_exceptions=True)
+
+
+@pytest.mark.asyncio
 async def test_cancelled_capture_keeps_recovery_blocked_through_extractor_cleanup(settling_memory, services):
     memory, control = settling_memory
     memory.enqueue('evidence-1', evidence(services))
@@ -157,6 +221,31 @@ async def test_close_seals_capture_admission_while_draining(settling_memory, ser
         control.finish.set()
         if closing:
             await closing
+    assert memory.repository.list() == []
+
+
+@pytest.mark.asyncio
+async def test_application_shutdown_defers_cancellation_until_thread_finalizers_settle(settling_memory, services):
+    memory, control = settling_memory
+    memory.enqueue('evidence-1', evidence(services))
+    control.close_needs_reply = True
+    await memory.start()
+    shutdown = None
+    try:
+        assert await asyncio.to_thread(control.entered.wait, 3)
+        shutdown = asyncio.create_task(memory.shutdown())
+        await asyncio.wait_for(control.cancel_requested.wait(), 1)
+        shutdown.cancel()
+        done, _ = await asyncio.wait({shutdown}, timeout=.05)
+        assert not done, 'Cancelled teardown released its application owner before settlement'
+        recovery_is_busy(memory)
+    finally:
+        control.release.set()
+        control.finish.set()
+        if shutdown:
+            await asyncio.gather(shutdown, return_exceptions=True)
+    assert not shutdown.cancelled()
+    assert control.close_reply.is_set()
     assert memory.repository.list() == []
 
 

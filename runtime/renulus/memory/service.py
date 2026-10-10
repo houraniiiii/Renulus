@@ -286,12 +286,29 @@ class MemoryService:
             state = self.db.fetch_one('SELECT state FROM memory_index_state WHERE singleton=1')['state']
             if state in ('dirty', 'empty') or retry:
                 try:
-                    await self._in_thread(self.reindex)
+                    await self._in_thread(self._reindex)
                 except ApiError:
                     pass  # Canonical captures remain available; retry repairs the derivative.
             return {'processed': processed}
 
     def reindex(self):
+        # Public recovery must refuse an outstanding extraction before waiting
+        # on any engine lock. The outbox already owns its internal rebuild.
+        lease = Future()
+        lease.set_running_or_notify_cancel()
+        with self._capture_state:
+            self._require_open()
+            if self._recovery_paused or self._threads or self._active_runs or self._processors:
+                raise ApiError('recovery_busy', 'Wait for learner-memory capture and cleanup before rebuilding', 409, True)
+            self._threads.add(lease)
+        try:
+            return self._reindex()
+        finally:
+            with self._capture_state:
+                lease.set_result(None)
+                self._threads.discard(lease)
+
+    def _reindex(self):
         with self._lock:
             self._require_open()
             old = self.db.fetch_one('SELECT * FROM memory_index_state WHERE singleton=1')
@@ -410,6 +427,11 @@ class MemoryService:
             try:
                 await self.close()
                 return
+            except asyncio.CancelledError:
+                # This is the application's owner, not a cancellable observer.
+                # Preserve reply capacity and finish downstream teardown only
+                # after the retained close task has actually settled.
+                continue
             except ApiError as error:
                 if error.code != 'memory_close_timeout':
                     raise

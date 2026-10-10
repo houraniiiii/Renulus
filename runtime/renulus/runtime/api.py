@@ -53,6 +53,10 @@ class CompactRequest(_Input):
     system: str | None = None
 
 
+class ShutdownRequest(_Input):
+    timeout_seconds: float = Field(default=5, gt=0, le=30, allow_inf_nan=False)
+
+
 def register(services: Services) -> ProviderManager:
     if "provider" not in services.registry:
         services.registry["provider"] = ProviderManager(services.paths)
@@ -114,6 +118,14 @@ def create_router(services: Services) -> APIRouter:
         return {**manager.status(), "helpers": services.registry["helpers"].status(),
                 "helper_startup": services.registry["helpers"].startup.status(),
                 "context": services.registry["context"].status()}
+
+    @runtime.get("/shutdown")
+    def shutdown_status():
+        return services.shutdown_status()
+
+    @runtime.post("/shutdown")
+    async def shutdown(request: ShutdownRequest):
+        return await services.shutdown(timeout=request.timeout_seconds)
 
     @runtime.post("/context/compact")
     async def compact(request: CompactRequest):

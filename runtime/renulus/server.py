@@ -49,10 +49,7 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
         try:
             yield
         finally:
-            for callback in reversed(services.on_shutdown):
-                result = callback()
-                if inspect.isawaitable(result):
-                    await result
+            await services.finish_shutdown()
 
     app = FastAPI(title="Renulus local API", version=__version__, docs_url=None, redoc_url=None, lifespan=lifespan)
     app.state.services = services
@@ -66,7 +63,8 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
     def needs_assistance(request):
         path = request.url.path
         if path in ("/api/v1/health", "/api/v1/meta", "/api/v1/assessment/policy",
-                    "/api/v1/runtime/status", "/api/v1/data/recovery", "/api/v1/home/preferences"):
+                    "/api/v1/runtime/status", "/api/v1/runtime/shutdown",
+                    "/api/v1/data/recovery", "/api/v1/home/preferences"):
             return False
         if path in ("/api/v1/nightly", "/api/v1/nightly/preferences") and request.method in {"GET", "PUT"}:
             return False  # Safe settings/status allow Off while a Test is active.
@@ -124,11 +122,15 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
             if urlparse(origin).hostname not in ("localhost", "127.0.0.1"):
                 return JSONResponse({"error": {"code": "invalid_origin",
                     "message": "Local app origin required", "retryable": False}}, status_code=403)
-        if token and request.url.path != "/api/v1/health":
+        if (token and request.url.path != "/api/v1/health") or request.url.path == '/api/v1/runtime/shutdown':
             supplied = request.headers.get("x-renulus-token", "")
-            if not secrets.compare_digest(supplied, token):
+            if not token or not secrets.compare_digest(supplied, token):
                 return JSONResponse({"error": {"code": "invalid_session",
                     "message": "Reconnect the application", "retryable": True}}, status_code=401)
+        if services.stopping and request.url.path not in (
+                '/api/v1/health', '/api/v1/meta', '/api/v1/runtime/status', '/api/v1/runtime/shutdown'):
+            return policy_error(ApiError('runtime_stopping',
+                'Renulus is closing this profile. Wait for local work to finish', 503, True))
         await asyncio.to_thread(reconcile_attempts)
         guarded = needs_assistance(request)
         try:
@@ -232,6 +234,11 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
             app.include_router(feature.create_router(services), prefix="/api/v1")
     from .storage.attachment_cleanup import drain as drain_attachment_cleanup
     services.on_startup.insert(0, lambda: drain_attachment_cleanup(services))
+    # Its router lifespan also stops this worker. The explicit desktop drain
+    # must join it before acknowledging settlement or releasing offline helpers.
+    if 'knowledge_worker' in services.registry:
+        services.on_shutdown.append(lambda: asyncio.to_thread(
+            services.registry['knowledge_worker'].stop, None))
     return app
 
 

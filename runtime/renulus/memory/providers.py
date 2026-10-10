@@ -72,6 +72,10 @@ class ApprovedLLM(LLMBase):
             raise ApiError('memory_capture_cancelled', 'Memory capture was cancelled or superseded', 409)
 
         async def generate():
+            # Recheck on the reply loop immediately before provider admission.
+            # The extractor thread's check can precede a queued Stop callback.
+            if not binding['current']():
+                raise ApiError('memory_capture_cancelled', 'Memory capture was cancelled or superseded', 409)
             provider = binding['services'].get('provider')
             system = '\n\n'.join(message['content'] for message in messages if message['role'] == 'system')
             output = ''

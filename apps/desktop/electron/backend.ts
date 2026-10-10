@@ -49,10 +49,32 @@ export async function startBackend(options: { profile: DesktopProfile; token: st
   const child = spawn(command, args, { cwd: source, env: backendEnvironment(profile, token, path.join(source, 'runtime'), path.join(source, 'upstream', 'hermes')), windowsHide: true, detached: process.platform !== 'win32', stdio: ['ignore', 'ignore', 'ignore'] });
   let stopped: Promise<void> | undefined;
   let failed = false;
+  let ready = false;
   child.once('error', () => { failed = true; });
   const stop = () => {
     if (!stopped) {
-      stopped = (async () => { if (child.pid && child.exitCode === null && child.signalCode === null) { stopBackendChild(child, deps); await waitForBackendExit(child, deps, 15000); } })();
+      stopped = (async () => {
+        if (child.pid && child.exitCode === null && child.signalCode === null) {
+          if (ready) {
+            // Quit aborts the app lifetime first. Bound the full shutdown response independently.
+            const shutdown = new AbortController();
+            const deadline = setTimeout(() => shutdown.abort(new Error('The local backend shutdown timed out; retaining ownership.')), 8000);
+            try {
+              await runBackendStartStep(shutdown.signal, async () => {
+                const response = await fetch('http://127.0.0.1:' + port + '/api/v1/runtime/shutdown', {
+                  method: 'POST', headers: { 'x-renulus-token': token, 'content-type': 'application/json' },
+                  body: JSON.stringify({ timeout_seconds: 5 }), redirect: 'error', cache: 'no-store', signal: shutdown.signal,
+                });
+                if (!response.ok) throw new Error('The local backend shutdown did not settle; retaining ownership.');
+                const acknowledgement = await response.json() as { state?: unknown; api_version?: unknown } | null;
+                if (acknowledgement?.state !== 'settled' || acknowledgement.api_version !== 1) throw new Error('The local backend shutdown acknowledgement is invalid; retaining ownership.');
+              });
+            } finally { clearTimeout(deadline); }
+          }
+          stopBackendChild(child, deps);
+          await waitForBackendExit(child, deps, 15000);
+        }
+      })();
       stopped.catch(() => { stopped = undefined; });
     }
     return stopped;
@@ -74,7 +96,8 @@ export async function startBackend(options: { profile: DesktopProfile; token: st
         // Authenticated meta proves this is our child session, not an unrelated listener.
         const response = await runBackendStartStep(signal, () => fetch('http://127.0.0.1:' + port + '/api/v1/meta', { headers: { 'x-renulus-token': token }, signal: AbortSignal.any([signal, AbortSignal.timeout(1000)]), redirect: 'error', cache: 'no-store' }));
         const meta = await response.json() as { api_version: number };
-        if (response.ok && meta.api_version === 1) return handle;
+        signal.throwIfAborted();
+        if (response.ok && meta.api_version === 1) { ready = true; return handle; }
       } catch { signal.throwIfAborted(); }
       await runBackendStartStep(signal, () => new Promise(resolve => setTimeout(resolve, 150)));
     }
