@@ -5,8 +5,19 @@
 `codex/opencode-foundations`, starting at
 `c2bd896420fb88f76d63ca576414dbbba182f4c2`.
 
-**Current status:** Fresh TypeScript, renderer and Electron builds passed for
-run **06** on committed Notes deletion fix `b6a4a7da`, including H24's
+**Current status:** Final backend lifecycle run **07** passed on H24
+`756c8ebc` (`Services.shutdown` completed-task guard). Fresh typecheck and build
+passed; all 505 source records and 54 build artifacts stayed unchanged through
+the hidden launch, existing New chat route check and **0.740-second normal
+close**, with no forced or remaining app processes. All eight controller
+requests succeeded. The former controller process no longer existed, so the
+supported tool created a fresh owned synthetic profile; this is not evidence of
+reopening the prior retained profile. The original profile and prior receipts
+remain preserved. The cross-loop branch itself is covered by the parent's
+public service regression, not this ordinary UI lifecycle.
+
+Fresh TypeScript, renderer and Electron builds also passed for run **06** on
+committed Notes deletion fix `b6a4a7da`, including H24's
 `f6bdb589` completed-close-task guard. The narrow actual Notes create/edit/
 history/delete journey passed: acknowledged deletion cleared both the revision
 list and historical text **without closing or reopening the panel**. The fresh
@@ -29,7 +40,7 @@ revision buttons and historical text until reopened**. Captures 0043–0045 and
 the read-only deletion receipt distinguish this UI finding from completed
 storage cleanup. That historical failure is retained unchanged; run 06 accepts
 the parent's subsequent repair on its recorded bytes. Parent-owned production
-source was not changed by this lane. Across runs 03–06, all **52 captured PNGs
+source was not changed by this lane. Across runs 03–07, all **53 captured PNGs
 were visually inspected**.
 
 The initial affected renderer run has **136 passed, 1 failed, 0 skipped** in
@@ -40,9 +51,10 @@ retain their initial passing evidence; this is not a fresh seven-file green run.
 The post-close run 05 checkpoint detected the later two-line
 `MemoryService.close` guard, subsequently committed as `f6bdb589`. It was absent
 before that close and was accepted only in run 06 after the parent's stability
-signal. Electron and its managed backend are now closed, with **seven normal
-closes** across the four runs and no forced or remaining processes. The owned
-controller remains connected. The parent committed the application fixes and
+signal. Electron and its managed backend are now closed, with **eight normal
+closes** across the five runs and two owned synthetic controller sessions,
+with no forced or remaining app processes. The run 07 controller remained
+connected at evidence capture. The parent committed the application fixes and
 the narrow Library expectation repair, then authorized a scoped commit of this
 UI evidence note only.
 The parent reported 689 renderer tests passed and 13 skipped before fixing the
@@ -752,3 +764,100 @@ were opened for direct visual inspection. No small-window/zoom repeat was made.
 | `capture-0050.png` | After acknowledged delete in the same panel: empty title/body, Not saved yet, disabled save, no stale history below |
 | `capture-0051.png` | Same empty Notes state after Home in the title field; history remains absent |
 | `capture-0052.png` | PageUp shows the actual deletion success notice and empty editor; no remount or New note click |
+
+## Final Services shutdown lifecycle delta — run 07
+
+2026-10-10 UTC. The parent committed
+`756c8ebc622eef85b39dd8fbff1abbba264df2b9`
+(`fix(runtime): replay settled shutdown after loop teardown`).
+`Services.shutdown` now calls `asyncio.wait` only while its shutdown task is
+unfinished, retaining the existing failed/completed observation and admission
+state. The parent reported its public regression and all **34 shutdown, Memory
+and privacy tests passed**. This lane performed only a final actual native
+lifecycle on those bytes; the ordinary launch/close does **not** isolate replay
+of a completed task from a new event loop.
+
+The fresh typecheck/build used the same matched 19 dependency pins, Vite runner
+configuration and external scratch cache. Relative to run 06, the 505-record
+source manifest changed **only `runtime/renulus/services.py`**. Every one of the
+54 newly built renderer/Electron artifacts was byte-for-byte identical to run
+06, including Notes. No existing Memory/Library/Notes journey, renderer suite
+or zoom check was repeated.
+
+| Phase | UTC interval / result |
+| --- | --- |
+| Fresh TypeScript | 21:20:07.342 → 21:20:09.340; exit 0, no source drift |
+| Fresh renderer/Electron build | 21:20:09.791 → 21:20:12.958; exit 0, 2,019 renderer modules, no source drift |
+| Hidden native launch | owned process creation from 21:21:22; ready in 19.326 seconds |
+| Normal close | 21:22:31.770 → 21:22:32.510; **0.740 seconds**, `normal: true`, `forcedPids: []`, `remainingPids: []` |
+
+### Controller-session recovery and evidence boundary
+
+The attempt to write to the prior exec session 1335 failed with **Unknown
+process id 1335**. Inspection found no former controller process 31492 and no
+prior main/backend processes. The scoped controller's documented contract has
+no existing-profile import/resume option: a new server always creates a fresh
+owned synthetic profile. The lane used that supported fresh-session path
+instead of changing controller source or copying the old profile. This deviation
+is recorded in `controller-recovery-07.json`; it is separate from the eight
+successful MCP operations in the new session.
+
+The new profile is
+`C:/Renulus/scratch/oc-foundations/ui/c/s-27c2d344/p`.
+The earlier `c/s-12449bc8/p` profile was not reused or modified by this delta.
+The same fixed worktree/Python/helper-assets configuration verified and staged
+the 19 public CPU helper files. The new owned process chain was launcher
+49036, main 38728 and managed Python backend 13256. Two window-created events
+and one renderer-ready event were verified hidden; `fault` stayed null.
+Run 07's receipt contains one launch/close. The seven earlier normal closes
+remain in the separate run 06 receipt, rather than being presented as one
+continuous controller session.
+
+### Exact bytes and route observation
+
+Build and pre-launch HEAD were `756c8ebc`. During launch, the parent committed
+the test-only Today fixture adjustment as
+`262e7e3e759a03a1d5022a1c27a89e33c1ddb270`; that was also final-close HEAD.
+All five source checkpoints, including the additional checkpoint before the
+replacement controller session, matched the build exactly. The ordered source
+manifest stayed
+`c52905284dc170acac2f707c82067d55107eba3e01e41e1da4143f95642c5ece`.
+
+| Source/artifact | SHA-256 |
+| --- | --- |
+| `runtime/renulus/services.py` | `83cff6865a979a8313c3b47bcbbabe325c6cdf29507a01afb82cb727d6ab4fbe` |
+| Ordered 505 source records | `c52905284dc170acac2f707c82067d55107eba3e01e41e1da4143f95642c5ece` |
+| Built `dist-electron/main.cjs` | `6c09b21b8dc4d0a5672ce35628f377e400fd4648017b4bfecfa1cfd89de4a2a2` |
+
+The eight requests were start, snapshot, click **New chat**, wait for its empty
+composer, snapshot, screenshot, errors and normal close. The snapshots showed
+the ordinary New chat route with empty composer and disabled Send. The single
+1384 × 921 PNG was opened for direct visual inspection. It shows normal
+navigation, the empty composer, disabled Send and the daily-suggestions-
+unavailable message. No message was entered or sent.
+
+Two renderer-console HTTP 409 lines were retained, at 21:21:41.847 and
+21:22:19.457 UTC; their log lines do not identify endpoints. No page-error,
+route-error, operation-error, close-error or controller fault occurred in the
+new controller session. This is not a clean-console claim. Run 06's single
+readiness locator rejection, run 05's failed immediate history cleanup and
+false index-identity comparison, and run 03's recall/startup qualifications
+remain unchanged in their original receipts and report sections.
+
+### Run 07 receipt and screenshot inventory
+
+All names below are relative to `C:/Renulus/scratch/oc-foundations/ui`.
+
+| Exact receipt paths | Evidence |
+| --- | --- |
+| `accept-build-07.mjs`, `native-source-07.before.json`, `dependencies-07.json` | Exact source, runner and matched dependencies |
+| `typecheck-07.receipt.json`, `typecheck-07.log` | Fresh TypeScript exit 0 |
+| `build-07.receipt.json`, `build-07.log`, `build-artifacts-07.json` | Fresh build exit 0, all 54 artifacts identical to run 06 |
+| `before-launch-07.source.json`, `before-new-session-07.source.json`, `after-launch-07.source.json` | Source/artifact parity before the failed resume attempt and across the fresh launch |
+| `before-close-07.source.json`, `after-close-07.source.json` | Final source/artifact parity through ordinary close |
+| `control-session-07.mjs`, `controller-recovery-07.json` | Fixed configuration wrapper and honest fresh-profile recovery record |
+| `control-session-07.closed.ndjson` | Frozen eight-request transcript for the new session |
+| `native-lifecycle-07.receipt.json`, `native-lifecycle-07.logs.ndjson` | One actual hidden launch/normal close, empty forced/remaining lists, diagnostics |
+| `summarize-ui-07.mjs`, `native-ui-07.summary.json` | Checked source delta, artifact equality, normal-close timings and scope limits |
+| `evidence-manifest-native-ui-07.json` | Frozen run 07 evidence hashes |
+| `c/s-27c2d344/out/capture-0001.png` | Visually inspected New chat route at 1384 × 921; screenshot numbering restarts in the new session |
