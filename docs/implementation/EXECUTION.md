@@ -58,8 +58,6 @@ handoff. DC04 must add the actual saved-case attachment tombstone producer;
 new record owners must register their deletion aliases/relations and prove
 export/restore. DC06/DC19 must compare the local context epoch before publication.
 
-The entries below preserve earlier implementation evidence. Their Flow selection,
-
 ### Published contracts and feature reservations
 
 The lead reviewed `design-c/1` validators at `527677f3`, after the exact-name
@@ -75,13 +73,17 @@ Ticket closure still requires the integrated producers and consumers.
 | Reader worker (Poincare) | `runtime/renulus/knowledge/` except schema/migrations; `apps/desktop/src/modules/library/`, new `apps/desktop/src/modules/reader/`; `tests/knowledge/`, `tests/integration/test_design_c_readers.py` | DC08 and Library DC10; `readers` |
 | Collection worker (Pauli) | New `runtime/renulus/assessment/test_repository.py`, `test_api.py`, `test_models.py`; new `apps/desktop/src/modules/tests/`; `tests/assessment/test_saved_tests.py` | DC12 collection/version/report and legacy mapping; `saved-tests` |
 | Attempt worker (Russell) | New `runtime/renulus/assessment/attempt_repository.py`, `attempt_api.py`, `attempt_models.py`; new `apps/desktop/src/modules/attempts/`; `tests/assessment/test_whole_attempts.py` | DC13 then DC14/DC15 core; `attempts` |
+| Chat/projects worker (Zeno) | `runtime/renulus/learn/`, `cases/` except schema/migrations; new Study `project_repository.py`, `project_api.py`, `project_models.py`; new frontend `chat/`, `projects/` plus existing `learn/`, `cases/`; `tests/learn/`, `tests/cases/`, new integration conversation/project tests | DC04/DC05, then project DC09; `chat-projects` |
+| Workspace worker (Aquinas) | New `apps/desktop/src/modules/workspace/` and colocated tests | DC07 typed tab/layout adapters after DC01 report; `workspace` |
+| Home/suggestions worker | New Study `home_service.py`, `home_api.py`, `home_models.py`; new frontend `modules/home/`; `tests/study/test_home_suggestions.py` | DC06 name/home/daily cache, Quick practice consumer pending DC16; `home` |
 
 Existing assessment repository/router and generation files remain lead-held.
 Collection and attempt workers have disjoint repositories/routers and use a
 small private pinned-version interface. No worker edits another reservation.
-All three feature workers merge the next committed reservation baseline into
+Feature workers merge the next committed reservation baseline into
 their clean existing worktree. Separate owned profiles remain outside Git.
 
+The entries below preserve earlier implementation evidence. Their Flow selection,
 branches, paths, issue status, time windows and heartbeat instructions describe
 those dated runs; they are not assignments or scheduling instructions for C.
 The current installed baseline and canonical paths are in
