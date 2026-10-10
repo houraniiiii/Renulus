@@ -18,9 +18,32 @@ export const conversationPath = (chat: Pick<ConversationSummary, 'kind' | 'ident
 export function createConversation(
   input: {kind?: 'learning' | 'case'; title?: string; temporary?: boolean; project_id?: string | null; teaching_case_id?: string},
   signal?: AbortSignal,
+  idempotencyKey: string = crypto.randomUUID(),
 ): Promise<ConversationSummary> {
   return api('/conversations', {method: 'POST', body: input, signal,
-    headers: {'Idempotency-Key': crypto.randomUUID()}});
+    headers: {'Idempotency-Key': idempotencyKey}});
+}
+
+export interface ChatTestRun {run_id:string;state:'queued'|'running'|'published'|'failed'|'cancelled'}
+export interface ChatTestResult {
+  test_id:string;version_id:string;item_count:5|10|20;
+  study_start:{version:{type:'saved_test_version';id:string};mode:'study';timing:{kind:'untimed'};idempotency_key:string};
+}
+const chatTestRunPath=(runId:string)=>'/conversations/test-drafts/runs/'+encodeURIComponent(runId);
+export function startQuickPractice(input:{text:string;request_id:string;count?:5},signal?:AbortSignal):Promise<ChatTestRun>{
+  return api('/conversations/test-drafts',{method:'POST',body:{intent:'quick_practice',...input,count:5},signal});
+}
+export function startChatTest(conversation:ConversationSummary,input:{expected_revision:number;request_id:string;count:5|10|20;instruction?:string},signal?:AbortSignal):Promise<ChatTestRun>{
+  return api(conversationPath(conversation)+'/tests',{method:'POST',body:input,signal});
+}
+export function readChatTestRun(runId:string,signal?:AbortSignal):Promise<ChatTestRun>{
+  return api(chatTestRunPath(runId),{signal});
+}
+export function readChatTestResult(runId:string,signal?:AbortSignal):Promise<ChatTestResult>{
+  return api(chatTestRunPath(runId)+'/result',{signal});
+}
+export function cancelChatTestRun(runId:string,signal?:AbortSignal):Promise<ChatTestRun>{
+  return api(chatTestRunPath(runId)+'/cancel',{method:'POST',signal});
 }
 
 export async function sendConversation(
