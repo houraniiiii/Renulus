@@ -22,6 +22,7 @@ import sqlite3
 import sys
 import tempfile
 from datetime import datetime, timezone
+from types import MappingProxyType
 import zipfile
 from urllib.parse import unquote, urlsplit, parse_qs
 
@@ -426,6 +427,84 @@ def validate_old_seed(root, seed):
     return old
 
 
+def library_original_expectations(stored, originals, inventory):
+    """Freeze only closed-seed identities; target paths never determine absence."""
+    present, absent, seen = {}, set(), set()
+    archived = {row["revision_id"]: row for row in originals}
+    require(len(archived) == len(originals), "Duplicate seed original revision")
+    for row in stored:
+        identifier = row["id"]
+        require(identifier not in seen, "Duplicate closed-seed Library revision")
+        seen.add(identifier)
+        if row["original_path"] is None:
+            require(identifier not in archived, "Archived original missing from closed seed")
+            prefix = "library/knowledge/" + row["document_id"] + "/" + identifier + "/original."
+            require(not any(path.startswith(prefix) for path in inventory),
+                    "Inventoried original missing from closed seed")
+            absent.add(identifier)
+            continue
+        item = archived.get(identifier)
+        metadata = (row["document_id"], row["bytes"], row["sha256"])
+        require(item is not None and (item["document_id"], item["bytes"], item["sha256"]) == metadata
+                and item["path"] == row["original_path"], "Closed seed and archive original differ")
+        record = inventory.get(item["path"])
+        require(record is not None and (record["size"], record["sha256"]) == metadata[1:],
+                "Seed original missing or changed in hash inventory")
+        present[identifier] = metadata
+    require(present and set(archived) == set(present), "Seed needs matching genuine original coverage")
+    return MappingProxyType(present), frozenset(absent)
+
+
+def freeze_library_originals(root, seed, old):
+    """Read the verified immutable snapshot before any current application opens."""
+    database = relative_file(root / "b", "state/renulus.sqlite3")
+    with closing(sqlite3.connect(database.as_uri() + "?mode=ro&immutable=1", uri=True)) as conn:
+        conn.row_factory = sqlite3.Row
+        stored = [dict(row) for row in conn.execute(
+            "SELECT id,document_id,bytes,sha256,original_path FROM knowledge_revisions")]
+    exported = old["records"]["knowledge_revisions"]
+    require({row["id"] for row in stored} == {row["id"] for row in exported},
+            "Closed-seed Library inventory differs from canonical export")
+    assert_preserved_rows([{key: row[key] for key in ("id", "document_id", "bytes", "sha256")}
+                           for row in exported], stored, "closed-seed Library originals")
+    inventory = {row["path"][2:]: row for row in seed["files"] if row["path"].startswith("u/")}
+    for row in stored:
+        if row["original_path"] is not None:
+            path = Path(row["original_path"])
+            require(path.is_absolute() and path.is_relative_to(root / "u") and ".." not in path.parts,
+                    "Seed original path leaves its exact profile")
+            relative = path.relative_to(root / "u").as_posix()
+            require(relative.startswith("library/knowledge/" + row["document_id"] + "/" + row["id"] + "/"),
+                    "Seed original path differs from revision ownership")
+            snapshot = relative_file(root / "b", relative)
+            require(snapshot.is_file() and snapshot.stat().st_size == row["bytes"] and sha256(snapshot) == row["sha256"],
+                    "Preserved seed original bytes changed")
+            row["original_path"] = relative
+    archives = []
+    for number in (1, 2):
+        with zipfile.ZipFile(root / ("old%d.zip" % number)) as archive:
+            manifest = json.loads(archive.read("manifest.json"))
+            originals = manifest.get("originals")
+            require(isinstance(originals, list), "Seed archive original inventory missing")
+            archives.append(library_original_expectations(stored, originals, inventory))
+    require(archives[0] == archives[1], "Supported seed ZIP original identities differ")
+    return archives[0]
+
+
+def partition_library_originals(library, expectations):
+    present, absent = expectations
+    identifiers = {row["id"] for row in library}
+    require(len(identifiers) == len(library), "Duplicate canonical Library revision")
+    require((set(present) | set(absent)) <= identifiers, "Frozen seed revision disappeared from canonical records")
+    expected, unavailable = [], []
+    for row in library:
+        if row["id"] in present:
+            require((row["document_id"], row["bytes"], row["sha256"]) == present[row["id"]],
+                    "Frozen original metadata changed")
+        (unavailable if row["id"] in absent else expected).append(row)
+    return expected, unavailable
+
+
 def provision_helpers(bundle, root, boundary):
     # helper_copy itself and every asset were verified by the full installed
     # inventory before this first non-stdlib import. No development assets.
@@ -514,11 +593,14 @@ def application(root, name, bundle, boundary):
     require(not boundary.attempts, "Refused external/provider/ownership operation occurred")
 
 
-def assert_originals(services, library, attachments):
-    for row in library:
+def assert_originals(services, library, attachments, *, expectations):
+    expected, unavailable = partition_library_originals(library, expectations)
+    for row in expected:
         path, _ = services.get("knowledge").original(row["id"])
         require(path.is_relative_to(services.paths.library) and path.stat().st_size == row["bytes"]
                 and sha256(path) == row["sha256"], "Actual Library original differs")
+    for row in unavailable:
+        expect_unavailable(lambda: services.get("knowledge").original(row["id"]), {"original_missing"})
     for row in attachments:
         metadata, data = services.get("cases").original(row["case_id"], row["id"])
         require(len(data) == row["bytes"] and hashlib.sha256(data).hexdigest() == row["sha256"]
@@ -535,10 +617,11 @@ def expect_unavailable(operation, codes):
         raise ProofError("Records-only/deleted original was exposed")
 
 
-def assert_json_omits_originals(services, bundle):
+def assert_json_omits_originals(services, bundle, *, expectations):
     require(bundle.get("data_kind") == "records-only" and bundle.get("artifacts") == {}, "JSON must remain records-only")
     require(all(row.get("original_path") is None for row in bundle["records"].get("knowledge_revisions", [])),
             "JSON may not retain source original paths")
+    partition_library_originals(bundle["records"].get("knowledge_revisions", []), expectations)
     for row in bundle["records"].get("knowledge_revisions", []):
         expect_unavailable(lambda: services.get("knowledge").original(row["id"]), {"original_missing"})
     for row in bundle["records"].get("case_attachments", []):
@@ -689,6 +772,7 @@ def verify(args, identity):
     shutil.copytree(root / "u", root / "b")
     snapshot_files = [{**row, "path": row["path"][2:]} for row in seed["files"] if row["path"].startswith("u/")]
     validate_inventory(root / "b", snapshot_files)
+    original_expectations = freeze_library_originals(root, seed, old)
     boundary = configure_safety(root, args.bundle)
     journal = (root / "events.jsonl").open("x", encoding="utf-8")
     gates = {}
@@ -700,10 +784,12 @@ def verify(args, identity):
     try:
         helper_copy, contract = provision_helpers(args.bundle, root, boundary)
         mark("identity-and-seed", {"seed": seed_inventory, "schema1_snapshot_preserved": str(root / "b"),
-                                  "helpers": helper_copy})
+            "helpers": helper_copy, "library_originals": {"present": sorted(original_expectations[0]),
+                                                         "absent": sorted(original_expectations[1])}})
         with application(root, "u", args.bundle, boundary) as services:
             legacy_assertions(services, old)
-            assert_originals(services, old["records"]["knowledge_revisions"], old["records"]["case_attachments"])
+            assert_originals(services, old["records"]["knowledge_revisions"], old["records"]["case_attachments"],
+                             expectations=original_expectations)
             with closing(services.db.connect()) as conn:
                 require(conn.execute("PRAGMA user_version").fetchone()[0] == 2, "Actual coordinated upgrade did not reach schema2")
                 require(not conn.execute("PRAGMA foreign_key_check").fetchall(), "Upgrade broke live relations")
@@ -719,7 +805,8 @@ def verify(args, identity):
                                          "reopen": "closed owners then assembled again in this interpreter"})
             produced = produce_current(services, root)
             current = export_current(services, root)
-            assert_originals(services, current["records"]["knowledge_revisions"], current["records"]["case_attachments"])
+            assert_originals(services, current["records"]["knowledge_revisions"], current["records"]["case_attachments"],
+                             expectations=original_expectations)
             mark("actual-current-producers", {"library_originals": len(produced["documents"]), "manual_memory_revision": 2,
                 "version_id": produced["version_id"], "attempt_id": produced["attempt_id"], "partial_denominator": 2})
         old_fact = next(row for row in old["records"]["memory_facts"] if row["revision"] >= 2)
@@ -731,15 +818,17 @@ def verify(args, identity):
                 legacy_assertions(services, old)
                 services.get("saved_tests").backfill_legacy()
                 if kind == "json":
-                    assert_json_omits_originals(services, old)
+                    assert_json_omits_originals(services, old, expectations=original_expectations)
                 else:
-                    assert_originals(services, old["records"]["knowledge_revisions"], old["records"]["case_attachments"])
+                    assert_originals(services, old["records"]["knowledge_revisions"], old["records"]["case_attachments"],
+                                     expectations=original_expectations)
                 restore(services, current_archive, kind)
                 current_assertions(services, current)
                 if kind == "json":
-                    assert_json_omits_originals(services, current)
+                    assert_json_omits_originals(services, current, expectations=original_expectations)
                     restore(services, root / "current1.zip", "zip1")
-                assert_originals(services, current["records"]["knowledge_revisions"], current["records"]["case_attachments"])
+                assert_originals(services, current["records"]["knowledge_revisions"], current["records"]["case_attachments"],
+                                 expectations=original_expectations)
                 evidence = rebuild(services, revision=produced["documents"][1]["revision_id"], fact=produced["fact"]["id"])
                 mark(kind + "-restored", evidence)
                 removed = produced["documents"][0]
@@ -758,7 +847,7 @@ def verify(args, identity):
                 legacy_assertions(services, old, deleted_fact=old_fact["id"])
                 current_assertions(services, current)
                 kept = [row for row in current["records"]["knowledge_revisions"] if row["document_id"] != removed["document_id"]]
-                assert_originals(services, kept, current["records"]["case_attachments"])
+                assert_originals(services, kept, current["records"]["case_attachments"], expectations=original_expectations)
                 evidence = rebuild(services, revision=produced["documents"][1]["revision_id"], fact=produced["fact"]["id"])
                 mark(kind + "-deletion-replay", {**evidence, "older_and_current_backups_replayed": True})
         assert_bundled_modules(args.bundle)

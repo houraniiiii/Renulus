@@ -153,6 +153,92 @@ class FileGuardTests(unittest.TestCase):
 
 
 class EvidenceAssertions(unittest.TestCase):
+    def original_fixture(self):
+        # Descriptors exercise driver guards only, never an invented database.
+        digest = hashlib.sha256(b"synthetic original").hexdigest()
+        stored = [{"id": "present", "document_id": "doc-present", "bytes": 18,
+                   "sha256": digest, "original_path": "library/knowledge/doc-present/present/original.txt"},
+                  {"id": "absent", "document_id": "doc-absent", "bytes": 37,
+                   "sha256": "a" * 64, "original_path": None}]
+        originals = [{"revision_id": "present", "document_id": "doc-present", "bytes": 18,
+                      "sha256": digest, "path": stored[0]["original_path"]}]
+        inventory = {originals[0]["path"]: {"size": 18, "sha256": digest}}
+        return stored, originals, inventory
+
+    def test_seed_original_expectations_are_explicit_and_immutable(self):
+        stored, originals, inventory = self.original_fixture()
+        present, absent = driver.library_original_expectations(stored, originals, inventory)
+        self.assertEqual(set(present), {"present"})
+        self.assertEqual(absent, frozenset({"absent"}))
+        with self.assertRaises(TypeError):
+            present["present"] = ("changed", 0, "b" * 64)
+        with self.assertRaises(AttributeError):
+            absent.add("present")
+
+    def test_lost_seed_original_cannot_be_reclassified_as_expected_absence(self):
+        stored, originals, inventory = self.original_fixture()
+        stored[0]["original_path"] = None
+        with self.assertRaisesRegex(driver.ProofError, "Archived original missing"):
+            driver.library_original_expectations(stored, originals, inventory)
+        stored, originals, inventory = self.original_fixture()
+        for altered in ({}, {originals[0]["path"]: {"size": 18, "sha256": "b" * 64}}):
+            with self.subTest(inventory=altered), self.assertRaises(driver.ProofError):
+                driver.library_original_expectations(stored, originals, altered)
+        # Even if an archive entry were omitted too, another valid original
+        # cannot make the inventoried lost revision eligible for the absent set.
+        other = {**stored[0], "id": "other", "document_id": "doc-other",
+                 "original_path": "library/knowledge/doc-other/other/original.txt"}
+        archive_other = {**originals[0], "revision_id": "other", "document_id": "doc-other", "path": other["original_path"]}
+        stored[0]["original_path"] = None
+        with self.assertRaisesRegex(driver.ProofError, "Inventoried original missing"):
+            driver.library_original_expectations([*stored, other], [archive_other],
+                {**inventory, other["original_path"]: {"size": 18, "sha256": other["sha256"]}})
+
+    def test_seed_and_both_archive_identities_must_agree_and_include_real_bytes(self):
+        stored, originals, inventory = self.original_fixture()
+        for field, value in (("revision_id", "absent"), ("document_id", "wrong-document"),
+                             ("bytes", 0), ("sha256", "b" * 64), ("path", "another-original.txt")):
+            changed = [{**originals[0], field: value}]
+            with self.subTest(field=field), self.assertRaises(driver.ProofError):
+                driver.library_original_expectations(stored, changed, inventory)
+        with self.assertRaises(driver.ProofError):
+            driver.library_original_expectations(stored, originals * 2, inventory)
+        with self.assertRaises(driver.ProofError):
+            driver.library_original_expectations([stored[1]], [], {})
+
+    def test_target_missing_paths_never_override_frozen_or_new_presence(self):
+        stored, originals, inventory = self.original_fixture()
+        expectations = driver.library_original_expectations(stored, originals, inventory)
+        # JSON correctly clears all paths. Even after that clearing, previously
+        # present and unknown/current identities must demand an actual original
+        # when the full-ZIP original assertion runs.
+        target = [{**row, "original_path": None} for row in stored]
+        target.append({**target[0], "id": "new-current", "document_id": "new-document"})
+        expected, unavailable = driver.partition_library_originals(target, expectations)
+        self.assertEqual([row["id"] for row in expected], ["present", "new-current"])
+        self.assertEqual([row["id"] for row in unavailable], ["absent"])
+        for changed in (target[1:], [{**target[0], "sha256": "b" * 64}, *target[1:]]):
+            with self.subTest(changed=changed), self.assertRaises(driver.ProofError):
+                driver.partition_library_originals(changed, expectations)
+
+    def test_actual_original_assertion_propagates_missing_present_and_new_errors(self):
+        stored, originals, inventory = self.original_fixture()
+        expectations = driver.library_original_expectations(stored, originals, inventory)
+        calls = []
+        class MissingOriginal:
+            def original(self, identifier):
+                calls.append(identifier)
+                raise FileNotFoundError(identifier)
+        class GuardServices:
+            def get(self, name):
+                assert name == "knowledge"
+                return MissingOriginal()
+        new = {**stored[0], "id": "new-current", "original_path": None}
+        for library, identifier in ((stored, "present"), ([new, *stored], "new-current")):
+            with self.subTest(identifier=identifier), self.assertRaisesRegex(FileNotFoundError, identifier):
+                driver.assert_originals(GuardServices(), library, [], expectations=expectations)
+            self.assertEqual(calls[-1], identifier)
+
     def test_rebuild_requires_changed_generations_count_and_actual_hit(self):
         before = {"knowledge": "old-library", "memory": "old-memory"}
         after = {"knowledge": "new-library", "memory": "new-memory"}
