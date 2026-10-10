@@ -15,7 +15,7 @@ Use [parallel-work rules](../planning/PARALLEL_WORK.md) and record prerequisite
 commits, integrated evidence and remaining limits in the ticket handoff or its
 linked issue. Update this current section when execution starts.
 
-### Current integration checkpoint — f2ac20d2
+### Current integration checkpoint — 31e9e4ce
 
 The earlier reservations below are historical. Active work remains against the
 same DC01–DC21 backlog. Canonical root/branch and baseline 528025ff ancestry were
@@ -24,9 +24,9 @@ rechecked; the 18 pre-existing normalization-only flags remain unstaged.
 | Owner | Current exact lease / prerequisite | Current evidence and next gate |
 | --- | --- | --- |
 | Lead | Shared integration/release paths and current guides/spec | `f5d36ac9` resolves R5 with authorized volatile tab titles; eight actual backend and 28 renderer/transport checks plus full build pass. Public payload inventory verified: 39,287 files / 2,176,578,295 bytes. No C installer manufactured yet. |
-| Aquinas / dc01-design | docs/implementation/design-c-review-integration.md only | `02906c12` records actual R3/R7–R10 and Study/Notes/source reopen passes; R4/R6 retain exact-blob prior proof. Recheck the bounded R5 title fix in the hidden app. |
+| Aquinas / dc01-design | Completed report-only recheck | `02906c12` records actual R3/R7–R10 and Study/Notes/source reopen passes; R4/R6 retain exact-blob prior proof. `31e9e4ce` passes the bounded R5 two-file title/Close/reopen check and retains the initial timeout/409 observation without a zero-error claim. |
 | Zeno / dc02-contracts | Installed verifier/fixture four-file lease | `ccc453dc` supplies all eight reader journeys; `2e30ee1d` confines every child user/cache directory. `f2ac20d2` adds actual installed PDF selected-page reopen and current title checks; 28 boundary and seven original/parser checks pass. Actual installed execution is parent-owned. |
-| Pauli / dc-review-data | scripts/verify-installed-recovery.py + test_verify_installed_recovery.py only | `1744e2cb` populated source eight-pass scope retained; pass-3 preflight `b51cb7b3` integrated. Implementing isolated installed upgrade/original/rebuild verification, with parent-owned genuine schema-1 seed and actual execution. |
+| Pauli / dc-review-data | Completed driver; actual-execution findings only | `c96afad8` installs the isolated recovery driver and nine passing stdlib guard tests. `1744e2cb` populated source eight-pass scope retained. Parent owns genuine schema-1 seed, matching installed upgrade/original/rebuild execution and separate fresh Electron reopen. |
 | Russell / dc-review-assessment | Completed; worktree preserved | C5 `7cdc3fec` consumes restore barriers `009b8780`; five-module regression passes 91 checks, including the earlier 15+2 focused checks. Supplemental `760f4b0b` proves failed-job global Retry cannot lift the barrier; explicit HTTP capture succeeds. Report `02c7e371` retains failures and evidence. |
 | Poincare / dc-review-readers | Reader.tsx + Reader.test.tsx + reader report, completed | Notes `dc59d4c2` proves 20 unique mounted boundaries. R7 `f4fc986f` fixes actual PDF page-2 text selection reopening at page 1; 40 Reader/Workspace checks, real loopback/SQLite reopen and typecheck pass. |
 | Kant / dc-home | Completed; worktree preserved | Guide `47246d63`, archived Search path `61eb44f8` and C5 wording `c8502415` are integrated. Wording distinguishes recorded cancelled-job capture from no-history restored sources, which remain quiet without a fabricated discovery job. |
