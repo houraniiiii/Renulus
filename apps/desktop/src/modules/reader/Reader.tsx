@@ -2,21 +2,24 @@ import { useEffect, useRef, useState } from 'react';
 import { api, apiResponse, ApiError, isCancelled } from '../../platform/api';
 import { Button, ErrorState, LoadingState, Notice } from '../../ui';
 import type { ContentLocator, PassageDraft, ReaderProps } from '../../platform/designC';
+import { studyHelpHeaders } from '../../platform/designC';
 import type { ReaderBlock, ReaderDocument } from './types';
 import './reader.css';
 
 /** Only trusted app code calls the API. Assets are decoded/rasterised PNGs. */
-function Asset({ assetId, request, sha256, zoom }: { assetId: string; request: object; sha256: string; zoom: number }) {
+function Asset({ assetId, request, sha256, zoom, studyHelpContext }: { assetId: string; request: object; sha256: string; zoom: number; studyHelpContext?: ReaderProps['studyHelpContext'] }) {
   const [url, setUrl] = useState<string>();
   const [error, setError] = useState<unknown>();
   const key = JSON.stringify({ ...request, asset_id: assetId, original_sha256: sha256 });
+  const studyContext = JSON.stringify(studyHelpContext);
   useEffect(() => {
     const controller = new AbortController();
     let ownedUrl: string | undefined;
     setUrl(undefined); setError(undefined);
     void (async () => {
       try {
-        const response = await apiResponse('/readers/asset', { method: 'POST', body: JSON.parse(key), signal: controller.signal });
+        const response = await apiResponse('/readers/asset', { method: 'POST', body: JSON.parse(key), signal: controller.signal,
+          headers: studyHelpHeaders(studyHelpContext) });
         if (response.headers.get('content-type')?.split(';')[0] !== 'image/png') throw new ApiError('The preview returned an unexpected format.', 0, 'reader_asset_invalid');
         const blob = await response.blob();
         if (controller.signal.aborted) return;
@@ -59,7 +62,10 @@ function TextBlock({ block, query }: { block: ReaderBlock; query: string }) {
   return <p {...attributes}>{content}</p>;
 }
 
-function ReaderSession({ reference, conversation, onPassage }: ReaderProps) {
+function ReaderSession(props: ReaderProps) {
+  const { reference, conversation, onPassage, studyHelpContext } = props;
+  const studyContext = JSON.stringify(studyHelpContext);
+  const headers = studyHelpHeaders(studyHelpContext);
   const locator = reference.locator;
   const [page, setPage] = useState(locator?.kind === 'pdf' ? locator.physical_page : locator?.kind === 'image' ? locator.frame : 1);
   const [sheet, setSheet] = useState(locator?.kind === 'table' ? locator.sheet_name ?? undefined : undefined);
@@ -160,7 +166,7 @@ function ReaderSession({ reference, conversation, onPassage }: ReaderProps) {
       <span>{Math.round(zoom * 100)}%</span><Button variant="ghost" disabled={zoom >= 3} onClick={() => setZoom(value => Math.min(3, value + 0.25))}>Zoom in</Button>
       <Button variant="ghost" onClick={() => setZoom(1)}>Fit width</Button>
     </div>}
-    {payload?.asset_id && <Asset assetId={payload.asset_id} request={request} sha256={document.original.sha256} zoom={zoom} />}
+    {payload?.asset_id && <Asset assetId={payload.asset_id} request={request} sha256={document.original.sha256} zoom={zoom} studyHelpContext={studyHelpContext} />}
     {table && <>
       <div className="reader-tools">{table.format === 'xlsx' && <label>Sheet<select value={sheet ?? table.sheet_name ?? ''}
         onChange={event => { setSheet(event.target.value); setFirstRow(1); }}>{table.sheets.map(name => <option key={name}>{name}</option>)}</select></label>}
@@ -177,7 +183,7 @@ function ReaderSession({ reference, conversation, onPassage }: ReaderProps) {
             <Highlight text={cell.display} query={query} /></button></td>)}</tr>)}</tbody></table></div>
     </>}
     {!!payload?.blocks.length && <div className="reader-content" onMouseUp={captureSelection} onKeyUp={captureSelection}>
-      {payload.blocks.map(item => item.kind === 'image' && item.asset_id ? <Asset key={item.item_ref} assetId={item.asset_id} request={request} sha256={document.original.sha256} zoom={1} /> :
+      {payload.blocks.map(item => item.kind === 'image' && item.asset_id ? <Asset key={item.item_ref} assetId={item.asset_id} request={request} sha256={document.original.sha256} zoom={1} studyHelpContext={studyHelpContext} /> :
         <div className="reader-block" key={item.item_ref}><TextBlock block={item} query={query} />
           {onPassage && document.capabilities.passage && item.text.length > 0 && Array.from(item.text).length <= 8000 && <Button variant="ghost" disabled={busy}
             onClick={() => void discuss({ kind: 'text', item_ref: item.item_ref, start: 0, end: Array.from(item.text).length })}>Discuss this passage</Button>}</div>)}
@@ -189,5 +195,5 @@ function ReaderSession({ reference, conversation, onPassage }: ReaderProps) {
 
 export default function Reader(props: ReaderProps) {
   // A different reference/context never inherits an old source, selection or Blob.
-  return <ReaderSession key={JSON.stringify([props.reference, props.conversation])} {...props} />;
+  return <ReaderSession key={JSON.stringify([props.reference, props.conversation, props.studyHelpContext])} {...props} />;
 }

@@ -978,3 +978,58 @@ remain 20e95641 and fbe7b4a0; no new helper implementation or DDL is required.
 No hidden renderer, saved PDF/image OCR import or feature closure is claimed.
 
 Exact lane changes are tests/knowledge/test_attachment_producer.py and this report.
+
+### Shared Study-help and real Library import consumer checkpoint
+
+Normal merge 7ddf7aeb completed at 4477a984. Reader now imports the parent-owned
+studyHelpHeaders helper and consumes the published optional StudyHelpContext
+directly; the temporary absent-type compatibility branch is removed. All four
+Reader request kinds, inline images and ephemeral cancellation/session behavior
+remain covered by eleven passing React transport checks. Full desktop
+TypeScript passes with the existing pinned dependencies. Shared source/types/
+server/DDL were changed only by the normal parent merge.
+
+Twenty-five real backend checks passed in readers-study-help-run1-results.xml.
+Eight new cases create a real saved personal version, start Study and record
+source-help exposure, then exercise resolve/asset/original/passage through the
+actual router. Changed canonical drafts reject the old receipt both before a
+read (the reader is not called) and after the actual parser/original read. The
+controlled race performs a real independent owner transaction; the inherited
+server guard returns a safe revision_conflict response without source/key data.
+The run also includes the seven parent guard tests and required-format persisted
+draft/original checks. No replacement authorization guard was introduced.
+
+Thirty-six actual offline saved-extraction checks passed in
+saved-extraction-parent-7ddf-run1-results.xml, adding text and CSV Library imports
+through /assessment/imports to the existing 34 authority checks. They use the
+production readers helper, real Docling/HybridChunker and FastEmbed/LanceDB
+extraction, immutable Assessment originals and source pins, idempotent create,
+reopen and private original hashes. Two focused positive cases passed again in
+library-positive-router-run2-results.xml after checking structured terms inside
+source_pin rather than constraining the consumer's visible terms formatting.
+No provider normalization/Test acceptance is claimed by these owner checks;
+Pauli owns those consumers and their separately published evidence.
+
+Exact offline opt-in: RENULUS_SAVED_EXTRACTION_ASSETS=C:/Renulus/dev/helper-assets,
+HF_HUB_OFFLINE=1 and TRANSFORMERS_OFFLINE=1. The fixture hashes and copies only
+the embedding files listed in packaging/runtime/helper-assets.json into the
+synthetic profile; missing opt-in produces explicit skips rather than fake
+extraction. Use the lane's explicit runtime PYTHONPATH, PYTHONDONTWRITEBYTECODE=1,
+and a fresh pytest --basetemp beneath its synthetic scratch root.
+
+Reader header adoption is ready on shared baseline 7ddf7aeb. Trusted helper
+content-only commits are 20e95641ad131df51f323ec70beed308818e8fc6 and
+fbe7b4a098256d4c46db87f14dd04a40876117ff; both contain only this report,
+knowledge/reader.py, repository.py, saved_extraction.py and its owned test.
+Structured terms remain licence/permission_reference/attribution in the trusted
+pin; visible retained lines belong in Pauli's consumer.
+
+Exact changed paths for this checkpoint:
+
+- apps/desktop/src/modules/reader/Reader.tsx
+- tests/integration/test_design_c_readers.py
+- tests/knowledge/test_saved_extraction.py
+- docs/implementation/design-c-review-readers.md
+
+No feature closure, packaged hidden journey or saved PDF/image OCR import
+acceptance is asserted. No Notes feature source was added in this checkpoint.

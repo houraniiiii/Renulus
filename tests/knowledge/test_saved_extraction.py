@@ -9,6 +9,7 @@ from pathlib import Path
 import shutil
 import socket
 
+from fastapi.testclient import TestClient
 import pytest
 
 from renulus.contracts import ApiError
@@ -59,7 +60,7 @@ def saved(tmp_path_factory):
         table = knowledge.import_file(csv, rights=own_text_rights())
         assert table["status"] == "ready", table
         try:
-            yield {"services": services, "note": note, "table": table}
+            yield {"app": app, "services": services, "note": note, "table": table}
         finally:
             knowledge.index.close()
 
@@ -349,3 +350,41 @@ def test_actual_pending_replacement_blocks_old_active_import_but_keeps_private_r
         assert reader.require_original_display(conn, pin)["allowed"]
         with code("saved_extraction_pending"):
             reader.import_original(conn, replacement["revision_id"])
+
+
+@pytest.mark.parametrize("kind", ["note", "table"])
+def test_actual_saved_library_source_creates_private_import_with_canonical_pins_and_reopens(saved, kind):
+    services = saved["services"]
+    revision_id = saved[kind]["revision_id"]
+    with services.db.transaction() as conn:
+        pin = services.get("readers").import_original(conn, revision_id)
+    client = TestClient(saved["app"])
+    request = {"idempotency_key": "SYNTHETIC_reader_import_" + kind, "title": "SYNTHETIC extracted private import",
+        "original": {"kind": "library_revision", "revision_id": revision_id}}
+    created = client.post("/api/v1/assessment/imports", json=request)
+    assert created.status_code == 201, created.text
+    identifier = created.json()["id"]
+    assert created.json()["source_revision_id"] == revision_id and created.json()["call_count"] == 0
+    original = client.get("/api/v1/assessment/imports/" + identifier + "/original")
+    assert original.status_code == 200 and original.json()["text"] == pin["text"]
+    row = services.db.fetch_one("SELECT * FROM assessment_test_imports WHERE id=?", (identifier,))
+    retained = json.loads(row["original_json"])
+    assert row["original_text"] == pin["text"] and row["original_sha256"] == pin["content_sha256"]
+    assert retained["source_pin"]["fingerprint"] == pin["fingerprint"]
+    assert retained["source_pin"]["original_sha256"] == pin["original_sha256"]
+    assert retained["segments"] == pin["segments"] and retained["source_pin"]["terms"] == pin["terms"]
+    assert row["source_revision_id"] == row["live_source_revision_id"] == revision_id
+    assert client.post("/api/v1/assessment/imports", json=request).json()["id"] == identifier
+    assert services.db.fetch_one("SELECT COUNT(*) AS count FROM assessment_test_imports WHERE id=?", (identifier,))["count"] == 1
+    reopened = create_app(services.paths.root)
+    try:
+        other = TestClient(reopened)
+        read = other.get("/api/v1/assessment/imports/" + identifier + "/original")
+        assert read.status_code == 200 and read.json()["text"] == pin["text"]
+        with reopened.state.services.db.transaction() as conn:
+            current = reopened.state.services.get("readers").recheck_import_original(conn, pin)
+            assert current["fingerprint"] == pin["fingerprint"]
+        private_original = reopened.state.services.paths.root / pin["original"]["relative_path"]
+        assert hashlib.sha256(private_original.read_bytes()).hexdigest() == pin["original_sha256"]
+    finally:
+        reopened.state.services.get("knowledge").index.close()

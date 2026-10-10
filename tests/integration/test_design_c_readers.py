@@ -2,6 +2,8 @@
 """Connected real router/SQLite/original/parser checks, without providers."""
 import hashlib
 import json
+from concurrent.futures import ThreadPoolExecutor
+from contextvars import Context
 
 from fastapi.testclient import TestClient
 import pytest
@@ -198,3 +200,94 @@ def test_actual_workspace_router_uses_registered_case_attachment_authority(reade
     assert not reader_app.state.services.db.fetch_one("SELECT id FROM case_sessions WHERE id=?", (case["id"],))
     cases.remove_attachment(case["id"], original["id"], case["revision"])
     assert client.post("/api/v1/workspace/authorize", json=request).json()["allowed"] is False
+
+
+def test_actual_html_grid_passage_uses_retained_cells_and_shared_revision_guard(reader_app, tmp_path):
+    reference = saved_source(reader_app, tmp_path, "SYNTHETIC-grid.html",
+        b'<table><tr><th>Topic</th><th>Value</th></tr><tr><td>SYNTHETIC CKD</td><td>15%</td></tr></table>')
+    client = TestClient(reader_app)
+    result = client.post("/api/v1/readers/resolve", json={"reference": reference})
+    assert result.status_code == 200
+    body = result.json()
+    table = body["payload"]["blocks"][0]
+    assert table["grid"]["rows"] == [["Topic", "Value"], ["SYNTHETIC CKD", "15%"]]
+    passage = client.post("/api/v1/readers/passage", json={"reference": reference,
+        "locator": table["locator"], "original_sha256": body["original"]["sha256"],
+        "expected_policy_revision": body["policy_revision"], "expected_context_epoch": body["context_epoch"]})
+    assert passage.status_code == 200 and passage.json()["text"] == "Topic\tValue\nSYNTHETIC CKD\t15%"
+    assert passage.json()["reference"]["locator"] == table["locator"]
+
+
+@pytest.mark.parametrize("endpoint,owner_method", [
+    ("resolve", "resolve"), ("asset", "asset"), ("original", "download"), ("passage", "passage"),
+])
+@pytest.mark.parametrize("stale_at", ["before_read", "after_read"])
+def test_actual_study_receipt_guards_all_reader_requests_before_and_after_reads(
+        reader_app, tmp_path, monkeypatch, endpoint, owner_method, stale_at):
+    from io import BytesIO
+    from PIL import Image
+    from renulus.assessment.attempt_models import HelpRequest, SaveDraft, StartAttempt
+    from renulus.design_c_contracts import QuestionSnapshot, SavedTestVersion
+    from renulus.storage import utc_now
+    services = reader_app.state.services
+    version = SavedTestVersion(id="SYNTHETIC_reader_study_version", test_id="SYNTHETIC_reader_study_test",
+        ordinal=1, origin="imported", review_quality="personal", status="ready", provenance={"method": "import"},
+        created_at=utc_now(), terms="SYNTHETIC owned teaching material", items=[QuestionSnapshot(
+            item_id="SYNTHETIC_reader_study_item", question_id="SYNTHETIC_reader_study_question",
+            question_version="1", key_version="1", family_id="SYNTHETIC_reader_study_family",
+            family_version="1", topic_id="general", stem="SYNTHETIC Study question",
+            options=[{"id": "a", "text": "SYNTHETIC first option"}, {"id": "b", "text": "SYNTHETIC second option"}],
+            correct_option_ids=["a"], explanation="SYNTHETIC_PRIVATE_STUDY_KEY")])
+    with services.db.transaction() as conn:
+        services.get("saved_tests").publish_version(conn, version, title="SYNTHETIC Reader Study",
+            provenance={"schema": "saved-test-provenance/1"}, idempotency_key="SYNTHETIC_reader_version")
+    owner = services.get("whole_attempts")
+    attempt = owner.start(StartAttempt(version={"type": "saved_test_version", "id": version.id}), "SYNTHETIC_reader_start")
+    receipt = owner.help(attempt["id"], HelpRequest(expected_revision=attempt["draft_revision"],
+        expected_policy_revision=attempt["policy"]["revision"], item_id=version.items[0].item_id, kind="sources"),
+        "SYNTHETIC_reader_help")
+    client = TestClient(reader_app)
+    if endpoint == "asset":
+        image = BytesIO(); Image.new("RGB", (20, 20), "white").save(image, format="PNG")
+        reference = saved_source(reader_app, tmp_path, "SYNTHETIC-study-image.png", image.getvalue())
+    else:
+        reference = saved_source(reader_app, tmp_path, "SYNTHETIC-study.txt", b"SYNTHETIC_PRIVATE_READER_SOURCE")
+    resolved = client.post("/api/v1/readers/resolve", json={"reference": reference})
+    assert resolved.status_code == 200
+    document = resolved.json()
+    command = {"reference": reference}
+    if endpoint == "asset":
+        command.update(asset_id=document["payload"]["asset_id"], original_sha256=document["original"]["sha256"])
+    elif endpoint == "passage":
+        command.update(locator=document["payload"]["blocks"][0]["locator"],
+            original_sha256=document["original"]["sha256"], expected_policy_revision=document["policy_revision"],
+            expected_context_epoch=document["context_epoch"])
+    headers = {"X-Renulus-Study-Context": json.dumps(receipt["context"])}
+    current = client.post("/api/v1/readers/" + endpoint, json=command, headers=headers)
+    assert current.status_code == 200, current.text
+
+    def invalidate():
+        return owner.save(attempt["id"], SaveDraft(expected_revision=attempt["draft_revision"], position=0,
+            answers=[{"item_id": version.items[0].item_id, "option_ids": ["b"], "marked": False}]),
+            "SYNTHETIC_reader_draft_change")
+
+    if stale_at == "before_read":
+        invalidate()
+    readers = services.get("readers")
+    actual_read = getattr(readers, owner_method)
+    reads = []
+    def read_then_change(request):
+        result = actual_read(request)
+        reads.append(endpoint)
+        # An independent control operation changes real canonical state after
+        # the reader finishes. It carries no inherited request publication guard.
+        with ThreadPoolExecutor(max_workers=1) as worker:
+            worker.submit(Context().run, invalidate).result(timeout=5)
+        return result
+    monkeypatch.setattr(readers, owner_method, read_then_change)
+    stale = client.post("/api/v1/readers/" + endpoint, json=command, headers=headers)
+    assert stale.status_code == 409 and stale.json()["error"]["code"] == "revision_conflict"
+    assert reads == ([] if stale_at == "before_read" else [endpoint])
+    assert "SYNTHETIC_PRIVATE_READER_SOURCE" not in stale.text and "SYNTHETIC_PRIVATE_STUDY_KEY" not in stale.text
+    assert "application/json" in stale.headers["content-type"]
+    assert owner.get(attempt["id"])["draft_revision"] == attempt["draft_revision"] + 1
