@@ -17,6 +17,7 @@ from renulus.knowledge.models import own_text_rights
 from renulus.learn.conversation_models import NewConversation
 from renulus.server import create_app
 from renulus.storage.assessment_policy import advance_policy, policy_snapshot
+from renulus.storage import attachment_cleanup
 from renulus.storage.invalidation import bump_context_epoch, context_epoch_in
 
 
@@ -367,3 +368,96 @@ def test_ordinary_upload_all_required_formats_connect_to_actual_reader_and_nativ
     listed = client.get("/api/v1/attachments/learning/" + chat["identity"]["id"])
     assert listed.status_code == 200 and len(listed.json()["items"]) == len(files)
     assert all(item["access"] == {"allowed": True} for item in listed.json()["items"])
+
+
+def test_individual_delete_journals_locked_file_then_actual_startup_finishes_cleanup(app, monkeypatch):
+    services = app.state.services
+    chat = conversation(app)
+    request = upload_request(app, chat)
+    owner = services.get("chat_attachments")
+    receipt = owner.upload(request, b"SYNTHETIC durable delete")
+    path = services.paths.library / "attachments" / receipt["id"] / "original.md"
+    removal = AttachmentRemoval(conversation=chat["identity"], expected_conversation_revision=receipt["conversation_revision"],
+        expected_policy_revision=request.expected_policy_revision, expected_context_epoch=request.expected_context_epoch,
+        idempotency_key="SYNTHETIC_journal_delete", expected_attachment_revision=1)
+    def locked(*args):
+        raise OSError("SYNTHETIC locked original")
+    with monkeypatch.context() as patch:
+        patch.setattr(attachment_cleanup, "remove_owned_tree", locked)
+        deleted = owner.remove(receipt["id"], removal)
+    assert deleted["deleted"] and path.exists()
+    assert not services.db.fetch_one("SELECT 1 FROM knowledge_attachments WHERE id=?", (receipt["id"],))
+    journal = services.db.fetch_one("SELECT value FROM preferences WHERE key=?", (attachment_cleanup.JOURNAL,))
+    assert json.loads(journal["value"]) == [{"attachment_id": receipt["id"],
+        "relative_directory": "library/attachments/" + receipt["id"]}]
+    assert TestClient(app).post("/api/v1/readers/original", json=read_body(receipt)).status_code == 404
+    reopened = create_app(services.paths.root)
+    with TestClient(reopened):
+        assert not path.exists()
+    assert attachment_cleanup.drain(reopened.state.services) == {"removed": 0, "pending": 0}
+    assert owner.remove(receipt["id"], removal) == deleted
+
+
+def test_individual_delete_enqueue_failure_rolls_back_rows_tombstones_revision_and_bytes(app, monkeypatch):
+    services = app.state.services
+    chat = conversation(app)
+    upload = upload_request(app, chat)
+    receipt = services.get("chat_attachments").upload(upload, b"SYNTHETIC journal rollback")
+    path = services.paths.library / "attachments" / receipt["id"] / "original.md"
+    removal = AttachmentRemoval(conversation=chat["identity"], expected_conversation_revision=receipt["conversation_revision"],
+        expected_policy_revision=upload.expected_policy_revision, expected_context_epoch=upload.expected_context_epoch,
+        idempotency_key="SYNTHETIC_enqueue_failure", expected_attachment_revision=1)
+    def failed(conn, plan):
+        assert conn.in_transaction
+        assert plan[0]["attachment_id"] == receipt["id"]
+        assert conn.execute("SELECT 1 FROM deletion_ledger WHERE entity_type='attachment' AND entity_id=?",
+            (receipt["id"],)).fetchone()
+        raise sqlite3.OperationalError("SYNTHETIC journal write failure")
+    monkeypatch.setattr(attachment_cleanup, "enqueue_in", failed)
+    with pytest.raises(sqlite3.OperationalError):
+        services.get("chat_attachments").remove(receipt["id"], removal)
+    assert path.read_bytes() == b"SYNTHETIC journal rollback"
+    assert not services.db.is_deleted("attachment", receipt["id"])
+    assert not services.db.is_deleted("attachment_original", receipt["original"]["id"])
+    assert services.get("conversations").get("learning", chat["identity"]["id"])["revision"] == receipt["conversation_revision"]
+    assert not services.db.fetch_one("SELECT 1 FROM conversation_commands WHERE idempotency_key=?", (removal.idempotency_key,))
+    assert TestClient(app).post("/api/v1/readers/original", json=read_body(receipt)).content == b"SYNTHETIC journal rollback"
+
+
+@pytest.mark.parametrize("version", [1, 2])
+def test_producer_original_round_trips_through_actual_typed_archive_and_reader(app, version):
+    from renulus.storage.recovery_files import remove_owned_tree
+    services = app.state.services
+    chat = conversation(app)
+    data = b"# SYNTHETIC typed recovery\n\nPreserve exact original and source permissions."
+    receipt = services.get("chat_attachments").upload(upload_request(app, chat), data)
+    directory, manifest = services.get("data_recovery").backup(format_version=version)
+    try:
+        archive = (directory / "backup.zip").read_bytes()
+    finally:
+        remove_owned_tree(services.paths, directory)
+    assert manifest["originals"] == [{"kind": "chat-attachment", "path": "library/attachments/" + receipt["id"] + "/original.md",
+        "attachment_id": receipt["id"], "original_id": receipt["original"]["id"], "chat_kind": "learning",
+        "chat_id": chat["identity"]["id"], "bytes": len(data), "sha256": receipt["original"]["sha256"]}]
+    target_app = create_app(services.paths.root.parent / ("synthetic-restored-archive-" + str(version)))
+    target = target_app.state.services
+    recovery = target.get("data_recovery")
+    token, stage = recovery.begin_preview()
+    keep = False
+    try:
+        (stage / "input.zip").write_bytes(archive)
+        checked = recovery.complete_preview(token, stage)
+        keep = True
+    finally:
+        recovery.end_upload(stage, keep=keep)
+    try:
+        restored = recovery.restore_preview(checked["preview_token"], checked["exported_at"], True)
+        assert restored["restored_originals"] == 1
+        assert TestClient(target_app).post("/api/v1/readers/original", json=read_body(receipt)).content == data
+        result = TestClient(target_app).post("/api/v1/readers/resolve", json=read_body(receipt))
+        assert result.status_code == 200 and result.json()["payload"]["blocks"][0]["text"] == "SYNTHETIC typed recovery"
+        metadata = target.db.fetch_one("SELECT * FROM knowledge_attachment_metadata WHERE attachment_id=?", (receipt["id"],))
+        assert metadata["filename"] == "SYNTHETIC.md" and json.loads(metadata["rights_json"])["display"]
+        assert not target.db.fetch_all("SELECT * FROM memory_jobs")
+    finally:
+        target.get("knowledge").index.close()

@@ -705,13 +705,49 @@ text and persists the reference without creating a Learn message or provider run
 The first producer run had nine passes and one faulty failure-injection fixture
 signature; the corrected fixture proves actual file/canonical rollback.
 
-Pending: parent mounts attachment_api; Zeno wires delete/forget and promotion;
-individual removal consumes the committed storage.attachment_cleanup journal.
-It currently commits revocation before scoped cleanup but does not yet enqueue
-that journal. Interrupted saved upload can leave an unreferenced owned folder;
+Pending: parent mounts attachment_api; Zeno wires delete/forget and promotion.
+After merging shared baseline 48729826 at d3938827, individual removal now
+enqueues storage.attachment_cleanup in the revocation transaction, then drains
+it after commit. Five actual journal/removal checks passed in
+attachment-journal-connected-results.xml, including enqueue failure rolling
+back bytes/rows/tombstones/revision and a locked file retaining its journal until
+actual app startup finishes cleanup. TypeScript passed after this shared merge.
+Two actual producer-to-typed-archive round trips passed in
+attachment-typed-recovery-connected-results.xml: ZIP1 and ZIP2 each preserve
+original IDs, ownership, exact bytes/hash, filename/rights sidecar and readable
+ContentReference after restore to another synthetic profile. No provider or
+derived memory job is created.
+Interrupted saved upload can still leave an unreferenced owned folder; upload
 crash cleanup remains integration work. No durable preview/extraction cache or
-derived binary preview is claimed. Cache publication uses the frozen sidecar
+derived binary preview is claimed. Proposed cache publication uses frozen sidecar
 generations and inert reader/1 payload pinned to original ID/hash, attachment
 revision, rights and shared policy/context; derived rows use preview.{extension}.
 Actual OCR/helpers, safe active links, PDF text alignment, hidden packaged flows
 and DC08/DC10 closure remain open.
+
+### Exact lane changed paths in this handoff
+
+- apps/desktop/src/modules/reader/Reader.test.tsx
+- apps/desktop/src/modules/reader/Reader.tsx
+- apps/desktop/src/modules/reader/reader.css
+- apps/desktop/src/modules/reader/types.ts
+- runtime/renulus/knowledge/api.py
+- runtime/renulus/knowledge/attachment_access.py
+- runtime/renulus/knowledge/attachment_api.py
+- runtime/renulus/knowledge/attachment_files.py
+- runtime/renulus/knowledge/attachment_models.py
+- runtime/renulus/knowledge/attachments.py
+- runtime/renulus/knowledge/reader.py
+- runtime/renulus/knowledge/reader_binary.py
+- runtime/renulus/knowledge/reader_models.py
+- runtime/renulus/knowledge/reader_text.py
+- tests/integration/test_design_c_readers.py
+- tests/knowledge/test_attachment_access.py
+- tests/knowledge/test_attachment_producer.py
+- tests/knowledge/test_reader_formats.py
+- tests/knowledge/test_reader_grids.py
+- docs/implementation/design-c-review-readers.md
+
+These are lane edits only. Shared merges preserve the parent's schema, recovery,
+contracts, shell/server and other owners' changes. No source schema/migration,
+root dependency manifest/lock or shared UI file was edited by this lane.

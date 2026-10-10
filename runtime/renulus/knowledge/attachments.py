@@ -13,6 +13,7 @@ from ..contracts import ApiError, durable_id
 from ..design_c_contracts import canonical_digest
 from ..learn.conversation_repository import command
 from ..storage.assessment_policy import require_assistance
+from ..storage import attachment_cleanup
 from ..storage.database import utc_now
 from ..storage.invalidation import context_epoch_in
 from .attachment_access import KnowledgeAttachmentAccess, denied
@@ -377,6 +378,10 @@ class KnowledgeAttachments(KnowledgeAttachmentAccess):
                     else:
                         result = command(conn, "conversation_commands", request.idempotency_key, "attachment_remove",
                             "attachment", attachment_id, request, remove)
+                        # Journal in the same transaction as revocation. Replay
+                        # also repairs a pending cleanup from an older runtime.
+                        attachment_cleanup.enqueue_in(conn, [{"attachment_id": attachment_id,
+                            "relative_directory": "library/attachments/" + attachment_id}])
                 if removed:
                     self._volatile.pop(attachment_id, None)
                     if temporary:
@@ -387,8 +392,8 @@ class KnowledgeAttachments(KnowledgeAttachmentAccess):
                 if before is not None:
                     state["summary"] = before
                 raise
-            # Canonical exclusion/tombstones committed before physical cleanup.
-            # A retry also completes any previously interrupted owned cleanup.
-            if not temporary and self.db.is_deleted("attachment", attachment_id):
-                remove_folder(self.paths, attachment_id)
+            # Parent-owned drain operates only after authoritative commit;
+            # locked/interrupted files remain journalled for normal startup.
+            if not temporary:
+                attachment_cleanup.drain(self.services)
             return result
