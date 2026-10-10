@@ -229,3 +229,25 @@ def test_context_change_during_reply_blocks_late_assistant_publication(tmp_path,
         assert result[-1]['payload']['code']=='dependency_changed'
         assert [row['role'] for row in client.get(path+'/messages').json()['items']]==['user']
         assert client.get(path+'/draft').json()['text']=='Fictional learning request'
+
+
+@pytest.mark.parametrize('kind',['learning','case'])
+def test_explicit_save_promotes_temporary_owner_once_and_preserves_history(tmp_path,kind):
+    profile=tmp_path/'explicit-promotion'
+    app=app_at(profile)
+    app.state.services.registry.update(provider=ConversationProvider(),knowledge=None,retrieval=None,memory=None)
+    with TestClient(app) as client:
+        chat=client.post('/api/v1/conversations',json={'kind':kind,'temporary':True}).json()
+        path=f"/api/v1/conversations/{kind}/{chat['identity']['id']}"
+        flow=event_payloads(client.post(path+'/messages',json={'expected_revision':chat['revision'],'text':'Fictional explicitly retained learning','request_id':'before-save-request'}))
+        assert flow[-1]['type']=='completed'
+        current=client.get(path).json()
+        body={'expected_revision':current['revision']}
+        headers={'Idempotency-Key':'explicit-save-request'}
+        promoted=client.post(path+'/save',json=body,headers=headers)
+        assert promoted.status_code==200,promoted.text
+        assert promoted.json()['identity']==chat['identity'] and promoted.json()['retention']=='saved'
+        assert client.post(path+'/save',json=body,headers=headers).json()==promoted.json()
+    with TestClient(app_at(profile)) as client:
+        assert client.get(path).json()['retention']=='saved'
+        assert [row['role'] for row in client.get(path+'/messages').json()['items']]==['user','assistant']

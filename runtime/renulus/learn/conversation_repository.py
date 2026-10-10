@@ -8,7 +8,7 @@ import secrets
 from threading import RLock
 
 from renulus.contracts import ApiError, durable_id
-from renulus.design_c_contracts import ConversationDraft, canonical_digest
+from renulus.design_c_contracts import ConversationDraft, ContentReference, canonical_digest
 from renulus.storage.database import utc_now
 from renulus.storage.invalidation import bump_context_epoch
 
@@ -387,3 +387,51 @@ class ConversationRepository:
                 conn.execute(f'UPDATE {sidecar} SET revision=revision+1,updated_at=? WHERE {column}=?', (utc_now(),identifier))
                 return self._saved(conn,kind,identifier)[0]
             return command(conn,'conversation_commands',key,'move',self._owner(kind)[3],identifier,request,move)
+
+    def promote(self, kind, identifier, request, key=None):
+        before = None
+        with self._lock, self.cases._lock:
+            try:
+                with self.db.transaction() as conn:
+                    require_assistance(conn)
+                    target_type = self._owner(kind)[3]
+                    temporary = self._temporary.get((kind,identifier))
+                    def save():
+                        nonlocal before
+                        if not temporary:
+                            raise ApiError('conversation_already_saved','This conversation is already saved',409)
+                        self._expected(temporary['summary'],request.expected_revision)
+                        if any(e['kind']==kind and e['id']==identifier for e in self.streaming.active.values()):
+                            raise ApiError('conversation_busy','Finish the response before saving this chat',409,True)
+                        draft_refs = [ContentReference.model_validate(ref) for ref in json.loads(temporary['draft_refs_json'])]
+                        self.validate_refs(conn,draft_refs)
+                        if kind=='case':
+                            state=self.cases.get(identifier)
+                            before=deepcopy(self.cases._sessions[identifier])
+                            self.cases.save(identifier,state['revision'],conn=conn)
+                        else:
+                            self.learn.create_thread(temporary['summary']['title'],conn=conn,identifier=identifier)
+                            runs = {m['run_id'] for m in temporary['messages']}
+                            outcomes = {result['run_id']:result for _,result in self._temporary_commands.values() if 'run_id' in result}
+                            for run_id in runs:
+                                result=outcomes.get(run_id,{})
+                                state='completed' if result.get('state')=='completed' else 'failed'
+                                now=utc_now()
+                                conn.execute('INSERT INTO learn_runs VALUES(?,?,?,?,?,?,?)',
+                                    (run_id,identifier,'saved-history:'+run_id,state,None,now,now))
+                            for message in temporary['messages']:
+                                conn.execute('INSERT INTO learn_messages VALUES(?,?,?,?,?,?,?)',
+                                    (message['id'],identifier,message['run_id'],message['role'],message['content'],
+                                     json.dumps([{'content_ref':ref} for ref in message['content_refs']]),message['created_at']))
+                        self._insert_sidecar(conn,kind,identifier)
+                        _,sidecar,column,_=self._owner(kind)
+                        conn.execute(f'UPDATE {sidecar} SET revision=?,draft_text=?,draft_refs_json=?,draft_revision=?,updated_at=? WHERE {column}=?',
+                            (temporary['summary']['revision']+1,temporary['draft_text'],temporary['draft_refs_json'],temporary['draft_revision'],utc_now(),identifier))
+                        return self._saved(conn,kind,identifier)[0]
+                    result=command(conn,'conversation_commands',key,'save',target_type,identifier,request,save)
+            except BaseException:
+                if before is not None:
+                    self.cases._sessions[identifier]=before
+                raise
+            self._temporary.pop((kind,identifier),None)
+            return result

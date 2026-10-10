@@ -65,6 +65,10 @@ def create_router(services):
     def move(kind: Literal['learning','case'], identifier: str, body: ProjectMove, idempotency_key: str | None = Header(default=None)):
         return repository.move(kind,identifier,body,idempotency_key)
 
+    @router.post('/{kind}/{identifier}/save')
+    def save(kind: Literal['learning','case'], identifier: str, body: Mutation, idempotency_key: str | None = Header(default=None)):
+        return repository.promote(kind,identifier,body,idempotency_key)
+
     @router.post("/{kind}/{identifier}/archive")
     def archive(kind: Literal["learning", "case"], identifier: str, body: Mutation, idempotency_key: str | None = Header(default=None)):
         return repository.change(kind, identifier, body, "archive", idempotency_key)
