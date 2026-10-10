@@ -64,6 +64,21 @@ payload copy, installer or promotion resulted. Its build log and
 `preparation/stopped-75c05797.json` are preserved. A final freeze must include
 the producer repair and regenerate the matching plan.
 
+The repair is integrated at `eef19e63`: legacy generated practice now captures
+the shared policy revision and restore epoch before replay and checks both
+before rich events/provider work and inside the publication transaction. Three
+red reproductions and 24 passing actual assembled-owner checks cover active
+Test, a complete Test cycle, restore, replay and the final-write race. The
+retained legacy suite initially failed only during its obsolete assessment-only
+assembly; its module-local fixture is being updated to the complete app, without
+changing production assembly or global test fixtures.
+
+Verifier `576a61bf` adds actual active Library extraction followed by ordinary
+window close and same-job recovery after fresh reopen. Its 39 boundary checks
+pass; no simulated workload or graceful-drain claim is used. The installed
+flow must verify the original, indexed passages and real local retrieval before
+that gate can pass. Four unrelated deferred gates remain explicit.
+
 ## Installation and acceptance boundary
 
 Manufacture and installation use fresh `matching-<revision>` and
