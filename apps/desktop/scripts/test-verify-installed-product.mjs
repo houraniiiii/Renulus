@@ -9,7 +9,7 @@ import { installedAcceptancePlan, validateInstalledRequest, validateInstallation
   validateCompleteReport, validateFrozenScript, validateFrozenExport, validateAcceptanceChanges,
   requiredGates, remainingOwnedIdentities, inside,
   coreGates, readerGates, deferredGates, completeCoreReceipt, designCEvidenceRoot, ownedArtifact, validateHiddenWindows, waitForDesignCWindow,
-  validateConversation, validateSavedTest, validateActiveTest, validateFinalAttempt, safeFailure,
+  validateConversation, validateSavedTest, validateActiveTest, validateFinalAttempt, validateAssistanceRefusal, safeFailure,
   validateReaderManifest, validateReaderOriginal, validateReaderDocument, validateReaderPassage, validateReaderRaster, validateBundledInterpreter,
   validateIsolatedDirectories, validateReopenedPdf, validateRecoveryRequest, parseRecoveryBytes,
   validateRecoveryReceipt, validateRecoverySeed, expectedRecoveryConversations, validateRecoveredConversation,
@@ -605,6 +605,17 @@ test('whole Test assertions reject leaked keys/feedback, changed pins and incorr
     v => { v.policy.assistance_allowed = true; }, v => { v.policy.active_test_id = null; }]) {
     const value = activeAttempt(); mutate(value); assert.throws(() => validateActiveTest(value, 'version-unit', 'attempt-unit'));
   }
+});
+
+test('active Test assistance refusal requires exactly the frozen 409 code and no-store response', () => {
+  const refusal = { status: 409, code: 'assistance_restricted', cacheControl: 'no-store' };
+  validateAssistanceRefusal(refusal);
+  for (const changed of [
+    ...[200, 401, 403, 422, 500, '409', undefined].map(status => ({ status })),
+    ...['assistance_changed', 'forbidden', undefined].map(code => ({ code })),
+    ...[undefined, null, '', 'no-cache', 'public', 'max-age=60'].map(cacheControl => ({ cacheControl })),
+  ]) assert.throws(() => validateAssistanceRefusal({ ...refusal, ...changed }), /409 assistance_restricted and no-store/);
+  assert.throws(() => validateAssistanceRefusal(null), /409 assistance_restricted and no-store/);
 });
 
 test('final whole-attempt assertions distinguish committed Study from final Test drafts', () => {

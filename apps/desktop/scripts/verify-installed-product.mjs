@@ -661,6 +661,10 @@ async function reviewedStudyJourney(page) {
   await page.locator('.attempt-result-score').waitFor();
   return { published, setup, study: final };
 }
+export function validateAssistanceRefusal(refusal) {
+  check(refusal?.status === 409 && refusal.code === 'assistance_restricted' && refusal.cacheControl === 'no-store',
+    'Active Test must refuse conversation help with exactly 409 assistance_restricted and no-store.');
+}
 async function startTestJourney(page, versionId) {
   await navigate(page, '#/tests/' + versionId);
   await page.getByLabel('Mode', { exact: true }).selectOption('test');
@@ -674,9 +678,10 @@ async function startTestJourney(page, versionId) {
   check(await page.getByRole('button', { name: 'Hint', exact: true }).count() === 0, 'Active Test displayed Study help.');
   const refusal = await page.evaluate(async () => {
     const response = await fetch('/api/v1/conversations?limit=1');
-    const body = await response.json(); return { status: response.status, code: body.error?.code };
+    const body = await response.json(); return { status: response.status, code: body.error?.code,
+      cacheControl: response.headers.get('cache-control') };
   });
-  check(refusal.status === 403 && refusal.code === 'assistance_restricted', 'Active Test did not refuse conversation help at the real API.');
+  validateAssistanceRefusal(refusal);
   return { draft, refusal };
 }
 async function finishTestJourney(page, before) {
