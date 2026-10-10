@@ -949,6 +949,19 @@ This table records outcomes against the existing tickets, not a replacement plan
 | DC20 | Final integration review in progress — lead + independent reviewers | C1/C2/C4 independently rechecked; C3 `51f208b4` plus C5 `7cdc3fec`/`009b8780` prevent restored inference. C5 affected regression passes 91 checks, with separate actual HTTP retry/capture proof `760f4b0b`; the earlier 17 focused checks overlap. R3–R10 review `02906c12`, Notes `dc59d4c2`, PDF text `f4fc986f` and hidden R5 `31e9e4ce` are integrated. `1744e2cb` populated source eight-pass scope retained; matching release checks remain open. |
 | DC21 | Matching installed acceptance in progress — release lead + Zeno/Pauli | Source `4c289868` manufacture passes: renderer/native/backend match, complete 39,353-file packaged backend inventory verified, unsigned installer 1,011,460,914 bytes with recorded SHA256. Actual fresh installation and core/eight-reader/recovery/normal-lifecycle checks are next. Earlier stopped candidates retain their defect receipts; all identified policy/search fixes have green evidence. Drivers have 39 JS/seven original/nine recovery guard checks, not installed acceptance. Flow remains selected until matching actual evidence passes. |
 
+DC21 acceptance-tool clarification: product source, renderer/native/backend and
+installed artifact remain pinned to one exact revision. A later acceptance-tool
+revision may be pinned separately when it changes only the bounded verifier,
+its tests and documentation; any product/dependency/build change refuses that
+reuse. Both revisions and executed driver hashes must be recorded. This permits
+repairing a harness assumption without rebuilding unchanged product bytes.
+The first installed preflight compared raw Git blobs to Git's exported Windows
+PowerShell line endings. An independent exact Git archive comparison proved
+all 5,840 admitted source files (79,611,627 bytes) match the installed candidate.
+The failed receipt is retained and establishes no app launch or reader pass.
+The corrected verifier must honor only declared frozen export transformations,
+not normalize arbitrary installed differences or skip source checks.
+
 DC17 implementation clarification: one assessment_test_imports table owns the
 explicitly accepted pasted/extracted private original, SHA-256, terms/locators,
 mutable candidates and three-call explicit normalization budget. Library and

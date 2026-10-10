@@ -110,6 +110,20 @@ source match the dated Flow revision, recorded in
 not a fresh physical Save/cancel or live-provider pass. Main navigation/API
 isolation changes belong to the new installed checks.
 
+Actual silent installation exited zero in 344.16 seconds. Receipt
+`proofs/installer-1bf8dbca/installer-evidence.json` records exact matching EXE
+`093434622d5a95b2ef100a0656662125a88b2c6288010aad9c673a6da8522eba`
+and ASAR `0b632f647c036d341f2d293f2d3d5fc8942d92ce386a0b4bf80a8bfa097d2d98`.
+The first core preflight `c-ae2cb75c` failed before any app launch: raw Git blob
+comparison rejected `upstream/hermes/activate.ps1`, whose committed attributes
+export CRLF. Independent exact frozen `git archive` comparison passes all 5,840
+admitted files, with zero mismatches; receipt
+`preparation/source-export-4c289868/result.json` retains the export manifest/hash.
+This is a verifier-assumption failure, not changed product content. A separately
+frozen, strictly bounded QA correction is in progress; the failed receipt is
+not promoted to a pass. Installed recovery can use the unchanged hash-verified
+Python driver while the core verifier is repaired.
+
 Manufacture and installation use fresh `matching-<revision>` and
 `installed-<revision>` destinations. A matching receipt must compare backend,
 renderer, native, executable, archive and installed inventory hashes. The hidden
