@@ -6,7 +6,7 @@ import { Badge, Button, EmptyState, ErrorState, Input, LoadingState, Notice, Sel
 import type { LibraryDocument } from '../library/types';
 import CandidateEditor from './CandidateEditor';
 import { getImport, getImportOriginal, importBase, importPath, listImports } from './api';
-import { importMessage, keyLabel, type ImportCancellation, type ImportDraft, type ImportedVersion, type ImportIntent, type ImportOriginal } from './types';
+import { importMessage, keyLabel, originalSlice, type ImportCancellation, type ImportDraft, type ImportedVersion, type ImportIntent, type ImportOriginal } from './types';
 import { useImportCommand } from './useImportCommand';
 import './imports.css';
 
@@ -144,7 +144,7 @@ export default function ImportPanel({ importId, sourceRevisionId, onSaved, onOpe
               { removed, expected_revision: draft.revision }, received)} />}
           <aside className="import-original" aria-label="Immutable original"><div className="import-heading"><h3>Original text</h3><Badge tone="neutral">Unchanged</Badge></div>
             <p className="import-caption">{location ? 'Characters ' + location.start + '–' + location.end + ' · end exclusive' : 'Exact retained original'}</p>
-            <pre>{original && location ? original.text.slice(location.start, location.end) : original?.text}</pre>
+            <pre>{original && location ? originalSlice(original.text, location) : original?.text}</pre>
             {onOpenSource && sourceReference && <Button variant="secondary" onClick={() => onOpenSource(sourceReference)}>Open original location</Button>}
             <details><summary>Full original and retained terms</summary><pre>{original?.text}</pre><p>{original?.original.terms}</p>
               {original?.original.diagnostics.map((item, index) => <p key={index}>{item.message ?? item.code}</p>)}</details>

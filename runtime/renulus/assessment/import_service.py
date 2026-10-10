@@ -160,18 +160,25 @@ class SavedImportService:
         conn.execute("INSERT INTO assessment_test_commands VALUES(?,?,?,?,?,?,?)",
             (request.idempotency_key, operation, "test_import", identifier, digest, encode(result), utc_now()))
 
-    def _library_original(self, conn, identifier):
+    def _library_original(self, conn, identifier, *, expected_fingerprint=None):
         readers = self.services.registry.get("readers")
         helper = getattr(readers, "import_original", None)
         if helper is None:
             raise ApiError("import_extraction_unavailable", "Saved Library extraction is not connected. Paste permitted test text instead", 503, True)
-        return helper(conn, identifier)
+        return helper(conn, identifier, operation="import", expected_fingerprint=expected_fingerprint)
 
     def _source(self, conn, row, *, display=False):
         if row["source_kind"] == "paste":
             return
         original = json.loads(row["original_json"])
-        source = self._library_original(conn, row["source_revision_id"])
+        pin = original["source_pin"]
+        if display:
+            helper = getattr(self.services.registry.get("readers"), "require_original_display", None)
+            if helper is None:
+                raise ApiError("import_extraction_unavailable", "Saved original inspection is not connected", 503, True)
+            helper(conn, pin)
+            return
+        source = self._library_original(conn, row["source_revision_id"], expected_fingerprint=pin["fingerprint"])
         if source["fingerprint"] != original["source_pin"]["fingerprint"]:
             raise ApiError("import_source_changed", "The saved source or its permissions changed. Your original and edits are retained", 409)
 
@@ -246,7 +253,9 @@ class SavedImportService:
                 source_revision = request.original.revision_id
                 source = self._library_original(conn, source_revision)
                 text = source["text"]
-                original = {"schema": "saved-test-import-original/1", "kind": "library_revision", "terms": source["terms"],
+                source_terms = source["terms"]
+                terms = source_terms if isinstance(source_terms, str) else "\n".join(f"{key}: {value}" for key, value in source_terms.items())
+                original = {"schema": "saved-test-import-original/1", "kind": "library_revision", "terms": terms,
                     "rights": source["rights"], "segments": source["segments"], "diagnostics": source.get("diagnostics", []),
                     "source_pin": {key: value for key, value in source.items() if key != "text"}}
             if not text.strip() or len(text) > 96000:

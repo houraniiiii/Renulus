@@ -30,6 +30,9 @@ export type ImportIntent = { title: string; original:
   { kind: 'library_revision'; revision_id: string } };
 export interface ImportCancellation { id: string; state: ImportDraft['state'] }
 
+/** Backend offsets count Unicode characters rather than UTF-16 code units. */
+export function originalSlice(text: string, span: TextSpan) { return Array.from(text).slice(span.start, span.end).join(''); }
+
 export function keyLabel(candidate: ImportCandidate) {
   if (candidate.removed) return 'Removed from set';
   if (candidate.review_confirmed) return 'Reviewed by you';

@@ -8,8 +8,9 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest';
 import { fixturePython, fixtureReady, stopFixture } from '../../testBackend';
+import { api } from '../../platform/api';
 import ImportPanel from './ImportPanel';
-import type { ImportDraft, ImportedVersion } from './types';
+import { originalSlice, type ImportDraft, type ImportedVersion } from './types';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../..');
 const profile = mkdtempSync(join(process.env.RENULUS_TEST_STATE_ROOT || tmpdir(), 'imports-ui-'));
@@ -76,6 +77,10 @@ beforeAll(async () => {
 }, 75_000);
 afterEach(() => { cleanup(); losePath = ''; });
 afterAll(async () => { configure({ asyncUtilTimeout: 1000 }); vi.resetConfig(); vi.unstubAllGlobals(); await stopFixture(backend); }, 20_000);
+
+it('uses the original Python Unicode character locations, including supplementary characters', () => {
+  expect(originalSlice('🧪 Renal Δ value', { start: 2, end: 7 })).toBe('Renal');
+});
 
 async function request<T>(path: string, method = 'GET', body?: object, key?: string): Promise<T> {
   const response = await fetch(path, { method, headers: { 'Content-Type': 'application/json', ...(key ? { 'Idempotency-Key': key } : {}) }, body: body ? JSON.stringify(body) : undefined });
@@ -165,4 +170,34 @@ it('stops actual provider work and reopens its retained draft without another ca
   cleanup(); render(<ImportPanel importId={row.id} />);
   await screen.findByText('Normalization is stopped. Continue reviewing the retained original and candidates.');
   expect((await stats()).calls).toBe(before.calls + 1);
+});
+
+it('consumes a real imported version in Test and hides content while neutral Stop stays available', async () => {
+  const row = await create('Renderer Test restricted private original');
+  await scenario(row.id, 'wait'); const before = await stats();
+  fireEvent.click(screen.getByRole('button', { name: 'Normalize with selected connection' }));
+  await screen.findByRole('button', { name: 'Stop normalization' });
+  await waitFor(async () => expect((await stats()).calls).toBe(before.calls + 1));
+  const base = '/api/v1/assessment/imports';
+  let ready = await request<ImportDraft>(base, 'POST', { idempotency_key: crypto.randomUUID(), title: 'Independent explicit Test setup',
+    original: { kind: 'paste', text: TEXT, terms: 'Synthetic explicit personal terms', permission_confirmed: true } });
+  for (const item of ready.candidates) ready = await request<ImportDraft>(base + '/' + ready.id + '/candidates/' + item.id + '/resolve', 'POST',
+    { idempotency_key: crypto.randomUUID(), expected_revision: ready.revision, correct_option_ids: ['a'], review_confirmed: true });
+  ready = await request<ImportDraft>(base + '/' + ready.id + '/save', 'POST', { idempotency_key: crypto.randomUUID(), expected_revision: ready.revision });
+  const attempt = await api<{ id: string; draft_revision: number }>('/assessment/test-attempts', { method: 'POST',
+    headers: { 'Idempotency-Key': crypto.randomUUID() }, body: { version: { type: 'saved_test_version', id: ready.result?.version_id }, mode: 'test' } });
+  try {
+    await screen.findByText('Import assistance is paused during Test. You can stop normalization without opening its content.');
+    expect(screen.queryByRole('region', { name: 'Immutable original' })).toBeNull();
+    expect(screen.queryByLabelText('Original test text')).toBeNull();
+    expect(screen.queryByText('Renderer Test restricted private original')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Stop normalization' }));
+    await waitFor(async () => {
+      const response = await fetch(base + '/' + row.id + '/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idempotency_key: 'synthetic-policy-neutral-replay' }) });
+      expect(response.status).toBe(200); expect(await response.json()).toEqual({ id: row.id, state: 'cancelled' });
+    });
+    expect((await stats()).calls).toBe(before.calls + 1);
+  } finally {
+    await request('/api/v1/assessment/test-attempts/' + attempt.id + '/submit', 'POST', { expected_draft_revision: attempt.draft_revision }, crypto.randomUUID());
+  }
 });
