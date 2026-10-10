@@ -249,3 +249,74 @@ the passing scalar/active-Test/epoch guards to make consumer tests green.
 This report is the only changed path. Testcase scripts, profiles and receipts
 remain in the owned scratch directory. Local report commit follows explicit
 file staging; dependent implementation is not included.
+
+## Follow-up at canonical 319ff190
+
+Normally merged canonical `319ff190` as `dd2116dc` after the clean report
+checkpoint `c17c4a8d`. `git diff 84be584e 319ff190 -- runtime tests packages`
+is empty; the original backend findings remain applicable. The follow-up
+checks use a new owned profile, actual production migrations/services/HTTP,
+and actual `knowledge.import_text` extraction. Public local embedding assets
+from `C:/Renulus/dev/helper-assets` were checked against the committed size
+and SHA-256 inventory, then copied into the synthetic profile. External
+connections were denied. No normalization or live provider was required.
+
+Script and receipts:
+
+- `C:/Renulus/scratch/design-c/dc-review-assessment/pass2/import-boundaries.py`
+- `C:/Renulus/scratch/design-c/dc-review-assessment/pass2/import-boundaries01.txt`
+- `C:/Renulus/scratch/design-c/dc-review-assessment/pass2/import-boundaries-results.json`
+- Profile: `C:/Renulus/scratch/design-c/dc-review-assessment/pass2/profile-import-boundaries01`
+
+### C4 — P1: Library import Save replay bypasses current display permission
+
+**R31 reproduction:** import two synthetic MCQs through actual Library text
+extraction (`status=ready`); create a Library-revision private import; explicitly
+resolve each retained key; Save through HTTP. Revoke `display` in the canonical
+source revision rights, then issue these actual assembled HTTP requests:
+
+| Operation | Observed result |
+| --- | --- |
+| `GET /api/v1/assessment/imports/{id}` | 403 `saved_extraction_denied` |
+| `GET /api/v1/assessment/imports/{id}/original` | 403 `saved_extraction_denied` |
+| `POST /api/v1/assessment/imports/{id}/save`, same original body/idempotency key | 200; stored candidate text and resolved `correct_option_ids` returned |
+
+The Save replay checks the published version but returns `_view(row)` before
+checking current source display/cache rights. `_view` includes private question
+and option text as well as resolved keys. Idempotency therefore provides an
+alternate disclosure path after ordinary reads have correctly been denied.
+This is a source-permission boundary failure; no active-Test bypass is alleged.
+
+Source: [Save replay](../../runtime/renulus/assessment/import_service.py), lines
+489–498; [source/display guard and private view](../../runtime/renulus/assessment/import_service.py),
+lines 168–218.
+
+**Bounded repair, import owner:** recheck the current source display permission
+and original integrity before every replay returning `_view`, including cache
+permission and deletion aliases already checked by the reader helper. If Save
+replay is changed to a neutral acknowledgement, update its consumer contract
+explicitly; a valid historical publication does not authorize current source
+display. Preserve the immutable publication and historical command receipt.
+
+**Required proof:** actual Library Save replay is denied after display/cache
+revocation, source deletion or original loss; unchanged permitted sources retain
+idempotent acknowledgement; active Test continues to deny disclosure before
+replay. Test the actual HTTP path and reader helper, not a fabricated ready row.
+Only display revocation was independently reproduced here; the remaining cases
+are required verification for the proposed repair.
+
+### R32 — assembled neutral import cancellation passes
+
+Create an actual pasted draft, then start an actual whole Test from a reviewed
+saved version. `POST /api/v1/assessment/imports/{draft_id}/cancel` returns 200
+with exactly `{id, state}`, state `cancelled`; identical replay returns the same
+body. Ordinary import read returns 409 while Test is active. The shared server
+already exempts this neutral control, so the hypothesized HTTP cancellation
+gap is not a finding. This check did not hold normalization inference in flight;
+the existing production-service transport cancellation regression supplies
+that separate evidence.
+
+The initial report limits still apply except that this follow-up did exercise
+actual Library text extraction and Library-backed import. C1/C2 repairs are now
+assigned by the parent. C3 has a separate subsequent Memory source lease; no
+source changes are part of this report checkpoint.
