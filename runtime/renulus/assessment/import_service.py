@@ -490,6 +490,7 @@ class SavedImportService:
         with self.db.transaction() as conn:
             require_assistance(conn)
             row = self._row(conn, identifier)
+            self._source(conn, row, display=True)
             digest, replay = self._replay(conn, request, "import_save", identifier)
             if replay is not None:
                 if not row["live_published_version_id"]:

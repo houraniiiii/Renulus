@@ -526,6 +526,70 @@ async def test_library_permission_revocation_keeps_retained_read_but_blocks_mode
 
 
 @pytest.mark.asyncio
+async def test_saved_library_replay_requires_current_display_and_keeps_cancel_neutral(extracted_imports):
+    services, service, transport, note, _ = extracted_imports
+    row = resolve_all(service, service.create(CreateImportRequest(idempotency_key="actual-replay-rights",
+        original={"kind": "library_revision", "revision_id": note["revision_id"]})))
+    save = command(row, "actual-replay-save")
+    published = service.save(row["id"], save)
+    before = len(transport.calls)
+    stored = services.db.fetch_one("SELECT rights_json FROM knowledge_revisions WHERE id=?", (note["revision_id"],))["rights_json"]
+    rights = json.loads(stored)
+    try:
+        # Retained inspection needs display/cache; new publication still needs model/derivation.
+        services.db.execute("UPDATE knowledge_revisions SET rights_json=? WHERE id=?",
+            (json.dumps({**rights, "model_input": False, "derivation": False}), note["revision_id"]))
+        assert service.save(row["id"], save) == published
+        services.db.execute("UPDATE knowledge_revisions SET rights_json=? WHERE id=?",
+            (json.dumps({**rights, "display": False}), note["revision_id"]))
+        for read in (lambda: service.read(row["id"]), lambda: service.original(row["id"]),
+                     lambda: service.save(row["id"], save),
+                     lambda: service.save(row["id"], command(row, "actual-replay-changed-key")),
+                     lambda: service.save(row["id"], save.model_copy(update={"expected_revision": row["revision"] + 1}))):
+            with pytest.raises(ApiError) as error:
+                read()
+            assert (error.value.code, error.value.status) == ("saved_extraction_denied", 403)
+        cancel = command(published, "actual-replay-neutral-cancel")
+        receipt = await service.cancel(row["id"], cancel)
+        assert receipt == {"id": row["id"], "state": "published"}
+        assert await service.cancel(row["id"], cancel) == receipt
+        assert len(transport.calls) == before
+        assert len(services.db.fetch_all("SELECT id FROM assessment_test_versions WHERE id=?", (published["result"]["version_id"],))) == 1
+    finally:
+        services.db.execute("UPDATE knowledge_revisions SET rights_json=? WHERE id=?", (stored, note["revision_id"]))
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("boundary", ["integrity", "deletion"])
+async def test_saved_library_replay_checks_actual_original_integrity_and_deletion(extracted_imports, boundary):
+    services, service, transport, _, _ = extracted_imports
+    note = services.get("knowledge").import_text(TEXT, title="Synthetic replay " + boundary)
+    row = resolve_all(service, service.create(CreateImportRequest(idempotency_key="actual-replay-" + boundary,
+        original={"kind": "library_revision", "revision_id": note["revision_id"]})))
+    original = service.original(row["id"])
+    save = command(row, "actual-replay-save-" + boundary)
+    published = service.save(row["id"], save)
+    before = len(transport.calls)
+    if boundary == "integrity":
+        path = services.paths.root / original["original"]["source_pin"]["original"]["relative_path"]
+        retained = path.read_bytes()
+        path.write_bytes(b"Changed synthetic original")
+        expected = "original_missing"
+    else:
+        services.get("knowledge").delete_document(note["document_id"])
+        expected = "saved_extraction_not_found"
+    try:
+        with pytest.raises(ApiError) as error:
+            service.save(row["id"], save)
+        assert error.value.code == expected and error.value.status == 404
+        assert await service.cancel(row["id"], command(published, "actual-replay-cancel-" + boundary)) == {"id": row["id"], "state": "published"}
+        assert len(transport.calls) == before
+    finally:
+        if boundary == "integrity":
+            path.write_bytes(retained)
+
+
+@pytest.mark.asyncio
 async def test_actual_extracted_cache_loss_retains_original_but_cannot_normalize(extracted_imports):
     services, service, transport, note, _ = extracted_imports
     row = service.create(CreateImportRequest(idempotency_key="actual-derived-cache-loss",
