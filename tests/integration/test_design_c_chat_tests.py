@@ -191,6 +191,57 @@ class FictionalTransport:
         yield {'type': 'completed', 'response_model': model}
 
 
+def test_production_active_test_keeps_status_and_cancel_neutral_and_refuses_result(tmp_path):
+    app = app_at(tmp_path / 'chat-test-active-http')
+    services = app.state.services
+    provider = services.get('provider')
+    provider._settings['connections']['codex'] = {'access_token': 'synthetic-chat-test-token', 'expires_at': 9999999999}
+    provider._settings['selected_provider'] = 'codex'
+    provider._settings.setdefault('selected_models', {})['codex'] = 'gpt-6.1-sol'
+    provider._transport = FictionalTransport()
+    entered = Event()
+
+    class DelayedFictionalTransport(FictionalTransport):
+        async def stream(self, *args):
+            entered.set()
+            await asyncio.Event().wait()
+            async for event in super().stream(*args):
+                yield event
+
+    with TestClient(app) as client:
+        body = {'intent': 'quick_practice', 'text': RAW, 'request_id': REQUEST, 'count': 5}
+        published_id = client.post('/api/v1/conversations/test-drafts', json=body).json()['run_id']
+        assert wait_terminal(client, published_id)['state'] == 'published'
+        root = '/api/v1/conversations/test-drafts/runs/'
+        saved = client.get(root + published_id + '/result').json()
+        provider._transport = DelayedFictionalTransport()
+        waiting = client.post('/api/v1/conversations/test-drafts', json={**body, 'request_id': REQUEST + '_waiting'})
+        assert waiting.status_code == 202 and entered.wait(2)
+        waiting_id = waiting.json()['run_id']
+        started = client.post('/api/v1/assessment/test-attempts', headers={'Idempotency-Key': 'actual-chat-test-policy-start'},
+            json={'version': saved['study_start']['version'], 'mode': 'test', 'timing': {'kind': 'untimed'}})
+        assert started.status_code == 201, started.text
+        assert started.json()['mode'] == 'test' and started.json()['status'] == 'active'
+        # Neutral operations ignore a stale/malformed help header. They disclose
+        # no input, provider details, question text or saved publication IDs.
+        headers = {'X-Renulus-Study-Context': 'stale-neutral-header'}
+        for run_id in (published_id, waiting_id):
+            status = client.get(root + run_id, headers=headers)
+            assert status.status_code == 200 and set(status.json()) == {'run_id', 'state'}
+            refused = client.get(root + run_id + '/result')
+            assert refused.status_code == 409 and refused.json()['error']['code'] == 'assistance_restricted'
+            assert RAW not in status.text + refused.text and saved['version_id'] not in status.text + refused.text
+        cancelled = client.post(root + waiting_id + '/cancel', headers=headers)
+        assert cancelled.status_code == 200 and set(cancelled.json()) == {'run_id', 'state'}
+        assert cancelled.json()['state'] in ('cancelled', 'failed')
+        assert client.post(root + waiting_id + '/cancel', headers=headers).json() == cancelled.json()
+        assert client.post('/api/v1/conversations/test-drafts', json=body).json()['error']['code'] == 'assistance_restricted'
+        assert len(services.db.fetch_all('SELECT * FROM assessment_test_versions')) == 1
+        assert services.db.fetch_all('SELECT * FROM assessment_test_jobs') == []
+        assert services.get('chat_tests').runs[waiting_id].source_text == ''
+        assert all(RAW.encode() not in path.read_bytes() for path in services.paths.root.rglob('*') if path.is_file())
+
+
 @pytest.mark.parametrize('count', [5, 10, 20])
 def test_real_private_producer_saves_exact_version_and_starts_actual_study_once(tmp_path, count):
     app = app_at(tmp_path / 'real-chat-test')
