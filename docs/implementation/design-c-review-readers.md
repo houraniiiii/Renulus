@@ -1307,6 +1307,82 @@ saves {kind:'text',item_ref:'reader-v1:pdf:2',start,end}, but Reader's page
 initialisation handles pdf/image locators. Parent requested report/scratch
 reproduction after this Notes checkpoint before any Reader source edits. The
 Reader.tsx blob is identical in this lane and canonical eb20e0cf
-(a09fd21c5b22a1cd95bd737c7cf79a8324610cbf). This observation is not yet an app
-reopen reproduction or an approved fix. Matching installed/hidden acceptance
-and feature-ticket closure remain with the integration lead.
+(a09fd21c5b22a1cd95bd737c7cf79a8324610cbf). At the Notes checkpoint this was a
+source observation awaiting reproduction and a conditional fix lease. The
+following section records the later reproduction and repair. Matching
+installed/hidden acceptance and feature-ticket closure remain with the lead.
+
+### R7 PDF selected-text restoration follow-up — October 10
+
+Notes test/report checkpoint 679c419fbfedca840be9bd5de6ae9e949271d69e was
+published with a clean lane before this work. The parent then explicitly
+reserved only Reader.tsx, Reader.test.tsx and this report for a source fix if
+the suspected PDF restoration failure reproduced. No backend, shared types,
+storage, dependency, controller or other verifier files are edited.
+
+The failure was reproduced before implementation with the actual Reader in
+the actual WorkspaceProvider/WorkspacePanel, forwarding its requests to a
+loopback production create_app. The fixture is a two-page synthetic PDF:
+page 1 says 'SYNTHETIC FIRST PAGE CKD', page 2 says
+'SYNTHETIC SECOND PAGE TRANSPLANT'. Actual PDFium parsing and PNG asset routes
+verify both pages and the original SHA-256. Selecting 'SECOND' on page 2 emits
+{kind:'text',item_ref:'reader-v1:pdf:2',start:10,end:16}; the actual preferences
+PUT/GET persists it in SQLite. Component remount then sent page:1, displayed
+the first page and persisted {kind:'pdf',physical_page:1}, losing the text
+offsets. An independent actual owner resolve with the text locator and no
+explicit page correctly chose page 2. This is a frontend mapping failure,
+not unavailable PDF extraction.
+
+All reproduction files and receipts are under
+C:/Renulus/scratch/design-c/dc-review-readers/r7-pdf-selection/:
+
+- backend.py creates the bounded synthetic original, canonical import/chat,
+  actual page/PNG probes and loopback fixture. pdf-selection.test.tsx mounts
+  the production components and forwards their transport to the actual API.
+  The preferences callback serialises real PUTs; no fake authorization,
+  parser result, extraction status or persistence success replaces the owners.
+- result-red2.json and observed-red2.json retain the real page-2-to-page-1
+  failure, requests and before/after SQLite preferences. result-red1.json was
+  an earlier harness assertion error because canonical text locators add
+  section:null; matching that valid normalisation allowed the actual repro.
+- result-green1.json has the same connected case passed. observed-green1.json
+  shows requests [2,2], physical page 2 and the exact text locator still
+  present in Workspace and SQLite after remount.
+- After the owned backend command session was stopped, reopen.py recreated
+  production services at the same synthetic profile. reopen.json records
+  exact retained preferences, original SHA, page-2 text/PNG and the actual
+  passage route returning precisely 'SECOND' with current policy/epoch pins.
+
+The source repair infers PDF pages only from exact reader-v1:pdf:<integer>
+text item references with pages 1–300, after existing locator validation.
+Invalid PDF item suffixes are ignored in favour of an eligible source locator.
+Both initial state and later restored positions use the same mapping. Once
+the actual PDF payload contains the referenced text item and valid offsets,
+the position callback retains that text locator instead of overwriting it
+with a page-only locator. Ordinary page navigation still emits the new PDF
+page; existing image, table, generic text, Study receipt and cancellation
+behaviour is covered by the retained checks. No new path or resource authority
+is introduced. This does not claim a restored visible DOM text highlight.
+
+Tracked regression receipt reader-pdftext-red1.json had six new failures and
+34 retained passes before the fix. Final reader-pdftext-final1.json has
+40 passed, zero failed: 28 Reader and 12 Workspace cases, including actual
+Workspace selection/remount/next-page, position versus source text locators
+and invalid zero/out-of-range/non-integer PDF item references. The retained
+CSV/XLSX window/sheet, image frame, policy, inert markup, callback echo,
+abort and scalar Study header tests still pass. These tracked component tests
+use synthetic transport; the separate connected scratch receipt supplies
+the real API/SQLite/PDF parser proof. An intermediate green run had 39 passed
+and an existing bounds test asserted before its passive position callback;
+that assertion now waits for the actual callback.
+
+Full desktop TypeScript --noEmit passed using the existing scratch
+reader-grid-tsconfig.json, and git diff --check passed. Reproduce the tracked
+checks with reader-pdftext-check.mjs and R7_RECEIPT set to a fresh receipt name.
+For the connected case run the owned backend.py with this lane's runtime and
+offline flags, then r7-pdf-selection/run.mjs; neither needs helper downloads or
+provider calls. The scratch server disables lifespan workers. This establishes
+component remount and recreated production services, not normal Electron
+shutdown/reopen, native text-selection pixels, physical Windows input or the
+installed eight-format package. Those matching acceptance gates remain with
+the parent and Zeno's separate driver. No feature ticket is marked closed.

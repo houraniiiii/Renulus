@@ -127,6 +127,71 @@ describe('inert connected reader transport', () => {
     window.getSelection()!.removeAllRanges();
   });
 
+  it('reopens selected PDF text on page 2 through the actual Workspace without replacing its offsets', async () => {
+    stubBlobUrls();
+    const pages: number[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (path: string, options: RequestInit) => {
+      if (path.endsWith('/asset')) return pngResponse();
+      const body = JSON.parse(String(options.body)); pages.push(body.page);
+      const text = body.page === 2 ? 'SYNTHETIC SECOND PAGE TRANSPLANT' : 'SYNTHETIC page ' + body.page;
+      const data = source(text); data.media_type = 'application/pdf'; data.original.filename = 'synthetic.pdf';
+      Object.assign(data.payload!, { kind: 'pdf', page: body.page, pages: 5, asset_id: 'page:' + body.page });
+      data.payload!.blocks[0].item_ref = 'reader-v1:pdf:' + body.page;
+      data.payload!.blocks[0].locator = { kind: 'text', item_ref: data.payload!.blocks[0].item_ref, start: 0, end: text.length };
+      return response(data);
+    }));
+    const context = { identity: { type: 'learn_thread' as const, id: 'synthetic_chat' }, retention: 'saved' as const };
+    let workspace!: WorkspaceController;
+    function Probe() { workspace = useWorkspace(); return null; }
+    const authorize = vi.fn(async () => ({ allowed: true as const }));
+    const change = vi.fn();
+    const mount = (preferences: WorkspacePreferences) => render(
+      <WorkspaceProvider context={context} policy={{ active_test_id: null, revision: 3, assistance_allowed: true }}
+        initialPreferences={preferences} authorize={authorize} onPreferencesChange={change}>
+        <Probe /><WorkspacePanel availableWidth={1168} Reader={Reader} />
+      </WorkspaceProvider>);
+    const view = mount({ width: 480, tabs: [{ content: reference, context: context.identity, retention: 'saved',
+      position: { kind: 'pdf', physical_page: 2 } }] });
+    act(() => workspace.toggle());
+    const second = await screen.findByText('SYNTHETIC SECOND PAGE TRANSPLANT');
+    await screen.findByRole('img', { name: 'Source page' });
+    const range = document.createRange(); range.setStart(second.firstChild!, 10); range.setEnd(second.firstChild!, 16);
+    window.getSelection()!.removeAllRanges(); window.getSelection()!.addRange(range);
+    fireEvent.mouseUp(second); fireEvent.click(second);
+    const selected: ContentLocator = { kind: 'text', item_ref: 'reader-v1:pdf:2', start: 10, end: 16 };
+    await waitFor(() => expect(workspace.getPreferences().tabs[0].position).toEqual(selected));
+    const saved = workspace.getPreferences();
+    view.unmount(); window.getSelection()!.removeAllRanges();
+    mount(saved); act(() => workspace.toggle());
+    await screen.findByRole('img', { name: 'Source page' });
+    expect(pages).toEqual([2, 2]);
+    expect((screen.getByLabelText('Physical page') as HTMLInputElement).value).toBe('2');
+    expect(workspace.getPreferences().tabs[0].position).toEqual(selected);
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    await waitFor(() => expect(workspace.getPreferences().tabs[0].position).toEqual({ kind: 'pdf', physical_page: 3 }));
+    expect(pages).toEqual([2, 2, 3]);
+  });
+
+  it.each(['position', 'reference'] as const)('restores a validated PDF text %s locator and keeps its offsets', async from => {
+    stubBlobUrls();
+    const selected: ContentLocator = { kind: 'text', item_ref: 'reader-v1:pdf:2', section: null, start: 10, end: 16 };
+    const positions = vi.fn(); const pages: number[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (path: string, options: RequestInit) => {
+      if (path.endsWith('/asset')) return pngResponse();
+      const body = JSON.parse(String(options.body)); pages.push(body.page);
+      const text = 'SYNTHETIC PDF page ' + body.page; const data = source(text);
+      data.media_type = 'application/pdf'; data.original.filename = 'synthetic.pdf';
+      Object.assign(data.payload!, { kind: 'pdf', page: body.page, pages: 5, asset_id: 'page:' + body.page });
+      data.payload!.blocks[0].item_ref = 'reader-v1:pdf:' + body.page;
+      return response(data);
+    }));
+    render(<Reader reference={from === 'reference' ? { ...reference, locator: selected } : reference}
+      position={from === 'position' ? selected : undefined} onPositionChange={positions} />);
+    await screen.findByRole('img', { name: 'Source page' });
+    expect(pages).toEqual([2]);
+    await waitFor(() => expect(positions).toHaveBeenLastCalledWith(selected));
+  });
+
   it('does not overwrite a retained position when preview resolution fails', async () => {
     const positions = vi.fn();
     const position: ContentLocator = { kind: 'pdf', physical_page: 3 };
@@ -141,6 +206,9 @@ describe('inert connected reader transport', () => {
     { kind: 'pdf', physical_page: 301 },
     { kind: 'pdf', physical_page: 3, path: 'SYNTHETIC-forbidden.pdf' },
     { kind: 'table', format: 'csv', first_row: 100001, last_row: 100001, first_column: 1, last_column: 1 },
+    { kind: 'text', item_ref: 'reader-v1:pdf:0', start: 0, end: 1 },
+    { kind: 'text', item_ref: 'reader-v1:pdf:301', start: 0, end: 1 },
+    { kind: 'text', item_ref: 'reader-v1:pdf:2x', start: 0, end: 1 },
   ])('ignores malformed or unrequestable Workspace positions: %j', async invalid => {
     const positions = vi.fn();
     const pages: number[] = [];
@@ -156,7 +224,7 @@ describe('inert connected reader transport', () => {
       position={invalid as ContentLocator} onPositionChange={positions} />);
     await screen.findByText('SYNTHETIC page 2');
     expect(pages).toEqual([2]);
-    expect(positions).toHaveBeenLastCalledWith({ kind: 'pdf', physical_page: 2 });
+    await waitFor(() => expect(positions).toHaveBeenLastCalledWith({ kind: 'pdf', physical_page: 2 }));
   });
 
   it.each(['pdf', 'image'] as const)('restores a Workspace %s position and publishes canonical page changes', async kind => {

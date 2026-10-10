@@ -77,10 +77,22 @@ function TextBlock({ block, query }: { block: ReaderBlock; query: string }) {
   return <p {...attributes}>{content}</p>;
 }
 
+function pdfTextPage(value: ContentLocator | null): number | null {
+  if (value?.kind !== 'text') return null;
+  const match = /^reader-v1:pdf:([1-9][0-9]{0,2})$/.exec(value.item_ref);
+  const page = match ? Number(match[1]) : null;
+  return page !== null && page <= 300 ? page : null;
+}
+
+function positionPage(value: ContentLocator | null): number {
+  return value?.kind === 'pdf' ? value.physical_page : value?.kind === 'image' ? value.frame : pdfTextPage(value) ?? 1;
+}
+
 function safePosition(value: unknown): ContentLocator | null {
   if (!validLocator(value)) return null;
   if ((value.kind === 'pdf' && value.physical_page > 300) || (value.kind === 'image' && value.frame > 300)
       || (value.kind === 'table' && value.first_row > 100000)) return null;
+  if (value.kind === 'text' && value.item_ref.startsWith('reader-v1:pdf:') && pdfTextPage(value) === null) return null;
   return value;
 }
 
@@ -90,7 +102,7 @@ function ReaderSession(props: ReaderProps) {
   const headers = studyHelpHeaders(studyHelpContext);
   const locator = safePosition(props.position) ?? safePosition(reference.locator);
   const locatorKey = JSON.stringify(locator);
-  const [page, setPage] = useState(locator?.kind === 'pdf' ? locator.physical_page : locator?.kind === 'image' ? locator.frame : 1);
+  const [page, setPage] = useState(positionPage(locator));
   const [sheet, setSheet] = useState(locator?.kind === 'table' ? locator.sheet_name ?? undefined : undefined);
   const [firstRow, setFirstRow] = useState(locator?.kind === 'table' ? locator.first_row : 1);
   const [document, setDocument] = useState<ReaderDocument>();
@@ -129,7 +141,7 @@ function ReaderSession(props: ReaderProps) {
     // Workspace echoes emitted positions; an echo must not jump a selected cell
     // or trigger another request. A genuinely restored location hydrates state.
     if (locatorKey === lastPosition.current) return;
-    setPage(locator?.kind === 'pdf' ? locator.physical_page : locator?.kind === 'image' ? locator.frame : 1);
+    setPage(positionPage(locator));
     setSheet(locator?.kind === 'table' ? locator.sheet_name ?? undefined : undefined);
     setFirstRow(locator?.kind === 'table' ? locator.first_row : 1);
   }, [locatorKey]);
@@ -155,7 +167,7 @@ function ReaderSession(props: ReaderProps) {
     const load = loadedKey + ':' + document.original.sha256;
     if (lastPositionLoad.current === load || !positionCallback.current) return;
     let next: ContentLocator | null = null;
-    if (payload.kind === 'pdf' && payload.page != null) next = { kind: 'pdf', physical_page: payload.page };
+    if (payload.kind === 'pdf' && payload.page != null) next = textPosition ?? { kind: 'pdf', physical_page: payload.page };
     else if (payload.kind === 'image' && payload.page != null) next = { kind: 'image', frame: payload.page };
     else if (payload.table && payload.table.rows.length > 0 && payload.table.total_columns > 0) {
       const table = payload.table;
