@@ -1,19 +1,154 @@
 # Design C independent integration review — October 10, 2026
 
-The latest bounded repair is committed locally as `3f0c4781`, based on published
-`8f82b346`. R4 restored-preview styling and R6 action-error persistence both
-pass their exact hidden reproductions on this build. Seventeen focused tests,
-desktop TypeScript and renderer/native builds pass. This report adds the exact
-source identity, four inspected screenshots and normal restart/close evidence.
-The previous 84+Import and 319 reviews below retain their recorded baseline
-qualifications; their R3/R5/R7/R8/R9/R10 and G1/G2 observations do not claim
-those failures still exist in later owner revisions. No other finding was
-rerun during this bounded repair.
-Figma Test timing copy is reconciled across ten existing C specimens with
-verified screenshots. Timed lifecycle, other media/extraction paths and Windows
-delivery remain outside this pass's acceptance. This report closes no ticket.
+The independent R3–R10 recheck is complete on the built `397d1032` integration.
+R3 draft retention, R7 CSV position reopening, R8 reviewed progress, R9 edited
+answer copy, R10 Files inventory and the Study → Notes → saved Chat/source flow
+pass their actual connected reproductions. R4/R6 retain their prior passing
+hidden evidence with exact repair-source blob parity. R5 ambiguous reader tab
+and close names remains P2. No reproducible blocking UI failure was established
+in the completed checks; an unexplained first-open Reader timeout is retained
+below, including its successful recovery and limited attribution.
 
-## Latest bounded repair — R4/R6 on 8f82b346
+This is a report-only checkpoint. It supersedes earlier open R3/R7/R8/R9/R10
+and G1/G2 statements only at the tested scopes below. Historical findings and
+receipts remain intact. Parent's latest announced canonical is `b51cb7b3`; it
+was not built or exercised here. Figma Test timing correction remains committed
+as `fc732598`. This report closes no feature ticket or Windows delivery gate.
+
+## Independent integrated recheck — 397d1032
+
+### Source, runtime and evidence identity
+
+Normal Git root is `C:/Renulus/dev/worktrees/dc01-design`, on
+`codex/dc01-design`. A clean normal merge of prerequisite
+`397d1032caa4babbd86d5b51c8a4afda95b0e2ba` produced the exact tested build HEAD
+`ae624a5e6a4170ba9fdf933f27e5fb62d63735fa`. There were no conflicts, resets,
+checkouts or unowned flag changes. This checkpoint authors only
+`docs/implementation/design-c-review-integration.md`; canonical source was read
+only. Desktop TypeScript, Vite with `--configLoader runner`, and native build
+passed before the hidden journeys. No application source changed after build.
+
+Renderer `apps/desktop/dist/assets/index-DiP2muZY.js` SHA-256 is
+`98299f45e2f2ac015cbfb98c58b95af51f6b54170586fa668ee9eb3619dc58c8`.
+Native `apps/desktop/dist-electron/main.cjs` SHA-256 is
+`c4b3e337fa58ee3e2754ffbf2d485cc74d0421db6a7d339ed36f3a5cc223d615`.
+The manifest is
+`C:/Renulus/scratch/dcctl/rev1/probes/final397-20261010/manifest.json`: 305
+hashed artifacts, 138 tool operations, 131 successful operations and 14 native
+PNG captures. Eight captures were visually inspected: 0004, 0005, 0007, 0009,
+0011, 0012, 0013 and 0014. The failed requests are explicitly described below.
+
+The fixed app-scoped controller used only its fresh synthetic profile
+`C:/Renulus/scratch/dcctl/rev1/c/s-7df5d332/p`. Three launches ended in three
+normal closes: operation-failure cleanup, requested restart and final requested
+close. Every forced/remaining PID list is empty; fault is null. Final close
+finished October 10, 2026 at 15:15:51.348 UTC; the bridge exited with code 0.
+All screenshots, logs and runtime state remain under the owned scratch root.
+No credentials, owner profile, foreground input or live provider call was used.
+
+### Reproductions and bounded results
+
+| Finding | Independent result and evidence |
+| --- | --- |
+| R3 — Home draft loss | **Actual pass.** Type an unsent draft on New chat and remain on that route throughout. Production Test start returns 201 and activates restriction; production final submission returns 200 and releases it. The exact draft returns unchanged. `home-start.json`, `home-submit.json` and inspected `capture-0004.png` record the isolated reproduction. This does not establish general recovery focus. |
+| R4 — cold restored preview styling | **Prior pass reused with exact source parity.** `TestSetupPane.tsx` and `tests.css` Git blobs match the repaired `3f0c4781` build. Its actual cold preview, width 480 and narrow/200% focused Continue to Study evidence remains the applicable reproduction. No new cold-preview journey or preference seed was used in this pass. |
+| R5 — ambiguous tab/close names | **P2 remains.** Earlier actual two-reader reproduction shows duplicate Document / Close Document tab names. Current Workspace panel/types are unchanged and shell still omits `getTitle`. This pass does not claim a new duplicate-pair UI reproduction. Current Note and Attachment tabs also use generic type labels while Reader itself shows the content title. |
+| R6 — action errors cleared by polling | **Prior pass reused with exact source parity.** `session.ts` and `session.test.ts` Git blobs match `3f0c4781`. Its actual Hint refusal surviving multiple polls, recovery through Sources and 17 focused tests remain the applicable evidence. No new Hint polling run was required. |
+| R7 — reading position lost on reopen | **Actual CSV pass.** UI uploads the declared original, opens its real Reader, advances to rows 101–200 and saves the safe table locator through ordinary Workspace preferences. Normal restart reopens rows 101–200. `before-normal-restart.json`, `after-normal-restart.json` and inspected `capture-0013.png` agree. The saved note text source also reopens. PDF selected-text/page acceptance stays with Poincare. |
+| R8 — reviewed Study progress omitted | **Actual pass.** UI creates DC01 final397 reviewed with RN-AAV-001, starts Study, commits the correct answer and finishes fresh 1/1. Real `GET /study/progress` in `after-study.json` reports fresh answered/correct 1/1 and topic T16. No progress row was seeded. |
+| R9 — edited-answer copy misleading | **Actual pass.** After editing the imported explanation, the warning correctly says the edit requires a new review while the unchanged original separately retains Answer A. Inspected `capture-0005.png` shows both states. This is the mounted Import editor, not a mocked page. |
+| R10 — saved Chat attachments omitted from Files | **Actual pass.** The UI-retained CSV appears in real `/workspace/entries` Files inventory and the rendered Files list. Clicking its title opens its actual Reader. Inspected `capture-0011.png`, current HTTP records and original SHA-256 agree. |
+| G1 — Notes creation/editor gap | **Actual Study flow pass.** Notes help opens the mounted editor; create and save the synthetic note, then Use note in chat. The saved Chat draft carries the exact typed `note_revision`; Source 1 opens its real Reader. Normal restart retains the draft, source and note text. Inspected `capture-0007.png` shows Saved · Revision 1; `capture-0014.png` shows the reopened source/draft. Notes rights, project/deletion and source contracts remain Poincare's separate scope. |
+| G2 — Reader Study context omitted | **Current consumer passes the tested handoff.** Reader sends Study help headers and the actual note-source handoff works with its receipt. `reader-probe.json` contains production resolve 200 with the actual Study receipt and without it after recovery. Earlier stale/late guard evidence retains its recorded scope; this pass adds no new late-stream race test or general bypass acceptance. |
+
+`review.py` uses the real assembled API/SQLite on UI-created synthetic records
+through TestClient without lifespan, helper workers or a provider. Its Home
+start/submit requests change the actual attempt policy while the renderer stays
+on Home; they are not a claim of UI-start acceptance. During the active Test,
+Notes, Workspace preferences and progress each return 409
+`assistance_restricted`. No page mocks or Workspace preference fixtures were
+used in this integrated pass.
+
+The exact saved Chat is `thread_7a3dbcc87716455e94dcd12cf12bc32f`, note revision
+is `rev_94d3b9fd95f649a080c39f31edec7027` and attachment is
+`attachment_4e8d150b3791433b975f23c4e687663f`. The 5,947-byte CSV retains original
+SHA-256 `a563865763fcaf67c584cb12b053ca24ee68667755e2438da6f1e8ff13a9110f`.
+The saved safe position is
+`{kind:"table",format:"csv",sheet_name:null,first_row:101,last_row:200,first_column:1,last_column:2}`.
+Send was never used; saved draft/source preparation proves no model response.
+
+### Screen coverage, narrow layout and focus
+
+Captures are native app pixels under
+`C:/Renulus/scratch/dcctl/rev1/c/s-7df5d332/out/`. The default wide captures are
+1384×921 content pixels; this pass did not request 1440×900. The narrow check
+uses 1000×900 outer / 984×861 content dimensions and native 200% zoom.
+
+| Surface/state | Current evidence |
+| --- | --- |
+| Home before/restricted/after policy | Captures 0002–0004 plus real policy requests; 0004 inspected for the retained draft. |
+| Reviewed Study summary | Capture 0001 indexed, with actual fresh 1/1 verified from current production progress and attempt records. |
+| Mounted Import edited review | Capture 0005 inspected; edit-review warning and original answer remain distinct and readable. |
+| Study Notes saved editor | Capture 0007 inspected; saved revision status, note selector, title and body are rendered beside the actual Study question. |
+| Note-source Reader | Capture 0008 indexed, then 0014 inspected after normal restart; source text and unsent saved Chat draft agree. |
+| Attachment Reader and Files | Recovered Reader 0009 inspected, rows 101–200 in 0010 indexed, Files 0011 inspected and normal-restart Reader 0013 inspected. |
+| Single pane at 200%, keyboard focus | Capture 0012 inspected: collapsed navigation, focused Reader pane, Back to chat, row 101 and a visible table-cell focus ring. This bounded check does not establish full tab order or pointer splitter behavior. |
+| Cold Test preview, action failure/recovery | Exact-source prior R4/R6 captures remain applicable; no fresh screen acceptance is invented for them. |
+
+The inspected Study and Chat/Reader compositions preserve the calm medical
+system: teal action/focus color, muted metadata, distinct question/composer
+focal elements, quiet boundaries and the 480-pixel secondary Workspace in wide
+view. The current narrow composition preserves a readable primary pane and
+visible focus. R5 remains a should-fix naming defect: type-only tabs prevent
+users from reliably identifying different open sources. This bounded review
+does not certify every hover, loading, error, motion or keyboard state.
+
+### First-open timeout and remaining gates
+
+After the actual CSV upload and Open file under the Study-linked Chat, request
+092 waited for Next rows and exceeded the controller's finite action budget.
+Requests 093–098 subsequently returned `not_running`; operation-failure cleanup
+closed normally. There is no screenshot of that first failed Reader state. A
+409 appears near the attempt in logs, but its source was not conclusively
+attributed. An application cause, crash or reproducible blocker is not asserted.
+
+Starting the same owned profile recovered the actual attachment Reader.
+Production resolve succeeded with the actual Study receipt and without it;
+row navigation, Files-to-Reader opening and the subsequent normal restart all
+passed. Preserve request/results 092–099 and `reader-probe.json` when triaging
+another occurrence. This was not a zero-error run. The remaining observation is
+an unexplained first-open timeout with successful recovery, not a demonstrated
+loss of retained data.
+
+R5's exact owner recommendation remains: resolve authorized titles in a
+volatile shell cache, supply `getTitle` and use each resolved title for both tab
+and close accessible names. Keep preference references safe and invalidate
+titles when context/policy changes. Its existing two-file reproduction is
+retained below; verify distinct files and a note after the owner correction.
+
+The latest canonical notices were `2e30ee1d` and then `b51cb7b3`. Read-only
+`git diff --name-only 397d1032 b51cb7b3` returned no differences for the checked
+Home, Reader, Notes, shell, Workspace, attempts session, TestSetupPane, Import
+CandidateEditor, `storage/workspace.py` and `study/service.py` paths. That bounded
+parity supports reuse of these findings; it does not prove the latest assembled
+runtime, all API/server paths or uncommitted canonical bytes were executed.
+
+Poincare retains PDF selected-text/page reopen and Notes rights/source contract
+acceptance. Russell retains C5 ordinary inference restore on its foundation009b
+work. Zeno retains installed isolation at the reported `2e30ee1d` integration.
+No competing source changes or duplicate owner tests were performed. Timed
+Test lifecycle, other media/extraction, pointer splitting, complete focus audit,
+physical Windows behavior and provider-backed generation remain outside this
+checkpoint. R4/R6 repair commit and earlier Figma/Workspace checkpoints retain
+their recorded identities. This lane reports tested passes and the remaining
+P2/timeout observation; the parent owns final pre-cutover acceptance.
+
+Report checkpoint validation passes `git diff --check` and
+`scripts/check_workspace.py`: 18,446 public files, 1,203 local links, 27 topics
+and 199 subtopics. The reserved report is the sole content edit. No new source
+tests or runtime journeys were required after this documentation change.
+
+## Earlier bounded repair — R4/R6 on 8f82b346
 
 Normal `rev-parse --show-toplevel` returned
 `C:/Renulus/dev/worktrees/dc01-design`; branch is `codex/dc01-design`. The clean
