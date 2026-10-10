@@ -7,7 +7,7 @@ import json
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 import pytest
-from httpx import ASGITransport, AsyncClient
+from httpx import ASGITransport, AsyncClient, ReadError
 
 from renulus.contracts import ApiError
 from renulus.assessment.generation_models import CreateGenerationRequest
@@ -239,11 +239,11 @@ def test_actual_router_offline_preference_save_and_invalid_import_fail_closed(ni
     assert service.preferences()["enabled"] is False and not transport.calls
 
 
-async def finish_job(service, identifier):
+async def finish_job(service, identifier, *, timeout=5):
     owner = service.services.get("saved_generation")
     task = owner.tasks.get(identifier)
     if task:
-        await asyncio.wait_for(asyncio.shield(task), timeout=5)
+        await asyncio.wait_for(asyncio.shield(task), timeout=timeout)
     return service.read()["last_job"]
 
 
@@ -466,18 +466,132 @@ async def test_cold_status_reconciles_same_epoch_orphan_without_generation_ui(ni
 
 
 @pytest.mark.asyncio
-async def test_assembled_status_and_disable_cancel_are_neutral_during_active_test(nightly):
+async def test_scheduler_saved_setup_study_and_test_replay_keep_one_personal_version(nightly):
+    """Actual Nightly producer and HTTP consumers; only provider transport is synthetic."""
     app, service, clock, transport = nightly
-    job = await due_job(service, clock)
-    await finish_job(service, job["id"])
-    result = service.read()["last_job"]["result"]
-    # Real policy-row specimen; the separate DC13 attempt consumer is not proof here.
-    stamp = utc_now()
-    service.db.execute("INSERT INTO assessment_test_attempts(id,version_id,version_snapshot_json,mode,clock_high_water_at,created_at,updated_at) "
-        "VALUES('synthetic-nightly-active-test',?,'{}','test',?,?,?)", (result["version"]["id"], stamp, stamp, stamp))
-    async with AsyncClient(transport=ASGITransport(app), base_url="http://testserver") as client:
+    attempts = service.services.get("whole_attempts")
+    # The attempt owner uses an independent clock: moving the scheduler to the
+    # following day below must not accidentally expire an explicitly timed Test.
+    attempt_time = clock.now.replace(hour=22)
+    attempts.clock, attempts.monotonic = lambda: attempt_time, lambda: 0
+    base = "/api/v1/assessment/test-attempts"
+    lost_keys = {"nightly-consumer-study-start", "nightly-consumer-test-start",
+                 "nightly-consumer-test-draft", "nightly-consumer-test-submit"}
+
+    class LostAcknowledgement(ASGITransport):
+        async def handle_async_request(self, request):
+            response = await super().handle_async_request(request)
+            key = request.headers.get("Idempotency-Key")
+            if key in lost_keys and response.is_success:
+                lost_keys.remove(key)
+                # The assembled app has committed and produced a real response.
+                # Lose it at the HTTP boundary, without replacing any owner result.
+                await response.aread()
+                await response.aclose()
+                raise ReadError("Synthetic lost acknowledgement", request=request)
+            return response
+
+    async with AsyncClient(transport=LostAcknowledgement(app), base_url="http://testserver") as client:
+        async def replay_after_lost_ack(method, url, body, key, expected=200):
+            headers = {"Idempotency-Key": key}
+            with pytest.raises(ReadError, match="Synthetic lost acknowledgement"):
+                await client.request(method, url, json=body, headers=headers)
+            response = await client.request(method, url, json=body, headers=headers)
+            assert response.status_code == expected, response.text
+            return response.json()
+
+        initial = await client.get("/api/v1/nightly")
+        assert initial.status_code == 200 and initial.json()["preferences"]["enabled"] is False
+        assert (await service.tick())["last_job"] is None and not transport.calls
+        enabled = await client.put("/api/v1/nightly/preferences",
+            json={"enabled": True, "local_time": "22:00", "question_count": 5, "expected_revision": 1},
+            headers={"Idempotency-Key": "nightly-consumer-enable"})
+        assert enabled.status_code == 200 and enabled.json()["revision"] == 2
+        clock.now = clock.now.replace(hour=22)
+        job = (await service.tick())["last_job"]
+        assert (await finish_job(service, job["id"], timeout=20))["state"] == "published"
+        ready = await client.get("/api/v1/nightly")
+        assert ready.status_code == 200, ready.text
+        result = ready.json()["last_job"]["result"]
+        version_id, test_id = result["version"]["id"], result["test"]["id"]
+        assert result == {"version": {"type": "saved_test_version", "id": version_id},
+                          "test": {"type": "saved_test", "id": test_id}, "available": True}
+        assert ready.json()["last_job"]["validated_count"] == 5
+        stored_version = dict(service.db.fetch_one("SELECT * FROM assessment_test_versions WHERE id=?", (version_id,)))
+        assert stored_version["origin"] == "nightly" and stored_version["review_quality"] == "personal"
+        assert len(json.loads(stored_version["items_json"])) == 5
+        assert json.loads(stored_version["provenance_json"])["producer"]["method"] == "nightly"
+        collection = await client.get("/api/v1/assessment/tests", params={"origin": "nightly"})
+        assert collection.status_code == 200, collection.text
+        assert [(item["id"], item["latest_version"]["id"]) for item in collection.json()["items"]] == [(test_id, version_id)]
+        for url, params in (("/api/v1/assessment/tests/" + test_id + "/setup", {"version_id": version_id}),
+                            ("/api/v1/assessment/tests/versions/" + version_id + "/setup", {})):
+            setup = await client.get(url, params=params)
+            assert setup.status_code == 200, setup.text
+            assert setup.json()["can_start"] is True
+            assert setup.json()["version"]["id"] == version_id and setup.json()["version"]["item_count"] == 5
+            assert setup.json()["modes"] == ["study", "test"] and setup.json()["timing_default"] == "untimed"
+            assert "PRIVATE_GENERATED_NIGHTLY_EXPLANATION" not in setup.text
+        # Publication and setup are selection only: no start, timer, exposure or grading.
+        for table in ("assessment_test_attempts", "assessment_attempt_drafts",
+                      "assessment_attempt_exposure", "assessment_attempt_commands", "learning_evidence"):
+            assert service.db.fetch_all("SELECT * FROM " + table) == []
+
+        study_body = {"version": result["version"], "mode": "study", "timing": {"kind": "untimed"}}
+        study = await replay_after_lost_ack("POST", base, study_body, "nightly-consumer-study-start", 201)
+        assert study["version_id"] == version_id and study["status"] == "active"
+        assert study["timing"]["deadline_at"] is None and study["committed"] == [] and study["result"] is None
+        assert study["current_item"]["repeat"] is False
+        assert "PRIVATE_GENERATED_NIGHTLY_EXPLANATION" not in json.dumps(study)
+        study_url = base + "/" + study["id"]
+        help_body = {"expected_revision": study["draft_revision"], "expected_policy_revision": study["policy"]["revision"],
+                     "item_id": study["current_item"]["item_id"], "kind": "sources"}
+        help_response = await client.post(study_url + "/help", json=help_body,
+            headers={"Idempotency-Key": "nightly-consumer-study-help"})
+        assert help_response.status_code == 200, help_response.text
+        help_result = help_response.json()
+        assert help_result["assisted"] is True and help_result["references"] == []
+        assert help_result["context"]["version_id"] == version_id and help_result["context"]["attempt_id"] == study["id"]
+        assert "PRIVATE_GENERATED_NIGHTLY_EXPLANATION" not in help_response.text
+        assert service.db.fetch_all("SELECT * FROM learning_evidence") == []
+        commit_body = {"expected_revision": study["draft_revision"],
+                       "item_id": study["current_item"]["item_id"], "option_ids": ["a"]}
+        committed = await client.post(study_url + "/submit-answer", json=commit_body,
+            headers={"Idempotency-Key": "nightly-consumer-study-answer"})
+        assert committed.status_code == 200, committed.text
+        study = committed.json()
+        assert len(study["committed"]) == 1
+        entry = study["committed"][0]
+        assert entry["assisted"] is True and entry["repeat"] is False and entry["score_bucket"] == "personal"
+        study_end = await client.post(study_url + "/submit", json={"expected_draft_revision": study["draft_revision"]},
+            headers={"Idempotency-Key": "nightly-consumer-study-end"})
+        assert study_end.status_code == 200 and study_end.json()["status"] == "ended", study_end.text
+        study_result = study_end.json()["result"]
+        assert study_result["version_id"] == version_id and study_result["not_submitted"] == 4
+        assert study_result["cohorts"]["personal"] == {"denominator": 1, "answered": 1, "unanswered": 0, "correct": 1}
+        current_study = await client.post(base, json=study_body, headers={"Idempotency-Key": "nightly-consumer-study-start"})
+        assert current_study.status_code == 201 and current_study.json()["id"] == study["id"]
+        assert current_study.json()["status"] == "ended" and current_study.json()["result"] == study_result
+
+        test_body = {"version": result["version"], "mode": "test",
+                     "timing": {"kind": "timed", "duration_seconds": 600}}
+        test = await replay_after_lost_ack("POST", base, test_body, "nightly-consumer-test-start", 201)
+        assert test["version_id"] == version_id and test["current_item"]["repeat"] is True
+        assert test["timing"]["deadline_at"] == (attempt_time + timedelta(seconds=600)).isoformat(timespec="microseconds")
+        assert test["timing"]["remaining_seconds"] == 600
+        assert test["policy"]["active_test_id"] == test["id"] and test["policy"]["assistance_allowed"] is False
+        test_url = base + "/" + test["id"]
+        draft_body = {"expected_revision": test["draft_revision"], "position": test["position"],
+                      "answers": [{**answer, "option_ids": ["a"] if index == 0 else [], "marked": index == 0}
+                                  for index, answer in enumerate(test["answers"])]}
+        test = await replay_after_lost_ack("PUT", test_url + "/draft", draft_body, "nightly-consumer-test-draft")
+        assert test["draft_revision"] == 1 and test["answers"][0]["option_ids"] == ["a"]
+        assert test["answers"][0]["marked"] is True and test["committed"] == [] and test["result"] is None
+        assert "PRIVATE_GENERATED_NIGHTLY_EXPLANATION" not in json.dumps(test)
+        assert service.db.fetch_all("SELECT * FROM learning_evidence WHERE entity_id=?", (test["id"],)) == []
         status = await client.get("/api/v1/nightly")
         assert status.status_code == 200 and status.json()["assistance_allowed"] is False
+        assert status.json()["last_job"]["result"] == result
         assert "PRIVATE_GENERATED_NIGHTLY_EXPLANATION" not in status.text
         assert status.headers["cache-control"] == "no-store"
         off = await client.put("/api/v1/nightly/preferences",
@@ -486,6 +600,54 @@ async def test_assembled_status_and_disable_cancel_are_neutral_during_active_tes
         assert off.status_code == 200 and off.json()["enabled"] is False
         stop = await client.post("/api/v1/nightly/jobs/" + job["id"] + "/cancel", headers={"Idempotency-Key": "synthetic-nightly-test-stop"})
         assert stop.status_code == 200 and stop.json() == {"id": job["id"], "state": "published"}
-    clock.now += timedelta(days=1)
-    await service.tick()
+        stop_replay = await client.post("/api/v1/nightly/jobs/" + job["id"] + "/cancel", headers={"Idempotency-Key": "synthetic-nightly-test-stop"})
+        assert stop_replay.status_code == 200 and stop_replay.json() == stop.json()
+        clock.now += timedelta(days=1)
+        assert (await service.tick())["preferences"]["enabled"] is False
+        active = await client.get(test_url)
+        assert active.status_code == 200 and active.json()["status"] == "active"
+        assert active.json()["timing"]["deadline_at"] == test["timing"]["deadline_at"]
+        final_body = {"expected_draft_revision": test["draft_revision"]}
+        final = await replay_after_lost_ack("POST", test_url + "/submit", final_body, "nightly-consumer-test-submit")
+        assert final["status"] == "submitted" and final["policy"]["assistance_allowed"] is True
+        test_result = final["result"]
+        assert test_result["version_id"] == version_id and test_result["item_count"] == 5
+        assert test_result["reason"] == "manual" and test_result["not_submitted"] == 0
+        assert test_result["cohorts"]["personal"] == {"denominator": 5, "answered": 1, "unanswered": 4, "correct": 1}
+        first = next(item for item in test_result["items"] if item["item_id"] == entry["item_id"])
+        assert first["repeat"] is True and first["assisted"] is False and first["score_bucket"] == "personal"
+        current_test = await client.post(base, json=test_body, headers={"Idempotency-Key": "nightly-consumer-test-start"})
+        assert current_test.status_code == 201 and current_test.json()["id"] == test["id"]
+        assert current_test.json()["status"] == "submitted" and current_test.json()["result"] == test_result
+        for final_result in (study_result, test_result):
+            assert final_result["origin"] == "nightly" and final_result["review_quality"] == "personal"
+            assert all(final_result["cohorts"][bucket]["denominator"] == 0 for bucket in ("fresh", "assisted", "repeat"))
+        persisted_attempts = service.db.fetch_all("SELECT * FROM assessment_test_attempts")
+        assert {(row["id"], row["version_id"], row["mode"]) for row in persisted_attempts} == {
+            (study["id"], version_id, "study"), (test["id"], version_id, "test")}
+        for row in persisted_attempts:
+            snapshot = json.loads(row["version_snapshot_json"])
+            assert snapshot["version"]["id"] == version_id and len(snapshot["version"]["items"]) == 5
+            assert snapshot["pinned_provenance"] == json.loads(stored_version["provenance_json"])
+        starts = service.db.fetch_all("SELECT target_id FROM assessment_attempt_commands WHERE operation='start'")
+        assert sorted(row["target_id"] for row in starts) == sorted([study["id"], test["id"]])
+        evidence = service.db.fetch_all("SELECT * FROM learning_evidence")
+        assert len(evidence) == 6
+        with service.db.transaction() as conn:
+            for row in evidence:
+                payload = json.loads(row["payload_json"])
+                assert payload["version_id"] == version_id and payload["origin"] == "nightly"
+                assert payload["review_quality"] == "personal" and payload["score_bucket"] == "personal"
+                assert payload["bank_cohort_eligible"] is False and payload["reviewed"] is False
+                assert "PRIVATE_GENERATED_NIGHTLY_EXPLANATION" not in row["payload_json"]
+                canonical = attempts.committed_evidence_in(conn, row["id"])
+                if payload["outcome"] == "unanswered":
+                    assert canonical is None
+                else:
+                    assert canonical["payload"] == payload
+        assert (await client.get("/api/v1/nightly")).json()["last_job"]["result"] == result
+    assert lost_keys == set()
+    assert dict(service.db.fetch_one("SELECT * FROM assessment_test_versions WHERE id=?", (version_id,))) == stored_version
+    assert len(service.db.fetch_all("SELECT id FROM assessment_test_versions WHERE origin='nightly'")) == 1
     assert len(transport.calls) == 1
+    assert transport.calls[0][:2] == ("codex", "gpt-6.1-sol")
