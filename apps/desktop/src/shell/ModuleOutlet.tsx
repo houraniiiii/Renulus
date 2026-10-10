@@ -122,6 +122,9 @@ export function ModuleOutlet({ assistanceAllowed }: { assistanceAllowed?: boolea
     };
   }
   return <ModuleBoundary key={route}><Suspense fallback={<LoadingState />}>
+    {route === 'chat' && !!handoff?.studyHelpContext && studyHelp.context && <div className="actions">
+      <Button variant="secondary" onClick={() => navigate('attempts', { freshStudy: true, payload: { attempt_id: studyHelp.context!.attempt_id } })}>Return to Study</Button>
+    </div>}
     {!!helpError && <ErrorState error={helpError} title="Study help could not open" />}
     {Page ? <Page {...props} /> : route === 'connections' ? <ConnectionsPage assistanceAllowed={assistanceAllowed}
       initialSection={handoff?.settings_section === 'preferences' ? 'preferences' : undefined} /> : route === 'more' ? <MorePage /> : <PendingPage />}

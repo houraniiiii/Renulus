@@ -51,7 +51,8 @@ export default function Tests() {
   }
   return <div className="saved-tests">
     <PageHeader title="Tests" description="Return to a saved set or choose reviewed questions for your next session."
-      actions={<div className="tests-actions"><Button variant="secondary" onClick={() => { setCreating(value => !value); setGenerating(false); setImporting(false); }} disabled={mutation.locked}>New reviewed test</Button>
+      actions={<div className="tests-actions"><Button variant="ghost" onClick={() => navigate('attempts', { freshStudy: true })}>Your attempts</Button>
+        <Button variant="secondary" onClick={() => { setCreating(value => !value); setGenerating(false); setImporting(false); }} disabled={mutation.locked}>New reviewed test</Button>
         <Button variant="secondary" aria-expanded={importing} aria-controls="tests-import" onClick={() => { setImporting(value => !value); setCreating(false); setGenerating(false); }}>Import a test</Button>
         <Button aria-expanded={generating} aria-controls="tests-generation" onClick={() => { setGenerating(value => !value); setGenerationJob(undefined); setCreating(false); setImporting(false); }} disabled={mutation.locked}><Plus size={18} aria-hidden="true" />Create test</Button></div>} />
     {notice && <Notice>{notice}</Notice>}

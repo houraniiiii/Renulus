@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, Pause, Play, RotateCcw, Square } from 'lucide-react';
-import { api, ApiError, isCancelled } from '../../platform/api';
+import { api, ApiError, isCancelled, type ApiOptions } from '../../platform/api';
+import { studyHelpHeaders, type StudyHelpContext } from '../../platform/designC';
 import { stream } from '../../platform/stream';
 import { useResource } from '../../platform/useResource';
 import { useNavigation } from '../../shell/navigation';
@@ -15,6 +16,7 @@ const runPath = (id: string) => base + '/runs/' + encodeURIComponent(id) + '/can
 
 interface GenerationAttempt {
   body: GeneratePracticeRequest;
+  helpHeaders: Record<string, string>;
   controller: AbortController | null;
   runId: string | null;
   terminal: boolean;
@@ -121,13 +123,21 @@ function FeedbackView({ feedback, focus = false }: { feedback: PracticeFeedback;
 
 export function GeneratedPractice({ onBack }: { onBack?: () => void }) {
   const nav = useNavigation();
+  const studyHelpContext = nav.handoff?.studyHelpContext as StudyHelpContext | undefined;
+  // Capture the receipt with each command. Retrying cannot acquire a newer
+  // question's authority, and the receipt never enters a durable request body.
+  function guardedApi<T>(path: string, options: ApiOptions = {}) {
+    const headers = new Headers(options.headers);
+    for (const [key, value] of Object.entries(studyHelpHeaders(studyHelpContext))) headers.set(key, value);
+    return api<T>(path, { ...options, headers });
+  }
   const ticket = typeof nav.handoff?.case_handoff_id === 'string' ? nav.handoff.case_handoff_id : undefined;
   const sourceConversation = nav.handoff?.conversation as { type?: unknown; id?: unknown } | undefined;
   const returnsToChat = sourceConversation && ['learn_thread', 'case'].includes(String(sourceConversation.type))
     && typeof sourceConversation.id === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(sourceConversation.id)
     && (nav.handoff?.retention === 'saved' || nav.handoff?.retention === 'temporary');
   function returnToCase() {
-    if (returnsToChat) nav.navigate('chat', { payload: { conversation: sourceConversation, retention: nav.handoff?.retention } });
+    if (returnsToChat) nav.navigate('chat', { payload: { conversation: sourceConversation, retention: nav.handoff?.retention, studyHelpContext } });
     else nav.navigate('cases', { payload: { case_id: nav.handoff?.case_id ?? nav.scope.entity_id } });
   }
   const topic = typeof nav.handoff?.topic_id === 'string' ? nav.handoff.topic_id : undefined;
@@ -158,9 +168,9 @@ export function GeneratedPractice({ onBack }: { onBack?: () => void }) {
   const practiceHeading = useRef<HTMLHeadingElement>(null);
   const sessionState = useRef<string | undefined>(undefined);
   const reviewHeading = useRef<HTMLHeadingElement>(null);
-  const capabilities = useResource(signal => api<PracticeCapabilities>(base + '/capabilities', { signal }));
+  const capabilities = useResource(signal => guardedApi<PracticeCapabilities>(base + '/capabilities', { signal }));
   const history = useResource(async signal => volatile ? [] :
-    (await api<{ sessions: PracticeSession[] }>(base + '/sessions', { signal })).sessions
+    (await guardedApi<{ sessions: PracticeSession[] }>(base + '/sessions', { signal })).sessions
       .filter(value => value.mode === 'generated' && value.retention === 'persistent'));
 
   useEffect(() => {
@@ -213,7 +223,7 @@ export function GeneratedPractice({ onBack }: { onBack?: () => void }) {
     let started = false;
     try {
       for await (const message of stream<PracticeRunEvent>(base + '/generate', {
-        method: 'POST', body: current.body, signal: controller.signal,
+        method: 'POST', body: current.body, signal: controller.signal, headers: current.helpHeaders,
       })) {
         if (!mounted.current || attempt.current !== current || current.terminal) return;
         const event = message.data;
@@ -233,6 +243,9 @@ export function GeneratedPractice({ onBack }: { onBack?: () => void }) {
               throw new ApiError('The runtime could not confirm the requested practice context.', 0, 'invalid_event');
             }
             started = true;
+            // Expose Stop as soon as the run identity arrives, even when the
+            // provider has not emitted its first progress or retrieval event.
+            setGeneration(previous => ({ ...previous }));
             break;
           case 'retrieval':
             setGeneration(previous => ({ ...previous, retrieval: event.payload }));
@@ -285,7 +298,7 @@ export function GeneratedPractice({ onBack }: { onBack?: () => void }) {
     const request: GeneratePracticeRequest = body ? { ...body, idempotency_key: crypto.randomUUID() }
       : { idempotency_key: crypto.randomUUID(), prompt: prompt.trim(), count: amount, context,
         ...(topic ? { topic_id: topic } : {}), ...(ticket ? { case_handoff_id: ticket } : {}) };
-    void generate({ body: request, controller: null, runId: null, terminal: false });
+    void generate({ body: request, helpHeaders: studyHelpHeaders(studyHelpContext), controller: null, runId: null, terminal: false });
   }
 
   async function cancelGeneration() {
@@ -335,13 +348,13 @@ export function GeneratedPractice({ onBack }: { onBack?: () => void }) {
     if (!session) return;
     const url = sessionPath(session.id, '/' + action);
     const body = { idempotency_key: crypto.randomUUID() };
-    perform(signal => api<PracticeSession>(url, { method: 'POST', body, signal }), adopt);
+    perform(signal => guardedApi<PracticeSession>(url, { method: 'POST', body, signal }), adopt);
   }
   function answer() {
     if (!session?.current_item || !choice || session.status !== 'active') return;
     const url = sessionPath(session.id, '/answer');
     const body = { idempotency_key: crypto.randomUUID(), item_id: session.current_item.id, option_ids: [choice] };
-    perform(signal => api<PracticeAnswerResult>(url, { method: 'POST', body, signal }), result => {
+    perform(signal => guardedApi<PracticeAnswerResult>(url, { method: 'POST', body, signal }), result => {
       setSession(checkedSession(result.session)); setFeedback(result.feedback); setChoice(''); setHelp(null); setReview(null);
     });
   }
@@ -349,7 +362,7 @@ export function GeneratedPractice({ onBack }: { onBack?: () => void }) {
     if (!session?.current_item || session.status !== 'active') return;
     const url = sessionPath(session.id, '/help');
     const body = { idempotency_key: crypto.randomUUID(), item_id: session.current_item.id, kind };
-    perform(signal => api<PracticeHelpResult>(url, { method: 'POST', body, signal }), result => {
+    perform(signal => guardedApi<PracticeHelpResult>(url, { method: 'POST', body, signal }), result => {
       setHelp(result);
       setSession(current => current?.current_item?.id === result.item_id ? { ...current,
         current_item: { ...current.current_item, assisted: true } } : current);
@@ -363,7 +376,7 @@ export function GeneratedPractice({ onBack }: { onBack?: () => void }) {
     setBusy(true);
     try {
       if (session) {
-        const restored = await api<PracticeSession>(sessionPath(session.id), { signal: controller.signal });
+        const restored = await guardedApi<PracticeSession>(sessionPath(session.id), { signal: controller.signal });
         if (mounted.current && pending.current === command && !controller.signal.aborted) adopt(restored);
       }
       if (mounted.current && pending.current === command && !controller.signal.aborted) {
@@ -444,7 +457,7 @@ export function GeneratedPractice({ onBack }: { onBack?: () => void }) {
             <div><strong>Generated · unreviewed</strong><span>{previous.answered_count} / {previous.item_count} answered · {previous.status}</span>
               <span className="muted">{new Date(previous.created_at).toLocaleString()}</span></div>
             <Button variant="secondary" disabled={locked} onClick={() => perform(signal =>
-              api<PracticeSession>(sessionPath(previous.id), { signal }), adopt)}>{previous.status === 'ended' ? 'Open review' : 'Open session'}<Play size={16} /></Button>
+              guardedApi<PracticeSession>(sessionPath(previous.id), { signal }), adopt)}>{previous.status === 'ended' ? 'Open review' : 'Open session'}<Play size={16} /></Button>
           </li>)}</ul>)}
       </section>}
     </div> : <div className="assessment-session-layout">
@@ -475,14 +488,14 @@ export function GeneratedPractice({ onBack }: { onBack?: () => void }) {
         </form>}
         {feedback && <><FeedbackView feedback={feedback} focus /><div className="actions">
           {session.status === 'active' && session.answered_count < session.item_count && <Button disabled={locked}
-            onClick={() => perform(signal => api<PracticeSession>(sessionPath(session.id), { signal }), adopt)}>Next question<ArrowRight size={17} /></Button>}
+            onClick={() => perform(signal => guardedApi<PracticeSession>(sessionPath(session.id), { signal }), adopt)}>Next question<ArrowRight size={17} /></Button>}
           {session.status === 'active' && session.answered_count === session.item_count && <Button disabled={locked} onClick={() => transition('end')}>Finish practice</Button>}
         </div></>}
         {session.status === 'active' && !session.current_item && !feedback && <EmptyState title="All practice answers are committed"
           action={<Button disabled={locked} onClick={() => transition('end')}>Finish practice</Button>}>
           <p>Review the generated reasoning and its source locators below.</p></EmptyState>}
         <div className="actions assessment-separated"><Button variant="secondary" disabled={locked} onClick={() => perform(signal =>
-          api<PracticeReview>(sessionPath(session.id, '/review'), { signal }), setReview)}>Review committed answers<RotateCcw size={16} /></Button>
+          guardedApi<PracticeReview>(sessionPath(session.id, '/review'), { signal }), setReview)}>Review committed answers<RotateCcw size={16} /></Button>
           {session.status === 'active' && <Button variant="ghost" disabled={locked} onClick={() => transition('pause')}>Pause<Pause size={16} /></Button>}
           {session.status !== 'ended' && <Button variant="ghost" disabled={locked} onClick={() => transition('end')}>End practice</Button>}
           <Button variant="ghost" disabled={locked} onClick={() => { setSession(null); setFeedback(null); setHelp(null); setReview(null); }}>Back to practice request</Button>

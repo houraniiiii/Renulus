@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
-import { NavigationProvider } from '../../shell/navigation';
+import { NavigationProvider, useNavigation } from '../../shell/navigation';
+import type { StudyHelpContext } from '../../platform/designC';
 import { GeneratedPractice } from './GeneratedPractice';
 import type { PracticeSession } from './generated-types';
 
@@ -15,6 +16,53 @@ const initial: PracticeSession = {
 };
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+
+it('keeps the Study receipt on a lost-ack retry while cancellation stays neutral', async () => {
+  const context: StudyHelpContext = { attempt_id: 'whole-study', item_id: 'whole-item', version_id: 'whole-version',
+    draft_revision: 2, policy_revision: 7, kind: 'chat' };
+  let calls = 0;
+  const requests: { path: string; headers: Headers; body: string }[] = [];
+  const fetch = vi.fn(async (path: string, options: RequestInit) => {
+    requests.push({ path, headers: new Headers(options.headers), body: String(options.body ?? '') });
+    if (path.endsWith('/capabilities')) return json({ available: true, live_provider_verified: false });
+    if (path.endsWith('/sessions')) return json({ sessions: [] });
+    if (path.endsWith('/cancel')) return json({ run_id: 'synthetic-run', cancelled: true });
+    if (path.endsWith('/generate')) {
+      calls += 1;
+      if (calls === 1) throw new TypeError('Synthetic lost acknowledgement');
+      const encoder = new TextEncoder();
+      const body = new ReadableStream({ start(controller) {
+        controller.enqueue(encoder.encode('data: ' + JSON.stringify({ sequence: 1, run_id: 'synthetic-run', type: 'started', payload: { mode: 'generated', persistent: true } }) + '\n\n'));
+      } });
+      return new Response(body, { headers: { 'Content-Type': 'text/event-stream' } });
+    }
+    throw new Error('Unexpected request ' + path);
+  });
+  vi.stubGlobal('fetch', fetch);
+  function Handoff() {
+    const nav = useNavigation();
+    return nav.handoff?.studyHelpContext ? <GeneratedPractice />
+      : <button onClick={() => nav.navigate('assessment', { payload: { studyHelpContext: context } })}>Open Study handoff</button>;
+  }
+  window.history.replaceState(null, '', '#/assessment');
+  render(<NavigationProvider><Handoff /></NavigationProvider>);
+  fireEvent.click(screen.getByText('Open Study handoff'));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Generate practice' }).hasAttribute('disabled')).toBe(true));
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Synthetic reasoning practice' } });
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Generate practice' }).hasAttribute('disabled')).toBe(false));
+  fireEvent.click(screen.getByRole('button', { name: 'Generate practice' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Reconnect same request' }));
+  const cancel = await screen.findByRole('button', { name: 'Cancel generation' });
+  await waitFor(() => expect(cancel.hasAttribute('disabled')).toBe(false));
+  fireEvent.click(cancel);
+  await screen.findByText('Generation cancelled. You can edit the request and explicitly generate again.');
+  const generations = requests.filter(row => row.path.endsWith('/generate'));
+  expect(generations).toHaveLength(2);
+  expect(generations[0].body).toBe(generations[1].body);
+  for (const row of requests.filter(row => !row.path.endsWith('/cancel'))) expect(JSON.parse(row.headers.get('X-Renulus-Study-Context')!)).toEqual(context);
+  expect(generations[0].body).not.toContain('whole-study');
+  expect(requests.find(row => row.path.endsWith('/cancel'))!.headers.has('X-Renulus-Study-Context')).toBe(false);
+});
 
 it('retains keyboard orientation through pause, resume, review, end and return to request', async () => {
   let session = initial;
