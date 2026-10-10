@@ -8,7 +8,8 @@ import { installedAcceptancePlan, validateInstalledRequest, validateInstallation
   validateCompleteReport, validateFrozenScript, requiredGates, remainingOwnedIdentities, inside,
   coreGates, readerGates, deferredGates, completeCoreReceipt, designCEvidenceRoot, ownedArtifact, validateHiddenWindows, waitForDesignCWindow,
   validateConversation, validateSavedTest, validateActiveTest, validateFinalAttempt, safeFailure,
-  validateReaderManifest, validateReaderOriginal, validateReaderDocument, validateReaderPassage, validateReaderRaster, validateBundledInterpreter } from './verify-installed-product.mjs';
+  validateReaderManifest, validateReaderOriginal, validateReaderDocument, validateReaderPassage, validateReaderRaster, validateBundledInterpreter,
+  validateIsolatedDirectories } from './verify-installed-product.mjs';
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
 const desktop = path.resolve(directory, '..');
@@ -104,6 +105,42 @@ test('filesystem confinement rejects roots and siblings, while accepting an ordi
   assert.equal(inside(root, root), false);
   assert.equal(inside(root, path.join(desktop, 'test-results-other/profile')), false);
   assert.equal(inside(root, path.resolve(root, '../other')), false);
+});
+
+test('inherited owner homes, AppData and cache paths are replaced with evidence-owned directories', () => {
+  const evidence = path.join(designCEvidenceRoot, 'c-12345678'), profile = path.join(evidence, 'p');
+  const inherited = { SystemRoot: 'C:/Windows', USERPROFILE: 'C:/synthetic-outside-owner', HOME: 'C:/synthetic-outside-owner',
+    APPDATA: 'C:/synthetic-outside-owner/roaming', LOCALAPPDATA: 'C:/synthetic-outside-owner/local',
+    ALLUSERSPROFILE: 'C:/synthetic-outside-common', PROGRAMDATA: 'C:/synthetic-outside-common',
+    TEMP: 'C:/synthetic-outside-temp', TMP: 'C:/synthetic-outside-temp', XDG_CACHE_HOME: 'C:/synthetic-outside-cache',
+    XDG_CONFIG_HOME: 'C:/synthetic-outside-config', XDG_DATA_HOME: 'C:/synthetic-outside-data',
+    HF_HOME: 'C:/synthetic-outside-hf', TORCH_HOME: 'C:/synthetic-outside-torch',
+    HOMEDRIVE: 'Z:', HOMEPATH: '\\synthetic-outside-home', userprofile: 'C:/synthetic-outside-lowercase' };
+  const before = structuredClone(inherited);
+  const env = isolatedEnvironment(inherited, evidence, profile);
+  assert.deepEqual(inherited, before);
+  for (const [name, suffix] of Object.entries({ USERPROFILE: 'h', HOME: 'h', LOCALAPPDATA: 'local', APPDATA: 'roaming',
+    XDG_CACHE_HOME: 'local/cache', XDG_CONFIG_HOME: 'roaming', XDG_DATA_HOME: 'local',
+    ALLUSERSPROFILE: 'local/common', PROGRAMDATA: 'local/common', RENULUS_PROFILE: 'p', TEMP: 't', TMP: 't' })) {
+    assert.equal(env[name], path.join(evidence, suffix));
+    assert.ok(inside(evidence, env[name]));
+  }
+  for (const name of ['HF_HOME', 'TORCH_HOME', 'HOMEDRIVE', 'HOMEPATH', 'userprofile']) assert.equal(env[name], undefined);
+  assert.ok(!JSON.stringify(env).includes('synthetic-outside'));
+  assert.equal(isolatedEnvironment({ SystemRoot: 'C:/Windows' }, evidence, profile).HOME, path.join(evidence, 'h'));
+});
+
+test('child directory assertion rejects escaped, missing and non-scalar user/cache/profile/temp paths', () => {
+  const evidence = path.join(designCEvidenceRoot, 'c-12345678');
+  const env = isolatedEnvironment({ SystemRoot: 'C:/Windows' }, evidence, path.join(evidence, 'p'));
+  validateIsolatedDirectories(env, evidence);
+  for (const name of ['USERPROFILE', 'HOME', 'LOCALAPPDATA', 'APPDATA', 'ALLUSERSPROFILE', 'PROGRAMDATA',
+    'XDG_CACHE_HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'RENULUS_PROFILE', 'TEMP', 'TMP']) {
+    for (const value of [undefined, null, [], { path: env[name] }, 'relative', evidence,
+      evidence + '-sibling', path.join(evidence, '../outside')]) {
+      assert.throws(() => validateIsolatedDirectories({ ...env, [name]: value }, evidence), /inside its fresh evidence/);
+    }
+  }
 });
 
 test('physical shutdown retains unknown/live ownership and distinguishes Windows PID reuse', () => {

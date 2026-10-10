@@ -114,21 +114,46 @@ export function validateInstallationReceipts(request, delivery, installation, ac
   }
 }
 
+const isolatedDirectoryKeys = ['USERPROFILE', 'HOME', 'LOCALAPPDATA', 'APPDATA', 'ALLUSERSPROFILE', 'PROGRAMDATA',
+  'XDG_CACHE_HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'RENULUS_PROFILE', 'TEMP', 'TMP'];
+
+export function validateIsolatedDirectories(env, evidence) {
+  for (const name of isolatedDirectoryKeys) {
+    check(typeof env[name] === 'string' && path.isAbsolute(env[name]) && inside(evidence, env[name]),
+      'Child ' + name + ' must remain inside its fresh evidence directory.');
+    assertSyntheticEvidenceDirectory(env[name]);
+  }
+}
+
+export async function prepareIsolatedDirectories(env, evidence) {
+  validateIsolatedDirectories(env, evidence);
+  for (const directory of new Set(isolatedDirectoryKeys.map(name => env[name]))) {
+    await mkdir(directory, { recursive: true });
+    assertSyntheticEvidenceDirectory(directory);
+  }
+}
+
 export function isolatedEnvironment(inherited, evidence, profile) {
   check(inside(designCEvidenceRoot, evidence), 'Design C state requires the exact synthetic delivery evidence root.');
   assertSyntheticEvidenceDirectory(evidence);
   check(inside(evidence, profile), 'The profile must be newly owned by this synthetic run.');
   check(path.resolve(profile).length <= 60, 'The installed helper profile must use at most 60 characters.');
   const env = {};
-  for (const name of ['SystemRoot', 'SYSTEMROOT', 'WINDIR', 'COMSPEC', 'ComSpec', 'PATHEXT', 'USERPROFILE', 'LOCALAPPDATA', 'APPDATA']) {
+  for (const name of ['SystemRoot', 'SYSTEMROOT', 'WINDIR', 'COMSPEC', 'ComSpec', 'PATHEXT']) {
     if (inherited[name]) env[name] = inherited[name];
   }
   const systemRoot = env.SystemRoot ?? env.SYSTEMROOT;
   check(systemRoot, 'Windows system root is required.');
   env.PATH = [path.join(systemRoot, 'System32'), path.join(systemRoot, 'System32', 'Wbem')].join(path.delimiter);
+  env.USERPROFILE = path.join(evidence, 'h'); env.HOME = env.USERPROFILE;
+  env.LOCALAPPDATA = path.join(evidence, 'local'); env.APPDATA = path.join(evidence, 'roaming');
+  env.ALLUSERSPROFILE = path.join(env.LOCALAPPDATA, 'common'); env.PROGRAMDATA = env.ALLUSERSPROFILE;
+  env.XDG_CACHE_HOME = path.join(env.LOCALAPPDATA, 'cache');
+  env.XDG_CONFIG_HOME = env.APPDATA; env.XDG_DATA_HOME = env.LOCALAPPDATA;
   env.RENULUS_PROFILE = profile;
   env.RENULUS_BACKGROUND_TEST = '1'; env.RENULUS_BACKGROUND_OWNER_PID = String(process.pid);
   env.TEMP = path.join(evidence, 't'); env.TMP = env.TEMP;
+  validateIsolatedDirectories(env, evidence);
   return env; // No inherited Electron-as-Node flag, developer path, token, provider key or runtime override.
 }
 
@@ -313,21 +338,25 @@ export function validateBundledInterpreter(interpreter, backend) {
     && interpreter.paths.length > 0 && interpreter.paths.every(value => inside(backend, value))
     && inside(backend, interpreter.pillow), 'The actual bundled interpreter and Pillow must be isolated inside the verified installation.');
 }
-function inspectBundledInterpreter(identity, env) {
+function inspectBundledInterpreter(identity, env, evidence) {
   const python = path.join(identity.backend, 'python/python.exe');
   const interpreter = json(execFileSync(python, ['-I', '-B', '-X', 'utf8', '-c',
-    'import sys,json,importlib.util;print(json.dumps(dict(version=sys.version.split()[0],prefix=sys.prefix,base_prefix=sys.base_prefix,isolated=sys.flags.isolated,no_user_site=sys.flags.no_user_site,paths=sys.path,pillow=importlib.util.find_spec("PIL").origin)))'],
+    'import sys,json,os,importlib.util;print(json.dumps(dict(version=sys.version.split()[0],prefix=sys.prefix,base_prefix=sys.base_prefix,isolated=sys.flags.isolated,no_user_site=sys.flags.no_user_site,paths=sys.path,pillow=importlib.util.find_spec("PIL").origin,directories={key:os.environ.get(key) for key in json.loads(sys.argv[1])})))',
+    JSON.stringify(isolatedDirectoryKeys)],
   { env, windowsHide: true, timeout: 30_000 }));
   validateBundledInterpreter(interpreter, identity.backend);
+  validateIsolatedDirectories(interpreter.directories, evidence);
+  check(isolatedDirectoryKeys.every(name => samePath(interpreter.directories[name], env[name])), 'The Python child changed its isolated directories.');
   return interpreter;
 }
 async function launch(request, identity, evidence, profileName, report) {
   const profile = path.join(evidence, profileName), env = isolatedEnvironment(process.env, evidence, profile);
+  await prepareIsolatedDirectories(env, evidence);
   const absentTools = ['python', 'python3', 'py', 'uv', 'node', 'npm'];
   for (const name of absentTools) check(spawnSync(path.join(env.SystemRoot ?? env.SYSTEMROOT, 'System32/where.exe'),
     [name], { env, windowsHide: true }).status === 1, 'A developer tool resolves on the app PATH: ' + name);
   const python = path.join(identity.backend, 'python/python.exe');
-  const interpreter = inspectBundledInterpreter(identity, env);
+  const interpreter = inspectBundledInterpreter(identity, env, evidence);
   const { _electron: electron } = await import('@playwright/test');
   const startedAt = Date.now();
   const application = await electron.launch({ executablePath: request.executable, args: [], cwd: path.dirname(request.executable), env, timeout: 360_000 });
@@ -336,15 +365,18 @@ async function launch(request, identity, evidence, profileName, report) {
   report.current = current;
   const { page, ...timing } = await waitForDesignCWindow(application, { startedAt, timeout: 360_000 }); current.page = page;
   page.setDefaultTimeout(30_000);
-  const native = await application.evaluate(({ app, BrowserWindow }, url) => {
+  const native = await application.evaluate(({ app, BrowserWindow }, { url, directoryKeys }) => {
     const window = BrowserWindow.getAllWindows().find(item => item.webContents.getURL() === url);
     const preferences = window.webContents.getLastWebPreferences();
     return { pid: process.pid, executable: process.execPath, packaged: app.isPackaged, electron: process.versions.electron,
       background: process.env.RENULUS_BACKGROUND_TEST, backgroundOwner: process.env.RENULUS_BACKGROUND_OWNER_PID,
+      directories: Object.fromEntries(directoryKeys.map(name => [name, process.env[name]])),
       userData: app.getPath('userData'), persistent: window.webContents.session.isPersistent(), sandbox: preferences.sandbox,
       nodeIntegration: preferences.nodeIntegration, contextIsolation: preferences.contextIsolation,
       children: process._getActiveHandles().filter(item => item.constructor.name === 'ChildProcess').map(item => item.pid).filter(Boolean) };
-  }, page.url());
+  }, { url: page.url(), directoryKeys: isolatedDirectoryKeys });
+  validateIsolatedDirectories(native.directories, evidence);
+  check(isolatedDirectoryKeys.every(name => samePath(native.directories[name], env[name])), 'The Electron child changed its isolated directories.');
   check(native.packaged && samePath(native.executable, request.executable) && native.electron === identity.electronVersion
     && samePath(native.userData, path.join(profile, 'desktop')) && !native.persistent && native.sandbox
     && !native.nodeIntegration && native.contextIsolation && native.children.length === 1
@@ -624,8 +656,9 @@ async function generateReaderFixtures(identity, evidence) {
     'The frozen fixture generator changed before execution.');
   const python = path.join(identity.backend, 'python/python.exe');
   const env = isolatedEnvironment(process.env, evidence, path.join(evidence, 'p'));
+  await prepareIsolatedDirectories(env, evidence);
   // Inspect isolation and Pillow resolution before the generator can import it.
-  const interpreter = inspectBundledInterpreter(identity, env);
+  const interpreter = inspectBundledInterpreter(identity, env, evidence);
   const generated = json(execFileSync(python, ['-I', '-B', '-X', 'utf8', script, '--output', directory],
     { env, windowsHide: true, timeout: 30_000, maxBuffer: 1024 * 1024 }));
   const manifest = validateReaderManifest(json(await readFile(path.join(directory, 'manifest.json'))));
@@ -938,7 +971,6 @@ export async function runInstalledProduct() {
   try {
     const identity = await verifyArtifacts(request); report.identity = identity;
     pass('installed-identity', { hashes: identity.actual, frozenFiles: identity.frozenFiles, inventoryFiles: identity.inventoryFiles });
-    await mkdir(path.join(evidence, 't'));
     const fixtures = await generateReaderFixtures(identity, evidence);
     current = await launch(request, identity, evidence, 'p', report);
     pass('isolated-runtime', report.launches[0]); pass('c-readiness', report.launches[0].timing);
