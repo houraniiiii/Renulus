@@ -47,10 +47,21 @@ export class AttemptSession {
   seed(attempt: Attempt) { this.epoch++; this.pending = null; this.accept(attempt, true); }
   async refresh() {
     const id = this.state.attempt?.id;
-    if (!id || this.state.busy || this.state.dirty || this.pending) return;
+    if (!id || this.state.busy || this.state.saving) return;
     const epoch = this.epoch;
     try { const attempt = await this.transport.read(id);
-      if (epoch === this.epoch && !this.state.busy && !this.state.dirty && !this.pending) this.accept(attempt, true);
+      if (epoch !== this.epoch || this.state.busy || this.state.saving) return;
+      if (this.state.dirty || this.pending) {
+        // A refused late save must not suppress reads forever. Only a frozen
+        // result can supersede local changes or an ambiguous command here.
+        if (!attempt.result || !['submitted', 'ended'].includes(attempt.status)) return;
+        if (this.state.dirty && !same(this.state.draft, draftOf(attempt)))
+          this.update({ warning: attempt.result.reason === 'deadline'
+            ? 'The timer finished. Results use the backend-saved answers accepted before the deadline.'
+            : 'The attempt finished. Results use the backend-saved answers committed at finalisation.' });
+        this.pending = null;
+      }
+      this.accept(attempt, true);
     } catch (error) { if (epoch === this.epoch) this.update({ error }); }
   }
   change(draft: Draft) {

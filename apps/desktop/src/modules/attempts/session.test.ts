@@ -103,4 +103,23 @@ describe('attempt draft ordering and recovery', () => {
     await h.session.action('help', () => ({ kind: 'sources' }));
     expect(kinds).toEqual(['hint', 'sources']); expect(h.session.snapshot().help!.context.kind).toBe('sources');
   });
+  it('reconciles a finished Test after its late draft is refused without counting that choice', async () => {
+    const h = harness();
+    const terminal: Attempt = { ...h.read(), status: 'submitted', current_item: null,
+      policy: { active_test_id: null, revision: 3, assistance_allowed: true },
+      result: { attempt_id: h.read().id, version_id: h.read().version_id, mode: 'test', origin: 'reviewed_bank', items: [],
+        correct: 0, denominator: 2, excluded: 0, unanswered: 2, not_submitted: 0, item_count: 2, reason: 'deadline',
+        finalized_at: '2026-10-10T12:00:05Z', cohorts: {} as NonNullable<Attempt['result']>['cohorts'] } };
+    h.transport.write = async () => { throw new ApiError('Resume the attempt before continuing.', 409, 'attempt_not_active'); };
+    h.transport.read = async () => terminal;
+    h.session.change(selected(h.read(), 'b'));
+    await expect(h.session.flush()).rejects.toThrow('Resume the attempt');
+    expect(h.session.snapshot().dirty).toBe(true);
+    await h.session.refresh();
+    expect(h.session.snapshot().attempt!.result).toEqual(terminal.result);
+    expect(h.session.snapshot().draft!.answers[0].option_ids).toEqual([]);
+    expect(h.session.snapshot().dirty).toBe(false);
+    expect(h.session.snapshot().warning).toContain('backend-saved');
+    expect(h.session.snapshot().error).toBeNull();
+  });
 });

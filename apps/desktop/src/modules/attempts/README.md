@@ -89,3 +89,13 @@ through the shared policy endpoint, reopens the immutable result, deletes the
 collection through its API and saves a retained report through the renderer.
 External receipts are `C:/Renulus/scratch/design-c/attempts/backend-pytest-09.txt`
 and `frontend-connected-04.txt`; the owned backend shut down after the checks.
+
+The `19125498` follow-up reproduced a late-save failure against actual HTTP:
+expiry committed the durable Test, but a refused draft left the renderer dirty
+and suppressed every later poll. The controller now reads while a save is no
+longer in flight and accepts a frozen terminal result without applying the late
+choice. Active work and ambiguous commands remain protected from replacement.
+Four actual HTTP journeys plus eight controller checks passed in
+`frontend-connected-05.txt`; five focused authority/expiry/publication/provenance
+backend checks passed in `backend-pytest-11.txt`. Both receipts remain in the
+same owned scratch root, alongside the preserved failing reproduction.

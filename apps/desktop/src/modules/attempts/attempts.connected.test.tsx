@@ -97,4 +97,27 @@ connected('actual attempt page → router → collection/SQLite', () => {
     await screen.findByText('Your local report was saved. It does not change this answer or result.');
     expect((await remote<Attempt>('/assessment/test-attempts/' + id)).result).toEqual(terminal.result);
   });
+  it('shows backend-finalised results when a displayed choice reaches the server after expiry', async () => {
+    let release!: () => void;
+    const delayed = new Promise<void>(resolve => { release = resolve; });
+    vi.stubGlobal('fetch', async (path: string, options: RequestInit) => {
+      if (path.endsWith('/draft') && options.method === 'PUT') await delayed;
+      return request(origin + path, { ...options, signal: undefined });
+    });
+    render(<AttemptPage versionId={versionId} mode="test" timing={{ kind: 'timed', duration_seconds: 2 }} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Start Test' }));
+    fireEvent.click(await screen.findByRole('radio', { name: 'Token a' }));
+    try {
+      await waitFor(async () => {
+        expect((await remote<{ assistance_allowed: boolean }>('/assessment/policy')).assistance_allowed).toBe(true);
+      }, { timeout: 7000, interval: 200 });
+    } finally { release(); }
+    await screen.findByRole('heading', { name: 'Test results' }, { timeout: 6000 });
+    expect(screen.getByText(/Results use the backend-saved/)).toBeTruthy();
+    const list = await remote<{ items: { id: string; version_id: string }[] }>('/assessment/test-attempts');
+    const terminal = await remote<Attempt>('/assessment/test-attempts/' + list.items.find(item => item.version_id === versionId)!.id);
+    expect(terminal.result!.unanswered).toBe(3);
+    expect(terminal.answers[0].option_ids).toEqual([]);
+    expect(terminal.result!.reason).toBe('deadline');
+  });
 });
