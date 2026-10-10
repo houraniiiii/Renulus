@@ -1106,3 +1106,101 @@ membership into metadata or write a competing project-link authority.
 
 Dependent Notes coding awaits these exact prerequisites/reservations. No schema
 change or feature completion is inferred from the API proposal.
+
+### Notes owner checkpoint and prerequisite receipt — October 10
+
+The preceding proposal was subsequently authorised and implemented. Apply
+e0e51784762a60ddba828c46e1c47b43582137b4 before
+98f5f3e4596672d86876697073750f1da8c1fda6. The first commit creates the Notes
+test file and fixes actual original loss: queued note replacement, cancellation
+and failed extraction must preserve saved study-note originals and historical
+citations. Ordinary import cancellation keeps its prior discard behaviour.
+Explicit document deletion still removes all note revisions' bytes.
+
+The second commit adds note_models.py, note_service.py and note_api.py, plus
+repository CAS/idempotency and the owner tests. Its router registers notes and
+returns /library/notes for the parent mount. Summary is exactly document_id,
+revision_id, ordinal, title, updated_at and reference; detail adds text. The
+reference targets note_revision. Per-revision titles reuse SourceMetadata.notes;
+no new table is introduced. Saves call projects.note_saved_in once inside the
+caller transaction after note rows are inserted, with no second epoch bump.
+The prerequisite is Project owner af1a1e28d98e3800e870c20890060a2a25e28330,
+integrated by the parent as b0bcb40d.
+
+Actual lane receipt:
+C:/Renulus/scratch/design-c/dc-review-readers/notes-owner-run1.xml — 35 passed,
+zero failures/errors/skips in 158.127 seconds. The six Notes cases cover actual
+HTTP create/edit/replay/historical text and title/reopen, stale edit and delete,
+idempotency conflicts, delete replay and retained originals through replacement,
+cancel and actual extraction failure. The other checks are 16 Knowledge
+regressions and 13 actual Project checks, including caller rollback and unchanged
+retrieval eligibility. The earlier retention red/green receipts remain in the
+synthetic lane. Saves do not attest successful extraction or index readiness.
+
+The parent reports integrating the two commits as 820d1906/7116e427 and mounting
+Notes in a4439597. Its separate six backend checks, six frontend checks and
+hidden n1 journey are parent evidence: save v1, typed chat draft without send,
+save v2 and Source 1 still reading v1, including narrow/200-percent pixels.
+These are not new runs by this lane. Remaining dedicated Notes gates are
+HTTP project-filter/rights/tombstone and stale Study-context cases, deletion
+recovery, and matching packaged acceptance. No Notes ticket is marked closed.
+
+### R7 safe Reader position checkpoint — October 10
+
+Content-only source commit b3addad5f29e4b29f2d075534d156ce7644a1696 changes only:
+
+- apps/desktop/src/modules/reader/Reader.tsx
+- apps/desktop/src/modules/reader/Reader.test.tsx
+- apps/desktop/src/modules/reader/index.tsx
+- apps/desktop/src/modules/reader/types.ts
+- tests/integration/test_design_c_readers.py
+
+The actual Reader now consumes Workspace position/onPositionChange. Positions
+are validated with the existing Workspace validLocator and bounded to the
+production request limits: page/frame 1–300 and first row 1–100000. Restore uses
+the saved position, then the reference locator. Successful PDF/image navigation
+and table window/sheet changes emit canonical locators; cell and text selection
+also emit locators. Callback echoes cannot restart a table window or replace a
+selected range. Known text-item restoration scrolls inside the Reader without
+persisting pixel offsets. Failed preview and aborted Workspace authority cannot
+publish a replacement position. Positions contain no original path, filename,
+hash or Study-help receipt. Shared scalar Study headers remain on all mediated
+Reader requests. No shared types, storage, server or dependencies were edited.
+
+Prerequisites are the existing Workspace position/callback and validLocator
+seams plus integrated Reader grid/Study-header foundations in d1b5f8a2 and
+c6b72502. The lane checkpoint was based on c6ae5025, the normal merge of
+d1b5f8a2. The Notes frontend commit is not an R7 prerequisite.
+
+Reproduced failures are retained in
+C:/Renulus/scratch/design-c/dc-review-readers/reader-position-red1.json
+(saved PDF page 3 requested as page 1) and reader-position-red2.json (CSV cell
+selection overwritten by the window default; click after text mouseup replaced
+the selected range with a whole block). The fixes have these completed checks:
+
+- reader-position-final2.json: 34 passed, zero failures — 22 actual Reader
+  component/transport checks and 12 existing Workspace checks. CSV and XLSX
+  tests mount the actual Reader in the actual WorkspaceProvider/WorkspacePanel,
+  restore row 101, preserve cell callback echoes, move to rows 201–250 and
+  remount from saved preferences. XLSX restores the selected sheet and resets
+  its row on explicit sheet change. PDF and image page/frame restore and emit;
+  known text items restore locally. Invalid/path-bearing/out-of-request-bounds
+  positions are ignored, failed preview retains position and Study receipt
+  cancellation/header behaviour still passes. Transport responses in these
+  component tests are synthetic; they are not parser or SQLite attestation.
+- reader-position-api1.xml: 20 passed, zero failures/errors/skips in 148.378
+  seconds, using the actual assembled FastAPI/SQLite and installed parsers.
+  Three new cases persist Workspace preferences and recreate the app, then
+  open real CSV/XLSX rows 101–200 or page 3 of a five-page PDF and retrieve its
+  PNG asset. Exact original SHA is checked. Revoking current display rights
+  denies the retained reference while keeping its safe tab/position. Existing
+  original, inert HTML/XML, Case authority, stale policy/epoch and Study guard
+  checks also pass. No providers/external sockets are used.
+- Full desktop TypeScript --noEmit with reader-grid-tsconfig.json passed,
+  as did git diff --check. All receipts/cache/state remain under
+  C:/Renulus/scratch/design-c/dc-review-readers/.
+
+The remaining R7 acceptance is the parent's assembled hidden close/reopen
+journey and matching reader package. This lane does not attest native dialogs,
+installed reader dependencies or physical scrolling/zoom from component tests.
+R10 Workspace Files inventory remains with the parent. No feature is closed.
