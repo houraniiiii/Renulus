@@ -10,6 +10,7 @@ const origin = env.RENULUS_ATTEMPT_TEST_ORIGIN;
 const connected = describe.skipIf(!origin);
 const request = globalThis.fetch.bind(globalThis);
 let versionId: string;
+let testId: string;
 async function remote<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await request(origin + '/api/v1' + path, init);
   if (!response.ok) throw new Error('Actual backend refused ' + path + ': ' + response.status + ' ' + await response.text());
@@ -19,9 +20,10 @@ beforeEach(async () => {
   if (!origin) return;
   const url = new URL(origin);
   if (url.protocol !== 'http:' || !['127.0.0.1', 'localhost'].includes(url.hostname)) throw new Error('Connected tests require an owned loopback backend.');
-  const saved = await remote<{ version_id: string }>('/assessment/tests/reviewed', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+  const saved = await remote<{ test_id: string; version_id: string }>('/assessment/tests/reviewed', { method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ idempotency_key: crypto.randomUUID(), title: 'Synthetic connected UI', count: 3 }) });
   versionId = saved.version_id;
+  testId = saved.test_id;
   vi.stubGlobal('fetch', (path: string, options: RequestInit) => request(origin + path, { ...options, signal: undefined }));
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
@@ -61,5 +63,38 @@ connected('actual attempt page → router → collection/SQLite', () => {
     expect(attempt.answers[0].option_ids).toEqual(['a']); expect(attempt.result!.correct).toBe(1);
     expect(attempt.result!.denominator).toBe(3); expect(attempt.result!.items).toHaveLength(3);
     expect(attempt.policy.assistance_allowed).toBe(true);
+  });
+  it('expires a timed Test while its page is closed and retains results and reports after collection deletion', async () => {
+    const page = render(<AttemptPage versionId={versionId} mode="test" timing={{ kind: 'timed', duration_seconds: 5 }} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Start Test' }));
+    fireEvent.click(await screen.findByRole('radio', { name: 'Token a' }));
+    const list = await remote<{ items: { id: string; version_id: string }[] }>('/assessment/test-attempts');
+    const id = list.items.find(item => item.version_id === versionId)!.id;
+    await waitFor(async () => {
+      const saved = await remote<Attempt>('/assessment/test-attempts/' + id);
+      expect(saved.answers[0].option_ids).toEqual(['a']);
+    });
+    page.unmount();
+    await waitFor(async () => {
+      const policy = await remote<{ assistance_allowed: boolean }>('/assessment/policy');
+      expect(policy.assistance_allowed).toBe(true);
+    }, { timeout: 9000, interval: 250 });
+    const terminal = await remote<Attempt>('/assessment/test-attempts/' + id);
+    expect(terminal.result!.reason).toBe('deadline');
+    expect(terminal.result!.correct).toBe(1);
+    const collection = await remote<{ revision: number }>('/assessment/tests/' + testId);
+    await remote('/assessment/tests/' + testId, { method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expected_revision: collection.revision, idempotency_key: crypto.randomUUID() }) });
+    render(<AttemptPage attemptId={id} />);
+    await screen.findByRole('heading', { name: 'Test results' });
+    expect(screen.getByText(/The original collection is unavailable/)).toBeTruthy();
+    const retained = await remote<Attempt>('/assessment/test-attempts/' + id);
+    expect(retained.result).toEqual(terminal.result);
+    expect(retained.provenance_unavailable).toBe(true);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Question seems wrong' })[0]);
+    fireEvent.change(screen.getByRole('textbox', { name: 'What seems wrong?' }), { target: { value: 'Original synthetic report after removal' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save report' }));
+    await screen.findByText('Your local report was saved. It does not change this answer or result.');
+    expect((await remote<Attempt>('/assessment/test-attempts/' + id)).result).toEqual(terminal.result);
   });
 });

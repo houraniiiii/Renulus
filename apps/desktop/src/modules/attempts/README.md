@@ -81,3 +81,11 @@ These checks do not establish native Windows acceptance. Integration still
 needs the assembled shell start/resume/policy/timer/finalisation flows,
 Workspace/Chat/Notes receipts, Home/Memory consumption, all origins and
 populated export/restore. DC13/DC14/DC15 remain open until that evidence.
+
+At the merged `c19d1493` baseline, the actual whole-attempt backend suite
+passed 21 checks, and the renderer passed three actual HTTP journeys plus
+seven controller checks. The timer journey closes the page, reconciles expiry
+through the shared policy endpoint, reopens the immutable result, deletes the
+collection through its API and saves a retained report through the renderer.
+External receipts are `C:/Renulus/scratch/design-c/attempts/backend-pytest-09.txt`
+and `frontend-connected-04.txt`; the owned backend shut down after the checks.
