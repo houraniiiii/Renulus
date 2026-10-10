@@ -639,7 +639,7 @@ describe('Deliberate import recovery', () => {
     expect((screen.getByRole('button', { name: 'Add document' }) as HTMLButtonElement).disabled).toBe(false);
     fireEvent.change(input, { target: { files: [new File(['Synthetic file'], 'second.exe')] } });
     expect(permission.checked).toBe(false); expect((screen.getByRole('button', { name: 'Add document' }) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText('Choose a PDF, PNG, JPEG, TIFF, text, DOCX, PPTX or XLSX file.')).toBeTruthy();
+    expect(screen.getByText('Choose PDF, PNG, JPEG, TIFF, text, CSV, HTML, XML, DOCX, PPTX or XLSX.')).toBeTruthy();
     expect(input.getAttribute('aria-invalid')).toBe('true');
     expect(request.mock.calls.some(([url]) => String(url).includes('/library/import/'))).toBe(false);
   });
