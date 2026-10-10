@@ -200,6 +200,13 @@ JSON remains records-only: its target is subsequently hydrated through the
 real ZIP owner before original-byte retrieval. The pre-upgrade snapshot remains
 byte-checked. This proves owner close/reassembly within the installed interpreter;
 separate fresh Electron launches of the upgraded profile are still required.
+The independent data reviewer rehashed the driver, seed and final receipt,
+matched all nine gate records to `events.jsonl` (SHA256
+`d4fe65c701f68d51fc85664d909c93acbb86924bc4bb9435aa629d9ed9db032f`),
+and checked each gate against the frozen assertions. No material mismatch was
+found. The review confirms six distinct generations for each engine, counts
+changing from two to one after deletion, and readiness/dirty-state checks before
+retrieval; it does not broaden the receipt's reopen/native limits.
 
 Manufacture and installation use fresh `matching-<revision>` and
 `installed-<revision>` destinations. A matching receipt must compare backend,
