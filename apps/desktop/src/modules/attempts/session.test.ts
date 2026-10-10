@@ -81,4 +81,26 @@ describe('attempt draft ordering and recovery', () => {
     await expect(h.session.action('help', () => ({}))).rejects.toThrow('policy changed');
     expect(h.session.snapshot().help).toBeNull();
   });
+  it('does not let a delayed poll rewind a completed final submission', async () => {
+    const h = harness(); const wait = deferred(); const old = structuredClone(h.read()); const read = h.transport.read;
+    h.transport.read = async id => { await wait.promise; return old; };
+    const poll = h.session.refresh(); h.transport.read = read;
+    await h.session.action('submit', attempt => ({ expected_draft_revision: attempt.draft_revision }));
+    wait.release(); await poll;
+    expect(h.session.snapshot().attempt!.status).toBe('submitted');
+    expect(h.session.snapshot().attempt!.policy.assistance_allowed).toBe(true);
+  });
+  it('allows another help kind after an unavailable authored hint is refused', async () => {
+    const h = harness(); const study = { ...h.read(), mode: 'study' as const, policy: { active_test_id: null, revision: 2, assistance_allowed: true } }; h.session.seed(study);
+    const kinds: string[] = []; h.transport.read = async () => study;
+    h.transport.write = async <T,>(_path: string, _method: string, raw: unknown) => {
+      const body = raw as { kind: HelpReceipt['context']['kind'] }; kinds.push(body.kind);
+      if (body.kind === 'hint') throw new ApiError('No authored hint', 409, 'hint_unavailable');
+      return { hint: null, references: [], assisted: true, context: { kind: body.kind, attempt_id: study.id, item_id: study.current_item!.item_id,
+        version_id: study.version_id, draft_revision: 0, policy_revision: 2 } } as T;
+    };
+    await expect(h.session.action('help', () => ({ kind: 'hint' }))).rejects.toThrow('No authored hint');
+    await h.session.action('help', () => ({ kind: 'sources' }));
+    expect(kinds).toEqual(['hint', 'sources']); expect(h.session.snapshot().help!.context.kind).toBe('sources');
+  });
 });

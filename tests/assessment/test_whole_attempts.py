@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 import pytest
 
 from renulus.assessment.attempt_api import create_router
-from renulus.assessment.attempt_models import SubmitAttempt
+from renulus.assessment.attempt_models import StartAttempt, SubmitAttempt
 from renulus.assessment.attempt_repository import WholeAttemptRepository
 from renulus.contracts import ApiError
 from renulus.assessment.test_api import create_router as collection_router
@@ -19,6 +19,18 @@ from renulus.storage import Database
 from renulus.storage.relations import reconcile_unavailable_references
 
 BASE = "/api/v1/assessment/test-attempts"
+
+
+@pytest.fixture(autouse=True)
+def assessment_modules(monkeypatch, tmp_path):
+    # Exercise the parent's actual full router/policy assembly. The inherited
+    # narrow fixture currently cannot construct the new conversation router.
+    # No provider endpoints are invoked; helpers are offline and profile-owned.
+    monkeypatch.setattr("renulus.server.MODULE_ORDER", ("runtime", "content", "knowledge", "retrieval", "learn", "cases",
+                                                       "assessment", "memory", "study", "updates"))
+    monkeypatch.setenv("HF_HUB_OFFLINE", "1")
+    monkeypatch.setenv("TRANSFORMERS_OFFLINE", "1")
+    monkeypatch.setenv("HF_HOME", str(tmp_path / "offline-helper-cache"))
 
 
 class Clock:
@@ -40,8 +52,10 @@ def whole(app):
         migration = root / (ordinal + ".sql")
         assert migration.is_file(), "Integrate parent migration" + ordinal + " before persistence acceptance"
         services.db.apply_migration("assessment-" + ordinal, migration.read_text(encoding="utf-8"))
-    app.include_router(collection_router(services), prefix="/api/v1")
-    app.include_router(create_router(services), prefix="/api/v1")
+    if "saved_tests" not in services.registry:
+        app.include_router(collection_router(services), prefix="/api/v1")
+    if "whole_attempts" not in services.registry:
+        app.include_router(create_router(services), prefix="/api/v1")
     clock = Clock()
     repository = services.get("whole_attempts")
     repository.clock, repository.monotonic = clock, lambda: 0
@@ -281,6 +295,9 @@ def test_report_and_result_retain_snapshot_when_live_collection_disappears(whole
     assert reopened["provenance_unavailable"] and reopened["result"] == result
     row = services.db.fetch_one("SELECT * FROM assessment_question_reports")
     assert row["live_version_id"] is None and row["version_id"] == version_id
+    assert json.loads(row["question_snapshot_json"])["provenance"]["item"]["item_id"] == item_id
+    snapshot = json.loads(services.db.fetch_one("SELECT version_snapshot_json FROM assessment_test_attempts")["version_snapshot_json"])
+    assert snapshot["schema"] == "whole-attempt-snapshot/1" and snapshot["pinned_provenance"]["items"]
 
 
 def test_shared_reconcile_callback_advances_policy_and_late_help_context_refuses(whole):
@@ -330,3 +347,76 @@ def test_archived_collection_cannot_start_and_repeat_receipt_survives_repository
     services.db.execute("UPDATE assessment_tests SET lifecycle='archived'")
     response = client.post(BASE, json={"version": {"type": "saved_test_version", "id": version_id}}, headers={"Idempotency-Key": "archive-start-refused"})
     assert response.status_code == 409 and response.json()["error"]["code"] == "test_not_active"
+
+
+def test_personal_edited_bank_origin_never_becomes_reviewed_by_selecting_test_mode(whole):
+    client, services, _, version_id = whole
+    with services.db.transaction() as conn:
+        version = services.get("saved_tests").pinned_version(conn, version_id)
+    edited = client.post("/api/v1/assessment/tests/" + version.test_id + "/versions", json={"idempotency_key": "synthetic-personal-edit",
+        "expected_revision": 1, "base_version_id": version_id, "items": [item.model_dump(mode="json") for item in version.items]})
+    assert edited.status_code == 200, edited.text
+    response = client.post(BASE, json={"version": {"type": "saved_test_version", "id": edited.json()["version_id"]}, "mode": "test"},
+                           headers={"Idempotency-Key": "start-personal-test"})
+    assert response.status_code == 201, response.text
+    attempt = response.json()
+    final = finish(client, attempt, draft(attempt)).json()["result"]
+    assert final["origin"] == "reviewed_bank" and final["review_quality"] == "personal"
+    assert final["cohorts"]["personal"]["denominator"] == 3 and final["cohorts"]["fresh"]["denominator"] == 0
+    payloads = [json.loads(row["payload_json"]) for row in services.db.fetch_all("SELECT * FROM learning_evidence")]
+    assert all(not payload["reviewed"] and not payload["bank_cohort_eligible"] for payload in payloads)
+
+
+def test_start_refuses_lost_review_attestation_without_creating_partial_attempt(whole, content):
+    client, services, _, version_id = whole
+    with services.db.transaction() as conn:
+        version = services.get("saved_tests").pinned_version(conn, version_id)
+    content.versions[(version.items[0].question_id, 1)]["review"]["source_key_checked"] = False
+    response = client.post(BASE, json={"version": {"type": "saved_test_version", "id": version_id}}, headers={"Idempotency-Key": "unreviewed-start-refused"})
+    assert response.status_code == 409 and response.json()["error"]["code"] == "test_not_ready"
+    assert services.db.fetch_all("SELECT * FROM assessment_test_attempts") == []
+
+
+def test_producer_rechecks_policy_before_serialising_study_feedback(whole, monkeypatch):
+    client, services, _, version_id = whole
+    study = start(whole)
+    assert commit(client, study).status_code == 200
+    repository = services.get("whole_attempts")
+    original = repository.get
+    def racing_read(attempt_id):
+        result = original(attempt_id)
+        repository.start(StartAttempt(version={"type": "saved_test_version", "id": version_id}, mode="test"), "start-between-read-and-json")
+        return result
+    monkeypatch.setattr(repository, "get", racing_read)
+    response = client.get(BASE + "/" + study["id"])
+    assert response.status_code == 409 and "PRIVATE_REVIEWED_KEY_SENTINEL" not in response.text
+
+
+def test_real_active_test_gates_legacy_routes_and_expiry_is_reconciled_before_help_dispatch(whole):
+    client, services, clock, _ = whole
+    attempt = start(whole, "test", seconds=30)
+    for path in ("/assessment/aggregates", "/assessment/progress", "/assessment/mistakes", "/assessment/sessions",
+                 "/assessment/practice/sessions", "/study", "/memory", "/learn/threads", "/cases/saved",
+                 "/knowledge/documents", "/content/topics", "/data/export", "/data/backup?format_version=2", "/home"):
+        response = client.get("/api/v1" + path)
+        assert response.status_code == 409, path
+        assert "PRIVATE_" not in response.text
+    for path in ("/runtime/runs", "/retrieval/discover", "/data/restore", "/data/backup/restore"):
+        assert client.post("/api/v1" + path, json={}).status_code == 409, path
+    for path in ("/health", "/assessment/policy", "/connections", "/data/recovery", "/home/preferences"):
+        assert client.get("/api/v1" + path).status_code == 200, path
+    clock.advance(30)
+    assert client.get("/api/v1/content/topics").status_code == 200
+    final = client.get(BASE + "/" + attempt["id"]).json()
+    assert final["result"]["reason"] == "deadline" and final["result"]["unanswered"] == 3
+    assert len(services.db.fetch_all("SELECT * FROM learning_evidence")) == 3
+
+
+def test_reviewed_single_answer_rejects_multiple_selection_without_committing(whole):
+    client, services, _, _ = whole
+    attempt = start(whole)
+    response = post(client, attempt, "submit-answer", {"expected_revision": 0, "item_id": attempt["current_item"]["item_id"],
+                    "option_ids": ["a", "b"]}, "multi-choice-refused")
+    assert response.status_code == 422
+    assert services.db.fetch_one("SELECT draft_revision,committed_json FROM assessment_test_attempts")["draft_revision"] == 0
+    assert services.db.fetch_all("SELECT * FROM learning_evidence") == []

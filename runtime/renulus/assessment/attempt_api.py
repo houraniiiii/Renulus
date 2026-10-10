@@ -3,9 +3,11 @@
 import sqlite3
 
 from fastapi import APIRouter, Header, Response
+from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 from renulus.contracts import ApiError
+from renulus.storage.assessment_policy import policy_snapshot
 
 from .attempt_models import (CommitAnswer, HelpRequest, ItemRequest, QuestionReport,
                              SaveDraft, StartAttempt, SubmitAttempt, Transition)
@@ -17,9 +19,25 @@ def create_router(services):
     services.registry["whole_attempts"] = repository
     router = APIRouter(prefix="/assessment", tags=["whole-attempts"])
 
-    def call(method, *args):
+    def call(method, *args, status_code=200):
         try:
-            return method(*args)
+            result = method(*args)
+            # The parent excludes this router from ordinary help middleware.
+            # Recheck after production and serialize while holding the policy
+            # transaction, so a new Test cannot publish old Study feedback.
+            with services.db.transaction() as conn:
+                repository.reconcile_in(conn)
+                policy = policy_snapshot(conn)
+                if "context" in result:
+                    repository.require_help_context_in(conn, result["context"])
+                elif "id" in result and "policy" in result:
+                    if policy["revision"] != result["policy"]["revision"]:
+                        raise ApiError("assistance_changed", "Assessment access changed. Reopen the attempt.", 409, True)
+                    repository._allowed_in(conn, result["id"] if result["mode"] == "test" and result["status"] == "active" else None)
+                elif "policy" in result:
+                    result["policy"] = policy
+                return JSONResponse(result, status_code=status_code, headers={"Cache-Control": "no-store",
+                    "X-Renulus-Assessment-Policy": str(policy["revision"])})
         except sqlite3.Error as error:
             raise ApiError("assessment_storage_failed", "Attempt storage is unavailable. Keep your draft and try again.", 503, True) from error
         except ValidationError as error:
@@ -36,7 +54,7 @@ def create_router(services):
 
     @router.post("/test-attempts", status_code=201)
     def start(body: StartAttempt, idempotency_key: str = Header(min_length=8, max_length=128)):
-        return call(repository.start, body, idempotency_key)
+        return call(repository.start, body, idempotency_key, status_code=201)
 
     @router.get("/test-attempts/{attempt_id}")
     def read(attempt_id: str):
@@ -76,6 +94,6 @@ def create_router(services):
 
     @router.post("/test-attempts/{attempt_id}/reports", status_code=201)
     def report(attempt_id: str, body: QuestionReport, idempotency_key: str = Header(min_length=8, max_length=128)):
-        return call(repository.report, attempt_id, body, idempotency_key)
+        return call(repository.report, attempt_id, body, idempotency_key, status_code=201)
 
     return router

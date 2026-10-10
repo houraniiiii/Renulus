@@ -1,6 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Badge, Button, ErrorState, Notice, PageHeader, Panel, Textarea } from '../../ui';
-import { originLabel } from './types';
+import { practiceLabel } from './types';
 import type { HelpReceipt } from './types';
 import type { AttemptsPageProps } from './index';
 import type { AttemptSession } from './session';
@@ -14,12 +14,13 @@ export default function AttemptRun({ session, onHelp, onOpenReference, onRetake 
   const item = attempt.position === draft.position ? attempt.current_item : null;
   const currentAnswer = draft.answers[draft.position]; const committed = attempt.committed.find(entry => entry.item_id === currentAnswer.item_id);
   const selected = currentAnswer.option_ids; const disabled = state.busy || attempt.status !== 'active' || !!committed;
+  const reviewed = attempt.origin === 'reviewed_bank' && attempt.review_quality === 'reviewed';
   const remaining = attempt.timing.remaining_seconds;
   const seconds = remaining === null ? null : Math.max(0, remaining - (attempt.status === 'active' ? Math.floor(Math.max(0, now - state.receivedAt) / 1000) : 0));
   const timeLabel = seconds === null ? 'Untimed' : Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
   const swallow = (promise: Promise<unknown>) => { void promise.catch(() => { /* Recovery state remains visible. */ }); };
   function changeOption(id: string, checked: boolean) { session.change({ ...draft, answers: draft.answers.map(answer => answer.item_id === currentAnswer.item_id
-    ? { ...answer, option_ids: checked ? [...answer.option_ids, id] : answer.option_ids.filter(value => value !== id) } : answer) }); }
+    ? { ...answer, option_ids: checked ? reviewed ? [id] : [...answer.option_ids, id] : answer.option_ids.filter(value => value !== id) } : answer) }); }
   function submit() { swallow(session.action('submit', (latest, displayed) => ({ expected_draft_revision: latest.draft_revision, latest_draft: latest.status === 'active' ? displayed : null })).then(() => setConfirm(false))); }
   async function help(kind: HelpReceipt['context']['kind']) {
     try { await session.action<HelpReceipt>('help', latest => ({ expected_revision: latest.draft_revision, expected_policy_revision: latest.policy.revision, item_id: latest.current_item!.item_id, kind }));
@@ -28,7 +29,7 @@ export default function AttemptRun({ session, onHelp, onOpenReference, onRetake 
   }
   function report(itemId: string) { setReporting(itemId); setReportText(''); setReportSaved(false); }
   return <div className="attempt-page"><PageHeader title={attempt.result ? (attempt.mode === 'test' ? 'Test results' : 'Study summary') : (attempt.mode === 'test' ? 'Test' : 'Study')}
-    description={originLabel[attempt.origin]} actions={<div className="attempt-meta"><span>{timeLabel}</span><Badge tone={state.error ? 'warning' : 'neutral'}>{state.saving || state.dirty ? 'Saving draft…' : state.busy ? 'Saving action…' : 'Saved'}</Badge></div>} />
+    description={practiceLabel(attempt)} actions={<div className="attempt-meta"><span>{timeLabel}</span><Badge tone={state.error ? 'warning' : 'neutral'}>{state.saving || state.dirty ? 'Saving draft…' : state.busy ? 'Saving action…' : 'Saved'}</Badge></div>} />
     {attempt.provenance_unavailable && <Notice tone="warning">The original collection is unavailable. This attempt keeps its pinned version and historical result.</Notice>}
     {state.warning && <Notice tone="warning">{state.warning}</Notice>}
     {!!state.error && <><ErrorState error={state.error} title="This action needs recovery" onRetry={() => swallow(session.retry())} />
@@ -37,8 +38,8 @@ export default function AttemptRun({ session, onHelp, onOpenReference, onRetake 
     {attempt.result ? <><Panel><div className="attempt-result-score"><strong>{attempt.result.correct}<span> / {attempt.result.denominator}</span></strong><p>Correct / included questions</p></div>
       <p>{attempt.result.unanswered} unanswered · {attempt.result.excluded} excluded · {attempt.result.not_submitted} not submitted</p>
       {attempt.result.reason === 'deadline' && <p>The timer ended this Test using backend-saved answers.</p>}
-      <table className="attempt-cohorts"><caption>{attempt.origin === 'reviewed_bank' ? 'Reviewed cohorts for this attempt' : 'Personal practice for this attempt'}</caption><thead><tr><th scope="col">Cohort</th><th scope="col">Correct / included</th></tr></thead>
-        <tbody>{(['fresh', 'assisted', 'repeat', 'personal'] as const).filter(bucket => attempt.origin === 'reviewed_bank' ? bucket !== 'personal' : bucket === 'personal').map(bucket => <tr key={bucket}><th scope="row">{bucket}</th><td>{attempt.result!.cohorts[bucket].correct} / {attempt.result!.cohorts[bucket].denominator}</td></tr>)}</tbody></table>
+      <table className="attempt-cohorts"><caption>{reviewed ? 'Reviewed cohorts for this attempt' : 'Personal practice for this attempt'}</caption><thead><tr><th scope="col">Cohort</th><th scope="col">Correct / included</th></tr></thead>
+        <tbody>{(['fresh', 'assisted', 'repeat', 'personal'] as const).filter(bucket => reviewed ? bucket !== 'personal' : bucket === 'personal').map(bucket => <tr key={bucket}><th scope="row">{bucket}</th><td>{attempt.result!.cohorts[bucket].correct} / {attempt.result!.cohorts[bucket].denominator}</td></tr>)}</tbody></table>
       <div className="actions"><Button variant="secondary" disabled={attempt.provenance_unavailable} onClick={() => onRetake?.(attempt.version_id)}>Retake this version</Button>
         <label><input type="checkbox" checked={mistakesOnly} onChange={event => setMistakesOnly(event.target.checked)} /> Mistakes and unanswered only</label></div></Panel>
       {attempt.result.items.filter(entry => !mistakesOnly || ['incorrect', 'unanswered'].includes(entry.outcome)).map(entry => <Panel key={entry.item_id}><p className="muted">Question {attempt.answers.findIndex(answer => answer.item_id === entry.item_id) + 1}</p>
@@ -51,12 +52,13 @@ export default function AttemptRun({ session, onHelp, onOpenReference, onRetake 
       {attempt.status === 'active' && <Panel className="attempt-question">{item ? <><h2 className="attempt-stem">{item.stem}</h2>
         {item.availability !== 'current' && <Notice tone="warning">This pinned item is {item.availability}. It will be flagged separately in the result.</Notice>}
         <fieldset className="attempt-options" disabled={disabled}><legend>Select your answer</legend>{item.options.map((option, index) => <label className={selected.includes(option.id) ? 'is-selected' : ''} key={option.id}>
-          <input type="checkbox" checked={selected.includes(option.id)} onChange={event => changeOption(option.id, event.target.checked)} /><span className="attempt-option-letter" aria-hidden="true">{String.fromCharCode(65 + index)}</span><span>{option.text}</span>
+          <input type={reviewed ? 'radio' : 'checkbox'} name={'choices-' + item.item_id} checked={selected.includes(option.id)} onChange={event => changeOption(option.id, event.target.checked)} /><span className="attempt-option-letter" aria-hidden="true">{String.fromCharCode(65 + index)}</span><span>{option.text}</span>
         </label>)}</fieldset>
+        {!committed && <Button variant="ghost" disabled={disabled || !selected.length} onClick={() => session.change({ ...draft, answers: draft.answers.map(answer => answer.item_id === currentAnswer.item_id ? { ...answer, option_ids: [] } : answer) })}>Clear choice</Button>}
         {committed ? <Feedback entry={committed} /> : attempt.mode === 'study' && <div className="actions"><Button busy={state.busy} disabled={!selected.length} onClick={() => swallow(session.action('submit-answer', latest => ({ expected_revision: latest.draft_revision, item_id: latest.current_item!.item_id, option_ids: session.snapshot().draft!.answers[latest.position].option_ids })))}>Submit answer</Button>
           <Button variant="ghost" disabled={state.busy} onClick={() => { void help('hint'); }}>Hint</Button><Button variant="ghost" disabled={state.busy} onClick={() => { void help('sources'); }}>Sources</Button>
-          <Button variant="ghost" disabled={state.busy || !onHelp} title={!onHelp ? 'Notes help needs the shared workspace connection.' : undefined} onClick={() => { void help('notes'); }}>Notes</Button>
-          <Button variant="ghost" disabled={state.busy || !onHelp} title={!onHelp ? 'Chat help needs the shared chat connection.' : undefined} onClick={() => { void help('chat'); }}>Ask in chat</Button></div>}
+          <Button variant="ghost" disabled={state.busy || !onHelp} title={!onHelp ? 'Notes help is currently unavailable.' : undefined} onClick={() => { void help('notes'); }}>Notes</Button>
+          <Button variant="ghost" disabled={state.busy || !onHelp} title={!onHelp ? 'Chat help is currently unavailable.' : undefined} onClick={() => { void help('chat'); }}>Ask in chat</Button></div>}
         {state.help && state.help.context.item_id === item.item_id && <aside className="attempt-help" aria-label="Recorded assistance">{state.help.hint && <p>{state.help.hint}</p>}
           {state.help.context.kind === 'sources' && (!state.help.references.length ? <p>No reader references were saved with this version.</p> : state.help.references.map((reference, index) => <Button key={index} variant="secondary" disabled={!onOpenReference} onClick={() => onOpenReference?.(reference, state.help!.context)}>Open source {index + 1}</Button>))}
           <p className="muted">Assistance is recorded for this question.</p></aside>}

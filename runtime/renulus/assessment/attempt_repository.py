@@ -15,6 +15,7 @@ from renulus.design_c_contracts import SavedTestVersion
 from renulus.storage.assessment_policy import advance_policy, policy_snapshot, require_assistance
 
 from .attempt_models import DraftState
+from .content import ContentGateway
 
 TERMINAL = {"submitted", "ended"}
 HELP_KINDS = {"hint", "sources", "notes", "chat"}
@@ -69,13 +70,21 @@ class WholeAttemptRepository:
     @staticmethod
     def _row(conn, attempt_id):
         row = conn.execute("SELECT * FROM assessment_test_attempts WHERE id=?", (attempt_id,)).fetchone()
-        if row is None:
+        deleted = conn.execute("SELECT 1 FROM deletion_ledger WHERE entity_type='test_attempt' AND entity_id=?", (attempt_id,)).fetchone()
+        if row is None or deleted:
             raise ApiError("not_found", "This attempt is unavailable.", 404)
         return dict(row)
 
     @staticmethod
     def _version(row):
-        return SavedTestVersion.model_validate_json(row["version_snapshot_json"])
+        snapshot = json.loads(row["version_snapshot_json"])
+        return SavedTestVersion.model_validate(snapshot["version"] if snapshot.get("schema") == "whole-attempt-snapshot/1" else snapshot)
+
+    def pinned_attempt_snapshot_in(self, conn, attempt_id):
+        """Private collection/report seam; retains the full producer envelope."""
+        row = self._row(conn, attempt_id)
+        snapshot = json.loads(row["version_snapshot_json"])
+        return {"version": self._version(row), "pinned_provenance": snapshot.get("pinned_provenance", {})}
 
     @staticmethod
     def _draft(conn, row):
@@ -154,10 +163,17 @@ class WholeAttemptRepository:
         self._allowed_in(conn, target)  # Even stored acknowledgements need policy.
         if command is None:
             return None
+        self._row(conn, command["target_id"])  # A retained receipt cannot resurrect a deleted attempt.
         digest = hashlib.sha256(encode(request).encode()).hexdigest()
         if command["operation"] != operation or command["request_hash"] != digest or (attempt_id and command["target_id"] != attempt_id):
             raise ApiError("idempotency_conflict", "This request key was already used for a different action.", 409)
-        return json.loads(command["result_json"])
+        result = json.loads(command["result_json"])
+        if "policy" in result:
+            # The graded acknowledgement stays frozen in storage. Access is a
+            # live envelope; an intervening completed Test must not make an
+            # otherwise permitted receipt permanently stale.
+            result["policy"] = self._policy_snapshot_in(conn)
+        return result
 
     def _record_in(self, conn, key, operation, request, attempt_id, result):
         conn.execute("INSERT INTO assessment_attempt_commands "
@@ -206,7 +222,7 @@ class WholeAttemptRepository:
                                                               (row["live_version_id"],)).fetchone():
             return "unavailable"
         version = self._version(row)
-        if version.origin != "reviewed_bank":
+        if not version.bank_cohort_eligible:
             return "current"
         repository = self.services.registry.get("content")
         if repository is None:
@@ -219,7 +235,20 @@ class WholeAttemptRepository:
             return "withdrawn"
         if current.get("current_version") is None:
             return "unavailable"
-        return "current" if str(current["current_version"]) == item.question_version else "corrected"
+        if str(current["current_version"]) != item.question_version:
+            return "corrected"
+        if not ContentGateway._reviewed(current) or not current.get("sources") or not current.get("explanation") or current.get("kind") != "single_best_answer":
+            return "unavailable"
+        if str(current.get("key_version")) != item.key_version or str(current.get("family_version")) != item.family_version:
+            return "corrected"
+        if set(current.get("correct_option_ids", ())) != set(item.correct_option_ids):
+            return "corrected"
+        currency_table = conn.execute("SELECT 1 FROM sqlite_master WHERE name='update_affected_versions'").fetchone()
+        if currency_table and conn.execute("SELECT 1 FROM update_affected_versions WHERE kind='question' AND entity_id=? "
+                                          "AND version=? AND state='needs-re-review' LIMIT 1",
+                                          (item.question_id, int(item.question_version))).fetchone():
+            return "source_needs_review"
+        return "current" if currency_table else "unavailable"
 
     def _view_in(self, conn, row):
         version, draft = self._version(row), self._draft(conn, row)
@@ -265,6 +294,8 @@ class WholeAttemptRepository:
             if any(self._availability_in(conn, candidate, item) != "current" for item in version.items):
                 raise ApiError("test_not_ready", "This pinned version has a content warning. Resolve it in Tests before starting.", 409)
             now = self.clock()
+            provenance = json.loads(conn.execute("SELECT provenance_json FROM assessment_test_versions WHERE id=?", (version.id,)).fetchone()[0])
+            snapshot = encode({"schema": "whole-attempt-snapshot/1", "version": version.model_dump(mode="json"), "pinned_provenance": provenance})
             attempt_id = durable_id("test_attempt")
             deadline = now + timedelta(seconds=request.timing.duration_seconds) if request.timing.kind == "timed" else None
             conn.execute("INSERT INTO assessment_test_attempts "
@@ -272,7 +303,7 @@ class WholeAttemptRepository:
                          "duration_seconds,started_at,deadline_at,paused_seconds,created_at,updated_at,"
                          "finalized_at,committed_json,result_json,clock_high_water_at,paused_at) "
                          "VALUES(?,?,?,?,?,'active',0,?,?,?,?,0,?,?,NULL,'[]',NULL,?,NULL)",
-                         (attempt_id, version.id, version.id, version.model_dump_json(), request.mode, request.timing.kind,
+                         (attempt_id, version.id, version.id, snapshot, request.mode, request.timing.kind,
                           request.timing.duration_seconds, timestamp(now) if deadline else None, timestamp(deadline) if deadline else None,
                           timestamp(now), timestamp(now), timestamp(now)))
             self._observations[attempt_id] = (now, self.monotonic())
@@ -307,6 +338,8 @@ class WholeAttemptRepository:
         for identifier, answer in choices.items():
             if not set(answer.option_ids) <= {o.id for o in items[identifier].options}:
                 raise ApiError("invalid_request", "A choice does not belong to this question.", 422)
+            if version.bank_cohort_eligible and len(answer.option_ids) > 1:
+                raise ApiError("invalid_request", "Choose one answer for a reviewed-bank question.", 422)
         committed = json.loads(row["committed_json"])
         for entry in committed:
             if set(choices[entry["item_id"]].option_ids) != set(entry["selected_option_ids"]):
@@ -361,7 +394,7 @@ class WholeAttemptRepository:
         hint = None
         if request.kind == "hint":
             content = self.services.registry.get("content")
-            if version.origin == "reviewed_bank" and content and self._availability_in(conn, row, item) == "current":
+            if version.bank_cohort_eligible and content and self._availability_in(conn, row, item) == "current":
                 pinned = content.get_question_version(item.question_id, int(item.question_version))
                 if isinstance(pinned.get("hint"), str) and pinned["hint"].strip():
                     hint = pinned["hint"][:6000]
@@ -551,5 +584,6 @@ class WholeAttemptRepository:
             if request.item_id not in {item.item_id for item in version.items}:
                 raise ApiError("not_found", "This question is not in the pinned attempt.", 404)
             return self.services.get("saved_tests").save_question_report(conn, version=version, attempt_id=attempt_id,
-                item_id=request.item_id, report_text=request.report_text, idempotency_key=key)
+                item_id=request.item_id, report_text=request.report_text, idempotency_key=key,
+                provenance=self.pinned_attempt_snapshot_in(conn, attempt_id)["pinned_provenance"])
         return self._run(operation)

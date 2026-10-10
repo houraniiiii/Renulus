@@ -29,17 +29,22 @@ export class AttemptSession {
   snapshot = () => this.state;
   private update(patch: Partial<SessionState>) { this.state = { ...this.state, ...patch }; this.listeners.forEach(listener => listener()); }
   private accept(attempt: Attempt, adopt: boolean) {
+    const previous = this.state.attempt;
+    if (previous?.id === attempt.id && (attempt.draft_revision < previous.draft_revision || attempt.policy.revision < previous.policy.revision
+      || (previous.result !== null && attempt.result === null))) return;
     const terminal = attempt.status !== 'active';
     const changed = this.state.attempt?.position !== attempt.position || this.state.attempt?.draft_revision !== attempt.draft_revision || terminal;
     this.update({ attempt, receivedAt: performance.now(), ...(adopt || terminal ? { draft: draftOf(attempt), dirty: false } : {}),
       ...(changed ? { help: null } : {}), error: null });
+    if (typeof window !== 'undefined' && (!previous || previous.policy.revision !== attempt.policy.revision))
+      window.dispatchEvent(new CustomEvent('renulus:assessment-policy', { detail: attempt.policy }));
   }
   async open(id: string) {
     const epoch = ++this.epoch;
     try { const attempt = await this.transport.read(id); if (epoch === this.epoch) { this.pending = null; this.accept(attempt, true); } }
     catch (error) { if (epoch === this.epoch) this.update({ error }); }
   }
-  seed(attempt: Attempt) { this.pending = null; this.accept(attempt, true); }
+  seed(attempt: Attempt) { this.epoch++; this.pending = null; this.accept(attempt, true); }
   async refresh() {
     const id = this.state.attempt?.id;
     if (!id || this.state.busy || this.state.dirty || this.pending) return;
@@ -64,7 +69,7 @@ export class AttemptSession {
       if (this.pending && !this.pending.draft) throw new ApiError('Retry the pending action before changing answers.', 409, 'pending_action');
       const command = this.pending ?? { path: attemptPath(attempt.id, '/draft'), method: 'PUT', key: this.key(),
         draft: this.state.draft!, body: { ...this.state.draft, expected_revision: attempt.draft_revision } };
-      this.pending = command; this.update({ saving: true, error: null });
+      this.epoch++; this.pending = command; this.update({ saving: true, error: null });
       try {
         await this.transport.write<Attempt>(command.path, command.method, command.body, command.key);
         const durable = await this.transport.read(attempt.id);
@@ -73,12 +78,16 @@ export class AttemptSession {
         if (durable.status !== 'active' && !same(this.state.draft, draftOf(durable)))
           this.update({ warning: 'The timer finished. Results use the answers accepted by Renulus before the deadline.' });
         this.accept(durable, caughtUp);
-      } catch (error) { this.update({ error }); throw error; }
+      } catch (error) {
+        if (error instanceof ApiError && !error.retryable && error.status >= 400 && error.status < 500) this.pending = null;
+        this.update({ error }); throw error;
+      }
       finally { this.update({ saving: false }); }
     }
   }
   async action<T = Attempt>(action: string, body: (attempt: Attempt, draft: Draft) => unknown): Promise<T> {
     if (this.state.busy) throw new ApiError('Another attempt action is still saving.', 409, 'pending_action');
+    this.epoch++;
     this.update({ busy: true, error: null, help: null });
     try {
       await this.flush();
@@ -97,7 +106,10 @@ export class AttemptSession {
         else throw new ApiError('The question or learning policy changed. Reopen help for the current question.', 409, 'stale_help');
       }
       return result;
-    } catch (error) { this.update({ error }); throw error; }
+    } catch (error) {
+      if (error instanceof ApiError && !error.retryable && error.status >= 400 && error.status < 500) this.pending = null;
+      this.update({ error }); throw error;
+    }
     finally { this.update({ busy: false }); }
   }
   async retry() {
