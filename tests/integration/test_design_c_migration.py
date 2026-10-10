@@ -89,6 +89,19 @@ def test_composite_link_identity_preserves_independent_endpoints(tmp_path):
     assert db.fetch_one("SELECT id FROM knowledge_documents")["id"] == "document"
 
 
+def test_unlinked_membership_tombstone_cannot_revive_from_older_export(tmp_path):
+    services = create_app(tmp_path / "unlink").state.services
+    imported = services.registry["knowledge"].import_text("SYNTHETIC transplant study note", process=False)
+    services.db.execute("INSERT INTO study_projects(id,title,created_at,updated_at) VALUES('project','Study','now','now')")
+    services.db.execute("INSERT INTO study_project_documents(id,project_id,revision_id,created_at) VALUES('link','project',?,'now')", (imported["revision_id"],))
+    before = export_records(services)
+    services.db.mark_deleted("project_document", "link")
+    restore_records(services, before, confirm_older=True)
+    assert services.db.fetch_all("SELECT * FROM study_project_documents") == []
+    assert services.db.fetch_one("SELECT id FROM study_projects WHERE id='project'")
+    assert services.db.fetch_one("SELECT id FROM knowledge_revisions WHERE id=?", (imported["revision_id"],))
+
+
 @pytest.mark.parametrize("recovery_path", ["json", "segmented"])
 def test_project_link_deletion_preserves_shared_revision_and_original_identity(tmp_path, recovery_path):
     services = create_app(tmp_path / recovery_path).state.services

@@ -99,6 +99,7 @@ TOMBSTONES = {
     "saved_test_version": "assessment_test_versions", "test_attempt": "assessment_test_attempts",
     "attachment": "knowledge_attachments", "attachment_original": "knowledge_attachment_originals",
     "goal": "study_project_goals", "update_entry": "update_entries",
+    "project_chat": "study_project_chats", "project_document": "study_project_documents",
 }
 
 # Historical pins remain untouched. These optional live pointers are cleared

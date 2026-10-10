@@ -21,7 +21,7 @@ MAX_JSON_BYTES = 16 * 1024 * 1024
 SAFE_PREFIXES = ("content_", "learn_", "case_", "cases_", "assessment_",
                  "memory_", "study_", "knowledge_", "library_", "update_")
 COMMON_TABLES = {"learning_evidence", "deletion_ledger", "preferences", "conversation_commands"}
-SAFE_PREFERENCES = {"study.goals", "memory.enabled", "learn.teaching_style"}
+SAFE_PREFERENCES = {"study.goals", "memory.enabled", "learn.teaching_style", "home.preferences"}
 CATALOGUE_OMISSION = (
     "Acquisition catalogue is input metadata tied to external collection paths; "
     "retained library metadata remains in knowledge_documents and knowledge_revisions."

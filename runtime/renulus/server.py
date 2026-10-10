@@ -6,6 +6,8 @@ from pathlib import Path
 import secrets
 from contextlib import asynccontextmanager
 import inspect
+import asyncio
+import json
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -16,6 +18,7 @@ from .contracts import API_VERSION, ApiError
 from .services import Services
 from .storage import AppPaths, Database
 from .storage.database import SUPPORTED_SCHEMA
+from .storage.assessment_policy import policy_snapshot, require_assistance
 
 MODULE_ORDER = ("runtime", "content", "knowledge", "retrieval", "learn", "cases",
                 "assessment", "memory", "study", "updates")
@@ -54,6 +57,31 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
     app.state.services = services
     app.state.session_token = token
 
+    def reconcile_attempts():
+        owner = services.registry.get("whole_attempts")
+        if owner is not None:
+            owner.reconcile_all()
+
+    def needs_assistance(request):
+        path = request.url.path
+        if path in ("/api/v1/health", "/api/v1/meta", "/api/v1/assessment/policy",
+                    "/api/v1/runtime/status", "/api/v1/data/recovery", "/api/v1/home/preferences"):
+            return False
+        if path.startswith(("/api/v1/connections", "/api/v1/retrieval/connections",
+                            "/api/v1/assessment/test-attempts")):
+            return False  # Attempt owner gates every help/replay operation.
+        if request.method == "DELETE" and path.startswith(("/api/v1/runtime/runs/", "/api/v1/data/backup/preview/")):
+            return False
+        return path.startswith("/api/v1/")
+
+    def captured_policy(expected=None):
+        with services.db.transaction() as conn:
+            return require_assistance(conn, expected_revision=expected)
+
+    def policy_error(error):
+        return JSONResponse({"error": {"code": error.code, "message": error.message,
+            "retryable": error.retryable}}, status_code=error.status, headers={"Cache-Control": "no-store"})
+
     @app.middleware("http")
     async def local_boundary(request: Request, call_next):
         host = (request.headers.get("host") or "").split(":")[0]
@@ -71,7 +99,34 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
             if not secrets.compare_digest(supplied, token):
                 return JSONResponse({"error": {"code": "invalid_session",
                     "message": "Reconnect the application", "retryable": True}}, status_code=401)
-        return await call_next(request)
+        await asyncio.to_thread(reconcile_attempts)
+        guarded = needs_assistance(request)
+        try:
+            revision = await asyncio.to_thread(captured_policy) if guarded else None
+        except ApiError as error:
+            return policy_error(error)
+        response = await call_next(request)
+        if guarded:
+            try:
+                await asyncio.to_thread(captured_policy, revision)
+            except ApiError as error:
+                await response.body_iterator.aclose()
+                return policy_error(error)
+            iterator = response.body_iterator
+            async def guarded_body():
+                try:
+                    async for chunk in iterator:
+                        try:
+                            await asyncio.to_thread(captured_policy, revision)
+                        except ApiError as error:
+                            if response.headers.get("content-type", "").startswith("text/event-stream"):
+                                yield ("event: error\ndata: " + json.dumps({"type": "error", "payload": {"code": error.code, "message": error.message, "retryable": error.retryable}}) + "\n\n").encode()
+                            return
+                        yield chunk
+                finally:
+                    await iterator.aclose()
+            response.body_iterator = guarded_body()
+        return response
 
     @app.exception_handler(ApiError)
     async def product_error(request: Request, error: ApiError):
@@ -96,6 +151,12 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
         return {"version": __version__, "api_version": API_VERSION,
                 "modules": services.capabilities}
 
+    @app.get("/api/v1/assessment/policy")
+    def assessment_policy():
+        reconcile_attempts()
+        with services.db.transaction() as conn:
+            return policy_snapshot(conn)
+
     from .storage.api import create_router as data_router
     app.include_router(data_router(services), prefix="/api/v1")
 
@@ -118,6 +179,14 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
         router = module.create_router(services)
         app.include_router(router, prefix="/api/v1")
         services.capabilities[name] = {"status": "installed"}
+    # Separate feature routers preserve the existing module/legacy APIs. Their
+    # schemas have already been checked and applied before any startup backfill.
+    for name in ("learn.conversation_api", "study.project_api", "study.home_api",
+                 "assessment.test_api", "assessment.attempt_api"):
+        path = Path(__file__).parent.joinpath(*name.split(".")).with_suffix(".py")
+        if path.exists():
+            feature = importlib.import_module("renulus." + name)
+            app.include_router(feature.create_router(services), prefix="/api/v1")
     return app
 
 

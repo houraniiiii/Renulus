@@ -107,6 +107,18 @@ override. Eighteen historical status-only normalization flags remain preserved.
 An earlier migration run failed before setup because its scratch parent did not
 exist; the corrected run passed all 35 migration/contract checks.
 
+`db6852f9` publishes the exact additive migrations and policy helper; ten focused
+checks passed (`integration/migration04.xml`). Home's first slice, chat sidecars
+and workspace panel are integrated at `1a242f93`, `94b6e9bc` and `96fefd5b`.
+Their consumers and feature acceptance remain open. The lead's HTTP policy
+boundary blocks legacy help, source/reader requests, generated-practice replay
+and key-containing export/restore while a Test is active. Connection settings,
+neutral policy and recovery status stay reachable. A late-read reproduction
+confirms a private answer cannot publish after Test start. Membership unlink
+tombstones prevent an old export reviving a removed shared-document link.
+Four focused checks passed in `integration/policy02.xml`; full attempt expiry,
+provider cancellation and integrated UI/reader publication still require DC14.
+
 The entries below preserve earlier implementation evidence. Their Flow selection,
 branches, paths, issue status, time windows and heartbeat instructions describe
 those dated runs; they are not assignments or scheduling instructions for C.
