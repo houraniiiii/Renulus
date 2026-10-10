@@ -74,10 +74,13 @@ def test_quick_practice_lost_ack_replays_one_volatile_task_and_cancellation_is_n
         no_durable_input(app.state.services)
 
 
-def test_volatile_preparation_error_is_safe_and_never_creates_a_job_or_saved_artifact(tmp_path, monkeypatch):
+@pytest.mark.parametrize('error_code', [None, 'connection_required'])
+def test_volatile_preparation_error_is_safe_and_never_creates_a_job_or_saved_artifact(tmp_path, monkeypatch, error_code):
     app = app_at(tmp_path / 'quick-practice-error')
     service = app.state.services.get('chat_tests')
     async def refuse(run):
+        if error_code:
+            raise ApiError(error_code, RAW + REQUEST, 409)
         raise RuntimeError(RAW + REQUEST)
     monkeypatch.setattr(service, '_fictionalise', refuse)
     with TestClient(app) as client:
@@ -91,6 +94,22 @@ def test_volatile_preparation_error_is_safe_and_never_creates_a_job_or_saved_art
         no_durable_input(app.state.services)
     with TestClient(app_at(app.state.services.paths.root)) as restarted:
         assert restarted.get('/api/v1/conversations/test-drafts/runs/' + run_id).status_code == 404
+
+
+def test_missing_connection_returns_a_safe_recovery_action_without_provider_or_durable_input(tmp_path):
+    app = app_at(tmp_path / 'chat-test-connection-required')
+    with TestClient(app) as client:
+        started = client.post('/api/v1/conversations/test-drafts', json={
+            'intent': 'quick_practice', 'text': RAW, 'request_id': REQUEST, 'count': 5})
+        assert started.status_code == 202
+        run_id = started.json()['run_id']
+        assert wait_terminal(client, run_id)['state'] == 'failed'
+        result = client.get('/api/v1/conversations/test-drafts/runs/' + run_id + '/result')
+        assert result.status_code == 409
+        assert result.json()['error']['code'] == 'connection_required'
+        assert 'Connections' in result.json()['error']['message']
+        assert RAW not in result.text and REQUEST not in result.text
+        no_durable_input(app.state.services)
 
 
 @pytest.mark.parametrize('extra', [{'count': 10}, {'count': 20}, {'artifact': {}}, {'privacy_reviewed': True}, {'scope': 'study'}, {'text': ''}])

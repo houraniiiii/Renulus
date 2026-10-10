@@ -17,6 +17,15 @@ MAX_RUNS = 40
 MAX_ACTIVE = 3
 MAX_SOURCE = 32000
 RECEIPT_SECONDS = 1800
+PREPARATION_ERRORS = {
+    'connection_required': ('Select a subscription and model in Connections, then create a new test request.', True),
+    'learning_use_unverified': ('Select an approved learning subscription in Connections, then create a new test request.', False),
+    'model_unavailable': ('The selected model is unavailable. Review Connections, then create a new test request.', True),
+    'model_not_allowed': ('Choose an approved learning model in Connections, then create a new test request.', False),
+    'fictionalisation_privacy_refused': ('Privacy review refused this test. No test was saved. Revise the learning focus or use general learning content.', False),
+    'chat_test_unavailable': ('Test creation is unavailable. Reopen Renulus and try again.', True),
+    'chat_test_failed': ('Test creation did not finish. No test was saved. Try a new request.', True),
+}
 
 
 @dataclass
@@ -182,7 +191,9 @@ class ChatTestService:
                 run.error_code = 'chat_test_failed'
         except Exception as error:
             run.state = 'cancelled' if run.cancel.is_set() and not run.guard_failed else 'failed'
-            run.error_code = 'chat_test_unavailable' if isinstance(error, ApiError) and error.code == 'chat_test_unavailable' else 'chat_test_failed'
+            # Keep only known codes; provider/error messages can contain raw
+            # source, account details or unclassified model output.
+            run.error_code = error.code if isinstance(error, ApiError) and error.code in PREPARATION_ERRORS else 'chat_test_failed'
         finally:
             if watcher:
                 watcher.cancel()
@@ -221,7 +232,9 @@ class ChatTestService:
             require_assistance(conn)
             if run.state != 'published' or run.result is None:
                 code = run.error_code or 'chat_test_not_ready'
-                raise ApiError(code, 'The fictional test is not ready. Your source has not been saved by this request.', 409, run.state == 'failed')
+                message, retryable = PREPARATION_ERRORS.get(code,
+                    ('The fictional test is not ready. Wait for preparation or start a new request after cancellation.', False))
+                raise ApiError(code, message, 409, retryable)
             value = run.result
             row = conn.execute("SELECT v.test_id,v.items_json FROM assessment_test_versions v JOIN assessment_tests t ON t.id=v.test_id "
                 "WHERE v.id=? AND t.lifecycle!='deleted' AND NOT EXISTS(SELECT 1 FROM deletion_ledger d WHERE "
