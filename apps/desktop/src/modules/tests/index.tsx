@@ -6,6 +6,7 @@ import { useNavigation } from '../../shell/navigation';
 import { Badge, Button, EmptyState, ErrorState, Input, LoadingState, Notice, PageHeader, Select } from '../../ui';
 import TestSetupPane from './TestSetupPane';
 import GenerationPanel from '../generation/GenerationPanel';
+import { NightlyStatus } from '../nightly';
 import { useTestMutation } from './useTestMutation';
 import { originLabel, type PublishedTest, type TestOrigin, type TestPage, type TestSelection } from './types';
 import './tests.css';
@@ -16,13 +17,14 @@ const base = '/assessment/tests';
 // Saved title + real question count lead. Origin and quality stay visibly separate.
 // Paper/teal tokens, Source Sans and 4px spacing reuse the established medical system.
 export default function Tests() {
-  const { handoff } = useNavigation();
+  const { handoff, navigate } = useNavigation();
   const [origin, setOrigin] = useState<TestOrigin | ''>(''), [lifecycle, setLifecycle] = useState('active');
   const [query, setQuery] = useState(''), [search, setSearch] = useState('');
   const [cursor, setCursor] = useState<string | null>(null);
   const [selected, setSelected] = useState<TestSelection | null>(null);
   const [creating, setCreating] = useState(false), [title, setTitle] = useState('Reviewed practice'), [count, setCount] = useState('5');
   const [generating, setGenerating] = useState(false);
+  const [generationJob, setGenerationJob] = useState<string>();
   const [notice, setNotice] = useState('');
   const mutation = useTestMutation();
   const { resource, retry } = useResource(signal => {
@@ -48,13 +50,16 @@ export default function Tests() {
   return <div className="saved-tests">
     <PageHeader title="Tests" description="Return to a saved set or choose reviewed questions for your next session."
       actions={<div className="tests-actions"><Button variant="secondary" onClick={() => { setCreating(value => !value); setGenerating(false); }} disabled={mutation.locked}>New reviewed test</Button>
-        <Button aria-expanded={generating} aria-controls="tests-generation" onClick={() => { setGenerating(value => !value); setCreating(false); }} disabled={mutation.locked}><Plus size={18} aria-hidden="true" />Create test</Button></div>} />
+        <Button aria-expanded={generating} aria-controls="tests-generation" onClick={() => { setGenerating(value => !value); setGenerationJob(undefined); setCreating(false); }} disabled={mutation.locked}><Plus size={18} aria-hidden="true" />Create test</Button></div>} />
     {notice && <Notice>{notice}</Notice>}
     {mutation.error !== null && <ErrorState error={mutation.error} title="Your request needs a retry" onRetry={mutation.retry} />}
+    <NightlyStatus onPreferences={() => navigate('connections', { payload: { settings_section: 'preferences' } })}
+      onOpenTest={selection => { setSelected(selection); setGenerating(false); setCreating(false); retry(); }}
+      onReviewJob={id => { setGenerationJob(id); setGenerating(true); setCreating(false); }} />
     {generating && <section id="tests-generation" aria-label="Create a test" className="tests-generation">
       <div className="tests-generation-heading"><p>Personal practice uses the selected connection. Reviewed scores remain separate.</p>
         <Button variant="ghost" onClick={() => setGenerating(false)}>Close generation</Button></div>
-      <GenerationPanel onPublished={version => { setSelected({ test_id: version.test_id, version_id: version.version_id }); retry(); }}
+      <GenerationPanel jobId={generationJob} onPublished={version => { setSelected({ test_id: version.test_id, version_id: version.version_id }); retry(); }}
         onOpenVersion={version => { setSelected({ test_id: version.test_id, version_id: version.version_id }); setGenerating(false); retry(); }} />
     </section>}
     {creating && <form className="tests-create panel" onSubmit={create}>

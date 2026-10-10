@@ -7,6 +7,7 @@ import type { Health } from './contracts';
 import { DataManagement } from './DataManagement';
 import { RetrievalConnections } from './RetrievalConnections';
 import { NamePreference } from '../modules/home/NamePreference';
+import { NightlyPreferences } from '../modules/nightly';
 
 type Provider = 'codex' | 'opencode-go';
 type Availability = 'unknown' | 'available' | 'unavailable' | 'account_unsupported';
@@ -72,8 +73,10 @@ function statusLabel(status: string): string {
   } as Record<string, string>)[status] ?? 'Connection needs attention';
 }
 
-export function ConnectionsPage() {
-  const [section, setSection] = useState<'subscriptions' | 'sources' | 'data' | 'preferences'>('subscriptions');
+type SettingsSection = 'subscriptions' | 'sources' | 'data' | 'preferences';
+export function ConnectionsPage({ initialSection = 'subscriptions', assistanceAllowed }: { initialSection?: SettingsSection; assistanceAllowed?: boolean } = {}) {
+  const [section, setSection] = useState<SettingsSection>(initialSection);
+  useEffect(() => setSection(initialSection), [initialSection]);
   const { resource, retry } = useResource(async signal => {
     const [health, connections] = await Promise.all([
       api<Health>('/health', { signal }), api<Connections>('/connections', { signal }),
@@ -329,6 +332,6 @@ export function ConnectionsPage() {
     </>}
     {section === 'sources' && <RetrievalConnections openSource={window.renulus?.openSource} />}
     {section === 'data' && <DataManagement />}
-    {section === 'preferences' && <NamePreference />}
+    {section === 'preferences' && <><NamePreference /><NightlyPreferences assistanceAllowed={assistanceAllowed} /></>}
   </>;
 }

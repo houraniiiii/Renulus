@@ -54,7 +54,7 @@ function MorePage() {
   return <><PageHeader title="More" /><div className="secondary-destinations">{destinations.map(id => <button key={id} onClick={() => navigate(id)}><strong>{routes.find(item => item.id === id)?.label}</strong><span>{descriptions[id]}</span><ArrowRight size={18} aria-hidden="true" /></button>)}</div></>;
 }
 
-export function ModuleOutlet() {
+export function ModuleOutlet({ assistanceAllowed }: { assistanceAllowed?: boolean } = {}) {
   const { route, handoff, navigate, consumeIntent, selectConversation } = useNavigation();
   const module = routes.find(item => item.id === route)!.module;
   const Page = pages['../modules/' + module + '/index.tsx'];
@@ -82,6 +82,7 @@ export function ModuleOutlet() {
     props.mode = handoff?.mode; props.timing = handoff?.timing;
   }
   return <ModuleBoundary key={route}><Suspense fallback={<LoadingState />}>
-    {Page ? <Page {...props} /> : route === 'connections' ? <ConnectionsPage /> : route === 'more' ? <MorePage /> : <PendingPage />}
+    {Page ? <Page {...props} /> : route === 'connections' ? <ConnectionsPage assistanceAllowed={assistanceAllowed}
+      initialSection={handoff?.settings_section === 'preferences' ? 'preferences' : undefined} /> : route === 'more' ? <MorePage /> : <PendingPage />}
   </Suspense></ModuleBoundary>;
 }

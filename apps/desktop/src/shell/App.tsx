@@ -116,9 +116,9 @@ function Shell() {
       <header className="workspace-header"><p className="workspace-destination">{label}</p><div className="workspace-header-actions"><Button variant="ghost" disabled={!policy?.assistance_allowed} onClick={() => window.dispatchEvent(new Event('renulus:workspace-toggle'))}><PanelLeft size={20} aria-hidden="true" />Workspace</Button></div></header>
       {scopeLabel && <div className="scope-banner" role="status"><Shield size={17} aria-hidden="true" /><p>{scopeLabel}</p><Button variant="ghost" onClick={startFreshStudy}>End temporary context</Button></div>}
       <div className="shell-content" ref={contentRegion}><main className="workspace-main" id="learning-content" aria-label={label} tabIndex={-1} ref={content}>
-        {route === 'connections' || route === 'attempts' ? <ModuleOutlet /> : !policy ? policyError
+        {route === 'connections' || route === 'attempts' ? <ModuleOutlet assistanceAllowed={policy?.assistance_allowed === true} /> : !policy ? policyError
           ? <Notice><p>The local assessment state could not be checked.</p><div className="actions"><Button variant="secondary" onClick={refreshPolicy}>Retry</Button><Button variant="ghost" onClick={() => open('connections')}>Settings & connections</Button></div></Notice> : <LoadingState />
-          : policy.assistance_allowed ? <ModuleOutlet /> : <Notice><p>A Test is in progress. Submit it to return to chat, readers and study help.</p><div className="actions"><Button onClick={() => open('attempts', { attempt_id: policy.active_test_id })}>Resume Test</Button><Button variant="ghost" onClick={() => open('connections')}>Settings & connections</Button></div></Notice>}
+          : policy.assistance_allowed ? <ModuleOutlet assistanceAllowed /> : <Notice><p>A Test is in progress. Submit it to return to chat, readers and study help.</p><div className="actions"><Button onClick={() => open('attempts', { attempt_id: policy.active_test_id })}>Resume Test</Button><Button variant="ghost" onClick={() => open('connections')}>Settings & connections</Button></div></Notice>}
       </main><WorkspaceHost contentRef={contentRegion} /></div>
     </div>
     <dialog ref={searchDialog} className="destination-dialog" aria-labelledby="search-title" onClose={() => {

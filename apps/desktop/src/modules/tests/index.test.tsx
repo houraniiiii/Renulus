@@ -8,6 +8,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { NavigationProvider, useNavigation } from '../../shell/navigation';
+import { ConnectionsPage } from '../../platform/ConnectionsPage';
 import { fixturePython, fixtureReady, stopFixture } from '../../testBackend';
 import Tests from './index';
 import type { PublishedTest, TestPage, TestSetup } from './types';
@@ -88,6 +89,25 @@ function mount(versionId?: string) {
 }
 
 describe('saved collection against the real local router and schema', () => {
+  it('mounts nightly settings and persists preferences without starting generation', async () => {
+    render(<ConnectionsPage initialSection="preferences" assistanceAllowed />);
+    const form = await screen.findByRole('form', { name: 'Nightly preferences' });
+    expect((within(form).getByLabelText('Preferred time') as HTMLInputElement).value).toBe('22:00');
+    expect(within(form).getByRole('button', { name: '5 questions' }).getAttribute('aria-pressed')).toBe('true');
+    const before = requests.length;
+    fireEvent.click(within(form).getByRole('button', { name: '10 questions' }));
+    fireEvent.click(within(form).getByRole('button', { name: 'Save preferences' }));
+    await within(form).findByText('Nightly preferences saved. Generation is off.');
+    const result = await globalThis.fetch('/api/v1/nightly/preferences');
+    expect(await result.json()).toMatchObject({ enabled: false, local_time: '22:00', question_count: 10 });
+    expect(requests.slice(before).filter(item => item.method === 'POST')).toEqual([]);
+    cleanup();
+    mount();
+    await screen.findByRole('region', { name: 'Nightly practice' });
+    fireEvent.click(screen.getByRole('button', { name: 'Preferences' }));
+    await waitFor(() => expect(window.location.hash).toBe('#/connections'));
+  });
+
   it('opens the connected generation controls without creating or starting an attempt', async () => {
     mount(); await screen.findByLabelText('Find a saved test');
     const before = requests.length;
