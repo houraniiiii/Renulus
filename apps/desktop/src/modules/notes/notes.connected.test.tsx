@@ -98,9 +98,13 @@ it('creates once, explicitly rebases a retained draft, reads immutable history a
   fireEvent.click(screen.getByRole('button', { name: 'Use note in chat' }));
   await waitFor(() => expect(onUse).toHaveBeenCalledOnce());
   expect((await request<Note>(path)).text).toBe('Synthetic retained local edits');
+  fireEvent.click(screen.getByRole('button', { name: 'Revision 1' }));
+  await screen.findByText('Synthetic first original');
   fireEvent.click(screen.getByRole('button', { name: 'Delete note' }));
   fireEvent.click(screen.getByRole('button', { name: 'Delete all revisions' }));
   await waitFor(() => expect(screen.queryByRole('button', { name: 'Revision history' })).toBeNull());
+  expect(screen.queryByText('Synthetic first original')).toBeNull();
+  expect(screen.queryByRole('heading', { name: 'Saved revisions' })).toBeNull();
   expect(await request('/library/notes')).toEqual({ items: [] });
   const removed = await originalFetch(origin + '/api/v1' + path + '?revision_id=' + first.revision_id,
     { headers: { 'x-renulus-token': 'synthetic-notes-ui' } });

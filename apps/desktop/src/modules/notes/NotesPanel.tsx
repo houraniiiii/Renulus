@@ -79,6 +79,7 @@ export default function NotesPanel({ projectId, studyHelpContext, signal, onUse,
       pending.current = undefined; changed();
       if ('deleted' in result) {
         store.notes.delete(draftKey); store.selected.delete(scope); select('new'); setDeleting(false);
+        setHistory(undefined); setHistorical(undefined); setLatest(undefined);
         setMessage('Note deleted. Earlier references now show that the source is unavailable.');
       } else {
         const value = { title: result.title, text: result.text, base: result };

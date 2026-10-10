@@ -114,6 +114,32 @@ describe('saved notes editor', () => {
     await screen.findByText('This note is unavailable. Its saved contents are hidden until access is restored.');
     expect(screen.queryByRole('textbox', { name: 'Note' })).toBeNull(); expect(onUse).not.toHaveBeenCalled();
   });
+  it('clears open revision history only when deletion is acknowledged', async () => {
+    let deleted = false, finishDelete!: () => void;
+    vi.stubGlobal('fetch', vi.fn(async (path: string, options: RequestInit) => {
+      if (options.method === 'DELETE') return new Promise<Response>(resolve => {
+        finishDelete = () => { deleted = true; resolve(json({ deleted: true })); };
+      });
+      if (path.endsWith('/notes')) return json({ items: deleted ? [] : [note(2)] });
+      if (path.endsWith('/documents/synthetic_note')) return json({ revisions: [
+        { id: 'synthetic_revision_2', ordinal: 2 }, { id: 'synthetic_revision_1', ordinal: 1 },
+      ] });
+      return json(path.includes('?revision_id=') ? note(1, 'Synthetic historical original') : note(2));
+    }));
+    render(<Harness />); await selectNote();
+    fireEvent.click(screen.getByRole('button', { name: 'Revision history' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Revision 1' }));
+    await screen.findByText('Synthetic historical original');
+    fireEvent.click(screen.getByRole('button', { name: 'Delete note' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete all revisions' }));
+    expect(screen.getByText('Synthetic historical original')).toBeTruthy();
+    await act(async () => finishDelete());
+    await screen.findByText('Note deleted. Earlier references now show that the source is unavailable.');
+    expect(screen.queryByText('Synthetic historical original')).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Saved revisions' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Revision 1' })).toBeNull();
+    expect((screen.getByRole('textbox', { name: 'Note' }) as HTMLTextAreaElement).value).toBe('');
+  });
   it('does not hand a late saved read to chat after its panel was closed', async () => {
     let finish!: (value: Response) => void;
     vi.stubGlobal('fetch', vi.fn(async (path: string) => path.includes('?revision_id=') ? new Promise<Response>(resolve => { finish = resolve; }) : json(path.endsWith('/notes') ? { items: [note()] } : note())));
