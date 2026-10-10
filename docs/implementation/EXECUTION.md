@@ -21,10 +21,17 @@ The earlier reservations below are historical. Active work remains against the
 same DC01–DC21 backlog. Canonical root/branch and baseline 528025ff ancestry were
 rechecked; the 18 pre-existing normalization-only flags remain unstaged.
 
-Manufacture of exact `4c2898682d65b36d0281f890298ac38697e224b7` exited zero:
-typecheck/renderer/native build, public toolchain and full packaged inventory
-pass; matching installer/provenance are in `delivery/matching-4c289868`. Fresh
-`installed-4c289868` acceptance is now the lead's serial work. Aquinas' report-only
+Manufacture of exact `4c2898682d65b36d0281f890298ac38697e224b7` and its fresh
+silent installation exited zero. Typecheck/renderer/native build, public
+toolchain and full packaged inventory pass; matching installer/provenance are
+in `delivery/matching-4c289868`. `installed-4c289868` acceptance is now the lead's
+serial work. The first core preflight falsely compared a declared CRLF export
+with raw Git bytes; independent complete export parity passed. Bounded verifier
+repair `21242708` passes 46 guard checks and is the separate QA freeze for the
+second installed run. All product identity checks remain pinned to `4c289868`.
+Recovery run `r-4246ec46` passed identity/seed admission, preserved the schema-1
+snapshot, then stopped with `original_missing`; diagnosis remains open and no
+upgrade pass is claimed. Aquinas' report-only
 `bc149c91` adds bounded DC10 hidden restriction/keyboard evidence; that controller
 closed normally and freed the helper slot. No production bytes changed after
 the freeze. Completed review workers are closed; Zeno/Pauli remain available
@@ -32,7 +39,7 @@ for findings within their exact delivery-driver leases.
 
 | Owner | Current exact lease / prerequisite | Current evidence and next gate |
 | --- | --- | --- |
-| Lead | Shared integration/release paths and current guides/spec | `f5d36ac9` resolves R5 with authorized volatile tab titles; eight actual backend and 28 renderer/transport checks plus full build pass. Public payload inventory verified: 39,287 files / 2,176,578,295 bytes. No C installer manufactured yet. |
+| Lead | Shared integration/release paths and current guides/spec | Matching `4c289868` manufacture and installation pass; actual core/readers and recovery checks are running serially. Flow remains selected. |
 | Aquinas / dc01-design | Completed report-only recheck | `02906c12` records actual R3/R7–R10 and Study/Notes/source reopen passes; R4/R6 retain exact-blob prior proof. `31e9e4ce` passes the bounded R5 two-file title/Close/reopen check and retains the initial timeout/409 observation without a zero-error claim. |
 | Zeno / dc02-contracts | Installed verifier/fixture four-file lease | `ccc453dc` supplies all eight reader journeys; `2e30ee1d` confines every child user/cache directory. `f2ac20d2` adds actual installed PDF selected-page reopen and current title checks; 28 boundary and seven original/parser checks pass. Actual installed execution is parent-owned. |
 | Pauli / dc-review-data | Completed driver; actual-execution findings only | `c96afad8` installs the isolated recovery driver and nine passing stdlib guard tests. `1744e2cb` populated source eight-pass scope retained. Parent owns genuine schema-1 seed, matching installed upgrade/original/rebuild execution and separate fresh Electron reopen. |
@@ -50,8 +57,8 @@ real old/runtime producers and the now-mounted Notes service. Its eight checks
 pass at source `4316fde0`, including post-delete fresh-profile filtering across
 all three formats. Receipts preserve initial harness errors and exact limits;
 queued extraction/rebuild and packaged old-runtime execution are not implied.
-DC21 public inputs and guarded staging plan pass; no matching C package/default
-cutover is claimed. Exact paths/hashes are in delivery preparation receipts.
+DC21 public inputs, manufacture and installation pass; no matching acceptance or
+default cutover is claimed. Exact paths/hashes are in delivery preparation receipts.
 
 The completed leases in the table above are superseded by these bounded final
 acceptance reservations. The lead retains all other shared and release paths:

@@ -119,10 +119,21 @@ comparison rejected `upstream/hermes/activate.ps1`, whose committed attributes
 export CRLF. Independent exact frozen `git archive` comparison passes all 5,840
 admitted files, with zero mismatches; receipt
 `preparation/source-export-4c289868/result.json` retains the export manifest/hash.
-This is a verifier-assumption failure, not changed product content. A separately
-frozen, strictly bounded QA correction is in progress; the failed receipt is
-not promoted to a pass. Installed recovery can use the unchanged hash-verified
-Python driver while the core verifier is repaired.
+This is a verifier-assumption failure, not changed product content. Separately
+frozen QA correction `21242708dbadc7b60ee7bf865e7bbf479cdb93ca` passes 46 guard
+checks. It requires the product commit as ancestor and permits only the exact
+two verifier/test paths and Markdown documentation between freezes. Committed
+text/EOL attributes transform expected bytes only; unrelated transformations or
+inherited attribute overrides are refused. The second core run records both
+revisions; all artifact and recovery-driver checks still use `4c289868`.
+The failed first receipt is not promoted to a pass.
+
+Installed recovery run `r-4246ec46` admitted the full installed inventory and
+genuine schema-1 seed, preserved the closed original snapshot at `b`, and copied
+the hash-verified public helper assets. It then stopped with `original_missing`
+before the upgrade gate passed. `recovery-failure.json` and `events.jsonl` retain
+the failure; the exact missing-source diagnosis is pending. No recovery pass or
+owner-profile operation is inferred from admission.
 
 Manufacture and installation use fresh `matching-<revision>` and
 `installed-<revision>` destinations. A matching receipt must compare backend,
