@@ -5,6 +5,7 @@ import { AssessmentPolicyProvider, useAssessmentPolicy } from './AssessmentPolic
 import { api } from '../platform/api';
 import type { Health } from '../platform/contracts';
 import type { ConversationSummary, ProjectSummary } from '../platform/designC';
+import type { VolatileHomeDraft } from '../platform/volatileHome';
 import { useResource } from '../platform/useResource';
 import { ModuleOutlet } from './ModuleOutlet';
 import { NavigationProvider, destinationHash, routes, useNavigation, type RouteId } from './navigation';
@@ -19,6 +20,8 @@ const primary = [
 ] as const;
 function Shell() {
   const { route, revision, scope, navigate, startFreshStudy } = useNavigation();
+  const homeDraft = useRef<{ revision: number; value: VolatileHomeDraft }>({ revision, value: { text: '', intent: 'explain' } });
+  if (homeDraft.current.revision !== revision) homeDraft.current = { revision, value: { text: '', intent: 'explain' } };
   const { policy, error: policyError, refresh: refreshPolicy } = useAssessmentPolicy();
   const reading = useWorkspace();
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('renulus.navigation.collapsed') === 'true');
@@ -119,7 +122,7 @@ function Shell() {
       <div className="shell-content" ref={contentRegion}><main className="workspace-main" id="learning-content" aria-label={label} tabIndex={-1} ref={content}>
         {route === 'connections' || route === 'attempts' ? <ModuleOutlet assistanceAllowed={policy?.assistance_allowed === true} /> : !policy ? policyError
           ? <Notice><p>The local assessment state could not be checked.</p><div className="actions"><Button variant="secondary" onClick={refreshPolicy}>Retry</Button><Button variant="ghost" onClick={() => open('connections')}>Settings & connections</Button></div></Notice> : <LoadingState />
-          : policy.assistance_allowed ? <ModuleOutlet assistanceAllowed /> : <Notice><p>A Test is in progress. Submit it to return to chat, readers and study help.</p><div className="actions"><Button onClick={() => open('attempts', { attempt_id: policy.active_test_id })}>Resume Test</Button><Button variant="ghost" onClick={() => open('connections')}>Settings & connections</Button></div></Notice>}
+          : policy.assistance_allowed ? <ModuleOutlet assistanceAllowed homeDraft={homeDraft.current.value} /> : <Notice><p>A Test is in progress. Submit it to return to chat, readers and study help.</p><div className="actions"><Button onClick={() => open('attempts', { attempt_id: policy.active_test_id })}>Resume Test</Button><Button variant="ghost" onClick={() => open('connections')}>Settings & connections</Button></div></Notice>}
       </main><WorkspaceHost contentRef={contentRegion} /></div>
     </div>
     <dialog ref={searchDialog} className="destination-dialog" aria-labelledby="search-title" onClose={() => {

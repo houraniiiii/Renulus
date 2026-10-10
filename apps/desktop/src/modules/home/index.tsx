@@ -3,6 +3,7 @@ import { ArrowUp, BookOpen, ClipboardCheck, Paperclip, Stethoscope } from 'lucid
 import { ApiError, isCancelled } from '../../platform/api';
 import type { ContextScope } from '../../platform/contracts';
 import type { ConversationSummary } from '../../platform/designC';
+import type { VolatileHomeDraft } from '../../platform/volatileHome';
 import { routes, useNavigation } from '../../shell/navigation';
 import { Button, Notice } from '../../ui';
 import { cancelChatTestRun, createConversation, type ChatTestRun } from '../chat/api';
@@ -18,18 +19,20 @@ const categories = [
 ] as const;
 const running = (value: HomeState) => value.job?.state === 'running' || value.job?.state === 'queued';
 
-export default function Home({ adapters = {} }: { adapters?: HomeAdapters }) {
+export default function Home({ adapters = {}, volatileDraft }: { adapters?: HomeAdapters; volatileDraft?: VolatileHomeDraft }) {
   const navigation = useNavigation();
   const [state, setState] = useState<HomeState>();
-  const [text, setText] = useState('');
-  const [intent, setIntent] = useState<SuggestionCategory>('explain');
+  const [text, updateText] = useState(volatileDraft?.text ?? '');
+  const [intent, updateIntent] = useState<SuggestionCategory>(volatileDraft?.intent ?? 'explain');
+  function setText(value: string) { if (volatileDraft) volatileDraft.text = value; updateText(value); }
+  function setIntent(value: SuggestionCategory) { if (volatileDraft) volatileDraft.intent = value; updateIntent(value); }
   const [expanded, setExpanded] = useState<SuggestionCategory>();
   const [pending, setPending] = useState<{ prompt: string; category: SuggestionCategory }>();
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [greeting, setGreeting] = useState('Welcome back');
   const greetingChosen = useRef(false);
-  const hasDraft = useRef(false);
+  const hasDraft = useRef(!!volatileDraft?.text);
   const composer = useRef<HTMLTextAreaElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const sending = useRef(false);

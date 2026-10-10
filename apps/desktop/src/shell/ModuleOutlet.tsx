@@ -4,6 +4,7 @@ import { Button, EmptyState, ErrorState, LoadingState, PageHeader } from '../ui'
 import { ConnectionsPage } from '../platform/ConnectionsPage';
 import { studyHelpHeaders, type ConversationIdentity, type ConversationSummary } from '../platform/designC';
 import { api } from '../platform/api';
+import type { VolatileHomeDraft } from '../platform/volatileHome';
 import type { HelpReceipt } from '../modules/attempts/types';
 import { useWorkspace } from '../modules/workspace';
 import { useStudyHelp } from './StudyHelp';
@@ -58,8 +59,8 @@ function MorePage() {
   return <><PageHeader title="More" /><div className="secondary-destinations">{destinations.map(id => <button key={id} onClick={() => navigate(id)}><strong>{routes.find(item => item.id === id)?.label}</strong><span>{descriptions[id]}</span><ArrowRight size={18} aria-hidden="true" /></button>)}</div></>;
 }
 
-export function ModuleOutlet({ assistanceAllowed }: { assistanceAllowed?: boolean } = {}) {
-  const { route, handoff, navigate, consumeIntent, selectConversation } = useNavigation();
+export function ModuleOutlet({ assistanceAllowed, homeDraft }: { assistanceAllowed?: boolean; homeDraft?: VolatileHomeDraft } = {}) {
+  const { route, revision, handoff, navigate, consumeIntent, selectConversation } = useNavigation();
   const studyHelp = useStudyHelp();
   const workspace = useWorkspace();
   const [helpError, setHelpError] = useState<unknown>();
@@ -67,6 +68,7 @@ export function ModuleOutlet({ assistanceAllowed }: { assistanceAllowed?: boolea
   const module = routes.find(item => item.id === route)!.module;
   const Page = pages['../modules/' + module + '/index.tsx'];
   const props: Record<string, unknown> = {};
+  if (route === 'newchat') props.volatileDraft = homeDraft;
   if (route === 'chat') {
     props.onConversation = selectConversation;
     if (handoff?.studyHelpContext) props.studyHelpContext = studyHelp.context;
@@ -121,7 +123,7 @@ export function ModuleOutlet({ assistanceAllowed }: { assistanceAllowed?: boolea
       } catch (error) { setHelpError(error); }
     };
   }
-  return <ModuleBoundary key={route}><Suspense fallback={<LoadingState />}>
+  return <ModuleBoundary key={route === 'newchat' ? route + ':' + revision : route}><Suspense fallback={<LoadingState />}>
     {route === 'chat' && !!handoff?.studyHelpContext && studyHelp.context && <div className="actions">
       <Button variant="secondary" onClick={() => navigate('attempts', { freshStudy: true, payload: { attempt_id: studyHelp.context!.attempt_id } })}>Return to Study</Button>
     </div>}
