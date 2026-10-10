@@ -67,6 +67,10 @@ Its additional `fileInputs` list supplies exact observed locators. Use one as
 and uses Playwright `setInputFiles` directly. Refresh the snapshot after a
 selection or Case mode change. Observe the app's resulting extraction, preview,
 rights and Save state separately; successful selection alone proves none of them.
+The Design C Home field labelled `Attach file` and Chat field labelled
+`Attach files to chat` use this same observed-input and synthetic-manifest gate.
+Home selection only hands the File to Chat review; upload still requires the
+actual rights/metadata confirmation.
 
 Send `{"name":"renulus_resize","arguments":{"width":1000,"height":720}}`
 to resize only the owned hidden Flow window. Bounds are 640–2560 wide and

@@ -17,7 +17,24 @@ function AttachmentProbe() {
     <button onClick={() => nav.consumeIntent('attachmentIntent', 'different-receipt')}>Other receipt</button>
     <button onClick={() => nav.consumeIntent('attachmentIntent', 'attachment-receipt')}>Consume attachment</button></>;
 }
+function FreshAttemptProbe() {
+  const nav = useNavigation();
+  return <><button onClick={() => nav.navigate('cases')}>Temporary case</button>
+    <button onClick={() => nav.navigate('attempts', { freshStudy: true, payload: { attempt_id: 'published_attempt' } })}>Open published practice</button>
+    <span data-testid="attempt">{nav.handoff?.attempt_id as string}</span><span data-testid="scope">{nav.scope.kind}</span></>;
+}
 describe('navigation and retention boundary', () => {
+  it('retains the new exact attempt when leaving a temporary context for published practice', async () => {
+    window.history.replaceState(null, '', '#/newchat');
+    render(<NavigationProvider><FreshAttemptProbe /></NavigationProvider>);
+    fireEvent.click(screen.getByText('Temporary case'));
+    expect(screen.getByTestId('scope').textContent).toBe('temporary-case');
+    fireEvent.click(screen.getByText('Open published practice'));
+    expect(screen.getByTestId('attempt').textContent).toBe('published_attempt');
+    expect(screen.getByTestId('scope').textContent).toBe('study');
+    await waitFor(() => expect(window.location.hash).toBe('#/attempts/published_attempt'));
+    expect(screen.getByTestId('attempt').textContent).toBe('published_attempt');
+  });
   it('resolves all destination aliases and safe unknown routes', () => {
     expect(routeFromHash('#/learn')).toBe('learn'); expect(routeFromHash('#/test')).toBe('assessment'); expect(routeFromHash('#/home')).toBe('newchat'); expect(routeFromHash('#/unknown')).toBe('newchat');
   });

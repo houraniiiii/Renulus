@@ -82,7 +82,9 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const ownHashes = useRef<string[]>([]);
   function navigate(next: RouteId, options: NavigationOptions = {}) {
     setScope(current => nextScope(current, next, options));
-    setHandoff(options.freshStudy ? undefined : options.payload);
+    // Starting a fresh Study scope releases the previous context, while the
+    // caller's explicit new attempt identity remains available immediately.
+    setHandoff(options.payload);
     setRoute(next);
     setRevision(value => value + 1);
     // Only validated saved identities enter history; drafts/temporary IDs never do.

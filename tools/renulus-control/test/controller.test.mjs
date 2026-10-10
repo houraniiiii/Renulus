@@ -345,6 +345,16 @@ test('upload requires observed exact input and passes only verified bytes to Pla
   assert.ok(receipt.includes('fixture-upload')); assert.equal(receipt.includes('Synthetic educational fixture'), false);
 });
 
+test('Home Attach file is observed only as the exact safe file input label', async t => {
+  const f = await uploadFixture(t);
+  Object.assign(f.elements.get('css=' + uploadLocator.css), { label: 'Attach file', accept: '.pdf,.png,.jpg,.jpeg' });
+  const snapshot = await f.controller.run('renulus_snapshot');
+  assert.deepEqual(snapshot.fileInputs[0].locator, uploadLocator);
+  assert.equal((await f.controller.run('renulus_upload', { locator: uploadLocator, fixture: 'synthetic-study.pdf' })).hidden, true);
+  Object.assign(f.elements.get('css=' + uploadLocator.css), { label: 'Attach file credentials', hint: 'credential import' });
+  assert.deepEqual((await f.controller.run('renulus_snapshot')).fileInputs, []);
+});
+
 test('upload stays disabled without a fixed CLI root and rejects unobserved or extra arguments', async t => {
   const f = await fixture(); t.after(() => f.controller.shutdown()); await f.controller.run('renulus_start');
   await assert.rejects(f.controller.run('renulus_upload', { locator: uploadLocator, fixture: 'synthetic-study.pdf' }), { code: 'uploads_disabled' });
