@@ -41,12 +41,22 @@ def create_router(services):
     @router.post('/{kind}/{identifier}/messages')
     async def send(kind: Literal['learning','case'], identifier: str, body: Send, idempotency_key: str | None = Header(default=None)):
         entry,receipt=streaming.begin(kind,identifier,body,idempotency_key)
+        streaming.launch(entry)
         return StreamingResponse(streaming.events(entry,receipt),media_type='text/event-stream',
             headers={'Cache-Control':'no-store','X-Accel-Buffering':'no'})
 
     @router.post('/{kind}/{identifier}/runs/{run_id}/cancel')
     async def cancel(kind: Literal['learning','case'], identifier: str, run_id: str):
         return await streaming.cancel(kind,identifier,run_id)
+
+    @router.get('/{kind}/{identifier}/runs')
+    def runs(kind: Literal['learning','case'], identifier: str, limit: int = Query(default=20,ge=1,le=100),
+             cursor: str | None = Query(default=None,max_length=2048)):
+        return streaming.list(kind,identifier,limit,cursor)
+
+    @router.get('/{kind}/{identifier}/runs/{run_id}')
+    def run(kind: Literal['learning','case'], identifier: str, run_id: str):
+        return streaming.status(kind,identifier,run_id)
 
     @router.get("/{kind}/{identifier}/draft")
     def draft(kind: Literal["learning", "case"], identifier: str):

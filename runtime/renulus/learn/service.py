@@ -442,6 +442,7 @@ class LearnService:
             if run.thread_id:
                 self.db.execute("UPDATE learn_runs SET state='failed',error_code=?,updated_at=? WHERE id=? AND state='running'",
                                 (code, utc_now(), run.id))
+            await self._cancel_provider(run.id)
             yield event("error", {"code": code, "message": message,
                                   "retryable": error.retryable if isinstance(error, ApiError) else True})
         finally:

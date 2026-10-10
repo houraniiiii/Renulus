@@ -8,6 +8,7 @@ import json
 from renulus.contracts import ApiError, ContextScope, Event, Scope, durable_id
 from renulus.storage.database import utc_now
 from renulus.storage.invalidation import context_epoch_in
+from renulus.storage.assessment_policy import policy_snapshot
 from renulus.cases.models import DiscussCase
 from renulus.cases.streaming import discuss, sse
 from .conversation_repository import command, require_assistance
@@ -17,6 +18,96 @@ class ConversationStreams:
     def __init__(self, repository):
         self.repo = repository
         self.active = {}
+        self.tasks = {}
+        # Remote work cannot resume after process loss; drafts and pins survive.
+        with repository.db.transaction() as conn:
+            for row in conn.execute(
+                    "SELECT idempotency_key,result_json FROM conversation_commands WHERE operation='send'"):
+                receipt=json.loads(row['result_json'])
+                if receipt.get('state')=='running':
+                    receipt.update(state='interrupted',error={'code':'response_interrupted',
+                        'message':'The response did not finish. Your draft is retained.','retryable':True})
+                    conn.execute('UPDATE conversation_commands SET result_json=? WHERE idempotency_key=?',
+                        (json.dumps(receipt),row['idempotency_key']))
+        repository.services.on_shutdown.append(self.close)
+
+    def launch(self, entry):
+        if entry is not None and entry['saved'] and not entry.get('launched'):
+            entry['launched']=True
+            entry['queue']=asyncio.Queue(maxsize=64)
+            entry['subscribed']=True
+            self.tasks[entry['run'].id]=asyncio.create_task(self._drain(entry))
+
+    async def _drain(self, entry):
+        try:
+            async for encoded in self._produce(entry):
+                if entry['subscribed']:
+                    queue=entry['queue']
+                    # A slow renderer never holds publication or grows a durable log.
+                    if queue.full():
+                        queue.get_nowait()
+                    queue.put_nowait(encoded)
+        finally:
+            if entry['queue'].full():
+                entry['queue'].get_nowait()
+            entry['queue'].put_nowait(None)
+            self.tasks.pop(entry['run'].id,None)
+
+    async def close(self):
+        tasks=list(self.tasks.values())
+        for entry in self.active.values():
+            entry['shutdown']=True
+        for task in tasks:
+            task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks,return_exceptions=True)
+
+    def _receipts(self, conn, kind, identifier, *, run_id=None, limit=101, after=None):
+        target_type=self.repo._owner(kind)[3]
+        if (kind,identifier) in self.repo._temporary:
+            receipts=[(key,result['conversation']['created_at'],result) for key,(_,result) in self.repo._temporary_commands.items()
+                if result.get('run_id') and result.get('conversation',{}).get('identity')=={'type':target_type,'id':identifier}
+                and (run_id is None or result['run_id']==run_id)]
+            return [row for row in sorted(receipts,reverse=True,key=lambda row:row[:2])
+                if after is None or (row[1],row[0])<tuple(after)][:limit]
+        clauses,parameters=[],[target_type,identifier]
+        if run_id is not None:
+            clauses.append("json_extract(result_json,'$.run_id')=?")
+            parameters.append(run_id)
+        if after is not None:
+            clauses.append('(created_at,idempotency_key)<(?,?)')
+            parameters.extend(after)
+        where=' AND '+' AND '.join(clauses) if clauses else ''
+        parameters.append(limit)
+        return [(row['idempotency_key'],row['created_at'],json.loads(row['result_json'])) for row in conn.execute(
+            "SELECT idempotency_key,created_at,result_json FROM conversation_commands WHERE operation='send' AND target_type=? AND target_id=?"
+            +where+' ORDER BY created_at DESC,idempotency_key DESC LIMIT ?',parameters)]
+
+    def status(self, kind, identifier, run_id):
+        with self.repo._lock,self.repo.db.transaction() as conn:
+            entry=self.active.get(run_id)
+            receipt=entry['receipt'] if entry and (entry['kind'],entry['id'])==(kind,identifier) else next(
+                (value for _,_,value in self._receipts(conn,kind,identifier,run_id=run_id,limit=1)),None)
+            if not receipt:
+                raise ApiError('conversation_run_missing','This response is no longer available in this chat',404)
+            result={'run_id':run_id,'state':receipt['state']}
+            if policy_snapshot(conn)['assistance_allowed']:
+                summary,_=self.repo._get(conn,kind,identifier)
+                result['conversation']=summary
+                if receipt.get('error'):
+                    result['error']=receipt['error']
+                if entry:
+                    result['partial_text']=entry.get('output','')
+            return result
+
+    def list(self, kind, identifier, limit=20, cursor=None):
+        scope=['runs',kind,identifier]
+        after=self.repo._uncursor(cursor,scope)['after'] if cursor else None
+        with self.repo._lock,self.repo.db.transaction() as conn:
+            receipts=self._receipts(conn,kind,identifier,limit=limit+1,after=after)
+            page=receipts[:limit]
+            return {'items':[{'run_id':r['run_id'],'state':r['state']} for _,_,r in page],
+                'next_cursor':self.repo._cursor({'scope':scope,'after':[page[-1][1],page[-1][0]]}) if len(receipts)>limit else None}
 
     def _touch(self, conn, entry, *, clear=False):
         repo = self.repo
@@ -151,6 +242,23 @@ class ConversationStreams:
                 payload.update(receipt.get('error') or {'code':'response_interrupted','message':'The response did not finish. Your draft is retained.','retryable':True})
             yield sse(Event(run_id=receipt['run_id'],sequence=1,type='completed' if state=='completed' else 'error',payload=payload))
             return
+        if entry['saved']:
+            self.launch(entry)
+            try:
+                while True:
+                    event=await entry['queue'].get()
+                    if event is None:
+                        break
+                    yield event
+            finally:
+                entry['subscribed']=False
+            return
+        async with aclosing(self._produce(entry)) as producer:
+            async for event in producer:
+                yield event
+
+    async def _produce(self, entry):
+        repo=self.repo
         run,request=entry['run'],entry['request']
         terminal=False
         stream=repo.learn.answer(run,request.text,request.teaching_style,request.topic_id,request.model,freshness=request.freshness) if entry['kind']=='learning' else discuss(repo.cases,run,entry['messages'])
@@ -217,7 +325,7 @@ class ConversationStreams:
                     await cancel_provider(repo.cases,run.id)
                 try:
                     with repo._lock,repo.cases._lock,repo.db.transaction() as conn:
-                        self._finish(conn,entry,'cancelled',{'code':'response_interrupted',
+                        self._finish(conn,entry,'interrupted' if entry.get('shutdown') else 'cancelled',{'code':'response_interrupted',
                             'message':'The response did not finish. Your draft is retained.','retryable':True})
                 except Exception:
                     pass
@@ -226,10 +334,19 @@ class ConversationStreams:
     async def cancel(self, kind, identifier, run_id):
         entry=self.active.get(run_id)
         if not entry or (entry['kind'],entry['id'])!=(kind,identifier):
-            raise ApiError('conversation_run_missing','This response is no longer active in this chat',404)
+            result=self.status(kind,identifier,run_id)
+            return {'run_id':run_id,'state':result['state']}
         if kind=='learning':
-            return await self.repo.learn.cancel(run_id)
-        result=self.repo.cases.cancel(run_id)
-        from renulus.cases.streaming import cancel_provider
-        await cancel_provider(self.repo.cases,run_id)
-        return result
+            await self.repo.learn.cancel(run_id)
+        else:
+            self.repo.cases.cancel(run_id)
+            from renulus.cases.streaming import cancel_provider
+            await cancel_provider(self.repo.cases,run_id)
+        task=self.tasks.get(run_id)
+        if task:
+            try:
+                await asyncio.wait_for(asyncio.shield(task),timeout=3)
+            except asyncio.TimeoutError:
+                task.cancel()
+                await asyncio.gather(task,return_exceptions=True)
+        return {'run_id':run_id,'state':entry['receipt']['state']}

@@ -251,3 +251,105 @@ def test_explicit_save_promotes_temporary_owner_once_and_preserves_history(tmp_p
     with TestClient(app_at(profile)) as client:
         assert client.get(path).json()['retention']=='saved'
         assert [row['role'] for row in client.get(path+'/messages').json()['items']]==['user','assistant']
+
+
+class PausedProvider(ConversationProvider):
+    async def stream(self, messages, **options):
+        import asyncio
+        self.inputs.append(messages.copy())
+        self.release = asyncio.Event()
+        yield 'Fictional partial response.'
+        await self.release.wait()
+        yield ' Fictional completed response.'
+
+
+@pytest.mark.parametrize('kind',['learning','case'])
+def test_saved_producer_outlives_subscription_and_stop_preserves_terminal_winner(tmp_path,kind):
+    import asyncio
+    from renulus.learn.conversation_models import Send
+    app=app_at(tmp_path/'detached-response')
+    provider=PausedProvider()
+    app.state.services.registry.update(provider=provider,knowledge=None,retrieval=None,memory=None)
+    with TestClient(app) as client:
+        chat=client.post('/api/v1/conversations',json={'kind':kind}).json()
+        identifier=chat['identity']['id']
+        path=f'/api/v1/conversations/{kind}/{identifier}'
+        streams=app.state.services.get('conversations').streaming
+        async def detach():
+            entry,receipt=streams.begin(kind,identifier,Send(expected_revision=chat['revision'],text='Fictional saved request',request_id='detached-request-123'))
+            streams.launch(entry)
+            subscription=streams.events(entry,receipt)
+            await anext(subscription)
+            await subscription.aclose()
+            for _ in range(50):
+                if hasattr(provider,'release'):
+                    break
+                await asyncio.sleep(.01)
+            return receipt['run_id']
+        run_id=client.portal.call(detach)
+        status=client.get(path+'/runs/'+run_id)
+        assert status.status_code==200,status.text
+        assert status.json()['state']=='running'
+        assert client.get(path+'/runs').json()['items'][0]['run_id']==run_id
+        async def finish():
+            provider.release.set()
+            await streams.tasks[run_id]
+        client.portal.call(finish)
+        assert client.get(path+'/runs/'+run_id).json()['state']=='completed'
+        assert client.post(path+'/runs/'+run_id+'/cancel').json()['state']=='completed'
+        assert [row['role'] for row in client.get(path+'/messages').json()['items']]==['user','assistant']
+        assert client.get(path+'/draft').json()['text']==''
+        # Status reads stay neutral even before shared middleware exemptions.
+        app.state.services.db.execute(
+            "INSERT INTO assessment_test_attempts(id,version_id,version_snapshot_json,mode,clock_high_water_at,created_at,updated_at) VALUES('active-policy-test','unavailable','{}','test',?,?,?)",
+            (chat['created_at'],)*3)
+        assert streams.status(kind,identifier,run_id)=={'run_id':run_id,'state':'completed'}
+        assert 'conversation' not in streams.list(kind,identifier)['items'][0]
+
+
+def test_restart_reconciles_saved_receipt_without_provider_or_erasing_draft(tmp_path):
+    from renulus.learn.conversation_models import Send
+    profile=tmp_path/'interrupted-response'
+    app=app_at(profile)
+    with TestClient(app) as client:
+        chat=client.post('/api/v1/conversations',json={}).json()
+        identifier=chat['identity']['id']
+        streams=app.state.services.get('conversations').streaming
+        _,receipt=streams.begin('learning',identifier,Send(expected_revision=chat['revision'],text='Fictional interrupted request',request_id='interrupted-request-123'))
+        # Abrupt exit leaves a running receipt. A new runtime owns reconciliation.
+        restarted=app_at(profile)
+        provider=ConversationProvider()
+        restarted.state.services.registry['provider']=provider
+        with TestClient(restarted) as other:
+            path=f'/api/v1/conversations/learning/{identifier}'
+            state=other.get(path+'/runs/'+receipt['run_id']).json()
+            assert state['state']=='interrupted'
+            assert other.get(path+'/draft').json()['text']=='Fictional interrupted request'
+            assert [m['role'] for m in other.get(path+'/messages').json()['items']]==['user']
+            assert provider.inputs==[]
+
+
+
+@pytest.mark.parametrize('kind',['learning','case'])
+def test_temporary_subscription_close_stops_producer_without_saved_command(tmp_path,kind):
+    from renulus.learn.conversation_models import Send
+    from renulus.storage.backup import export_records
+    app=app_at(tmp_path/'volatile-subscription')
+    provider=PausedProvider()
+    app.state.services.registry.update(provider=provider,knowledge=None,retrieval=None,memory=None)
+    with TestClient(app) as client:
+        chat=client.post('/api/v1/conversations',json={'kind':kind,'temporary':True}).json()
+        identifier=chat['identity']['id']
+        streams=app.state.services.get('conversations').streaming
+        async def detach():
+            entry,receipt=streams.begin(kind,identifier,Send(expected_revision=chat['revision'],text='FICTIONAL_VOLATILE_RUN_3187',request_id='volatile-detached-123'))
+            subscription=streams.events(entry,receipt)
+            await anext(subscription)
+            await anext(subscription)
+            await subscription.aclose()
+            return receipt['run_id']
+        run_id=client.portal.call(detach)
+        assert streams.status(kind,identifier,run_id)['state']=='cancelled'
+        assert run_id not in streams.active and streams.tasks=={}
+        exported=json.dumps(export_records(app.state.services))
+        assert identifier not in exported and 'FICTIONAL_VOLATILE_RUN_3187' not in exported

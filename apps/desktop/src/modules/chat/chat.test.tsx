@@ -11,7 +11,7 @@ vi.mock('./api',async()=>({...await vi.importActual('./api'),sendConversation:ca
 vi.mock('../../platform/api',async()=>({...await vi.importActual('../../platform/api'),api:calls.api}));
 function setup() {
   calls.send.mockReset();calls.api.mockReset();
-  calls.api.mockImplementation(async(path:string)=>path.endsWith('/draft')?{text:'Existing draft',content_refs:[],revision:0,conversation_revision:1}:path.includes('/messages')||path.includes('/study/projects')?{items:[],next_cursor:null}:chat);
+  calls.api.mockImplementation(async(path:string)=>path.endsWith('/draft')?{text:'Existing draft',content_refs:[],revision:0,conversation_revision:1}:path.includes('/messages')||path.includes('/study/projects')||path.endsWith('/runs')?{items:[],next_cursor:null}:chat);
 }
 const frame=(element:React.ReactNode)=><WorkspaceProvider policy={{revision:1,active_test_id:null,assistance_allowed:true}}>{element}</WorkspaceProvider>;
 afterEach(()=>cleanup());
@@ -36,12 +36,40 @@ describe('Chat volatile handoffs',()=>{
     await waitFor(()=>expect(calls.send).toHaveBeenCalledTimes(1));
     view.rerender(frame(<Chat identity={chat.identity} sendIntent={{...intent}} onSendIntentConsumed={consumed}/>));
     expect(consumed).toHaveBeenCalledTimes(1);
+    await act(async()=>publish({run_id:'saved-running',sequence:1,type:'started',payload:{}}));
     calls.api.mockImplementation(async(path:string)=>path.endsWith('/draft')?{text:'Second chat draft',content_refs:[],revision:0,conversation_revision:1}:path.includes('/messages')||path.includes('/study/projects')?{items:[],next_cursor:null}:{...chat,identity:{type:'learn_thread',id:'second-chat'}});
     view.rerender(frame(<Chat identity={{type:'learn_thread',id:'second-chat'}}/>));
     await waitFor(()=>expect((screen.getByLabelText('Message Renulus') as HTMLTextAreaElement).value).toBe('Second chat draft'));
+    expect(calls.api.mock.calls.some(([path])=>path.includes('/cancel'))).toBe(false);
     await act(async()=>{publish({run_id:'old-run',sequence:2,type:'delta',payload:{text:'Late text from old chat'}});finish();});
     expect(screen.queryByText('Late text from old chat')).toBeNull();
     fireEvent.change(screen.getByLabelText('Message Renulus'),{target:{value:'Second revised draft'}});
     expect(calls.send).toHaveBeenCalledTimes(1);
+  });
+
+  it('reopens a saved running response and refreshes its canonical terminal transcript',async()=>{
+    setup();let detailReads=0;
+    calls.api.mockImplementation(async(path:string)=>{
+      if(path.endsWith('/runs'))return {items:[{run_id:'reopened-run',state:'running'}],next_cursor:null};
+      if(path.endsWith('/runs/reopened-run'))return ++detailReads===1?{run_id:'reopened-run',state:'running',partial_text:'Still responding',conversation:chat}:{run_id:'reopened-run',state:'completed',conversation:{...chat,revision:3}};
+      if(path.endsWith('/draft'))return {text:detailReads>1?'':'Existing draft',content_refs:[],revision:0,conversation_revision:3};
+      if(path.endsWith('/messages'))return {items:detailReads>1?[{id:'canonical-answer',run_id:'reopened-run',role:'assistant',content:'Canonical completed response',content_refs:[]}]:[],next_cursor:null};
+      if(path.includes('/study/projects'))return {items:[],next_cursor:null};
+      return chat;
+    });
+    render(frame(<Chat identity={chat.identity}/>));
+    expect(await screen.findByText('Still responding')).toBeTruthy();
+    expect(await screen.findByText('Canonical completed response',{}, {timeout:2000})).toBeTruthy();
+    expect((screen.getByLabelText('Message Renulus') as HTMLTextAreaElement).value).toBe('');
+    expect(calls.send).not.toHaveBeenCalled();
+  });
+
+  it('cancels a temporary response when its view closes',async()=>{
+    setup();calls.api.mockImplementation(async(path:string)=>path.endsWith('/draft')?{text:'',content_refs:[],revision:0,conversation_revision:1}:path.includes('/messages')||path.includes('/study/projects')||path.endsWith('/runs')?{items:[],next_cursor:null}:{...chat,retention:'temporary'});
+    calls.send.mockImplementation(async(_chat,_input,onEvent)=>{onEvent({run_id:'temporary-run',sequence:1,type:'started',payload:{}});await new Promise<void>(()=>{});});
+    const view=render(frame(<Chat identity={chat.identity} sendIntent={{text:'Temporary fictional question',request_id:'temporary-intent-123'}}/>));
+    await waitFor(()=>expect(calls.send).toHaveBeenCalledTimes(1));
+    view.unmount();
+    expect(calls.api.mock.calls.some(([path])=>path.endsWith('/runs/temporary-run/cancel'))).toBe(true);
   });
 });

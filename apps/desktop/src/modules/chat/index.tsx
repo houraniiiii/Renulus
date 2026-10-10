@@ -4,7 +4,7 @@ import { api, ApiError, isCancelled } from '../../platform/api';
 import type { ContentReference, ConversationIdentity, ConversationSummary, PageResult, PassageDraft, ProjectSummary } from '../../platform/designC';
 import { Badge, Button, ErrorState, IconButton, Input, LoadingState, Notice, Select, Textarea } from '../../ui';
 import { useWorkspace } from '../workspace';
-import { conversationPath, createConversation, sendConversation, type SendIntent } from './api';
+import { conversationPath, createConversation, sendConversation, type ConversationRun, type SendIntent } from './api';
 import './chat.css';
 
 interface Message {id: string; run_id: string; role: 'user'|'assistant'; content: string; content_refs: ContentReference[]}
@@ -36,6 +36,7 @@ export default function ChatPage(props: ChatPageProps) {
   const [error,setError] = useState<unknown>();
   const [loading,setLoading] = useState(true);
   const [busy,setBusy] = useState(false);
+  const [recovering,setRecovering] = useState(false);
   const [title,setTitle] = useState('');
   const [projects,setProjects] = useState<ProjectSummary[]>([]);
   const [confirmDelete,setConfirmDelete] = useState(false);
@@ -58,21 +59,25 @@ export default function ChatPage(props: ChatPageProps) {
 
   useEffect(() => {
     const version=++epoch.current, controller=new AbortController();
-    setLoading(true);setError(undefined);setMessages([]);setPartial('');setBusy(false);setStatus('');
+    setLoading(true);setError(undefined);setMessages([]);setPartial('');setBusy(false);setRecovering(false);setStatus('');
+    activeRun.current=undefined;visibleRun.current=undefined;
     chatRef.current=undefined;setChat(undefined);setRefs([]);setText('');persisted.current='';
     async function load() {
       try {
         if (!incoming) {setLoading(false);return;}
         const kind=incoming.type==='learn_thread'?'learning':'case';
         const value=await api<ConversationSummary>('/conversations/'+kind+'/'+encodeURIComponent(incoming.id),{signal:controller.signal});
-        const [page,draft] = await Promise.all([
+        const [page,draft,runs] = await Promise.all([
           api<PageResult<Message>>(conversationPath(value)+'/messages',{signal:controller.signal}),
           api<Draft>(conversationPath(value)+'/draft',{signal:controller.signal}),
+          api<PageResult<ConversationRun>>(conversationPath(value)+'/runs',{signal:controller.signal}),
         ]);
         if (epoch.current!==version) return;
         accept({...value,revision:draft.conversation_revision});setMessages(page.items);setCursor(page.next_cursor);
         persisted.current=signature(draft.text,draft.content_refs);
         setText(draft.text || callback.current.prefill || '');setRefs(draft.content_refs);setLoading(false);
+        const running=runs.items?.find(run=>run.state==='running');
+        if(running){activeRun.current=running.run_id;visibleRun.current=running.run_id;setBusy(true);setRecovering(true);setStatus('Response is running');}
         void api<PageResult<ProjectSummary>>('/study/projects?limit=100',{signal:controller.signal}).then(result=>{
           if (epoch.current===version) setProjects(result.items);
         }).catch(()=>{});
@@ -82,10 +87,37 @@ export default function ChatPage(props: ChatPageProps) {
     return () => {
       controller.abort();epoch.current++;
       const current=chatRef.current, run=activeRun.current;
-      if(current&&run) void api(conversationPath(current)+'/runs/'+encodeURIComponent(run)+'/cancel',{method:'POST'}).catch(()=>{});
+      if(current?.retention==='temporary'&&run) void api(conversationPath(current)+'/runs/'+encodeURIComponent(run)+'/cancel',{method:'POST'}).catch(()=>{});
       streamAbort.current?.abort();activeRun.current=undefined;
     };
   },[incomingKey]);
+
+  useEffect(()=>{
+    if(!recovering||!chat||chat.retention!=='saved')return;
+    const controller=new AbortController(),version=epoch.current;
+    let timer:ReturnType<typeof setTimeout>|undefined;
+    async function poll(){
+      const current=chatRef.current,run=activeRun.current;
+      if(!current||!run)return;
+      try{
+        const result=await api<ConversationRun>(conversationPath(current)+'/runs/'+encodeURIComponent(run),{signal:controller.signal});
+        if(version!==epoch.current)return;
+        if(result.conversation)accept(result.conversation);
+        setPartial(result.partial_text??'');
+        if(result.state==='running'){timer=setTimeout(()=>void poll(),750);return;}
+        await refreshMessages(result.conversation??current,version);
+        const draft=await api<Draft>(conversationPath(current)+'/draft',{signal:controller.signal});
+        if(version!==epoch.current)return;
+        setText(draft.text);setRefs(draft.content_refs);persisted.current=signature(draft.text,draft.content_refs);
+        activeRun.current=undefined;setBusy(false);setRecovering(false);
+        setStatus(result.state==='completed'?'Saved':result.state==='cancelled'?'Stopped. Your draft is retained.':'Response did not finish. Your draft is retained.');
+        if(result.error)setError(new ApiError(result.error.message,409,result.error.code,result.error.retryable));
+        changed();
+      }catch(caught){if(version===epoch.current&&!isCancelled(caught)){setError(caught);setBusy(false);setRecovering(false);}}
+    }
+    void poll();
+    return()=>{controller.abort();if(timer)clearTimeout(timer);};
+  },[recovering,chat?.identity.id]);
 
   useEffect(()=>{if(confirmDelete)dialog.current?.showModal();},[confirmDelete]);
   useEffect(()=>{
@@ -136,7 +168,7 @@ export default function ChatPage(props: ChatPageProps) {
     await draftWrite.current;
     const current=chatRef.current;
     if(!current||version!==epoch.current)return;
-    let terminal=false;
+    let terminal=false,watching=false;
     try {
       await sendConversation(current,{text:value,request_id:requestId,expected_revision:current.revision,teaching_style:style,content_refs:refsRef.current},event=>{
         if(epoch.current!==version)return;
@@ -160,8 +192,8 @@ export default function ChatPage(props: ChatPageProps) {
       },controller.signal);
       if(!terminal&&!controller.signal.aborted)throw new ApiError('The response was interrupted. Your draft is retained.',0,'response_interrupted',true);
       if(epoch.current===version)await refreshMessages(chatRef.current??current,version);
-    }catch(caught){if(epoch.current===version&&!isCancelled(caught))setError(caught);}
-    finally{if(epoch.current===version){setBusy(false);activeRun.current=undefined;streamAbort.current=null;}}
+    }catch(caught){if(epoch.current===version&&!isCancelled(caught)){setError(caught);if(current.retention==='saved'&&activeRun.current&&!terminal){watching=true;setRecovering(true);setStatus('Checking running response');}}}
+    finally{if(epoch.current===version){if(!watching){setBusy(false);activeRun.current=undefined;}streamAbort.current=null;}}
   }
   async function stop() {
     const current=chatRef.current,run=activeRun.current;

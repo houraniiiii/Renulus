@@ -8,6 +8,10 @@ export interface RunEvent {
   payload: { text?: string; message?: string; code?: string; retryable?: boolean;
     conversation?: ConversationSummary; [key: string]: unknown };
 }
+export interface ConversationRun {
+  run_id: string; state: string; conversation?: ConversationSummary; partial_text?: string;
+  error?: {code: string; message: string; retryable: boolean};
+}
 export const conversationPath = (chat: Pick<ConversationSummary, 'kind' | 'identity'>) =>
   '/conversations/' + chat.kind + '/' + encodeURIComponent(chat.identity.id);
 
