@@ -5,15 +5,11 @@ import { lstat, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promis
 import { execFileSync, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createNativeEvidence, assertSyntheticEvidenceDirectory, localEvidenceRoot } from './native-evidence-directory.mjs';
-import { waitForFlowWindow } from './wait-for-flow-window.mjs';
-import { syntheticPdf } from './synthetic-pdf.mjs';
-import { capturePdfFrames, classifyPdfFrames } from './pdf-viewer-evidence.mjs';
-import { proveNativeProductBackup } from './native-product-backup.mjs';
+import { createNativeEvidence, assertSyntheticEvidenceDirectory, nativeEvidenceRoot, designCEvidenceRoot } from './native-evidence-directory.mjs';
 
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repository = path.resolve(desktop, '../..');
-const prerequisiteCommits = ['793eddb4', 'a6b5d597', '16ad199d', 'c9d145af', 'eb821aa3', '8c6c4b18', '5e0c3837'];
+const prerequisiteCommits = ['793eddb4', 'a6b5d597', '16ad199d', 'c9d145af', 'eb821aa3', '8c6c4b18', '5e0c3837', '6145fc70'];
 const sha = value => createHash('sha256').update(value).digest('hex');
 const check = (condition, message) => { if (!condition) throw new Error(message); };
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -22,26 +18,43 @@ const samePath = (left, right) => typeof left === 'string' && typeof right === '
 const json = buffer => JSON.parse(buffer.toString('utf8').replace(/^\uFEFF/, ''));
 const git = args => execFileSync('git', args, { cwd: repository, windowsHide: true, maxBuffer: 16 * 1024 * 1024 });
 
-export const requiredGates = Object.freeze([
-  'installed-identity', 'isolated-runtime', 'programme-selectors', 'reviewed-quiz',
-  'native-backup-save-cancel', 'library-text', 'library-pdf', 'library-image',
-  'library-office-docx', 'library-office-pptx', 'library-office-xlsx',
-  'temporary-retention', 'normal-ingestion-close', 'normal-reopen',
-  'full-backup-restore', 'deletion-reconciliation', 'final-close',
+export { designCEvidenceRoot };
+export const deferredGates = Object.freeze({
+  'reader-pdf': 'Matching installed C PDF page/selection/original journey not exercised by this core driver.',
+  'reader-docx': 'Matching installed C DOCX text/table/image journey not exercised.',
+  'reader-csv': 'Matching installed C CSV row/selection journey not exercised.',
+  'reader-xlsx': 'Matching installed C XLSX sheet/cell journey not exercised.',
+  'reader-markdown': 'Matching installed C Markdown rendering/selection journey not exercised.',
+  'reader-html': 'Matching installed inert HTML/remote-resource refusal journey not exercised.',
+  'reader-xml': 'Matching installed inert XML/selection journey not exercised.',
+  'reader-images': 'Matching installed PNG/JPEG/TIFF frame journey not exercised.',
+  'legacy-profile-upgrade': 'Requires an immutable preserved schema-1 synthetic profile; fresh-state startup is not upgrade proof.',
+  'full-backup-restore': 'JSON/ZIP1/ZIP2 restore, originals and real derived rebuild require their separate connected journey.',
+  'deletion-reconciliation': 'Project live deletion does not prove old-backup deletion reconciliation.',
+  'normal-ingestion-close': 'No real active ingestion job is scheduled by this bounded core driver.',
+  'native-backup-save-cancel': 'Hidden mode suppresses physical Save dialogs; no native dialog claim.',
+});
+export const coreGates = Object.freeze([
+  'installed-identity', 'isolated-runtime', 'c-readiness', 'saved-conversations',
+  'project-membership', 'saved-reviewed-test', 'whole-study', 'active-test-policy',
+  'test-draft-reopen', 'whole-test', 'temporary-retention', 'normal-reopen',
+  'project-delete-preserves-chats', 'final-close',
 ]);
+export const requiredGates = Object.freeze([...coreGates, ...Object.keys(deferredGates)]);
 
 export function installedAcceptancePlan() {
   return {
-    scope: 'Unsigned installed Windows build on this PC; signing and a separate PC/VM are optional future work.',
-    prerequisiteCommits, requiredGates,
+    scope: 'Hidden unsigned installed Design C on this Windows PC; signing and a separate PC/VM are optional future work.',
+    prerequisiteCommits, requiredGates, coreGates, deferredGates,
     requiredEnvironment: ['RENULUS_NATIVE_SLOT', 'RENULUS_EXPECT_SOURCE_REVISION', 'RENULUS_INSTALLED_PROOF=1',
-      'RENULUS_PACKAGED_EXECUTABLE', 'RENULUS_DELIVERY_PROVENANCE', 'RENULUS_INSTALLER_EVIDENCE'],
-    evidenceRoot: 'Default: this desktop test-results (also compatible with the existing native backup inspector).',
-    resourceBound: 'One app/backend at a time; six small originals, at most four extra PDF queue jobs; no models/providers/compaction simulated.',
-    receipt: 'installed-product-evidence.json; every gate and physical close must pass, or exit 1.',
+      'RENULUS_PACKAGED_EXECUTABLE', 'RENULUS_DELIVERY_PROVENANCE', 'RENULUS_INSTALLER_EVIDENCE',
+      'RENULUS_NATIVE_EVIDENCE_ROOT=' + designCEvidenceRoot],
+    evidenceRoot: designCEvidenceRoot,
+    resourceBound: 'One owned hidden app/backend at a time; two saved draft chats, one project and one real two-question reviewed set; no providers or simulated producer results.',
+    receipt: 'installed-product-evidence.json; absent reader/migration/native gates remain not-run and make the aggregate incomplete/exit 1.',
     parentChecks: ['Assign the exclusive native/helper slot and immutable final source first.',
-      'Run normal-profile/provider acceptance separately with the parent-owned profile and deliberately selected account.',
-      'Review captured PDF physical page and original/Office UI screenshots.'],
+      'Publish the exact Design C generated/native proof root in shared guards; never bypass those guards.',
+      'Supply the matching package/install receipts. Preserve separate native/live/physical and legacy-profile acceptance.'],
   };
 }
 
@@ -54,11 +67,12 @@ export function validateInstalledRequest(env, platform = process.platform) {
     check(typeof env[key] === 'string' && path.isAbsolute(env[key]), 'An absolute ' + key + ' is required.');
   }
   for (const key of ['RENULUS_PROFILE', 'RENULUS_SOURCE_DESKTOP', 'RENULUS_BACKEND_URL', 'RENULUS_SESSION_TOKEN',
-    'RENULUS_PYTHON', 'RENULUS_TEST_ATTACH', 'RENULUS_PDF_FIXTURE_ONLY', 'RENULUS_FIXTURE_PYTHON']) {
+    'RENULUS_PYTHON', 'RENULUS_TEST_ATTACH', 'RENULUS_PDF_FIXTURE_ONLY', 'RENULUS_FIXTURE_PYTHON',
+    'RENULUS_BACKGROUND_TEST', 'RENULUS_BACKGROUND_OWNER_PID']) {
     check(!env[key], 'Installed acceptance refuses profile/attached/runtime/fixture override ' + key + '.');
   }
-  check(!env.RENULUS_NATIVE_EVIDENCE_ROOT || samePath(env.RENULUS_NATIVE_EVIDENCE_ROOT, localEvidenceRoot),
-    'This reused backup-inspector recipe needs the desktop test-results root; clear RENULUS_NATIVE_EVIDENCE_ROOT for this run. C proof confinement remains available to the other native scripts.');
+  check(samePath(env.RENULUS_NATIVE_EVIDENCE_ROOT, designCEvidenceRoot),
+    'Design C installed proof requires its exact synthetic delivery evidence root.');
   return { slot: env.RENULUS_NATIVE_SLOT, revision: env.RENULUS_EXPECT_SOURCE_REVISION,
     executable: path.resolve(env.RENULUS_PACKAGED_EXECUTABLE),
     deliveryFile: path.resolve(env.RENULUS_DELIVERY_PROVENANCE), installerFile: path.resolve(env.RENULUS_INSTALLER_EVIDENCE) };
@@ -69,10 +83,12 @@ export function inside(root, value) {
   return !!relative && relative !== '..' && !relative.startsWith('..' + path.sep) && !path.isAbsolute(relative);
 }
 
-async function ownedArtifact(value) {
+export async function ownedArtifact(value) {
   check(path.isAbsolute(value), 'Artifact paths must be absolute.');
   check([path.join(desktop, 'release'), 'C:/Renulus-native-delivery/desktop-20261005',
-    'E:/Renulus-native-delivery/desktop-20261005'].some(root => inside(path.resolve(root), value)), 'Use the existing owned delivery/release tree.');
+    'E:/Renulus-native-delivery/desktop-20261005', designCEvidenceRoot].some(root => inside(path.resolve(root), value)), 'Use the existing owned delivery/release tree.');
+  if (inside(designCEvidenceRoot, value)) check(/^(?:matching-[0-9a-f]{8}|installed-[0-9a-f]{8}|proofs)$/.test(path.relative(designCEvidenceRoot, value).split(path.sep)[0]),
+    'Design C artifacts must use matching/installed/proofs directories, never synthetic runtime profiles.');
   for (let cursor = path.resolve(value); ; cursor = path.dirname(cursor)) {
     try { check(!(await lstat(cursor)).isSymbolicLink(), 'Artifact paths may not traverse a junction/reparse point.'); }
     catch (error) { if (error.code !== 'ENOENT') throw error; }
@@ -105,6 +121,7 @@ export function validateInstallationReceipts(request, delivery, installation, ac
 }
 
 export function isolatedEnvironment(inherited, evidence, profile) {
+  check(inside(designCEvidenceRoot, evidence), 'Design C state requires the exact synthetic delivery evidence root.');
   assertSyntheticEvidenceDirectory(evidence);
   check(inside(evidence, profile), 'The profile must be newly owned by this synthetic run.');
   const env = {};
@@ -115,6 +132,7 @@ export function isolatedEnvironment(inherited, evidence, profile) {
   check(systemRoot, 'Windows system root is required.');
   env.PATH = [path.join(systemRoot, 'System32'), path.join(systemRoot, 'System32', 'Wbem')].join(path.delimiter);
   env.RENULUS_PROFILE = profile;
+  env.RENULUS_BACKGROUND_TEST = '1'; env.RENULUS_BACKGROUND_OWNER_PID = String(process.pid);
   env.TEMP = path.join(evidence, 'temporary'); env.TMP = env.TEMP;
   return env; // No inherited Electron-as-Node flag, developer path, token, provider key or runtime override.
 }
@@ -224,12 +242,39 @@ async function poll(work, accepts, label, timeout = 180_000, interval = 500) {
   const deadline = Date.now() + timeout;
   let value;
   do { value = await work(); if (accepts(value)) return value; await sleep(interval); } while (Date.now() < deadline);
-  throw new Error(label + ' did not reach its required state; last state: ' + JSON.stringify(value));
+  throw new Error(label + ' did not reach its required state.');
 }
 
-async function navigate(page, name) {
-  await page.getByRole('navigation', { name: 'Main navigation', exact: true }).getByRole('link', { name, exact: true }).click();
-  await page.waitForFunction(name => document.title === 'Renulus · ' + name, name);
+async function navigate(page, hash) {
+  check(/^#\/(?:projects|tests|chat|attempts)(?:\/[a-zA-Z0-9_-]+){0,2}$/.test(hash), 'Use a bounded canonical C route.');
+  await page.evaluate(value => { window.location.hash = value; }, hash);
+  await page.waitForFunction(value => window.location.hash === value && !!document.querySelector('.desktop-shell.design-c-shell'), hash);
+}
+
+export function validateHiddenWindows(windows) {
+  check(windows.every(window => !window.visible && !window.focused), 'Installed proof must keep every owned window hidden and unfocused.');
+}
+async function hiddenWindowState(application) {
+  const windows = await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()
+    .filter(window => !window.isDestroyed()).map(window => ({ visible: window.isVisible(), focused: window.isFocused(), url: window.webContents.getURL() })));
+  validateHiddenWindows(windows);
+  return windows;
+}
+export async function waitForDesignCWindow(application, { startedAt = Date.now(), timeout = 360_000 } = {}) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    const windows = await hiddenWindowState(application);
+    for (const page of application.windows()) {
+      if (page.isClosed()) continue;
+      let url; try { url = new URL(page.url()); } catch { continue; }
+      if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || !url.port || !windows.some(window => window.url === page.url())) continue;
+      // DOM readiness works with hidden/collapsed navigation; no visible heading is required.
+      if (await page.locator('.desktop-shell.design-c-shell').count() !== 1) continue;
+      return { page, rendererReadySeconds: (Date.now() - startedAt) / 1000, hidden: true, landmark: '.desktop-shell.design-c-shell' };
+    }
+    await sleep(100);
+  }
+  throw new Error('The hidden owned loopback Design C renderer did not become ready.');
 }
 
 export function remainingOwnedIdentities(owners, observed) {
@@ -251,9 +296,10 @@ function processIdentities(pids, env) {
 
 async function normalClose(current, report) {
   const started = Date.now();
+  await hiddenWindowState(current.application);
   await current.application.evaluate(({ BrowserWindow }, url) => {
     const window = BrowserWindow.getAllWindows().find(item => item.webContents.getURL() === url);
-    if (!window) throw new Error('The owning Flow window is missing.');
+    if (!window) throw new Error('The owning Design C window is missing.');
     window.close(); // Same close handler as the window's ordinary Close control; no taskkill/CDP forced app exit.
   }, current.page.url());
   const remaining = await poll(async () => {
@@ -283,19 +329,21 @@ async function launch(request, identity, evidence, profileName, report) {
   // Retain ownership even if window/readiness validation subsequently fails.
   const current = { application, env, profile, identities: [], page: null };
   report.current = current;
-  const { page, ...timing } = await waitForFlowWindow(application, { startedAt, timeout: 360_000 }); current.page = page;
+  const { page, ...timing } = await waitForDesignCWindow(application, { startedAt, timeout: 360_000 }); current.page = page;
   page.setDefaultTimeout(30_000);
   const native = await application.evaluate(({ app, BrowserWindow }, url) => {
     const window = BrowserWindow.getAllWindows().find(item => item.webContents.getURL() === url);
     const preferences = window.webContents.getLastWebPreferences();
     return { pid: process.pid, executable: process.execPath, packaged: app.isPackaged, electron: process.versions.electron,
+      background: process.env.RENULUS_BACKGROUND_TEST, backgroundOwner: process.env.RENULUS_BACKGROUND_OWNER_PID,
       userData: app.getPath('userData'), persistent: window.webContents.session.isPersistent(), sandbox: preferences.sandbox,
       nodeIntegration: preferences.nodeIntegration, contextIsolation: preferences.contextIsolation,
       children: process._getActiveHandles().filter(item => item.constructor.name === 'ChildProcess').map(item => item.pid).filter(Boolean) };
   }, page.url());
   check(native.packaged && samePath(native.executable, request.executable) && native.electron === identity.electronVersion
     && samePath(native.userData, path.join(profile, 'desktop')) && !native.persistent && native.sandbox
-    && !native.nodeIntegration && native.contextIsolation && native.children.length === 1, 'Installed runtime/profile/backend ownership differs.');
+    && !native.nodeIntegration && native.contextIsolation && native.children.length === 1
+    && native.background === '1' && native.backgroundOwner === String(process.pid), 'Installed runtime/profile/backend ownership differs.');
   current.identities = processIdentities([native.pid, ...native.children], env);
   check(current.identities.length === 2 && current.identities.every(item => item.created && item.executable)
     && current.identities.some(item => item.pid === native.pid && samePath(item.executable, request.executable))
@@ -307,281 +355,9 @@ async function launch(request, identity, evidence, profileName, report) {
   check(runtime.helpers?.embedding?.ready && runtime.helpers?.docling?.ready && runtime.helper_startup?.configured
     && runtime.helper_startup?.imports?.embedding?.ready && runtime.helper_startup?.imports?.docling?.ready
     && runtime.helper_startup.downloads === false, 'Actual bundled offline helpers are not ready.');
-  await page.setViewportSize({ width: 1440, height: 960 });
+  await page.setViewportSize({ width: 1440, height: 900 });
   report.launches.push({ profile, timing, native, interpreter, absentTools, meta, runtime });
   return current;
-}
-
-export function validateProgrammeHandoff(home, catalog, selectedTrack) {
-  const track = home.tracks?.find(item => item.id === 'esen_eph');
-  check(home.goals?.track === 'eseneph' && home.selection?.track === 'esen_eph' && home.selection.status === 'ready'
-    && track?.available && track.status === 'partial' && track.version && track.checked_on
-    && home.selection.mapping_version === track.version && home.selection.topic_ids.length > 0,
-  'The saved Today programme must use the active dated content mapping.');
-  check(selectedTrack === 'esen_eph' && catalog.track === 'esen_eph' && catalog.complete_exam_available === false
-    && catalog.tracks?.some(item => item.id === 'esen_eph' && item.available && item.exam_simulation_available === false),
-  'Today Open Test must retain ESENeph and its actual reviewed catalogue.');
-  return { track: selectedTrack, mappingVersion: track.version, checkedOn: track.checked_on,
-    selectedTopics: home.selection.topic_ids, availableFamilies: catalog.available_families, examSimulation: false };
-}
-
-async function reviewedJourneys(page, evidence) {
-  const tracks = await api(page, '/content/tracks');
-  check(tracks.some(track => track.id === 'esen_eph' && track.available && track.status === 'partial'
-    && track.exam_simulation_available === false), 'The integrated dated partial ESENeph programme is missing.');
-  const sessions = [];
-  for (const [track, pattern] of [['general_nephrology', /chronic kidney/i], ['general_nephrology', /dialysis/i], ['esen_eph', /transplant/i]]) {
-    await navigate(page, 'Test');
-    await page.getByLabel('Track', { exact: true }).selectOption(track);
-    const catalog = await api(page, '/assessment/catalog?track=' + track);
-    const topic = catalog.domains.find(row => pattern.test(row.label) && row.available_families > 0);
-    check(topic && !catalog.complete_exam_available, 'No reviewed topic is available for the bounded cross-domain quiz.');
-    // Wait for the actual catalog refresh before selecting its topic.
-    await poll(() => page.getByLabel('Topic', { exact: true }).locator('option').evaluateAll(rows => rows.map(row => row.value)),
-      rows => rows.includes(topic.id), 'Track topic selector', 30_000);
-    await page.getByLabel('Topic', { exact: true }).selectOption(topic.id);
-    await page.getByLabel('Questions', { exact: true }).fill('1');
-    if (track === 'esen_eph') {
-      await page.locator('[aria-label="Selected track coverage"]').getByText(/Exam simulation is unavailable/).waitFor();
-      await page.getByText('View indicative domain coverage', { exact: true }).click();
-      await page.getByRole('table', { name: 'Mapped reviewed bank', exact: true }).waitFor();
-      await page.screenshot({ path: path.join(evidence, 'esen-eph-selectors.png'), fullPage: true });
-    }
-    const session = await actionResponse(page, '/assessment/start', () => page.getByRole('button', { name: 'Start reviewed quiz', exact: true }).click());
-    check(session.item_count === 1 && session.selector.track === track && session.selector.topic_ids.includes(topic.id)
-      && session.current_item?.topic_id === topic.id, 'The real quiz did not retain the selected programme/topic.');
-    await page.locator('.assessment-question input[type="radio"]').first().check();
-    const answer = await actionResponse(page, '/assessment/sessions/' + session.id + '/answer',
-      () => page.getByRole('button', { name: 'Commit answer', exact: true }).click());
-    check(answer.session.answered_count === 1 && answer.feedback.attempt_id && answer.feedback.score_bucket === 'fresh'
-      && !answer.feedback.assisted && !answer.feedback.repeat && answer.feedback.sources.length > 0
-      && typeof answer.feedback.correct === 'boolean' && answer.feedback.explanation, 'Committed reviewed feedback is incomplete.');
-    await page.getByRole('heading', { name: 'Why this answer', exact: true }).waitFor();
-    await page.getByRole('heading', { name: 'Sources for this feedback', exact: true }).waitFor();
-    await page.screenshot({ path: path.join(evidence, 'quiz-feedback-' + sessions.length + '.png'), fullPage: true });
-    const ended = await actionResponse(page, '/assessment/sessions/' + session.id + '/end',
-      () => page.getByRole('button', { name: 'Finish quiz', exact: true }).click());
-    check(ended.status === 'ended' && ended.answered_count === 1, 'The reviewed quiz was not completed.');
-    const review = await actionResponse(page, '/assessment/sessions/' + session.id + '/review',
-      () => page.getByRole('button', { name: 'Review committed answers', exact: true }).click(), 200, 'GET');
-    check(review.feedback.length === 1 && review.feedback[0].attempt_id === answer.feedback.attempt_id, 'Persisted feedback differs from the committed answer.');
-    sessions.push({ id: session.id, topic: topic.id, track, feedback: answer.feedback });
-    await page.getByRole('button', { name: 'Back to quizzes', exact: true }).click();
-  }
-  const scores = await api(page, '/assessment/aggregates'), home = await api(page, '/study/home');
-  const correct = sessions.filter(row => row.feedback.correct).length;
-  check(scores.reviewed.fresh.answered === 3 && scores.reviewed.fresh.correct === correct
-    && scores.reviewed.assisted.answered === 0 && scores.reviewed.repeat.answered === 0 && scores.generated.answered === 0
-    && home.progress.groups.fresh.answered === 3 && home.progress.groups.fresh.correct === correct, 'Reviewed progress/Home does not reflect actual committed answers.');
-  await navigate(page, 'Today');
-  await page.getByText(correct + ' correct from 3 fresh unassisted reviewed answers across all tracks.', { exact: true }).waitFor();
-  await page.getByRole('button', { name: 'Study preferences', exact: true }).click();
-  await page.getByLabel('Track', { exact: true }).selectOption('eseneph');
-  const goals = await actionResponse(page, '/study/goals', () => page.getByRole('button', { name: 'Save preferences', exact: true }).click(), 200, 'PUT');
-  check(goals.track === 'eseneph', 'The real study programme preference was not saved.');
-  const programmeHome = await api(page, '/study/home');
-  const coverage = page.locator('[aria-label="Study track coverage"]');
-  await coverage.getByText('Partial mapping', { exact: true }).waitFor();
-  await coverage.getByText('Exam simulation is unavailable. The partial mapping does not establish complete exam coverage or mastery.', { exact: true }).waitFor();
-  const checkedOn = programmeHome.tracks.find(item => item.id === 'esen_eph')?.checked_on;
-  check(await coverage.locator('time').getAttribute('datetime') === checkedOn, 'Today lost the content-owned mapping date.');
-  await coverage.getByText('Mapped domains and gaps', { exact: true }).click();
-  await page.screenshot({ path: path.join(evidence, 'reviewed-progress-home.png'), fullPage: true });
-  const handoffCatalog = await actionResponse(page, '/assessment/catalog',
-    () => page.getByRole('button', { name: 'Open Test', exact: true }).click(), 200, 'GET');
-  const handoff = validateProgrammeHandoff(programmeHome, handoffCatalog, await page.getByLabel('Track', { exact: true }).inputValue());
-  await page.screenshot({ path: path.join(evidence, 'today-test-programme-handoff.png'), fullPage: true });
-  return { tracks, sessions, scores, home, goals, programmeHome, handoff };
-}
-
-// Adapt the existing test_office_conversion.make_office fixtures; use only bundled packages.
-export const fixturePython = [
-  'import sys, pathlib, struct, zlib', 'from docx import Document', 'from pptx import Presentation',
-  'from pptx.util import Inches', 'from openpyxl import Workbook', 'root=pathlib.Path(sys.argv[1])',
-  'd=Document(); d.add_heading("Synthetic glomerular study",0); d.add_paragraph("Synthetic glomerular proteinuria observation.")',
-  't=d.add_table(rows=2,cols=2); t.cell(0,0).text="Topic"; t.cell(0,1).text="Observation"; t.cell(1,0).text="Glomerular"; t.cell(1,1).text="Synthetic proteinuria"',
-  'd.save(root/"synthetic.docx")', 'p=Presentation()',
-  'for topic in ("dialysis","transplant"):',
-  ' s=p.slides.add_slide(p.slide_layouts[5]); s.shapes.title.text="Synthetic "+topic+" study"',
-  ' s.shapes.add_textbox(Inches(1),Inches(1),Inches(6),Inches(1)).text="Synthetic "+topic+" access observation."',
-  'p.save(root/"synthetic.pptx")', 'w=Workbook(); w.remove(w.active)',
-  'for topic in ("CKD","Electrolytes"):',
-  ' s=w.create_sheet(topic); s.append(["Topic","Observation"]); s.append([topic,"Synthetic "+topic+" study observation."])',
-  'w.save(root/"synthetic.xlsx")',
-  'def chunk(kind,data): return struct.pack(">I",len(data))+kind+data+struct.pack(">I",zlib.crc32(kind+data)&0xffffffff)',
-  'width,height=320,240; pixels=b"".join(b"\\0"+bytes([223,239,234])*width for _ in range(height))',
-  '(root/"synthetic.png").write_bytes(b"\\x89PNG\\r\\n\\x1a\\n"+chunk(b"IHDR",struct.pack(">IIBBBBB",width,height,8,2,0,0,0))+chunk(b"IDAT",zlib.compress(pixels))+chunk(b"IEND",b""))',
-].join('\n');
-
-/** Enrich the existing two-page viewer fixture so chunking yields page-specific passages. */
-export function ingestionPdf() {
-  const objects = [...syntheticPdf().toString('ascii').matchAll(/[0-9]+ 0 obj\n([\s\S]*?)\nendobj/g)].map(match => match[1]);
-  check(objects.length === 7, 'The existing two-page synthetic PDF structure changed.');
-  for (const [index, pageName] of [[3, 'one'], [5, 'two']]) {
-    const existing = objects[index].match(/stream\n([\s\S]*?)endstream/)[1];
-    const lines = Array.from({ length: 60 }, (_, row) => 'BT /F1 5 Tf 18 ' + (375 - row * 5)
-      + ' Td (Synthetic PDF page ' + pageName + ' dialysis acceptance observation row ' + row + ' for original source learning.) Tj ET');
-    const stream = existing + lines.join('\n') + '\n';
-    objects[index] = '<< /Length ' + Buffer.byteLength(stream) + ' >>\nstream\n' + stream + 'endstream';
-  }
-  let body = '%PDF-1.4\n'; const offsets = [0];
-  for (let index = 0; index < objects.length; index++) {
-    offsets.push(Buffer.byteLength(body)); body += (index + 1) + ' 0 obj\n' + objects[index] + '\nendobj\n';
-  }
-  const xref = Buffer.byteLength(body);
-  body += 'xref\n0 8\n0000000000 65535 f \n' + offsets.slice(1).map(offset => String(offset).padStart(10, '0') + ' 00000 n \n').join('');
-  return Buffer.from(body + 'trailer\n<< /Size 8 /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF\n');
-}
-
-async function fixtures(identity, current, evidence) {
-  const directory = path.join(evidence, 'fixtures'); await mkdir(directory);
-  await writeFile(path.join(directory, 'synthetic.pdf'), ingestionPdf(), { flag: 'wx' });
-  execFileSync(path.join(identity.backend, 'python/python.exe'), ['-I', '-B', '-c', fixturePython, directory],
-    { env: current.env, windowsHide: true, timeout: 30_000 });
-  const rows = [{ kind: 'text', title: 'Synthetic CKD acceptance note', query: 'Synthetic CKD acceptance note',
-    text: 'Synthetic CKD acceptance note. Deliberate learning material; no patient or clinical claims.' }];
-  for (const [kind, query] of [['pdf', 'Synthetic PDF page two dialysis acceptance'], ['image', null], ['office-docx', 'Synthetic glomerular'],
-    ['office-pptx', 'Synthetic dialysis access observation'], ['office-xlsx', 'Synthetic CKD study observation']]) {
-    const extension = kind === 'image' ? 'png' : kind.replace('office-', '');
-    const file = path.join(directory, 'synthetic.' + extension);
-    rows.push({ kind, title: 'Synthetic acceptance ' + extension, query, file, sha256: await hashFile(file) });
-  }
-  return rows;
-}
-
-async function importThroughUi(page, fixture) {
-  await navigate(page, 'Library');
-  await page.getByRole('button', { name: 'Add to library', exact: true }).click();
-  await page.getByLabel('Title', { exact: true }).fill(fixture.title);
-  if (fixture.kind === 'text') await page.getByLabel('Your study note', { exact: true }).fill(fixture.text);
-  else {
-    await page.getByRole('button', { name: 'Document', exact: true }).click();
-    await page.getByLabel('Choose a study document', { exact: true }).setInputFiles(fixture.file);
-    await page.getByLabel('I have permission to read, store, index and use this file for local learning.', { exact: true }).check();
-  }
-  const imported = await actionResponse(page, fixture.kind === 'text' ? '/library/import/text' : '/library/import/file',
-    () => page.getByRole('button', { name: fixture.kind === 'text' ? 'Add note' : 'Add document', exact: true }).click(), 202);
-  check(imported.document_id && imported.revision_id && imported.job?.id, 'A complete actual import identity is required.');
-  return { ...fixture, imported };
-}
-
-async function originalBytes(page, revision, expectedHash) {
-  const bytes = await page.evaluate(async revision => {
-    const response = await fetch('/api/v1/library/revisions/' + revision + '/original');
-    if (!response.ok) throw new Error('Original unavailable: ' + response.status);
-    const buffer = new Uint8Array(await response.arrayBuffer());
-    if (buffer.length > 1024 * 1024) throw new Error('Synthetic original exceeds its bounded size.');
-    return { base64: btoa(Array.from(buffer, value => String.fromCharCode(value)).join('')), type: response.headers.get('content-type') };
-  }, revision);
-  const hash = sha(Buffer.from(bytes.base64, 'base64'));
-  check(hash === expectedHash, 'The actual original bytes changed.');
-  return { sha256: hash, mediaType: bytes.type };
-}
-
-async function downloadOriginal(application, page, link, evidence, extension, expectedHash) {
-  const target = path.join(evidence, 'downloaded-original.' + extension);
-  await application.evaluate(({ BrowserWindow }, { url, target }) => {
-    const window = BrowserWindow.getAllWindows().find(item => item.webContents.getURL() === url);
-    globalThis.renulusOriginalDownload = null;
-    window.webContents.session.once('will-download', (_event, item, contents) => {
-      if (contents?.id !== window.webContents.id) { item.cancel(); return; }
-      item.setSavePath(target);
-      item.once('done', (_event, state) => { globalThis.renulusOriginalDownload = { state, bytes: item.getReceivedBytes(), target: item.getSavePath() }; });
-    });
-  }, { url: page.url(), target });
-  await link.click();
-  const receipt = await poll(() => application.evaluate(() => globalThis.renulusOriginalDownload), value => !!value, 'Actual original download', 30_000);
-  check(receipt.state === 'completed' && receipt.bytes > 0 && await hashFile(target) === expectedHash, 'The native original download failed or changed bytes.');
-  return receipt;
-}
-
-async function inspectLibrary(page, row, evidence) {
-  const status = await poll(() => api(page, '/library/documents/' + row.imported.document_id + '/import-status'), value => {
-    check(!['failed', 'cancelled'].includes(value.status), 'Actual ingestion failed: ' + (value.job?.error_code ?? value.status));
-    return value.status === 'ready' && value.job.state === 'ready';
-  }, 'Actual ' + row.kind + ' ingestion');
-  const document = await api(page, '/library/documents/' + row.imported.document_id);
-  const revision = document.revisions.find(item => item.id === row.imported.revision_id);
-  check(document.active_revision === revision?.id && revision.status === 'ready' && revision.rights.display
-    && revision.rights.cache && revision.rights.index && revision.rights.embedding && !revision.rights.redistribution,
-  'The original lost its active revision or explicit local-use rights.');
-  const expectedHash = row.kind === 'text' ? sha(row.text) : row.sha256;
-  check(revision.sha256 === expectedHash, 'Canonical original identity differs from the synthetic input.');
-  let passage, citation;
-  if (row.kind !== 'image') {
-    check(revision.passage_count > 0, 'A queued/empty import is not a successful searchable source.');
-    await page.getByLabel('Find a passage', { exact: true }).fill(row.query);
-    const found = await actionResponse(page, '/library/retrieve', () => page.getByRole('button', { name: 'Search', exact: true }).click());
-    passage = found.passages.find(item => item.document_id === document.id && item.document_revision === revision.id
-      && (row.kind !== 'pdf' || item.locators.find(locator => Number.isInteger(locator.page) && locator.page > 0)?.page === 2));
-    check(passage?.id && passage.locators.length > 0, 'No real passage/locator was retrieved for ' + row.kind + '.');
-    citation = await api(page, '/library/revisions/' + revision.id + '/citation?passage_id=' + passage.id
-      + (row.kind === 'pdf' ? '&page=2' : ''));
-    check(citation.passage_id === passage.id && citation.document_revision === revision.id
-      && JSON.stringify(citation.locators) === JSON.stringify(passage.locators.filter(locator => row.kind !== 'pdf' || locator.page === 2)), 'The exact passage citation changed its locators.');
-    // The real passage button drives the existing SourceInspector, without a navigation fixture.
-    const hit = page.locator('.library-passage').nth(found.passages.findIndex(item => item.id === passage.id));
-    await hit.getByRole('heading', { name: document.title, exact: true }).waitFor();
-    await hit.getByRole('button', { name: 'Inspect citation', exact: true }).click();
-  } else {
-    check(revision.passage_count === 0, 'The synthetic no-text image must honestly remain original-only.');
-    citation = await api(page, '/library/revisions/' + revision.id + '/citation');
-    check(citation.locators.length === 0 && citation.page === null, 'The original-only image invented a citation page.');
-    await page.getByRole('button', { name: document.title, exact: true }).click();
-    await page.getByText('This image is available to view. No searchable text was extracted.', { exact: true }).waitFor();
-    const found = await api(page, '/library/retrieve', { query: row.title, scope: { kind: 'study' } });
-    check(!found.passages.some(item => item.document_id === document.id), 'The original-only image invented searchable passages.');
-    const missing = await api(page, '/library/revisions/' + revision.id + '/citation?page=1', undefined, 404);
-    check(missing.error?.code === 'page_missing', 'The original-only image invented a physical page.');
-  }
-  const reader = page.getByRole('complementary', { name: 'Source reader', exact: true });
-  // For page 2, require the exact passage-driven reader; whole-document fallback cannot pass.
-  if (row.kind === 'pdf') await reader.getByRole('button', { name: 'Open original · page 2', exact: true }).click();
-  else await reader.getByRole('button', { name: /^Open original/ }).click();
-  const original = await originalBytes(page, revision.id, expectedHash);
-  check(original.mediaType?.split(';')[0] === revision.media_type, 'The original response lost its declared media type.');
-  let view;
-  if (row.kind === 'pdf') {
-    const viewer = reader.getByTitle('Original document viewer', { exact: true }); await viewer.waitFor();
-    view = await poll(async () => { const frames = await capturePdfFrames(page); return { frames, ...classifyPdfFrames(frames, 2) }; },
-      value => !value.blocked && value.viewerDetected && value.citationPageSelected, 'Native physical PDF page 2', 30_000);
-  } else if (row.kind === 'image') {
-    const image = reader.getByRole('img', { name: 'Original imported document', exact: true });
-    await poll(() => image.evaluate(node => node.complete && node.naturalWidth > 0), Boolean, 'Original image rendering', 30_000);
-    const link = reader.getByRole('link', { name: 'Save original (.png)', exact: true }); await link.waitFor();
-    view = await downloadOriginal(row.application, page, link, evidence, 'png', expectedHash);
-  } else if (row.kind.startsWith('office-')) {
-    const extension = row.kind.slice(7), link = reader.getByRole('link', { name: 'Save original (.' + extension + ')', exact: true });
-    await link.waitFor();
-    // Same real native original-download seam used for PNG; no simulated response or dialog.
-    view = await downloadOriginal(row.application, page, link, evidence, extension, expectedHash);
-    check(citation.page === null && citation.locators.every(locator => locator.page === null)
-      && (extension !== 'pptx' || citation.locators.some(locator => locator.slide >= 1))
-      && (extension !== 'xlsx' || citation.locators.some(locator => locator.sheet >= 1 && locator.sheet_name)), 'Office citations invented a physical page or lost slide/sheet locations.');
-  } else {
-    await reader.locator('.library-original-text').waitFor();
-    check(await reader.locator('.library-original-text').innerText() === row.text, 'The text original differs from the deliberate study note.');
-  }
-  await page.screenshot({ path: path.join(evidence, 'library-' + row.kind + '.png'), fullPage: true });
-  return { ...row, application: undefined, status, document, revision, passage, citation, original, view };
-}
-
-async function temporaryJourney(page) {
-  const sentinel = 'RENULUS_UNSAVED_' + randomUUID().replaceAll('-', '');
-  await navigate(page, 'Cases');
-  await page.getByLabel('Case title', { exact: true }).fill('Synthetic temporary retention check');
-  await page.getByLabel('What would you like to discuss?', { exact: true }).fill(sentinel);
-  const temporary = await actionResponse(page, '/cases/sessions',
-    () => page.getByRole('button', { name: 'Start temporary case', exact: true }).click(), 201);
-  check(temporary.id && !temporary.saved && temporary.text === sentinel && temporary.scope?.kind === 'temporary-case'
-    && temporary.active_run_id === null, 'The actual temporary case was not established without Save or generation.');
-  await page.getByRole('button', { name: 'End temporary context', exact: true }).waitFor();
-  await navigate(page, 'Library');
-  check(await page.getByRole('button', { name: 'Add to library', exact: true }).isDisabled(), 'Temporary case scope was silently promoted to Library.');
-  await page.getByRole('button', { name: 'End temporary context', exact: true }).click();
-  await poll(() => page.getByRole('button', { name: 'End temporary context', exact: true }).count(), value => value === 0, 'Explicit temporary context end', 30_000);
-  check(!JSON.stringify(await api(page, '/data/export')).includes(sentinel), 'Unsaved case text entered canonical export.');
-  return sentinel; // Never write the sentinel into an evidence receipt.
 }
 
 async function assertNoSentinel(directory, sentinel) {
@@ -607,158 +383,290 @@ async function assertNoSentinel(directory, sentinel) {
     scope: 'All closed owned profile files, including canonical/index/cache/Hermes/desktop/helper state; no directory exclusion.' };
 }
 
-async function backupAll(page, evidence, sentinel) {
-  const result = await page.evaluate(async () => {
-    const response = await fetch('/api/v1/data/backup?format_version=2');
-    if (!response.ok || response.headers.get('content-type')?.split(';')[0] !== 'application/zip') throw new Error('Actual full backup producer failed.');
-    const reader = response.body.getReader(); let size = 0; const parts = [];
-    while (true) { const next = await reader.read(); if (next.done) break; size += next.value.length;
-      if (size > 32 * 1024 * 1024) { await reader.cancel(); throw new Error('Synthetic backup exceeds 32 MiB.'); }
-      parts.push(next.value); }
-    let text = ''; for (const part of parts) for (let offset = 0; offset < part.length; offset += 8192) text += String.fromCharCode(...part.subarray(offset, offset + 8192));
-    return { base64: btoa(text), size, format: response.headers.get('x-renulus-backup-format') };
-  });
-  check(result.format === '2' && result.size > 0 && !JSON.stringify(await api(page, '/data/export')).includes(sentinel), 'A complete actual format-2 backup is required.');
-  const file = path.join(evidence, 'all-formats-backup.zip'), bytes = Buffer.from(result.base64, 'base64');
-  check(bytes.length === result.size, 'The actual producer transfer was incomplete.');
-  await writeFile(file, bytes, { flag: 'wx' });
-  return { file, bytes: bytes.length, sha256: sha(bytes), transport: 'actual authenticated backend; native Save/Cancel separately proved by reused producer harness' };
+
+/** These assertions inspect real producer responses in --run; unit fixtures prove only refusal logic. */
+export function validateConversation(summary, kind, projectId) {
+  check(summary?.kind === kind && summary.retention === 'saved' && summary.lifecycle === 'active'
+    && summary.identity?.type === (kind === 'case' ? 'case' : 'learn_thread') && typeof summary.identity.id === 'string'
+    && !summary.identity.id.startsWith('tmp_') && summary.project_id === projectId && Number.isInteger(summary.revision),
+  'The canonical saved conversation did not retain its typed owner/project.');
+}
+export function validateSavedTest(published, setup) {
+  check(published?.test_id && published.version_id && published.item_count === 2
+    && setup.test?.id === published.test_id && setup.version?.id === published.version_id
+    && setup.version.origin === 'reviewed_bank' && setup.version.review_quality === 'reviewed'
+    && setup.version.status === 'ready' && setup.version.item_count === 2 && setup.can_start,
+  'The real saved reviewed test/version is incomplete or differs from publication.');
+}
+export function validateActiveTest(attempt, versionId, expectedId = attempt?.id) {
+  check(attempt?.id && attempt.id === expectedId && attempt.version_id === versionId && attempt.mode === 'test'
+    && attempt.status === 'active' && attempt.item_count === 2 && attempt.origin === 'reviewed_bank'
+    && attempt.review_quality === 'reviewed' && attempt.timing?.kind === 'untimed'
+    && attempt.policy?.assistance_allowed === false && attempt.policy.active_test_id === attempt.id
+    && Array.isArray(attempt.committed) && attempt.committed.length === 0 && attempt.result === null,
+  'Active Test identity/policy changed or feedback was published before final submission.');
+  function noFeedback(value) {
+    if (!value || typeof value !== 'object') return;
+    for (const [key, child] of Object.entries(value)) {
+      check(!['correct_option_ids', 'correct', 'explanation', 'feedback'].includes(key), 'Active Test question exposes feedback.');
+      noFeedback(child);
+    }
+  }
+  noFeedback(attempt.current_item);
+}
+export function validateFinalAttempt(attempt, mode, versionId) {
+  const result = attempt?.result;
+  check(attempt?.id && attempt.mode === mode && attempt.version_id === versionId && attempt.item_count === 2
+    && attempt.status === (mode === 'study' ? 'ended' : 'submitted') && result?.attempt_id === attempt.id
+    && result.version_id === versionId && result.mode === mode && result.origin === 'reviewed_bank'
+    && result.item_count === 2 && result.excluded === 0 && result.denominator === (mode === 'study' ? 1 : 2)
+    && result.unanswered === (mode === 'study' ? 0 : 1) && result.not_submitted === (mode === 'study' ? 1 : 0)
+    && result.items?.length === (mode === 'study' ? 1 : 2) && attempt.policy?.assistance_allowed === true
+    && attempt.policy.active_test_id === null, 'Whole-attempt final result/pin/counts or released policy differ.');
+  check(result.correct === result.items.filter(item => item.correct === true).length
+    && result.items.every(item => item.commit_id && item.question?.item_id === item.item_id
+      && Array.isArray(item.selected_option_ids) && item.feedback?.explanation), 'Final feedback is not pinned to actual commitments.');
+}
+export function safeFailure(error, temporaryPhase = false) {
+  return { message: temporaryPhase ? 'Temporary retention check failed; volatile text and identity are withheld.' : error.message };
 }
 
-async function restoreThroughUi(page, file, { cancelFirst = false } = {}) {
-  await navigate(page, 'Connections');
-  await page.getByRole('navigation', { name: 'Connection settings', exact: true }).getByRole('button', { name: 'Your study data', exact: true }).click();
-  const choose = async () => actionResponse(page, '/data/backup/preview',
-    () => page.getByLabel('Choose ZIP backup or JSON export', { exact: true }).setInputFiles(file));
-  let preview = await choose();
-  check(preview.format_version === 2 && preview.original_count >= 6 && preview.record_count > 0, 'The actual all-format restore preview is incomplete.');
-  const button = page.getByRole('button', { name: 'Restore full backup', exact: true });
-  check(await button.isDisabled(), 'Restore must wait for deliberate date/deletion acknowledgement.');
-  if (cancelFirst) {
-    await actionResponse(page, '/data/backup/preview/' + preview.preview_token,
-      () => page.getByRole('button', { name: 'Cancel restore', exact: true }).click(), 204, 'DELETE');
-    check((await api(page, '/library/documents?limit=25&offset=0')).total === 0, 'Cancel restore wrote saved originals.');
-    preview = await choose();
+export function completeCoreReceipt(report) {
+  for (const [name, reason] of Object.entries(deferredGates)) {
+    check(!report.gates[name] || report.gates[name].status === 'not-run', 'The core verifier cannot attest an unexecuted reader/migration/native gate.');
+    report.gates[name] = { status: 'not-run', reason };
   }
-  await page.getByLabel(/^I reviewed the backup date:/).check();
-  await page.getByLabel('I understand and accept the deletion limits of this backup.', { exact: true }).check();
-  const restored = await actionResponse(page, '/data/backup/restore', () => button.click());
-  check(restored.recovery_id && restored.exported_at === preview.exported_at && restored.indexes === 'rebuild-required', 'The acknowledged restore receipt is incomplete.');
-  const recovery = await poll(() => api(page, '/data/recovery'), value => {
-    check(!['partial', 'blocked', 'failed'].includes(value.rebuild.status), 'Actual local rebuild failed: ' + value.rebuild.status);
-    return value.rebuild.status === 'complete';
-  }, 'Actual local knowledge/memory rebuild', 180_000, 1000);
-  return { preview, restored, recovery };
+  check(coreGates.every(name => report.gates[name]?.status === 'passed'), 'A core journey is incomplete.');
+  report.coreCompleted = true;
+  report.status = 'incomplete';
+  report.pendingGates = Object.keys(deferredGates);
+  // A successful bounded core is never advertised as complete DC21 acceptance.
+  return report;
+}
+
+const chatPath = chat => '/conversations/' + chat.kind + '/' + encodeURIComponent(chat.identity.id);
+const chatHash = chat => '#/chat/' + chat.identity.type + '/' + chat.identity.id;
+async function screenshot(current, evidence, name) {
+  await hiddenWindowState(current.application);
+  await current.page.screenshot({ path: path.join(evidence, name + '.png'), fullPage: true });
+}
+async function savedConversationJourney(page) {
+  await navigate(page, '#/projects');
+  const projectTitle = 'DC21 synthetic study ' + randomUUID().slice(0, 8);
+  await page.getByLabel('New project name', { exact: true }).fill(projectTitle);
+  const project = await actionResponse(page, '/study/projects', () => page.getByRole('button', { name: 'Create project', exact: true }).click(), 201);
+  check(project.id && project.lifecycle === 'active', 'Project creation did not return its canonical owner.');
+  const conversations = [];
+  for (const kind of ['learning', 'case']) {
+    await navigate(page, '#/projects/' + project.id);
+    await page.getByRole('heading', { level: 1, name: projectTitle, exact: true }).waitFor();
+    const chat = await actionResponse(page, '/conversations', () => page.getByRole('button', {
+      name: kind === 'learning' ? 'New learning chat' : 'New case chat', exact: true }).click(), 201);
+    validateConversation(chat, kind, project.id);
+    const composer = page.getByLabel(kind === 'case' ? 'Your case question' : 'Message Renulus', { exact: true });
+    const draft = 'Synthetic ' + (kind === 'case' ? 'dialysis case' : 'CKD learning') + ' draft; no patient information or generation.';
+    await composer.fill(draft);
+    await poll(() => api(page, chatPath(chat) + '/draft'), value => value.text === draft && value.revision > 0, 'Durable saved chat draft');
+    await page.locator('.chat-tools summary').click();
+    const title = 'DC21 ' + kind + ' ' + project.id;
+    await page.getByLabel('Conversation title', { exact: true }).fill(title);
+    const renamed = await actionResponse(page, chatPath(chat), () => page.getByRole('button', { name: 'Rename', exact: true }).click(), 200, 'PATCH');
+    validateConversation(renamed, kind, project.id);
+    check(renamed.title === title, 'Chat rename did not persist.');
+    check((await api(page, chatPath(chat) + '/messages')).items.length === 0, 'Draft editing unexpectedly created a message.');
+    check((await api(page, chatPath(chat) + '/runs')).items.length === 0, 'Draft editing unexpectedly started a provider run.');
+    conversations.push({ ...renamed, expectedDraft: draft });
+  }
+  const linked = await api(page, '/study/projects/' + project.id);
+  check(linked.chats.length === 2 && conversations.every(chat => linked.chats.some(row => row.identity.id === chat.identity.id
+    && row.identity.type === chat.identity.type)), 'The project did not retain exactly its two typed chat memberships.');
+  await navigate(page, chatHash(conversations[0]));
+  await page.getByRole('heading', { level: 1, name: conversations[0].title, exact: true }).waitFor();
+  await page.locator('.chat-tools summary').click();
+  await actionResponse(page, chatPath(conversations[0]) + '/archive', () => page.getByRole('button', { name: 'Archive', exact: true }).click());
+  check((await api(page, chatPath(conversations[0]))).lifecycle === 'archived', 'Archive was not persisted.');
+  // The Manage details may retain its state; select the actual action rather than toggle blindly.
+  const restore = page.getByRole('button', { name: 'Restore', exact: true });
+  if (!await restore.isVisible()) await page.locator('.chat-tools summary').click();
+  await actionResponse(page, chatPath(conversations[0]) + '/restore', () => restore.click());
+  return { project: linked, conversations };
+}
+async function reopenSavedWork(page, work, projectId = work.project.id) {
+  for (const saved of work.conversations) {
+    const chat = await api(page, chatPath(saved)); validateConversation(chat, saved.kind, projectId);
+    check(chat.title === saved.title && (await api(page, chatPath(saved) + '/draft')).text === saved.expectedDraft,
+      'Reopen lost the original chat title or durable draft.');
+    await navigate(page, chatHash(saved));
+    await poll(() => page.getByLabel(saved.kind === 'case' ? 'Your case question' : 'Message Renulus', { exact: true }).inputValue(),
+      text => text === saved.expectedDraft, 'Reopened composer draft');
+    check((await api(page, chatPath(saved) + '/messages')).items.length === 0
+      && (await api(page, chatPath(saved) + '/runs')).items.length === 0, 'Reopen duplicated or generated conversation content.');
+  }
+  return { chatIds: work.conversations.map(chat => chat.identity), draftsPreserved: true, projectId };
+}
+async function reviewedStudyJourney(page) {
+  await navigate(page, '#/tests');
+  await page.getByRole('button', { name: 'New reviewed test', exact: true }).click();
+  const title = 'DC21 reviewed set ' + randomUUID().slice(0, 8);
+  await page.getByLabel('Test title', { exact: true }).fill(title);
+  await page.getByLabel('Questions', { exact: true }).fill('2');
+  const published = await actionResponse(page, '/assessment/tests/reviewed', () => page.getByRole('button', { name: 'Save test', exact: true }).click());
+  const setup = await api(page, '/assessment/tests/versions/' + published.version_id + '/setup');
+  validateSavedTest(published, setup);
+  await page.getByRole('button', { name: 'Continue to Study', exact: true }).click();
+  const started = await actionResponse(page, '/assessment/test-attempts', () => page.getByRole('button', { name: 'Start Study', exact: true }).click(), 201);
+  check(started.mode === 'study' && started.status === 'active' && started.version_id === published.version_id
+    && started.item_count === 2 && started.committed.length === 0 && started.result === null && started.timing.kind === 'untimed', 'Study start did not pin the saved version.');
+  await page.locator('.attempt-options input[type="radio"]').first().check();
+  const commit = await actionResponse(page, '/assessment/test-attempts/' + started.id + '/submit-answer',
+    () => page.getByRole('button', { name: 'Submit answer', exact: true }).click());
+  check(commit.id === started.id && commit.committed.length === 1 && commit.committed[0].commit_id
+    && commit.committed[0].feedback?.explanation && commit.result === null, 'Study feedback did not follow an actual explicit commitment.');
+  await page.getByRole('button', { name: 'Finish study', exact: true }).click();
+  const final = await actionResponse(page, '/assessment/test-attempts/' + started.id + '/submit',
+    () => page.locator('.attempt-confirm').getByRole('button', { name: 'Finish study', exact: true }).click());
+  validateFinalAttempt(final, 'study', published.version_id);
+  await page.locator('.attempt-result-score').waitFor();
+  return { published, setup, study: final };
+}
+async function startTestJourney(page, versionId) {
+  await navigate(page, '#/tests/' + versionId);
+  await page.getByLabel('Mode', { exact: true }).selectOption('test');
+  await page.getByRole('button', { name: 'Continue to Test', exact: true }).click();
+  const started = await actionResponse(page, '/assessment/test-attempts', () => page.getByRole('button', { name: 'Start Test', exact: true }).click(), 201);
+  validateActiveTest(started, versionId);
+  await page.locator('.attempt-options input[type="radio"]').first().check();
+  const draft = await poll(() => api(page, '/assessment/test-attempts/' + started.id),
+    value => value.answers[0].option_ids.length === 1 && value.draft_revision > started.draft_revision, 'Backend-durable Test choice');
+  validateActiveTest(draft, versionId, started.id);
+  check(await page.getByRole('button', { name: 'Hint', exact: true }).count() === 0, 'Active Test displayed Study help.');
+  const refusal = await page.evaluate(async () => {
+    const response = await fetch('/api/v1/conversations?limit=1');
+    const body = await response.json(); return { status: response.status, code: body.error?.code };
+  });
+  check(refusal.status === 403 && refusal.code === 'assistance_restricted', 'Active Test did not refuse conversation help at the real API.');
+  return { draft, refusal };
+}
+async function finishTestJourney(page, before) {
+  const current = await api(page, '/assessment/test-attempts/' + before.id);
+  validateActiveTest(current, before.version_id, before.id);
+  check(JSON.stringify(current.answers) === JSON.stringify(before.answers) && current.draft_revision === before.draft_revision,
+    'Closing/reopening changed the durable Test draft.');
+  await navigate(page, '#/attempts/' + before.id);
+  await page.locator('.attempt-options input[type="radio"]:checked').waitFor();
+  await page.getByRole('button', { name: 'Review and submit test', exact: true }).click();
+  const final = await actionResponse(page, '/assessment/test-attempts/' + before.id + '/submit',
+    () => page.locator('.attempt-confirm').getByRole('button', { name: 'Submit test', exact: true }).click());
+  validateFinalAttempt(final, 'test', before.version_id);
+  check(JSON.stringify(final.result.items[0].selected_option_ids) === JSON.stringify(before.answers[0].option_ids), 'Final Test discarded its durable choice.');
+  await page.locator('.attempt-result-score').waitFor();
+  return final;
+}
+async function temporaryJourney(page) {
+  await navigate(page, '#/chat');
+  const chat = await actionResponse(page, '/conversations', () => page.getByRole('button', { name: 'Start temporary chat', exact: true }).click(), 201);
+  check(chat.retention === 'temporary' && chat.project_id === null, 'The explicit temporary conversation was not volatile.');
+  const sentinel = 'DC21-TEMP-' + randomUUID();
+  await page.getByLabel('Message Renulus', { exact: true }).fill(sentinel);
+  await poll(() => api(page, chatPath(chat) + '/draft'), value => value.text === sentinel, 'Volatile temporary draft');
+  check(!page.url().includes(chat.identity.id), 'Temporary identity entered a navigation URL.');
+  await navigate(page, '#/tests');
+  const exported = JSON.stringify(await api(page, '/data/export'));
+  check(!exported.includes(sentinel) && !exported.includes(chat.identity.id), 'Temporary draft or identity entered canonical export.');
+  return { sentinel, chat }; // Volatile variables only; never included in the report or screenshots.
+}
+async function deleteProjectJourney(page, work) {
+  await navigate(page, '#/projects/' + work.project.id);
+  await page.getByText('Manage project', { exact: true }).click();
+  await page.getByRole('button', { name: 'Delete project', exact: true }).click();
+  const deleted = await actionResponse(page, '/study/projects/' + work.project.id,
+    () => page.getByRole('dialog').getByRole('button', { name: 'Delete project', exact: true }).click(), 200, 'DELETE');
+  check(deleted.id === work.project.id && deleted.deleted === true, 'Project deletion was not acknowledged.');
+  const retained = await reopenSavedWork(page, work, null);
+  return { deleted, ...retained };
 }
 
 export async function runInstalledProduct() {
   const request = validateInstalledRequest(process.env);
-  const evidence = await createNativeEvidence('installed-product');
+  // Published parent helper must accept exactly this root before any state is created.
+  nativeEvidenceRoot(designCEvidenceRoot);
+  const evidence = await createNativeEvidence('installed-design-c');
+  check(inside(designCEvidenceRoot, evidence), 'Generated proof left the Design C scratch root.');
   const report = { kind: 'actual-installed-product-current-pc', checkedAt: new Date().toISOString(),
     slot: request.slot, sourceRevision: request.revision, executable: request.executable, evidence,
     acceptanceScope: installedAcceptancePlan().scope, gates: {}, shutdowns: [], launches: [],
-    limits: ['Synthetic disconnected profiles; parent-owned normal profile and live subscription capabilities remain separately evidenced.',
-      'Image/Office originals downloaded by actual DownloadItem to a confined path; opening a separate Office application or its Save dialog is not claimed.',
-      'No inference/compaction/interpretation/medical-effectiveness claim; every failure or pending gate prevents this receipt passing.',
-      'On this PC; unsigned is accepted. Signing and separate clean-PC/VM validation are optional future distribution work.'] };
-  const pass = (name, proof) => { report.gates[name] = { status: 'passed', proof }; console.log(JSON.stringify({ gate: name, status: 'passed' })); };
+    limits: ['Hidden synthetic disconnected profiles only. No owner profile, providers, fabricated generation or native dialogs.',
+      'Real reviewed content and real SQLite/API producers; unit checks never establish installed acceptance.',
+      'Reader, migration/recovery and physical/native gates remain explicit not-run; this core driver cannot close DC21.'] };
+  const pass = (name, proof) => { check(coreGates.includes(name), 'Only an executed core gate can be recorded here.');
+    report.gates[name] = { status: 'passed', proof }; console.log(JSON.stringify({ gate: name, status: 'passed' })); };
   let current;
+  let temporaryPhase = false;
   try {
-    const identity = await verifyArtifacts(request); pass('installed-identity', identity);
+    const identity = await verifyArtifacts(request); report.identity = identity;
+    pass('installed-identity', { hashes: identity.actual, frozenFiles: identity.frozenFiles, inventoryFiles: identity.inventoryFiles });
     await mkdir(path.join(evidence, 'temporary'));
-    current = await launch(request, identity, evidence, 'profile', report); pass('isolated-runtime', report.launches.at(-1));
-    const reviewed = await reviewedJourneys(current.page, evidence);
-    pass('programme-selectors', { tracks: reviewed.tracks, goals: reviewed.goals, programmeHome: reviewed.programmeHome, handoff: reviewed.handoff });
-    pass('reviewed-quiz', reviewed);
-    // This established helper's inspector predates Office/C roots. Prove its real Save/Cancel before originals.
-    const nativeBackup = await proveNativeProductBackup(current.application, current.page, evidence, request.executable, current.env);
-    pass('native-backup-save-cancel', nativeBackup);
-    const library = [];
-    for (const fixture of await fixtures(identity, current, evidence)) {
-      const row = await importThroughUi(current.page, fixture); row.application = current.application;
-      const proof = await inspectLibrary(current.page, row, evidence); library.push(proof); pass('library-' + row.kind, proof);
-    }
-    const sentinel = await temporaryJourney(current.page);
-    const backup = await backupAll(current.page, evidence, sentinel);
-    const queued = [];
-    const pdf = library.find(row => row.kind === 'pdf');
-    // Real, bounded normal ingestion. Never pause/fake a converter to manufacture an active observation.
-    for (let index = 0; index < 4; index++) {
-      queued.push(await importThroughUi(current.page, { ...pdf, title: 'Synthetic shutdown PDF ' + index, imported: undefined }));
-    }
-    const ids = queued.map(row => row.imported.job.id);
-    const active = await poll(() => api(current.page, '/library/capabilities'), value => value.ingestion_worker.running
-      && ids.includes(value.ingestion_worker.active_job), 'An actually active owned ingestion job', 30_000, 100);
-    const activeJob = await api(current.page, '/library/jobs/' + active.ingestion_worker.active_job);
-    check(activeJob.state === 'processing', 'A queued receipt is not an active ingestion shutdown proof.');
-    report.ingestionAtClose = { capabilities: active, activeJob, queued: queued.map(row => row.imported) };
-    pass('normal-ingestion-close', { ingestion: report.ingestionAtClose, shutdown: await normalClose(current, report) });
-    current = undefined; delete report.current;
     current = await launch(request, identity, evidence, 'profile', report);
-    for (const session of reviewed.sessions) {
-      const retained = await api(current.page, '/assessment/sessions/' + session.id);
-      check(retained.status === 'ended' && retained.answered_count === 1, 'Reopen lost/doubled a completed reviewed session.');
-    }
-    check((await api(current.page, '/study/home')).progress.groups.fresh.answered === 3
-      && (await api(current.page, '/study/goals')).track === 'eseneph', 'Reopen lost reviewed progress/programme preference.');
-    for (const row of library) await originalBytes(current.page, row.revision.id, row.original.sha256);
-    for (const row of queued) await poll(() => api(current.page, '/library/documents/' + row.imported.document_id + '/import-status'), value => {
-      check(!['failed', 'cancelled'].includes(value.status), 'Restart did not recover its owned synthetic ingestion job.');
-      return value.status === 'ready' && value.job.state === 'ready';
-    }, 'Reopened normal ingestion');
-    pass('normal-reopen', { sessions: reviewed.sessions.map(row => row.id), originals: library.length, recoveredJobs: ids });
+    pass('isolated-runtime', report.launches[0]); pass('c-readiness', report.launches[0].timing);
+    const work = await savedConversationJourney(current.page);
+    pass('saved-conversations', { conversations: work.conversations, draftOnly: true });
+    pass('project-membership', { project: work.project, owner: 'study_project_chats' });
+    const reviewed = await reviewedStudyJourney(current.page);
+    pass('saved-reviewed-test', { published: reviewed.published, setup: reviewed.setup });
+    pass('whole-study', { attempt: reviewed.study });
+    const test = await startTestJourney(current.page, reviewed.published.version_id);
+    pass('active-test-policy', { id: test.draft.id, policy: test.draft.policy, refusal: test.refusal });
+    await screenshot(current, evidence, 'test-durable-draft');
     await normalClose(current, report); current = undefined; delete report.current;
-    pass('temporary-retention', await assertNoSentinel(path.join(evidence, 'profile'), sentinel));
-    current = await launch(request, identity, evidence, 'restored-profile', report);
-    const restored = await restoreThroughUi(current.page, backup.file, { cancelFirst: true });
-    check(restored.restored.restored_originals === library.length && restored.restored.excluded_originals === 0, 'Fresh full restore did not recover every accepted original.');
-    for (const row of library) {
-      await originalBytes(current.page, row.revision.id, row.original.sha256);
-      const citation = await api(current.page, '/library/revisions/' + row.revision.id + '/citation'
-        + (row.passage ? '?passage_id=' + row.passage.id + (row.kind === 'pdf' ? '&page=2' : '') : ''));
-      check(JSON.stringify(citation) === JSON.stringify(row.citation), 'Restore changed the original passage citation.');
-    }
-    check((await api(current.page, '/study/home')).progress.groups.fresh.answered === 3, 'Full restore lost real assessment progress.');
-    pass('full-backup-restore', { backup, ...restored, verifiedOriginals: library.length });
-    const deleted = library[0];
-    await navigate(current.page, 'Library');
-    await current.page.getByRole('button', { name: deleted.title, exact: true }).click();
-    const removal = await actionResponse(current.page, '/library/documents/' + deleted.document.id,
-      () => current.page.getByRole('button', { name: 'Remove from library', exact: true }).click(), 200, 'DELETE');
-    check(!removal.cleanup_pending, 'Known-deletion physical cleanup did not finish.');
-    const reconciled = await restoreThroughUi(current.page, backup.file);
-    check(reconciled.restored.excluded_by_deletion >= 1 && reconciled.restored.excluded_originals >= 1, 'Older restore did not reconcile this profile\'s newer deletion.');
-    const missing = await current.page.evaluate(async revision => (await fetch('/api/v1/library/revisions/' + revision + '/original')).status, deleted.revision.id);
-    check(missing === 404, 'An older backup resurrected the deleted original.');
-    const found = await api(current.page, '/library/retrieve', { query: deleted.query, scope: { kind: 'study' } });
-    check(!found.passages.some(row => row.document_id === deleted.document.id), 'Deleted source returned to search after rebuild.');
-    await current.page.screenshot({ path: path.join(evidence, 'restored-data-and-deletions.png'), fullPage: true });
-    pass('deletion-reconciliation', { removal, reconciled, deletedDocument: deleted.document.id, originalStatus: missing });
+    current = await launch(request, identity, evidence, 'profile', report);
+    const final = await finishTestJourney(current.page, test.draft);
+    pass('test-draft-reopen', { id: test.draft.id, draftRevision: test.draft.draft_revision, answers: test.draft.answers });
+    pass('whole-test', { attempt: final });
+    await reopenSavedWork(current.page, work);
+    check(JSON.stringify((await api(current.page, '/assessment/test-attempts/' + reviewed.study.id)).result) === JSON.stringify(reviewed.study.result),
+      'Reopen rewrote the immutable Study result.');
+    const collection = await api(current.page, '/assessment/tests?limit=100');
+    check(collection.items.filter(item => item.id === reviewed.published.test_id).length === 1, 'Reopen lost or duplicated the saved set.');
+    await screenshot(current, evidence, 'saved-chat-reopen');
+    temporaryPhase = true;
+    const temporary = await temporaryJourney(current.page);
+    await normalClose(current, report); current = undefined; delete report.current;
+    const scan = await assertNoSentinel(path.join(evidence, 'profile'), temporary.sentinel);
+    const idScan = await assertNoSentinel(path.join(evidence, 'profile'), temporary.chat.identity.id);
+    current = await launch(request, identity, evidence, 'profile', report);
+    const absent = await current.page.evaluate(async route => (await fetch('/api/v1' + route)).status, chatPath(temporary.chat));
+    check(absent === 404, 'Restart restored an ordinary temporary conversation.');
+    pass('temporary-retention', { ...scan, temporaryIdAbsent: idScan.sentinelAbsent, restartStatus: absent });
+    temporaryPhase = false;
+    pass('normal-reopen', await reopenSavedWork(current.page, work));
+    pass('project-delete-preserves-chats', await deleteProjectJourney(current.page, work));
+    await screenshot(current, evidence, 'project-deletion-retained-chat');
     pass('final-close', await normalClose(current, report)); current = undefined; delete report.current;
-    validateCompleteReport(report); report.status = 'passed';
+    completeCoreReceipt(report); process.exitCode = 1;
   } catch (error) {
-    report.status = 'failed'; report.error = { message: error.message }; process.exitCode = 1;
+    report.status = 'failed'; report.error = safeFailure(error, temporaryPhase); process.exitCode = 1;
   } finally {
     const owned = current ?? report.current;
     if (owned) {
-      // Failure cleanup is explicitly separate from successful normal-shutdown evidence. No PID-based kill.
       try {
         let timer;
-        try { await Promise.race([owned.application.close(), new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Owned app cleanup exceeded 30 seconds; parent must inspect its exact identities.')), 30_000); })]); }
+        try { await Promise.race([owned.application.close(), new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Owned app cleanup exceeded 30 seconds; inspect its exact identities.')), 30_000); })]); }
         finally { clearTimeout(timer); }
         report.failureCleanup = { attempted: true, identities: owned.identities };
       } catch (error) { report.cleanupError = error.message; process.exitCode = 1; }
     }
     delete report.current;
-    for (const name of requiredGates) report.gates[name] ??= { status: 'not-run' };
+    for (const name of requiredGates) report.gates[name] ??= { status: 'not-run', reason: deferredGates[name] ?? 'Execution stopped before this core gate.' };
+    report.finishedAt = new Date().toISOString();
     await writeFile(path.join(evidence, 'installed-product-evidence.json'), JSON.stringify(report, null, 2), { flag: 'wx' });
   }
-  console.log(JSON.stringify({ evidence, status: report.status, error: report.error?.message, cleanupError: report.cleanupError }));
+  console.log(JSON.stringify({ evidence, status: report.status, coreCompleted: report.coreCompleted ?? false,
+    pendingGates: report.pendingGates, error: report.error?.message, cleanupError: report.cleanupError }));
   return report;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   if (process.argv.length === 3 && process.argv[2] === '--plan') console.log(JSON.stringify(installedAcceptancePlan(), null, 2));
   else if (process.argv.length === 3 && process.argv[2] === '--run') await runInstalledProduct();
-  else throw new Error('Use --plan (read-only) or --run after the parent assigns the exact freeze and native/helper slot.');
+  else throw new Error('Use --plan (read-only) or --run after the parent supplies the matching package and exact freeze/slot.');
 }

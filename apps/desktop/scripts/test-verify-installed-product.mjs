@@ -4,17 +4,17 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateJourneyEntry } from './native-journeys.mjs';
 import { installedAcceptancePlan, validateInstalledRequest, validateInstallationReceipts, isolatedEnvironment,
-  validateCompleteReport, validateFrozenScript, validateProgrammeHandoff, requiredGates, remainingOwnedIdentities, inside,
-  ingestionPdf, fixturePython } from './verify-installed-product.mjs';
+  validateCompleteReport, validateFrozenScript, requiredGates, remainingOwnedIdentities, inside,
+  coreGates, deferredGates, completeCoreReceipt, designCEvidenceRoot, ownedArtifact, validateHiddenWindows, waitForDesignCWindow,
+  validateConversation, validateSavedTest, validateActiveTest, validateFinalAttempt, safeFailure } from './verify-installed-product.mjs';
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
 const desktop = path.resolve(directory, '..');
 const revision = 'a'.repeat(40), digest = 'b'.repeat(64);
 const executable = path.join(desktop, 'release/installed-synthetic/Renulus Development.exe');
 const requestEnv = () => ({ RENULUS_NATIVE_SLOT: 'parent-synthetic-slot', RENULUS_EXPECT_SOURCE_REVISION: revision,
-  RENULUS_INSTALLED_PROOF: '1', RENULUS_PACKAGED_EXECUTABLE: executable,
+  RENULUS_INSTALLED_PROOF: '1', RENULUS_PACKAGED_EXECUTABLE: executable, RENULUS_NATIVE_EVIDENCE_ROOT: designCEvidenceRoot,
   RENULUS_DELIVERY_PROVENANCE: path.join(desktop, 'release/matching-synthetic/delivery-provenance.json'),
   RENULUS_INSTALLER_EVIDENCE: path.join(desktop, 'release/proofs/installer-evidence.json') });
 const receiptFixture = () => ({
@@ -29,29 +29,24 @@ const receiptFixture = () => ({
 const validate = f => validateInstallationReceipts(f.request, f.delivery, f.installation, f.actual);
 
 test('an explicit parent slot/freeze is required before either native mode', () => {
-  assert.equal(validateJourneyEntry(['--installed-product'], requestEnv()), 'installed-product');
-  assert.equal(validateJourneyEntry([], requestEnv()), 'declared-fixtures');
   for (const key of ['RENULUS_NATIVE_SLOT', 'RENULUS_EXPECT_SOURCE_REVISION']) {
     const env = requestEnv(); delete env[key];
-    assert.throws(() => validateJourneyEntry([], env), /parent-assigned/);
     assert.throws(() => validateInstalledRequest(env, 'win32'), /parent|freeze/);
   }
   const env = requestEnv(); env.RENULUS_EXPECT_SOURCE_REVISION = 'HEAD';
   assert.throws(() => validateInstalledRequest(env, 'win32'), /immutable/);
-  assert.throws(() => validateJourneyEntry(['--unknown'], requestEnv()), /argument/);
-  assert.throws(() => validateJourneyEntry(['--installed-product', '--fixture'], requestEnv()), /argument/);
 });
 
 test('installed acceptance refuses supplied profiles, attached services and fixture/runtime overrides', () => {
   assert.equal(validateInstalledRequest(requestEnv(), 'win32').revision, revision);
   for (const key of ['RENULUS_PROFILE', 'RENULUS_SOURCE_DESKTOP', 'RENULUS_BACKEND_URL', 'RENULUS_SESSION_TOKEN',
-    'RENULUS_PYTHON', 'RENULUS_TEST_ATTACH', 'RENULUS_PDF_FIXTURE_ONLY', 'RENULUS_FIXTURE_PYTHON']) {
+    'RENULUS_PYTHON', 'RENULUS_TEST_ATTACH', 'RENULUS_PDF_FIXTURE_ONLY', 'RENULUS_FIXTURE_PYTHON', 'RENULUS_BACKGROUND_TEST', 'RENULUS_BACKGROUND_OWNER_PID']) {
     assert.throws(() => validateInstalledRequest({ ...requestEnv(), [key]: 'synthetic-override' }, 'win32'), /override/);
   }
   assert.throws(() => validateInstalledRequest(requestEnv(), 'linux'), /Windows/);
   assert.throws(() => validateInstalledRequest({ ...requestEnv(), RENULUS_INSTALLED_PROOF: '0' }, 'win32'), /actual installation/);
   assert.throws(() => validateInstalledRequest({ ...requestEnv(), RENULUS_PACKAGED_EXECUTABLE: 'relative.exe' }, 'win32'), /absolute/);
-  assert.throws(() => validateInstalledRequest({ ...requestEnv(), RENULUS_NATIVE_EVIDENCE_ROOT: path.resolve('C:/Renulus-native-delivery/desktop-20261005/proofs') }, 'win32'), /backup-inspector/);
+  assert.throws(() => validateInstalledRequest({ ...requestEnv(), RENULUS_NATIVE_EVIDENCE_ROOT: path.resolve('C:/Renulus-native-delivery/desktop-20261005/proofs') }, 'win32'), /exact synthetic/);
 });
 
 test('matching unsigned manufacture/extraction receipts are accepted without signing or VM conditions', () => {
@@ -85,23 +80,8 @@ test('the executed harness must match the freeze, allowing only the declared Pow
   assert.equal(validateFrozenScript('native-journeys.mjs', source, source).frozenSha256, hashes.frozenSha256);
 });
 
-test('Today handoff rejects general-track fallback, unavailable mapping and mismatched producer versions', () => {
-  const fixture = () => ({ home: { goals: { track: 'eseneph' },
-    selection: { track: 'esen_eph', status: 'ready', mapping_version: 'synthetic-version', topic_ids: ['synthetic-topic'] },
-    tracks: [{ id: 'esen_eph', available: true, status: 'partial', version: 'synthetic-version', checked_on: '2026-10-05' }] },
-    catalog: { track: 'esen_eph', complete_exam_available: false, available_families: 1,
-      tracks: [{ id: 'esen_eph', available: true, exam_simulation_available: false }] }, selected: 'esen_eph' });
-  const f = fixture(); assert.equal(validateProgrammeHandoff(f.home, f.catalog, f.selected).track, 'esen_eph');
-  for (const mutate of [
-    f => { f.home.goals.track = 'general'; }, f => { f.home.selection.track = 'general_nephrology'; },
-    f => { f.home.selection.mapping_version = 'older-synthetic-version'; }, f => { f.home.selection.topic_ids = []; },
-    f => { f.home.tracks[0].available = false; }, f => { f.catalog.track = 'general_nephrology'; },
-    f => { f.catalog.complete_exam_available = true; }, f => { f.selected = 'general_nephrology'; },
-  ]) { const changed = fixture(); mutate(changed); assert.throws(() => validateProgrammeHandoff(changed.home, changed.catalog, changed.selected)); }
-});
-
 test('synthetic child environment strips developer, Electron-as-Node and provider inputs', () => {
-  const evidence = path.join(desktop, 'test-results/installed-product-synthetic');
+  const evidence = path.join(designCEvidenceRoot, 'installed-product-unit-boundary');
   const env = isolatedEnvironment({ SystemRoot: 'C:/Windows', PATH: 'synthetic-developer-path',
     ELECTRON_RUN_AS_NODE: '1', RENULUS_SESSION_TOKEN: 'synthetic-token', OPENAI_API_KEY: 'synthetic-key',
     RENULUS_PYTHON: 'synthetic-python', RENULUS_PROFILE: 'synthetic-private-placeholder' }, evidence, path.join(evidence, 'profile'));
@@ -109,6 +89,9 @@ test('synthetic child environment strips developer, Electron-as-Node and provide
   assert.ok(!env.PATH.includes('developer'));
   for (const key of ['ELECTRON_RUN_AS_NODE', 'RENULUS_SESSION_TOKEN', 'OPENAI_API_KEY', 'RENULUS_PYTHON']) assert.equal(env[key], undefined);
   assert.equal(env.RENULUS_PROFILE, path.join(evidence, 'profile'));
+  assert.equal(env.RENULUS_BACKGROUND_TEST, '1');
+  assert.equal(env.RENULUS_BACKGROUND_OWNER_PID, String(process.pid));
+  assert.throws(() => isolatedEnvironment({ SystemRoot: 'C:/Windows' }, path.join(desktop, 'test-results/unit'), path.join(desktop, 'test-results/unit/profile')), /exact synthetic/);
   assert.throws(() => isolatedEnvironment({ SystemRoot: 'C:/Windows' }, evidence, evidence), /newly owned/);
   assert.throws(() => isolatedEnvironment({ SystemRoot: 'C:/Windows' }, evidence, path.join(desktop, 'other-profile')), /newly owned/);
 });
@@ -147,24 +130,108 @@ test('partial gates, cleanup failures and an unproved normal close cannot be lab
     f => { f.shutdowns.pop(); }]) { const f = fixture(); mutate(f); assert.throws(() => validateCompleteReport(f)); }
 });
 
-test('the enriched existing PDF remains a valid two-page byte fixture with exact stream lengths and xref', () => {
-  const pdf = ingestionPdf().toString('ascii');
-  assert.match(pdf, /\/Count 2/); assert.match(pdf, /RENULUS - PAGE TWO/);
-  assert.match(pdf, /Synthetic PDF page two dialysis acceptance observation row 59/);
-  for (const match of pdf.matchAll(/<< \/Length (\d+) >>\nstream\n([\s\S]*?)endstream/g)) {
-    assert.equal(Number(match[1]), Buffer.byteLength(match[2]));
-  }
-  const xref = Number(pdf.match(/startxref\n(\d+)/)[1]); assert.equal(pdf.slice(xref, xref + 4), 'xref');
-  const entries = pdf.slice(xref).split('\n').slice(3, 10);
-  entries.forEach((entry, index) => assert.ok(pdf.slice(Number(entry.slice(0, 10))).startsWith((index + 1) + ' 0 obj\n')));
-  assert.ok(!fixturePython.includes('\0'));
-  assert.ok(fixturePython.includes('b"\\x89PNG\\r\\n\\x1a\\n"'));
-});
-
 test('--plan can run without a freeze, slot, dependencies or profile and never requests a live run', () => {
   const output = execFileSync(process.execPath, [path.join(directory, 'verify-installed-product.mjs'), '--plan'],
     { encoding: 'utf8', windowsHide: true, env: { SystemRoot: process.env.SystemRoot ?? 'C:/Windows',
       RENULUS_NATIVE_EVIDENCE_ROOT: 'synthetic-invalid-root-which-must-not-be-used' } });
   const plan = JSON.parse(output); assert.deepEqual(plan.requiredGates, requiredGates);
   assert.match(plan.parentChecks[0], /exclusive native\/helper slot/);
+});
+
+
+test('all eight readers and old-profile/recovery gaps remain not-run after successful core work', () => {
+  const report = { kind: 'actual-installed-product-current-pc', sourceRevision: revision,
+    gates: Object.fromEntries(coreGates.map(name => [name, { status: 'passed', proof: { unitOnly: true } }])),
+    shutdowns: Array.from({ length: 3 }, () => ({ normalWindowClose: true, ownedBackendObserved: true, remaining: [] })) };
+  completeCoreReceipt(report);
+  assert.equal(report.status, 'incomplete'); assert.equal(report.coreCompleted, true);
+  assert.equal(Object.keys(deferredGates).filter(name => name.startsWith('reader-')).length, 8);
+  for (const name of ['legacy-profile-upgrade', 'full-backup-restore', ...Object.keys(deferredGates)]) {
+    assert.equal(report.gates[name].status, 'not-run'); assert.ok(report.gates[name].reason);
+  }
+  assert.throws(() => validateCompleteReport(report), /Every/);
+  report.gates['reader-pdf'] = { status: 'passed', proof: { unitOnly: true } };
+  assert.throws(() => completeCoreReceipt(report), /cannot attest/);
+});
+
+test('Design C artifact scope accepts named public deliveries and rejects profile/sibling roots', async () => {
+  for (const name of ['matching-aaaaaaaa/setup.exe', 'installed-aaaaaaaa/resources/backend/bundle.json', 'proofs/install/installer-evidence.json']) {
+    await ownedArtifact(path.join(designCEvidenceRoot, name));
+  }
+  for (const value of [path.join(designCEvidenceRoot, 'profile/Renulus.exe'), designCEvidenceRoot,
+    path.resolve('C:/Renulus/data/learning/Renulus.exe'), path.resolve(designCEvidenceRoot + '-other/installed-aaaaaaaa/Renulus.exe')]) {
+    await assert.rejects(ownedArtifact(value), /owned|artifacts/);
+  }
+});
+
+test('hidden C readiness accepts collapsed shell without Flow heading and rejects visible windows', async () => {
+  const url = 'http://127.0.0.1:12345/#/newchat';
+  const page = { isClosed: () => false, url: () => url, locator: selector => {
+    assert.equal(selector, '.desktop-shell.design-c-shell'); return { count: async () => 1 };
+  } };
+  const windows = [{ url, visible: false, focused: false }];
+  const application = { evaluate: async () => windows, windows: () => [page] };
+  assert.equal((await waitForDesignCWindow(application, { timeout: 10 })).page, page);
+  validateHiddenWindows(windows);
+  for (const property of ['visible', 'focused']) {
+    windows[0][property] = true;
+    await assert.rejects(waitForDesignCWindow(application, { timeout: 10 }), /hidden and unfocused/);
+    windows[0][property] = false;
+  }
+  await assert.rejects(waitForDesignCWindow({ ...application, windows: () => [{ ...page, url: () => 'https://example.test' }] }, { timeout: 1 }), /did not become ready/);
+});
+
+test('saved chat and set assertions reject temporary, wrong-owner and stale-version producer responses', () => {
+  const chat = { identity: { type: 'learn_thread', id: 'learn-unit' }, kind: 'learning', retention: 'saved', lifecycle: 'active', project_id: 'project-unit', revision: 1 };
+  validateConversation(chat, 'learning', 'project-unit');
+  for (const mutate of [v => { v.retention = 'temporary'; }, v => { v.identity.type = 'case'; }, v => { v.project_id = null; }]) {
+    const value = structuredClone(chat); mutate(value); assert.throws(() => validateConversation(value, 'learning', 'project-unit'));
+  }
+  const published = { test_id: 'test-unit', version_id: 'version-unit', item_count: 2 };
+  const setup = { test: { id: published.test_id }, version: { id: published.version_id, origin: 'reviewed_bank', review_quality: 'reviewed', status: 'ready', item_count: 2 }, can_start: true };
+  validateSavedTest(published, setup);
+  for (const mutate of [v => { v.version.id = 'wrong'; }, v => { v.version.review_quality = 'personal'; }, v => { v.can_start = false; }, v => { v.version.item_count = 1; }]) {
+    const value = structuredClone(setup); mutate(value); assert.throws(() => validateSavedTest(published, value));
+  }
+});
+
+const activeAttempt = () => ({ id: 'attempt-unit', version_id: 'version-unit', mode: 'test', status: 'active', item_count: 2,
+  origin: 'reviewed_bank', review_quality: 'reviewed', timing: { kind: 'untimed' },
+  policy: { assistance_allowed: false, active_test_id: 'attempt-unit' }, committed: [], result: null,
+  current_item: { item_id: 'item-unit', options: [{ id: 'a', text: 'Synthetic option' }] } });
+
+test('whole Test assertions reject leaked keys/feedback, changed pins and incorrectly released policy', () => {
+  validateActiveTest(activeAttempt(), 'version-unit');
+  for (const mutate of [v => { v.id = 'wrong'; }, v => { v.version_id = 'wrong'; }, v => { v.committed = [{}]; },
+    v => { v.result = {}; }, v => { v.current_item.options[0].correct = false; },
+    v => { v.current_item.feedback = { explanation: 'unit leak' }; }, v => { v.current_item.correct_option_ids = ['a']; },
+    v => { v.policy.assistance_allowed = true; }, v => { v.policy.active_test_id = null; }]) {
+    const value = activeAttempt(); mutate(value); assert.throws(() => validateActiveTest(value, 'version-unit', 'attempt-unit'));
+  }
+});
+
+test('final whole-attempt assertions distinguish committed Study from final Test drafts', () => {
+  for (const mode of ['study', 'test']) {
+    const value = activeAttempt(); value.mode = mode; value.status = mode === 'study' ? 'ended' : 'submitted';
+    value.policy = { assistance_allowed: true, active_test_id: null };
+    const entry = { commit_id: 'commit-unit', item_id: 'item-unit', question: { item_id: 'item-unit' }, selected_option_ids: ['a'], correct: true, feedback: { explanation: 'Unit-only explanation' } };
+    value.result = { attempt_id: value.id, version_id: value.version_id, mode, origin: 'reviewed_bank', item_count: 2,
+      excluded: 0, denominator: mode === 'study' ? 1 : 2, unanswered: mode === 'study' ? 0 : 1, not_submitted: mode === 'study' ? 1 : 0,
+      correct: 1, items: mode === 'study' ? [entry] : [entry, { ...entry, commit_id: 'commit-2', correct: false, selected_option_ids: [] }] };
+    validateFinalAttempt(value, mode, value.version_id);
+    for (const mutate of [v => { v.result.version_id = 'wrong'; }, v => { v.result.denominator = 99; },
+      v => { v.result.correct = 99; }, v => { v.result.not_submitted = 99; }, v => { v.policy.assistance_allowed = false; }]) {
+      const changed = structuredClone(value); mutate(changed); assert.throws(() => validateFinalAttempt(changed, mode, value.version_id));
+    }
+  }
+});
+
+
+test('temporary failure receipts never include Playwright input text or ephemeral request identity', () => {
+  const raw = new Error('Timeout filling TEMP-SYNTHETIC on /conversations/learning/tmp_unit');
+  const receipt = safeFailure(raw, true);
+  assert.ok(!JSON.stringify(receipt).includes('TEMP-SYNTHETIC'));
+  assert.ok(!JSON.stringify(receipt).includes('tmp_unit'));
+  assert.match(receipt.message, /withheld/);
+  assert.deepEqual(safeFailure(new Error('Immutable artifact mismatch')), { message: 'Immutable artifact mismatch' });
 });
