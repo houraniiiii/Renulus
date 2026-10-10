@@ -6,7 +6,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { installedAcceptancePlan, validateInstalledRequest, validateInstallationReceipts, isolatedEnvironment,
-  validateCompleteReport, validateFrozenScript, requiredGates, remainingOwnedIdentities, inside,
+  validateCompleteReport, validateFrozenScript, validateFrozenExport, validateAcceptanceChanges,
+  requiredGates, remainingOwnedIdentities, inside,
   coreGates, readerGates, deferredGates, completeCoreReceipt, designCEvidenceRoot, ownedArtifact, validateHiddenWindows, waitForDesignCWindow,
   validateConversation, validateSavedTest, validateActiveTest, validateFinalAttempt, safeFailure,
   validateReaderManifest, validateReaderOriginal, validateReaderDocument, validateReaderPassage, validateReaderRaster, validateBundledInterpreter,
@@ -306,6 +307,102 @@ test('the executed harness must match the freeze, allowing only the declared Pow
   assert.throws(() => validateFrozenScript('owned-dialog.ps1', source, Buffer.from('altered synthetic body\r\n')), /parent freeze/);
   assert.throws(() => validateFrozenScript('native-journeys.mjs', source, windows), /parent freeze/);
   assert.equal(validateFrozenScript('native-journeys.mjs', source, source).frozenSha256, hashes.frozenSha256);
+});
+
+test('optional acceptance revision defaults to the product and accepts only an explicit immutable scalar SHA', () => {
+  assert.equal(validateInstalledRequest(requestEnv(), 'win32').acceptanceRevision, revision);
+  const acceptanceRevision = 'c'.repeat(40);
+  const request = validateInstalledRequest({ ...requestEnv(), RENULUS_ACCEPTANCE_REVISION: acceptanceRevision }, 'win32');
+  assert.equal(request.acceptanceRevision, acceptanceRevision);
+  assert.equal(request.revision, revision);
+  for (const value of ['', 'HEAD', 'c'.repeat(39), 'C'.repeat(40), 'g'.repeat(40), null, [], [acceptanceRevision], 123]) {
+    assert.throws(() => validateInstalledRequest({ ...requestEnv(), RENULUS_ACCEPTANCE_REVISION: value }, 'win32'), /ACCEPTANCE_REVISION/);
+  }
+});
+
+test('dual freeze permits only descendant verifier/test and Markdown docs changes', () => {
+  const acceptanceRevision = 'c'.repeat(40), changedPaths = [
+    'apps/desktop/scripts/verify-installed-product.mjs', 'apps/desktop/scripts/test-verify-installed-product.mjs',
+    'docs/planning/DESIGN_C_IMPLEMENTATION_SPEC.md', 'docs/implementation/design-c-windows-review.md',
+  ];
+  assert.deepEqual(validateAcceptanceChanges(revision, acceptanceRevision, changedPaths, true),
+    { productRevision: revision, acceptanceRevision, changedPaths });
+  assert.deepEqual(validateAcceptanceChanges(revision, revision, [], true).changedPaths, []);
+  for (const ancestor of [false, undefined, null, 1, 'true']) {
+    assert.throws(() => validateAcceptanceChanges(revision, acceptanceRevision, changedPaths, ancestor), /ancestor/);
+  }
+  assert.throws(() => validateAcceptanceChanges(revision, revision, changedPaths, true), /single freeze/);
+  assert.throws(() => validateAcceptanceChanges(revision, 'HEAD', changedPaths, true), /exact product/);
+});
+
+test('acceptance diff cannot admit runtime, renderer, native, packaging, dependencies or redirected paths', () => {
+  for (const name of ['runtime/renulus/server.py', 'apps/desktop/src/App.tsx', 'apps/desktop/electron/main.cjs',
+    'packaging/runtime/bundle.json', 'apps/desktop/scripts/stage-backend.py', 'apps/desktop/package.json',
+    'package-lock.json', 'uv.lock', 'pyproject.toml', '.gitattributes', 'upstream/hermes/activate.ps1',
+    'content/packs/test.json', 'apps/desktop/scripts/native-evidence-directory.mjs',
+    'apps/desktop/scripts/design-c-reader-fixtures.py', 'apps/desktop/scripts/verify-installed-recovery.py',
+    'apps/desktop/scripts/verify-installed-product.mjs/extra', 'README.md', 'docs/build.mjs', 'docs/data.json',
+    'docs/x.MD', 'docs/../runtime/hidden.md', 'docs//extra.md', 'docs/./extra.md', 'docs/C:/extra.md',
+    'docs/..\\extra.md', 'docs-other/report.md', undefined, null, []]) {
+    assert.throws(() => validateAcceptanceChanges(revision, 'c'.repeat(40), [name], true), /Acceptance-only/);
+  }
+  // --no-renames supplies both paths; a move into documentation cannot hide the removed product file.
+  assert.throws(() => validateAcceptanceChanges(revision, 'c'.repeat(40),
+    ['runtime/renulus/legacy.md', 'docs/legacy.md'], true), /Acceptance-only/);
+});
+
+test('QA revision never substitutes the product revision in install or recovery receipts', () => {
+  const f = receiptFixture(); f.request.acceptanceRevision = 'c'.repeat(40); validate(f);
+  f.delivery.source_revision = f.request.acceptanceRevision;
+  assert.throws(() => validate(f), /exact freeze/);
+  const recovery = recoveryFixture(); recovery.request.acceptanceRevision = 'c'.repeat(40);
+  validateRecoveryReceipt(recovery.request, recovery.receipt, recovery.identity, recovery.hashes);
+  recovery.receipt.identity.source_revision = recovery.request.acceptanceRevision;
+  assert.throws(() => validateRecoveryReceipt(recovery.request, recovery.receipt, recovery.identity, recovery.hashes));
+});
+
+const exportAttributes = () => ({ text: 'set', eol: 'crlf', filter: 'unspecified',
+  'working-tree-encoding': 'unspecified', 'export-subst': 'unspecified' });
+const exportedBytes = bytes => ({ size: bytes.length, sha256: hash(bytes) });
+
+test('committed text/eol export transforms expected bytes only and records both exact digests', () => {
+  const blob = Buffer.from('synthetic first\nsecond \u03b1\nlast'), before = Buffer.from(blob);
+  const exported = Buffer.from('synthetic first\r\nsecond \u03b1\r\nlast'), attributes = exportAttributes();
+  const result = validateFrozenExport('upstream/hermes/activate.ps1', blob, attributes, exportedBytes(exported));
+  assert.deepEqual(blob, before);
+  assert.deepEqual(result, { path: 'upstream/hermes/activate.ps1', attributes,
+    blobSha256: hash(blob), exportSha256: hash(exported), exportBytes: exported.length });
+  const lf = { ...attributes, eol: 'lf' };
+  assert.equal(validateFrozenExport('source.py', blob, lf, exportedBytes(blob)).exportSha256, hash(blob));
+  const binary = Buffer.from([0, 10, 255]);
+  assert.equal(validateFrozenExport('original.bin', binary, { ...attributes, text: 'unset', eol: 'unspecified' },
+    exportedBytes(binary)).exportSha256, hash(binary));
+});
+
+test('wrong content, LF or mixed installed line endings cannot pass a declared CRLF export', () => {
+  const blob = Buffer.from('synthetic first\nsecond\n'), attributes = exportAttributes();
+  for (const wrong of [blob, Buffer.from('synthetic first\r\nchanged\r\n'),
+    Buffer.from('synthetic first\r\nsecond\n'), Buffer.from('synthetic first\r\r\nsecond\r\n'),
+    Buffer.from('synthetic first\r\nsecond\r\n\r\n')]) {
+    assert.throws(() => validateFrozenExport('source.ps1', blob, attributes, exportedBytes(wrong)), /exact frozen export/);
+  }
+  const exported = Buffer.from('synthetic first\r\nsecond\r\n');
+  assert.throws(() => validateFrozenExport('source.ps1', blob, attributes,
+    { size: exported.length - 1, sha256: hash(exported) }), /exact frozen export/);
+  assert.throws(() => validateFrozenExport('source.ps1', blob, { ...attributes, eol: 'lf' },
+    exportedBytes(exported)), /exact frozen export/);
+});
+
+test('source suffix never authorizes EOL conversion and undeclared transformations fail closed', () => {
+  const blob = Buffer.from('synthetic\n'), exported = Buffer.from('synthetic\r\n');
+  const attributes = exportAttributes();
+  assert.throws(() => validateFrozenExport('source.ps1', blob, { ...attributes, eol: 'unspecified' },
+    exportedBytes(exported)), /exact frozen export/);
+  for (const changed of [{ text: 'auto' }, { text: 'unset' }, { eol: 'native' }, { filter: 'lfs' },
+    { 'working-tree-encoding': 'UTF-16LE' }, { 'export-subst': 'set' }]) {
+    assert.throws(() => validateFrozenExport('source.ps1', blob, { ...attributes, ...changed }, exportedBytes(exported)));
+  }
+  assert.throws(() => validateFrozenExport('source.ps1', blob, {}, exportedBytes(exported)), /Unsupported/);
 });
 
 test('synthetic child environment strips developer, Electron-as-Node and provider inputs', () => {

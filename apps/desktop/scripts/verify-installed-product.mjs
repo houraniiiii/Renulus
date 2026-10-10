@@ -43,6 +43,7 @@ export function installedAcceptancePlan() {
     requiredEnvironment: ['RENULUS_NATIVE_SLOT', 'RENULUS_EXPECT_SOURCE_REVISION', 'RENULUS_INSTALLED_PROOF=1',
       'RENULUS_PACKAGED_EXECUTABLE', 'RENULUS_DELIVERY_PROVENANCE', 'RENULUS_INSTALLER_EVIDENCE',
       'RENULUS_NATIVE_EVIDENCE_ROOT=' + designCEvidenceRoot],
+    optionalEnvironment: ['RENULUS_ACCEPTANCE_REVISION (defaults to product revision; product ancestor, verifier/test and docs-only changes)'],
     evidenceRoot: designCEvidenceRoot,
     resourceBound: 'One owned hidden app/backend at a time; two saved draft chats, one project, eleven deterministic synthetic originals covering eight reader categories, one Library import reusing that two-page PDF, and one real two-question reviewed set; no providers or simulated producer results.',
     receipt: 'installed-product-evidence.json; absent reader/migration/native gates remain not-run and make the aggregate incomplete/exit 1.',
@@ -59,6 +60,10 @@ export function validateInstalledRequest(env, platform = process.platform) {
   check(platform === 'win32', 'Installed acceptance runs on the authorised Windows PC.');
   check(/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,79}$/.test(env.RENULUS_NATIVE_SLOT ?? ''), 'The parent must assign RENULUS_NATIVE_SLOT before any native/helper work.');
   check(/^[0-9a-f]{40}$/.test(env.RENULUS_EXPECT_SOURCE_REVISION ?? ''), 'An exact immutable parent freeze is required.');
+  const acceptanceRevision = env.RENULUS_ACCEPTANCE_REVISION === undefined
+    ? env.RENULUS_EXPECT_SOURCE_REVISION : env.RENULUS_ACCEPTANCE_REVISION;
+  check(typeof acceptanceRevision === 'string' && /^[0-9a-f]{40}$/.test(acceptanceRevision),
+    'RENULUS_ACCEPTANCE_REVISION must be an exact immutable 40-character commit SHA.');
   check(env.RENULUS_INSTALLED_PROOF === '1', 'Use the matching actual installation, with RENULUS_INSTALLED_PROOF=1.');
   for (const key of ['RENULUS_PACKAGED_EXECUTABLE', 'RENULUS_DELIVERY_PROVENANCE', 'RENULUS_INSTALLER_EVIDENCE']) {
     check(typeof env[key] === 'string' && path.isAbsolute(env[key]), 'An absolute ' + key + ' is required.');
@@ -70,7 +75,7 @@ export function validateInstalledRequest(env, platform = process.platform) {
   }
   check(samePath(env.RENULUS_NATIVE_EVIDENCE_ROOT, designCEvidenceRoot),
     'Design C installed proof requires its exact synthetic delivery evidence root.');
-  return { slot: env.RENULUS_NATIVE_SLOT, revision: env.RENULUS_EXPECT_SOURCE_REVISION,
+  return { slot: env.RENULUS_NATIVE_SLOT, revision: env.RENULUS_EXPECT_SOURCE_REVISION, acceptanceRevision,
     executable: path.resolve(env.RENULUS_PACKAGED_EXECUTABLE),
     deliveryFile: path.resolve(env.RENULUS_DELIVERY_PROVENANCE), installerFile: path.resolve(env.RENULUS_INSTALLER_EVIDENCE) };
 }
@@ -179,15 +184,84 @@ export function validateFrozenScript(name, expectedBytes, actualBytes) {
   return { frozenSha256: expected, executedSha256: sha(actualBytes) };
 }
 
+export function validateAcceptanceChanges(productRevision, acceptanceRevision, changes, productIsAncestor) {
+  check([productRevision, acceptanceRevision].every(value => typeof value === 'string' && /^[0-9a-f]{40}$/.test(value))
+    && productIsAncestor === true, 'The exact product commit must be an ancestor of the acceptance commit.');
+  const allowedScripts = ['apps/desktop/scripts/verify-installed-product.mjs', 'apps/desktop/scripts/test-verify-installed-product.mjs'];
+  check(Array.isArray(changes) && changes.every(name => typeof name === 'string'
+    && (allowedScripts.includes(name) || name.startsWith('docs/') && name.endsWith('.md')
+      && !name.includes('\\') && !name.includes(':') && name.split('/').every(part => part && part !== '.' && part !== '..'))),
+  'Acceptance-only changes may touch only this verifier, its tests and Markdown documentation; product changes require a new manufacture.');
+  check(productRevision !== acceptanceRevision || changes.length === 0, 'A single freeze cannot claim a separate acceptance diff.');
+  return { productRevision, acceptanceRevision, changedPaths: changes };
+}
+
+function acceptanceFreeze(request) {
+  for (const revision of [request.revision, request.acceptanceRevision]) {
+    check(git(['rev-parse', '--verify', revision + '^{commit}']).toString('utf8').trim() === revision,
+      'Product and acceptance revisions must resolve to their exact commit objects.');
+  }
+  git(['merge-base', '--is-ancestor', request.revision, request.acceptanceRevision]);
+  const changes = git(['diff', '--name-only', '-z', '--no-renames', request.revision, request.acceptanceRevision, '--'])
+    .toString('utf8').split('\0').filter(Boolean);
+  return validateAcceptanceChanges(request.revision, request.acceptanceRevision, changes, true);
+}
+
+const exportAttributeNames = ['text', 'eol', 'filter', 'working-tree-encoding', 'export-subst'];
+async function frozenExportAttributes(revision, names) {
+  // --source uses committed attributes; disable global/system attributes and refuse the remaining local override.
+  const local = path.resolve(repository, git(['rev-parse', '--git-path', 'info/attributes']).toString('utf8').trim());
+  try { check((await lstat(local)).size === 0, 'Frozen source export refuses local info/attributes overrides.'); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
+  const fields = execFileSync('git', ['-c', 'core.attributesFile=NUL', 'check-attr', '--source=' + revision,
+    '-z', '--stdin', ...exportAttributeNames], { cwd: repository, windowsHide: true, maxBuffer: 16 * 1024 * 1024,
+    env: { ...process.env, GIT_ATTR_NOSYSTEM: '1' }, input: Buffer.from(names.join('\0') + '\0') })
+    .toString('utf8').split('\0');
+  check(fields.pop() === '' && fields.length === names.length * exportAttributeNames.length * 3,
+    'Frozen export attributes returned an incomplete path inventory.');
+  const result = new Map(names.map(name => [name, {}]));
+  for (let index = 0; index < fields.length; index += 3) {
+    const [name, attribute, value] = fields.slice(index, index + 3), entry = result.get(name);
+    check(entry && exportAttributeNames.includes(attribute) && !(attribute in entry), 'Unexpected frozen export attribute.');
+    entry[attribute] = value;
+  }
+  return result;
+}
+
+export function validateFrozenExport(name, blob, attributes, actual) {
+  check(Buffer.isBuffer(blob) && ['filter', 'working-tree-encoding', 'export-subst']
+    .every(key => ['unspecified', 'unset'].includes(attributes?.[key])), 'Unsupported frozen source export transformation: ' + name);
+  let expected = blob;
+  if (attributes.eol === 'crlf') {
+    check(attributes.text === 'set', 'Only explicitly declared text/eol=crlf export is supported: ' + name);
+    // Transform expected Git bytes only, matching declared text export. Never normalize installed bytes.
+    const parts = [];
+    let start = 0;
+    for (let index = 0; index < blob.length; index++) {
+      if (blob[index] === 10 && (index === 0 || blob[index - 1] !== 13)) {
+        parts.push(blob.subarray(start, index), Buffer.from([13, 10])); start = index + 1;
+      }
+    }
+    if (parts.length) { parts.push(blob.subarray(start)); expected = Buffer.concat(parts); }
+  } else {
+    check(['lf', 'unspecified', 'unset'].includes(attributes.eol), 'Unsupported frozen EOL declaration: ' + name);
+  }
+  check(actual?.size === expected.length && actual.sha256 === sha(expected),
+    'Installed source bytes differ from the exact frozen export: ' + name);
+  return { path: name, attributes, blobSha256: sha(blob), exportSha256: sha(expected), exportBytes: expected.length };
+}
+
 async function verifyArtifacts(request) {
+  const freeze = acceptanceFreeze(request);
   for (const commit of prerequisiteCommits) git(['merge-base', '--is-ancestor', commit, request.revision]);
   const scripts = ['native-journeys.mjs', 'verify-installed-product.mjs', 'native-replacement-evidence.mjs',
     'native-evidence-directory.mjs', 'wait-for-flow-window.mjs', 'synthetic-pdf.mjs', 'pdf-viewer-evidence.mjs',
-    'native-product-backup.mjs', 'operate-owned-save-dialog.ps1', 'inspect-native-backup.py', 'design-c-reader-fixtures.py'];
+    'native-product-backup.mjs', 'operate-owned-save-dialog.ps1', 'inspect-native-backup.py', 'design-c-reader-fixtures.py',
+    'test-verify-installed-product.mjs'];
   const driverHashes = {};
   for (const name of scripts) {
     const file = 'apps/desktop/scripts/' + name;
-    driverHashes[name] = validateFrozenScript(name, git(['show', request.revision + ':' + file]),
+    driverHashes[name] = validateFrozenScript(name, git(['show', request.acceptanceRevision + ':' + file]),
       await readFile(path.join(repository, file)));
   }
   const requiredCells = git(['ls-tree', '-r', '--name-only', request.revision, '--', 'content/required-cells']).toString('utf8')
@@ -227,16 +301,28 @@ async function verifyArtifacts(request) {
   const roots = ['runtime/renulus', 'content/packs', 'content/LICENSE', 'LICENSE', 'licenses', 'upstream/hermes',
     'packaging/runtime', 'uv.lock', 'pyproject.toml', 'docs/SOURCES.md'];
   const excluded = /^(?:tests|tests-js|website|evals|[.]github|nix|docker|apps|ui-tui|web|scripts|docs)(?:\/|$)/;
+  const sourceRows = git(['ls-tree', '-r', '-z', request.revision, '--', ...roots]).toString('utf8').split('\0').filter(Boolean)
+    .map(row => { const [header, name] = row.split('\t'); const [mode, type, object] = header.split(' '); return { name, mode, type, object }; })
+    .filter(row => !(row.name.startsWith('upstream/hermes/') && excluded.test(row.name.slice('upstream/hermes/'.length))));
+  const attributes = await frozenExportAttributes(request.revision, sourceRows.map(row => row.name));
+  const sourceExports = [];
   let frozenFiles = 0;
-  for (const row of git(['ls-tree', '-r', '-z', request.revision, '--', ...roots]).toString('utf8').split('\0').filter(Boolean)) {
-    const [header, name] = row.split('\t'), [mode, type, object] = header.split(' ');
-    if (name.startsWith('upstream/hermes/') && excluded.test(name.slice('upstream/hermes/'.length))) continue;
+  for (const { name, mode, type, object } of sourceRows) {
     check(type === 'blob' && mode !== '120000' && listed.has(name), 'The installed backend omits a frozen source file: ' + name);
-    const file = path.join(backend, name);
-    check(await hashFile(file, 'sha1', 'blob ' + listed.get(name).size + '\0') === object, 'Installed source bytes differ from Git: ' + name);
+    const declaration = attributes.get(name);
+    check(['filter', 'working-tree-encoding', 'export-subst'].every(key => ['unspecified', 'unset'].includes(declaration[key])),
+      'Unsupported frozen source export transformation: ' + name);
+    if (declaration.eol === 'crlf') {
+      sourceExports.push({ gitBlob: object, ...validateFrozenExport(name, git(['cat-file', 'blob', object]), declaration, listed.get(name)) });
+    } else {
+      check(['lf', 'unspecified', 'unset'].includes(declaration.eol), 'Unsupported frozen EOL declaration: ' + name);
+      const file = path.join(backend, name);
+      check(await hashFile(file, 'sha1', 'blob ' + listed.get(name).size + '\0') === object, 'Installed source bytes differ from Git: ' + name);
+    }
     frozenFiles++;
   }
-  return { resources, backend, archive, electronVersion, actual, frozenFiles, inventoryFiles: listed.size, driverHashes,
+  return { resources, backend, archive, electronVersion, actual, frozenFiles, inventoryFiles: listed.size, driverHashes, freeze, sourceExports,
+    productRevision: request.revision, acceptanceRevision: request.acceptanceRevision,
     sourceReview: { sourceRegisterSha256: listed.get('docs/SOURCES.md').sha256, requiredCells,
       scope: 'Frozen development evidence; neither complete coverage nor current-source clearance is inferred from a native pass.' },
     bundle, renderer, native, installation: { kind: installation.kind, installExitCode: installation.installExitCode,
@@ -1368,7 +1454,8 @@ export async function runInstalledRecoveryReopen() {
   // Reserve before launch; a repeat/refusal never replaces either evidence receipt.
   const receiptOutput = await open(output, 'wx');
   const report = { kind: 'actual-installed-recovery-reopen-current-pc', status: 'running', checkedAt: new Date().toISOString(),
-    slot: request.slot, sourceRevision: request.revision, executable: request.executable, evidence: request.evidence, profile: request.profile,
+    slot: request.slot, sourceRevision: request.revision, acceptanceRevision: request.acceptanceRevision,
+    executable: request.executable, evidence: request.evidence, profile: request.profile,
     recoveryReceipt: { path: request.recoveryFile, sha256: request.recoverySha256, seedSha256: receipt.seed_sha256, oldSha256: original.sha256 },
     identity, launches: [], shutdowns: [], histories: [],
     limits: ['Only the existing verified schema1-upgraded u is opened; no profile copy, new content or provider calls.',
@@ -1412,7 +1499,7 @@ export async function runInstalledProduct() {
   const evidence = await createNativeEvidence('c');
   check(inside(designCEvidenceRoot, evidence), 'Generated proof left the Design C scratch root.');
   const report = { kind: 'actual-installed-product-current-pc', checkedAt: new Date().toISOString(),
-    slot: request.slot, sourceRevision: request.revision, executable: request.executable, evidence,
+    slot: request.slot, sourceRevision: request.revision, acceptanceRevision: request.acceptanceRevision, executable: request.executable, evidence,
     acceptanceScope: installedAcceptancePlan().scope, gates: {}, shutdowns: [], launches: [],
     limits: ['Hidden synthetic disconnected profiles only. No owner profile, providers, fabricated generation or native dialogs.',
       'Real reviewed content and real SQLite/API producers; unit checks never establish installed acceptance.',
