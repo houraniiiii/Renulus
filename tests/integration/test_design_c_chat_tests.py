@@ -163,3 +163,94 @@ def test_policy_is_checked_before_replaying_a_volatile_request(tmp_path, monkeyp
             service.start_draft(QuickPracticeDraftRequest.model_validate(body))
         assert error.value.code == 'assistance_restricted'
         no_durable_input(app.state.services)
+
+
+class FictionalTransport:
+    """Only the external subscription transport is synthetic; authority is real."""
+    def __init__(self):
+        self.calls = []
+
+    async def stream(self, provider, model, token, messages):
+        assert token == 'synthetic-chat-test-token'
+        payload = json.loads(messages[-1]['content'])
+        self.calls.append(payload)
+        if 'artifact_sha256' in payload:
+            output = {'schema': 'fictional-test-review/1', 'artifact_sha256': payload['artifact_sha256'],
+                'source_identity_removed': True, 'clinical_details_generalised': True,
+                'no_source_links': True, 'issues': []}
+        else:
+            start = len(payload['prior_fictional_stems'])
+            domains = ['transplant immunology', 'electrolyte physiology', 'glomerular inflammation',
+                'dialysis clearance', 'chronic kidney adaptation']
+            output = {'items': [{'stem': f'Independent conceptual {domains[index % 5]} question {index}',
+                'options': [{'id': 'a', 'text': 'First fictional interpretation'},
+                    {'id': 'b', 'text': 'Second fictional interpretation'}],
+                'correct_option_id': 'a', 'explanation': 'An independent educational rationale.',
+                'hint': None, 'source_indices': []} for index in range(start, start + 5)]}
+        yield {'type': 'delta', 'text': json.dumps(output)}
+        yield {'type': 'completed', 'response_model': model}
+
+
+@pytest.mark.parametrize('count', [5, 10, 20])
+def test_real_private_producer_saves_exact_version_and_starts_actual_study_once(tmp_path, count):
+    app = app_at(tmp_path / 'real-chat-test')
+    services = app.state.services
+    provider = services.get('provider')
+    provider._settings['connections']['codex'] = {'access_token': 'synthetic-chat-test-token', 'expires_at': 9999999999}
+    provider._settings['selected_provider'] = 'codex'
+    provider._settings.setdefault('selected_models', {})['codex'] = 'gpt-6.1-sol'
+    provider._transport = transport = FictionalTransport()
+    with TestClient(app) as client:
+        if count == 5:
+            route = '/api/v1/conversations/test-drafts'
+            body = {'intent': 'quick_practice', 'text': RAW, 'request_id': REQUEST, 'count': 5}
+            temporary_id = None
+        else:
+            chat = client.post('/api/v1/conversations', json={'kind': 'case', 'temporary': True, 'text': RAW}).json()
+            temporary_id = chat['identity']['id']
+            route = '/api/v1/conversations/case/' + temporary_id + '/tests'
+            body = {'expected_revision': chat['revision'], 'request_id': REQUEST, 'count': count}
+        response = client.post(route, json=body)
+        assert response.status_code == 202, response.text
+        run_id = response.json()['run_id']
+        assert wait_terminal(client, run_id) == {'run_id': run_id, 'state': 'published'}
+        assert client.post(route, json=body).json()['run_id'] == run_id
+        assert len(transport.calls) == count // 5 + 1
+        result = client.get('/api/v1/conversations/test-drafts/runs/' + run_id + '/result')
+        assert result.status_code == 200, result.text
+        saved = result.json()
+        assert set(saved) == {'test_id', 'version_id', 'item_count', 'study_start'}
+        assert saved['item_count'] == count
+        descriptor = saved['study_start']
+        assert descriptor['version'] == {'type': 'saved_test_version', 'id': saved['version_id']}
+        assert descriptor['mode'] == 'study' and descriptor['timing'] == {'kind': 'untimed'}
+        assert descriptor['idempotency_key'].startswith('chat-test-study-')
+        start_body = {key: descriptor[key] for key in ('version', 'mode', 'timing')}
+        headers = {'Idempotency-Key': descriptor['idempotency_key']}
+        started = client.post('/api/v1/assessment/test-attempts', json=start_body, headers=headers)
+        assert started.status_code == 201, started.text
+        attempt = started.json()
+        assert attempt['version_id'] == saved['version_id'] and attempt['item_count'] == count
+        assert attempt['mode'] == 'study' and attempt['status'] == 'active'
+        assert attempt['timing']['kind'] == 'untimed' and attempt['timing']['deadline_at'] is None
+        assert attempt['origin'] == 'generated' and attempt['review_quality'] == 'personal'
+        assert attempt['committed'] == [] and attempt['result'] is None
+        assert 'correct_option_ids' not in json.dumps(attempt['current_item'])
+        assert client.post('/api/v1/assessment/test-attempts', json=start_body, headers=headers).json()['id'] == attempt['id']
+        assert len(services.db.fetch_all('SELECT * FROM assessment_test_versions')) == 1
+        assert len(services.db.fetch_all('SELECT * FROM assessment_test_attempts')) == 1
+        assert services.db.fetch_all('SELECT * FROM assessment_test_jobs') == []
+        assert services.db.fetch_all('SELECT * FROM memory_jobs') == []
+        exported = json.dumps(export_records(services))
+        for forbidden in (RAW, REQUEST, temporary_id):
+            if forbidden:
+                assert forbidden not in exported
+                assert all(forbidden.encode() not in path.read_bytes() for path in services.paths.root.rglob('*') if path.is_file())
+        assert services.get('chat_tests').runs[run_id].source_text == ''
+    # The volatile run disappears, while the real immutable version and durable
+    # Study command replay survive reopening without provider work.
+    with TestClient(app_at(services.paths.root)) as reopened:
+        assert reopened.get('/api/v1/conversations/test-drafts/runs/' + run_id).status_code == 404
+        replay = reopened.post('/api/v1/assessment/test-attempts', json=start_body, headers=headers)
+        assert replay.status_code == 201 and replay.json()['id'] == attempt['id']
+        assert len(transport.calls) == count // 5 + 1
