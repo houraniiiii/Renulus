@@ -1,0 +1,53 @@
+{
+  "attempt": {
+    "id": "attempt_fiction_1",
+    "version": {
+      "type": "saved_test_version",
+      "id": "test_version_fiction_1"
+    },
+    "mode": "test",
+    "status": "active",
+    "draft_revision": 2,
+    "timing": {
+      "kind": "timed",
+      "duration_seconds": 600,
+      "started_at": "2026-10-10T12:00:00Z",
+      "deadline_at": "2026-10-10T12:10:00Z",
+      "paused_seconds": 0,
+      "last_reconciled_at": "2026-10-10T12:00:00Z"
+    }
+  },
+  "draft": {
+    "attempt_id": "attempt_fiction_1",
+    "version_id": "test_version_fiction_1",
+    "revision": 2,
+    "position": 1,
+    "answers": [
+      {
+        "item_id": "fiction_item_1",
+        "option_ids": [
+          "a"
+        ],
+        "marked": false
+      },
+      {
+        "item_id": "fiction_item_2",
+        "option_ids": [],
+        "marked": true
+      }
+    ]
+  },
+  "exposure": {
+    "id": "exposure_fiction_1",
+    "attempt_id": "attempt_fiction_1",
+    "version_id": "test_version_fiction_1",
+    "item_id": "fiction_item_1",
+    "question_id": "fiction_question_1",
+    "question_version": "1",
+    "key_version": "1",
+    "family_id": "fiction_family_1",
+    "family_version": "1",
+    "kind": "presented",
+    "created_at": "2026-10-10T12:00:00Z"
+  }
+}

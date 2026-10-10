@@ -1,0 +1,895 @@
+{
+  "format": "renulus-canonical-export",
+  "format_version": 1,
+  "schema_version": 1,
+  "exported_at": "2026-10-10T03:28:09.514+00:00",
+  "data_kind": "records-only",
+  "records": {
+    "assessment_attempts": [
+      {
+        "id": "attempt_5aebb2e41da74743abd175b5a5345180",
+        "session_id": "assessment_539c9fe1127a4a108040d16419f5f16a",
+        "item_id": "item_2f4ea18ce15d4f98ac05f47f47168cfd",
+        "question_id": "RN11-T01-001",
+        "question_version": "1",
+        "key_version": "1",
+        "family_id": "RN11-T01-001.family",
+        "family_version": "1",
+        "topic_id": "T01",
+        "answer_json": "[\"A\"]",
+        "correct": 1,
+        "assisted": 1,
+        "repeat": 0,
+        "score_bucket": "assisted",
+        "committed_at": "2026-10-10T03:28:09.444+00:00"
+      }
+    ],
+    "assessment_commands": [
+      {
+        "idempotency_key": "dc02-fixture-start",
+        "operation": "start",
+        "target": "",
+        "request_json": "{\"count\":3,\"mode\":\"reviewed\",\"selector\":{\"domain_ids\":[],\"topic_ids\":[],\"track\":null}}",
+        "result_json": "{\"answered_count\":0,\"coverage\":{\"available_families\":251,\"complete_exam_available\":false,\"insufficient_count\":false,\"missing_domain_ids\":[],\"missing_topic_ids\":[],\"note\":\"Limited reviewed quiz coverage; this is not a complete exam simulation\",\"requested_count\":3,\"selected_count\":3,\"track_title\":\"General nephrology\"},\"created_at\":\"2026-10-10T03:28:09.404+00:00\",\"current_item\":{\"assisted\":false,\"content_status\":{\"current_version\":1,\"message\":null,\"status\":\"current\",\"withdrawal\":null,\"withdrawn\":false},\"domain_id\":\"T01\",\"family_id\":\"RN11-T01-001.family\",\"family_version\":\"1\",\"id\":\"item_2f4ea18ce15d4f98ac05f47f47168cfd\",\"key_version\":\"1\",\"kind\":\"single_best_answer\",\"options\":[{\"id\":\"A\",\"text\":\"Inhibited tubular creatinine secretion without a matching fall in filtration.\"},{\"id\":\"B\",\"text\":\"Increased creatinine production is an obligatory effect of any antibiotic.\"},{\"id\":\"C\",\"text\":\"A higher creatinine must mean the same proportional reduction in measured GFR.\"},{\"id\":\"D\",\"text\":\"Normal cystatin C proves that all kidney adverse effects can be ignored.\"}],\"ordinal\":1,\"question_id\":\"RN11-T01-001\",\"question_version\":\"1\",\"repeat\":false,\"stem\":\"Creatinine rises shortly after trimethoprim is started, while cystatin C and urine findings are unchanged. Which mechanism could explain discordant filtration estimates?\",\"topic_id\":\"T01\"},\"ended_at\":null,\"id\":\"assessment_539c9fe1127a4a108040d16419f5f16a\",\"item_count\":3,\"mode\":\"reviewed\",\"scope\":{\"entity_id\":\"assessment_539c9fe1127a4a108040d16419f5f16a\",\"kind\":\"reviewed-assessment\"},\"scores\":{\"bucket_policy\":\"assisted takes precedence over repeat; both attempt flags are retained\",\"generated\":{\"answered\":0,\"available\":true},\"reviewed\":{\"assisted\":{\"accuracy\":null,\"answered\":0,\"correct\":0},\"fresh\":{\"accuracy\":null,\"answered\":0,\"correct\":0},\"repeat\":{\"accuracy\":null,\"answered\":0,\"correct\":0}}},\"selector\":{\"domain_ids\":[],\"topic_ids\":[],\"track\":null},\"status\":\"active\",\"updated_at\":\"2026-10-10T03:28:09.404+00:00\"}",
+        "created_at": "2026-10-10T03:28:09.410+00:00"
+      },
+      {
+        "idempotency_key": "dc02-fixture-help",
+        "operation": "help",
+        "target": "assessment_539c9fe1127a4a108040d16419f5f16a",
+        "request_json": "{\"item_id\":\"item_2f4ea18ce15d4f98ac05f47f47168cfd\",\"kind\":\"sources\"}",
+        "result_json": "{\"assisted\":true,\"hint\":null,\"item_id\":\"item_2f4ea18ce15d4f98ac05f47f47168cfd\",\"kind\":\"sources\",\"sources\":[{\"check_status\":\"locator_checked\",\"checked_on\":\"2026-10-04\",\"currency\":\"dated_final_baseline\",\"edition\":\"2024\",\"locator\":\"Table 31, printed S247: reversible inhibition of tubular creatinine secretion; Section 1.2.2\",\"source_id\":\"K01-2024-expansion\",\"title\":\"KDIGO CKD evaluation and management\",\"url\":\"https://kdigo.org/wp-content/uploads/2026/04/KDIGO-2024-CKD-Guideline.pdf\"}]}",
+        "created_at": "2026-10-10T03:28:09.425+00:00"
+      },
+      {
+        "idempotency_key": "dc02-fixture-answer",
+        "operation": "answer",
+        "target": "assessment_539c9fe1127a4a108040d16419f5f16a",
+        "request_json": "{\"item_id\":\"item_2f4ea18ce15d4f98ac05f47f47168cfd\",\"option_ids\":[\"A\"]}",
+        "result_json": "{\"feedback\":{\"assisted\":true,\"attempt_id\":\"attempt_5aebb2e41da74743abd175b5a5345180\",\"committed_at\":\"2026-10-10T03:28:09.444+00:00\",\"content_status\":{\"current_version\":1,\"message\":null,\"status\":\"current\",\"withdrawal\":null,\"withdrawn\":false},\"correct\":true,\"correct_option_ids\":[\"A\"],\"explanation\":\"Creatinine includes a secretion component. A secretion inhibitor can alter creatinine-based eGFR without an equivalent filtration change; assess the whole clinical pattern rather than automatically diagnosing or excluding AKI.\",\"item\":{\"assisted\":true,\"domain_id\":\"T01\",\"family_id\":\"RN11-T01-001.family\",\"family_version\":\"1\",\"id\":\"item_2f4ea18ce15d4f98ac05f47f47168cfd\",\"key_version\":\"1\",\"kind\":\"single_best_answer\",\"options\":[{\"id\":\"A\",\"text\":\"Inhibited tubular creatinine secretion without a matching fall in filtration.\"},{\"id\":\"B\",\"text\":\"Increased creatinine production is an obligatory effect of any antibiotic.\"},{\"id\":\"C\",\"text\":\"A higher creatinine must mean the same proportional reduction in measured GFR.\"},{\"id\":\"D\",\"text\":\"Normal cystatin C proves that all kidney adverse effects can be ignored.\"}],\"ordinal\":1,\"question_id\":\"RN11-T01-001\",\"question_version\":\"1\",\"stem\":\"Creatinine rises shortly after trimethoprim is started, while cystatin C and urine findings are unchanged. Which mechanism could explain discordant filtration estimates?\",\"topic_id\":\"T01\"},\"options\":[{\"id\":\"A\",\"rationale\":\"Creatinine includes a secretion component. A secretion inhibitor can alter creatinine-based eGFR without an equivalent filtration change; assess the whole clinical pattern rather than automatically diagnosing or excluding AKI.\",\"text\":\"Inhibited tubular creatinine secretion without a matching fall in filtration.\"},{\"id\":\"B\",\"rationale\":\"This is not the characteristic trimethoprim effect.\",\"text\":\"Increased creatinine production is an obligatory effect of any antibiotic.\"},{\"id\":\"C\",\"rationale\":\"Secretion is a non-GFR determinant of creatinine.\",\"text\":\"A higher creatinine must mean the same proportional reduction in measured GFR.\"},{\"id\":\"D\",\"rationale\":\"A possible marker effect does not exclude concurrent toxicity or potassium changes.\",\"text\":\"Normal cystatin C proves that all kidney adverse effects can be ignored.\"}],\"repeat\":false,\"review\":{\"independent_human_review\":false,\"method\":\"Assistant primary section/locator check, units and single-key/distractor review; original synthetic mechanism scenario. Evidence identity: RN11-T01-001. No independent human review.\",\"reviewed_on\":\"2026-10-04\",\"reviewer\":\"Renulus content lane assistant\",\"reviewer_kind\":\"assistant\",\"source_key_checked\":true,\"status\":\"assistant_reviewed\"},\"score_bucket\":\"assisted\",\"selected_option_ids\":[\"A\"],\"sources\":[{\"check_status\":\"locator_checked\",\"checked_on\":\"2026-10-04\",\"currency\":\"dated_final_baseline\",\"edition\":\"2024\",\"locator\":\"Table 31, printed S247: reversible inhibition of tubular creatinine secretion; Section 1.2.2\",\"source_id\":\"K01-2024-expansion\",\"title\":\"KDIGO CKD evaluation and management\",\"url\":\"https://kdigo.org/wp-content/uploads/2026/04/KDIGO-2024-CKD-Guideline.pdf\"}]},\"session\":{\"answered_count\":1,\"coverage\":{\"available_families\":251,\"complete_exam_available\":false,\"insufficient_count\":false,\"missing_domain_ids\":[],\"missing_topic_ids\":[],\"note\":\"Limited reviewed quiz coverage; this is not a complete exam simulation\",\"requested_count\":3,\"selected_count\":3,\"track_title\":\"General nephrology\"},\"created_at\":\"2026-10-10T03:28:09.404+00:00\",\"current_item\":null,\"ended_at\":null,\"id\":\"assessment_539c9fe1127a4a108040d16419f5f16a\",\"item_count\":3,\"mode\":\"reviewed\",\"scope\":{\"entity_id\":\"assessment_539c9fe1127a4a108040d16419f5f16a\",\"kind\":\"reviewed-assessment\"},\"scores\":{\"bucket_policy\":\"assisted takes precedence over repeat; both attempt flags are retained\",\"generated\":{\"answered\":0,\"available\":true},\"reviewed\":{\"assisted\":{\"accuracy\":1.0,\"answered\":1,\"correct\":1},\"fresh\":{\"accuracy\":null,\"answered\":0,\"correct\":0},\"repeat\":{\"accuracy\":null,\"answered\":0,\"correct\":0}}},\"selector\":{\"domain_ids\":[],\"topic_ids\":[],\"track\":null},\"status\":\"active\",\"updated_at\":\"2026-10-10T03:28:09.444+00:00\"}}",
+        "created_at": "2026-10-10T03:28:09.451+00:00"
+      }
+    ],
+    "assessment_exposure": [
+      {
+        "id": "exposure_0196491657464ec194b3c1171838a3cf",
+        "family_id": "RN11-T01-001.family",
+        "question_id": "RN11-T01-001",
+        "question_version": "1",
+        "item_id": "item_2f4ea18ce15d4f98ac05f47f47168cfd",
+        "kind": "presented",
+        "created_at": "2026-10-10T03:28:09.405+00:00"
+      },
+      {
+        "id": "exposure_4b8558c324c3465d89414a46706a05e7",
+        "family_id": "RN11-T01-001.family",
+        "question_id": "RN11-T01-001",
+        "question_version": "1",
+        "item_id": "item_2f4ea18ce15d4f98ac05f47f47168cfd",
+        "kind": "sources",
+        "created_at": "2026-10-10T03:28:09.425+00:00"
+      },
+      {
+        "id": "exposure_2f3856a0a00b48ac85254dc020ca74cc",
+        "family_id": "RN11-T01-001.family",
+        "question_id": "RN11-T01-001",
+        "question_version": "1",
+        "item_id": "item_2f4ea18ce15d4f98ac05f47f47168cfd",
+        "kind": "answered",
+        "created_at": "2026-10-10T03:28:09.445+00:00"
+      },
+      {
+        "id": "exposure_ec0651c421894f7296afced4b3605040",
+        "family_id": "RN11-T01-001.family",
+        "question_id": "RN11-T01-001",
+        "question_version": "1",
+        "item_id": "item_2f4ea18ce15d4f98ac05f47f47168cfd",
+        "kind": "reviewed",
+        "created_at": "2026-10-10T03:28:09.445+00:00"
+      }
+    ],
+    "assessment_generated_attempts": [
+      {
+        "id": "practice_attempt_2f3ea0f426324d49a8f3ff0b4c09434d",
+        "session_id": "practice_9c285f922cc54f8599591c87fa3592f2",
+        "item_id": "practice_item_37add8a748c042d8986a052a95e5f407",
+        "answer_json": "[\"a\"]",
+        "correct": 1,
+        "assisted": 0,
+        "committed_at": "2026-10-10T03:28:09.484+00:00"
+      }
+    ],
+    "assessment_generated_commands": [
+      {
+        "idempotency_key": "dc02-fixture-practice",
+        "operation": "generate",
+        "target": "",
+        "request_hash": "611c7dc9f9a8fb2703ea0e4cf244c07ccb40f218407ae8c6ae93985510244dde",
+        "result_json": "{\"session\":{\"answered_count\":0,\"created_at\":\"2026-10-10T03:28:09.467+00:00\",\"current_item\":{\"assisted\":false,\"id\":\"practice_item_37add8a748c042d8986a052a95e5f407\",\"kind\":\"single_best_answer\",\"options\":[{\"id\":\"a\",\"text\":\"Keep the source revision and its locator\"},{\"id\":\"b\",\"text\":\"Infer a missing source location\"}],\"ordinal\":1,\"stem\":\"Fictional learning scenario about ckd: which action preserves source provenance?\"},\"id\":\"practice_9c285f922cc54f8599591c87fa3592f2\",\"item_count\":3,\"mode\":\"generated\",\"retention\":\"persistent\",\"scope\":{\"entity_id\":\"practice_9c285f922cc54f8599591c87fa3592f2\",\"kind\":\"generated-practice\"},\"scores\":{\"assisted\":{\"accuracy\":null,\"answered\":0,\"correct\":0},\"unassisted\":{\"accuracy\":null,\"answered\":0,\"correct\":0}},\"source_verification\":\"not-verified\",\"status\":\"active\",\"topic_id\":null,\"updated_at\":\"2026-10-10T03:28:09.467+00:00\"}}",
+        "created_at": "2026-10-10T03:28:09.470+00:00"
+      },
+      {
+        "idempotency_key": "dc02-fixture-practice-answer",
+        "operation": "answer",
+        "target": "practice_9c285f922cc54f8599591c87fa3592f2",
+        "request_hash": "abd950bd5b760f4d71ec7d2b45c3fd6e2f2ac54fe0619a4d0062aed24f39df90",
+        "result_json": "{\"feedback\":{\"assisted\":false,\"attempt_id\":\"practice_attempt_2f3ea0f426324d49a8f3ff0b4c09434d\",\"committed_at\":\"2026-10-10T03:28:09.484+00:00\",\"correct\":true,\"correct_option_ids\":[\"a\"],\"explanation\":\"A citation pins the source revision and observed locator.\",\"item\":{\"assisted\":false,\"id\":\"practice_item_37add8a748c042d8986a052a95e5f407\",\"kind\":\"single_best_answer\",\"options\":[{\"id\":\"a\",\"text\":\"Keep the source revision and its locator\"},{\"id\":\"b\",\"text\":\"Infer a missing source location\"}],\"ordinal\":1,\"stem\":\"Fictional learning scenario about ckd: which action preserves source provenance?\"},\"options\":[{\"id\":\"a\",\"rationale\":null,\"text\":\"Keep the source revision and its locator\"},{\"id\":\"b\",\"rationale\":null,\"text\":\"Infer a missing source location\"}],\"selected_option_ids\":[\"a\"],\"sources\":[],\"verification\":\"generated-unreviewed\"},\"session\":{\"answered_count\":1,\"created_at\":\"2026-10-10T03:28:09.467+00:00\",\"current_item\":null,\"id\":\"practice_9c285f922cc54f8599591c87fa3592f2\",\"item_count\":3,\"mode\":\"generated\",\"retention\":\"persistent\",\"scope\":{\"entity_id\":\"practice_9c285f922cc54f8599591c87fa3592f2\",\"kind\":\"generated-practice\"},\"scores\":{\"assisted\":{\"accuracy\":null,\"answered\":0,\"correct\":0},\"unassisted\":{\"accuracy\":1.0,\"answered\":1,\"correct\":1}},\"source_verification\":\"not-verified\",\"status\":\"active\",\"topic_id\":null,\"updated_at\":\"2026-10-10T03:28:09.484+00:00\"}}",
+        "created_at": "2026-10-10T03:28:09.484+00:00"
+      }
+    ],
+    "assessment_generated_items": [
+      {
+        "id": "practice_item_37add8a748c042d8986a052a95e5f407",
+        "session_id": "practice_9c285f922cc54f8599591c87fa3592f2",
+        "ordinal": 1,
+        "snapshot_json": "{\"assisted\":false,\"correct_option_id\":\"a\",\"explanation\":\"A citation pins the source revision and observed locator.\",\"hint\":null,\"id\":\"practice_item_37add8a748c042d8986a052a95e5f407\",\"options\":[{\"id\":\"a\",\"rationale\":null,\"text\":\"Keep the source revision and its locator\"},{\"id\":\"b\",\"rationale\":null,\"text\":\"Infer a missing source location\"}],\"ordinal\":1,\"presented\":true,\"source_indices\":[],\"sources\":[],\"stem\":\"Fictional learning scenario about ckd: which action preserves source provenance?\",\"version\":\"1\"}",
+        "assisted": 0,
+        "presented": 1
+      },
+      {
+        "id": "practice_item_192b5acd90ea479c8087b7cf8577a1ca",
+        "session_id": "practice_9c285f922cc54f8599591c87fa3592f2",
+        "ordinal": 2,
+        "snapshot_json": "{\"assisted\":false,\"correct_option_id\":\"a\",\"explanation\":\"A citation pins the source revision and observed locator.\",\"hint\":null,\"id\":\"practice_item_192b5acd90ea479c8087b7cf8577a1ca\",\"options\":[{\"id\":\"a\",\"rationale\":null,\"text\":\"Keep the source revision and its locator\"},{\"id\":\"b\",\"rationale\":null,\"text\":\"Infer a missing source location\"}],\"ordinal\":2,\"presented\":false,\"source_indices\":[],\"sources\":[],\"stem\":\"Fictional learning scenario about dialysis: which action preserves source provenance?\",\"version\":\"1\"}",
+        "assisted": 0,
+        "presented": 0
+      },
+      {
+        "id": "practice_item_85b5ffe92f564793ab1882e27a3f7805",
+        "session_id": "practice_9c285f922cc54f8599591c87fa3592f2",
+        "ordinal": 3,
+        "snapshot_json": "{\"assisted\":false,\"correct_option_id\":\"a\",\"explanation\":\"A citation pins the source revision and observed locator.\",\"hint\":null,\"id\":\"practice_item_85b5ffe92f564793ab1882e27a3f7805\",\"options\":[{\"id\":\"a\",\"rationale\":null,\"text\":\"Keep the source revision and its locator\"},{\"id\":\"b\",\"rationale\":null,\"text\":\"Infer a missing source location\"}],\"ordinal\":3,\"presented\":false,\"source_indices\":[],\"sources\":[],\"stem\":\"Fictional learning scenario about transplantation: which action preserves source provenance?\",\"version\":\"1\"}",
+        "assisted": 0,
+        "presented": 0
+      }
+    ],
+    "assessment_generated_sessions": [
+      {
+        "id": "practice_9c285f922cc54f8599591c87fa3592f2",
+        "scope": "generated-practice",
+        "status": "active",
+        "topic_id": null,
+        "source_verification": "not-verified",
+        "created_at": "2026-10-10T03:28:09.467+00:00",
+        "updated_at": "2026-10-10T03:28:09.484+00:00"
+      }
+    ],
+    "assessment_items": [
+      {
+        "id": "item_2f4ea18ce15d4f98ac05f47f47168cfd",
+        "session_id": "assessment_539c9fe1127a4a108040d16419f5f16a",
+        "ordinal": 1,
+        "question_id": "RN11-T01-001",
+        "question_version": "1",
+        "key_version": "1",
+        "family_id": "RN11-T01-001.family",
+        "family_version": "1",
+        "topic_id": "T01",
+        "domain_id": "T01",
+        "snapshot_json": "{\"answer\":\"A\",\"correct_option_ids\":[\"A\"],\"current_version\":1,\"difficulty\":\"integration\",\"domain_id\":\"T01\",\"explanation\":\"Creatinine includes a secretion component. A secretion inhibitor can alter creatinine-based eGFR without an equivalent filtration change; assess the whole clinical pattern rather than automatically diagnosing or excluding AKI.\",\"family_id\":\"RN11-T01-001.family\",\"family_version\":1,\"id\":\"RN11-T01-001\",\"key_version\":1,\"kind\":\"single_best_answer\",\"license\":\"CC-BY-4.0\",\"objective_ids\":[\"T01.O02\"],\"options\":[{\"id\":\"A\",\"rationale\":\"Creatinine includes a secretion component. A secretion inhibitor can alter creatinine-based eGFR without an equivalent filtration change; assess the whole clinical pattern rather than automatically diagnosing or excluding AKI.\",\"text\":\"Inhibited tubular creatinine secretion without a matching fall in filtration.\"},{\"id\":\"B\",\"rationale\":\"This is not the characteristic trimethoprim effect.\",\"text\":\"Increased creatinine production is an obligatory effect of any antibiotic.\"},{\"id\":\"C\",\"rationale\":\"Secretion is a non-GFR determinant of creatinine.\",\"text\":\"A higher creatinine must mean the same proportional reduction in measured GFR.\"},{\"id\":\"D\",\"rationale\":\"A possible marker effect does not exclude concurrent toxicity or potassium changes.\",\"text\":\"Normal cystatin C proves that all kidney adverse effects can be ignored.\"}],\"original\":true,\"question_id\":\"RN11-T01-001\",\"rationale\":\"Creatinine includes a secretion component. A secretion inhibitor can alter creatinine-based eGFR without an equivalent filtration change; assess the whole clinical pattern rather than automatically diagnosing or excluding AKI.\",\"review\":{\"independent_human_review\":false,\"method\":\"Assistant primary section/locator check, units and single-key/distractor review; original synthetic mechanism scenario. Evidence identity: RN11-T01-001. No independent human review.\",\"reviewed_on\":\"2026-10-04\",\"reviewer\":\"Renulus content lane assistant\",\"reviewer_kind\":\"assistant\",\"source_key_checked\":true,\"status\":\"assistant_reviewed\"},\"secondary_topic_ids\":[\"T19\"],\"source_records\":[{\"canonical_topic_url\":\"https://kdigo.org/guidelines/ckd-evaluation-and-management/\",\"check_note\":\"Assistant checked numbered primary recommendations and sections, including in-memory reading of the official 199-page PDF: printed S151 (marker error), S154-S155 (urine measurement/monitoring), S165 (medicine measurement/dosing summary), and S247 (medicine mechanisms). Some other KDIGO locator checks used indexed official material after browser-parser failure. Source originals are not stored or distributed; no exhaustive currency clearance.\",\"check_status\":\"locator_checked\",\"checked_on\":\"2026-10-04\",\"currency\":\"dated_final_baseline\",\"edition\":\"2024\",\"id\":\"K01-2024-expansion\",\"publication_status\":\"final\",\"register_id\":\"K01\",\"rights_note\":\"Factual reference and citation metadata only. The primary document keeps its own terms; its prose, algorithms, figures and questions are neither distributed nor relicensed. This is not permission to import it into another AI workflow.\",\"scope\":\"Adult CKD measurement, risk, medicines, nutrition, monitoring and supportive care; no sole-current status claimed.\",\"title\":\"KDIGO CKD evaluation and management\",\"url\":\"https://kdigo.org/wp-content/uploads/2026/04/KDIGO-2024-CKD-Guideline.pdf\"}],\"sources\":[{\"check_status\":\"locator_checked\",\"checked_on\":\"2026-10-04\",\"currency\":\"dated_final_baseline\",\"edition\":\"2024\",\"locator\":\"Table 31, printed S247: reversible inhibition of tubular creatinine secretion; Section 1.2.2\",\"source_id\":\"K01-2024-expansion\",\"title\":\"KDIGO CKD evaluation and management\",\"url\":\"https://kdigo.org/wp-content/uploads/2026/04/KDIGO-2024-CKD-Guideline.pdf\"}],\"stem\":\"Creatinine rises shortly after trimethoprim is started, while cystatin C and urine findings are unchanged. Which mechanism could explain discordant filtration estimates?\",\"topic_id\":\"T01\",\"usage\":\"assessment_reserved\",\"version\":1,\"withdrawal\":null,\"withdrawn\":false}",
+        "presented_at": "2026-10-10T03:28:09.405+00:00",
+        "assisted": 1
+      },
+      {
+        "id": "item_f28ba889aab14ce7b432dd1a7e2c6906",
+        "session_id": "assessment_539c9fe1127a4a108040d16419f5f16a",
+        "ordinal": 2,
+        "question_id": "RN11-T02-001",
+        "question_version": "2",
+        "key_version": "2",
+        "family_id": "RN11-T02-001.family",
+        "family_version": "1",
+        "topic_id": "T02",
+        "domain_id": "T02",
+        "snapshot_json": "{\"answer\":\"C\",\"correct_option_ids\":[\"C\"],\"current_version\":2,\"difficulty\":\"integration\",\"domain_id\":\"T02\",\"explanation\":\"Marked total protein with much less albumin raises a nonalbumin-protein question, including tubular or light-chain protein. Electrophoresis/immunofixation and clinical assessment can characterize it; do not infer a clone from the ratio alone.\",\"family_id\":\"RN11-T02-001.family\",\"family_version\":1,\"id\":\"RN11-T02-001\",\"key_version\":2,\"kind\":\"single_best_answer\",\"license\":\"CC-BY-4.0\",\"objective_ids\":[\"T02.O01\"],\"options\":[{\"id\":\"A\",\"rationale\":\"ACR measures albumin, whereas PCR includes other proteins.\",\"text\":\"The low ACR excludes important proteinuria.\"},{\"id\":\"B\",\"rationale\":\"Diabetes is not established by a nonalbumin protein pattern.\",\"text\":\"The discrepancy alone proves diabetic glomerular disease.\"},{\"id\":\"C\",\"rationale\":\"Marked total protein with much less albumin raises a nonalbumin-protein question, including tubular or light-chain protein. Electrophoresis/immunofixation and clinical assessment can characterize it; do not infer a clone from the ratio alone.\",\"text\":\"Much of the measured protein is nonalbumin; investigate its type and source.\"},{\"id\":\"D\",\"rationale\":\"A discrepancy is a clue, not a clonal diagnosis.\",\"text\":\"A monoclonal malignancy is proven without further testing.\"}],\"original\":true,\"question_id\":\"RN11-T02-001\",\"rationale\":\"Marked total protein with much less albumin raises a nonalbumin-protein question, including tubular or light-chain protein. Electrophoresis/immunofixation and clinical assessment can characterize it; do not infer a clone from the ratio alone.\",\"review\":{\"independent_human_review\":false,\"method\":\"Application of recovered October 7 source comparison/correction impact to this immutable successor. Original diagnosis reading and historical keys are retained; no independent human or source-wide currency review. Content propositions retained at the specified scope.\",\"reviewed_on\":\"2026-10-07\",\"reviewer\":\"Renulus content application assistant\",\"reviewer_kind\":\"assistant\",\"source_key_checked\":true,\"status\":\"assistant_reviewed\"},\"secondary_topic_ids\":[\"T18\"],\"source_records\":[{\"canonical_topic_url\":\"https://doi.org/10.1038/s41581-018-0077-4\",\"check_note\":\"Recovered finish-mgrs-comparison-20261007.md and its exact eight-item receipt: old UCL 15-page PDF physical-page locators and new XML loci agree at the stated scopes. Correction of original DOI 10.1038/s41581-018-0077-4 by DOI 10.1038/s41581-018-0102-7 (online 2018-12-19, February 2019 issue; https://www.nature.com/articles/s41581-018-0102-7): Figure 1 microtubular label is corrected. None of the selected items reproduces the erroneous label. Adopt the relationship, without claiming corrected original bytes or wholesale IKMG supersession. The 2026 executive-summary comparison supports the seven retained keys; RN11-T11-001's ancillary rationale is narrowed in version 2. No source-wide currency clearance.\",\"check_status\":\"locator_checked\",\"checked_on\":\"2026-10-07\",\"currency\":\"dated_final_baseline\",\"edition\":\"2019 final (published online 2018)\",\"id\":\"L01-IKMG-2019-diagnostic-application\",\"publication_status\":\"final\",\"register_id\":\"L01\",\"rights_note\":\"Factual reference and citation metadata only. The primary document keeps its own terms; its prose, algorithms, figures and questions are neither distributed nor relicensed. This is not permission to import it into another AI workflow.\",\"scope\":\"Seven diagnostic questions and the proximal-loss case compared with 2026 MGRS evidence; no clone-directed treatment or universal biopsy rule.\",\"title\":\"IKMG consensus: evaluation of monoclonal gammopathy of renal significance\",\"url\":\"https://www.nature.com/articles/s41581-018-0077-4\"},{\"canonical_topic_url\":\"https://doi.org/10.1093/ckj/sfag163\",\"check_note\":\"Recovered successful official Europe PMC fullTextXML https://www.ebi.ac.uk/europepmc/webservices/rest/PMC13284707/fullTextXML, HTTP 200 at 2026-10-07T13:31:22.9163425Z; SHA256 d405af8506f148513c3586d81933b0b74105b79ec76a08cfced2a7713e69c980. No new retrieval. Locators use exact XML IDs and direct paragraph-child indexes: sec1/p[1], sec2/p[1]-p[4], tbl2, tbl4 including tbl4fn1, tbl9, sec3/p[3], sec4/p[11]-p[13]. Seven retained keys supported; ancillary proximal rationale narrowed. The LCPT complete-Fanconi/MIg/abnormal serum-and-urine FLC biopsy exception and atypical-feature limits are preserved. No numeric FLC interval, universal CKD screening, unconditional biopsy, full-appendix review or clone-directed regimen is inferred.\",\"check_status\":\"locator_checked\",\"checked_on\":\"2026-10-07\",\"currency\":\"dated_final_baseline\",\"edition\":\"2026 executive summary; published 2026-05-26, CKJ 19(6); DOI 10.1093/ckj/sfag163; PMC13284707.1\",\"id\":\"L01-MGRS-2026-diagnostic-application\",\"publication_status\":\"final\",\"register_id\":\"L01\",\"rights_note\":\"Authors 2026, published by OUP on behalf of ERA, CC BY 4.0 per recovered XML. Renulus contributes original expression only; no source body, tables or figures are bundled. Other referenced publications retain separate terms.\",\"scope\":\"Exact seven diagnostic questions and proximal-loss case: protein characterization, causality, pathology, renal/assay-dependent FLC, amyloid typing and LCPT biopsy boundary. Full appendix and treatment are excluded.\",\"title\":\"European MGRS consensus executive summary: diagnostic comparison\",\"url\":\"https://academic.oup.com/ckj/article/19/6/sfag163/8694705\"}],\"sources\":[{\"check_status\":\"locator_checked\",\"checked_on\":\"2026-10-07\",\"currency\":\"dated_final_baseline\",\"edition\":\"2019 final (published online 2018)\",\"locator\":\"UCL PDF pp10-11, monoclonal immunoglobulin testing\",\"source_id\":\"L01-IKMG-2019-diagnostic-application\",\"title\":\"IKMG consensus: evaluation of monoclonal gammopathy of renal significance\",\"url\":\"https://www.nature.com/articles/s41581-018-0077-4\"},{\"check_status\":\"locator_checked\",\"checked_on\":\"2026-10-07\",\"currency\":\"dated_final_baseline\",\"edition\":\"2026 executive summary; published 2026-05-26, CKJ 19(6); DOI 10.1093/ckj/sfag163; PMC13284707.1\",\"locator\":\"Executive-summary XML sec2/p[2]; p[n] is a direct paragraph child\",\"source_id\":\"L01-MGRS-2026-diagnostic-application\",\"title\":\"European MGRS consensus executive summary: diagnostic comparison\",\"url\":\"https://academic.oup.com/ckj/article/19/6/sfag163/8694705\"}],\"stem\":\"Urine PCR is 3.8 g/g but ACR is 0.25 g/g. Which interpretation should guide the next investigation?\",\"topic_id\":\"T02\",\"usage\":\"assessment_reserved\",\"version\":2,\"withdrawal\":null,\"withdrawn\":false}",
+        "presented_at": null,
+        "assisted": 0
+      },
+      {
+        "id": "item_aa043955faaf4fb59ec7e96c8f59ab03",
+        "session_id": "assessment_539c9fe1127a4a108040d16419f5f16a",
+        "ordinal": 3,
+        "question_id": "RN-NA-001",
+        "question_version": "1",
+        "key_version": "1",
+        "family_id": "RN-NA-001.family",
+        "family_version": "1",
+        "topic_id": "T03",
+        "domain_id": "T03",
+        "snapshot_json": "{\"answer\":\"C\",\"correct_option_ids\":[\"C\"],\"current_version\":1,\"difficulty\":\"foundation\",\"domain_id\":\"T03\",\"explanation\":\"The low measured osmolality confirms hypotonicity in the absence of another effective osmole. Serum findings classify the disorder but do not identify its cause by themselves.\",\"family_id\":\"RN-NA-001.family\",\"family_version\":1,\"id\":\"RN-NA-001\",\"key_version\":1,\"kind\":\"single_best_answer\",\"license\":\"CC-BY-4.0\",\"objective_ids\":[\"T03.O01\"],\"options\":[{\"id\":\"A\",\"rationale\":\"The measured osmolality is low in this specified setting.\",\"text\":\"Hypertonic hyponatremia.\"},{\"id\":\"B\",\"rationale\":\"Etiology requires further assessment, including urine data and exclusions.\",\"text\":\"A specific diagnosis of SIAD solely from serum values.\"},{\"id\":\"C\",\"rationale\":\"The low measured osmolality confirms hypotonicity in the absence of another effective osmole. Serum findings classify the disorder but do not identify its cause by themselves.\",\"text\":\"Hypotonic hyponatremia.\"},{\"id\":\"D\",\"rationale\":\"Tonicity is not defined by that sodium cutoff.\",\"text\":\"Normal tonicity because sodium is above 120.\"}],\"original\":true,\"question_id\":\"RN-NA-001\",\"rationale\":\"The low measured osmolality confirms hypotonicity in the absence of another effective osmole. Serum findings classify the disorder but do not identify its cause by themselves.\",\"review\":{\"independent_human_review\":false,\"method\":\"Primary public recommendation/section check; single-key and distractor review; synthetic scenario review.\",\"reviewed_on\":\"2026-10-04\",\"reviewer\":\"Renulus content lane assistant\",\"reviewer_kind\":\"assistant\",\"source_key_checked\":true,\"status\":\"assistant_reviewed\"},\"secondary_topic_ids\":[],\"source_records\":[{\"canonical_topic_url\":\"https://www.ese-hormones.org/publications/directory/ese-clinical-guideline-for-the-management-of-hyponatraemia/\",\"check_note\":\"Assistant opened primary public guideline or exact indexed recommendation, checked the locators used and read the main SOURCES access rules. Dated evidence; no exhaustive literature/retraction clearance or independent human review claimed.\",\"check_status\":\"locator_checked\",\"checked_on\":\"2026-10-04\",\"currency\":\"dated_final_baseline\",\"edition\":\"2014; July 2014 erratum identified\",\"id\":\"G01-hyponatremia-2014\",\"publication_status\":\"final\",\"register_id\":\"G01\",\"rights_note\":\"Citation metadata and independently authored medical-fact teaching only. Primary text, tables, algorithms and figures are not distributed or relicensed. Source terms remain independent.\",\"scope\":\"Dated European baseline: tonicity, urine osmolality and monitored initial treatment of severe symptoms. Does not claim a 2026 collaboration is final.\",\"title\":\"ESE/ESICM/ERA-EDTA hypotonic hyponatremia\",\"url\":\"https://academic.oup.com/ejendo/article/170/3/G1/6668028\"}],\"sources\":[{\"check_status\":\"locator_checked\",\"checked_on\":\"2026-10-04\",\"currency\":\"dated_final_baseline\",\"edition\":\"2014; July 2014 erratum identified\",\"locator\":\"Section 6.2: confirmation of hypotonic hyponatremia\",\"source_id\":\"G01-hyponatremia-2014\",\"title\":\"ESE/ESICM/ERA-EDTA hypotonic hyponatremia\",\"url\":\"https://academic.oup.com/ejendo/article/170/3/G1/6668028\"}],\"stem\":\"An adult's sodium is 124 mmol/L, measured serum osmolality is 263 mOsm/kg, and there is no hyperglycemia or exogenous effective osmole. What category is established?\",\"topic_id\":\"T03\",\"usage\":\"assessment_reserved\",\"version\":1,\"withdrawal\":null,\"withdrawn\":false}",
+        "presented_at": null,
+        "assisted": 0
+      }
+    ],
+    "assessment_sessions": [
+      {
+        "id": "assessment_539c9fe1127a4a108040d16419f5f16a",
+        "mode": "reviewed",
+        "scope": "reviewed-assessment",
+        "status": "active",
+        "selector_json": "{\"domain_ids\":[],\"topic_ids\":[],\"track\":null}",
+        "coverage_json": "{\"available_families\":251,\"complete_exam_available\":false,\"insufficient_count\":false,\"missing_domain_ids\":[],\"missing_topic_ids\":[],\"note\":\"Limited reviewed quiz coverage; this is not a complete exam simulation\",\"requested_count\":3,\"selected_count\":3,\"track_title\":\"General nephrology\"}",
+        "created_at": "2026-10-10T03:28:09.404+00:00",
+        "updated_at": "2026-10-10T03:28:09.444+00:00",
+        "ended_at": null
+      }
+    ],
+    "case_attachment_parts": [],
+    "case_attachments": [],
+    "case_sessions": [
+      {
+        "id": "case_f5ac16456f4544e385c77690827796ce",
+        "revision": 1,
+        "kind": "daily",
+        "title": "Fictional dialysis discussion",
+        "case_text": "Entirely fictional case used for contract ownership checks.",
+        "messages_json": "[]",
+        "teaching_json": null,
+        "revealed_count": 0,
+        "debriefed": 0,
+        "created_at": "2026-10-10T03:28:09.316+00:00",
+        "updated_at": "2026-10-10T03:28:09.316+00:00",
+        "saved_at": "2026-10-10T03:28:09.318+00:00"
+      }
+    ],
+    "deletion_ledger": [],
+    "knowledge_cleanup": [],
+    "knowledge_documents": [
+      {
+        "id": "doc_5c86475e13b74fa38ec394db5127306d",
+        "title": "Synthetic Library note",
+        "source_id": "R02",
+        "scope_kind": "personal-library",
+        "scope_entity": null,
+        "reserved": 0,
+        "active_revision": null,
+        "latest_revision": "rev_b9223ae5439e4044bebbb989a62137a1",
+        "deleted_at": null,
+        "created_at": "2026-10-10T03:28:09.338+00:00",
+        "updated_at": "2026-10-10T03:28:09.338+00:00"
+      }
+    ],
+    "knowledge_jobs": [
+      {
+        "id": "ingest_9513593b2c3240eb9f8b5b98361c6434",
+        "revision_id": "rev_b9223ae5439e4044bebbb989a62137a1",
+        "idempotency_key": "import_2a185d2d9cda45aa814a5a0bf30a3fc3",
+        "request_hash": "3a86a336ce11748a7e2ce6df23e3b2d6647e8a6ccd6ec7fb49d10f8ebd31d0db",
+        "state": "queued",
+        "phase": "queued",
+        "error_code": null,
+        "error_message": null,
+        "created_at": "2026-10-10T03:28:09.338+00:00",
+        "finished_at": null
+      }
+    ],
+    "knowledge_passages": [],
+    "knowledge_revisions": [
+      {
+        "id": "rev_b9223ae5439e4044bebbb989a62137a1",
+        "document_id": "doc_5c86475e13b74fa38ec394db5127306d",
+        "ordinal": 1,
+        "status": "queued",
+        "sha256": "d78791e65080240b767064fcf39c28a808a724bcc8d55393dac042c1b7ee7f0b",
+        "media_type": "text/plain",
+        "bytes": 37,
+        "original_path": null,
+        "metadata_json": "{\"source_id\":\"R02\",\"source_owner\":\"User\",\"canonical_url\":null,\"access_class\":\"user-owned\",\"edition\":null,\"original_sha256\":null,\"publication_date\":null,\"revision_date\":null,\"received_at\":null,\"retrieved_at\":null,\"checked_at\":null,\"review_due\":null,\"publication_status\":\"unknown\",\"latest_final_verified\":false,\"content_reviewed\":false,\"retracted\":false,\"superseded\":false,\"repository_removed\":false,\"access_changed\":false,\"correction\":null,\"supersedes\":[],\"replaced_topics\":[],\"excluded_pages\":[],\"topic_ids\":[],\"doi\":null,\"pmid\":null,\"pmcid\":null,\"jurisdiction\":null,\"collection_section\":null,\"collection_chapter\":null,\"asset_role\":[],\"notes\":[]}",
+        "rights_json": "{\"display\":true,\"cache\":true,\"index\":true,\"embedding\":true,\"model_input\":true,\"derivation\":true,\"evaluation\":false,\"redistribution\":false,\"licence\":\"user-owned\",\"permission_reference\":\"User deliberately added their own text to the library\",\"attribution\":\"\"}",
+        "extraction_json": null,
+        "embedding_model": null,
+        "chunk_tokens": null,
+        "created_at": "2026-10-10T03:28:09.338+00:00",
+        "activated_at": null
+      }
+    ],
+    "knowledge_source_status_events": [],
+    "learn_messages": [],
+    "learn_runs": [],
+    "learn_threads": [
+      {
+        "id": "thread_e92a48aebc6842b89337ca7f4206789e",
+        "title": "Synthetic CKD study",
+        "topic_id": "ckd",
+        "teaching_style": "direct",
+        "created_at": "2026-10-10T03:28:09.296+00:00",
+        "updated_at": "2026-10-10T03:28:09.296+00:00"
+      }
+    ],
+    "learning_evidence": [
+      {
+        "id": "assessment:attempt_5aebb2e41da74743abd175b5a5345180",
+        "kind": "assessment-answer",
+        "topic_id": "T01",
+        "entity_id": "attempt_5aebb2e41da74743abd175b5a5345180",
+        "payload_json": "{\"assisted\":true,\"attempt_id\":\"attempt_5aebb2e41da74743abd175b5a5345180\",\"correct\":true,\"family_id\":\"RN11-T01-001.family\",\"family_version\":\"1\",\"item_id\":\"item_2f4ea18ce15d4f98ac05f47f47168cfd\",\"key_version\":\"1\",\"mode\":\"reviewed\",\"objective_id\":\"T01.O02\",\"objective_ids\":[\"T01.O02\"],\"question_id\":\"RN11-T01-001\",\"question_version\":\"1\",\"repeat\":false,\"scope\":{\"entity_id\":\"assessment_539c9fe1127a4a108040d16419f5f16a\",\"kind\":\"reviewed-assessment\"},\"score_bucket\":\"assisted\",\"session_id\":\"assessment_539c9fe1127a4a108040d16419f5f16a\",\"topic_id\":\"T01\"}",
+        "created_at": "2026-10-10T03:28:09.444+00:00"
+      }
+    ],
+    "memory_facts": [],
+    "memory_history": [],
+    "memory_jobs": [],
+    "memory_requests": [],
+    "memory_sources": [],
+    "memory_suppression": [],
+    "preferences": [],
+    "study_activities": [],
+    "update_affected_versions": [],
+    "update_entries": [],
+    "update_library_changes": [],
+    "update_literature_checks": [],
+    "update_literature_records": [],
+    "update_publications": [],
+    "update_review_heads": [],
+    "update_reviews": [],
+    "update_schedule": [
+      {
+        "id": 1,
+        "enabled": 0,
+        "cadence_hours": 24,
+        "updated_at": "2026-10-10T03:28:08.584+00:00"
+      }
+    ],
+    "update_schedule_jobs": [],
+    "update_schedule_runs": [],
+    "update_source_checks": [
+      {
+        "source_id": "K00",
+        "title": "K00 — KDIGO catalogue and FAQs",
+        "url": "https://kdigo.org/guidelines/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Maintained source catalogue and ancillary publications, including new commentaries, corrections, implementation material and update notices.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "K01",
+        "title": "K01 — KDIGO CKD evaluation/management: topic, verified PDF",
+        "url": "https://kdigo.org/guidelines/ckd-evaluation-and-management/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "2024. Latest final listed; replaces the 2012 CKD guideline.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "K02",
+        "title": "K02 — KDIGO Anemia in CKD: topic, verified PDF",
+        "url": "https://kdigo.org/guidelines/anemia-in-ckd/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "2026. Final published January 2026; replaces 2012. Current suite also has 2026 implementation material.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "K03",
+        "title": "K03 — KDIGO ADPKD: topic, verified PDF",
+        "url": "https://kdigo.org/guidelines/autosomal-dominant-polycystic-kidney-disease-adpkd/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "2025. Latest final listed; retain newer ancillary commentaries as separate documents.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "K04",
+        "title": "K04 — KDIGO IgAN / IgAV: topic, verified PDF",
+        "url": "https://kdigo.org/guidelines/iga-nephropathy/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "2025. Final replaces GD 2021 chapter 2. Also acquire the linked 2026 complement-inhibitor/B-cell commentary as commentary, not a new guideline.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "K05",
+        "title": "K05 — KDIGO ANCA-associated vasculitis: topic, verified PDF",
+        "url": "https://kdigo.org/guidelines/antineutrophilic-cytoplasmic-antibody-anca-associated-vasculitis-aav/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "2024 final plus full-guideline corrigenda [July 2024](https://doi.org/10.1016/j.kint.2024.04.003) and [February 2025](https://doi.org/10.1016/j.kint.2024.10.004), confirmed October 7. Replaces GD 2021 chapter 9. A May 2024 URL alone does not establish incorporation of the later correction; see the scoped reconciliation below.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "K06",
+        "title": "K06 — KDIGO Lupus nephritis: topic, verified PDF",
+        "url": "https://kdigo.org/guidelines/lupus-nephritis/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "2024. Latest final listed; replaces GD 2021 chapter 10.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "K07",
+        "title": "K07 — KDIGO Nephrotic syndrome in children: topic, verified PDF",
+        "url": "https://kdigo.org/guidelines/nephrotic-syndrome-in-children/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "2025. Final; replaces GD 2021 chapter 4.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "K08",
+        "title": "K08 — KDIGO Glomerular diseases: remaining chapters: topic, verified PDF",
+        "url": "https://kdigo.org/guidelines/gd/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "2021 remaining scope. Use remaining chapters 1, 3, 5, 6, 7, 8 and 11 subject to current evidence review. Exclude replaced-topic summaries/figures/tables as well as chapters 2, 4, 9 and 10.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "K09",
+        "title": "K09 — KDIGO Diabetes and CKD: topic, verified PDF",
+        "url": "https://kdigo.org/guidelines/diabetes-ckd/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "2022 final. 2026 update remains a post-public-review draft on the checked page. Use final 2022 plus separately labelled 2025 incretin commentary/current evidence; watch final publication.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "K10",
+        "title": "K10 — KDIGO AKI / AKD: topic, verified PDF",
+        "url": "https://kdigo.org/guidelines/acute-kidney-injury/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "2012 final. 2026 AKI/AKD update remains a post-public-review draft. The final PDF title page is March 2012; one page link incorrectly says 2021. Older baseline needs current-evidence review.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "K11",
+        "title": "K11 — KDIGO Blood pressure in CKD: topic, verified PDF",
+        "url": "https://kdigo.org/guidelines/blood-pressure-in-ckd/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "2021. Latest topic final listed; consider newer overlapping CKD guidance and measurement consensus as distinct evidence.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "K12",
+        "title": "K12 — KDIGO Hepatitis C in CKD: topic, verified PDF",
+        "url": "https://kdigo.org/guidelines/hepatitis-c-in-ckd/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "2022. Latest final listed; replaces 2018. Historical 2018 downloads on the same page are excluded from current-guidance retrieval.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "K13",
+        "title": "K13 — KDIGO CKD mineral and bone disorder: topic, verified PDF",
+        "url": "https://kdigo.org/guidelines/ckd-mbd/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "2017 update remains the listed final on October 7. The [full-guideline erratum](https://doi.org/10.1016/j.kisu.2017.10.001), December 2017 issue, corrects the calcium comparator in supplementary Table S21; its text says the work-group conclusions are unchanged. This is distinct from the executive-summary erratum. Scope review and original-file incorporation remain separate.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "K14",
+        "title": "K14 — KDIGO Lipids in CKD: topic, verified PDF",
+        "url": "https://kdigo.org/guidelines/lipids-in-ckd/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "2013 topic guideline. Latest standalone topic final listed; older baseline. Check newer CKD/CVD guidance and current evidence for overlapping recommendations.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "K15",
+        "title": "K15 — KDIGO Living kidney donor: topic, verified PDF",
+        "url": "https://kdigo.org/guidelines/living-kidney-donor/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "2017. Latest KDIGO final listed; retain date and scope and review subsequent evidence before authoring current recommendations.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "K16",
+        "title": "K16 — KDIGO Kidney transplant candidate: topic, verified PDF",
+        "url": "https://kdigo.org/guidelines/transplant-candidate/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "2020. Latest KDIGO final listed; donor and recipient scopes remain separate.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "K17",
+        "title": "K17 — KDIGO Kidney transplant recipient: topic, verified PDF",
+        "url": "https://kdigo.org/guidelines/transplant-recipient/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "2009 topic guideline. Latest KDIGO recipient guideline listed, but an old baseline. Do not activate it as a sole source of current transplant regimens; reconcile with current specialist evidence and product information.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "K18",
+        "title": "K18 — KDIGO heart failure in CKD",
+        "url": "https://kdigo.org/guidelines/heart-failure-in-ckd/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Under development; scope of work is available. No final KDIGO guideline verified.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "G01",
+        "title": "G01 — ERA Guidance / ERBP",
+        "url": "https://www.era-online.org/era-guidance/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Maintained European guideline/commentary/consensus channel; includes ERBP commentary on KDIGO 2026 anemia. October 7: [ESE's hyponatraemia directory](https://www.ese-hormones.org/publications/directory/ese-clinical-guideline-for-the-management-of-hyponatraemia/) lists the March 2014 final and July 2014 correction; no later same-scope final identified in the checked catalogue. A collaboration announcement is not a released replacement. ERKNet lists dRTA 2021; Alport's 2024 guideline has a 2025 journal issue.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "G02",
+        "title": "G02 — UK Kidney Association guidelines, archives",
+        "url": "https://www.ukkidney.org/health-professionals/guidelines/guidelines-commentaries",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Maintained UK guidance and commentary. Select PDF edition, publication/review date and archive state; overdue review is current-status-unverified, not proof of supersession.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "G03",
+        "title": "G03 — ESC–ERA CVD and CKD guideline",
+        "url": "https://www.escardio.org/guidelines/clinical-practice-guidelines/all-esc-practice-guidelines/cvd-chronic-kidney-disease/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Final 2026 guideline released August 28, 2026. Use released ESC record rather than an ERA working-title announcement.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "G04",
+        "title": "G04 — EAU urolithiasis, terms",
+        "url": "https://uroweb.org/guidelines/urolithiasis",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "2026 final annual edition verified.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "G05",
+        "title": "G05 — EAU urological infections",
+        "url": "https://uroweb.org/guidelines/urological-infections",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "2026 final annual edition verified.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "G06",
+        "title": "G06 — EMA medicines, JSON docs, medicine JSON, EPAR-document JSON, legal notice",
+        "url": "https://www.ema.europa.eu/en/medicines",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Current EU centrally authorised medicine status and product information; national authorisations are outside this catalogue coverage.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "G07",
+        "title": "G07 — NICE guidance, syndication API, terms",
+        "url": "https://www.nice.org.uk/guidance",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Supplementary UK context; select History/Update information/surveillance records. NG203 last updated November 24, 2021; NG148 October 16, 2024 in the checked records.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "G08",
+        "title": "G08 — NKF KDOQI, AJKD catalogue, legal policy",
+        "url": "https://www.kidney.org/professionals/kdoqi",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Supplementary US channel. Full catalogue latest status unverified because publisher access was blocked; vascular access 2019 is explicitly current on the NKF topic page.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "G09",
+        "title": "G09 — BC Renal haemodialysis guidance, complications PDF, use terms",
+        "url": "https://www.bcrenal.ca/health-professionals/clinical-resources/hemodialysis",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Management of Complications During Hemodialysis, July 2026 as printed in retained PDF; checked October 7. Canadian provincial supplementary evidence, not EU guidance.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "L01",
+        "title": "L01 — PubMed/MEDLINE download documentation, E-utilities, baseline, daily updates",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/help/#download-pubmed-data",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Maintained biomedical bibliography; PubMed is not an open full-text corpus. PubMed includes MEDLINE and additional records.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "L02",
+        "title": "L02 — PMC Open Access subset, AWS/HTTPS access, current dataset README, transition notice",
+        "url": "https://pmc.ncbi.nlm.nih.gov/tools/openftlist/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Primary licensed full-text route. 2026 migration completed during the week of August 24; legacy article FTP/old cloud layouts were removed.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "L03",
+        "title": "L03 — Europe PMC REST, API base, OA bulk docs, XML bulk, PDF bulk",
+        "url": "https://europepmc.org/RestfulWebService",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Maintained metadata plus eligible full text. OA XML bulk weekly and PDF bulk monthly in checked documentation.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "L04",
+        "title": "L04 — OpenAlex API authentication, snapshot, full-text service scope",
+        "url": "https://help.openalex.org/api/authentication/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Current authentication page updated August 19, 2026 allows basic keyless queries. September 2026 metadata snapshot documented; old legacy-data layout is frozen.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "L05",
+        "title": "L05 — Crossref REST, API, Crossmark",
+        "url": "https://www.crossref.org/documentation/retrieve-metadata/rest-api/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Maintained DOI metadata and publication-status relationships where deposited; not a full-text dataset.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "L06",
+        "title": "L06 — Semantic Scholar API, Graph docs, datasets, licence",
+        "url": "https://www.semanticscholar.org/product/api",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Maintained graph/recommendation/dataset channel; exact endpoint-specific key and bulk eligibility require verification at integration.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "L07",
+        "title": "L07 — Unpaywall DOI API, current OpenAlex/Unpaywall relationship, terms",
+        "url": "https://data.unpaywall.org/products/api",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Maintained DOI-to-OA-location resolver. Search endpoint retired September 18, 2026; standalone snapshots ended. Bulk acquisition now uses OpenAlex.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "L08",
+        "title": "L08 — CORE API, v3 docs, datasets",
+        "url": "https://core.ac.uk/services/api",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Candidate, current individual-user access/key/fee/licence status unverified because current pages could not be checked reliably. Not a required/default route.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "E01",
+        "title": "E01 — ERA Neph-Manual",
+        "url": "https://www.era-online.org/research-education/era-e-learning/neph-manual/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Maintained member learning channel. A numbered latest edition/chapter revision is not publicly verified; record the actual supplied revision.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "E02",
+        "title": "E02 — ERA Neph-Manual self-assessment / approved MCQ exports: manual",
+        "url": "https://www.era-online.org/research-education/era-e-learning/neph-manual/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Current supplied question-set version must be identified. Owner-confirmed ERA cooperation/user-download direction; no acquired set or public export format claimed.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "E03",
+        "title": "E03 — ERA e-learning / NEP e-seminars",
+        "url": "https://www.era-online.org/research-education/era-e-learning/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Maintained dated seminar/recording channel. Free e-seminars and member archive access are distinct.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "E04",
+        "title": "E04 — Clinical Kidney Journal, licence guidance",
+        "url": "https://academic.oup.com/ckj",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Maintained nephrology publication channel; select current relevant papers and corrections, not a frozen article shortlist.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "E05",
+        "title": "E05 — Nephrology Dialysis Transplantation",
+        "url": "https://academic.oup.com/ndt",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Maintained nephrology research/guidance channel; each paper has its own access/licence and currency record.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "E06",
+        "title": "E06 — Pediatric Nephrology Educational Reviews, verified 2026 CC BY example",
+        "url": "https://link.springer.com/journal/467",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Maintained specialty review/question channel. Anti-CD20 therapy in childhood idiopathic nephrotic syndrome published April 29, 2026 is a verified CC BY example with MCQs/keys.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "E07",
+        "title": "E07 — Servier Medical Art, formats FAQ, terms",
+        "url": "https://smart.servier.com/",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Maintained anatomy/illustration channel; PNG and PPTX currently supported, SVG unavailable in checked FAQ.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "C01",
+        "title": "C01 — ESENeph curriculum/blueprint hub, curriculum PDF, blueprint PDF",
+        "url": "https://www.thefederation.uk/examinations/european-specialty-examination-nephrology",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Current hub links Renal Medicine 2022 curriculum and the 200-question blueprint. The UK curriculum is a mapping reference, not every EU doctor’s national programme.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      },
+      {
+        "source_id": "C02",
+        "title": "C02 — Official ESENeph sample questions",
+        "url": "https://www.thefederation.uk/examinations/european-specialty-examination-nephrology/sample-questions",
+        "fingerprint": null,
+        "links_json": "[]",
+        "snapshot_status": "Current official interactive preparation route; no public downloadable openly licensed bank verified.",
+        "last_checked_at": null,
+        "last_success_at": null,
+        "state": "never-checked",
+        "error_code": null
+      }
+    ],
+    "update_source_statuses": []
+  },
+  "artifacts": {},
+  "limits": "This backup carries only deletion markers known at its export date. On a new installation it cannot know later deletions. Restoring merges records and preserves newer deletion markers available in this profile. Derived indexes must be rebuilt using installed offline helpers.",
+  "omissions": {
+    "knowledge_catalogue": {
+      "records": 0,
+      "reason": "Acquisition catalogue is input metadata tied to external collection paths; retained library metadata remains in knowledge_documents and knowledge_revisions."
+    },
+    "knowledge_extractions": {
+      "records": 0,
+      "reason": "Structured extraction documents are rebuildable from retained originals; canonical passage text, headings and physical source locators are retained."
+    },
+    "case_originals": {
+      "records": 0,
+      "reason": "Records-only export retains case attachment metadata. Original bytes require a full backup including originals."
+    }
+  }
+}

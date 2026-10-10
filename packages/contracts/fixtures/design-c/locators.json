@@ -1,0 +1,71 @@
+[
+  {
+    "target": {
+      "type": "library_revision",
+      "id": "rev_fiction_pdf"
+    },
+    "locator": {
+      "kind": "pdf",
+      "physical_page": 3,
+      "printed_label": "ii"
+    }
+  },
+  {
+    "target": {
+      "type": "library_revision",
+      "id": "rev_fiction_docx"
+    },
+    "locator": {
+      "kind": "text",
+      "item_ref": "#/texts/2",
+      "section": "Dialysis",
+      "start": 0,
+      "end": 26
+    }
+  },
+  {
+    "target": {
+      "type": "attachment",
+      "id": "attachment_fiction_csv"
+    },
+    "locator": {
+      "kind": "table",
+      "format": "csv",
+      "first_row": 2,
+      "last_row": 3,
+      "first_column": 1,
+      "last_column": 4
+    }
+  },
+  {
+    "target": {
+      "type": "library_revision",
+      "id": "rev_fiction_xlsx"
+    },
+    "locator": {
+      "kind": "table",
+      "format": "xlsx",
+      "sheet_name": "Fictional study",
+      "first_row": 1,
+      "last_row": 4,
+      "first_column": 2,
+      "last_column": 3
+    }
+  },
+  {
+    "target": {
+      "type": "attachment",
+      "id": "attachment_fiction_tiff"
+    },
+    "locator": {
+      "kind": "image",
+      "frame": 2,
+      "bounds": [
+        0.1,
+        0.2,
+        0.8,
+        0.9
+      ]
+    }
+  }
+]

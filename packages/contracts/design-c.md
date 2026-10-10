@@ -34,6 +34,9 @@ DC02 remains open until its actual migration foundation is connected and proven.
   independent chats and Library originals. A deleted target invalidates its links.
   Conversation-to-attachment and attachment-to-original/preview edges are owned.
   Only installed, reviewed relation declarations may drive restore pruning.
+  Distinguish disposable membership links from retained unavailable provenance.
+  Delete a membership row whose endpoint is gone; preserve an attempt/report/job
+  outcome and its original pinned ID when its live source becomes unavailable.
 - Content references pin `library_revision`, `attachment`, `note_revision` or
   `saved_test_version`, with optional typed locator. The server resolves their
   owner, availability, retention, revision and per-operation permissions. No
@@ -172,6 +175,11 @@ bytes and model-controlled eligibility flags are rejected. Saved case summaries
 must already be generalised fictional learning evidence, separately eligible;
 retention alone grants no permission. Memory correction/deletion, project removal
 and relevant restore invalidate jobs/cache before publication.
+Capture `storage.invalidation.context_epoch` with each derived job and compare
+it transactionally before publication; producers call `bump_context_epoch` for
+relevant edits/deletions/settings changes. Restore's Library dirty marker blocks
+source queries until a real successful rebuild clears it. The parent's storage
+implementation owns these mechanisms; the contract pure check does not run them.
 
 DC18 explicit create-test intent can transform temporary text entirely in memory
 into a `FictionalTestArtifact`: validated generalised fictional questions and
@@ -207,11 +215,11 @@ Exact proposed persisted names/identity and relation columns:
 | knowledge_attachment_originals (Knowledge/003) | id PK, attachment_id → knowledge_attachments.id | Owned bytes/preview reference, separate extraction/index status; one authority |
 | assessment_tests (Assessment/003) | id PK | Collection identity/lifecycle; newest version derived by ordinal, no reverse cascade |
 | assessment_test_versions (Assessment/003) | id PK, test_id → assessment_tests.id | Owned immutable manifest; ordinal/origin/review_quality/items_json/terms/provenance/digest |
-| assessment_test_attempts (Assessment/004) | id PK, version_id → assessment_test_versions.id | Link to pinned version; independent history, unavailable marker on deletion |
+| assessment_test_attempts (Assessment/004) | id PK, original version_id, nullable live_version_id, version_snapshot_json | Independent immutable payload/provenance; original pin has no hard version FK or pruning edge |
 | assessment_attempt_drafts (Assessment/004) | attempt_id PK → assessment_test_attempts.id | Owned revision/answers_json/position; no scores |
 | assessment_attempt_exposure (Assessment/004) | id PK, attempt_id → assessment_test_attempts.id | Owned item/question/key/family version snapshot and kind; not learning evidence |
-| assessment_question_reports (Assessment/003) | id PK, version_id → assessment_test_versions.id, nullable attempt_id → assessment_test_attempts.id | Links; neutral local report pinned to item/version; unavailable provenance permitted |
-| assessment_test_jobs (Assessment/003) | id PK, nullable published_version_id → assessment_test_versions.id | Link outcome; inputs/checkpoints obey durable boundary; never ownership of a source |
+| assessment_question_reports (Assessment/003) | id PK, original version_id/attempt_id, nullable live_version_id/live_attempt_id | Independent item/question/key/family pins; neutral report survives deleted source |
+| assessment_test_jobs (Assessment/003) | id PK, original published_version_id, nullable live_published_version_id | Retained outcome; inputs/checkpoints obey durable boundary; never ownership of a source |
 
 These names are frozen proposals for review, not independently reserved new
 migrations. In particular M2 must reuse existing case attachment/original rows
@@ -225,6 +233,20 @@ job inputs need explicit typed traversal/revalidation; column-suffix heuristics
 are insufficient. Relation proposals in the Python module specify parent table/
 column, child table/column, ownership/link and any discriminator condition.
 Existing legacy relationships must remain in the parent's installed registry.
+`TABLE_COLUMNS` and `relations-and-rows.json` freeze the proposed scalar column
+inventory. `UNAVAILABLE_REFERENCE_COLUMNS` is separate from pruning relations:
+never add its pinned columns to deletion traversal or null/erase those pins.
+Attempt version_snapshot_json stores the complete immutable version privately
+at start; public TestAttempt responses omit its keys. A nullable live pointer
+can only equal the original pin or be unavailable; it cannot repin history.
+`unavailable-references.json` supplies an absent-live-version attempt snapshot,
+original report pins and the retained job outcome for migration/restore tests.
+
+Foreign keys may guard owned/membership rows. Original provenance pins in
+attempts/reports/job outcomes must survive physical pruning of deleted tests/
+versions; no hard FK may prevent that restore. Parent and M4 can instead retain
+referenced versions with root soft deletion, but must preserve the same public
+unavailable meaning and independent immutable attempt payload.
 
 Explicit converters must inspect known source format/schema/column inventory
 before exact-column validation against the target. Supported source inventories:

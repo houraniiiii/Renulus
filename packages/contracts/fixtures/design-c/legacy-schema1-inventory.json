@@ -1,0 +1,563 @@
+{
+  "source_baseline": "1b30a896",
+  "schema_version": 1,
+  "columns": {
+    "preferences": [
+      "key",
+      "value",
+      "updated_at"
+    ],
+    "deletion_ledger": [
+      "entity_type",
+      "entity_id",
+      "deleted_at"
+    ],
+    "learning_evidence": [
+      "id",
+      "kind",
+      "topic_id",
+      "entity_id",
+      "payload_json",
+      "created_at"
+    ],
+    "content_packs": [
+      "pack_id",
+      "version",
+      "manifest_json",
+      "sha256",
+      "installed_at"
+    ],
+    "content_topics": [
+      "topic_id",
+      "version",
+      "body_json",
+      "sha256"
+    ],
+    "content_case_versions": [
+      "case_id",
+      "version",
+      "body_json",
+      "sha256"
+    ],
+    "content_question_versions": [
+      "question_id",
+      "version",
+      "family_id",
+      "body_json",
+      "sha256"
+    ],
+    "content_pack_topics": [
+      "pack_id",
+      "pack_version",
+      "topic_id",
+      "topic_version"
+    ],
+    "content_pack_cases": [
+      "pack_id",
+      "pack_version",
+      "case_id",
+      "case_version"
+    ],
+    "content_pack_questions": [
+      "pack_id",
+      "pack_version",
+      "question_id",
+      "question_version"
+    ],
+    "content_active_pack": [
+      "slot",
+      "pack_id",
+      "pack_version"
+    ],
+    "content_question_withdrawals": [
+      "question_id",
+      "version",
+      "reason",
+      "withdrawn_at",
+      "replacement_version"
+    ],
+    "content_pack_withdrawals": [
+      "pack_id",
+      "version",
+      "reason",
+      "withdrawn_at"
+    ],
+    "knowledge_documents": [
+      "id",
+      "title",
+      "source_id",
+      "scope_kind",
+      "scope_entity",
+      "reserved",
+      "active_revision",
+      "latest_revision",
+      "deleted_at",
+      "created_at",
+      "updated_at"
+    ],
+    "knowledge_revisions": [
+      "id",
+      "document_id",
+      "ordinal",
+      "status",
+      "sha256",
+      "media_type",
+      "bytes",
+      "original_path",
+      "metadata_json",
+      "rights_json",
+      "extraction_json",
+      "embedding_model",
+      "chunk_tokens",
+      "created_at",
+      "activated_at"
+    ],
+    "knowledge_jobs": [
+      "id",
+      "revision_id",
+      "idempotency_key",
+      "request_hash",
+      "state",
+      "phase",
+      "error_code",
+      "error_message",
+      "created_at",
+      "finished_at"
+    ],
+    "knowledge_passages": [
+      "id",
+      "revision_id",
+      "ordinal",
+      "text",
+      "context_text",
+      "locators_json",
+      "headings_json"
+    ],
+    "knowledge_cleanup": [
+      "revision_id",
+      "remove_original",
+      "error_code",
+      "created_at"
+    ],
+    "knowledge_source_status_events": [
+      "id",
+      "source_id",
+      "request_hash",
+      "payload_json",
+      "created_at"
+    ],
+    "learn_threads": [
+      "id",
+      "title",
+      "topic_id",
+      "teaching_style",
+      "created_at",
+      "updated_at"
+    ],
+    "learn_messages": [
+      "id",
+      "thread_id",
+      "run_id",
+      "role",
+      "content",
+      "citations_json",
+      "created_at"
+    ],
+    "learn_runs": [
+      "id",
+      "thread_id",
+      "idempotency_key",
+      "state",
+      "error_code",
+      "created_at",
+      "updated_at"
+    ],
+    "case_sessions": [
+      "id",
+      "revision",
+      "kind",
+      "title",
+      "case_text",
+      "messages_json",
+      "teaching_json",
+      "revealed_count",
+      "debriefed",
+      "created_at",
+      "updated_at",
+      "saved_at"
+    ],
+    "case_attachments": [
+      "id",
+      "case_id",
+      "filename",
+      "title",
+      "media_type",
+      "bytes",
+      "sha256"
+    ],
+    "case_attachment_parts": [
+      "attachment_id",
+      "part",
+      "data"
+    ],
+    "assessment_sessions": [
+      "id",
+      "mode",
+      "scope",
+      "status",
+      "selector_json",
+      "coverage_json",
+      "created_at",
+      "updated_at",
+      "ended_at"
+    ],
+    "assessment_items": [
+      "id",
+      "session_id",
+      "ordinal",
+      "question_id",
+      "question_version",
+      "key_version",
+      "family_id",
+      "family_version",
+      "topic_id",
+      "domain_id",
+      "snapshot_json",
+      "presented_at",
+      "assisted"
+    ],
+    "assessment_attempts": [
+      "id",
+      "session_id",
+      "item_id",
+      "question_id",
+      "question_version",
+      "key_version",
+      "family_id",
+      "family_version",
+      "topic_id",
+      "answer_json",
+      "correct",
+      "assisted",
+      "repeat",
+      "score_bucket",
+      "committed_at"
+    ],
+    "assessment_exposure": [
+      "id",
+      "family_id",
+      "question_id",
+      "question_version",
+      "item_id",
+      "kind",
+      "created_at"
+    ],
+    "assessment_commands": [
+      "idempotency_key",
+      "operation",
+      "target",
+      "request_json",
+      "result_json",
+      "created_at"
+    ],
+    "assessment_generated_sessions": [
+      "id",
+      "scope",
+      "status",
+      "topic_id",
+      "source_verification",
+      "created_at",
+      "updated_at"
+    ],
+    "assessment_generated_items": [
+      "id",
+      "session_id",
+      "ordinal",
+      "snapshot_json",
+      "assisted",
+      "presented"
+    ],
+    "assessment_generated_attempts": [
+      "id",
+      "session_id",
+      "item_id",
+      "answer_json",
+      "correct",
+      "assisted",
+      "committed_at"
+    ],
+    "assessment_generated_commands": [
+      "idempotency_key",
+      "operation",
+      "target",
+      "request_hash",
+      "result_json",
+      "created_at"
+    ],
+    "memory_facts": [
+      "id",
+      "text",
+      "text_hash",
+      "kind",
+      "topic_id",
+      "scope",
+      "revision",
+      "source_kind",
+      "source_id",
+      "created_at",
+      "updated_at"
+    ],
+    "memory_history": [
+      "record_id",
+      "revision",
+      "text",
+      "event",
+      "created_at"
+    ],
+    "memory_sources": [
+      "source_key",
+      "record_id"
+    ],
+    "memory_suppression": [
+      "source_key",
+      "suppressed_at"
+    ],
+    "memory_requests": [
+      "idempotency_key",
+      "request_hash",
+      "record_id"
+    ],
+    "memory_jobs": [
+      "id",
+      "evidence_id",
+      "evidence_hash",
+      "scope",
+      "state",
+      "attempts",
+      "error_code",
+      "created_at",
+      "updated_at"
+    ],
+    "study_activities": [
+      "id",
+      "topic_id",
+      "objective_id",
+      "kind",
+      "title",
+      "due_date",
+      "duration_minutes",
+      "reason_json",
+      "evidence_id",
+      "state",
+      "manual_override",
+      "created_at",
+      "updated_at"
+    ],
+    "update_source_checks": [
+      "source_id",
+      "title",
+      "url",
+      "fingerprint",
+      "links_json",
+      "snapshot_status",
+      "last_checked_at",
+      "last_success_at",
+      "state",
+      "error_code"
+    ],
+    "update_entries": [
+      "id",
+      "source_id",
+      "external_id",
+      "title",
+      "url",
+      "kind",
+      "publication_date",
+      "discovered_at",
+      "reviewed_at",
+      "reviewer",
+      "review_state",
+      "summary",
+      "topic_ids_json",
+      "source_metadata_json",
+      "read_at"
+    ],
+    "update_publications": [
+      "id",
+      "source_id",
+      "url",
+      "title",
+      "permission_reference",
+      "max_bytes",
+      "tracked_at",
+      "enabled",
+      "digest",
+      "observation",
+      "fetch_metadata_json",
+      "last_checked_at",
+      "last_success_at",
+      "state",
+      "error_code"
+    ],
+    "update_reviews": [
+      "id",
+      "entry_id",
+      "target_json",
+      "changes_json",
+      "evidence_json",
+      "summary",
+      "topic_ids_json",
+      "reviewer",
+      "state",
+      "reviewed_at",
+      "library_sync_state",
+      "library_sync_error",
+      "library_result_json"
+    ],
+    "update_review_heads": [
+      "entry_id",
+      "review_id"
+    ],
+    "update_source_statuses": [
+      "target_key",
+      "target_json",
+      "status_json",
+      "review_id"
+    ],
+    "update_affected_versions": [
+      "entry_id",
+      "kind",
+      "entity_id",
+      "version",
+      "pinned_source_id",
+      "register_id",
+      "locators_json",
+      "topic_id",
+      "objective_ids_json",
+      "detected_at",
+      "basis",
+      "state"
+    ],
+    "update_library_changes": [
+      "id",
+      "entry_id",
+      "payload_json",
+      "state",
+      "last_attempt_at",
+      "error_code",
+      "result_json"
+    ],
+    "update_literature_records": [
+      "external_id",
+      "entry_id",
+      "fingerprint",
+      "observation",
+      "metadata_json",
+      "last_checked_at",
+      "last_success_at",
+      "state",
+      "error_code"
+    ],
+    "update_literature_checks": [
+      "topic_id",
+      "last_checked_at",
+      "last_success_at",
+      "state",
+      "error_code",
+      "result_count"
+    ],
+    "update_schedule": [
+      "id",
+      "enabled",
+      "cadence_hours",
+      "updated_at"
+    ],
+    "update_schedule_jobs": [
+      "kind",
+      "target_id",
+      "next_due_at",
+      "last_attempt_at",
+      "last_success_at",
+      "state",
+      "retry_count",
+      "failure_count",
+      "error_code"
+    ],
+    "update_schedule_runs": [
+      "id",
+      "trigger",
+      "started_at",
+      "finished_at",
+      "state",
+      "checked",
+      "failed",
+      "error_code"
+    ]
+  },
+  "migration_ledger": [
+    {
+      "name": "assessment-001",
+      "checksum": "f09d4abd974b21dc79235aa4403e3aa01c339c72a45053c493b617c9e7ac0a35"
+    },
+    {
+      "name": "assessment-002_generated",
+      "checksum": "097dc01cfda5803ec5949baa7d0e030162fb729715a97ff95b10dc779acca8c8"
+    },
+    {
+      "name": "cases-001",
+      "checksum": "6b5804a16ab7c34710a7704f227afc172a69df43e698267ff190aa29225275b6"
+    },
+    {
+      "name": "cases-002-originals",
+      "checksum": "db639ae1471667038175481d669e1db50dbfba06abecf811bc8fa00a6d535cd1"
+    },
+    {
+      "name": "content-001",
+      "checksum": "d4e42a9407959ce0b01e5dc456fe2b3c389603396524f6355eae99cd6cf35125"
+    },
+    {
+      "name": "knowledge-001",
+      "checksum": "42e80948f6ce141bdac4b5568b69d545e9ab4dd92175e530acb050d0cc0590df"
+    },
+    {
+      "name": "knowledge-002-source-status",
+      "checksum": "e710eeda09719123ddbffea04b3fa8b7e746a0b5b24d7886dac434b6ff9feb3b"
+    },
+    {
+      "name": "learn-001",
+      "checksum": "478585fc92ec78468f7e7e1690fff972ff312ad0166585a20579eab3717d74fd"
+    },
+    {
+      "name": "memory-001",
+      "checksum": "287819b0342fa61a5b71f0bcb4d2a5de530055a934de12cb71ebfbc7bb1de3a6"
+    },
+    {
+      "name": "retrieval-001",
+      "checksum": "bc6053504816d3f449093859eecd305780b595313baba0baf5862e6dfaad1f64"
+    },
+    {
+      "name": "storage-recovery-001",
+      "checksum": "092fa30bc66c131c5263861db9f89baf9e078669714413349ff9dd6523d69a60"
+    },
+    {
+      "name": "study-001",
+      "checksum": "deefe8ccd61f7627c48bf68f7edd0ba105d808c786bc9bb6ad21a98a417e6b1e"
+    },
+    {
+      "name": "updates-001",
+      "checksum": "755cffb53fcde47bdee8871be4fa419668bdea6b1a41dfb360b9a54202308655"
+    },
+    {
+      "name": "updates-002-publication-currency",
+      "checksum": "3f2ce7a66272d2cc374717790bf3cd6cf17812d79ab1dd36e11b783ec21c2cfc"
+    },
+    {
+      "name": "updates-003-reviewed-source-status",
+      "checksum": "69ab0c18999656c4eab59ae88e07620803434f61caf8b1657513069e0c3694db"
+    },
+    {
+      "name": "updates-004-scheduling",
+      "checksum": "a4c932c155410e9b089f1cff4df228bcc0b8ffa7f840e54a19454bb7308664df"
+    }
+  ]
+}

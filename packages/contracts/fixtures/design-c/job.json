@@ -1,0 +1,27 @@
+{
+  "id": "job_fiction_1",
+  "operation": "generate_test",
+  "idempotency_key": "fiction-job-01",
+  "state": "running",
+  "inputs": [
+    {
+      "kind": "memory",
+      "dependency": {
+        "target": {
+          "type": "memory_revision",
+          "id": "memory_revision_fiction_1"
+        },
+        "expected_revision": "2"
+      },
+      "retention": "saved",
+      "content_class": "general_learning"
+    }
+  ],
+  "settings_revision": 1,
+  "policy_revision": 1,
+  "context_epoch": 3,
+  "requested_count": 5,
+  "validated_count": 5,
+  "fictional_artifact": null,
+  "published_version": null
+}

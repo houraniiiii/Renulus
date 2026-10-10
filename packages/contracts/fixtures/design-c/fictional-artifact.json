@@ -1,0 +1,128 @@
+{
+  "id": "fiction_artifact_1",
+  "boundary_version": "fictional-test/1",
+  "validation_id": "synthetic_review_1",
+  "sha256": "e2dd1133839bb70bff10dbb3dab8517b1cbbee0b8af1399abf202b30a502a550",
+  "questions": [
+    {
+      "item_id": "fiction_item_1",
+      "question_id": "fiction_question_1",
+      "question_version": "1",
+      "key_version": "1",
+      "family_id": "fiction_family_1",
+      "family_version": "1",
+      "topic_id": "ckd",
+      "stem": "Fictional learning scenario about ckd: which action preserves source provenance?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Keep the source revision and its locator"
+        },
+        {
+          "id": "b",
+          "text": "Infer a missing source location"
+        }
+      ],
+      "correct_option_ids": [
+        "a"
+      ],
+      "explanation": "A citation pins the source revision and observed locator."
+    },
+    {
+      "item_id": "fiction_item_2",
+      "question_id": "fiction_question_2",
+      "question_version": "1",
+      "key_version": "1",
+      "family_id": "fiction_family_2",
+      "family_version": "1",
+      "topic_id": "dialysis",
+      "stem": "Fictional learning scenario about dialysis: which action preserves source provenance?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Keep the source revision and its locator"
+        },
+        {
+          "id": "b",
+          "text": "Infer a missing source location"
+        }
+      ],
+      "correct_option_ids": [
+        "a"
+      ],
+      "explanation": "A citation pins the source revision and observed locator."
+    },
+    {
+      "item_id": "fiction_item_3",
+      "question_id": "fiction_question_3",
+      "question_version": "1",
+      "key_version": "1",
+      "family_id": "fiction_family_3",
+      "family_version": "1",
+      "topic_id": "transplantation",
+      "stem": "Fictional learning scenario about transplantation: which action preserves source provenance?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Keep the source revision and its locator"
+        },
+        {
+          "id": "b",
+          "text": "Infer a missing source location"
+        }
+      ],
+      "correct_option_ids": [
+        "a"
+      ],
+      "explanation": "A citation pins the source revision and observed locator."
+    },
+    {
+      "item_id": "fiction_item_4",
+      "question_id": "fiction_question_4",
+      "question_version": "1",
+      "key_version": "1",
+      "family_id": "fiction_family_4",
+      "family_version": "1",
+      "topic_id": "glomerular",
+      "stem": "Fictional learning scenario about glomerular: which action preserves source provenance?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Keep the source revision and its locator"
+        },
+        {
+          "id": "b",
+          "text": "Infer a missing source location"
+        }
+      ],
+      "correct_option_ids": [
+        "a"
+      ],
+      "explanation": "A citation pins the source revision and observed locator."
+    },
+    {
+      "item_id": "fiction_item_5",
+      "question_id": "fiction_question_5",
+      "question_version": "1",
+      "key_version": "1",
+      "family_id": "fiction_family_5",
+      "family_version": "1",
+      "topic_id": "electrolytes",
+      "stem": "Fictional learning scenario about electrolytes: which action preserves source provenance?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Keep the source revision and its locator"
+        },
+        {
+          "id": "b",
+          "text": "Infer a missing source location"
+        }
+      ],
+      "correct_option_ids": [
+        "a"
+      ],
+      "explanation": "A citation pins the source revision and observed locator."
+    }
+  ]
+}
