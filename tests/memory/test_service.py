@@ -1,6 +1,7 @@
 """Synthetic controlled engines for commit races/failures, not producer proof."""
 import asyncio
 import json
+import sqlite3
 import threading
 from types import SimpleNamespace
 
@@ -9,6 +10,7 @@ import pytest
 from renulus.contracts import ApiError, ContextScope, Scope
 from renulus.memory.models import ManualFact
 from renulus.memory.service import MemoryService
+from renulus.storage.invalidation import MEMORY_RESTORE_CAPTURE_PREFIX, invalidate_restored_context
 
 from .conftest import evidence
 
@@ -293,3 +295,93 @@ async def test_active_sqlite_reader_reports_pending_wal_cleanup(controlled_memor
         reader.close()
     assert memory.delete(fact['id'], 1)['purge_pending'] is False
     await memory.close()
+
+
+@pytest.mark.asyncio
+async def test_global_retry_cannot_start_restored_failed_inference(controlled_memory, services):
+    memory, controller = controlled_memory
+    job = memory.enqueue('evidence-1', evidence(services))
+    controller.fail_extract = True
+    await memory.process_pending()
+    assert memory.repository.job(job['id'])['state'] == 'failed'
+    # A foreign failed job can coincide with the destination's next epoch.
+    parts = job['evidence_hash'].split(':')
+    parts[-1] = '1'
+    services.db.execute('UPDATE memory_jobs SET evidence_hash=? WHERE id=?', (':'.join(parts), job['id']))
+    with services.db.transaction() as conn:
+        invalidate_restored_context(conn)
+    controller.fail_extract = False
+    assert (await memory.process_pending(retry=True))['processed'] == 0
+    assert memory.repository.list() == []
+    assert memory.repository.job(job['id'])['error_code'] == 'restore_interrupted'
+    assert services.db.fetch_one('SELECT value FROM preferences WHERE key=?',
+        (MEMORY_RESTORE_CAPTURE_PREFIX + 'evidence-1',)) is not None
+    explicit = memory.enqueue('evidence-1', ContextScope(kind=Scope.STUDY, entity_id='study-1'))
+    assert explicit['state'] == 'queued'
+    assert (await memory.process_pending())['processed'] == 1
+    await memory.close()
+
+
+@pytest.mark.parametrize('terminal', ['cancelled', 'failed', 'invalid-source', 'suppressed'])
+def test_explicit_refusal_does_not_consume_restore_barrier(controlled_memory, services, terminal):
+    memory, _ = controlled_memory
+    scope = evidence(services)
+    with services.db.transaction() as conn:
+        invalidate_restored_context(conn)
+    key = MEMORY_RESTORE_CAPTURE_PREFIX + 'evidence-1'
+    marker = services.db.fetch_one('SELECT * FROM preferences WHERE key=?', (key,))
+    if terminal in ('cancelled', 'failed'):
+        # The foreign receipt already equals this profile's current fingerprint.
+        job = memory.repository.enqueue('evidence-1', scope)
+        services.db.execute('INSERT OR REPLACE INTO preferences VALUES(?,?,?)',
+            (key, marker['value'], marker['updated_at']))
+        if terminal == 'cancelled':
+            memory.repository.cancel(job['id'])
+        else:
+            memory.repository.claim(job['id'])
+            memory.repository.fail(job['id'], 'synthetic_permanent_failure')
+        refused = memory.enqueue('evidence-1', scope)
+        assert refused['state'] == terminal
+    else:
+        if terminal == 'invalid-source':
+            services.db.mark_deleted('learning_evidence', 'evidence-1')
+        else:
+            services.db.execute('INSERT INTO memory_suppression VALUES(?,?)',
+                ('evidence:evidence-1', marker['updated_at']))
+        with pytest.raises(ApiError):
+            memory.enqueue('evidence-1', scope)
+    assert services.db.fetch_one('SELECT * FROM preferences WHERE key=?', (key,)) == marker
+
+
+def test_enqueue_failure_rolls_back_restore_barrier_consumption(controlled_memory, services, monkeypatch):
+    memory, _ = controlled_memory
+    scope = evidence(services)
+    existing = memory.enqueue('evidence-1', scope)
+    other_scope = evidence(services, 'evidence-2')
+    with services.db.transaction() as conn:
+        invalidate_restored_context(conn)
+    key = MEMORY_RESTORE_CAPTURE_PREFIX + 'evidence-2'
+    before = services.db.fetch_one('SELECT * FROM preferences WHERE key=?', (key,))
+    monkeypatch.setattr('renulus.memory.repository.durable_id', lambda _: existing['id'])
+    with pytest.raises(sqlite3.IntegrityError):
+        memory.enqueue('evidence-2', other_scope)
+    assert services.db.fetch_one('SELECT * FROM preferences WHERE key=?', (key,)) == before
+    assert not [job for job in memory.repository.jobs() if job['evidence_id'] == 'evidence-2']
+
+
+def test_equal_completed_receipt_is_unchanged_after_explicit_capture(controlled_memory, services):
+    memory, _ = controlled_memory
+    scope = evidence(services)
+    with services.db.transaction() as conn:
+        invalidate_restored_context(conn)
+    job = memory.repository.claim(memory.enqueue('evidence-1', scope)['id'])
+    material = memory.repository.material('evidence-1', scope)
+    memory.repository.commit_capture(job, material, ['Synthetic completed general point.'])
+    completed = memory.repository.job(job['id'])
+    services.db.execute('INSERT OR REPLACE INTO preferences VALUES(?,?,?)',
+        (MEMORY_RESTORE_CAPTURE_PREFIX + 'evidence-1', 'foreign', completed['updated_at']))
+    assert memory.enqueue('evidence-1', scope) == completed
+    assert memory.repository.job(job['id']) == completed
+    assert len(memory.repository.list()) == 1
+    assert services.db.fetch_one('SELECT value FROM preferences WHERE key=?',
+        (MEMORY_RESTORE_CAPTURE_PREFIX + 'evidence-1',)) is None

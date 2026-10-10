@@ -4,7 +4,7 @@ import json
 from renulus.contracts import ApiError, ContextScope, Scope, durable_id
 from renulus.storage import utc_now
 from renulus.storage.assessment_policy import policy_snapshot, require_assistance
-from renulus.storage.invalidation import context_epoch_in
+from renulus.storage.invalidation import MEMORY_RESTORE_CAPTURE_PREFIX, context_epoch_in
 
 from .models import ManualFact, clean_text, digest, require_eligible
 from .study_answers import answer_text
@@ -314,6 +314,11 @@ class MemoryRepository:
         return {'text': text, 'kind': kind, 'topic_id': topic, 'infer': infer,
                 'fingerprint': capture_fingerprint(conn, source_revision), 'scope': scope, 'entity_id': row['entity_id']}
 
+    @staticmethod
+    def _restore_capture_required_in(conn, evidence_id, material):
+        return material['infer'] and conn.execute('SELECT 1 FROM preferences WHERE key=?',
+            (MEMORY_RESTORE_CAPTURE_PREFIX + evidence_id,)).fetchone() is not None
+
     def enqueue(self, evidence_id, scope: ContextScope, *, automatic=False):
         require_eligible(scope)
         with self.db.transaction() as conn:
@@ -321,10 +326,29 @@ class MemoryRepository:
             if conn.execute('SELECT 1 FROM memory_suppression WHERE source_key=?',
                             ('evidence:' + evidence_id,)).fetchone():
                 raise ApiError('memory_capture_suppressed', 'This source was removed or corrected in memory', 409)
+            if automatic and self._restore_capture_required_in(conn, evidence_id, material):
+                return None
             previous = conn.execute('SELECT * FROM memory_jobs WHERE evidence_id=? AND evidence_hash=?',
                                     (evidence_id, material['fingerprint'])).fetchone()
             if previous:
-                return None if automatic else dict(previous)
+                if automatic:
+                    return None
+                try:
+                    if ContextScope.model_validate_json(previous['scope']) != scope:
+                        raise ValueError()
+                except (ValueError, TypeError):
+                    raise ApiError('memory_job_invalid', 'This capture receipt has a different source scope', 409) from None
+                if previous['state'] == 'cancelled' and previous['error_code'] == 'restore_interrupted':
+                    # Equal integers from an imported profile do not revive its
+                    # execution. Only deliberate capture requeues this receipt;
+                    # claim increments attempts to fence the foreign execution.
+                    conn.execute(
+                        "UPDATE memory_jobs SET state='queued',error_code=NULL,updated_at=? WHERE id=?",
+                        (utc_now(), previous['id']))
+                    previous = conn.execute('SELECT * FROM memory_jobs WHERE id=?', (previous['id'],)).fetchone()
+                if previous['state'] in ('queued', 'running', 'completed'):
+                    conn.execute('DELETE FROM preferences WHERE key=?', (MEMORY_RESTORE_CAPTURE_PREFIX + evidence_id,))
+                return dict(previous)
             if automatic:
                 history = conn.execute('SELECT * FROM memory_jobs WHERE evidence_id=?', (evidence_id,)).fetchall()
                 if (conn.execute('SELECT 1 FROM memory_sources WHERE source_key=?',
@@ -347,6 +371,8 @@ class MemoryRepository:
             conn.execute('INSERT INTO memory_jobs VALUES(?,?,?,?,?,?,?,?,?)',
                          (identifier, evidence_id, material['fingerprint'], scope.model_dump_json(),
                           'queued', 0, None, now, now))
+            if not automatic:
+                conn.execute('DELETE FROM preferences WHERE key=?', (MEMORY_RESTORE_CAPTURE_PREFIX + evidence_id,))
         return self.job(identifier)
 
     def job(self, identifier):
@@ -438,7 +464,13 @@ class MemoryRepository:
         if not policy_snapshot(conn)['assistance_allowed']:
             return 'boundary_policy_changed'
         try:
-            current = self.material(job['evidence_id'], ContextScope.model_validate_json(job['scope']), conn=conn)['fingerprint']
+            material = self.material(job['evidence_id'], ContextScope.model_validate_json(job['scope']), conn=conn)
+            # Retry and startup may claim an existing row without enqueue. The
+            # same canonical guard must refuse inference before provider work or
+            # publication until deliberate capture consumes the local barrier.
+            if self._restore_capture_required_in(conn, job['evidence_id'], material):
+                return 'restore_interrupted'
+            current = material['fingerprint']
         except ApiError as error:
             return error.code
         except (ValueError, TypeError, KeyError):

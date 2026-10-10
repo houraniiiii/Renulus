@@ -1,7 +1,12 @@
-"""Actual collection/attempt producers into canonical Memory; no inference or fixture DDL."""
+"""Actual producers into canonical Memory; only remote transport is synthetic."""
+import asyncio
+import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
+import shutil
+import socket
 
 from fastapi.testclient import TestClient
 import pytest
@@ -9,9 +14,11 @@ import pytest
 from renulus.contracts import ApiError, ContextScope, Scope
 from renulus.design_c_contracts import SavedTestVersion
 from renulus.memory.models import digest
+from renulus.memory.service import MemoryService
 from renulus.server import create_app
 from renulus.storage.backup import export_records
-from renulus.storage.invalidation import bump_context_epoch
+from renulus.storage.invalidation import (MEMORY_RESTORE_CAPTURE_PREFIX, bump_context_epoch,
+    context_epoch_in)
 from renulus.storage.relations import reconcile_unavailable_references
 
 BASE = '/api/v1/assessment/test-attempts'
@@ -68,6 +75,222 @@ def capture(whole, evidence_id, scope):
     identifiers = repository.commit_capture(claimed, material, ['PRIVATE_FORGED_CONSUMER_TEXT'])
     assert len(identifiers) == 1
     return repository.get(identifiers[0]), material
+
+
+@pytest.fixture
+def ordinary_capture(whole_memory, monkeypatch):
+    """Real Learn, ProviderManager, Mem0 and pinned public CPU helpers, offline."""
+    _, services, _, _ = whole_memory
+    helper_root = os.environ.get('RENULUS_MEMORY_HELPERS')
+    if not helper_root or not (Path(helper_root) / 'manifest.json').is_file():
+        pytest.skip('Explicit offline helper path was not supplied')
+    helper_root = Path(helper_root)
+    manifest = json.loads((helper_root / 'manifest.json').read_text(encoding='utf-8'))
+    for record in manifest['groups']['embedding']['files']:
+        source = helper_root / record['path']
+        assert source.stat().st_size == record['size']
+        assert hashlib.sha256(source.read_bytes()).hexdigest() == record['sha256']
+        target = services.paths.helpers / record['path']
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+    (services.paths.helpers / 'manifest.json').write_text(json.dumps(manifest), encoding='utf-8')
+    for operation in ('connect', 'connect_ex'):
+        original = getattr(socket.socket, operation)
+        def local_only(original):
+            def guarded(sock, address):
+                if isinstance(address, tuple) and address[0] in ('127.0.0.1', '::1', 'localhost'):
+                    return original(sock, address)
+                raise AssertionError('C5 capture attempted an external connection')
+            return guarded
+        monkeypatch.setattr(socket.socket, operation, local_only(original))
+    provider = services.get('provider')
+    provider._settings['connections']['codex'] = {
+        'access_token': 'synthetic-c5-transport', 'expires_at': 9999999999}
+    provider._settings['selected_provider'] = 'codex'
+    provider._settings.setdefault('selected_models', {})['codex'] = 'gpt-6.1-sol'
+    calls = []
+
+    class SyntheticTransport:
+        async def stream(self, selected, model, token, messages):
+            assert token == 'synthetic-c5-transport'
+            inference = 'SYNTHETIC_C5_STUDY_REPLY' in json.dumps(messages)
+            calls.append({'inference': inference, 'messages': messages})
+            text = (json.dumps({'memory': [{'text': 'SYNTHETIC C5: compare albuminuria and eGFR.'}]})
+                    if inference else 'SYNTHETIC_C5_STUDY_REPLY: Albuminuria and eGFR complement each other.')
+            yield {'type': 'delta', 'text': text}
+            yield {'type': 'completed', 'response_model': model}
+
+    provider._transport = SyntheticTransport()
+    # No optional external/source context is needed for this ordinary producer.
+    services.registry.pop('retrieval', None)
+    services.registry.pop('knowledge', None)
+    return whole_memory, calls
+
+
+async def ordinary_answer(services, key):
+    learn = services.get('learn')
+    question = 'SYNTHETIC C5 ordinary learning: explain albuminuria and eGFR.'
+    _, run = learn.prepare(question, ContextScope(kind=Scope.STUDY), None, 'ckd', 'direct', key)
+    events = [event async for event in learn.answer(run, question, 'direct', 'ckd')]
+    assert events[-1].type == 'completed', [(event.type, event.data) for event in events]
+    return 'learn-answer:' + run.id, ContextScope(kind=Scope.STUDY, entity_id=run.thread_id)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('history', ['queued', 'no-job', 'restart'])
+async def test_restore_blocks_ordinary_worker_until_explicit_capture_and_allows_new_learning(ordinary_capture, history):
+    whole, calls = ordinary_capture
+    client, services, repository, _ = whole
+    memory = services.get('memory')
+    try:
+        evidence_id, scope = await ordinary_answer(services, 'c5-before-restore')
+        assert repository.material(evidence_id, scope)['infer'] is True
+        queued = repository.enqueue(evidence_id, scope) if history != 'no-job' else None
+        before = len(calls)
+        async with memory._process_lock:
+            await memory.start()
+            await asyncio.sleep(0)
+            services.get('data_recovery').restore_json(export_records(services), confirm_backup_date=True)
+            assert len(calls) == before
+            if queued:
+                interrupted = repository.job(queued['id'])
+                assert (interrupted['state'], interrupted['error_code']) == ('cancelled', 'restore_interrupted')
+            marker = services.db.fetch_one('SELECT value FROM preferences WHERE key=?',
+                (MEMORY_RESTORE_CAPTURE_PREFIX + evidence_id,))
+            assert marker is not None
+        if history == 'restart':
+            await memory.close()
+            memory = MemoryService(services)
+            services.registry['memory'] = memory
+            repository = memory.repository
+            await memory.start()
+        # Join the real worker's pending processing, then perform another normal
+        # pass: restored evidence must never reach extraction or a fresh job.
+        assert (await memory.process_pending())['processed'] >= 0
+        assert (await memory.process_pending())['processed'] == 0
+        assert not [call for call in calls if call['inference']]
+        assert not [job for job in repository.jobs() if job['evidence_id'] == evidence_id and job['state'] != 'cancelled']
+        assert not [fact for fact in repository.list() if fact['source_id'] == evidence_id]
+        if history == 'queued':
+            active = start(whole, mode='test', key='c5-explicit-policy-start')
+            denied = client.post('/api/v1/memory/captures', json={
+                'evidence_id': evidence_id, 'scope': scope.model_dump(mode='json')})
+            assert denied.status_code == 409 and denied.json()['error']['code'] == 'assistance_restricted'
+            assert services.db.fetch_one('SELECT value FROM preferences WHERE key=?',
+                (MEMORY_RESTORE_CAPTURE_PREFIX + evidence_id,)) == marker
+            submitted = client.post(BASE + '/' + active['id'] + '/submit',
+                headers={'Idempotency-Key': 'c5-explicit-policy-submit'},
+                json={'expected_draft_revision': active['draft_revision']})
+            assert submitted.status_code == 200, submitted.text
+            wrong_scope = ContextScope(kind=Scope.STUDY, entity_id='c5-forged-source')
+            refused = client.post('/api/v1/memory/captures', json={
+                'evidence_id': evidence_id, 'scope': wrong_scope.model_dump(mode='json')})
+            assert refused.status_code == 409 and refused.json()['error']['code'] == 'memory_evidence_scope'
+            assert services.db.fetch_one('SELECT value FROM preferences WHERE key=?',
+                (MEMORY_RESTORE_CAPTURE_PREFIX + evidence_id,)) == marker
+        response = client.post('/api/v1/memory/captures', json={
+            'evidence_id': evidence_id, 'scope': scope.model_dump(mode='json')})
+        assert response.status_code == 202, response.text
+        explicit = response.json()
+        assert explicit['state'] == 'queued'
+        assert services.db.fetch_one('SELECT value FROM preferences WHERE key=?',
+            (MEMORY_RESTORE_CAPTURE_PREFIX + evidence_id,)) is None
+        await memory.process_pending()
+        assert repository.job(explicit['id'])['state'] == 'completed'
+        assert len([call for call in calls if call['inference']]) == 1
+        assert memory._engine.memory.__class__.__module__ == 'mem0.memory.main'
+        assert memory._engine.memory.embedding_model.delegate.model.__class__.__module__.startswith('fastembed')
+        assert memory._engine.memory.vector_store.client._client.__class__.__name__ == 'QdrantLocal'
+        new_id, new_scope = await ordinary_answer(services, 'c5-after-restore')
+        assert new_id != evidence_id
+        assert services.db.fetch_one('SELECT value FROM preferences WHERE key=?',
+            (MEMORY_RESTORE_CAPTURE_PREFIX + new_id,)) is None
+        await memory.process_pending()
+        fresh = [job for job in repository.jobs() if job['evidence_id'] == new_id]
+        assert len(fresh) == 1 and fresh[0]['state'] == 'completed'
+        assert len([call for call in calls if call['inference']]) == 2
+    finally:
+        await memory.close()
+        await services.get('conversations').streaming.close()
+        await services.get('provider').close()
+
+
+@pytest.mark.asyncio
+async def test_policy_only_interruption_still_recaptures_ordinary_inferred_material(ordinary_capture):
+    whole, calls = ordinary_capture
+    client, services, repository, _ = whole
+    memory = services.get('memory')
+    try:
+        evidence_id, scope = await ordinary_answer(services, 'c5-policy-only')
+        job = repository.claim(repository.enqueue(evidence_id, scope)['id'])
+        material = repository.material(evidence_id, scope)
+        active = start(whole, mode='test', key='c5-policy-start')
+        assert repository.commit_capture(job, material, ['STALE_INFERENCE']) == []
+        assert repository.job(job['id'])['error_code'] == 'boundary_policy_changed'
+        assert (await memory.process_pending())['processed'] == 0
+        assert not [call for call in calls if call['inference']]
+        submitted = client.post(BASE + '/' + active['id'] + '/submit',
+            headers={'Idempotency-Key': 'c5-policy-submit'},
+            json={'expected_draft_revision': active['draft_revision']})
+        assert submitted.status_code == 200, submitted.text
+        assert (await memory.process_pending())['processed'] >= 1
+        assert len([call for call in calls if call['inference']]) == 1
+        assert len([row for row in repository.jobs() if row['evidence_id'] == evidence_id]) == 2
+    finally:
+        await memory.close()
+        await services.get('conversations').streaming.close()
+        await services.get('provider').close()
+
+
+def test_equal_foreign_restore_fingerprint_requires_explicit_same_row_requeue_and_fences_old_execution(whole_memory):
+    client, services, repository, _ = whole_memory
+    attempt = start(whole_memory, key='c5-foreign-attempt')
+    evidence_id = commit(whole_memory, attempt, key='c5-foreign-answer')
+    scope = ContextScope(kind=Scope.REVIEWED_ASSESSMENT, entity_id=attempt['id'])
+    queued = repository.enqueue(evidence_id, scope)
+    # An imported profile may already have the destination's next integer epoch.
+    with services.db.transaction() as conn:
+        parts = queued['evidence_hash'].split(':')
+        parts[-1] = str(context_epoch_in(conn) + 1)
+        conn.execute('UPDATE memory_jobs SET evidence_hash=? WHERE id=?', (':'.join(parts), queued['id']))
+    foreign = repository.claim(queued['id'])
+    services.get('data_recovery').restore_json(export_records(services), confirm_backup_date=True)
+    assert foreign['evidence_hash'] == repository.material(evidence_id, scope)['fingerprint']
+    assert repository.enqueue(evidence_id, scope, automatic=True) is None
+    assert repository.job(queued['id'])['state'] == 'cancelled'
+    response = client.post('/api/v1/memory/captures', json={
+        'evidence_id': evidence_id, 'scope': scope.model_dump(mode='json')})
+    assert response.status_code == 202, response.text
+    restored = response.json()
+    assert restored['id'] == foreign['id'] and restored['state'] == 'queued'
+    assert restored['attempts'] == foreign['attempts']
+    fresh = repository.claim(restored['id'])
+    assert fresh['attempts'] == foreign['attempts'] + 1
+    material = repository.material(evidence_id, scope)
+    assert repository.commit_capture(foreign, material, ['FOREIGN_OLD_EXECUTION']) == []
+    assert repository.job(fresh['id'])['state'] == 'running'
+    assert len(repository.commit_capture(fresh, material, ['FORGED_KEY_TEXT'])) == 1
+    assert repository.list()[0]['text'] == material['text']
+
+
+@pytest.mark.parametrize('invalid', ['deleted-source', 'forged-payload'])
+def test_explicit_capture_rechecks_restored_whole_source_and_retains_marker_on_refusal(whole_memory, invalid):
+    client, services, repository, _ = whole_memory
+    attempt = start(whole_memory, key='c5-explicit-invalid-attempt')
+    evidence_id = commit(whole_memory, attempt, key='c5-explicit-invalid-answer')
+    services.get('data_recovery').restore_json(export_records(services), confirm_backup_date=True)
+    key = MEMORY_RESTORE_CAPTURE_PREFIX + evidence_id
+    before = services.db.fetch_one('SELECT * FROM preferences WHERE key=?', (key,))
+    if invalid == 'deleted-source':
+        services.db.mark_deleted('test_attempt', attempt['id'])
+    else:
+        services.db.execute('UPDATE learning_evidence SET payload_json=? WHERE id=?',
+            (json.dumps({'correct': True, 'bank_cohort_eligible': True}), evidence_id))
+    response = client.post('/api/v1/memory/captures', json={'evidence_id': evidence_id,
+        'scope': {'kind': 'reviewed-assessment', 'entity_id': attempt['id']}})
+    assert response.status_code == 409 and response.json()['error']['code'] == 'memory_evidence_invalid'
+    assert services.db.fetch_one('SELECT * FROM preferences WHERE key=?', (key,)) == before
+    assert repository.jobs() == [] and repository.list() == []
 
 
 def test_actual_study_commit_auto_scan_captures_safe_scalar_metadata_and_ignores_draft(whole_memory):
