@@ -26,14 +26,13 @@ export const deferredGates = Object.freeze({
   'legacy-profile-upgrade': 'Requires an immutable preserved schema-1 synthetic profile; fresh-state startup is not upgrade proof.',
   'full-backup-restore': 'JSON/ZIP1/ZIP2 restore, originals and real derived rebuild require their separate connected journey.',
   'deletion-reconciliation': 'Project live deletion does not prove old-backup deletion reconciliation.',
-  'normal-ingestion-close': 'No real active ingestion job is scheduled by this bounded core driver.',
   'native-backup-save-cancel': 'Hidden mode suppresses physical Save dialogs; no native dialog claim.',
 });
 export const coreGates = Object.freeze([
   'installed-identity', 'isolated-runtime', 'c-readiness', 'saved-conversations',
   'project-membership', 'saved-reviewed-test', 'whole-study', 'active-test-policy',
   'test-draft-reopen', 'whole-test', 'pdf-selection-reopen', 'temporary-retention', 'normal-reopen',
-  'project-delete-preserves-chats', 'final-close',
+  'project-delete-preserves-chats', 'normal-ingestion-close', 'final-close',
 ]);
 export const requiredGates = Object.freeze([...coreGates, ...readerGates, ...Object.keys(deferredGates)]);
 
@@ -45,7 +44,7 @@ export function installedAcceptancePlan() {
       'RENULUS_PACKAGED_EXECUTABLE', 'RENULUS_DELIVERY_PROVENANCE', 'RENULUS_INSTALLER_EVIDENCE',
       'RENULUS_NATIVE_EVIDENCE_ROOT=' + designCEvidenceRoot],
     evidenceRoot: designCEvidenceRoot,
-    resourceBound: 'One owned hidden app/backend at a time; two saved draft chats, one project, eleven deterministic synthetic originals covering eight reader categories, and one real two-question reviewed set; no providers or simulated producer results.',
+    resourceBound: 'One owned hidden app/backend at a time; two saved draft chats, one project, eleven deterministic synthetic originals covering eight reader categories, one Library import reusing that two-page PDF, and one real two-question reviewed set; no providers or simulated producer results.',
     receipt: 'installed-product-evidence.json; absent reader/migration/native gates remain not-run and make the aggregate incomplete/exit 1.',
     recoveryReopen: { command: '--recovery-reopen', requiredEnvironment: ['RENULUS_RECOVERY_RECEIPT', 'RENULUS_RECOVERY_RECEIPT_SHA256'],
       scope: 'Same matching-package environment; hash-verified Pauli recovery-evidence.json selects only its existing r-<8>/u. Two hidden launches, read-only original history checks and normal closes.',
@@ -270,7 +269,7 @@ async function poll(work, accepts, label, timeout = 180_000, interval = 500) {
 }
 
 async function navigate(page, hash) {
-  check(/^#\/(?:projects|tests|chat|attempts)(?:\/[a-zA-Z0-9_-]+){0,2}$/.test(hash), 'Use a bounded canonical C route.');
+  check(/^#\/(?:projects|tests|chat|attempts|library)(?:\/[a-zA-Z0-9_-]+){0,2}$/.test(hash), 'Use a bounded canonical C route.');
   await page.evaluate(value => { window.location.hash = value; }, hash);
   await page.waitForFunction(value => window.location.hash === value && !!document.querySelector('.desktop-shell.design-c-shell'), hash);
 }
@@ -1020,6 +1019,134 @@ async function reopenSelectedPdfJourney(current, chat, fixtures, report, evidenc
     page: document.payload.page, raster, passage, normalShutdownsBeforeCheck: report.shutdowns.length };
 }
 
+function validateIngestionIdentity(checkpoint, job) {
+  check(job?.id === checkpoint.job.id && job.revision_id === checkpoint.revision_id
+    && ['request_hash', 'idempotency_key', 'created_at'].every(name => typeof checkpoint.job[name] === 'string'
+      && checkpoint.job[name].length > 0 && job[name] === checkpoint.job[name]),
+  'Library ingestion changed its original job, revision or import command.');
+}
+
+export function validateActiveLibraryIngestion(checkpoint, job, queue) {
+  validateIngestionIdentity(checkpoint, job);
+  check(job.state === 'processing' && job.phase === 'extraction' && job.finished_at === null
+    && queue?.running === true && queue.cpu_workers === 1 && queue.active_job === job.id && queue.error_code === null,
+  'Actual matching Library extraction must be active immediately before ordinary window close.');
+}
+
+export function validateReopenedLibraryIngestion(checkpoint, status, document) {
+  validateIngestionIdentity(checkpoint, status?.job);
+  check(status.document_id === checkpoint.document_id && status.revision_id === checkpoint.revision_id
+    && status.status === 'ready' && status.job.state === 'ready' && status.job.phase === 'complete'
+    && status.job.error_code === null && Number.isFinite(Date.parse(checkpoint.reopenStartedAt))
+    && Date.parse(status.job.finished_at) >= Date.parse(checkpoint.reopenStartedAt),
+  'The same interrupted job must finish after the fresh installed reopen; an import completed before close cannot pass.');
+  check(document?.id === checkpoint.document_id && document.title === checkpoint.title
+    && document.status === 'ready' && document.latest_revision === checkpoint.revision_id && document.active_revision === checkpoint.revision_id
+    && document.scope?.kind === 'personal-library' && document.scope.entity_id === null && document.reserved === false
+    && document.cleanup_pending === false && document.revisions?.length === 1,
+  'Reopen lost, replaced or duplicated the Library document/revision.');
+  const revision = document.revisions[0];
+  check(revision.id === checkpoint.revision_id && revision.document_id === checkpoint.document_id && revision.status === 'ready'
+    && Number.isInteger(revision.passage_count) && revision.passage_count > 0
+    && typeof revision.embedding_model === 'string' && revision.embedding_model.length > 0
+    && ['display', 'cache', 'index', 'embedding', 'model_input'].every(name => revision.rights?.[name] === true),
+  'The original Library revision has no actual indexed extraction or retained processing rights.');
+  validateReaderOriginal(checkpoint.fixture, revision, revision.media_type);
+  return revision;
+}
+
+export function validateIngestionPassage(checkpoint, passages, citation) {
+  check(Array.isArray(passages), 'Actual Library retrieval must return passages.');
+  const matches = passages.filter(row => row.document_id === checkpoint.document_id && row.document_revision === checkpoint.revision_id
+    && row.title === checkpoint.title && typeof row.text === 'string' && row.text.includes(checkpoint.fixture.expect.text));
+  check(matches.length > 0 && matches.every(row => typeof row.id === 'string' && Array.isArray(row.locators)
+    && row.locators.some(locator => Number.isInteger(locator.page) && locator.page >= 1 && locator.page <= 2)),
+  'Real retrieval did not return the synthetic PDF text with its original revision and physical-page provenance.');
+  const hit = matches[0];
+  if (citation !== undefined) {
+    const page = hit.locators.find(locator => Number.isInteger(locator.page) && locator.page > 0).page;
+    check(citation.document_id === checkpoint.document_id && citation.document_revision === checkpoint.revision_id
+      && citation.title === checkpoint.title && citation.passage_id === hit.id && citation.page === page
+      && isDeepStrictEqual(citation.locators, hit.locators.filter(locator => locator.page === page))
+      && citation.original_url === '/api/v1/library/revisions/' + checkpoint.revision_id + '/original',
+    'The mounted citation does not match the retrieved original passage/page.');
+  }
+  return hit;
+}
+
+async function beginLibraryIngestion(page, fixtures) {
+  const fixture = fixtures.manifest.files.find(row => row.filename === 'synthetic-reading.pdf');
+  check(fixture?.expect.kind === 'pdf' && fixture.expect.pages === 2, 'Use only the existing frozen two-page synthetic PDF.');
+  const file = await checkedReaderOriginal(fixtures.directory, fixture);
+  const title = 'DC21 synthetic ingestion ' + randomUUID().slice(0, 8);
+  await navigate(page, '#/library');
+  await page.getByRole('heading', { name: 'Your library', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Add to library', exact: true }).click();
+  await page.getByRole('button', { name: 'Document', exact: true }).click();
+  await page.getByLabel('Title', { exact: true }).fill(title);
+  await page.getByLabel('Choose a study document', { exact: true }).setInputFiles(file);
+  await page.getByRole('checkbox', { name: 'I have permission to read, store, index and use this file for local learning.', exact: true }).check();
+  const imported = await actionResponse(page, '/library/import/file',
+    () => page.getByRole('button', { name: 'Add document', exact: true }).click(), 202);
+  check(/^doc_[0-9a-f]{32}$/.test(imported.document_id ?? '') && /^rev_[0-9a-f]{32}$/.test(imported.revision_id ?? '')
+    && /^ingest_[0-9a-f]{32}$/.test(imported.job?.id ?? '') && imported.job.revision_id === imported.revision_id,
+  'Mounted Library import did not return its actual canonical document, revision and job.');
+  const checkpoint = { ...imported, title, fixture };
+  // Observe the production worker only. No delayed converter, paused route, substitute job or artificial workload.
+  checkpoint.preClose = await poll(async () => {
+    const [job, queue] = await Promise.all([api(page, '/library/jobs/' + imported.job.id), api(page, '/library/queue')]);
+    validateIngestionIdentity(checkpoint, job);
+    check(job.state === 'queued' || job.state === 'processing' && job.phase === 'extraction',
+      'The real extraction window was missed or failed; normal-ingestion-close remains unproved.');
+    return { job, queue, observedAt: new Date().toISOString() };
+  }, snapshot => snapshot.job.state === 'processing' && snapshot.queue.active_job === imported.job.id,
+  'Real active Library extraction', 30_000, 50);
+  validateActiveLibraryIngestion(checkpoint, checkpoint.preClose.job, checkpoint.preClose.queue);
+  return checkpoint;
+}
+
+async function verifyReopenedIngestion(page, checkpoint) {
+  const status = await poll(async () => {
+    const value = await api(page, '/library/documents/' + checkpoint.document_id + '/import-status');
+    validateIngestionIdentity(checkpoint, value.job);
+    check(value.document_id === checkpoint.document_id && value.revision_id === checkpoint.revision_id
+      && ['queued', 'processing', 'ready'].includes(value.status), 'Reopened Library ingestion failed, disappeared or changed ownership.');
+    return value;
+  }, value => value.status === 'ready', 'Actual resumed extraction and indexing', 360_000);
+  const document = await api(page, '/library/documents/' + checkpoint.document_id);
+  const revision = validateReopenedLibraryIngestion(checkpoint, status, document);
+  const downloaded = await page.evaluate(async route => {
+    const response = await fetch(route);
+    return { status: response.status, data: Array.from(new Uint8Array(await response.arrayBuffer())),
+      mediaType: response.headers.get('content-type')?.split(';')[0], noSniff: response.headers.get('x-content-type-options') };
+  }, '/api/v1/library/revisions/' + checkpoint.revision_id + '/original');
+  check(downloaded.status === 200 && downloaded.noSniff === 'nosniff', 'The reopened Library original could not be downloaded safely.');
+  const original = { sha256: sha(Buffer.from(downloaded.data)), bytes: downloaded.data.length };
+  validateReaderOriginal(checkpoint.fixture, original, downloaded.mediaType);
+  await navigate(page, '#/library');
+  const row = page.getByRole('region', { name: 'Library document list', exact: true }).locator('.library-document')
+    .filter({ has: page.getByRole('button', { name: checkpoint.title, exact: true }) });
+  await row.getByText('Available', { exact: true }).waitFor();
+  check(await row.count() === 1, 'The mounted Library lost or duplicated its imported document.');
+  await page.getByLabel('Find a passage', { exact: true }).fill(checkpoint.fixture.expect.text);
+  const retrieved = await actionResponse(page, '/library/retrieve',
+    () => page.getByRole('button', { name: 'Search', exact: true }).click());
+  const hit = validateIngestionPassage(checkpoint, retrieved.passages);
+  const passage = page.locator('.library-passage').filter({ has: page.getByText(hit.text, { exact: true }) });
+  const pending = page.waitForResponse(response => {
+    const url = new URL(response.url());
+    return response.request().method() === 'GET' && url.pathname === '/api/v1/library/revisions/' + checkpoint.revision_id + '/citation'
+      && url.searchParams.get('passage_id') === hit.id;
+  });
+  const [response] = await Promise.all([pending, passage.getByRole('button', { name: 'Inspect citation', exact: true }).click()]);
+  check(response.status() === 200, 'Mounted Library citation inspection failed.');
+  const citation = await response.json();
+  validateIngestionPassage(checkpoint, retrieved.passages, citation);
+  await page.getByRole('complementary', { name: 'Source reader', exact: true })
+    .getByRole('heading', { name: checkpoint.title, exact: true }).waitFor();
+  return { status, revision, original, passage: hit, citation, mountedAvailable: true };
+}
+
 const recoveryOldCommit = '1b30a89687cfcc5fb13b1cf824bbc43c19f870ed';
 const recoveryPythonPaths = ['python/python314.zip', 'python', 'dependencies', 'dependencies/win32',
   'dependencies/win32/lib', 'dependencies/pywin32_system32', 'runtime', 'upstream/hermes', '.'];
@@ -1335,6 +1462,15 @@ export async function runInstalledProduct() {
     pass('normal-reopen', await reopenSavedWork(current.page, work));
     pass('project-delete-preserves-chats', await deleteProjectJourney(current.page, work));
     await screenshot(current, evidence, 'project-deletion-retained-chat');
+    const ingestion = await beginLibraryIngestion(current.page, fixtures);
+    ingestion.closeRequestedAt = new Date().toISOString();
+    report.ingestion = ingestion; // Retain real pre-close observations even if close/recovery subsequently fails.
+    ingestion.close = await normalClose(current, report); current = undefined; delete report.current;
+    ingestion.reopenStartedAt = new Date().toISOString();
+    current = await launch(request, identity, evidence, 'p', report);
+    ingestion.reopened = await verifyReopenedIngestion(current.page, ingestion);
+    pass('normal-ingestion-close', { ...ingestion,
+      scope: 'Ordinary-window-close interruption/resume with observed active extraction and same-job completion after fresh reopen. Windows uses the existing owned backend termination; no graceful worker-drain claim.' });
     pass('final-close', await normalClose(current, report)); current = undefined; delete report.current;
     completeCoreReceipt(report); process.exitCode = 1;
   } catch (error) {

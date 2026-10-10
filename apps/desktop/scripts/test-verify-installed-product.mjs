@@ -12,7 +12,8 @@ import { installedAcceptancePlan, validateInstalledRequest, validateInstallation
   validateReaderManifest, validateReaderOriginal, validateReaderDocument, validateReaderPassage, validateReaderRaster, validateBundledInterpreter,
   validateIsolatedDirectories, validateReopenedPdf, validateRecoveryRequest, parseRecoveryBytes,
   validateRecoveryReceipt, validateRecoverySeed, expectedRecoveryConversations, validateRecoveredConversation,
-  readRecoveryPages } from './verify-installed-product.mjs';
+  readRecoveryPages, validateActiveLibraryIngestion, validateReopenedLibraryIngestion,
+  validateIngestionPassage } from './verify-installed-product.mjs';
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
 const desktop = path.resolve(directory, '..');
@@ -33,6 +34,83 @@ const receiptFixture = () => ({
 });
 const validate = f => validateInstallationReceipts(f.request, f.delivery, f.installation, f.actual);
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+const ingestionFixture = () => {
+  const checkpoint = { document_id: 'doc-unit', revision_id: 'rev-unit', title: 'Synthetic Library original',
+    fixture: { filename: 'synthetic-reading.pdf', sha256: digest, bytes: 512, media_type: 'application/pdf',
+      expect: { kind: 'pdf', pages: 2, text: 'Synthetic dialysis reading page two.' } },
+    job: { id: 'ingest-unit', revision_id: 'rev-unit', request_hash: digest, idempotency_key: 'unit-import',
+      created_at: '2026-10-10T12:00:00Z', state: 'queued', phase: 'queued', finished_at: null, error_code: null },
+    reopenStartedAt: '2026-10-10T12:01:00Z' };
+  const active = { ...checkpoint.job, state: 'processing', phase: 'extraction' };
+  const queue = { running: true, cpu_workers: 1, active_job: active.id, error_code: null };
+  const status = { document_id: checkpoint.document_id, revision_id: checkpoint.revision_id, status: 'ready',
+    job: { ...checkpoint.job, state: 'ready', phase: 'complete', finished_at: '2026-10-10T12:01:20Z' } };
+  const document = { id: checkpoint.document_id, title: checkpoint.title, status: 'ready', latest_revision: checkpoint.revision_id,
+    active_revision: checkpoint.revision_id, scope: { kind: 'personal-library', entity_id: null }, reserved: false, cleanup_pending: false,
+    revisions: [{ id: checkpoint.revision_id, document_id: checkpoint.document_id, status: 'ready', sha256: digest, bytes: 512,
+      media_type: 'application/pdf', passage_count: 2, embedding_model: 'bundled-unit-model',
+      rights: { display: true, cache: true, index: true, embedding: true, model_input: true } }] };
+  const hit = { id: 'passage-unit', document_id: checkpoint.document_id, document_revision: checkpoint.revision_id,
+    title: checkpoint.title, text: checkpoint.fixture.expect.text, locators: [{ page: 2, item_ref: '#/texts/1' }] };
+  const citation = { document_id: checkpoint.document_id, document_revision: checkpoint.revision_id, title: checkpoint.title,
+    passage_id: hit.id, page: 2, locators: hit.locators, original_url: '/api/v1/library/revisions/rev-unit/original' };
+  return { checkpoint, active, queue, status, document, hit, citation };
+};
+
+test('ingestion-close requires an actual matching processing/extraction observation, never queued or already ready', () => {
+  const f = ingestionFixture(); validateActiveLibraryIngestion(f.checkpoint, f.active, f.queue);
+  for (const mutate of [v => { v.active.state = 'queued'; }, v => { v.active.state = 'ready'; },
+    v => { v.active.phase = 'embedding'; }, v => { v.active.finished_at = '2026-10-10T12:00:30Z'; },
+    ...['id', 'revision_id', 'request_hash', 'idempotency_key', 'created_at'].map(name => v => { v.active[name] = 'changed'; }),
+    v => { v.queue.active_job = 'another-job'; }, v => { v.queue.running = false; },
+    v => { v.queue.cpu_workers = 0; }, v => { v.queue.error_code = 'worker-failed'; }]) {
+    const value = structuredClone(f); mutate(value);
+    assert.throws(() => validateActiveLibraryIngestion(value.checkpoint, value.active, value.queue));
+  }
+});
+
+test('reopened ingestion must finish the original command after fresh launch with unchanged indexed original', () => {
+  const f = ingestionFixture(); validateReopenedLibraryIngestion(f.checkpoint, f.status, f.document);
+  for (const mutate of [
+    ...['id', 'revision_id', 'request_hash', 'idempotency_key', 'created_at'].map(name => v => { v.status.job[name] = 'changed'; }),
+    v => { v.status.job.finished_at = '2026-10-10T12:00:30Z'; }, v => { v.status.job.finished_at = null; },
+    v => { v.checkpoint.reopenStartedAt = undefined; }, v => { v.status.status = 'failed'; },
+    v => { v.status.job.phase = 'embedding'; }, v => { v.status.job.error_code = 'failed'; },
+    v => { v.status.document_id = 'other'; }, v => { v.document.latest_revision = 'replacement'; },
+    v => { v.document.active_revision = null; }, v => { v.document.revisions.push(v.document.revisions[0]); },
+    v => { v.document.revisions[0].passage_count = 0; }, v => { v.document.revisions[0].embedding_model = ''; },
+    v => { v.document.revisions[0].sha256 = 'c'.repeat(64); }, v => { v.document.revisions[0].bytes++; },
+    v => { v.document.revisions[0].rights.index = false; }, v => { v.document.cleanup_pending = true; }]) {
+    const value = structuredClone(f); mutate(value);
+    assert.throws(() => validateReopenedLibraryIngestion(value.checkpoint, value.status, value.document));
+  }
+});
+
+test('actual ingestion retrieval and citation must pin original text, revision, passage and PDF page', () => {
+  const f = ingestionFixture();
+  assert.equal(validateIngestionPassage(f.checkpoint, [f.hit], f.citation), f.hit);
+  assert.throws(() => validateIngestionPassage(f.checkpoint, []));
+  for (const mutate of [v => { v.hit.document_revision = 'wrong'; }, v => { v.hit.document_id = 'wrong'; },
+    v => { v.hit.text = 'Other text'; }, v => { v.hit.locators = []; }, v => { v.hit.locators[0].page = 3; },
+    v => { v.citation.document_revision = 'wrong'; }, v => { v.citation.passage_id = 'wrong'; },
+    v => { v.citation.page = 1; }, v => { v.citation.locators = []; },
+    v => { v.citation.original_url = '/api/v1/library/revisions/wrong/original'; }]) {
+    const value = structuredClone(f); mutate(value);
+    assert.throws(() => validateIngestionPassage(value.checkpoint, [value.hit], value.citation));
+  }
+});
+
+test('normal-ingestion-close is mandatory but no core receipt can pass without its executed flow', () => {
+  assert.ok(coreGates.includes('normal-ingestion-close'));
+  assert.equal(deferredGates['normal-ingestion-close'], undefined);
+  assert.equal(requiredGates.filter(name => name === 'normal-ingestion-close').length, 1);
+  const report = { gates: Object.fromEntries(coreGates.filter(name => name !== 'normal-ingestion-close')
+    .map(name => [name, { status: 'passed', proof: { unitOnly: true } }])) };
+  assert.throws(() => completeCoreReceipt(report), /core journey is incomplete/);
+  assert.equal(report.gates['normal-ingestion-close'], undefined);
+  assert.deepEqual(Object.keys(deferredGates), ['legacy-profile-upgrade', 'full-backup-restore', 'deletion-reconciliation', 'native-backup-save-cancel']);
+});
+
 const recoveryFixture = () => {
   const evidence = path.join(designCEvidenceRoot, 'r-0123abcd'), backend = path.join(designCEvidenceRoot, 'installed-0123abcd/resources/backend');
   const env = { ...requestEnv(), RENULUS_RECOVERY_RECEIPT: path.join(evidence, 'recovery-evidence.json'), RENULUS_RECOVERY_RECEIPT_SHA256: digest };
