@@ -53,6 +53,22 @@ Require-Refusal { Assert-PublicGeneratedPath $fresh }
 Require-Refusal { Assert-OwnedReleasePath (Join-Path $expectedRoot 'installed-cafe1234') }
 if (Test-Path -LiteralPath $namedRoot) { throw 'Boundary checks created a delivery root.' }
 
+# Current C delivery uses a separate exact synthetic root, with the same installer
+# and generated-family confinement. Checking these paths never runs an installer.
+$dcRoot = [IO.Path]::GetFullPath('C:/Renulus/scratch/design-c/delivery')
+if ((Assert-DeliveryRoot $dcRoot) -ne $dcRoot) { throw 'Design C root was not accepted.' }
+$renulusExternalRoot = $dcRoot
+$externalRoot = $dcRoot
+$null = Assert-PublicGeneratedPath (Join-Path $dcRoot 'matching-cafe1234/never-created') -Fresh
+$null = Assert-OwnedReleasePath (Join-Path $dcRoot 'installed-cafe1234')
+foreach ($invalid in @((Split-Path -Parent $dcRoot), ($dcRoot + '-other'),
+    (Join-Path $dcRoot 'profiles'), (Join-Path $dcRoot 'data'), (Join-Path $dcRoot 'deliveries/nul'))) {
+    Require-Refusal { Assert-DeliveryRoot $invalid } $invalid
+}
+Require-Refusal { Assert-OwnedReleasePath (Join-Path $dcRoot 'data/learning') }
+Require-Refusal { Assert-PublicGeneratedPath (Join-Path $dcRoot 'repo/private') }
+Require-Refusal { Assert-OwnedReleasePath (Join-Path $expectedRoot 'installed-cafe1234') }
+
 # A real junction fixture stays inside the assigned ignored test-results. All
 # metadata targets are synthetic; no application or credential file is opened.
 $scratch = Join-Path $desktopRoot ('test-results/relocation-junction-' + [Guid]::NewGuid().ToString('N'))

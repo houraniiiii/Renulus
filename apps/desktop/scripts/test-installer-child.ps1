@@ -3,7 +3,7 @@ param()
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'installer-child.ps1')
 $beforeTemp, $beforeTmp = $env:TEMP, $env:TMP
-$proofRoot = [IO.Path]::GetFullPath('E:/Renulus-native-delivery/desktop-20261005')
+$proofRoot = [IO.Path]::GetFullPath('C:/Renulus/scratch/design-c/delivery')
 $temporary = Join-Path $proofRoot ('temporary/child-environment-' + [Guid]::NewGuid().ToString('N'))
 $cursor = $temporary
 while ($cursor) {
@@ -35,7 +35,7 @@ foreach ($path in @($observed.temp, $observed.tmp, $observed.temporary)) {
     if ([IO.Path]::GetFullPath($path).TrimEnd([IO.Path]::DirectorySeparatorChar) -ne $temporary) { throw 'Child scratch environment escaped its reserved folder.' }
 }
 if ($env:TEMP -ne $beforeTemp -or $env:TMP -ne $beforeTmp) { throw 'The host temporary environment changed.' }
-if ((Get-Content -LiteralPath $observed.marker -Raw) -ne 'synthetic installer environment proof') { throw 'The child did not write its scratch file in the assigned E folder.' }
+if ((Get-Content -LiteralPath $observed.marker -Raw) -ne 'synthetic installer environment proof') { throw 'The child did not write its scratch file in the assigned synthetic folder.' }
 $report = [ordered]@{ kind = 'actual-child-temporary-environment'; shell = $shellExecutable; shellVersion = $PSVersionTable.PSVersion.ToString(); childExitCode = $child.ExitCode; observed = $observed; hostEnvironmentUnchanged = $true; limits = @('Synthetic process only; actual NSIS execution remains a separate gate') }
 $report | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $temporary 'evidence.json') -Encoding utf8
 $report | ConvertTo-Json -Depth 5

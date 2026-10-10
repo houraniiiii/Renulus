@@ -15,6 +15,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $renulusAuthorizedRoot = [IO.Path]::GetFullPath('C:/Renulus-native-delivery/desktop-20261005')
+$renulusDesignCRoot = [IO.Path]::GetFullPath('C:/Renulus/scratch/design-c/delivery')
 $renulusExternalRoot = $renulusAuthorizedRoot
 $renulusPreviousRevision = 'ebb2db2e5080f4d42eaf31c2eb63711797704df0'
 
@@ -35,9 +36,13 @@ function Assert-DeliveryRoot([string]$Value) {
         if ($part -in @('.', '..') -or $part.EndsWith('.') -or $part.EndsWith(' ')) { throw 'DeliveryRoot may not use Windows path aliases or traversal.' }
     }
     $absolute = [IO.Path]::GetFullPath($Value)
-    if ($absolute -ne $renulusAuthorizedRoot) {
-        if (-not $absolute.StartsWith($renulusAuthorizedRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'DeliveryRoot must stay below the exact authorised C SSD root.' }
-        $relative = $absolute.Substring($renulusAuthorizedRoot.Length + 1)
+    $selectedRoot = $null
+    foreach ($allowed in @($renulusAuthorizedRoot, $renulusDesignCRoot)) {
+        if ($absolute -eq $allowed -or $absolute.StartsWith($allowed + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { $selectedRoot = $allowed; break }
+    }
+    if (-not $selectedRoot) { throw 'DeliveryRoot must stay below an exact authorised C SSD root.' }
+    if ($absolute -ne $selectedRoot) {
+        $relative = $absolute.Substring($selectedRoot.Length + 1)
         if ($relative -cnotmatch '^deliveries[\\/][a-z0-9][a-z0-9._-]{0,63}$' -or $relative.EndsWith('.') -or (Split-Path -Leaf $absolute) -match '^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$') { throw 'DeliveryRoot may only use a named deliveries child; repository/data/profile/credential roots are excluded.' }
     }
     $cursor = $absolute
