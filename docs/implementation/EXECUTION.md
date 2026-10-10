@@ -76,14 +76,18 @@ upgrade/current-producer/JSON/ZIP1/ZIP2 restore-and-deletion gates, including
 effective local engine rebuild/retrieval and zero provider calls. The closed
 schema-1 snapshot and failed predecessor receipts remain intact. Receipt/hash
 and the records-only JSON qualification are in [delivery evidence](design-c-delivery.md).
-Core/readers QA `3aa74fee` passes 70 guards; actual Core06 is running. Fresh
-Electron reopen of the upgraded profile follows in the same serial slot.
+Core/readers QA `3aa74fee` passes 70 guards; actual Core06 stopped on a retryable
+Reader 409, with its original bytes confirmed intact and both processes closed.
+The next amendment permits one recorded visible Try again for that exact error.
+Fresh Electron reopen preflight found empty Learn/Case histories in the old seed;
+no app launched. The lead is rebuilding a fresh seed with real old owner-produced
+transcripts and will repeat full recovery before fresh-process acceptance.
 
 | Owner | Exact current reservation | Required result |
 | --- | --- | --- |
 | Lead | Shared release records, spec and eventual default pointer | Serial installed checks against unchanged product `4c289868`; preserve failed receipts and old default. |
-| Zeno | `apps/desktop/scripts/verify-installed-product.mjs` and `test-verify-installed-product.mjs` only | Current amendment observes one saved synthetic upload response without replay and uses existing hidden Electron capture. Parent owns app/helper execution. |
-| Pauli | `apps/desktop/scripts/verify-installed-recovery.py` and `test_verify_installed_recovery.py` only | Diagnostic `5f1f3b80` passes 17 guards; actual public-import diagnosis is parent-owned, with every refusal retained. |
+| Zeno | `apps/desktop/scripts/verify-installed-product.mjs` and `test-verify-installed-product.mjs` only | One bounded actual Try again for the exact retryable Reader 409; no implicit fetch/reupload or broad retry. Parent owns app/helper execution. |
+| Pauli | `apps/desktop/scripts/verify-installed-recovery.py` and `test_verify_installed_recovery.py` only | Require populated canonical Learn/Case histories at seed admission. Frozen-source guard `c60da29d` and the passed bounded recovery remain retained; parent owns stronger seed and actual execution. |
 | Aquinas, Russell, Poincare, Kant | Completed; no active source reservation | Their integrated source/review evidence remains indexed above and below. Resume only for a concrete new finding with an exact reservation. |
 
 Manufacture of `75c05797` passed the full-factory NSIS preflight, then was

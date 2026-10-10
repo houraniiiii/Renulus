@@ -208,6 +208,25 @@ found. The review confirms six distinct generations for each engine, counts
 changing from two to one after deletion, and readiness/dirty-state checks before
 retrieval; it does not broaden the receipt's reopen/native limits.
 
+The following receipt-bound Electron reopen preflight refused the seed before
+launch: its original Learn and Case records contained no messages. The nine
+Python gates above remain valid for their populated records, but cannot establish
+conversation transcript preservation. The lead is creating a fresh genuine
+schema-1 seed through old Learn prepare/answer and Case discussion/Save owners,
+with two completed exchanges per kind and synthetic transport only. The seed
+validator will require populated canonical histories before repeating the full
+installed recovery and separate Electron reopen. No prior receipt is changed.
+
+Core06 (`c-ca911fc8`, QA `3aa74fee`) passes the five admission/chat/project gates,
+then the Reader returns retryable `reader_original_unavailable` on first open.
+Its hidden failure image shows the actual Try again state. A read-only check
+confirms the canonical attachment original's exact expected bytes/hash; no
+original loss is demonstrated. The next verifier amendment permits one actual
+visible Try again action only for that exact retryable 409, recording both
+outcomes and retaining all existing content/hash checks. Other errors and a
+second refusal remain terminal. Both owned processes closed; no reader pass is
+claimed from Core06.
+
 Manufacture and installation use fresh `matching-<revision>` and
 `installed-<revision>` destinations. A matching receipt must compare backend,
 renderer, native, executable, archive and installed inventory hashes. The hidden
