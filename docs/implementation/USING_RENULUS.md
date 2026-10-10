@@ -1,260 +1,448 @@
 # Using Renulus
 
-Renulus is an English-language Windows learning space for nephrology. For the
-selected unsigned installation and dated owner-PC acceptance status, see
-[Running Renulus](RUNNING.md#delivery-status). The October 7 source app has real
-Sol Explain/practice/automatic Memory and both Go Case-discussion evidence.
-The matching **f1c49444** installation is selected by the normal launcher,
-preserving the E: profile. New T18/ESENeph content, ready corrected Memory and
-normal reopen passed. Earlier real connected journeys retain their exact
-qualification. Physical Windows observations remain issue21.
+**Status checked October 10, 2026.** The Design C instructions below describe
+connected source at **`009b8780`**. They extend the source reviewed at
+`51f208b4`; they do not establish a matching installed release or launcher
+cutover. The normal shortcut still opens **Flow `f1c49444`**, content 1.4.2,
+at `C:/Renulus/app`, with the learning/account profile at
+`C:/Renulus/data/learning`. Former E: paths are compatibility junctions.
+Use the [installed Flow reference](#installed-flow-reference) until the lead
+publishes the Design C cutover. See [delivery status](RUNNING.md#delivery-status)
+and the [October 8 storage report](storage-cleanup-20261008.md).
+
+Renulus is an English-language Windows learning space for nephrology. The
+[dated limits](#dated-evidence-and-limits) retain the separate source, live,
+native and installed evidence scopes.
 
 ## Start and connect
 
-Open the **Renulus** shortcut or double-click **Start-Renulus.cmd** in the supplied
-folder. Allow the learning window to open, then use **Today** or the navigation
-rail. **Ctrl+K** opens **Find a destination**. Local runtime readiness and your
-learning subscription are separate statuses. The installed app bundles its
-runtime and CPU helpers; no developer tools, GPU, Docker or local model server
-setup is needed. Keep the existing E: data and Renulus account profile when
-updating the app, including the learning profile
-`E:/Renulus-native-delivery/desktop-20261005/data/learning`. The normal shortcut
-selects `installed-f1c49444` on C:. Launcher promotion followed matching installed
-acceptance and preserved the previous selector. See the
-[current delivery record](DELIVERY_20261007.md).
+Open the **Renulus** shortcut or **Start-Renulus.cmd**. The installed Flow app
+opens **Today**; Design C uses **New chat**, **Projects**, **Tests**, **More** and
+**Settings & connections**. **Ctrl+K** opens **Find a destination**. Local runtime
+readiness and subscription access are separate. The installed app bundles its
+runtime and CPU helpers; doctors need no developer tools, GPU, Docker or model
+server setup. Preserve the learning/account profile when updating; a study
+backup does not contain account credentials.
 
-Without a generative connection, use reviewed **Test**, **Today** planning, saved
-**Library** passages/originals, local **Cases** with explicit Save, **Memory**
-editing/recall and study-data backup/recovery.
-The [bounded reader check](finalise-reader-reflow-699938f2.md) also confirms the
-saved Case PDF page1 displays and Library content/Find/Filter/Open original
-remain usable at200% zoom through ordinary scrolling. This is a local reader
-observation, not a complete accessibility or live-generation acceptance.
-
-In **Connections → Learning subscriptions**, use **Check models** for a saved
-account. For a disconnected Codex account, choose **Continue with ChatGPT**
-under **Codex** and complete sign-in in your browser using your own account.
-If you need an account or subscription, complete that provider setup first.
-Connecting another application does not connect this Renulus profile.
-
-Choose **Use Codex** when offered and
-confirm the **Selected** badge before asking for generation. A saved account
-alone does not select a subscription. Choose an exact approved model with the
-default-model selector; catalogue omission does not block that choice in the
-updated app. To reconnect an expired or different account,
-use **Disconnect**, then **Continue with ChatGPT** again. During sign-in,
-**Reopen sign-in in browser**, **Check sign-in status** and **Cancel sign-in**
-help you finish or restart the attempt.
-
-Requests stay within your explicitly selected subscription and its approved,
-available models:
+In **Learning subscriptions** within Connections/Settings, **Check models**
+checks a saved account. For disconnected Codex, choose **Continue with ChatGPT**
+and finish in your browser; another app's sign-in does not connect Renulus.
+For Go, save your subscription key. Choose **Use Codex**/**Use OpenCode Go** and
+check the **Selected** badge and default model. A connected account alone does
+not select a subscription. Use the sign-in status/cancel controls for an
+incomplete attempt, or **Disconnect** to reconnect an expired account.
 
 | Subscription | Approved model labels |
 | --- | --- |
 | Codex | `gpt-6.1-sol`, `gpt-6-astra`, `gpt-6-luna` |
 | OpenCode Go | `mimo-v2.6-pro`, `deepseek-v4.1-flash` |
 
-For **OpenCode Go**, save your subscription key, choose **Use OpenCode Go** and
-select MiMo V2.6 Pro or DeepSeek V4.1 Flash. The October 7 update removes the
-earlier app-imposed learning pause at the owner's instruction. Model listing
-is separate from an actual successful response. Connection errors remain
-visible; Renulus keeps your selected model and subscription.
+Listing a model does not prove a successful response. Requests keep the selected
+subscription, with visible errors and no paid generation fallback. Reviewed
+questions, saved originals, Notes and Memory editing remain useful without
+generation; active-Test restrictions still apply.
 
-The older October 6 Astra attempt returned `subscription_limit`; a later real
-`gpt-6.1-sol` stream succeeded through the existing connection. Those are dated
-observations, not today's account status. Matching updated-app validation is
-tracked in [the active delivery continuation](FINISH_20261007.md), including
-successful learning, generated practice and completed automatic capture.
-The normal launcher was promoted to cb59beb2 after matching installed core
-acceptance on October 7. See [the current delivery](DELIVERY_20261007.md).
+## Design C: new chat and retained conversations
 
-## Learn and Test
+On **New chat**, write in **How can I help you today**, then **Send**. Ordinary
+learning and Case conversations save by default; Chat receives the message once.
+A failed handoff keeps the Home draft; retry that request.
 
-In **Learn**, enter **Your nephrology question**, choose a **Topic** or
-**Explore freely**, then **Ask Renulus**. **Teaching style** defaults to
-**Direct explanation**; select **Guided teaching** for guided study. Ordinary
-discussions appear under **Continue learning** for resuming later. Use **Stop**
-to interrupt a response and read any partial-response or evidence notice.
+Choose **Explain a topic**, **Discuss a case** or **Quick practice** before
+writing a new request, or select a suggestion from that category. Expanding a
+category beside an existing draft does not change that draft's intent. One
+category expands at a time; a valid daily bundle supplies five suggestions per
+category. Selecting one prefills the composer and still needs **Send**. If a
+draft exists, choose **Add to draft**, **Replace draft** or **Keep draft**.
+Offline/first-run states keep the composer usable without fabricated
+suggestions; an older valid bundle shows its date. Quick practice has the
+[separate saved-five flow](#explicit-saved-five-and-conversation-tests).
 
-In **Test**, choose:
+Set **Name for your greeting → Save name** in Settings/Connections. A blank
+name uses the generic greeting. Home text and selected intent are volatile:
+they survive a policy-only interruption in the same window, but real navigation
+or closing can clear them. After handoff, a saved Chat autosaves its draft;
+wait for **Draft saved** before closing. Sending commits a message; saving a
+draft does not send it. **Teaching** offers **Direct** and **Guided**; **Stop**
+interrupts a response. Read partial-response and retry notices.
 
-- **Reviewed quiz**: select **Track**, **Topic** and **Questions**, then
-  **Start reviewed quiz**. Choose an option and **Commit answer** before reading
-  the reasoning and sources. Committed answers cannot be changed.
-  **View source help** marks the attempt assisted.
-- **Generated practice**: describe what to practise, choose one to five
-  questions and **Generate practice** with an eligible connection. These
-  questions and keys are **Generated · unreviewed**; their results remain
-  separate from reviewed assessment. Retrieved sources do not review the key.
+In a conversation's **Manage** controls, **Rename**, **Project**, **Archive** and
+**Delete conversation** have separate effects. Archive retains messages, draft
+and originals, makes the chat read-only and removes it from active recents.
+Restore it before continuing. Project-linked archived chats can be reopened
+from the project's **Chats** list; a general archived-chat browser is not
+connected in this source snapshot. Deleting a conversation removes its owned
+originals; separately retained learning in Memory remains inspectable.
 
-## Choose your programme and plan
+The empty Chat view offers **Start saved chat** and **Start temporary chat**.
+Temporary work is explicitly labelled and excluded from ordinary Memory and
+backups. Use **Save conversation** to promote it before adding it to a project.
+Closing discards temporary work. The saved-default rule does not change the
+explicit-save behavior of [legacy Flow Cases](#temporary-and-saved-cases).
 
-Open **Today → Study preferences**. Set **Hours per week**, an optional
-**Exam date**, **Track** and topics, then **Save preferences**. The tracks are
-**General nephrology** and **ESENeph preparation**. Leave topics unchecked to
-use all available topics in your selected track; free exploration remains
-available across nephrology.
+For Case context, use **Edit case context → Save case context**, or **Use
+temporary context**. Local image keeping, reviewed text extraction and explicit
+image discussion are separate; extraction reads words, not clinical images.
+**Explore in Learn**/**Practise from this case** retain scoped legacy handoffs,
+separate from the new saved fictional-test flow.
 
-ESENeph currently has a partial mapping. Read **Mapped domains and gaps** beside
-the plan; mapped questions do not establish complete exam coverage. Exam
-simulation is unavailable. Test also has its own **Track** selector.
+## Design C: Projects, Files and Notes
 
-Use **Suggest a plan** after saving preferences. **Your next study** shows
-activities and reasons, including recorded mistake reviews. **Start** opens
-the activity; change **When**, **Mark done** or **Skip** to adjust it. Reviewed
-quiz history lets you revisit reasoning. Study activity and conversations do
-not establish mastery.
+### Projects and goals
 
-## Add and check Library material
+In **Projects**, enter a name and **Create project**. **Chats** offers **New
+learning chat**, **New case chat** and **Add saved conversation → Add to project**.
+Move an existing saved chat to another project or leave it unassigned. Under
+**Documents**, link a ready Library revision; **Unlink** keeps its Library
+original. Under **Study goals**, record a goal, optional target date and your
+progress/next step. **Mark complete** records your decision, not mastery.
 
-Use **Library → Add to library → Document** for authorised reusable teaching
-material. Enter **Title**, **Choose a study document**, confirm permission to
-read, store, index and use the file locally, then **Add document**. PDF, image,
-text and supported Office files are accepted within the displayed limits.
-**Study note → Add note** saves deliberately added text.
+**Show projects** switches between Active and Archived. **Manage project**
+provides rename, archive, restore and deletion. Deleting a project removes its
+goals and memberships while preserving independent conversations and Library
+originals.
 
-For ERA or institutional material, obtain the file through your own authorised
-access and retain its edition and permitted use. Public download access does
-not grant every processing or redistribution right. [SOURCES](../SOURCES.md)
-records the development acquisition boundaries; a personal import retains
-its own terms.
+### Attach and read files
 
-Check **View import details** and **Import status**. Queued or processing
-revisions are not yet searchable; an earlier indexed revision may remain
-available. For a failed or cancelled import, **Retry import** asks you to select
-the original again or supply the study note.
-**Collected sources** lists acquisitions; queuing selected files is a separate
-step from making their passages ready.
+Home **Attach** carries the selected file and existing text to a saved Chat's
+file review; it does not send the text. Review **File title**, **Source owner or
+author**, optional **Edition**, and **Permission or licence**, then choose allowed
+uses separately:
 
-Use **Find a passage → Search**, then **Inspect citation**. A **Source** control
-in Learn also opens citation inspection in Library. Check the passage, edition,
-permissions and locator, then **Open original**. A reported physical page counts
-from the start of the file, rather than its printed page label. Unknown pages
-open without a page jump; exact passage highlighting is unavailable. Office
-originals offer **Save original** for opening in a compatible application.
-Current-guidance search excludes sources whose currency is unverified.
+- **Display this file in Renulus**.
+- **Keep a local original when this conversation is saved**.
+- **Send selected content to my learning model**.
+- **Create learning material from selected content**.
 
-Check publication/edition, retrieval and review dates, corrigenda, chapter or scope
-replacements and retractions. A receipt/download date, recent URL or dated
-research note does not establish latest-final guidance. Keep research findings,
-drafts and commentary distinct from final guidelines.
+Use **Confirm attach**, or **Retry same attachment** after an uncertain receipt.
+Display permission is required; saved attachments also require local-original
+permission. The review enforces 64 MiB for saved and 10 MiB for temporary
+originals. Keeping a file does not itself request model inference or make it a
+searchable Library document. Use **Open file** or the workspace **Files** tab to
+read it.
 
-**Remove from library** removes the source from retrieval and cleans app-owned
-copies; read any **Storage cleanup pending** notice. Your external original
-is preserved. Copies already exported or backed up remain separate.
+The embedded reader has actual PDF, PNG/JPEG/TIFF, DOCX, XLSX/CSV and
+TXT/Markdown/HTML/XML adapters. An accepted upload type does not guarantee an
+embedded reader for that type; PPTX is an example. Unsupported, missing,
+restricted and extraction-failed states remain visible. Office previews are
+bounded reading views, not full Office editors or a fidelity guarantee.
 
-## Temporary and saved Cases
+Use **Physical page**/**Image frame**, Previous/Next, Zoom and **Fit width**.
+Physical pages count from the file's start, not its printed labels. Tables offer
+sheets/row windows; **Find on this page/table window** searches that window.
+**Prepare original download → Save original** retains an available original.
 
-In **Cases**, enter a title and learning question, then **Start temporary case**.
-Case text, discussion and added originals remain temporary until you choose
-**Save case**. A reopened saved snapshot also needs **Save changes** to retain
-later edits or discussion. Close the current case before reopening one from
-**Saved cases**.
+Select text and **Ask about selected passage**, or use **Discuss this passage**.
+The cited passage enters a Chat draft and needs a separate **Send**. Permissions
+and extraction state can prevent passage use even when the original is readable.
+On narrow layouts the reader takes the focused pane; **Back to chat** returns.
+Closing a workspace tab does not delete its source. Reopening saved workspace
+references is distinct from retaining temporary content or unsaved edits.
 
-For a PNG or JPEG you want to keep locally, select **Use this file for →
-Keep original image**, choose **Image to keep in case**, review the preview,
-then **Keep image in case**. Finish with **Save case** or **Save changes** to
-keep it after closing. This path works without a model connection and does not
-send the image to a model. **View original** opens a retained case original.
+### Personal and project Notes
 
-**Local text extraction** lets you review and correct attachment text before
-**Use extracted text**; it reads words, not clinical images. **Image discussion
-with selected subscription → Send image for discussion** is a separate, explicit
-provider request, subject to displayed availability. Input acceptance does not
-verify interpretation quality; Probe02 made no image request. Keeping and viewing
-originals locally remains available.
+Open workspace **Notes → New note**, enter **Note title** and **Note**, then
+**Save note**. A save creates an immutable revision. Notes are personal or linked
+to the current project; a temporary conversation must be saved before using the
+persistent Notes workspace. Unsaved edits survive workspace tab changes in the
+same window, but not closing the window.
 
-The case-scope banner follows you through Learn and **Practise from this case**.
-Return to Cases to save; navigation alone does not save. Choose
-**End temporary context** to return to ordinary study. Closing a temporary case
-or the app discards unsaved case work; it is not retained in learner Memory or
-a saved backup. Bring daily-practice input through Cases to keep this scope.
+Use **Revision history** or **Open saved original** to inspect retained text.
+A conflict offers **Keep my edits after this revision** or **Replace draft with
+latest** after comparison. **Use note in chat** requires a clean saved revision
+and prefills a cited draft; it does not send. For notes over 16,000 characters,
+open the saved original and select a shorter passage. **Delete note → Delete
+all revisions** removes its originals/history and project links; older citations
+then show an unavailable source.
+
+## Design C: saved Tests and attempts
+
+**Tests** holds saved sets; **Your attempts** holds work already started. Select
+a set and its exact **Saved versions** entry. Choose **Mode: Study/Test** and an
+optional timer, then **Continue to Study/Test**. This opens setup without
+starting an attempt or timer. **Start Study**/**Start Test** is the explicit
+start; **Retry start** checks the same pending start. Resume an existing attempt
+by its identity rather than starting again from its version.
+
+| Origin | What it means |
+| --- | --- |
+| Reviewed bank | Eligible bank questions; reviewed performance separates fresh, assisted and repeat answers. |
+| Generated | Selected-model personal practice; validated format does not independently review the key. |
+| Imported | Personal material normalised and explicitly reviewed by you; it remains personal practice. |
+| Nightly | A saved personal set from the opt-in scheduler; opening it does not start an attempt. |
+
+Origin, review quality and Study/Test mode are independent. Generated/imported/
+nightly questions remain personal when used in Test mode or edited by you; they
+do not become reviewed-bank mastery evidence. **Edit personal version** creates
+a new version; earlier cards and attempts retain their exact pins. **Archive**
+is distinct from **Delete saved test**. Deletion makes the collection unavailable
+but retains historical attempt and local-report snapshots. Adapted legacy
+sessions keep their original commitments and partial denominators; they are
+not retroactively graded as whole Tests.
+
+### Commitments, drafts and help
+
+| Action | Study | Test |
+| --- | --- | --- |
+| Choose/edit an option | An ungraded draft until **Submit answer**. | An editable draft until whole-Test submission. |
+| Submit | **Submit answer** locks that answer and reveals feedback. **Finish study** includes committed answers only. | **Review and submit test → Submit test** commits the whole result. Blanks become unanswered. |
+| Help | **Hint**, **Sources**, **Notes** and **Ask in chat** record assistance for the question. | Ordinary learning help is restricted until submission. |
+
+Hints/references can be unavailable. Notes/Chat returns to the same attempt;
+reopen stale help from the current question. Test supports clear, navigate, skip
+and mark for review without correctness. Results retain fresh/assisted/repeat
+or personal cohorts; activity does not certify mastery.
+
+Watch **Saving draft…/Saved**. Use the retry under **This action needs recovery**
+to check an uncertain save/submission. **Reopen saved attempt** uses the last
+backend-saved state and can omit unacknowledged changes; do not create another
+attempt to retry. Closing/finishing Study does not grade pending selections.
+**Question seems wrong → Save report** stores a local pinned report without
+changing key/score. Unavailable content is flagged without rewriting old results.
+
+### Timing and active Test restrictions
+
+Untimed is the default. Select **Use a timer** in setup, or **Add a timer** before
+Start. A timed Test begins at **Start Test**, has no pause and continues while
+the window is closed. At expiry the backend finalises the drafts it accepted
+before the deadline, once; reopening after expiry reads that result. Unsaved
+local choices are not a guarantee of receipt before the deadline.
+
+Study offers **Pause study/Resume study**. At Study expiry, choose **Continue
+untimed** or **Finish study**; pending choices remain ungraded. An active Test
+blocks ordinary Chat, source/Reader/Notes help and backup/export/restore.
+Use **Resume Test** to return. Settings and neutral status, Nightly Off and Stop
+remain available. Closing an active Test does not remove the restriction.
+
+### Create or import a saved set
+
+**New reviewed test → Save test** saves 1–50 eligible bank questions. **Create
+test** chooses a topic and 5/10/20 personal questions through the selected
+connection. Progress shows validated/requested counts. Use **Stop generation**,
+explicit retry or an offered shorter-count confirmation; partial work is not
+silently substituted. Saving starts no attempt or timer.
+
+**Import a test** accepts permitted pasted text or an eligible extracted personal
+Library revision. Save the original/terms first; **Normalize with selected
+connection** is a separate provider request. Compare candidates with the unchanged
+original, resolve keys and confirm each review before **Save N reviewed questions**.
+It remains Personal practice. Stop/retry explicitly; deleting an import keeps
+its independently published test.
+
+### Explicit saved-five and conversation tests
+
+For Home Quick practice, choose **Quick practice** before typing, or select one
+of its suggestions, then **Send**. The connected producer validates and saves
+exactly five fictional questions, then opens one untimed Study attempt pinned
+to that version. It does not use legacy one-to-five generation or silently accept
+a shorter set. Failure retains the draft. Retry checks the existing request;
+**Stop practice** is explicit. If publication won before Stop, the notice keeps
+the draft and **Send** opens that saved set's Study handoff.
+
+In Chat, **Create test from conversation → Create fictional test** offers
+5/10/20 questions from sent messages and visible Case context. The request source
+is volatile; only the validated fictional artifact is saved.
+**Cancel test creation** stops unfinished work. Once saved, **Start Study** opens
+one untimed attempt, or **Open saved test** reads the exact version. Creation
+alone starts neither Study nor a timer. Pending raw source/retry state is
+volatile across closing; a published set remains in Tests.
+
+### Opt-in Nightly generation
+
+Open **Settings & connections → Preferences → Nightly generation**. It is Off
+by default, with **22:00** and **5 questions** as initial choices. Set local
+**Preferred time**, choose 5/10/20 and **Save preferences**; **Turn on** opts in.
+Renulus must be running, with an eligible selected connection and saved learning
+context. It generates one set per eligible night and can catch up once after
+sleep, without building a missed-night backlog. Reopening or restoring waits
+for the next eligible time; it does not resume an old provider task.
+
+**Tests → Nightly practice** shows real progress and **Open saved test** selects
+the published version without starting an attempt. **Review retained work**
+opens failed/review-needed work for explicit recovery. **Turn off** and **Stop
+generation** are available during an active Test; publication already completed
+remains saved. Temporary conversations, private originals and raw Case text do
+not supply Nightly learning context.
 
 ## Inspect and correct Memory
 
-**Memory** shows saved learning, preferences and goals. Manual correction and
-local recall are accepted in the Connected scope; automatic capture from a live
-answer remains unproved. Use **Search retained learning**,
-**Edit → Save changes** to correct a record, and **History** to inspect previous
-text. **Remove history → Remove revision history** keeps the current record.
-**Delete → Delete learning and history** removes the record and its history
-from recall. Case input cannot be retained here; use
-**Open memory in study context** if the scope guard appears. Retained learning
-personalises study; it is not scientific verification.
+Open **More → Memory** in ordinary study scope, or use **Open memory in study
+context** if the scope guard appears. **Search retained learning**, **Edit → Save
+changes** and **History** inspect and correct canonical retained learning.
+Compare a conflict before **Use latest revision**. A correction keeps the edited
+current fact and suppresses recapture of the old source; it does not alter an
+answer commitment, key, score or cohort.
 
-## Updates and retrieval permissions
+**Remove history → Remove revision history** keeps the current record.
+**Delete → Delete learning and history** removes recall and suppresses recapture.
+Unavailable/deleted sources are excluded from derived learning context; they do
+not silently erase independent historical attempts. Personal, assisted and
+repeat evidence retain those distinctions, and unanswered items do not create
+answer learning. Case input, temporary content and private originals are not
+ordinary learner Memory. Retained learning personalises study, not scientific
+verification.
 
-In **Updates**, select a topic and **Check last 30 days**, or open
-**Source checks → Check now** for a registered source. New discoveries wait for
-review. **Open publication**, inspect its evidence and permissions, complete
-the review fields, then **Save reviewed update**. **Dismiss** does not make
-material current. Tracking a public file requires
-**Permission for a public digest check**; other processing permissions remain
-separate.
+**Recall status** describes the derived index separately from saved editable
+records. **Retry pending jobs** can process eligible capture through the selected
+model; **Rebuild recall index** repairs local recall from retained records.
+**Cancel job** explicitly cancels a capture. Ordinary policy/context interruption
+can allow a later automatic scan of unchanged eligible evidence; correction,
+suppression, deletion, unavailable sources and explicit cancellation remain
+barriers. Restore-specific inference acceptance is qualified below.
 
-For opt-in checks while Renulus is open, expand **Automatic checks**, select
-sources and **Check interval**, enable **Check my selected sources automatically**,
-then **Save automatic checks**. **Check selected now** also works for a saved
-selection with automatic checking off. Read failures and **Last success** dates:
-a failed check retains previous evidence and does not establish freshness.
+## Library, Updates and retrieval permissions
 
-The single K01 catalogue check on **October 6, 2026, at 11:51:42.812 UTC**
-(13:51:42.812 Europe/Warsaw) returned baseline. Gap02 confirmed its saved state
-with automatic checks off, without fetching it again. This is dated catalogue
-discovery, not reviewed latest-final guidance or proof that an installed
-correction changes later learning. Dated research passages remain unreviewed
-and do not certify guidance currency or complete retraction status.
+**Library → Add to library → Document** deliberately imports reusable permitted
+material. Enter title, file and permissions, then **Add document**; **Study note
+→ Add note** retains deliberately entered text. Obtain ERA/institutional files
+through your authorised access and retain edition and permitted use. Public
+availability does not grant every processing/redistribution right.
+[SOURCES](../SOURCES.md) records development acquisition boundaries.
 
-**Connections → Sources and retrieval** holds optional personal retrieval keys.
-Enable and select a tool deliberately, with daily request/credit limits, or use
-**Use key-free sources**. Provider billing terms apply; failed attempts count
-toward request limits. These tools do not change the learning subscription.
+**View import details/Import status** distinguish queued, processing and ready;
+an earlier ready revision can remain available. **Retry import** may need the
+original again. **Collected sources** does not mean searchable. Use **Find a
+passage → Search → Inspect citation → Open original** to check edition, rights
+and locator; unknown locators need not give exact highlighting/page jumps.
+**Remove from library** excludes retrieval and cleans app-owned copies; heed
+**Storage cleanup pending**. External originals/backups remain independent.
+Current-guidance search excludes sources whose currency is unverified.
+
+In **Updates**, choose a topic and **Check last 30 days**, or **Source checks →
+Check now**. Discoveries need review: **Open publication**, inspect evidence and
+permissions, then **Save reviewed update**. **Dismiss** does not make it current.
+Automatic checks are opt-in while the app runs: select sources/interval and
+**Save automatic checks**. **Check selected now** is separate. Failures retain
+previous evidence; read **Last success**, publication/review dates, corrigenda,
+replacements and retractions. A recent download or dated research note does
+not establish latest-final guidance.
+
+**Sources and retrieval** in Settings/Connections holds optional personal keys.
+Select and enable a tool deliberately with request/credit limits, or **Use
+key-free sources**. Provider billing terms apply and failed attempts count
+against request limits. Retrieval configuration does not select or change your
+learning subscription.
 
 ## Back up and restore
 
-Open **Connections → Your study data**:
+Open **Settings/Connections → Your study data**:
 
-- **Download full backup (ZIP)** includes saved records and eligible Library
-  and saved-case originals. Choose a save location and wait for confirmation.
-- **Export records only (JSON)** omits original attachment bytes; it cannot
-  recover missing originals.
+- **Download full backup (ZIP)** includes saved records and eligible app-owned
+  Library, saved Case, Chat and Notes originals in Design C.
+- **Export records only (JSON)** omits original bytes and cannot recover them.
 
-Credentials, search indexes and the external acquisition catalogue are excluded.
-Keep external collection originals separately. A study backup does not back up
-your account credentials. Temporary cases and unsaved changes to saved cases
-are not included.
+Credentials/provider connection settings, derived indexes, helper weights and
+the external acquisition catalogue are excluded. Safe greeting/Nightly
+preferences are retained; Home suggestions and local scheduler/retry state are
+not. Temporary conversations, unsent Home text, unsaved Notes and unsaved legacy
+Case changes are excluded. Keep external originals and account access separately.
 
-To restore, **Choose ZIP backup or JSON export**, review its date, contents and
-omissions, acknowledge the displayed deletion limits, then choose
-**Restore full backup** or **Restore records only**. Restoration merges saved
-records and preserves newer deletions known to this installation. Read the
-restored and excluded counts; an older copy alone cannot know about later
-deletions elsewhere. Deleting in Renulus does not erase an existing backup or
-external original.
+Finish an active Test before exporting or restoring. If recovery is busy, finish
+or cancel the named active work and retry. **Choose ZIP backup or JSON export**,
+review date, contents and omissions, acknowledge deletion limits, then **Restore
+full backup** or **Restore records only**. Reselect a ZIP if its preview expires.
+Restore merges records and preserves newer deletions known to this installation;
+an old backup cannot know about later deletions elsewhere. Deletion does not
+erase an existing backup, external original or another profile's copy.
 
-Check **Recovery status** while local indexes rebuild, including the separate
-**Library search** and **Learning memory** results. For **Blocked**, **Partial**
-or **Failed**, read the message and any pending cleanup, then use
-**Retry local rebuild** when offered and **Refresh recovery status**. If status
-could not be checked, use **Try again** to read it again. A completed records restore
-does not by itself mean search is ready; **Not reported** is not completion.
-A Retry starts asynchronous rebuilding; refresh until both index results report
-readiness before relying on search. Inspect restored originals and citations too.
+Design C restore interrupts unfinished generation, Nightly, daily-suggestion and
+import-normalization work while retaining valid checkpoints. Reading progress
+or reopening does not replay those provider tasks. Generation/import need an
+explicit retry with still-valid source/permissions; Nightly waits for a future
+eligible time. Local rebuild readiness is separate from model capture.
 
-Recovery02 on **October 6, 2026** accepted Retry/rebuild, restored-original
-inspection, newer-deletion reconciliation and three ordinary closes/two reopens.
-Connected03 accepted populated ZIP restoration of Memory, saved originals and
-the manual plan. Its deletion checks in a different fresh-restored synthetic
-profile showed that replaying the ZIP did not resurrect newer deleted Memory,
-case/raw originals or Library material. The source profile intentionally retains
-its saved PDF/PNG case; deletion in the other profile does not delete that copy.
-These continuations retain earlier proofs; all original failed aggregates remain
-failed. Your own restore still needs the status checks above.
+**Source recovery limit at `009b8780`:** restored Memory evidence is marked for
+explicit inference capture, but the automatic Memory consumer does not yet read
+that marker. Still-eligible boundary-interrupted evidence can be reconsidered
+automatically after recovery. Do not treat this snapshot as proof of inference-free
+Memory restore. Corrections, deletions and explicit cancellation still constrain
+capture. This open consumer must be rechecked before installed cutover.
 
-Matching Maintenance03 exited 0 on **October 6, 2026, at 12:34:25.741436 UTC**
-and the parent accepted it at **12:36:07 UTC**. Uninstall/reinstall/reopen
-preserved the source profile's canonical data, saved case and exact PDF/PNG
-originals, followed by an ordinary main/backend close. Earlier maintenance
-failures remain failed. See [the parent maintenance report](finalise-maintenance-699938f2.md)
-and [Running Renulus](RUNNING.md#delivery-status) for acceptance and launcher
-provenance; this local result supplies no live answer or automatic-capture pass.
+Check **Recovery status → Library search/Learning memory**. For **Blocked**,
+**Partial** or **Failed**, read cleanup/error details, use **Retry local rebuild**
+when offered and **Refresh recovery status**. **Try again** retries a status read;
+**Not reported** or an accepted Retry is not readiness. Inspect originals and
+citations too. Original-file rollback pending requires the displayed restart
+before another restore/rebuild. Archive size/format limits still apply.
+
+## Installed Flow reference
+
+These controls describe the normal `f1c49444` installation until Design C
+cutover. Shared connection, source-currentness and local-recovery guidance above
+still applies; new C Chat/Projects/Notes/saved-Test controls require C source.
+
+### Learn and Test
+
+In **Learn**, enter **Your nephrology question**, choose **Topic**/**Explore
+freely**, then **Ask Renulus**. **Teaching style** defaults to **Direct
+explanation**; **Guided teaching** is optional. **Continue learning** resumes
+ordinary discussions. **Stop** interrupts a response.
+
+In Flow **Test**, **Reviewed quiz → Start reviewed quiz** chooses Track, Topic
+and Questions. **Commit answer** locks an answer before reasoning/sources;
+**View source help** records assistance. **Generated practice → Generate
+practice** produces one to five **Generated · unreviewed** questions through an
+eligible connection. It is distinct from C's exact saved-five flow and whole
+Study/Test commitment model.
+
+### Choose your programme and plan
+
+Open **Today → Study preferences**, set Hours per week, optional Exam date,
+Track and topics, then **Save preferences**. General nephrology and partial
+ESENeph preparation are available. Unchecked topics use all available topics
+in the track; free exploration remains available. Read **Mapped domains and
+gaps**; exam simulation is unavailable.
+
+**Suggest a plan** supplies **Your next study** with reasons. **Start**, **When**,
+**Mark done** and **Skip** let you act or adjust manually. Conversations, plans
+and completion marks do not establish mastery. These legacy planning controls
+remain available through More/Today in C.
+
+### Temporary and saved Cases
+
+Flow **Cases → Start temporary case** keeps text, discussion and originals
+temporary until **Save case**. Reopened saved Cases need **Save changes** for
+later edits/discussion. Navigation to Learn or **Practise from this case** does
+not save them. **End temporary context** returns to ordinary study; closing
+unsaved work discards it and excludes it from learner Memory/backups.
+
+For a local PNG/JPEG, **Use this file for → Keep original image → Keep image in
+case**, then Save. **View original** reads a retained original without a model.
+**Local text extraction → Use extracted text** requires reviewing words.
+**Image discussion with selected subscription → Send image for discussion** is
+an explicit, separate request, subject to actual availability; upload acceptance
+does not prove clinical interpretation quality.
+
+## Dated evidence and limits
+
+- **October 7, 2026:** source receipts establish real Sol Explain/generated
+  practice/automatic Memory and both approved Go Case discussions. Matching
+  installed `f1c49444` accepts new T18/partial ESENeph content, retained history,
+  corrected ready Memory and reopen. See [delivery](DELIVERY_20261007.md) and
+  [continuation](FINISH_20261007.md). These receipts do not establish today's
+  account availability or new Design C live/installed acceptance.
+- **October 6:** Astra Probe02 returned `subscription_limit` and made no image
+  request. Later Sol success keeps its own scope. Physical Windows speech,
+  scaling and high contrast remain **issue #21**. The bounded Case PDF page 1/
+  Library 200% reader check proves reachable controls through ordinary scrolling,
+  not full accessibility; see [reader evidence](finalise-reader-reflow-699938f2.md).
+- **October 6, 11:51:42.812 UTC** (13:51:42.812 Europe/Warsaw): the K01 catalogue
+  check returned baseline. Gap02 retained it with automatic checking off and
+  no repeated fetch. This is dated discovery, not latest-final/corrections/
+  retraction acceptance or proof that an installed correction affects learning.
+- **October 6 recovery:** Recovery02 accepted Retry/rebuild, original inspection,
+  newer-deletion reconciliation and three closes/two reopens. Connected03 accepted
+  populated ZIP recovery; deletion checks used a separate fresh-restored synthetic
+  profile. The source profile intentionally kept its PDF/PNG Case. Original
+  failed aggregates remain failed; inspect each actual restore's status.
+- **October 6 Maintenance03:** exit at 12:34:25.741436 UTC, accepted at 12:36:07 UTC.
+  Uninstall/reinstall/reopen preserved canonical data and saved PDF/PNG originals,
+  then closed normally. This supplies no new live/automatic-capture acceptance.
+  See [maintenance provenance](finalise-maintenance-699938f2.md).
+
+Design C source instructions were checked against the committed Home/Chat,
+Projects/Notes/Reader, saved Tests/whole attempts, Nightly, Memory and recovery
+implementations, alongside the [C spec](../planning/DESIGN_C_IMPLEMENTATION_SPEC.md)
+and [reconciled review](design-c-reconciliation.md). Synthetic transport and
+hidden controller checks do not prove live provider behavior, physical file
+dialogs, clean-machine installation, signing or complete clinical accuracy.
