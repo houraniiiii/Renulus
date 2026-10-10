@@ -6,6 +6,7 @@ import { Badge, Button, ErrorState, Input, LoadingState, Notice, Select, Textare
 import TestVersionEditor from './TestVersionEditor';
 import { useTestMutation } from './useTestMutation';
 import { originLabel, type PreviewItem, type TestSetup, type TestSelection, type VersionSummary } from './types';
+import './tests.css';
 
 interface Props { selected: TestSelection; onClose: () => void; onChanged: () => void; onVersionSelected: (id: string) => void }
 

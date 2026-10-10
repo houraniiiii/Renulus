@@ -100,8 +100,35 @@ describe('attempt draft ordering and recovery', () => {
         version_id: study.version_id, draft_revision: 0, policy_revision: 2 } } as T;
     };
     await expect(h.session.action('help', () => ({ kind: 'hint' }))).rejects.toThrow('No authored hint');
+    const failure = h.session.snapshot().error;
+    await h.session.refresh(); await h.session.refresh();
+    expect(h.session.snapshot().error).toBe(failure);
     await h.session.action('help', () => ({ kind: 'sources' }));
     expect(kinds).toEqual(['hint', 'sources']); expect(h.session.snapshot().help!.context.kind).toBe('sources');
+    expect(h.session.snapshot().error).toBeNull();
+  });
+  it('retains a refused action through a failed poll until explicit recovery', async () => {
+    const h = harness();
+    const failure = new ApiError('No authored hint', 409, 'hint_unavailable');
+    h.transport.write = async () => { throw failure; };
+    await expect(h.session.action('help', () => ({ kind: 'hint' }))).rejects.toBe(failure);
+    h.transport.read = async () => { throw new ApiError('Synthetic read interruption', 0, 'unavailable', true); };
+    await h.session.refresh();
+    expect(h.session.snapshot().error).toBe(failure);
+    h.transport.read = async () => h.read();
+    await h.session.refresh();
+    expect(h.session.snapshot().error).toBe(failure);
+    await h.session.retry();
+    expect(h.session.snapshot().error).toBeNull();
+  });
+  it('recovers a transient read failure when a later poll succeeds', async () => {
+    const h = harness();
+    h.transport.read = async () => { throw new ApiError('Synthetic read interruption', 0, 'unavailable', true); };
+    await h.session.refresh();
+    expect(h.session.snapshot().error).toBeInstanceOf(ApiError);
+    h.transport.read = async () => h.read();
+    await h.session.refresh();
+    expect(h.session.snapshot().error).toBeNull();
   });
   it('reconciles a finished Test after its late draft is refused without counting that choice', async () => {
     const h = harness();
