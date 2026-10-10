@@ -55,8 +55,8 @@ def create_router(services):
         return streaming.list(kind,identifier,limit,cursor)
 
     @router.get('/{kind}/{identifier}/runs/{run_id}')
-    def run(kind: Literal['learning','case'], identifier: str, run_id: str):
-        return streaming.status(kind,identifier,run_id)
+    def run(kind: Literal['learning','case'], identifier: str, run_id: str, neutral: bool = False):
+        return streaming.status(kind,identifier,run_id,neutral=neutral)
 
     @router.get("/{kind}/{identifier}/draft")
     def draft(kind: Literal["learning", "case"], identifier: str):

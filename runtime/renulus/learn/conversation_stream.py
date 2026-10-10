@@ -83,7 +83,7 @@ class ConversationStreams:
             "SELECT idempotency_key,created_at,result_json FROM conversation_commands WHERE operation='send' AND target_type=? AND target_id=?"
             +where+' ORDER BY created_at DESC,idempotency_key DESC LIMIT ?',parameters)]
 
-    def status(self, kind, identifier, run_id):
+    def status(self, kind, identifier, run_id, *, neutral=False):
         with self.repo._lock,self.repo.db.transaction() as conn:
             entry=self.active.get(run_id)
             receipt=entry['receipt'] if entry and (entry['kind'],entry['id'])==(kind,identifier) else next(
@@ -91,7 +91,7 @@ class ConversationStreams:
             if not receipt:
                 raise ApiError('conversation_run_missing','This response is no longer available in this chat',404)
             result={'run_id':run_id,'state':receipt['state']}
-            if policy_snapshot(conn)['assistance_allowed']:
+            if not neutral and policy_snapshot(conn)['assistance_allowed']:
                 summary,_=self.repo._get(conn,kind,identifier)
                 result['conversation']=summary
                 if receipt.get('error'):

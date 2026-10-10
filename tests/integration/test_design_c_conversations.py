@@ -38,6 +38,27 @@ def app_at(profile):
     return app
 
 
+def test_neutral_run_detail_has_exact_keys_before_and_during_active_test(tmp_path):
+    app = app_at(tmp_path / 'neutral-run-detail')
+    app.state.services.registry['provider'] = ConversationProvider()
+    with TestClient(app) as client:
+        chat = client.post('/api/v1/conversations', json={}).json()
+        identifier = chat['identity']['id']
+        route = '/api/v1/conversations/learning/' + identifier
+        sent = client.post(route + '/messages', json={'expected_revision': chat['revision'],
+            'text': 'Fictional neutral receipt request', 'request_id': 'neutral-receipt-request'})
+        events = event_payloads(sent)
+        run_id = events[0]['run_id']
+        streams = app.state.services.get('conversations').streaming
+        assert streams.status('learning', identifier, run_id, neutral=True) == {'run_id': run_id, 'state': 'completed'}
+        assert 'conversation' in streams.status('learning', identifier, run_id)
+        assert client.get(route + '/runs/' + run_id + '?neutral=true').json() == {'run_id': run_id, 'state': 'completed'}
+        app.state.services.db.execute(
+            "INSERT INTO assessment_test_attempts(id,version_id,version_snapshot_json,mode,clock_high_water_at,created_at,updated_at) "
+            "VALUES('neutral-active-test','unavailable','{}','test',?,?,?)", (chat['created_at'],) * 3)
+        assert streams.status('learning', identifier, run_id, neutral=True) == {'run_id': run_id, 'state': 'completed'}
+
+
 @pytest.mark.parametrize("kind", ["learning", "case"])
 def test_saved_default_chat_and_draft_survive_restart_using_original_owner(tmp_path, kind):
     profile = tmp_path / "saved-chat"
