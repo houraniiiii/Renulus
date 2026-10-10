@@ -1,5 +1,113 @@
 # Design C independent integration review — October 10, 2026
 
+## Bounded DC10 retained-navigation acceptance — 1b6895ee
+
+**The requested DC10 navigation/restriction checks pass at their tested scope.**
+Memory and Updates are reachable in the current C shell and show useful real
+empty states. During an actual unfinished Untimed Test, both content screens
+clear to the restriction notice; Connections and Preferences remain reachable.
+At 200% renderer zoom, the Preferences controls reflow and keyboard navigation
+scrolls the focused name/time fields into view with visible rings. The Test was
+submitted and restriction release was observed before normal close. No material
+DC10 UI blocker was found in this bounded pass. This does not accept external
+connections, automatic checks, generated learning, every error state or a
+feature ticket. Matching installed manufacture remains parent-owned.
+
+### Source, owned runtime and evidence
+
+Normal Git root was verified as `C:/Renulus/dev/worktrees/dc01-design`, branch
+`codex/dc01-design`, with a clean index/content diff before this report edit.
+The normal conflict-free merge of canonical
+`1b6895eeccd934b57d27179cbe312a68e1f5989f` produced lane HEAD
+`e52c1260dded82ebec8ca15494236267b6b20d80`. The lane still contains six historical
+Workspace differences from canonical; they were preserved and were not the
+runtime for this check. The controller instead used the existing parent-built
+canonical app at `C:/Renulus/dev/repo` read-only. No build or product-source edit
+was performed by this pass.
+
+Renderer `apps/desktop/dist/assets/index-BWSnATPM.js` SHA-256 is
+`b2ce0cd350e974ba1281a0e6500536d2647ae148e29c5324cab21e6dbeecb79e`; native
+main SHA-256 remains
+`c4b3e337fa58ee3e2754ffbf2d485cc74d0421db6a7d339ed36f3a5cc223d615`. Canonical
+advanced during integration. A read at `eef19e63` found only the two generated
+assessment runtime files changed from the supplied basis, with no uncommitted
+product content. A subsequent read at `c6ec9717` found the additional connected
+assessment test, with no C UI production delta. These generation changes are
+outside the exercised DC10 paths. Later, during post-close manifest preparation,
+pending parent Chat/index and ModuleOutlet edits appeared; this already
+closed run does not accept those later bytes. The manifest retains that exact
+qualification and path list rather than claiming whole-current-tree acceptance.
+
+The explicitly leased existing closed synthetic profile was reused:
+`C:/Renulus/scratch/dcctl/rev1/c/s-e3988044/p`. Prior ownership markers, exact
+non-linked profile paths and normal-close receipts were checked before reuse.
+The scratch request queue invokes the existing controller methods with its
+strict declared tool schemas. No controller/product helper implementation or
+helper staging was added; the previously retained synthetic helper state was
+preserved. No owner profile, credentials, uploads, provider/authentication
+action, research/source check, OS input or foreground helper was used.
+
+Evidence root:
+`C:/Renulus/scratch/dcctl/rev1/probes/dc10-1b6895ee-20261010`. Its
+`manifest.json` records 214 hashed artifacts, all 98 requests/results, 12
+native captures, built JS/CSS hashes and lifecycle receipts. All 12 captures
+were visually inspected. Outer size was 1000×900, actual content 984×861;
+Preferences alone additionally received native renderer 200% zoom, then zoom
+returned to 100%. This is app-scoped layout evidence, not physical Windows
+display scaling or a complete narrow/zoom audit.
+
+### Observed screens and restrictions
+
+| Actual reproduction | Observed result and retained evidence |
+| --- | --- |
+| More → Memory | Request 010 and capture 0001 show Learning memory, zero retained records, Make room for what you learn and Add your first learning point. Empty Search is disabled. Local recall status is Ready for recall, with zero pending captures and zero Memory jobs. Refresh memory status completes; no search/add/rebuild action was invoked. This is retained UI/status evidence, not new memory-engine acceptance. |
+| Sidebar Updates | Request 015 and capture 0002 show an empty review queue, zero To review/Reviewed/Dismissed counts, Automatic checks Off and an unselected topic. Check last 30 days and empty pagination controls are disabled. Read, then review is the truthful empty detail. No remote check was started. |
+| Settings & connections → Learning subscriptions | Settled request 020 and capture 0003 show Codex and OpenCode Go Not connected, their configured models and the neutral connection guidance. No account/key action was activated. |
+| Settings → Preferences before Test | Request 023 and capture 0004 show the blank optional greeting name, Nightly generation Off, preferred time 22:00 and five questions. This pass leaves name/nightly preferences unchanged; the earlier actual persistence evidence is retained without repeating it. |
+| Start actual reviewed-bank Untimed Test | The UI saves DC01 DC10 restriction check, one reviewed question, Version 1. Request 039 proves the saved set survived normal cleanup/reopen. Requests 047–048 show the real setup and Start Test action. Request 086 later shows the same active saved Test with zero answered drafts and no Pause action. |
+| Active Test → destination search → Memory | Request 056 offers Memory as a destination while saved-content search is unavailable. Request 058 and capture 0005 show only the Test-in-progress notice and Resume Test / Settings & connections actions. Memory search, retained records and recall content are absent. |
+| Active Test → Updates | Request 062 and capture 0006 show only the same restriction/recovery notice. Updates content, project/recent-chat history and reader content are absent; Workspace is disabled. |
+| Active Test → Settings & connections → Preferences | Requests 066/071 and captures 0007–0008 show Connections and Preferences reachable while Workspace stays disabled. Name and local preference controls settle enabled. Nightly generation remains Off; Turn on is disabled and the page explains that generation is paused during Test. No preference write was made. |
+| Active Preferences at 200%, keyboard only | Requests 073–077 and captures 0009–0010 show Tab from Preferences reaches the name field, then moves through Save name to Preferred time, skipping disabled Turn on. Visible focus rings and scroll movement expose the actual fields without horizontal clipping. These two fields and the wrapping settings navigation pass; the full page/tab cycle is not inferred. |
+| Denial notice keyboard recovery | Requests 079–082 press Tab from Resume Test, then Enter on the actual focused main-content button. Connections opens successfully. Capture 0005 is not used to claim a visible ghost-button focus ring; the field rings in 0009–0010 and actual keyboard navigation provide the bounded focus evidence. |
+| Resume and finish Test | Requests 086–091 resume the actual Test, open Review and submit test, confirm zero answered / one unanswered, and submit through Submit test. The saved result is 0/1, one unanswered, zero excluded and zero not submitted. Workspace and project/recent history return. Capture 0011 retains the locked No answer feedback portion; request 091 supplies the result total. |
+| Updates after submission | Request 095 and capture 0012 show the real empty Updates queue again with Workspace enabled. This verifies release of the content-screen restriction before close. |
+
+### Errors, closure and remaining scope
+
+This is not a zero-error run. Request 032 waited for Start Test on the collection
+setup, which actually offers Continue to Study/Test. Request 049 waited for
+Submit test before opening its confirmation; the active screen actually offers
+Review and submit test. Both wrong-stage waits exceeded the controller action
+budget and triggered normal cleanup; their following snapshots 033/050 returned
+not_running. The same owned profile recovered both times, preserving the saved
+set and unfinished Test. These four failed operations are operator errors and
+are not reported as an app crash or a DC10 defect. The other 94 operations
+succeeded. Six generic renderer-console 409 entries are retained without
+request-specific attribution; they do not establish a new producer failure or
+an error-free runtime. Fault remains null.
+
+Three launches ended in three normal closes: two operation-failure cleanups and
+the final requested close at **October 10, 2026, 16:13:39.333 UTC**. Every
+forced/remaining PID list is empty; request 098 confirms normal closure and
+`exit.json` is code 0. Prior R5 receipts/screens remain untouched. The closed
+controller frees the installed-helper slot; no further runtime work is queued.
+
+The tested empty states, disconnected-account guidance and Test-denial recovery
+are useful and truthful. No transport failure, missing source, live provider
+failure or retrieval-error scenario was induced. Direct backend bypass/stream
+checks retain their earlier exact scope; this bounded UI run does not repeat
+them. Populated Memory/Updates, all Settings sections, nightly execution, name/
+preference writes, installed helpers/dialogs and current parent-only source
+changes retain their existing separate acceptance. No new UI fix is requested
+from these observations and no delivery/feature ticket is marked done.
+
+Report validation passes `git diff --check` and `scripts/check_workspace.py`:
+18,454 public files, 1,207 local links, 27 topics and 199 subtopics. This
+checkpoint authors only `docs/implementation/design-c-review-integration.md`.
+
+## Earlier accepted R3–R10 scope
+
 The independent R3–R10 recheck is complete on the built `397d1032` integration.
 R3 draft retention, R7 CSV position reopening, R8 reviewed progress, R9 edited
 answer copy, R10 Files inventory and the Study → Notes → saved Chat/source flow
