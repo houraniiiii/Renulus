@@ -1,6 +1,8 @@
 """Durable capture/recovery and rebuildable, revision-filtered learner recall."""
 import asyncio
+from concurrent.futures import Future
 from contextlib import closing, contextmanager
+from contextvars import copy_context
 import shutil
 import threading
 from pathlib import Path
@@ -24,9 +26,13 @@ class MemoryService:
         self._wake = asyncio.Event()
         self._worker = self._loop = None
         self._active_runs = set()
+        self._threads = set()
+        self._processors = set()
         self._capture_state = threading.RLock()
         self._recovery_paused = False
         self._stopping = False
+        self._closed = False
+        self._close_task = None
         # Reindex on restart; no index file is a record authority. This also
         # reconciles deletion markers from restores before any recall.
         self.db.execute("UPDATE memory_index_state SET state='dirty' WHERE singleton=1")
@@ -44,17 +50,23 @@ class MemoryService:
     @contextmanager
     def _canonical_mutation(self):
         with self._capture_state:
+            self._require_open()
             if self._recovery_paused:
                 raise ApiError('recovery_busy', 'Wait for learner-memory backup or restore to finish', 409, True)
             yield
+
+    def _require_open(self):
+        if self._stopping:
+            raise ApiError('memory_stopping', 'Learner memory is closing; retry after reopening the profile', 409, True)
 
     @contextmanager
     def recovery_guard(self):
         # Claim/pause bookkeeping is brief. Do not hold a thread lock across
         # remote inference or block the event loop during a ZIP operation.
         with self._capture_state:
-            if self._recovery_paused or self._active_runs:
-                raise ApiError('recovery_busy', 'Finish or cancel active learner-memory capture before backup or restore', 409, True)
+            if (self._recovery_paused or self._active_runs or self._threads or self._processors
+                    or (self._stopping and not self._closed)):
+                raise ApiError('recovery_busy', 'Wait for learner-memory capture and cleanup before backup or restore', 409, True)
             self._recovery_paused = True
         try:
             with self._lock:
@@ -166,19 +178,63 @@ class MemoryService:
             embedding = self._get_embedding()
             engine = self.index_factory(self.services, path, embedding, transient=True)
             binding = {'services': self.services, 'loop': loop, 'scope': material['scope'],
-                       'run_id': job['id'], 'current': lambda: self.repository.current(job)}
+                       'run_id': job['id'], 'current': lambda: self._capture_current(job)}
             return engine.extract(material['text'], binding)
         finally:
             if engine:
                 engine.close()
             self._remove(path)
 
+    def _capture_current(self, job):
+        with self._capture_state:
+            admitted = not self._stopping and job['id'] in self._active_runs
+        return admitted and self.repository.current(job)
+
+    async def _in_thread(self, function, *args):
+        # A coroutine's cancellation is not executor-thread settlement. The
+        # lease is released by the thread only after the function's finalizers.
+        lease = Future()
+        lease.set_running_or_notify_cancel()
+        with self._capture_state:
+            self._threads.add(lease)
+
+        def settled():
+            with self._capture_state:
+                lease.set_result(None)
+                self._threads.discard(lease)
+
+        def run():
+            try:
+                return function(*args)
+            finally:
+                settled()
+
+        try:
+            work = asyncio.get_running_loop().run_in_executor(None, copy_context().run, run)
+        except BaseException:
+            settled()
+            raise
+        # Observe late errors even when the original caller has been cancelled.
+        work.add_done_callback(lambda done: None if done.cancelled() else done.exception())
+        return await asyncio.shield(work)
+
     async def process_pending(self, *, retry=False):
+        with self._capture_state:
+            self._require_open()
+            owner = asyncio.current_task()
+            self._processors.add(owner)
+        try:
+            return await self._process_pending(retry=retry)
+        finally:
+            with self._capture_state:
+                self._processors.discard(owner)
+
+    async def _process_pending(self, *, retry):
         if self._loop is None:
             self._loop = asyncio.get_running_loop()
         async with self._process_lock:
             with self._capture_state:
-                if self._recovery_paused:
+                if self._recovery_paused or self._threads:
                     return {'processed': 0}
                 if retry:
                     self.repository.retry()
@@ -202,7 +258,7 @@ class MemoryService:
                     # Structured assessment/interest records need no generated
                     # claim. General points use real Mem0 extraction through F0.
                     if material['infer']:
-                        texts = await asyncio.to_thread(self._extract, job, material, asyncio.get_running_loop())
+                        texts = await self._in_thread(self._extract, job, material, asyncio.get_running_loop())
                     else:
                         texts = [material['text']]
                     if self.repository.commit_capture(job, material, texts):
@@ -211,6 +267,8 @@ class MemoryService:
                     # A user Stop is already explicit in the canonical outbox.
                     # Shutdown leaves current work recoverable on restart; a
                     # crossed boundary retains its distinct cancellation reason.
+                    with self._capture_state:
+                        self._active_runs.discard(job['id'])
                     self.repository.cancel_stale(job)
                     provider = self.services.registry.get('provider')
                     if provider:
@@ -228,13 +286,14 @@ class MemoryService:
             state = self.db.fetch_one('SELECT state FROM memory_index_state WHERE singleton=1')['state']
             if state in ('dirty', 'empty') or retry:
                 try:
-                    await asyncio.to_thread(self.reindex)
+                    await self._in_thread(self.reindex)
                 except ApiError:
                     pass  # Canonical captures remain available; retry repairs the derivative.
             return {'processed': processed}
 
     def reindex(self):
         with self._lock:
+            self._require_open()
             old = self.db.fetch_one('SELECT * FROM memory_index_state WHERE singleton=1')
             generation, engine = durable_id('generation'), None
             path = self.root / generation
@@ -281,6 +340,7 @@ class MemoryService:
     def retrieve(self, query, *, scope: ContextScope, limit=10, budget_chars=4000, topic_id=None):
         require_eligible(scope)
         with self._lock:
+            self._require_open()
             state = self.db.fetch_one('SELECT * FROM memory_index_state WHERE singleton=1')
             if state['state'] != 'ready' or self._engine is None:
                 self.reindex()
@@ -325,6 +385,7 @@ class MemoryService:
                 'pending_jobs': pending, 'producer': 'mem0-oss', 'automatic_capture': True}
 
     async def start(self):
+        self._require_open()
         self._loop = asyncio.get_running_loop()
         self._worker = asyncio.create_task(self._run(), name='renulus-memory-outbox')
 
@@ -343,14 +404,51 @@ class MemoryService:
             except TimeoutError:
                 pass
 
-    async def close(self):
-        self._stopping = True
-        if self._worker:
-            self._worker.cancel()
+    async def shutdown(self):
+        """Application teardown retains the live loop until its drain settles."""
+        while True:
             try:
-                await self._worker
-            except asyncio.CancelledError:
-                pass
+                await self.close()
+                return
+            except ApiError as error:
+                if error.code != 'memory_close_timeout':
+                    raise
+                # A bounded observation expired, not the work. Do not unwind
+                # lifespan into provider/IPC teardown while a worker needs it.
+
+    async def close(self, *, timeout=5.0):
+        """Stop admission and await settlement; timeout never releases ownership.
+
+        Keep the original event loop/provider reply path alive after a timeout.
+        Another close call observes the same drain; it does not restart work.
+        """
+        with self._capture_state:
+            self._stopping = True
+            if self._close_task is None:
+                self._close_task = asyncio.create_task(self._close(), name='renulus-memory-drain')
+        done, _ = await asyncio.wait({self._close_task}, timeout=timeout)
+        if not done:
+            raise ApiError('memory_close_timeout',
+                'Learner-memory cleanup is still running. Keep this profile open and retry shutdown',
+                503, True) from None
+        self._close_task.result()
+
+    async def _close(self):
+        with self._capture_state:
+            owners = self._processors | ({self._worker} if self._worker else set())
+        for owner in owners:
+            owner.cancel()
+        if owners:
+            await asyncio.gather(*owners, return_exceptions=True)
+        with self._capture_state:
+            threads = tuple(self._threads)
+        if threads:
+            await asyncio.gather(*(asyncio.wrap_future(lease) for lease in threads))
+        await self._in_thread(self._release_engines)
+        with self._capture_state:
+            self._closed = True
+
+    def _release_engines(self):
         with self._lock:
             if self._engine:
                 self._engine.close()
