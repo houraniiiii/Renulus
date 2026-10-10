@@ -1,21 +1,26 @@
 # Parallel implementation and worktrees
 
-Original baseline 2026-10-04; active lanes, worktrees and handoffs are tracked in
-GitHub issues and `../implementation/EXECUTION.md`. Sequencing below is flexible
-when actual integration evidence changes a dependency.
+For the selected Design C replacement, the [C spec](DESIGN_C_IMPLEMENTATION_SPEC.md)
+owns tickets DC01–DC21, dependencies and the five delivery waves. Its ticket
+dependencies govern completion even when contract-based work starts earlier.
+Track active owners, worktrees and handoffs using those IDs in linked issues and
+the current section of [the execution record](../implementation/EXECUTION.md).
+Start workers from the same committed documentation/contracts baseline.
 **Every branch contributes real product behaviour.** Parallel mock screens do
 not establish parallel progress if their contracts, state and integrations
 cannot work together.
 
-[Implementation stages](IMPLEMENTATION_PLAN.md) define delivery order.
+[Implementation stages](IMPLEMENTATION_PLAN.md) retain the October 4 foundation
+plan; their older sequence does not replace the C spec's delivery order.
 [Architecture](ARCHITECTURE.md) defines authoritative module/path ownership.
 Use that ownership table when assigning work; the exploratory research note's
 alternative paths are not a second folder structure.
 
-## Dependency waves for implementation
+## Historical foundation waves — October 4
 
-These development waves are separate from the subagent review waves used to
-write this plan.
+These waves describe the original foundation build. Their case non-persistence
+default is superseded by the later saved-conversation decision. For new C work,
+use the C spec's waves and retention contracts; do not restart these old stages.
 
 | Wave | Work allowed in parallel | Must already be stable | Integration result |
 | --- | --- | --- | --- |
@@ -42,7 +47,7 @@ Source/version/scope contracts come before either index is activated.
 ## Branch, file and state isolation
 
 - Use one short-lived branch/worktree per owned slice, for example
-  feature/library-ingest in a sibling Renulus-wt-library directory. Keep the
+  `codex/design-c-readers` in a bounded worktree under `C:/Renulus/dev/`. Keep the
   active Renulus workspace intact. Create branches from an agreed integration
   commit once planning changes are committed through the normal handoff.
 - Assign one owner to F0 and each M1–M8 module. Workers edit only their owned

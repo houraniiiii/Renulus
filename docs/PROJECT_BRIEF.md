@@ -2,6 +2,9 @@
 
 Confirmed direction updated on 2026-10-04 from the
 [user's answers in rounds 1–3 and subsequent stack approval](planning/2026-10-04-user-answers.md).
+The October 9–10 decisions add saved conversations by default and select Design C
+as the UI replacement. The [consolidated C spec](planning/DESIGN_C_IMPLEMENTATION_SPEC.md)
+governs this migration; the status section below describes the existing Flow app.
 
 Renulus is an independent open-source Windows application for nephrologists
 practising in the EU. Its central job is to support education and learning
@@ -25,15 +28,18 @@ guidelines and selected important research.
 Chat/Explain and Test are separate modes. A reviewed question bank supports
 scored assessment; generated questions serve practice. Automatically retain
 useful learning information without redundant records, with inspection and
-editing. Raw daily-practice cases and attachments persist only after explicit
-Save. Uploaded study documents can form a reusable personal library with
-passage/page citations.
+editing. The target behavior saves chats and context, including case discussions,
+by default, with Archive and optional temporary conversations. Existing case
+persistence still needs that migration. Uploaded study documents form a reusable
+personal library with passage/page citations.
 
 Explain answers directly by default, with optional guided teaching. Offer an
 adaptive study plan while preserving free exploration and manual changes.
 Automatically retrieve reliable evidence when needed and show sources, dates
-and retrieval failures. The home presents Ask, Resume, suggested review and
-relevant updates, with easy access to topics and Test.
+and retrieval failures. Design C new chat uses a greeting, a simple composer and
+Explain a topic / Discuss a case / Quick practice actions with daily personalised
+suggestions. Projects/chats and global destinations provide access to saved work,
+Library, Tests and Updates. The C spec defines the connected states and defaults.
 
 English is the first product language. Other EU-relevant languages are possible
 later. Personal Windows computers are the delivery target. Model and tool configuration
@@ -94,6 +100,9 @@ teal treatment. The character is modern medical: calm, precise and approachable,
 with a subtle abstract renal reference. See [the brand record](../assets/brand/README.md).
 
 Use Figma for the design process, informed by Impeccable and Interface Design.
+The selected Design C puts projects/chats and global destinations on the left,
+conversation or the chosen destination in the centre, and an optional adjustable
+file/content workspace on the right. Apply the later copy and Tests decisions.
 The user and assistant lead development, review and validation. Practical checks
 of sources, question keys, learner journeys and software behaviour should guide
 acceptance; an external review panel is not a prerequisite for starting work.

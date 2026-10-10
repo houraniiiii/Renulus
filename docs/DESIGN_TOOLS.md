@@ -1,6 +1,23 @@
 # Renulus design tools
 
-## Planning update — 2026-10-04
+## Current design work — 2026-10-10
+
+Design C is the selected replacement. Its [implementation spec](planning/DESIGN_C_IMPLEMENTATION_SPEC.md)
+indexes the editable Figma screens, known corrections and acceptance work.
+October 9 prototype editing/validation and the October 10 source inspection
+verified Figma file access during those passes; see the
+[Tests design evidence](planning/2026-10-09-design-c-tests.md#final-prototype-validation)
+and the spec's review record. That dated evidence supersedes the old statement
+that file access had not been verified.
+
+Check callable tools and file access in each new session. Past access does not
+guarantee a current connection. Use the installed Figma skills for the applicable
+read/write operation, and Impeccable/Interface Design for coherent implementation.
+PRODUCT.md records current product direction; DESIGN.md describes the implemented
+visual foundation and points to C's target rules. Keep target and shipped status
+distinct while the migration is in progress.
+
+## Historical planning update — 2026-10-04
 
 The preservation audit below remains historical evidence. Product planning is
 now active. Impeccable and Interface Design are available locally, and official

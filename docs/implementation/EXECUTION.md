@@ -1,5 +1,23 @@
 # Renulus implementation run
 
+## Current work — Design C, October 10
+
+The [Design C implementation spec](../planning/DESIGN_C_IMPLEMENTATION_SPEC.md)
+is the current UI replacement backlog and delivery sequence. Tickets DC01–DC21
+are not started at this documentation handoff. Track execution against those
+IDs, with one owner for each reserved path and a shared committed baseline.
+Use [parallel-work rules](../planning/PARALLEL_WORK.md) and record prerequisite
+commits, integrated evidence and remaining limits in the ticket handoff or its
+linked issue. Update this current section when execution starts.
+
+The entries below preserve earlier implementation evidence. Their Flow selection,
+branches, paths, issue status, time windows and heartbeat instructions describe
+those dated runs; they are not assignments or scheduling instructions for C.
+The current installed baseline and canonical paths are in
+[the workspace guide](../WORKSPACE.md) and [project brief](../PROJECT_BRIEF.md).
+
+## Historical implementation record — October 4–6
+
 Final local handover October6: [the delivered app](DELIVERY_20261006.md) follows
 the owner's explicit acceptance of the live blocker. The final ordinary
 queue02/03 proof passed its bounded parent review: concurrent Library controls,

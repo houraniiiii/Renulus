@@ -42,7 +42,7 @@ See [the relocation and deletion report](implementation/storage-cleanup-20261008
 | `docs/research/` | Bounded, dated investigations supporting those decisions |
 | `assets/brand/` | The selected Renulus logo and icon exports, with provenance |
 | `references/` | A small, dated reference shelf, including inherited taxonomy labels |
-| `apps/desktop/` | Flow React renderer, Electron lifecycle and Windows packaging |
+| `apps/desktop/` | React renderer (currently Flow; Design C migration target), Electron lifecycle and Windows packaging |
 | `runtime/renulus/` | Controlled product backend, canonical services and engine adapters |
 | `upstream/hermes/` | Pinned attributed runtime foundation and patch provenance |
 | `content/` | Versioned original learning packs and scoped content licence |
@@ -51,15 +51,22 @@ See [the relocation and deletion report](implementation/storage-cleanup-20261008
 | `.agents/`, `.claude/`, `.codex/` | Portable design skills and reviewed project configuration |
 | `.local/` | Ignored machine-specific pointers, per-profile development state, public-source research caches and verification evidence |
 
-The recorded rounds 1–3 settle the product direction, interaction rules and
+The [Design C spec](planning/DESIGN_C_IMPLEMENTATION_SPEC.md) is the current
+replacement plan, with tickets DC01–DC21 and parallel delivery waves. Later
+confirmed decisions govern layout and conversation retention. Start each lane
+from the shared committed baseline and track work with those ticket IDs.
+
+The recorded rounds 1–3 establish the original product foundation and
 subscription/model constraints. The implementation baseline adopts Hermes's
 Python runtime and suitable existing Electron/React desktop foundation. The
 user subsequently approved Mem0 OSS, Docling/HybridChunker, FastEmbed and
 LanceDB OSS behind Hermes, with canonical SQLite records. Their selected roles
 and remaining checks are recorded in the
 [stack evidence](research/2026-10-04-starting-stack-evidence.md). The
-[stage plan](planning/IMPLEMENTATION_PLAN.md), [module ownership](planning/ARCHITECTURE.md)
-and [worktree rules](planning/PARALLEL_WORK.md) govern future implementation.
+[stage plan](planning/IMPLEMENTATION_PLAN.md) retains the original foundation
+sequence. [Module ownership](planning/ARCHITECTURE.md) and
+[worktree rules](planning/PARALLEL_WORK.md) apply alongside the C spec; older
+stages do not override its dependencies or newer confirmed decisions.
 Authentication, native packaging and behaviour require real verification in
 those stages. Hermes and the selected stack are now adopted with pinned
 dependencies and helper artifacts. Module evidence in `docs/implementation/`

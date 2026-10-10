@@ -1,5 +1,10 @@
 # Renulus decision queue
 
+October 10: Design C is selected. Its current engineering defaults, open scope
+boundaries and build tickets live in the [consolidated C spec](DESIGN_C_IMPLEMENTATION_SPEC.md).
+Later saved-by-default conversation decisions supersede the dated explicit-Save
+default below. This file retains the earlier foundation decisions.
+
 Updated 2026-10-04 after rounds 1–3, upstream research, adversarial review and
 explicit approval of the starting stack.
 This file contains remaining decisions; it is not a competing architecture.

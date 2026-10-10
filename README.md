@@ -8,8 +8,11 @@ It uses the selected existing models through Codex and/or OpenCode Go
 subscriptions, without retraining.
 The project owner will not host a service or model inference.
 
-This repository contains the Windows app, selected Flow interface, original
+This repository contains the Windows app, current Flow interface, original
 teaching packs and dated evidence. The accepted integration is merged into `main`.
+On October 10 the owner selected Design C as its replacement; the
+[Design C implementation spec](docs/planning/DESIGN_C_IMPLEMENTATION_SPEC.md)
+contains the consolidated build tickets and acceptance plan.
 The canonical checkout is `C:/Renulus/dev/repo`; the normal shortcut selects the
 unchanged validated **f1c49444** app at `C:/Renulus/app`. The learning/account
 profile is preserved at `C:/Renulus/data/learning`; normal startup/reopen and
@@ -36,9 +39,10 @@ explicit reference launcher and is separate from Renulus implementation evidence
 - [Run the app](docs/implementation/RUNNING.md) — Windows delivery and contributor startup.
 - [Control the development app](docs/implementation/APP_CONTROL.md) — hidden app-scoped MCP/Playwright input and screenshots while the owner uses this PC.
 - [Use Renulus](docs/implementation/USING_RENULUS.md) — subscriptions, study, Library, Cases, Memory and recovery.
-- [Implementation run](docs/implementation/EXECUTION.md) — live queue, ownership and evidence rules.
+- [Implementation run](docs/implementation/EXECUTION.md) — current C coordination and dated implementation evidence.
 - [Decisions](docs/DECISIONS.md) — confirmed choices and unresolved work.
-- [Implementation stages](docs/planning/IMPLEMENTATION_PLAN.md) — working outcomes and acceptance gates from foundation to full product.
+- [Design C implementation spec](docs/planning/DESIGN_C_IMPLEMENTATION_SPEC.md) — current UI replacement target, ordered tickets, backend gaps and acceptance.
+- [Implementation stages](docs/planning/IMPLEMENTATION_PLAN.md) — original foundation plan; the C spec governs the UI replacement.
 - [Architecture](docs/planning/ARCHITECTURE.md) — module ownership, records and interfaces.
 - [Parallel work](docs/planning/PARALLEL_WORK.md) — dependencies, worktrees and integration rules.
 - [User answers](docs/planning/2026-10-04-user-answers.md) — confirmed product, stack, source-acquisition and optional retrieval-key choices.

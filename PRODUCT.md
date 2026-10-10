@@ -2,8 +2,12 @@
 
 <!-- impeccable:product-schema 1 -->
 
-Confirmed context for the authorised implementation on October 4, 2026.
-The project brief and decisions remain the product authority.
+Confirmed product direction updated October 10, 2026. The
+[project brief](docs/PROJECT_BRIEF.md) and [decisions](docs/DECISIONS.md) record
+the product authority. The [Design C spec](docs/planning/DESIGN_C_IMPLEMENTATION_SPEC.md)
+defines the replacement UI, connected behaviour and acceptance. Its labelled
+planning defaults remain adaptable. The installed app still uses Flow; selected
+target behaviour below is not a claim that the migration is implemented.
 
 ## Platform
 
@@ -14,7 +18,7 @@ in a browser during development. Native lifecycle is owned by Electron.
 
 ## Stack
 
-User selected React/TypeScript, Flow, the Hermes foundation, and one local
+User selected React/TypeScript, the Hermes foundation, and one local
 FastAPI process. Reuse appropriate upstream Electron lifecycle functions.
 Mem0 OSS, Docling/HybridChunker, FastEmbed and LanceDB OSS are approved backend
 components; feature and runtime lanes own their implementation.
@@ -31,9 +35,21 @@ reviewed assessment, generated practice, sources, retained learning and updates.
 
 ## Operating Context
 
-English first. Separate Learn and Test; reviewed-bank assessment and generated
-practice have different roles. Home offers Ask, Resume, review and updates
-when real records exist. A temporary case stays volatile until explicit Save.
+English first. Design C brings explanations and case discussion into chats,
+organised in projects with shared documents and study goals. Global destinations,
+including Library, Tests and Updates, sit above projects/chats on the left.
+An optional resizable workspace opens files and contextual material beside chat.
+
+New chat uses the chosen doctor name in a greeting, the composer prompt
+"How can I help you today", Attach, and Explain a topic / Discuss a case /
+Quick practice actions. Each action reveals five daily personalised suggestions.
+The spec owns their generation, cache, failure and connection behaviour.
+
+Chats and context, including case discussions, save by default. Archive and
+optional temporary conversations remain distinct actions. Explicit temporary
+content follows the spec's retention rules. Study and Test have distinct help,
+submission and timing behaviour; reviewed-bank scores remain separate from
+generated/imported practice. These changes require the C implementation tickets.
 
 ## Capabilities and Constraints
 
@@ -47,14 +63,17 @@ established by the shell. Feature readiness follows actual integrated APIs.
 ## Brand Commitments
 
 Renulus, selected C — Renal flow mark, calm precise approachable medical voice.
-The user selected Flow and authorised reuse of its actual code and assets.
+Design C is the selected interface. Reuse the brand assets, Source Sans 3,
+semantic teal tokens and suitable existing components as its coherent foundation.
 
 ## Evidence on Hand
 
-Flow source and screenshots in the read-only UX worktrees; selected brand
-exports; approved plans; attributed Hermes desktop source; implementation
-evidence in docs/implementation/desktop-evidence.md. Prototype data is not
-production content, learner progress or source verification.
+The editable C Figma page and screen/state links are indexed in the C spec.
+Current Flow code, selected brand exports, attributed Hermes source and dated
+[desktop evidence](docs/implementation/desktop-evidence.md) establish the
+implemented baseline. The spec's source audit identifies reuse and missing
+capabilities. Prototype data is not production content, learner progress or
+source verification.
 
 ## Product Principles
 

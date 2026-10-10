@@ -1,38 +1,87 @@
-# Renulus — Flow
+# Renulus design
 
-The user selected Flow on October 4, 2026. This records its existing visual
-authority, ported from the UX exploration; it does not introduce another world.
+## Authority and implementation status
 
-Flow begins with one question in an open learning area, served by a stable
-212px left rail and a quiet continuation area. The renderer uses Source Sans 3
-bundled locally, the unchanged C — Renal flow mark, and restrained petrol teal.
-The shell removes prototype switches, invented progress and synthetic results.
+Design C is the selected replacement as of October 10, 2026. Follow the
+[C implementation spec](docs/planning/DESIGN_C_IMPLEMENTATION_SPEC.md) for the
+screen map, later user decisions, interactions and acceptance. DC01 reconciles
+the editable Figma references before implementation uses them as visual targets.
 
-The domain is nephrology learning: filtration, renal flow, source passages,
-clinical reasoning, teaching, revision and the ESENeph track. The colour world
-is warm reading paper, white clinical surfaces, pale sage wayfinding, petrol
-teal instruments and dark green ink. Flow's signature appears in the renal
-mark, active destination, primary action, focused input and source/action links.
-The selected layout leads with a question rather than a grid of dashboard metrics.
+The app currently implements Flow, selected on October 4. The foundations below
+describe its existing code and reusable visual language. Its layout and retention
+behaviour are baseline evidence, not requirements to preserve where C supersedes
+them. Update this implementation record from actual C components as they land;
+do not document a prototype as a shipped capability.
 
-Tokens are in apps/desktop/src/ui/tokens.css. Paper #faf9f6; surface #ffffff;
-rail #eff2ec; renal teal #17675f; hover #11564f; soft teal #e9f1ed; primary ink
-#243b34; strong ink #18392f; secondary #50635c; muted #53655b; line #dce3db.
-Warning and error colours have independent semantic meanings. Use borders for
-quiet separation; shadows only for overlays. A 4px spacing base governs 8, 12,
-16, 24, 32 and 40px rhythm. Inputs are inset into a quiet surface.
+## Character
 
-Typography: body 16px/1.5, metadata 13px, controls 15px/600, section titles
-21px/600, page titles 34px/600 with -0.028em tracking. Reading measure is at most
-72ch. Navigation and primary controls have 44px minimum targets. Panel radius
-is 12px; compact controls 7px. Text hierarchy uses size, weight and colour.
+Renulus is calm, precise and approachable. Nephrology learning, clinical
+reasoning, source passages and ESENeph revision supply the product context.
+Keep the C — Renal flow mark, warm reading surfaces and restrained petrol teal.
+The selected C direction prioritises the conversation and the material being read.
+Prototype names, suggestions, progress and results must become real-data states.
 
-Reusable primitives are exported by src/ui/index.ts. Use native buttons,
-inputs, selects and dialogs. Focus has a 2px teal outline with 3px offset;
-reduced motion removes movement. Loading skeletons preserve composition;
-empty states explain a real next action; errors retain work and offer recovery.
+## Colors
 
-At narrower widths the rail becomes an inline expandable navigation region,
-columns stack and controls wrap. Keyboard navigation uses Ctrl+K to find a
-destination, Alt+1–8 for routes, Escape for the destination dialog. Temporary
-case scope remains visible during handoffs; no payload enters URL/history.
+Implemented semantic tokens live in [tokens.css](apps/desktop/src/ui/tokens.css).
+Reuse their meanings while reconciling C; coordinate shared changes through
+the integration owner.
+
+| Role | Existing value |
+| --- | --- |
+| Paper / surface / rail | `#faf9f6` / `#ffffff` / `#eff2ec` |
+| Renal teal / hover / soft | `#17675f` / `#11564f` / `#e9f1ed` |
+| Primary / strong ink | `#243b34` / `#18392f` |
+| Secondary / muted ink | `#50635c` / `#53655b` |
+| Divider | `#dce3db` |
+
+Warning and error colours retain independent semantic meanings. Use borders
+for quiet separation and shadows for overlays. Teal identifies active navigation,
+primary actions, focus and source/action links.
+
+## Typography
+
+Source Sans 3 is bundled locally. The implemented baseline uses body 16px/1.5,
+metadata 13px, controls 15px/600, section titles 21px/600 and page titles
+34px/600 with -0.028em tracking. Reading measure is at most 72ch. Establish
+hierarchy through size, weight and colour; verify C against its real content
+and zoomed layouts rather than copying a fixed screenshot width.
+
+## Spacing and shape
+
+The existing 4px base supplies 8, 12, 16, 24, 32 and 40px spacing. Panel radius
+is 12px and compact controls 7px. Navigation and primary controls have 44px
+minimum targets. Inputs sit within quiet surfaces.
+
+## Components
+
+Reuse the primitives exported by [ui/index.tsx](apps/desktop/src/ui/index.tsx)
+and their [styles](apps/desktop/src/ui/styles.css). Prefer native buttons,
+inputs, selects and dialogs. Shared token/component changes have one owner.
+Loading states preserve composition; empty states offer a real next action;
+errors retain work and provide recovery. Connect components to canonical state
+and real operations before treating a screen as complete.
+
+## Layout and responsive behaviour
+
+Flow's implemented baseline has a 212px left rail, an open learning area and
+quiet continuation content. Its narrow layout expands navigation inline and
+stacks columns. These describe the existing shell.
+
+The C target has global destinations and projects/chats on the left, a central
+conversation or destination, and an optional adjustable workspace on the right.
+DC01/DC03/DC07 define and verify its dimensions, collapsed states, pane-aware
+layouts and resize behaviour. The spec distinguishes observed Figma dimensions
+from proposed implementation defaults; neither the old rail width nor the
+prototype's 360px workspace is a fixed C requirement.
+
+## Accessibility and state
+
+The existing focus outline is 2px teal with a 3px offset; reduced motion removes
+movement. Flow currently uses Ctrl+K for destination search, Alt+1–8 for routes
+and Escape for the destination dialog. C must provide coherent keyboard and
+focus behaviour across navigation, chat, readers and assessment, with the
+spec's narrow-window, zoom and high-contrast checks.
+
+Conversation scope must be clear. Saved-by-default behaviour and optional
+temporary mode follow the C spec; payloads do not belong in URL/history.

@@ -1,5 +1,10 @@
 # Renulus implementation architecture
 
+The [October 10 Design C spec](DESIGN_C_IMPLEMENTATION_SPEC.md) defines current
+migration contracts and overrides older layout/retention assumptions below.
+Preserve this document's module ownership and canonical-store boundaries; the C
+work extends them with projects, content references and saved-test versions.
+
 Planning baseline · 2026-10-04. **This is a real product.** The interfaces below
 must lead to working Windows flows, real data and real integrations. No
 application code is implemented by this document. Confirmed product choices

@@ -39,10 +39,16 @@ work. Keep edits scoped to the user's current request.
   corrigenda, chapter replacements, retractions and access-specific user imports.
   References are dated evidence and candidates, not product requirements or
   claims of implemented functionality, educational efficacy or clinical accuracy.
-- Round 3 recommendations are accepted. Follow `docs/planning/IMPLEMENTATION_PLAN.md`,
-  `ARCHITECTURE.md` and `PARALLEL_WORK.md` in that directory for stages, module
-  ownership and worktree boundaries. Every stage builds working product flows;
-  prototypes inform decisions but do not establish implementation completion.
+- Design C is the selected replacement for the current Flow UI. For this
+  migration, read `docs/planning/DESIGN_C_IMPLEMENTATION_SPEC.md`, including the
+  relevant ticket, dependencies and shared behaviour rules. Confirmed user
+  decisions govern; labelled planning defaults remain adaptable with a recorded
+  rationale. Figma supplies visual references, not proof of implemented capability.
+- Follow the C spec's delivery waves and `docs/planning/ARCHITECTURE.md` and
+  `docs/planning/PARALLEL_WORK.md` for module ownership and worktree boundaries.
+  The older Round 3 implementation plan retains foundation guidance but does not
+  override later UI or retention decisions. Use `codex/` branches from the shared
+  committed baseline. Every feature must deliver a connected working flow.
 - Hermes is the confirmed fork foundation. Reuse its runtime and suitable
   existing Electron/React desktop components before building replacements.
   Preserve the upstream licence and patch provenance. Supermemory was evaluated

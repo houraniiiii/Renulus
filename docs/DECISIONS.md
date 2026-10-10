@@ -1,6 +1,6 @@
 # Renulus decisions
 
-Updated on 2026-10-07. The [recorded user answers](planning/2026-10-04-user-answers.md)
+Updated on 2026-10-10. The [recorded user answers](planning/2026-10-04-user-answers.md)
 are the evidence for the new product decisions. Earlier assistant suggestions
 remain proposals unless accepted here.
 
@@ -20,8 +20,10 @@ remain proposals unless accepted here.
 | Modes | Separate Chat/Explain and Test. |
 | Questions | Reviewed bank for scored assessment; generated questions for practice. |
 | Memory | Automatically retain useful deduplicated learning points, progress and preferences; inspect/edit/delete controls are required. |
-| Case retention | Raw daily-practice cases and their attachments are retained only after explicit Save. |
+| Conversation retention | On October 9, the owner requested saved chats and context by default, an Archive option, and optional temporary conversations. This supersedes temporary-by-default case discussion context. The changed default and archiving remain implementation work; see the [dated preference](planning/2026-10-04-user-answers.md#october-9-conversation-retention-preference). |
 | Personal library | Reusable uploaded study material, organised by topic with passage/page citations; separate from one-off cases. |
+| Workspace sizing | On October 10, the owner confirmed an adjustable Workspace width, with a default wider than the current Design C prototype. ChatGPT/Codex, T3 Code and Hermes desktop layouts are interaction references. Exact widths and resize limits remain engineering choices; see the [dated Workspace decisions](planning/2026-10-04-user-answers.md#october-10-workspace-sizing-and-file-readers). |
+| Workspace file readers | Render and read PDF, DOCX, CSV, XLSX, Markdown, HTML, XML and images within the Workspace. These are confirmed format requirements, not evidence of implemented preview or ingestion support. Additional formats remain unconfirmed. |
 | Teaching behaviour | Direct Explain by default, with optional guided teaching and deeper explanations. |
 | Study planning | Adaptive plan from goals, time, optional exam date and observed mistakes; free exploration and manual changes remain available. |
 | Source lookup | Automatically look up selected reliable sources when evidence/freshness matters, with citations, dates and visible retrieval failure. |
@@ -29,7 +31,8 @@ remain proposals unless accepted here.
 | Source currency | Use the latest published final guidance for its scope, with corrigenda and chapter replacements. Drafts, superseded/expired guidance, retractions and unverified-current material must have distinct states. |
 | ERA acquisition | The owner reports follow-up calls confirming ERA's willingness to support at least user-responsible downloading. Plan for doctors to obtain authorised ERA material through their own access and import it locally; record the supplied edition and applicable use scope. |
 | Optional retrieval keys | Allow user-supplied API keys for web search, literature search and related retrieval tools. These are optional, explicitly enabled tool connections, including paid services where selected by the user; they do not change the subscription/model allowlist or create a paid generation fallback. |
-| Home | Ask, Resume, suggested review and relevant updates; quick access to all topics and Test. |
+| New chat | The October 9 C decisions replace introductory filler with a chosen-name greeting and "How can I help you today". Keep Attach and three actions (Explain a topic, Discuss a case, Quick practice), each revealing five daily personalised suggestions; remove Auto and the redundant navigation/follow-up copy. Details and adaptable interactions are in the C spec. |
+| Interface target | On October 10, the owner selected Design C to replace the current Flow UI, incorporating the later navigation, chat, retention, Tests and Workspace decisions. The [Design C implementation spec](planning/DESIGN_C_IMPLEMENTATION_SPEC.md) is the consolidated ticket plan; its labelled planning defaults remain adaptable. |
 | Daily practice | Interactive educational discussion of daily practice cases is in scope. |
 | Input methods | Text, summaries, PDFs, images and other useful methods; typed-only scope is not accepted. |
 | Updates | Guidelines and selected important research. |
@@ -60,8 +63,8 @@ remain proposals unless accepted here.
 | Review | User and assistant lead review and validation using concrete evidence; no external-panel prerequisite. |
 | Brand | C — Renal flow, with the selected teal treatment; modern medical, calm, precise and approachable, with a subtle renal reference. |
 | Separation | Preserve the inherited clinical MVP and batch/research project outside the active repository. The normal desktop launcher opens Renulus; the optional legacy reference launcher stays separate. |
-| Current scope | Complete the backend, Flow frontend and connected Windows app in bounded parallel lanes and worktrees. GitHub issues hold the adjustable execution queue and evidence. |
-| Heartbeat | Exactly one implementation heartbeat every 20 minutes, per the October 5 owner instruction; earlier 15- and 30-minute settings remain historical. |
+| Current scope | Prepare and deliver the Design C replacement of the existing Flow interface, reusing working backend and Windows capabilities. The October 10 handoff contains the reviewed spec, aligned repo guidance and a committed documentation baseline. Implementation follows as a separate execution task using its dependencies and acceptance evidence. |
+| Historical implementation heartbeat | The October 5 owner instruction selected one 20-minute heartbeat for that implementation run; its 15- and 30-minute predecessors are historical. This record does not create or reactivate an automation for the C handoff. |
 
 ## Unresolved work
 
@@ -94,6 +97,13 @@ establish functioning integrations. Follow the [stage plan](planning/IMPLEMENTAT
 
 Earlier module proposals, UI studies and clinical MVP choices do not become
 current requirements through preservation.
+
+The October 10 Workspace requirements leave the exact default width, minimum
+and maximum widths, behaviour on smaller windows and persistence of the user's
+chosen width unresolved. Specify and verify the reader for each confirmed file
+format, including supported image extensions. Visual preview and content
+extraction for model use need separate implementation evidence; recording a
+format does not establish either capability.
 
 Licence selection is complete. Add licence files and scope notices with source
 and content adoption before distribution. Preserved development tooling

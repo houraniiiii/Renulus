@@ -1,5 +1,11 @@
 # Renulus staged implementation plan
 
+For the October 10 Design C replacement, use the
+[consolidated C spec and tickets](DESIGN_C_IMPLEMENTATION_SPEC.md). It supersedes
+the older UI layout and temporary-by-default behavior below. The selected stack,
+module reuse and delivery rules continue to apply; this remains the earlier
+foundation/delivery baseline.
+
 Original baseline 2026-10-04; implementation is now authorised and active.
 The owner updated Windows acceptance on October 5, 2026: deliver an unsigned
 build and validate a fresh isolated installation on the current PC. Signing and

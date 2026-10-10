@@ -371,3 +371,186 @@ practice, automatic Memory, connected evidence/Cases/Updates, required content,
 Windows usability and matching release acceptance are now the active goal.
 Use bounded parallel lanes, integrate their work, keep GitHub current and clean
 completed worktrees after preserving useful evidence.
+
+## October 9 Figma navigation refinement
+
+The owner asked to refine concept C in the existing Renulus Figma file, using
+the supplied ChatGPT, Codex and T3 Code screenshots as layout references.
+This request covers prototype design; it does not authorise app implementation
+or establish a final choice among the three concepts.
+
+Confirmed directions from the prototype discussion:
+
+- Place search and sidebar collapse beside the Renulus name at the top left.
+- Put relevant global destinations, including Library, Test and Updates, above
+  projects and chats in the left navigation.
+- Use the right side as a workspace for files and other useful learning
+  material, rather than a Library/Test navigation bar.
+- A project contains chats, shared documents and study goals; ESENeph
+  preparation is the shared comparison example.
+- Compare the three layouts with the same content. The existing comparison
+  board retains three design columns and nine matching screen rows.
+
+Design proposals built for review, not separately confirmed app requirements:
+
+- An optional workspace with Files, cited Sources, Study notes and project Goals.
+- Full Library and focused Test destinations reached through the left navigation.
+- A More menu for learning memory, study preferences, connections and settings.
+- Global search, source reading beside chat, and collapsed navigation examples.
+
+The editable C page is now **03 · C — Chat + workspace** in Figma file
+`zV8JiWybVHP1UxJtLbZjEt`, page `2:250`. The files-beside-chat example is
+`25:2522`, and the three-column comparison board is `13:23` on page `12:23`.
+The C column was refreshed; its Chat row shows the file workspace open.
+Visual and structural checks establish editable prototype layouts, not working
+app behaviour. Product code, installed builds and learning data are unchanged.
+
+## October 9 C new-chat and conversation simplification
+
+The owner reviewed C and authorised the following prototype changes and their
+implementation planning. This request does not authorise product-code changes.
+
+Confirmed UI decisions:
+
+- Replace the three introductory lines with a greeting using the doctor
+  name chosen by the user. Suggested wording includes a welcome-back greeting;
+  a small set of rotating greetings is acceptable.
+- Use **“How can I help you today”** as the new-chat composer placeholder.
+- Remove the Auto control while there is only one option; retain Attach.
+- Keep **Explain a topic**, **Discuss a case** and **Quick practice**, with
+  five suggestions revealed underneath when an action is selected.
+- Generate those suggestions with the backend model, update them daily and
+  personalise them from usage and learning memory.
+- Remove the tick and **Your learning space** row from C navigation.
+- Remove the redundant **Ask a follow-up** conversation button.
+
+Prototype examples and assistant implementation proposals:
+
+- The greeting **“Welcome back, Dr. Karol”** is an illustrative chosen name.
+  A local greeting rotation and a generic fallback are proposed.
+- The learning actions use compact pills and an expanded list. Selecting a
+  suggestion prefills the composer; Send remains a separate action. Selecting
+  the active category closes the list. These interaction choices are proposals.
+- Conversation composers use **“Message Renulus…”**. The follow-up button
+  is removed throughout the related C examples; Test this topic remains.
+- Auto is hidden consistently across C composers. Shared A/B components are
+  preserved. The three-column comparison retains its nine matching rows.
+- C26–C28 show five sample prompts per category. They are design fixtures,
+  not output from a live personalised backend or evidence of implementation.
+- A chosen-name preference and a daily suggestion generation/cache service
+  require new implementation. Existing model routing, eligible memory and
+  study evidence can support them.
+
+The scoped proposal, source evidence, prototype links and acceptance criteria
+are in [the C new-chat plan](2026-10-09-design-c-new-chat.md).
+
+## October 9 C Tests interaction and collection decisions
+
+The owner accepted the Test recommendation and authorised parallel subagents to
+create, edit and validate Figma prototypes. Product implementation is a later step.
+
+- One Tests collection includes reviewed-bank tests, agent-refined user imports,
+  opt-in overnight personalised tests and chat-created tests. Chat-created tests
+  appear in the right workspace and are saved to the same collection.
+- Separate immutable saved test versions from attempts; preserve prior attempts
+  when editing. Keep origin, quality and reviewed-bank scoring distinct.
+- Study uses explicit Submit answer, locked feedback and Next, with assistance
+  recorded before returning help. Next clears the previous question's help.
+- Test autosaves editable choices until final Submit test. Include navigation,
+  skip/mark for review, final confirmation, results, mistakes and Retake. Help,
+  sources, notes and keys remain unavailable until final submission.
+- Untimed is default; offer configurable timing starting at attempt start. Pause
+  Study/untimed Test. Timed Test keeps running after closure, submits saved
+  answers and blanks at expiry, and reopens results. Persist timing in backend.
+- Offer generated sets of 5/10/20 assembled from validated smaller batches;
+  five is Quick practice. Reviewed-bank count remains 1–50 where content allows.
+- Overnight generation is Off by default, with preferred time/count and one
+  bounded catch-up. Initial scope requires Renulus running; a closed-app Windows
+  worker is separate implementation work.
+- Include Generating/Ready/Needs review, resume, local Question seems wrong,
+  cancellation and recovery. Preserve imported originals and uncertain keys.
+- Generalise unsaved case content into fictional questions before saving a test,
+  or explicitly save the original case first.
+
+Prototype-specific UI choices and backend gaps remain separately labelled in
+[the C Tests plan](2026-10-09-design-c-tests.md).
+The completed Figma work includes 46 editable Test states, 14 passing saved-graph
+checks, and refreshed C Test/Question/Feedback cells in the preserved three-column,
+nine-row comparison. Links, prototype limits and validation are recorded in that
+plan. These are design artifacts; app implementation remains a separate step.
+
+## October 9 conversation retention preference
+
+During the backend-state questions, the owner clarified the required conversation
+behaviour:
+
+- Save chats and their context normally by default, including discussions that
+  currently enter temporary case context.
+- Provide an Archive option so users can keep conversations and their context.
+- Offer temporary conversations as an optional mode, never the default.
+
+This confirmed direction supersedes the earlier temporary-by-default conversation
+behaviour. It is a product requirement, not a claim of implementation. Current
+ordinary study chats persist, while case discussion and its Explain/practice
+handoffs retain their existing temporary/explicit-Save behaviour. Archive controls
+and the changed retention default still need implementation. The owner has not
+specified a conversation branching or subagent execution/storage design.
+
+## October 10 Workspace sizing and file readers
+
+The owner requested that these additional Design C Workspace decisions be
+recorded before implementation. This instruction covers the decision record;
+it does not request product-code or Figma changes.
+
+Confirmed requirements:
+
+- Workspace width must be adjustable, following the interaction direction of
+  the referenced ChatGPT/Codex, T3 Code and Hermes desktop layouts.
+- The default Workspace width must be wider than the current Design C prototype.
+- Workspace must render and read files within the app in these categories:
+  PDF, DOCX, CSV, XLSX, Markdown, HTML, XML and images.
+
+Unresolved implementation choices:
+
+- Exact default width, resize limits and behaviour in smaller windows.
+- Whether the chosen width is remembered across chats or app restarts.
+- Reader behaviour and fidelity for each format, including supported image
+  extensions. Visual preview and extracting content for the assistant are
+  separate capabilities to specify and verify; neither is established by
+  this decision record. File editing was not requested.
+
+The owner invited suggestions about other relevant formats. TXT, PPTX and EPUB
+are assistant suggestions for confirmation, not additions to the confirmed list.
+
+## October 10 Design C selection and implementation spec
+
+The owner selected Design C as the intended replacement for the current app UI,
+incorporating the notes and decisions already established. The immediate request
+is to read the relevant product, design and implementation evidence and create
+one detailed specification consisting of multiple actionable tickets.
+
+- Keep the spec concise, simple and adaptable so agents can make sound
+  implementation choices instead of following an unnecessarily rigid blueprint.
+- Use adversarial subagent reviews and iterate a few times to verify the plan.
+- Preserve the later saved-conversation default, Workspace sizing/file readers,
+  new-chat simplification and Tests decisions when older prototypes differ.
+
+The consolidated [Design C implementation spec](DESIGN_C_IMPLEMENTATION_SPEC.md)
+records source gaps, ticket ownership/dependencies, user outcomes and acceptance.
+Its explicitly labelled planning defaults are assistant proposals; selection of
+C does not retrospectively confirm every detail of an older prototype. The spec
+and its review establish implementation readiness, not a completed app migration.
+
+## October 10 documentation and implementation handoff
+
+After reviewing the repo guidance audit, the owner asked to make the recommended
+documentation changes, commit the work and provide a prompt for a new session
+to implement Design C with parallel lanes. This handoff covers the existing
+spec/decision documents and their instruction alignment. It does not itself
+claim product implementation or authorise incidental deployment/provider usage.
+
+The handoff makes the C spec the current build entry point, refreshes product
+context, structures the implemented design record and separates old execution
+instructions from current work. Parallel implementation should start from the
+committed baseline, retain stable DC ticket IDs and use the spec's dependency,
+ownership and adversarial-review rules. Historical evidence retains its dates.
