@@ -78,6 +78,12 @@ export default function ChatPage(props: ChatPageProps) {
         setText(draft.text || callback.current.prefill || '');setRefs(draft.content_refs);setLoading(false);
         const running=runs.items?.find(run=>run.state==='running');
         if(running){activeRun.current=running.run_id;visibleRun.current=running.run_id;setBusy(true);setRecovering(true);setStatus('Response is running');}
+        else if(runs.items?.[0]&&runs.items[0].state!=='completed'){
+          const latest=await api<ConversationRun>(conversationPath(value)+'/runs/'+encodeURIComponent(runs.items[0].run_id),{signal:controller.signal});
+          if(epoch.current!==version)return;
+          setStatus(latest.state==='cancelled'?'Stopped. Your draft is retained.':'Response did not finish. Your draft is retained.');
+          if(latest.error)setError(new ApiError(latest.error.message,409,latest.error.code,latest.error.retryable));
+        }
         void api<PageResult<ProjectSummary>>('/study/projects?limit=100',{signal:controller.signal}).then(result=>{
           if (epoch.current===version) setProjects(result.items);
         }).catch(()=>{});

@@ -72,4 +72,13 @@ describe('Chat volatile handoffs',()=>{
     view.unmount();
     expect(calls.api.mock.calls.some(([path])=>path.endsWith('/runs/temporary-run/cancel'))).toBe(true);
   });
+
+  it('shows the saved failed outcome with its retained draft after reopening',async()=>{
+    setup();const ordinary=calls.api.getMockImplementation();
+    calls.api.mockImplementation(async(path:string,...args)=>path.endsWith('/runs')?{items:[{run_id:'failed-run',state:'error'}],next_cursor:null}:path.endsWith('/runs/failed-run')?{run_id:'failed-run',state:'error',error:{code:'authentication_required',message:'Connect the approved subscription to continue.',retryable:true}}:ordinary?.(path,...args));
+    render(frame(<Chat identity={chat.identity}/>));
+    expect(await screen.findByText('Connect the approved subscription to continue.')).toBeTruthy();
+    expect((screen.getByLabelText('Message Renulus') as HTMLTextAreaElement).value).toBe('Existing draft');
+    expect(calls.send).not.toHaveBeenCalled();
+  });
 });
