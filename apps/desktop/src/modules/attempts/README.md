@@ -1,0 +1,83 @@
+# Whole attempts integration
+
+The default `AttemptsPage` reads the shell navigation handoff. The named
+`AttemptPage` also mounts directly. Both accept `attemptId`, `versionId`,
+`mode: 'study' | 'test'`, and `timing: {kind:'untimed'} |
+{kind:'timed', duration_seconds:number}`. Optional consumers are
+`onHelp(receipt)`, `onOpenReference(reference, receipt.context)` and
+`onRetake(versionId)`. The shell owns navigation and Workspace mounting.
+
+`attempt_api.create_router(services)` installs `whole_attempts` in the services
+registry and routes under `/assessment`. The shared policy middleware calls
+`whole_attempts.reconcile_all()` before dispatch. A caller already holding the
+canonical transaction can use `reconcile_in(conn)`. The implementation uses
+the shared `storage.assessment_policy` helpers; Test start and finalisation
+advance its revision in the attempt transaction. Parent middleware owns the
+profile policy and response/stream enforcement across other modules.
+
+Study help commits exposure before returning a receipt with
+`{attempt_id,item_id,version_id,draft_revision,policy_revision,kind}` context.
+Delayed consumers must validate it with
+`whole_attempts.require_help_context_in(conn, context)` before publication.
+The receipt alone does not prove that Notes, Chat or Workspace integration
+has consumed it. Until a callback exists, the corresponding control is
+unavailable. The controller emits `renulus:assessment-policy` on a verified
+revision change; the shell must invalidate cached assistance immediately.
+
+## Evidence consumer contract
+
+New learning evidence has `kind='assessment-test-answer'` and
+`entity_id=attempt_id`. Do not dispatch it to legacy `assessment_attempts`.
+Its payload contains no answer key, explanation or selected answer text:
+
+```text
+attempt_id, version_id, commit_id, item_id,
+question_id, question_version, key_version, family_id, family_version, topic_id,
+mode, origin, review_quality, reviewed, bank_cohort_eligible,
+assisted, repeat, score_bucket, outcome, correct, committed_at
+```
+
+`reviewed` and `bank_cohort_eligible` capture eligibility at commitment. Origin
+and mode alone never establish reviewed eligibility: a personal edit with
+reviewed-bank origin remains personal. `assisted` and `repeat` are independent
+flags. `score_bucket` is the attempt's display cohort; consumers should retain
+both flags rather than reconstructing one from that bucket. `outcome` is
+`correct`, `incorrect` or `unanswered`; excluded entries remain in the frozen
+result but emit no learning evidence. Study drafts emit nothing before an
+explicit commitment. A Test blank is a final `unanswered` commitment.
+
+Each attempt stores an independent immutable version plus the full private
+provenance envelope. Historical result entries keep readable question text.
+`pinned_attempt_snapshot_in(conn, id)` supplies both typed `version` and
+`pinned_provenance` to retained reports even after the live collection is
+removed. This private snapshot is not a start-authorisation shortcut.
+
+## Timing and retry authority
+
+The repository persists clock high-water and pause state; remaining time is
+computed by the backend. A same-process wall-clock rollback uses its monotonic
+anchor; a restart below persisted high-water conservatively expires timed
+active work. Test expiry commits only backend-durable drafts. Manual submit
+waits for displayed draft saves and supplies the complete latest draft.
+Study expiry preserves pending drafts without grading them.
+
+Commands retain exact request hashes and acknowledgements. Policy gating
+precedes replay; evidence, immutable final result and policy release share
+one transaction. An expected request error preserves already reconciled
+expiry, while a storage/evidence error rolls the entire transaction back.
+
+## Verification boundary
+
+`session.test.ts` checks controller concurrency and ambiguous acknowledgements.
+`attempts.connected.test.tsx` is an opt-in actual HTTP/SQLite renderer journey
+using an owned loopback API with synthetic reviewed content. Set
+`RENULUS_ATTEMPT_TEST_ORIGIN` only for that synthetic server. No API response
+fixtures or providers are used in that journey. Without the variable it is
+explicitly skipped. Backend persistence/policy/timer tests are in
+`tests/assessment/test_whole_attempts.py` and require published migrations
+003/004 and the actual saved-test producer.
+
+These checks do not establish native Windows acceptance. Integration still
+needs the assembled shell start/resume/policy/timer/finalisation flows,
+Workspace/Chat/Notes receipts, Home/Memory consumption, all origins and
+populated export/restore. DC13/DC14/DC15 remain open until that evidence.
