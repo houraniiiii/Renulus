@@ -13,7 +13,6 @@ from renulus.server import create_app
 from renulus.storage import utc_now
 from renulus.storage.assessment_policy import advance_policy
 from renulus.storage.invalidation import bump_context_epoch
-from renulus.study.home_api import create_router
 from renulus.study.home_models import NameUpdate
 from renulus.study.home_service import HomeService
 from fastapi.testclient import TestClient
@@ -44,7 +43,6 @@ class SyntheticTransport:
 def home(tmp_path, monkeypatch):
     monkeypatch.setattr("renulus.server.MODULE_ORDER", ("runtime", "content", "knowledge", "learn", "cases", "assessment", "memory", "study"))
     app = create_app(tmp_path / "synthetic-profile")
-    app.include_router(create_router(app.state.services), prefix="/api/v1")
     service = app.state.services.registry["home"]
     provider = app.state.services.registry["provider"]
     transport = SyntheticTransport()
@@ -214,12 +212,19 @@ async def test_source_existence_is_rechecked_without_relying_only_on_epoch(home)
 
 
 @pytest.mark.asyncio
-async def test_cache_rechecks_deleted_memory_and_restore_on_every_read(home):
+@pytest.mark.parametrize("change", ["memory_delete", "restore", "policy"])
+async def test_cache_rechecks_deleted_memory_restore_and_policy_on_every_read(home, change):
     _, service, _ = home
     memory(service)
     await service.refresh()
     assert (await finish(service))["suggestions"]
-    service.db.execute("DELETE FROM memory_facts")
+    with service.db.transaction() as conn:
+        if change == "memory_delete":
+            conn.execute("DELETE FROM memory_facts")
+        elif change == "restore":
+            bump_context_epoch(conn)
+        else:
+            advance_policy(conn)
     assert service.read()["suggestions"] is None
 
 
@@ -291,6 +296,27 @@ def test_name_replay_after_later_edits_returns_original_durable_outcome_without_
     assert len(receipts) == 128
 
 
+@pytest.mark.asyncio
+async def test_actual_export_restore_keeps_chosen_name_without_daily_cache_or_command_receipts(home, tmp_path):
+    app, service, transport = home
+    service.save_name(NameUpdate(doctor_name="Ada", expected_revision=1), "synthetic-export-name")
+    await service.refresh()
+    assert (await finish(service))["suggestions"] == bundle()
+    from renulus.storage.backup import export_records, restore_records
+    exported = export_records(app.state.services)
+    exported_preferences = {row["key"]: json.loads(row["value"])
+                            for row in exported["records"]["preferences"]}
+    assert exported_preferences["home.preferences"] == {"doctor_name": "Ada", "revision": 2}
+    assert "home.suggestions" not in exported_preferences
+    assert "home.preference_commands" not in exported_preferences
+    target = create_app(tmp_path / "synthetic-restored-profile").state.services
+    restore_records(target, exported, confirm_older=True)
+    assert target.registry["home"].preferences() == {"doctor_name": "Ada", "revision": 2}
+    assert target.db.fetch_one("SELECT 1 FROM preferences WHERE key IN ('home.suggestions','home.preference_commands')") is None
+    assert target.registry["home"].read()["suggestions"] is None
+    assert len(transport.calls) == 1
+
+
 def test_home_router_refresh_uses_real_provider_manager_and_real_jobs(home):
     app, service, transport = home
     with TestClient(app) as client:
@@ -303,6 +329,9 @@ def test_home_router_refresh_uses_real_provider_manager_and_real_jobs(home):
         assert state["suggestions"] == bundle()
         assert client.post("/api/v1/home/suggestions/refresh", headers={"Idempotency-Key": "synthetic-home-open2"}).json()["job_id"] == started.json()["job_id"]
         assert len(transport.calls) == 1
+        job = service.db.fetch_one("SELECT checkpoint_json,validated_count FROM assessment_test_jobs")
+        assert json.loads(job["checkpoint_json"]) == {}
+        assert job["validated_count"] == 15
 
 
 def test_malformed_imported_name_uses_generic_welcome_preference(home):

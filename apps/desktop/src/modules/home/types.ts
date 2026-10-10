@@ -1,4 +1,5 @@
-import type { ConversationKind, ConversationSummary } from '../../platform/designC';
+import type { ConversationKind } from '../../platform/designC';
+import type { createConversation } from '../chat/api';
 
 export type SuggestionCategory = 'explain' | 'case' | 'practice';
 export interface HomePreferences { doctor_name: string | null; revision: number }
@@ -14,7 +15,7 @@ export interface HomeState {
 export interface HomeIntent { text: string; kind: ConversationKind }
 /** These seams retain canonical typed identity; they never target legacy generation. */
 export interface HomeAdapters {
-  send?: (intent: HomeIntent) => Promise<ConversationSummary>;
+  create?: typeof createConversation;
   attach?: (intent: HomeIntent) => Promise<void>;
   practice?: (text: string) => Promise<{ attempt_id: string }>;
 }

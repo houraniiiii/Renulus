@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ArrowUp, BookOpen, ClipboardCheck, Paperclip, Stethoscope } from 'lucide-react';
 import { ApiError, isCancelled } from '../../platform/api';
+import type { ContextScope } from '../../platform/contracts';
+import type { ConversationSummary } from '../../platform/designC';
 import { routes, useNavigation } from '../../shell/navigation';
 import { Button, Notice } from '../../ui';
+import { createConversation } from '../chat/api';
 import { readHome, refreshHome } from './requests';
 import type { HomeAdapters, HomeState, SuggestionCategory } from './types';
 import './home.css';
@@ -27,6 +30,8 @@ export default function Home({ adapters = {} }: { adapters?: HomeAdapters }) {
   const greetingChosen = useRef(false);
   const hasDraft = useRef(false);
   const composer = useRef<HTMLTextAreaElement>(null);
+  const sending = useRef(false);
+  const command = useRef<{ text: string; kind: 'learning' | 'case'; request_id: string; conversation?: ConversationSummary }>(undefined);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -44,7 +49,11 @@ export default function Home({ adapters = {} }: { adapters?: HomeAdapters }) {
       }, 1000);
     };
     const handleError = (error: unknown) => {
-      if (!isCancelled(error) && !controller.signal.aborted) setMessage('Daily suggestions are unavailable. You can still write a message.');
+      if (isCancelled(error) || controller.signal.aborted) return;
+      if (error instanceof ApiError && error.code === 'assistance_restricted') {
+        setState({ preferences: { doctor_name: null, revision: 1 }, suggestions: null,
+          suggestions_date: null, stale: false, job: null, error_code: error.code, assistance_allowed: false });
+      } else setMessage('Daily suggestions are unavailable. You can still write a message.');
     };
     void readHome(controller.signal).then(value => {
       accept(value);
@@ -63,30 +72,40 @@ export default function Home({ adapters = {} }: { adapters?: HomeAdapters }) {
     if (text.trim()) { setPending({ prompt, category }); return; }
     fill(prompt, category);
   }
-  function go(destination: 'chat' | 'attempts', payload: Record<string, unknown>) {
+  function go(destination: 'chat' | 'attempts', payload: Record<string, unknown>, scope = navigation.scope) {
     const route = routes.find(value => String(value.id) === destination);
     if (!route) throw new ApiError('This destination is not available yet. Your draft is kept.', 0, 'prerequisite_unavailable');
-    navigation.navigate(route.id, { scope: navigation.scope, payload });
+    navigation.navigate(route.id, { scope, payload });
   }
   async function send(event: FormEvent) {
     event.preventDefault();
-    if (!text.trim() || busy) return;
+    if (!text.trim() || sending.current || state?.assistance_allowed === false) return;
     const draft = text;
     const kind = intent === 'case' ? 'case' : 'learning';
-    setBusy(true); setMessage('');
+    sending.current = true; setBusy(true); setMessage('');
     try {
       if (intent === 'practice') {
         if (!adapters.practice) throw new ApiError('Quick practice is awaiting the saved five-question Study flow. Your draft is kept.', 0, 'prerequisite_unavailable');
         const result = await adapters.practice(draft);
         go('attempts', { attempt_id: result.attempt_id });
       } else {
-        if (!adapters.send) throw new ApiError('Chat is not available yet. Your draft is kept.', 0, 'prerequisite_unavailable');
-        const conversation = await adapters.send({ text: draft, kind });
-        go('chat', { conversation: conversation.identity, kind: conversation.kind, prefill: draft });
+        if (!command.current || command.current.text !== draft || command.current.kind !== kind) {
+          command.current = { text: draft, kind, request_id: crypto.randomUUID() };
+        }
+        const current = command.current;
+        // Home creates only. Chat consumes the volatile intent and owns streaming.
+        current.conversation ??= await (adapters.create ?? createConversation)({ kind });
+        const conversation = current.conversation;
+        const scope: ContextScope = conversation.kind === 'case'
+          ? { kind: conversation.retention === 'temporary' ? 'temporary-case' : 'saved-case', entity_id: conversation.identity.id }
+          : { kind: 'study', entity_id: conversation.identity.id };
+        go('chat', { conversation: conversation.identity, retention: conversation.retention,
+          sendIntent: { text: draft, request_id: current.request_id } }, scope);
       }
+      setText(''); hasDraft.current = false; setPending(undefined); command.current = undefined;
     } catch (error) {
       setMessage(error instanceof ApiError ? error.message : 'Your message could not be sent. Your draft is kept.');
-    } finally { setBusy(false); }
+    } finally { sending.current = false; setBusy(false); }
   }
   async function attach() {
     setMessage('');

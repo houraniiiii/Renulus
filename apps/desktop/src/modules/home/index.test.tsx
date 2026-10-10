@@ -3,10 +3,12 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import Home from './index';
 import { NamePreference } from './NamePreference';
+import { ApiError } from '../../platform/api';
 import type { HomeState } from './types';
 
-const mocks = vi.hoisted(() => ({ readHome: vi.fn(), refreshHome: vi.fn(), readName: vi.fn(), saveName: vi.fn(), navigate: vi.fn() }));
+const mocks = vi.hoisted(() => ({ readHome: vi.fn(), refreshHome: vi.fn(), readName: vi.fn(), saveName: vi.fn(), navigate: vi.fn(), createConversation: vi.fn(), sendConversation: vi.fn() }));
 vi.mock('./requests', () => mocks);
+vi.mock('../chat/api', () => mocks);
 vi.mock('../../shell/navigation', () => ({
   routes: ['newchat', 'chat', 'tests', 'attempts'].map(id => ({ id })),
   useNavigation: () => ({ route: 'newchat', scope: { kind: 'study' }, navigate: mocks.navigate }),
@@ -17,7 +19,7 @@ const state = (): HomeState => ({ preferences: { doctor_name: 'Ada', revision: 1
     practice: Array.from({ length: 5 }, (_, i) => 'Synthetic five-question practice ' + i) },
   suggestions_date: '2026-10-10', stale: false, job: null, error_code: null, assistance_allowed: true });
 beforeEach(() => {
-  vi.clearAllMocks(); mocks.readHome.mockResolvedValue(state()); mocks.refreshHome.mockResolvedValue(state());
+  vi.resetAllMocks(); mocks.readHome.mockResolvedValue(state()); mocks.refreshHome.mockResolvedValue(state());
   mocks.readName.mockResolvedValue(state().preferences);
 });
 afterEach(() => cleanup());
@@ -42,12 +44,12 @@ it('renders exact greeting/composer/Attach/Send and switches exactly five sugges
 });
 
 it('prefills only and keeps an existing draft until an explicit append or replace', async () => {
-  const send = vi.fn(); render(<Home adapters={{ send }} />);
+  const create = vi.fn(); render(<Home adapters={{ create }} />);
   await screen.findByRole('heading', { name: 'Welcome back, Dr. Ada' });
   fireEvent.click(screen.getByRole('button', { name: 'Discuss a case' }));
   fireEvent.click(screen.getByRole('button', { name: 'Synthetic fictional case 0' }));
   expect(composer().value).toBe('Synthetic fictional case 0');
-  expect(send).not.toHaveBeenCalled();
+  expect(create).not.toHaveBeenCalled();
   expect(mocks.navigate).not.toHaveBeenCalled();
   fireEvent.change(composer(), { target: { value: 'My existing draft' } });
   fireEvent.click(screen.getByRole('button', { name: 'Explain a topic' }));
@@ -61,34 +63,85 @@ it('prefills only and keeps an existing draft until an explicit append or replac
   fireEvent.click(screen.getByRole('button', { name: 'Synthetic explain 1' }));
   fireEvent.click(screen.getByRole('button', { name: 'Replace draft' }));
   expect(composer().value).toBe('Synthetic explain 1');
-  expect(send).not.toHaveBeenCalled();
+  expect(create).not.toHaveBeenCalled();
 });
 
-it('sends separately with typed canonical identity, selected kind and volatile prefill', async () => {
+it('creates through the published helper and hands off one explicit send intent with canonical identity/retention', async () => {
   const conversation = { identity: { type: 'case' as const, id: 'synthetic-case' }, kind: 'case' as const,
     title: 'Synthetic', retention: 'saved' as const, lifecycle: 'active' as const, revision: 2, project_id: null, created_at: 'now', updated_at: 'now' };
-  const send = vi.fn().mockResolvedValue(conversation);
-  render(<Home adapters={{ send }} />);
+  mocks.createConversation.mockResolvedValue(conversation);
+  render(<Home />);
   await screen.findByRole('heading', { name: 'Welcome back, Dr. Ada' });
   fireEvent.click(screen.getByRole('button', { name: 'Discuss a case' }));
   fireEvent.click(screen.getByRole('button', { name: 'Synthetic fictional case 1' }));
   fireEvent.click(screen.getByRole('button', { name: 'Send' }));
   await act(async () => {});
-  expect(send).toHaveBeenCalledWith({ text: 'Synthetic fictional case 1', kind: 'case' });
-  expect(mocks.navigate).toHaveBeenCalledWith('chat', { scope: { kind: 'study' },
-    payload: { conversation: { type: 'case', id: 'synthetic-case' }, kind: 'case', prefill: 'Synthetic fictional case 1' } });
+  expect(mocks.createConversation).toHaveBeenCalledExactlyOnceWith({ kind: 'case' });
+  expect(mocks.navigate).toHaveBeenCalledExactlyOnceWith('chat', { scope: { kind: 'saved-case', entity_id: 'synthetic-case' },
+    payload: { conversation: { type: 'case', id: 'synthetic-case' }, retention: 'saved',
+      sendIntent: { text: 'Synthetic fictional case 1', request_id: expect.any(String) } } });
+  expect(mocks.navigate.mock.calls[0][1].payload.sendIntent.request_id).toMatch(/^[0-9a-f-]{36}$/);
+  expect(mocks.sendConversation).not.toHaveBeenCalled();
+  expect(composer().value).toBe('');
 });
 
 it('keeps generic first run and offline composer usable without fabricated prompts', async () => {
   mocks.readHome.mockRejectedValue(new Error('Synthetic offline runtime'));
+  mocks.createConversation.mockRejectedValue(new Error('Synthetic offline chat'));
   render(<Home />);
   await screen.findByText('Daily suggestions are unavailable. You can still write a message.');
   expect(screen.getByRole('heading', { name: 'Welcome back' })).toBeTruthy();
   expect(composer().disabled).toBe(false);
   fireEvent.change(composer(), { target: { value: 'An educational question' } });
   fireEvent.click(screen.getByRole('button', { name: 'Send' }));
-  await screen.findByText('Chat is not available yet. Your draft is kept.');
+  await screen.findByText('Your message could not be sent. Your draft is kept.');
   expect(composer().value).toBe('An educational question');
+});
+
+it('retains a failed handoff draft and retries the same conversation and stable send request', async () => {
+  mocks.createConversation.mockResolvedValue({ identity: { type: 'learn_thread', id: 'synthetic-learning' },
+    kind: 'learning', retention: 'saved' });
+  mocks.navigate.mockImplementationOnce(() => { throw new Error('Synthetic navigation failure'); });
+  render(<Home />);
+  await screen.findByRole('heading', { name: 'Welcome back, Dr. Ada' });
+  fireEvent.change(composer(), { target: { value: 'My retained learning draft' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+  await screen.findByText('Your message could not be sent. Your draft is kept.');
+  expect(composer().value).toBe('My retained learning draft');
+  const original = mocks.navigate.mock.calls[0][1];
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+  await act(async () => {});
+  expect(mocks.createConversation).toHaveBeenCalledExactlyOnceWith({ kind: 'learning' });
+  expect(mocks.navigate).toHaveBeenLastCalledWith('chat', original);
+  expect(original.scope).toEqual({ kind: 'study', entity_id: 'synthetic-learning' });
+  expect(composer().value).toBe('');
+  expect(mocks.sendConversation).not.toHaveBeenCalled();
+});
+
+it('keeps draft during creation and refuses duplicate submissions before the handoff', async () => {
+  let resolve!: (value: unknown) => void;
+  mocks.createConversation.mockReturnValue(new Promise(done => { resolve = done; }));
+  render(<Home />);
+  await screen.findByRole('heading', { name: 'Welcome back, Dr. Ada' });
+  fireEvent.change(composer(), { target: { value: 'One educational request' } });
+  fireEvent.submit(composer().closest('form')!);
+  fireEvent.submit(composer().closest('form')!);
+  expect(composer().value).toBe('One educational request');
+  expect(mocks.createConversation).toHaveBeenCalledTimes(1);
+  expect(mocks.navigate).not.toHaveBeenCalled();
+  await act(async () => resolve({ identity: { type: 'learn_thread', id: 'synthetic-once' }, kind: 'learning', retention: 'saved' }));
+  expect(mocks.navigate).toHaveBeenCalledTimes(1);
+  expect(mocks.sendConversation).not.toHaveBeenCalled();
+});
+
+it('pauses assistance on the actual policy error while keeping the draft controls visible', async () => {
+  mocks.readHome.mockRejectedValue(new ApiError('Submit the active Test before opening learning help.', 409, 'assistance_restricted'));
+  render(<Home />);
+  await screen.findByText('Chat and daily suggestions are paused during an active Test.');
+  expect(composer().disabled).toBe(true);
+  expect((screen.getByRole('button', { name: 'Send' }) as HTMLButtonElement).disabled).toBe(true);
+  expect(mocks.createConversation).not.toHaveBeenCalled();
+  expect(mocks.refreshHome).not.toHaveBeenCalled();
 });
 
 it('does not change the greeting when name data arrives after composing starts', async () => {

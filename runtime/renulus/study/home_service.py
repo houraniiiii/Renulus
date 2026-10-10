@@ -242,6 +242,7 @@ class HomeService:
         try:
             cache = DailyCache.model_validate_json(row[0])
             if (context is None or cache.context_epoch != context.epoch or
+                    cache.policy_revision != context.policy_revision or
                     cache.settings_revision != context.settings_revision or cache.inputs != tuple(
                         item.model_dump(mode="json") for item in context.inputs)):
                 return None
