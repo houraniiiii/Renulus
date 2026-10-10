@@ -99,11 +99,18 @@ def test_pinned_old_revision_does_not_follow_replacement_during_embedding(reposi
     assert result["status"] == "no_eligible_documents" and not result["passages"]
 
 
-@pytest.mark.parametrize("revision_ids", ["all", [None], [""], ["x" * 129], ["id"] * 1001])
+@pytest.mark.parametrize("revision_ids", ["all", [None], [""], ["x" * 257], ["id"] * 1001])
 def test_revision_scope_validation_is_bounded_and_does_not_become_global(repository, revision_ids):
     with pytest.raises(ApiError) as caught:
         repository.retrieve("SYNTHETIC", scope=STUDY, revision_ids=revision_ids)
     assert caught.value.code == "revision_scope_invalid"
+
+
+def test_revision_id_length_accepts_shared_contract_boundary(repository):
+    from renulus.design_c_contracts import Identity
+    target = Identity(type="library_revision", id="x" * 256)
+    result = repository.retrieve("SYNTHETIC", scope=STUDY, revision_ids=[target.id])
+    assert result["status"] == "no_eligible_documents" and not result["passages"]
 
 
 def test_actual_router_preserves_none_empty_and_explicit_revision_scope(tmp_path):

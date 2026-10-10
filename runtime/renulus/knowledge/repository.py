@@ -545,9 +545,9 @@ class KnowledgeRepository:
         revision_filter = None
         if revision_ids is not None:
             if (not isinstance(revision_ids, list) or len(revision_ids) > MAX_RETRIEVAL_REVISIONS
-                    or any(not isinstance(value, str) or not 1 <= len(value) <= 128
+                    or any(not isinstance(value, str) or not 1 <= len(value) <= 256
                            for value in revision_ids)):
-                raise ApiError("revision_scope_invalid", "Use at most 1,000 revision IDs of 1–128 characters", 422)
+                raise ApiError("revision_scope_invalid", "Use at most 1,000 revision IDs of 1–256 characters", 422)
             revision_filter = tuple(dict.fromkeys(revision_ids))
         if self.db.fetch_one("SELECT 1 FROM preferences WHERE key='knowledge.restore_dirty' AND value='true'"):
             raise ApiError("knowledge_rebuild_required", "The restored Library needs its local search rebuild. Open data recovery and retry the rebuild.", 503, True)
