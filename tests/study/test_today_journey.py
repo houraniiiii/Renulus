@@ -36,8 +36,8 @@ def seeded_app(profile):
 
 def test_reviewed_mistake_manual_changes_preferences_reload_and_propose_keep_original_scores(tmp_path):
     profile = tmp_path / "today-final"
-    app, session_id, review_id = seeded_app(profile)
-    with TestClient(app) as api:
+    _, session_id, review_id = seeded_app(profile)
+    with TestClient(create_app(profile, source_root=ROOT)) as api:
         saved_goals = {"hours_per_week": 4, "exam_date": "2027-03-01",
                        "track": "eseneph", "topic_ids": ["T03", "T21"]}
         saved = api.put("/api/v1/study/goals", json=saved_goals)
