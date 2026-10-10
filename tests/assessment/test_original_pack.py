@@ -5,7 +5,7 @@ import os
 from fastapi.testclient import TestClient
 import pytest
 
-from renulus.server import create_app
+from conftest import create_app_with_pack
 
 ROOT = Path(__file__).resolve().parents[2]
 PACK = Path(os.environ.get("RENULUS_ASSESSMENT_TEST_PACK",
@@ -15,7 +15,8 @@ BASE = "/api/v1/assessment"
 
 @pytest.mark.skipif(not PACK.is_file(), reason="M8 original published pack has not been handed off")
 def test_original_published_pack_produces_durable_cross_domain_reviewed_results(tmp_path):
-    app = create_app(tmp_path / "original-pack-profile", source_root=ROOT)
+    app = create_app_with_pack(tmp_path / "original-pack-profile", PACK.resolve().parent,
+                               source_root=ROOT)
     content = app.state.services.registry["content"]
     # Explicitly selected authored pack only; never ingest sibling directories.
     content.install_pack(PACK.resolve().parent)
@@ -55,7 +56,8 @@ def test_original_published_pack_produces_durable_cross_domain_reviewed_results(
         assert scores["fresh"]["answered"] == session["item_count"] - 1
         assert scores["repeat"]["answered"] == 0
         assert len(app.state.services.db.fetch_all("SELECT * FROM learning_evidence WHERE kind='assessment-answer'")) == session["item_count"]
-    with TestClient(create_app(tmp_path / "original-pack-profile", source_root=ROOT)) as restarted:
+    with TestClient(create_app_with_pack(tmp_path / "original-pack-profile", PACK.resolve().parent,
+                                        source_root=ROOT)) as restarted:
         replay = restarted.post(BASE + f"/sessions/{session_id}/answer", json=first_request)
         assert replay.json() == first_response
         review = restarted.get(BASE + f"/sessions/{session_id}/review").json()

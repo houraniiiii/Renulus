@@ -3,7 +3,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from renulus.server import create_app
+from conftest import create_app_with_pack
 
 ROOT = Path(__file__).resolve().parents[2]
 PACK = ROOT / "content/packs/renulus-foundations/1.0.0"
@@ -20,7 +20,7 @@ class SyntheticPublisher:
 
 
 def currency_app(profile, token=None):
-    app = create_app(profile, token=token, source_root=ROOT)
+    app = create_app_with_pack(profile, PACK, token=token, source_root=ROOT)
     services = app.state.services
     services.registry["content"].install_pack(PACK)
     services.registry["updates"].fetcher = SyntheticPublisher()
@@ -72,6 +72,7 @@ def immutable_facts(app):
 def test_detected_notice_appears_on_exact_pending_items_paused_sessions_and_history(tmp_path):
     app = currency_app(tmp_path / "profile")
     with TestClient(app) as client:
+        assert client.get("/api/v1/content/manifest").json()["version"] == "1.0.0"
         session = start(client)
         other = start(client, "aki-currency-start", topic="T06")
         updates, entry, source, _ = track_and_detect(app, client, session)

@@ -2,7 +2,7 @@
 import argparse
 from pathlib import Path
 
-from conftest import SyntheticContentRepository
+from conftest import ASSESSMENT_MODULE_ORDER, SyntheticContentRepository
 import renulus.server as server
 from renulus.server import create_app
 import uvicorn
@@ -18,7 +18,7 @@ if __name__ == "__main__":
     parser.add_argument("--generated-provider", action="store_true")
     args = parser.parse_args()
     profile = Path(args.profile).resolve()
-    server.MODULE_ORDER = ("content", "updates", "assessment")
+    server.MODULE_ORDER = ASSESSMENT_MODULE_ORDER
     app = create_app(profile, token=args.token)
     app.state.services.registry["content"] = SyntheticContentRepository()
     if args.generated_provider:

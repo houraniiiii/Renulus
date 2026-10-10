@@ -5,14 +5,39 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+import renulus.server as server
 from renulus.server import create_app
+
+
+# Design C's conversation routes require the real Learn and Cases owners even
+# in assessment fixtures; keep provider/runtime and helper engines opt-in.
+ASSESSMENT_MODULE_ORDER = ("content", "updates", "learn", "cases", "assessment")
+
+
+def create_app_with_pack(profile, pack, **kwargs):
+    """Select the historical fixture release before real content bootstrap."""
+    pack = Path(pack).resolve()
+    manifest = json.loads((pack / "manifest.json").read_text(encoding="utf-8"))
+    original_services = server.Services
+
+    def selected_services(*args, **service_kwargs):
+        services = original_services(*args, **service_kwargs)
+        # Use the integrator's supported root/selection contract, including on
+        # reopen; installing an older pack after automatic bootstrap is invalid.
+        services.registry.update(content_pack_root=pack.parent.parent,
+            content_pack_selection={"id": manifest["id"], "version": manifest["version"]})
+        return services
+
+    with pytest.MonkeyPatch.context() as selection:
+        selection.setattr(server, "Services", selected_services)
+        return create_app(profile, **kwargs)
 
 
 @pytest.fixture(autouse=True)
 def assessment_modules(monkeypatch):
     # Assessment tests exercise the real pack/Updates seams and explicit
     # synthetic provider adapters without starting unrelated helper engines.
-    monkeypatch.setattr("renulus.server.MODULE_ORDER", ("content", "updates", "assessment"))
+    monkeypatch.setattr("renulus.server.MODULE_ORDER", ASSESSMENT_MODULE_ORDER)
 
 
 class SyntheticContentRepository:
