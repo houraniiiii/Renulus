@@ -1204,3 +1204,109 @@ The remaining R7 acceptance is the parent's assembled hidden close/reopen
 journey and matching reader package. This lane does not attest native dialogs,
 installed reader dependencies or physical scrolling/zoom from component tests.
 R10 Workspace Files inventory remains with the parent. No feature is closed.
+
+### Mounted Notes boundary verification — October 10
+
+The renewed test-only lease is exactly tests/knowledge/test_design_c_notes.py
+and this report. No production, schema, migration, shared, renderer or verifier
+files are changed. Lane root/branch were reverified as
+C:/Renulus/dev/worktrees/dc-review-readers and codex/dc-review-readers. The lane
+normally merged canonical 397d1032 into cd5f51b4 before this work; its actual
+assembled create_app supplies services.registry['notes'] and the mounted Notes
+router. Earlier Notes tests no longer add a second router themselves.
+
+Completed focused receipt:
+C:/Renulus/scratch/design-c/dc-review-readers/notes-boundary-02.xml — 12 passed,
+zero failures/errors/skips in 89.000 seconds. These actual HTTP/SQLite cases
+prove the following bounded behaviour:
+
+- Two projects plus an unscoped note list only their current memberships.
+  A note edit replaces the linked revision while its prior exact body/title
+  remains inspectable. An archived project's existing membership carries
+  forward, but a newly selected archived project refuses creation and rolls
+  back. Actual unlink records its canonical tombstone and subsequent edits
+  cannot relink it. Actual project deletion removes project-scoped access while
+  the independently owned note and personal list remain readable.
+- Current revision display/cache revocation hides the note from global and
+  project-filtered lists and denies its body/title without exposure. Historical
+  revisions retain their independent current rights. Model-input/derivation
+  revocation still permits original inspection while Reader passage capability
+  is false. Canonical knowledge-revision and knowledge-document tombstones
+  deny their respective exposure scopes. There is no rights-edit route: these
+  two cases update the complete validated Rights JSON in synthetic canonical
+  records; they do not claim a user rights-editor flow.
+- The real saved_tests owner publishes a synthetic personal test version;
+  actual whole Study starts, records kind='notes' help exposure and prepares
+  /study/help-context without private keys. A current scalar header can list
+  Notes. Changing the real attempt draft then refuses stale list/get/create/
+  edit/delete with 409 revision_conflict, without leaking originals or keys,
+  writing another note revision or adding a deletion marker. No assessment
+  policy/attempt rows are manually manufactured.
+- Timing hooks delegate to actual Notes reads and Knowledge import; an
+  independent real Study draft change after the read or before import causes
+  the inherited guard to refuse exposure/publication. Both list/get reads and
+  create/edit publication are exercised. These hooks replace no extraction or
+  persistence success and attest those specific timing boundaries only.
+
+The first receipt notes-boundary-01.xml contains 12 fixture errors: the test
+incorrectly read .path from FastAPI's _IncludedRouter. Removing that invalid
+introspection resolved the harness issue; no production workaround was used.
+The exact-file run notes-boundary-final1.xml has 18 passed and one test-assertion
+failure (147.970 seconds): the new ZIP case incorrectly required a separate
+knowledge-revision marker for each revision. The production owner emits the
+knowledge-document marker and marks its revisions deleted; typed recovery's
+owned parent edge propagates that deletion. The test now verifies actual 404
+historical reads plus the document marker and subsequent rows/bytes exclusion,
+without imposing a redundant marker contract. No production change was made.
+Corrected focused receipt:
+C:/Renulus/scratch/design-c/dc-review-readers/notes-zip-01.xml — two passed,
+zero failures/errors/skips in 36.090 seconds. Together with the 18 exact-file
+passes this checks all 20 cases; no single all-green full-file receipt is
+claimed. The ZIP cases use actual mounted GET /data/backup, POST
+/data/backup/preview and POST /data/backup/restore. They inspect the declared
+original descriptors, exact UTF-8 bytes and SHA-256 for both immutable note
+revisions and an independent retained note. Actual Notes DELETE removes both
+victim originals; restoring the older ZIP reports two excluded originals and
+one retained original. Both historical reads stay 404, filtered notes and
+Project documents stay empty, and recreating create_app at the same synthetic
+profile preserves that outcome and the retained note's exact body/hash. The
+HTTP restore's actual rebuild runs; these tests do not attest available CPU
+helper assets, successful indexing or clinical extraction.
+
+Reproduction uses the pinned C:/Renulus/dev/python/Scripts/python.exe,
+PYTHONDONTWRITEBYTECODE=1, PYTHONPATH pointing to this lane's runtime,
+HF_HUB_OFFLINE=1 and TRANSFORMERS_OFFLINE=1, then:
+
+```text
+-m pytest tests/knowledge/test_design_c_notes.py -p no:cacheprovider
+--basetemp C:/Renulus/scratch/design-c/dc-review-readers/<fresh-run>
+--junitxml C:/Renulus/scratch/design-c/dc-review-readers/<fresh-run>.xml -q
+```
+
+Use -k mounted for the mounted boundaries, or -k older_full_zip for the two
+bounded recovery cases. External sockets/providers are refused by the fixture;
+all profiles, archives, receipts and other runtime state use the lane scratch.
+The existing Starlette test-client deprecation is a dependency warning, not a
+failed product check; no packages or lockfiles were changed. The only shared
+prerequisite is the assembled Notes/Projects/whole Study/recovery owner baseline
+already present in 397d1032. No new helper, schema or consumer prerequisite is
+introduced.
+
+Pauli's distinct populated recovery evidence is reported, not rerun as this
+lane's work: commit 050993ff261daecca80c82e67ad027351dce116d and
+C:/Renulus/scratch/design-c/dc-review-data/dc20-9.xml have eight passed cases,
+zero skips, through actual Notes mount a4439597. Its owner-method checks cover
+two immutable note originals/current project membership, JSON records without
+media claims, both full ZIP formats, project deletion preserving independent
+notes and Notes deletion preventing older-backup resurrection. No Notes
+recovery product failure was reported. This lane's mounted rights/Study tests
+remain separate evidence.
+
+Zeno reported a separate source-only R7 concern: a PDF page-2 text selection
+saves {kind:'text',item_ref:'reader-v1:pdf:2',start,end}, but Reader's page
+initialisation handles pdf/image locators. Parent requested report/scratch
+reproduction after this Notes checkpoint before any Reader source edits. The
+Reader.tsx blob is identical in this lane and canonical eb20e0cf
+(a09fd21c5b22a1cd95bd737c7cf79a8324610cbf). This observation is not yet an app
+reopen reproduction or an approved fix. Matching installed/hidden acceptance
+and feature-ticket closure remain with the integration lead.
