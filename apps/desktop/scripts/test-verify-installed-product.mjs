@@ -4,12 +4,15 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 import { installedAcceptancePlan, validateInstalledRequest, validateInstallationReceipts, isolatedEnvironment,
   validateCompleteReport, validateFrozenScript, requiredGates, remainingOwnedIdentities, inside,
   coreGates, readerGates, deferredGates, completeCoreReceipt, designCEvidenceRoot, ownedArtifact, validateHiddenWindows, waitForDesignCWindow,
   validateConversation, validateSavedTest, validateActiveTest, validateFinalAttempt, safeFailure,
   validateReaderManifest, validateReaderOriginal, validateReaderDocument, validateReaderPassage, validateReaderRaster, validateBundledInterpreter,
-  validateIsolatedDirectories, validateReopenedPdf } from './verify-installed-product.mjs';
+  validateIsolatedDirectories, validateReopenedPdf, validateRecoveryRequest, parseRecoveryBytes,
+  validateRecoveryReceipt, validateRecoverySeed, expectedRecoveryConversations, validateRecoveredConversation,
+  readRecoveryPages } from './verify-installed-product.mjs';
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
 const desktop = path.resolve(directory, '..');
@@ -29,6 +32,151 @@ const receiptFixture = () => ({
   actual: { executable: digest, asar: digest, inventory: digest, installer: digest },
 });
 const validate = f => validateInstallationReceipts(f.request, f.delivery, f.installation, f.actual);
+const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+const recoveryFixture = () => {
+  const evidence = path.join(designCEvidenceRoot, 'r-0123abcd'), backend = path.join(designCEvidenceRoot, 'installed-0123abcd/resources/backend');
+  const env = { ...requestEnv(), RENULUS_RECOVERY_RECEIPT: path.join(evidence, 'recovery-evidence.json'), RENULUS_RECOVERY_RECEIPT_SHA256: digest };
+  const request = validateRecoveryRequest(env, 'win32');
+  const identity = { backend, inventoryFiles: 1, actual: { inventory: digest }, bundle: { python: { executable_sha256: digest } } };
+  const runtime = { platform: 'win32', version: '3.14.4', isolated: 1, no_site: 1, no_user_site: 1, bytecode_disabled: true,
+    executable: path.join(backend, 'python/python.exe'), prefix: path.join(backend, 'python'), base_prefix: path.join(backend, 'python'),
+    sys_path: ['python/python314.zip', 'python', 'dependencies', 'dependencies/win32', 'dependencies/win32/lib',
+      'dependencies/pywin32_system32', 'runtime', 'upstream/hermes', '.'].map(name => path.join(backend, name)) };
+  const receipt = { format: 'renulus-installed-recovery-evidence/1', status: 'passed', run_root: evidence, seed_sha256: digest,
+    old_commit: '1b30a89687cfcc5fb13b1cf824bbc43c19f870ed', external_provider_calls: 0,
+    identity: { source_revision: revision, bundle: backend, slot: request.slot, inventory: { files: 1, bytes: 100 }, runtime,
+      bundle_sha256: digest, inventory_sha256: digest, python_sha256: digest, driver_sha256: digest },
+    gates: Object.fromEntries(['identity-and-seed', 'legacy-upgrade-reopen', 'actual-current-producers', 'json-restored',
+      'json-deletion-replay', 'zip1-restored', 'zip1-deletion-replay', 'zip2-restored', 'zip2-deletion-replay'].map(name => [name, { checked: true }])) };
+  const seed = { format: 'renulus-installed-recovery-seed/1', old_commit: receipt.old_commit, run_root: evidence, profile: request.profile,
+    synthetic: true, closed: true, schema_version: 1, old_source_archive_sha256: digest, seed_driver_sha256: digest, fixture_sha256: digest,
+    exports: { json: 'old.json', zip1: 'old1.zip', zip2: 'old2.zip' },
+    files: ['u/state/renulus.sqlite3', 'old.json', 'old1.zip', 'old2.zip'].map(name => ({ path: name, size: 100, sha256: digest })) };
+  const messages = [{ id: 'm2', role: 'assistant', content: 'Synthetic second.\nExact bytes.', created_at: '2026-10-01T00:00:01Z' },
+    { id: 'm1', role: 'user', content: 'Synthetic first.', created_at: '2026-10-01T00:00:00Z' }];
+  const old = { format: 'renulus-canonical-export', format_version: 1, schema_version: 1, records: {
+    learn_threads: [{ id: 'original_learn', title: 'Original synthetic Learn' }],
+    learn_messages: messages.map(message => ({ ...message, thread_id: 'original_learn', run_id: 'original_run',
+      citations_json: JSON.stringify([{ title: 'Legacy citation' }, { content_ref: { target: { type: 'library_revision', id: 'revision1' } } }]) })),
+    case_sessions: [{ id: 'original_case', title: 'Original synthetic Case', case_text: 'Original synthetic vignette.',
+      messages_json: JSON.stringify(messages) }],
+  } };
+  return { env, request, receipt, identity, seed, old, hashes: Object.fromEntries(['bundle', 'inventory', 'python', 'driver'].map(name => [name, digest])) };
+};
+
+test('recovery entry admits only the exact r root receipt plus explicit SHA256 and matching-package guards', () => {
+  const { env, request } = recoveryFixture();
+  assert.equal(request.profile, path.join(designCEvidenceRoot, 'r-0123abcd/u'));
+  for (const file of [undefined, [], 'relative.json', path.join(designCEvidenceRoot, 'r-0123abcd/other.json'),
+    path.join(designCEvidenceRoot, 'r-0123abcd/u/recovery-evidence.json'), path.join(designCEvidenceRoot, 'r-ABCDEF12/recovery-evidence.json'),
+    path.join(designCEvidenceRoot, 'r-0123abcd') + '/../r-12345678/recovery-evidence.json', 'C:/synthetic-owner/recovery-evidence.json']) {
+    assert.throws(() => validateRecoveryRequest({ ...env, RENULUS_RECOVERY_RECEIPT: file }, 'win32'));
+  }
+  for (const value of [undefined, 'a', 'A'.repeat(64), [], 'g'.repeat(64)]) {
+    assert.throws(() => validateRecoveryRequest({ ...env, RENULUS_RECOVERY_RECEIPT_SHA256: value }, 'win32'), /SHA256/);
+  }
+  for (const name of ['RENULUS_PROFILE', 'RENULUS_BACKEND_URL', 'RENULUS_PYTHON']) {
+    assert.throws(() => validateRecoveryRequest({ ...env, [name]: 'override' }, 'win32'), /override/);
+  }
+});
+
+test('recovery JSON is admitted only after exact bounded byte hashes, including seed and old export', () => {
+  const bytes = Buffer.from('{"status":"passed"}');
+  assert.deepEqual(parseRecoveryBytes(bytes, hash(bytes), bytes.length), { status: 'passed' });
+  assert.throws(() => parseRecoveryBytes(bytes, digest, bytes.length), /SHA256/);
+  assert.throws(() => parseRecoveryBytes(bytes, hash(bytes), bytes.length - 1), /bounded/);
+  assert.throws(() => parseRecoveryBytes(Buffer.from('invalid JSON'), digest, 100), /SHA256/);
+  const { seed, old, receipt, request } = recoveryFixture();
+  const oldBytes = Buffer.from(JSON.stringify(old)), descriptor = seed.files.find(row => row.path === 'old.json');
+  Object.assign(descriptor, { size: oldBytes.length, sha256: hash(oldBytes) });
+  const seedBytes = Buffer.from(JSON.stringify(seed)); receipt.seed_sha256 = hash(seedBytes);
+  const admittedSeed = parseRecoveryBytes(seedBytes, receipt.seed_sha256, 256 * 1024);
+  const admitted = validateRecoverySeed(request, admittedSeed);
+  assert.equal(expectedRecoveryConversations(parseRecoveryBytes(oldBytes, admitted.sha256, admitted.size)).length, 2);
+  assert.throws(() => parseRecoveryBytes(Buffer.concat([oldBytes, Buffer.from(' ')]), admitted.sha256, admitted.size + 1), /SHA256/);
+});
+
+test('a passed receipt cannot substitute source, bundle, inventory, driver, Python or incomplete recovery gates', () => {
+  const f = recoveryFixture(); validateRecoveryReceipt(f.request, f.receipt, f.identity, f.hashes);
+  for (const mutate of [r => { r.status = 'failed'; }, r => { r.external_provider_calls = 1; },
+    r => { r.run_root += '-other'; }, r => { r.old_commit = revision; }, r => { r.seed_sha256 = 'invalid'; },
+    r => { r.identity.source_revision = 'c'.repeat(40); }, r => { r.identity.bundle = 'C:/synthetic-owner'; },
+    r => { r.identity.slot = 'other-slot'; }, r => { r.identity.inventory.files = 2; },
+    ...['bundle', 'inventory', 'python', 'driver'].map(name => r => { r.identity[name + '_sha256'] = 'c'.repeat(64); }),
+    ...['isolated', 'no_site', 'no_user_site'].map(name => r => { r.identity.runtime[name] = 0; }),
+    r => { r.identity.runtime.executable = 'C:/synthetic-dev/python.exe'; }, r => { r.identity.runtime.bytecode_disabled = false; },
+    r => { r.identity.runtime.sys_path.push('C:/synthetic-dev'); }, r => { r.identity.runtime.sys_path.reverse(); },
+    ...Object.keys(f.receipt.gates).map(name => r => { delete r.gates[name]; })]) {
+    const receipt = structuredClone(f.receipt); mutate(receipt);
+    assert.throws(() => validateRecoveryReceipt(f.request, receipt, f.identity, f.hashes));
+  }
+});
+
+test('hash-bound seed cannot redirect old export/profile or admit private/open-state inventory', () => {
+  const f = recoveryFixture(); assert.equal(validateRecoverySeed(f.request, f.seed).path, 'old.json');
+  for (const mutate of [s => { s.profile = 'C:/synthetic-owner'; }, s => { s.closed = false; },
+    s => { s.synthetic = false; }, s => { s.schema_version = 2; }, s => { s.exports.json = '../other.json'; },
+    s => { s.files.push({ ...s.files[0] }); }, s => { s.files[0].size = 33 * 1024 * 1024; },
+    ...['u/../outside', 'u/con.txt', 'u/state/connections.dpapi', 'u/.env', 'u/state/renulus.sqlite3-wal',
+      'u/state/credentials.json', 'u/state/secret.key', 'u//empty', 'u/C:/outside'].map(name => s => { s.files[0].path = name; })]) {
+    const seed = structuredClone(f.seed); mutate(seed);
+    assert.throws(() => validateRecoverySeed(f.request, seed));
+  }
+});
+
+test('expected canonical histories come from original typed IDs and exact legacy fields, never caller descriptions', () => {
+  const { old } = recoveryFixture(), original = structuredClone(old), expected = expectedRecoveryConversations(old);
+  assert.deepEqual(old, original);
+  assert.deepEqual(expected.map(row => row.identity), [{ type: 'learn_thread', id: 'original_learn' }, { type: 'case', id: 'original_case' }]);
+  assert.deepEqual(expected[0].messages.map(row => row.id), ['m1', 'm2']);
+  assert.equal(expected[0].messages[0].content_refs.length, 1);
+  assert.equal(expected[1].messages[0].run_id, 'm1');
+  assert.equal(expected[0].messages[1].content, 'Synthetic second.\nExact bytes.');
+  for (const item of expected) {
+    const summary = { identity: item.identity, kind: item.kind, title: item.title, retention: 'saved', lifecycle: 'active', project_id: null };
+    validateRecoveredConversation(item, summary, item.messages);
+    for (const change of [s => { s.title += 'changed'; }, s => { s.identity.id = 'new'; },
+      s => { s.retention = 'temporary'; }, s => { s.project_id = 'retroactive'; }]) {
+      const altered = structuredClone(summary); change(altered);
+      assert.throws(() => validateRecoveredConversation(item, altered, item.messages));
+    }
+    for (const messages of [item.messages.slice(1), [...item.messages, item.messages[0]], [...item.messages].reverse(),
+      item.messages.map((row, index) => index ? row : { ...row, content: row.content + ' ' })]) {
+      assert.throws(() => validateRecoveredConversation(item, summary, messages));
+    }
+  }
+  for (const change of [o => { o.schema_version = 2; }, o => { o.records.learn_threads[0].id = '../owner'; },
+    o => { o.records.learn_threads.push(o.records.learn_threads[0]); },
+    o => { o.records.learn_messages.push(o.records.learn_messages[0]); }, o => { o.records.case_sessions = []; }]) {
+    const altered = structuredClone(old); change(altered); assert.throws(() => expectedRecoveryConversations(altered));
+  }
+});
+
+test('read-only history collector actually follows opaque cursors and refuses cycles or cross-owner pages', async () => {
+  const expected = expectedRecoveryConversations(recoveryFixture().old)[0], requests = [];
+  const result = await readRecoveryPages(async route => {
+    requests.push(route); const index = requests.length - 1;
+    return { conversation: expected.identity, items: [expected.messages[index]], next_cursor: index ? null : 'opaque+/=' };
+  }, '/conversations/learning/original_learn/messages', expected.identity);
+  assert.deepEqual(result, { items: expected.messages, pages: 2 });
+  assert.match(requests[0], /\?limit=1$/); assert.match(requests[1], /&cursor=opaque%2B%2F%3D$/);
+  for (const value of [{ items: [], next_cursor: 'repeat' }, { items: [expected.messages[0]], next_cursor: 'repeat' },
+    { items: [expected.messages[0]], next_cursor: null, conversation: { type: 'case', id: 'other' } },
+    { items: [expected.messages[0], expected.messages[1]], next_cursor: null }, { items: [], next_cursor: undefined }]) {
+    await assert.rejects(readRecoveryPages(async () => ({ conversation: expected.identity, ...value }), '/messages', expected.identity));
+  }
+});
+
+test('the recovery CLI fails closed without a receipt hash before launching and remains a separate gate', () => {
+  const f = recoveryFixture(), env = { ...process.env, ...f.env };
+  delete env.RENULUS_RECOVERY_RECEIPT_SHA256;
+  for (const name of ['RENULUS_PROFILE', 'RENULUS_BACKEND_URL', 'RENULUS_SESSION_TOKEN', 'RENULUS_PYTHON',
+    'RENULUS_BACKGROUND_TEST', 'RENULUS_BACKGROUND_OWNER_PID']) delete env[name];
+  assert.throws(() => execFileSync(process.execPath, [path.join(directory, 'verify-installed-product.mjs'), '--recovery-reopen'],
+    { env, windowsHide: true, stdio: 'pipe' }), error => error.status === 1 && /receipt SHA256/.test(error.stderr.toString()));
+  assert.equal(installedAcceptancePlan().recoveryReopen.command, '--recovery-reopen');
+  assert.match(deferredGates['legacy-profile-upgrade'], /schema-1/);
+});
 
 test('an explicit parent slot/freeze is required before either native mode', () => {
   for (const key of ['RENULUS_NATIVE_SLOT', 'RENULUS_EXPECT_SOURCE_REVISION']) {

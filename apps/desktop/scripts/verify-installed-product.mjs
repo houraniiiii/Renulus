@@ -1,10 +1,11 @@
 /** Bounded current-PC acceptance. Importing this file or --plan never launches anything. */
 import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { lstat, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, open, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { execFileSync, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 import { createNativeEvidence, assertSyntheticEvidenceDirectory, nativeEvidenceRoot, designCEvidenceRoot } from './native-evidence-directory.mjs';
 
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -46,6 +47,9 @@ export function installedAcceptancePlan() {
     evidenceRoot: designCEvidenceRoot,
     resourceBound: 'One owned hidden app/backend at a time; two saved draft chats, one project, eleven deterministic synthetic originals covering eight reader categories, and one real two-question reviewed set; no providers or simulated producer results.',
     receipt: 'installed-product-evidence.json; absent reader/migration/native gates remain not-run and make the aggregate incomplete/exit 1.',
+    recoveryReopen: { command: '--recovery-reopen', requiredEnvironment: ['RENULUS_RECOVERY_RECEIPT', 'RENULUS_RECOVERY_RECEIPT_SHA256'],
+      scope: 'Same matching-package environment; hash-verified Pauli recovery-evidence.json selects only its existing r-<8>/u. Two hidden launches, read-only original history checks and normal closes.',
+      receipt: 'installed-recovery-reopen.json (exclusive create); no broader acceptance gates are changed.' },
     parentChecks: ['Assign the exclusive native/helper slot and immutable final source first.',
       'Publish the exact Design C generated/native proof root in shared guards; never bypass those guards.',
       'Supply the matching package/install receipts. Preserve separate native/live/physical and legacy-profile acceptance.'],
@@ -1016,6 +1020,264 @@ async function reopenSelectedPdfJourney(current, chat, fixtures, report, evidenc
     page: document.payload.page, raster, passage, normalShutdownsBeforeCheck: report.shutdowns.length };
 }
 
+const recoveryOldCommit = '1b30a89687cfcc5fb13b1cf824bbc43c19f870ed';
+const recoveryPythonPaths = ['python/python314.zip', 'python', 'dependencies', 'dependencies/win32',
+  'dependencies/win32/lib', 'dependencies/pywin32_system32', 'runtime', 'upstream/hermes', '.'];
+const recoveryGateNames = ['identity-and-seed', 'legacy-upgrade-reopen', 'actual-current-producers',
+  'json-restored', 'json-deletion-replay', 'zip1-restored', 'zip1-deletion-replay', 'zip2-restored', 'zip2-deletion-replay'];
+const exactDigest = value => typeof value === 'string' && /^[0-9a-f]{64}$/.test(value);
+
+export function validateRecoveryRequest(env, platform = process.platform) {
+  const request = validateInstalledRequest(env, platform), file = env.RENULUS_RECOVERY_RECEIPT;
+  check(typeof file === 'string' && path.isAbsolute(file) && !file.split(/[/\\]/).some(part => part === '.' || part === '..')
+    && path.basename(file) === 'recovery-evidence.json', 'An absolute exact recovery-evidence.json path without traversal is required.');
+  const evidence = path.dirname(file);
+  check(samePath(path.dirname(evidence), designCEvidenceRoot) && /^r-[0-9a-f]{8}$/.test(path.basename(evidence)),
+    'Recovery reopen accepts only the exact delivery/r-<8> root.');
+  check(exactDigest(env.RENULUS_RECOVERY_RECEIPT_SHA256), 'An explicit recovery receipt SHA256 is required.');
+  assertSyntheticEvidenceDirectory(file);
+  const profile = path.join(evidence, 'u');
+  check(profile.length <= 60, 'The upgraded profile exceeds the 60-character native bound.');
+  return { ...request, evidence, profile, recoveryFile: file, recoverySha256: env.RENULUS_RECOVERY_RECEIPT_SHA256 };
+}
+
+/** Hash admission precedes parsing; callers cannot supply expected titles, IDs or a profile. */
+export function parseRecoveryBytes(bytes, expected, maximum) {
+  check(Buffer.isBuffer(bytes) && bytes.length <= maximum && exactDigest(expected) && sha(bytes) === expected,
+    'Recovery input bytes differ from their bounded SHA256 identity.');
+  return json(bytes);
+}
+
+export function validateRecoveryReceipt(request, receipt, identity, hashes) {
+  check(receipt?.format === 'renulus-installed-recovery-evidence/1' && receipt.status === 'passed' && !receipt.error
+    && receipt.external_provider_calls === 0 && receipt.old_commit === recoveryOldCommit
+    && samePath(receipt.run_root, request.evidence) && exactDigest(receipt.seed_sha256)
+    && recoveryGateNames.every(name => receipt.gates?.[name] && typeof receipt.gates[name] === 'object'
+      && !Array.isArray(receipt.gates[name]) && Object.keys(receipt.gates[name]).length),
+  'A complete successful Pauli recovery receipt for this exact synthetic root is required.');
+  const claimed = receipt.identity, runtime = claimed?.runtime;
+  check(claimed?.source_revision === request.revision && samePath(claimed.bundle, identity.backend)
+    && samePath(path.dirname(path.dirname(path.dirname(identity.backend))), designCEvidenceRoot)
+    && /^installed-[0-9a-f]{8}$/.test(path.basename(path.dirname(path.dirname(identity.backend))))
+    && claimed.slot === request.slot && claimed.inventory?.files === identity.inventoryFiles
+    && Number.isSafeInteger(claimed.inventory?.bytes) && claimed.inventory.bytes > 0,
+  'Recovery source, installed bundle, inventory or assigned slot differs.');
+  for (const name of ['bundle', 'inventory', 'python', 'driver']) {
+    check(exactDigest(hashes[name]) && claimed[name + '_sha256'] === hashes[name], 'Recovery ' + name + ' identity differs.');
+  }
+  check(hashes.inventory === identity.actual.inventory && hashes.python === identity.bundle.python.executable_sha256,
+    'Recovery hashes differ from the verified installation.');
+  check(runtime?.platform === 'win32' && runtime.version === '3.14.4'
+    && runtime.isolated === 1 && runtime.no_site === 1 && runtime.no_user_site === 1 && runtime.bytecode_disabled === true
+    && samePath(runtime.executable, path.join(identity.backend, 'python/python.exe'))
+    && samePath(runtime.prefix, path.join(identity.backend, 'python')) && samePath(runtime.base_prefix, runtime.prefix)
+    && Array.isArray(runtime.sys_path) && runtime.sys_path.length === recoveryPythonPaths.length
+    && runtime.sys_path.every((value, index) => samePath(value, path.join(identity.backend, recoveryPythonPaths[index]))),
+  'Recovery was not executed with the exact isolated installed Python.');
+}
+
+export function validateRecoverySeed(request, seed) {
+  check(seed?.format === 'renulus-installed-recovery-seed/1' && seed.old_commit === recoveryOldCommit
+    && seed.synthetic === true && seed.closed === true && seed.schema_version === 1
+    && samePath(seed.run_root, request.evidence) && samePath(seed.profile, request.profile)
+    && isDeepStrictEqual(seed.exports, { json: 'old.json', zip1: 'old1.zip', zip2: 'old2.zip' })
+    && ['old_source_archive_sha256', 'seed_driver_sha256', 'fixture_sha256'].every(name => exactDigest(seed[name])),
+  'The hash-verified seed must bind the original closed synthetic schema1 u profile.');
+  check(Array.isArray(seed.files) && seed.files.length >= 4 && seed.files.length <= 256, 'A bounded original seed inventory is required.');
+  const names = new Set();
+  let bytes = 0;
+  for (const record of seed.files) {
+    check(record && typeof record.path === 'string' && (['old.json', 'old1.zip', 'old2.zip'].includes(record.path)
+      || record.path.startsWith('u/')) && record.path.split('/').every(part => /^[a-zA-Z0-9_.-]+$/.test(part)
+        && !['.', '..'].includes(part) && !part.endsWith('.') && !/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:[.]|$)/i.test(part))
+      && !/(?:^|\/)(?:runtime|credentials?|secrets?|connections?)(?:\/|[.]|$)/i.test(record.path)
+      && !/(?:-wal|-shm|[.]dpapi|[.]pem|[.]key|[.]token)$/.test(record.path) && !record.path.split('/').includes('.env')
+      && !names.has(record.path.toLowerCase()) && Number.isSafeInteger(record.size) && record.size >= 0 && exactDigest(record.sha256),
+    'Unsafe, duplicate or unbounded seed descriptor.');
+    names.add(record.path.toLowerCase()); bytes += record.size;
+  }
+  check(bytes <= 32 * 1024 * 1024 && ['u/state/renulus.sqlite3', 'old.json', 'old1.zip', 'old2.zip'].every(name => names.has(name)),
+    'The original closed database and exports must be present in the bounded seed.');
+  return seed.files.find(record => record.path === 'old.json');
+}
+
+export function expectedRecoveryConversations(old) {
+  check(old?.format === 'renulus-canonical-export' && old.schema_version === 1 && old.format_version === 1
+    && Array.isArray(old.records?.learn_threads) && Array.isArray(old.records?.learn_messages)
+    && Array.isArray(old.records?.case_sessions), 'A genuine schema1 canonical export with Learn and Case history is required.');
+  const result = [], identities = new Set(), records = old.records;
+  check(records.learn_threads.length > 0 && records.case_sessions.length > 0
+    && records.learn_threads.length + records.case_sessions.length <= 100
+    && records.learn_messages.length <= 10000, 'The original Learn/Case seed must be populated and bounded.');
+  for (const [kind, rows] of [['learning', records.learn_threads], ['case', records.case_sessions]]) {
+    for (const row of rows) {
+      const type = kind === 'learning' ? 'learn_thread' : 'case';
+      check(typeof row.id === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(row.id)
+        && typeof row.title === 'string' && row.title.length > 0 && row.title.length <= 120
+        && !identities.has(type + ':' + row.id), 'Invalid or duplicate original conversation identity/title.');
+      identities.add(type + ':' + row.id);
+      const original = kind === 'learning' ? records.learn_messages.filter(item => item.thread_id === row.id) : JSON.parse(row.messages_json);
+      check(Array.isArray(original) && original.length <= 10000, 'Unbounded original message history.');
+      const ids = new Set();
+      const messages = original.map(item => {
+        check(typeof item.id === 'string' && !ids.has(item.id) && ['user', 'assistant'].includes(item.role)
+          && typeof item.content === 'string' && typeof item.created_at === 'string', 'Invalid or duplicated original message.');
+        ids.add(item.id);
+        const message = structuredClone(item);
+        if (kind === 'learning') {
+          message.content_refs = JSON.parse(message.citations_json).filter(entry => 'content_ref' in entry).map(entry => entry.content_ref);
+          delete message.thread_id; delete message.citations_json;
+        } else {
+          message.run_id ??= message.id; message.content_refs ??= [];
+        }
+        return message;
+      }).sort((a, b) => a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+      result.push({ identity: { type, id: row.id }, kind, title: row.title, messages,
+        legacyMessages: original, ...(kind === 'case' ? { caseText: row.case_text } : {}) });
+    }
+  }
+  check(['learning', 'case'].every(kind => result.some(item => item.kind === kind && item.messages.length >= 2))
+    && records.learn_messages.every(message => records.learn_threads.some(thread => thread.id === message.thread_id)),
+  'Both original owners must contain multi-message history with no orphan Learn messages.');
+  return result;
+}
+
+export function validateRecoveredConversation(expected, summary, messages) {
+  check(isDeepStrictEqual(summary.identity, expected.identity) && summary.kind === expected.kind && summary.title === expected.title
+    && summary.retention === 'saved' && summary.lifecycle === 'active' && summary.project_id === null,
+  'Original saved identity/title/lifecycle changed or gained retroactive project membership.');
+  check(isDeepStrictEqual(messages, expected.messages), 'Original canonical paged history changed, duplicated or was truncated.');
+}
+
+/** All pagination is read from the actual server, bounded and cycle-refusing. Small pages exercise cursor reads even with compact seeds. */
+export async function readRecoveryPages(read, route, identity) {
+  const items = [], cursors = new Set();
+  let cursor = null, pages = 0;
+  do {
+    check(++pages <= 10000, 'Recovery history exceeded its page bound.');
+    const page = await read(route + (route.includes('?') ? '&' : '?') + 'limit=1' + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''));
+    check(Array.isArray(page.items) && page.items.length <= 1 && (page.next_cursor === null
+      || typeof page.next_cursor === 'string' && page.next_cursor.length > 0 && page.next_cursor.length <= 4096),
+    'Invalid recovery pagination response.');
+    if (identity) check(isDeepStrictEqual(page.conversation, identity), 'Paged history crossed conversation ownership.');
+    items.push(...page.items); cursor = page.next_cursor;
+    if (cursor) { check(page.items.length === 1 && !cursors.has(cursor), 'Repeated or empty recovery cursor.'); cursors.add(cursor); }
+  } while (cursor);
+  return { items, pages };
+}
+
+async function readRecoveryFile(file, expected, maximum) {
+  assertSyntheticEvidenceDirectory(file);
+  const information = await lstat(file);
+  check(information.isFile() && !information.isSymbolicLink() && information.size <= maximum, 'Missing or oversized recovery input.');
+  return parseRecoveryBytes(await readFile(file), expected, maximum);
+}
+
+async function recoveredHistoryJourney(page, expected) {
+  const listed = await readRecoveryPages(route => api(page, route), '/conversations'), proof = [];
+  for (const item of expected) {
+    const matches = listed.items.filter(row => isDeepStrictEqual(row.identity, item.identity));
+    check(matches.length === 1, 'The saved list lost or duplicated an original conversation.');
+    const route = chatPath(item), summary = await api(page, route);
+    const history = await readRecoveryPages(route => api(page, route), route + '/messages', item.identity);
+    validateRecoveredConversation(item, matches[0], history.items);
+    validateRecoveredConversation(item, summary, history.items);
+    const legacy = await api(page, item.kind === 'learning' ? '/learn/threads/' + item.identity.id : '/cases/sessions/' + item.identity.id);
+    const originals = item.legacyMessages.map(message => {
+      if (item.kind === 'case') return message;
+      const { citations_json, ...rest } = message; return { ...rest, citations: JSON.parse(citations_json) };
+    });
+    // Legacy Learn also orders by created_at,id; Case preserves the stored array order.
+    if (item.kind === 'learning') originals.sort((a, b) => a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+    check(legacy.id === item.identity.id && legacy.title === item.title && isDeepStrictEqual(legacy.messages, originals)
+      && (item.kind !== 'case' || legacy.text === item.caseText && legacy.saved === true), 'The original legacy owner history changed.');
+    await navigate(page, chatHash(item));
+    await page.getByRole('heading', { level: 1, name: item.title, exact: true }).waitFor();
+    const transcript = page.locator('.chat-transcript'), more = transcript.getByRole('button', { name: 'Load more history', exact: true });
+    let uiPages = 1;
+    while (await more.count()) {
+      check(++uiPages <= Math.ceil(item.messages.length / 50), 'UI history pagination exceeded the original message count.');
+      const previous = await transcript.locator('.chat-message').count();
+      await more.click();
+      await poll(() => transcript.locator('.chat-message').count(), count => count > previous, 'Actual UI history page', 30_000, 100);
+    }
+    const displayed = await transcript.locator('.chat-message').evaluateAll(elements => elements.map(element => ({
+      role: element.classList.contains('chat-message-user') ? 'user' : 'assistant',
+      content: element.querySelector('.chat-message-text')?.textContent,
+    })));
+    check(isDeepStrictEqual(displayed, item.messages.map(({ role, content }) => ({ role, content }))), 'The C renderer changed or truncated original history.');
+    proof.push({ identity: item.identity, title: item.title, messages: history.items.length, apiPages: history.pages, uiPages,
+      canonicalHistorySha256: sha(JSON.stringify(history.items)), legacyOwnerChecked: true });
+  }
+  return { listPages: listed.pages, conversations: proof };
+}
+
+export async function runInstalledRecoveryReopen() {
+  const request = validateRecoveryRequest(process.env);
+  nativeEvidenceRoot(designCEvidenceRoot);
+  const receipt = await readRecoveryFile(request.recoveryFile, request.recoverySha256, 1024 * 1024);
+  const identity = await verifyArtifacts(request);
+  const hashes = { bundle: await hashFile(path.join(identity.backend, 'bundle.json')), inventory: identity.actual.inventory,
+    python: await hashFile(path.join(identity.backend, 'python/python.exe')),
+    driver: sha(git(['show', request.revision + ':apps/desktop/scripts/verify-installed-recovery.py'])) };
+  validateRecoveryReceipt(request, receipt, identity, hashes);
+  const seed = await readRecoveryFile(path.join(request.evidence, 'seed.json'), receipt.seed_sha256, 256 * 1024);
+  const original = validateRecoverySeed(request, seed);
+  const old = await readRecoveryFile(path.join(request.evidence, 'old.json'), original.sha256, original.size);
+  check((await stat(path.join(request.evidence, 'old.json'))).size === original.size, 'Old export size differs from the frozen seed.');
+  const expected = expectedRecoveryConversations(old);
+  for (const [file, directory] of [[request.profile, true], [path.join(request.profile, 'state/renulus.sqlite3'), false]]) {
+    assertSyntheticEvidenceDirectory(file);
+    const entry = await lstat(file);
+    check(directory ? entry.isDirectory() : entry.isFile(), 'The verified upgraded u profile must already exist.');
+  }
+  const claimFile = path.join(request.evidence, 'verify.claim');
+  assertSyntheticEvidenceDirectory(claimFile);
+  check((await lstat(claimFile)).size <= 4096, 'Oversized recovery ownership claim.');
+  const claim = json(await readFile(claimFile)), env = isolatedEnvironment(process.env, request.evidence, request.profile);
+  check(processIdentities([claim.pid], env).length === 0, 'The recovery owner must exit before Electron opens its profile.');
+  const output = path.join(request.evidence, 'installed-recovery-reopen.json');
+  assertSyntheticEvidenceDirectory(output);
+  // Reserve before launch; a repeat/refusal never replaces either evidence receipt.
+  const receiptOutput = await open(output, 'wx');
+  const report = { kind: 'actual-installed-recovery-reopen-current-pc', status: 'running', checkedAt: new Date().toISOString(),
+    slot: request.slot, sourceRevision: request.revision, executable: request.executable, evidence: request.evidence, profile: request.profile,
+    recoveryReceipt: { path: request.recoveryFile, sha256: request.recoverySha256, seedSha256: receipt.seed_sha256, oldSha256: original.sha256 },
+    identity, launches: [], shutdowns: [], histories: [],
+    limits: ['Only the existing verified schema1-upgraded u is opened; no profile copy, new content or provider calls.',
+      'Two hidden installed launches and ordinary closes complement the separately hashed recovery receipt.',
+      'Reader, native dialogs, active ingestion and broader DC21 acceptance are not exercised by this runner.'] };
+  let current;
+  try {
+    for (let pass = 0; pass < 2; pass++) {
+      current = await launch(request, identity, request.evidence, 'u', report);
+      report.histories.push(await recoveredHistoryJourney(current.page, expected));
+      await normalClose(current, report); current = undefined; delete report.current;
+    }
+    check(report.shutdowns.length === 2 && report.shutdowns.every(row => row.normalWindowClose && row.ownedBackendObserved && row.remaining.length === 0),
+      'Both upgraded-profile launches must terminate normally.');
+    report.status = 'passed';
+  } catch (error) {
+    report.status = 'failed'; report.error = safeFailure(error); process.exitCode = 1;
+  } finally {
+    const owned = current ?? report.current;
+    if (owned) {
+      try {
+        let timer;
+        try { await Promise.race([owned.application.close(), new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Owned recovery app cleanup exceeded 30 seconds.')), 30_000); })]); }
+        finally { clearTimeout(timer); }
+        report.failureCleanup = { attempted: true, identities: owned.identities };
+      } catch (error) { report.cleanupError = error.message; process.exitCode = 1; }
+    }
+    delete report.current;
+    report.finishedAt = new Date().toISOString();
+    try { await receiptOutput.writeFile(JSON.stringify(report, null, 2)); }
+    finally { await receiptOutput.close(); }
+  }
+  console.log(JSON.stringify({ evidence: output, status: report.status, error: report.error?.message }));
+  return report;
+}
+
 export async function runInstalledProduct() {
   const request = validateInstalledRequest(process.env);
   // Published parent helper must accept exactly this root before any state is created.
@@ -1100,5 +1362,6 @@ export async function runInstalledProduct() {
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   if (process.argv.length === 3 && process.argv[2] === '--plan') console.log(JSON.stringify(installedAcceptancePlan(), null, 2));
   else if (process.argv.length === 3 && process.argv[2] === '--run') await runInstalledProduct();
-  else throw new Error('Use --plan (read-only) or --run after the parent supplies the matching package and exact freeze/slot.');
+  else if (process.argv.length === 3 && process.argv[2] === '--recovery-reopen') await runInstalledRecoveryReopen();
+  else throw new Error('Use --plan (read-only), --run or --recovery-reopen after the parent supplies the matching package and exact freeze/slot.');
 }
