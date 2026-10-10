@@ -1,23 +1,100 @@
 # Design C independent integration review — October 10, 2026
 
-The latest bounded pass reviews committed `84be584e` plus the actual Tests Import
-mount `0d10e5df` and Home Attach label fix `319ff190`, built in this lane at
-`f69f6792`. Actual Import review/publication, Study-to-Chat preparation, saved
-Chat attachment/CSV preview and Untimed Test final submission work at their
-recorded scope. Ten production learning-route probes refuse access during the
-UI-started Test, and eight focused Study-help guard tests pass. Material open
-findings are reviewed progress omission (R8, P1), Home draft loss on a policy
-change without navigation (R3, P2), reader row-position loss on restart (R7,
-P2), and saved Chat attachments missing from Workspace Files (R10, P2).
-R9 records misleading edited-key copy. Notes creation and receipt propagation
-into Reader remain specific consumer gates. The same-baseline hidden follow-up
-below reconfirms R4 preview styles and R6 transient error feedback; R5 retains
-its earlier qualification. The resolved R1/R2 probes were not repeated.
+The latest bounded repair is committed locally as `3f0c4781`, based on published
+`8f82b346`. R4 restored-preview styling and R6 action-error persistence both
+pass their exact hidden reproductions on this build. Seventeen focused tests,
+desktop TypeScript and renderer/native builds pass. This report adds the exact
+source identity, four inspected screenshots and normal restart/close evidence.
+The previous 84+Import and 319 reviews below retain their recorded baseline
+qualifications; their R3/R5/R7/R8/R9/R10 and G1/G2 observations do not claim
+those failures still exist in later owner revisions. No other finding was
+rerun during this bounded repair.
 Figma Test timing copy is reconciled across ten existing C specimens with
 verified screenshots. Timed lifecycle, other media/extraction paths and Windows
 delivery remain outside this pass's acceptance. This report closes no ticket.
 
-## Latest bounded pass — 84 baseline and connected Import mount
+## Latest bounded repair — R4/R6 on 8f82b346
+
+Normal `rev-parse --show-toplevel` returned
+`C:/Renulus/dev/worktrees/dc01-design`; branch is `codex/dc01-design`. The clean
+normal merge of prerequisite `8f82b346611560d4ff05b4e575578643861b1084` produced
+`d07dcb23dc6b61ccb1536f10586298085c19a43e`. The source repair is
+`3f0c4781c54eebb4bcfd41d1dbce84e0228e9c3e`, with exactly these three paths:
+
+- `apps/desktop/src/modules/tests/TestSetupPane.tsx`: imports its existing
+  `./tests.css`, so the independently mounted Workspace preview has its styles.
+- `apps/desktop/src/modules/attempts/session.ts`: tracks read versus action
+  errors. Passive reads retain an action error for the same active question,
+  and failed polls do not mask it. Successful reads recover read errors;
+  explicit recovery, a new action or terminal reconciliation clears obsolete
+  feedback. Existing ambiguous-command recovery remains intact.
+- `apps/desktop/src/modules/attempts/session.test.ts`: verifies successful polls
+  retain the refusal, a failed poll cannot replace it, explicit retry recovers,
+  and later successful reads clear transient read errors.
+
+No `AttemptRun.tsx`, connected-test, CSS, shared/router or other module edits
+were needed. Before the repair, the two regression assertions failed because a
+successful poll cleared the Hint error and a failed poll masked it. After the
+repair, `session.test.ts` and `tests/index.test.tsx` passed 17/17 focused tests in
+48.53 seconds. Desktop TypeScript, Vite with `--configLoader runner`, and the
+native build passed. These checks preceded the hidden recheck; no source changed
+after building.
+
+Renderer `apps/desktop/dist/assets/index-C4AYbNrt.js` SHA-256 is
+`c9cd6fb45acfcd6ced41d6059f0afe52cd322a243ca04038236531823180ae81`.
+Native `apps/desktop/dist-electron/main.cjs` SHA-256 is
+`c4b3e337fa58ee3e2754ffbf2d485cc74d0421db6a7d339ed36f3a5cc223d615`.
+The manifest at
+`C:/Renulus/scratch/dcctl/rev1/probes/r4-r6-3f0c4781-20261010/manifest.json`
+hashes 104 artifacts, including all 43 strict controller request/results, four
+native captures, exact source/build bytes, validation and lifecycle receipts.
+All 43 tool operations succeeded. The fixed controller used only its fresh
+synthetic profile `C:/Renulus/scratch/dcctl/rev1/c/s-329c19b8/p`.
+
+| Repair / actual reproduction | Evidence and result |
+| --- | --- |
+| R6: create a three-question reviewed test through Tests, Continue to Study, Start Study, then Hint on question 1 (RN-AAV-001) | Request 018 and capture 0001 show “No authored hint is available for this pinned question.” After a bounded 6.5-second idle wait with no UI action, request 020 and inspected capture 0002 retain the same refusal. Snapshot result files are 25.937 seconds apart, including capture/tool overhead. The error survived multiple two-second polls. |
+| R6: perform another valid action | Sources succeeds. Request 024 has Recorded assistance and no Hint refusal/error heading. The refusal stays visible until meaningful recovery instead of disappearing during polling. |
+| R4: cold restored preview, before any post-restart Tests visit | Ask in chat creates a real saved Chat. A labelled production preference fixture saves only that UI-created Chat and reviewed-version reference at width 480. After normal restart, open Study question and Workspace. Request 035 and inspected capture 0003 show a styled version row, separated readiness/origin labels and the prominent count with “questions in this version.” There are no default list markers or joined “3questions” labels. |
+| R4: narrow/200% keyboard composition | At 1000×900 outer / 984×861 content and native 200% zoom, request 040 shows the single Test preview pane with Back to chat. Tab from Use a timer reaches Continue to Study; inspected capture 0004 shows its visible focus ring. At 1440×900 outer / 1424×861 content, capture 0003 shows the 480-wide Workspace beside Chat and expanded navigation. |
+
+The exact UI-created identities are Chat
+`thread_aedabb7b0b0842deaf63f53c91d21d52` and reviewed version
+`test_version_8ea9102b2b1c4ca8bed4929cb8a97a2d`. `preview-seed.json` records
+the production GET/PUT/GET preferences at HTTP 200. This safe-reference fixture
+proves restored-preview behavior; it is not acceptance of a Test-tab-open
+producer UI. Study-to-Chat preparation restored the public-question draft;
+Send was not used. No live provider call, owner profile or credentials were
+used. The controller and its windows remained hidden.
+
+All four PNGs are under
+`C:/Renulus/scratch/dcctl/rev1/c/s-329c19b8/out/`. The receipt records normal
+restart and final requested close, both with empty forced/remaining PID lists
+and null fault. Final close finished October 10, 2026 at 14:33:13.696 UTC;
+the bridge exited with code 0. The errors tool retains HTTP 409 console entries,
+including the expected refused Hint; this report does not assert that every
+console entry is absent or independently attributed.
+
+Bounded verdict: both repaired reproductions pass on `3f0c4781`; their prior
+R4/R6 open-status statements below are historical. Parent integration and the
+matching parent build recheck remain the next gate. Full tab order, pointer
+drag, timed lifecycle, installed Windows delivery and other owner findings
+were not accepted or rerun here. No feature ticket is marked complete.
+
+Owner integration notice received after this recheck: parent published
+`a4439597` with the Notes editor/Workspace backend, and reported integrated
+R3 Home `434dc`, R8 Study `77e139d9` (20 actual checks), R9 Import copy
+`f1228182` (actual renderer) and R10 Files `1b0d22d3` (7 actual checks). These
+are owner-reported checkpoints, not new independent acceptance by this lane.
+The R4/R6 evidence above remains the exact committed `3f0c4781` build; those
+later parent bytes were not merged or rebuilt for this bounded repair.
+
+Checkpoint checks passed: `git diff --check` and `scripts/check_workspace.py`
+(18,429 public files, 1,181 local links, 27 topics and 199 subtopics). The normal
+root and Git status identify this reserved report as the sole remaining content
+edit. Source repairs and report evidence use separate local commits; no push.
+
+## Earlier bounded pass — 84 baseline and connected Import mount
 
 The exact-root check returned `C:/Renulus/dev/worktrees/dc01-design` and the
 branch remained `codex/dc01-design`. A clean normal merge of `84be584e` produced
@@ -144,7 +221,8 @@ not an application crash. The saved explanation/original survived restart.
 
 R4's route-dependent Test preview styling, R5's ambiguous reader-tab names and
 R6's disappearing unavailable-hint error were not independently rerun in this
-bounded pass. Their previously recorded reproductions remain open. This pass's
+84 bounded pass. R4/R6 were subsequently repaired and rechecked above; R5
+retains its prior qualification. This pass's
 single generic Attachment tab does not establish a new duplicate-name repro.
 No stale graph/invalidation finding is being reopened by those qualifications.
 
@@ -177,7 +255,7 @@ No further Figma change or full-page metadata request was necessary.
 This report recommends exact owner actions and records evidence; it does not
 implement shared paths or change feature-ticket disposition.
 
-## Same-baseline hidden UX follow-up and coverage — October 10, 2026
+## Earlier same-baseline hidden UX follow-up and coverage — October 10, 2026
 
 Canonical was exactly `319ff190610d6b6ff1a5f44f2e65aa5620a7f7c6`; the clean
 lane was `ab941c18`, with this canonical commit already merged. Only the report
@@ -194,7 +272,7 @@ listed in `C:/Renulus/scratch/dcctl/rev1/probes/ux-319-20261010/manifest.json`.
 Restart and final close were normal, with empty forced/remaining PID lists and
 null fault. Final close finished at 14:12:21.706 UTC. Zero live provider calls.
 
-**R6 remains P2 on current committed bytes.** Through Tests, create
+**R6 was P2 on 319ff190; the 3f0c4781 repair supersedes this status.** Through Tests, create
 `DC01 319 hidden UX recheck`, three reviewed questions, Continue to Study and
 Start Study. On question 1, RN-AAV-001 has no authored hint. Click Hint.
 Request 020 reaches the visible heading “This action needs recovery”; request
@@ -206,7 +284,7 @@ not claim visible error pixels. Retain action feedback until a relevant
 successful action, explicit dismissal or retry; describe unavailable authored
 help truthfully instead of losing the reason during draft polling.
 
-**R4 remains P2 on current committed bytes.** Ask in chat creates the actual
+**R4 was P2 on 319ff190; the 3f0c4781 repair supersedes this status.** Ask in chat creates the actual
 saved conversation `thread_269ffc13e641470694c3e1563969b89a` without Send.
 `preview-seed.json` records an explicit production `PUT /workspace/preferences`
 fixture containing only that saved context and the UI-created reviewed version
@@ -239,8 +317,8 @@ rests on the fresh s-59e2b4de session above.
 | Home / default New chat | The 84+mount pass rendered the real Home composer and isolated draft loss through actual Test policy start/release without navigation. R3 remains open; provider-backed daily suggestions and complete recovery focus are not accepted. |
 | Chat | Actual Study-to-saved-Chat preparation, retained public-question draft, CSV upload/rights/Open file and reader were checked on 84+mount. This follow-up reconfirms preparation and draft restoration. No Send or model-response acceptance. |
 | Library / reader | The 873 pass covered actual PDF page 3 and CSV rows 101–200; 84+mount covered real Chat CSV upload/preview and restart. R7 position loss and R10 Files inventory remain open. This is not full format/extraction/OCR or Library eligibility acceptance. |
-| Tests collection / setup / Import | Actual reviewed creation, pasted private-original review, edited-key re-selection and explicit Imported/Personal/Ready Version 1 publication passed on 84+mount. Current restored setup recheck confirms R4. R9 edited-key copy, media imports, normalization/retry and native chooser remain open. |
-| Study / assistance | Actual Study answer commitment and summary, Notes pane opening and Ask in chat were checked on 84+mount. Current R6 recheck uses a UI-started reviewed Study. G1 Notes creation and G2 Reader receipt/abort consumer remain open. |
+| Tests collection / setup / Import | Actual reviewed creation, pasted private-original review, edited-key re-selection and explicit Imported/Personal/Ready Version 1 publication passed on 84+mount. The later 3f0c4781 recheck passes the R4 restored-styling repro before visiting Tests. R9 edited-key copy, media imports, normalization/retry and native chooser were not rerun in that repair. |
+| Study / assistance | Actual Study answer commitment and summary, Notes pane opening and Ask in chat were checked on 84+mount. The later 3f0c4781 UI-started reviewed Study passes R6 error persistence/recovery. G1 Notes creation and G2 Reader receipt/abort consumer were not rerun in that repair. |
 | Test / results / restricted navigation | Actual Untimed Imported Test, Home restriction, no Pause action, keyboard final submission and personal 0/2 result passed on 84+mount. Ten route denials and eight Study-help guard tests retain their separate backend scope. Timed expiry/sleep, ambiguous acknowledgement and full results/filter/export behavior remain open. |
 | Workspace / keyboard / narrow / zoom | The retained passes cover real mounting, 480 preference restoration, keyboard width changes and safe tabs. This follow-up adds 1000×900 / 200% restored-preview focus and desktop before/after route pixels. Pointer drag, concurrent preference writes and general focus routing remain open. |
 | Project / Goals | Earlier recorded continuation covers real project context, no inherited Chat tabs and truthful empty Goals. Current 319 baseline full project creation/goal workflows were not rerun or accepted. |
