@@ -4,16 +4,102 @@ The independent R3–R10 recheck is complete on the built `397d1032` integration
 R3 draft retention, R7 CSV position reopening, R8 reviewed progress, R9 edited
 answer copy, R10 Files inventory and the Study → Notes → saved Chat/source flow
 pass their actual connected reproductions. R4/R6 retain their prior passing
-hidden evidence with exact repair-source blob parity. R5 ambiguous reader tab
-and close names remains P2. No reproducible blocking UI failure was established
-in the completed checks; an unexplained first-open Reader timeout is retained
-below, including its successful recovery and limited attribution.
+hidden evidence with exact repair-source blob parity. The subsequent bounded
+R5 recheck below passes real two-file titles and matching Close names before
+and after normal restart on the integrated `f5d36ac9` fix. An unexplained
+first-open Reader timeout recurred and is retained separately, including its
+successful recovery and limited attribution.
 
 This is a report-only checkpoint. It supersedes earlier open R3/R7/R8/R9/R10
 and G1/G2 statements only at the tested scopes below. Historical findings and
-receipts remain intact. Parent's latest announced canonical is `b51cb7b3`; it
-was not built or exercised here. Figma Test timing correction remains committed
+receipts remain intact. Parent's latest announced canonical is `f2ac20d2`; the
+bounded R5 build and path-parity qualifications are recorded below. Figma Test
+timing correction remains committed
 as `fc732598`. This report closes no feature ticket or Windows delivery gate.
+
+## Bounded R5 authorized-title/reopen recheck — f5d36ac9
+
+**The exact R5 two-file reproduction passes.** Actual saved Markdown and CSV
+readers have distinct authorized tab names and matching Close accessible
+names. Both titles resolve again after normal restart, and both real Reader
+bodies reopen. Titles remain volatile: actual preferences are identical before
+and after restart and contain only safe references/positions at width 480.
+This supersedes the earlier R5 open statement at this tested scope. It does
+not close a feature ticket or repeat the completed R3–R10 audit.
+
+Normal Git root was verified as `C:/Renulus/dev/worktrees/dc01-design`; the
+lane was clean on `codex/dc01-design`. A normal conflict-free merge of parent
+title fix `f5d36ac9b5902f5215443a6e928d2ab6354c5fa6` produced the exact tested
+build HEAD `fff36f280b5a62096aa69abffe5fd56fdefaeb30`. Desktop TypeScript,
+Vite with `--configLoader runner` and native build passed. No application source
+changed after building. This follow-up authors only the reserved report.
+
+Renderer `apps/desktop/dist/assets/index-CF6NIY7g.js` SHA-256 is
+`419cf9dbaba6a6efa19a6bd20caa8d303d54cdf35e7782ef815ab41da239eef2`.
+Native main SHA-256 is
+`c4b3e337fa58ee3e2754ffbf2d485cc74d0421db6a7d339ed36f3a5cc223d615`.
+The evidence manifest is
+`C:/Renulus/scratch/dcctl/rev1/probes/r5-f5d36ac9-20261010/manifest.json`: 153
+hashed artifacts, 66 tool operations, 62 successful operations and four native
+captures, all visually inspected. The four failed requests are qualified below.
+
+The previous controller session remains closed and preserved. A fresh fixed
+controller connection reused the two already-declared original synthetic
+fixtures, uploaded through the actual saved Chat rights-confirmation flow:
+`synthetic-practice.md` (212 bytes, SHA-256
+`306d1dee77d485312548876103cefc432d97ba2b6e0c061af944810a815034a0`) and
+`synthetic-rows.csv` (5,947 bytes, SHA-256
+`a563865763fcaf67c584cb12b053ca24ee68667755e2438da6f1e8ff13a9110f`).
+The owned profile is `C:/Renulus/scratch/dcctl/rev1/c/s-e3988044/p`. Display and
+Keep local original were confirmed; model input and derivation remained false.
+No provider, preference fixture, page mock, new extraction/index work, owner
+profile, credentials or foreground input was used. The controller staged only
+the existing declared public helper bundle through its normal startup contract.
+
+| Actual reproduction | Result / exact evidence |
+| --- | --- |
+| Open the retained Markdown original | Its tab is DC01 R5 Markdown and its Close name is Close DC01 R5 Markdown tab. After same-profile recovery, request 028 renders its real original text. |
+| Attach the retained CSV and open it through Files | Both tabs are present. Request 047 has DC01 R5 Markdown / DC01 R5 CSV and both matching Close names. Captures 0001–0002 show the two titles alongside the actual CSV rows. Request 043 briefly records distinct numbered neutral fallback labels during metadata refresh; settled request 047 and the captures resolve the actual titles. |
+| Normal restart, saved Chat selection and Workspace reopen | Request 059 retains both title/Close names and renders the CSV body. Capture 0003 shows both tabs and the actual reopened rows. |
+| Select the reopened Markdown tab | Request 063 retains both title/Close names and renders the original Markdown body; capture 0004 shows it after normal restart. |
+| Read actual persisted preferences | `before-restart.json` and `after-restart.json` contain identical two-tab safe references/positions, width 480 and no titles. These are production HTTP/SQLite reads of UI-created records, with no lifespan/helper worker/provider or state mutation. |
+
+The saved Chat is `thread_e16d8220e78d47a7882e0a9112e52fde`. The two references
+are attachment `attachment_2add28edfafc43d0963e5318642cc18e` (Markdown) and
+`attachment_a58c919bed054505b38ece34bfad9384` (CSV). All captures and lifecycle
+logs are under `C:/Renulus/scratch/dcctl/rev1/c/s-e3988044/out/`. Wide captures
+are 1384×921 content pixels; no additional narrow/zoom or full focus audit was
+performed. Close accessible names were checked; destructive removal was not
+needed for this bounded naming/reopen reproduction.
+
+**Remaining observation: first-open timeout recurred.** After the initial
+Markdown Open file, request 015 records the correct tab/Close title with
+Opening source. Request 016 exceeded the controller's finite action budget
+waiting for the Reader title; requests 017–019 then returned `not_running`.
+Cleanup was normal. The nearby 409 log entry was not conclusively attributed.
+This adds another first-open occurrence to the earlier CSV observation; it
+does not establish an application cause, crash or title-fix regression.
+
+Starting the same owned profile recovered the actual Markdown Reader. The
+second original, its distinct titles and the subsequent normal restart all
+passed. Three launches ended in three normal closes: operation-failure cleanup,
+requested restart and final requested close at October 10, 2026, 15:44:28.865
+UTC. Every forced/remaining PID list is empty, fault is null, and the bridge
+exited with code 0. Request 066 confirms the controller is closed. This is not
+a zero-error run; retain requests 015–020 and the logs for bounded owner triage.
+
+Parent reported eight real backend and 28 renderer/API checks for guarded
+metadata, duplicate-title numbering and neutral inaccessible titles. This lane
+independently accepts the distinct authorized two-file naming/reopen behavior
+above; equal-title, rights-revocation, tombstone and late-response cases were
+not repeated. Parent's later `f2ac20d2` was not built here. Read-only diff of
+the R5 WorkspaceHost, workspaceTitles, platform API and backend workspace/titles
+paths from `f5d36ac9` to `f2ac20d2` is empty. No source lease changed and no
+other owner acceptance gate was duplicated.
+
+Follow-up document validation passes `git diff --check` and
+`scripts/check_workspace.py`: 18,452 public files, 1,207 local links, 27 topics
+and 199 subtopics. Only the reserved report has a content edit.
 
 ## Independent integrated recheck — 397d1032
 
