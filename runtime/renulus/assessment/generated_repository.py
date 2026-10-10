@@ -1,5 +1,6 @@
 """Pinned generated keys and independent scores; case derivatives remain volatile."""
 from copy import deepcopy
+from contextlib import closing
 from dataclasses import dataclass, field
 import hashlib
 import json
@@ -8,6 +9,8 @@ from time import monotonic
 
 from renulus.contracts import ApiError, ContextScope, Scope, durable_id
 from renulus.storage.database import utc_now
+from renulus.storage.assessment_policy import require_assistance
+from renulus.storage.invalidation import context_epoch_in
 
 from .generated_contracts import HandoffGuard
 from .repository import encode
@@ -31,6 +34,8 @@ class PracticeRun:
     count: int
     messages: list[dict]
     prompt: str
+    policy_revision: int
+    context_epoch: int
     handoff_id: str | None = None
     case_cancel: object | None = None
     cancel: CancelFlag = field(default_factory=CancelFlag)
@@ -93,9 +98,18 @@ class GeneratedPracticeRepository:
             raise ApiError("case_handoff_unavailable", "Return to Cases to start a new practice handoff", 503, True)
         return cases
 
-    def guard_run(self, run):
+    def guard_boundary(self, run, conn=None):
+        if conn is None:
+            with closing(self.db.connect()) as current:
+                return self.guard_boundary(run, current)
+        require_assistance(conn, expected_revision=run.policy_revision)
+        if context_epoch_in(conn) != run.context_epoch:
+            raise ApiError("practice_context_changed", "Learning context changed; start a new practice request", 409, True)
+
+    def guard_run(self, run, conn=None):
         if run.cancel.is_set() or (run.case_cancel and run.case_cancel.is_set()):
             raise ApiError("practice_cancelled", "Practice generation was stopped", 409)
+        self.guard_boundary(run, conn)
         if run.handoff_id:
             # Revalidate revision, deletion, expiry and saved revision before every reveal.
             self._cases().resolve_handoff(run.handoff_id, "generated-practice")
@@ -115,11 +129,18 @@ class GeneratedPracticeRepository:
         digest = fingerprint(request.model_dump(exclude={"idempotency_key"}))
         with self.lock:
             self._expire()
-            previous = self.db.fetch_one("SELECT * FROM assessment_generated_commands WHERE idempotency_key=?",
-                                         (request.idempotency_key,))
+            # Gate even durable command replays. Never adopt a new boundary for
+            # an existing in-flight/recorded run after a Test cycle or restore.
+            with closing(self.db.connect()) as conn:
+                conn.execute("BEGIN")
+                policy_revision = require_assistance(conn)
+                context_epoch = context_epoch_in(conn)
+                previous = conn.execute("SELECT * FROM assessment_generated_commands WHERE idempotency_key=?",
+                                        (request.idempotency_key,)).fetchone()
             replay = self._check_command(previous, "generate", "", digest)
             for run in self.runs.values():
                 if run.key == request.idempotency_key:
+                    self.guard_boundary(run)
                     if run.request_hash != digest:
                         raise ApiError("idempotency_conflict", "Use a new request key for changed practice input", 409)
                     if run.status == "running":
@@ -147,6 +168,7 @@ class GeneratedPracticeRepository:
                 scope = ContextScope(kind=Scope.TEMPORARY_CASE if request.context == "temporary" else Scope.UNCLASSIFIED)
             run = PracticeRun(durable_id("practice_run"), request.idempotency_key, digest,
                               scope, identifier, request.topic_id, request.count, messages, request.prompt,
+                              policy_revision, context_epoch,
                               request.case_handoff_id, cancel)
             if replay is not None:
                 run.session_id = replay["session"]["id"]
@@ -241,6 +263,7 @@ class GeneratedPracticeRepository:
             result = {"session": self.view(state, present=True)}
             if run.scope.kind == Scope.GENERATED_PRACTICE:
                 with self.db.transaction() as conn:
+                    self.guard_run(run, conn)
                     previous = conn.execute("SELECT * FROM assessment_generated_commands WHERE idempotency_key=?", (run.key,)).fetchone()
                     replay = self._check_command(previous, "generate", "", run.request_hash)
                     if replay is not None:
@@ -248,6 +271,7 @@ class GeneratedPracticeRepository:
                     self._save(conn, state, new=True)
                     self._record(conn, run.key, "generate", "", run.request_hash, result)
             else:
+                self.guard_run(run)
                 self._expire()
                 if len(self.volatile) >= MAX_VOLATILE:
                     raise ApiError("practice_capacity", "Finish existing temporary practice before starting another", 429, True)
