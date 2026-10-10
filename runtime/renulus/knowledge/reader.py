@@ -107,7 +107,7 @@ class ReaderRepository:
                     raise ApiError("reader_context_mismatch", "This attachment is not available in this context", 403)
                 if reason == "not_found":
                     raise ApiError("reader_content_missing", "This attachment is unavailable", 404)
-                columns = {row["name"] for row in conn.execute("PRAGMA table_info(knowledge_attachments)")}
+                columns = {row["name"] for row in conn.execute("PRAGMA table_info(knowledge_attachment_metadata)")}
                 if not legacy and conversation is None and "rights_json" not in columns:
                     raise ApiError("reader_schema_unavailable", "The attachment storage update is not installed", 503, True)
                 raise ApiError("reader_original_unavailable", "The attachment original is currently unavailable", 409, True)
@@ -134,10 +134,11 @@ class ReaderRepository:
                 if error.status not in {404, 410}:
                     raise
         required = {"rights_json", "metadata_json", "filename"}
-        columns = {row["name"] for row in self.db.fetch_all("PRAGMA table_info(knowledge_attachments)")}
+        columns = {row["name"] for row in self.db.fetch_all("PRAGMA table_info(knowledge_attachment_metadata)")}
         if not required <= columns:
             raise ApiError("reader_schema_unavailable", "The attachment storage update is not installed", 503, True)
-        row = self.db.fetch_one("SELECT * FROM knowledge_attachments WHERE id=?", (target.id,))
+        row = self.db.fetch_one("SELECT a.*,m.filename,m.metadata_json,m.rights_json FROM knowledge_attachments a "
+            "JOIN knowledge_attachment_metadata m ON m.attachment_id=a.id WHERE a.id=?", (target.id,))
         if not row:
             raise ApiError("reader_content_missing", "This attachment is unavailable", 404)
         expected_type = "case" if row["chat_kind"] == "case" else "learn_thread"

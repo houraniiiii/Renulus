@@ -179,3 +179,24 @@ def test_pending_case_attachment_removal_revokes_reader_before_save(reader_app):
     assert reader_app.state.services.db.fetch_one("SELECT id FROM case_attachments WHERE id=?", (original["id"],))
     assert client.post("/api/v1/readers/resolve", json=body).status_code == 404
     assert client.post("/api/v1/readers/original", json=body).status_code == 404
+
+
+def test_actual_workspace_router_uses_registered_case_attachment_authority(reader_app):
+    from io import BytesIO
+    from PIL import Image
+    from renulus.cases.models import StartCase
+    from renulus.cases.originals import accepted_original
+    cases = reader_app.state.services.get("cases")
+    stream = BytesIO(); Image.new("RGB", (20, 20), "white").save(stream, format="PNG")
+    original = accepted_original("SYNTHETIC.png", "SYNTHETIC Workspace original", "image/png", stream.getvalue())
+    case = cases.start(StartCase(text="SYNTHETIC volatile Workspace Case"))
+    case = cases.attach(case["id"], case["revision"], original)
+    client = TestClient(reader_app)
+    request = {"kind": "content", "context": {"identity": {"type": "case", "id": case["id"]},
+        "retention": "temporary"}, "policy": client.get("/api/v1/assessment/policy").json(),
+        "reference": {"target": {"type": "attachment", "id": original["id"]}}}
+    result = client.post("/api/v1/workspace/authorize", json=request)
+    assert result.status_code == 200 and result.json() == {"allowed": True}
+    assert not reader_app.state.services.db.fetch_one("SELECT id FROM case_sessions WHERE id=?", (case["id"],))
+    cases.remove_attachment(case["id"], original["id"], case["revision"])
+    assert client.post("/api/v1/workspace/authorize", json=request).json()["allowed"] is False

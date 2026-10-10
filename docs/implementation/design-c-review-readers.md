@@ -491,21 +491,26 @@ exist. This report completes only the assigned independent pass-1 review.
 
 Implementation follow-up on October 10, against the frozen `design-c/1`
 10-column attachment and 7-column original inventory. The parent owns the DDL,
-contract inventory and media recovery changes. Keep all frozen names/meanings and
-append the following exact columns; do not widen the legacy Case schema.
+contract inventory and media recovery changes. The lead's later request selects
+a metadata sidecar instead of additions to those core tables. This supersedes
+the earlier 20+11-column proposal at `f6d23bdd`. Do not widen the legacy Case schema.
 
 | Table | Additional columns |
 | --- | --- |
-| `knowledge_attachments` | `filename TEXT NOT NULL`, `source_id TEXT NOT NULL`, `metadata_json TEXT NOT NULL`, `rights_json TEXT NOT NULL`, `preview_state TEXT NOT NULL DEFAULT 'not_requested'`, `preview_revision INTEGER NOT NULL DEFAULT 0`, `preview_json TEXT`, `extraction_revision INTEGER NOT NULL DEFAULT 0`, `extraction_json TEXT`, `processing_json TEXT` |
-| `knowledge_attachment_originals` | `filename TEXT NOT NULL`, `media_type TEXT NOT NULL`, `source_original_id TEXT`, `preview_revision INTEGER` |
+| New `knowledge_attachment_metadata` | `attachment_id TEXT PRIMARY KEY REFERENCES knowledge_attachments(id) ON DELETE CASCADE`; `filename TEXT NOT NULL`, `source_id TEXT NOT NULL`, `metadata_json TEXT NOT NULL`, `rights_json TEXT NOT NULL`, `preview_state TEXT NOT NULL DEFAULT 'not_requested'`, `preview_revision INTEGER NOT NULL DEFAULT 0`, `preview_json TEXT DEFAULT NULL`, `extraction_revision INTEGER NOT NULL DEFAULT 0`, `extraction_json TEXT DEFAULT NULL`, `processing_json TEXT DEFAULT NULL` |
+| Existing `knowledge_attachments` and `knowledge_attachment_originals` | Retain the frozen 10+7 inventories without added columns. |
 
-The resulting exact inventories contain 20 and 11 columns respectively. Existing
-`original_path` must permit NULL for records-only restore. JSON columns contain
-valid objects when present; generations are nonnegative. Original roles are
-`original|preview`, with exactly one original per attachment. Original ID/hash/bytes
-are immutable; replacing bytes creates a new attachment ID. A preview pins the
-same attachment's original through `source_original_id` and a preview generation;
-those two fields are NULL on original rows. A source original cannot be a preview.
+The new sidecar has eleven columns. Existing `original_path` must represent
+unavailable bytes for records-only restore (prefer NULL if the published contract
+permits it). JSON columns contain valid objects when present; generations are
+nonnegative. Original roles are `original|preview`, with exactly one original per
+attachment. Original ID/hash/bytes are immutable; replacing bytes creates a new
+attachment ID. Preview provenance is in `processing_json`: `schema_version`,
+`source_original_id`, `source_sha256`, `attachment_revision`, `preview_revision`,
+and `assets` entries `{original_id, media_type}`. The repository checks that source
+and asset rows belong to this attachment and that the source has original role.
+No original metadata sidecar is required: originals use the attachment filename
+and media type; derived reader assets are PNG.
 
 Ordinary chat uploads own their originals under
 `paths.library / "attachments" / attachment_id`. Library/project documents and
@@ -543,23 +548,27 @@ the reader reports `reader_schema_unavailable` until the published columns exist
 
 ### Frozen proposal constraints and authority
 
-Required added text columns have no default. All three nullable JSON
-columns default to NULL; both original-row additions default to NULL. Required
+Required sidecar text columns have no default. All three nullable JSON
+columns default to NULL. Required
 metadata/rights JSON and present optional JSON must satisfy
 `json_valid(value) AND json_type(value)='object'`. Preview and extraction
 generations are nonnegative integers. Existing `role` is constrained to
 `original|preview`. A partial unique index on attachment ID for original roles
-allows only one original. Original rows have NULL source/generation; preview
-rows require a source original and nonnegative preview generation. The nullable
-`source_original_id` references `knowledge_attachment_originals(id)`; the repository
-checks that source is an original of the same attachment. No additive helper
-tables or independent policy authority are required.
+allows only one original. Processing metadata pins previews to an original of
+the same attachment and a nonnegative generation. Preview states used by this
+slice are `not_requested|ready|failed|unsupported`. Missing/invalid sidecar rights
+or a source-ID mismatch grants no access. No other helper table or independent
+policy authority is required. Readers/access join the sidecar; frozen core
+original rows are unchanged.
 
 Knowledge owns new uploads' original, rights, preview and extraction records.
 The rights are per-operation `Rights` and never inferred from preview readiness.
 The original remains available independently of extraction/index state; NULL
 paths report records-only unavailability. Case keeps its legacy byte authority.
 Library/project sources and notes retain their existing Knowledge revision IDs.
+Knowledge's deletion byte scope is only `paths.library / "attachments" / attachment_id`
+after canonical ownership/tombstone checks, covering that original and its
+derived previews. It excludes Case parts, revision folders and arbitrary paths.
 
 ### Caller-transaction attachment authorization slice
 
@@ -599,3 +608,14 @@ records-only parts removal, tombstones, stale saved revision and pending removal
 are covered. Synthetic state/evidence is exclusively under
 `C:/Renulus/scratch/design-c/dc-review-readers/`. This does not close DC08/DC10 or
 establish ordinary uploads, packaged reader behavior or Electron isolation.
+
+After merging the lead's `c19d1493` baseline, readers/access now join the proposed
+`knowledge_attachment_metadata` sidecar and leave the published 10+7 core
+inventories untouched. Twenty reader/access/shared Workspace checks passed in
+`sidecar-workspace-run-1-results.xml`. The additional actual Workspace attachment
+journey passed in `workspace-attachment-connected-results.xml`: a volatile Case
+original is authorized through the registered owner without creating a saved
+Case, then removal revokes it. The sidecar itself is not fabricated in tests;
+ordinary saved attachment persistence awaits the lead's published migration.
+The retrieval ID boundary now matches the shared 256-character Identifier;
+twenty scope/access checks passed in `scope-access-current-results.xml`.

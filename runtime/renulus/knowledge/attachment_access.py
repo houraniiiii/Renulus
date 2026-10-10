@@ -10,7 +10,7 @@ from pathlib import Path
 from ..cases.originals import CHUNK_BYTES
 from ..design_c_contracts import Identity
 from ..storage.assessment_policy import policy_snapshot
-from .models import Rights
+from .models import Rights, SourceMetadata
 
 
 def denied(reason):
@@ -101,10 +101,11 @@ class KnowledgeAttachmentAccess:
                 return ({"allowed": True} if attachment["data_length"] == attachment["bytes"]
                         else denied("unavailable"))
 
-        columns = {row["name"] for row in conn.execute("PRAGMA table_info(knowledge_attachments)")}
-        if not {"id", "chat_kind", "chat_id", "rights_json"} <= columns:
+        columns = {row["name"] for row in conn.execute("PRAGMA table_info(knowledge_attachment_metadata)")}
+        if not {"attachment_id", "source_id", "metadata_json", "rights_json"} <= columns:
             return denied("unavailable")
-        row = conn.execute("SELECT id,chat_kind,chat_id,rights_json FROM knowledge_attachments WHERE id=?",
+        row = conn.execute("SELECT a.id,a.chat_kind,a.chat_id,m.source_id,m.metadata_json,m.rights_json "
+            "FROM knowledge_attachments a LEFT JOIN knowledge_attachment_metadata m ON m.attachment_id=a.id WHERE a.id=?",
             (attachment_id,)).fetchone()
         if row is None:
             return denied("not_found")
@@ -119,7 +120,10 @@ class KnowledgeAttachmentAccess:
             return denied("not_found")
         try:
             rights = Rights.model_validate(json.loads(row["rights_json"]))
+            metadata = SourceMetadata.model_validate(json.loads(row["metadata_json"]))
         except (ValueError, TypeError):
+            return denied("unavailable")
+        if metadata.source_id != row["source_id"]:
             return denied("unavailable")
         if not rights.display:
             return denied("access_denied")
