@@ -2,15 +2,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../platform/api';
 import type { ContextScope } from '../../platform/contracts';
-import type { ConversationSummary } from '../../platform/designC';
+import { studyHelpHeaders, type ConversationSummary, type StudyHelpContext } from '../../platform/designC';
 import { useNavigation } from '../../shell/navigation';
 import { Button, ErrorState } from '../../ui';
 import { conversationPath } from './api';
 
 interface Handoff {id:string;case_handoff_id:string;case_id:string;question:string;scope:ContextScope;conversation:ConversationSummary['identity'];retention:ConversationSummary['retention']}
 
-export function CaseHandoffActions({conversation,question,disabled,prepare}:{
+export function CaseHandoffActions({conversation,question,disabled,prepare,studyHelpContext}:{
   conversation:ConversationSummary;question:string;disabled:boolean;prepare:()=>Promise<ConversationSummary|undefined>;
+  studyHelpContext?:StudyHelpContext;
 }) {
   const navigation=useNavigation();
   const [working,setWorking]=useState(false);
@@ -24,12 +25,13 @@ export function CaseHandoffActions({conversation,question,disabled,prepare}:{
     try{
       const latest=await prepare();
       if(!latest||current.current!==identifier)return;
-      const context=await api<{revision:number}>(conversationPath(latest)+'/context');
+      const headers=studyHelpHeaders(studyHelpContext);
+      const context=await api<{revision:number}>(conversationPath(latest)+'/context',{headers});
       const ticket=await api<Handoff>(conversationPath(latest)+'/handoff',{method:'POST',body:{
         expected_revision:latest.revision,case_revision:context.revision,target,question:target==='explain'?question.trim():'',
-      }});
+      },headers});
       if(current.current!==identifier){void api('/cases/handoffs/'+encodeURIComponent(ticket.id),{method:'DELETE'}).catch(()=>{});return;}
-      navigation.navigate(target==='explain'?'learn':'assessment',{scope:ticket.scope,payload:{...ticket}});
+      navigation.navigate(target==='explain'?'learn':'assessment',{scope:ticket.scope,payload:{...ticket,...(studyHelpContext?{studyHelpContext:{...studyHelpContext}}:{})}});
     }catch(caught){if(current.current===identifier)setError(caught);}
     finally{if(current.current===identifier)setWorking(false);}
   }

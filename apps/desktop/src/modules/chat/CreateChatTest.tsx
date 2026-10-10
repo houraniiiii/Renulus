@@ -1,20 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
 import { ApiError } from '../../platform/api';
-import type { ConversationSummary } from '../../platform/designC';
+import type { ConversationSummary, StudyHelpContext } from '../../platform/designC';
 import { useNavigation } from '../../shell/navigation';
 import { Badge, Button, ErrorState, Notice, Select, Textarea } from '../../ui';
 import { startStudyAttempt } from '../attempts/start';
 import { useWorkspace } from '../workspace';
 import { cancelChatTestRun, readChatTestResult, readChatTestRun, startChatTest, type ChatTestResult, type ChatTestRun } from './api';
 
-interface Props {conversation:ConversationSummary;disabled:boolean;prepare:()=>Promise<ConversationSummary|undefined>}
-export function CreateChatTest({conversation,disabled,prepare}:Props){
+interface Props {conversation:ConversationSummary;disabled:boolean;prepare:()=>Promise<ConversationSummary|undefined>;studyHelpContext?:StudyHelpContext}
+export function CreateChatTest({conversation,disabled,prepare,studyHelpContext}:Props){
   const workspace=useWorkspace(),navigation=useNavigation();
   const [open,setOpen]=useState(false),[count,setCount]=useState<5|10|20>(5),[instruction,setInstruction]=useState('');
   const [run,setRun]=useState<ChatTestRun>(),[result,setResult]=useState<ChatTestResult>();
   const [working,setWorking]=useState(false),[error,setError]=useState<unknown>();
-  const pending=useRef<{conversation:ConversationSummary;body:{request_id:string;expected_revision:number;count:5|10|20;instruction:string}}|undefined>(undefined);
+  const pending=useRef<{conversation:ConversationSummary;studyHelpContext?:StudyHelpContext;body:{request_id:string;expected_revision:number;count:5|10|20;instruction:string}}|undefined>(undefined);
   const mounted=useRef(true),currentRun=useRef<ChatTestRun|undefined>(undefined),creating=useRef(false);
+  const runContext=useRef<StudyHelpContext|undefined>(undefined);
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;const value=currentRun.current;if(value&&['queued','running'].includes(value.state))void cancelChatTestRun(value.run_id).catch(()=>{});};},[]);
   function accept(value:ChatTestRun){currentRun.current=value;setRun(value);}
   useEffect(()=>{
@@ -25,11 +26,11 @@ export function CreateChatTest({conversation,disabled,prepare}:Props){
         const value=await readChatTestRun(run!.run_id,controller.signal);
         if(controller.signal.aborted)return;accept(value);
         if(value.state==='published'){
-          const saved=await readChatTestResult(value.run_id,controller.signal);
+          const saved=await readChatTestResult(value.run_id,controller.signal,runContext.current);
           if(controller.signal.aborted)return;setResult(saved);setError(undefined);
           window.dispatchEvent(new Event('renulus:records-changed'));
         }else if(value.state==='failed'){
-          pending.current=undefined;await readChatTestResult(value.run_id,controller.signal);
+          pending.current=undefined;await readChatTestResult(value.run_id,controller.signal,runContext.current);
         }else if(value.state!=='cancelled')timer=setTimeout(()=>void poll(),600);
       }catch(caught){if(!controller.signal.aborted)setError(caught);}
     }
@@ -39,15 +40,16 @@ export function CreateChatTest({conversation,disabled,prepare}:Props){
     if(creating.current||disabled||!workspace.permitted)return;
     creating.current=true;setWorking(true);setError(undefined);
     try{
-      if(!pending.current){const latest=await prepare();if(!latest)return;pending.current={conversation:latest,body:{request_id:crypto.randomUUID(),expected_revision:latest.revision,count,instruction}};}
-      const value=await startChatTest(pending.current.conversation,pending.current.body);
+      if(!pending.current){const context=studyHelpContext?{...studyHelpContext}:undefined;const latest=await prepare();if(!latest)return;pending.current={conversation:latest,studyHelpContext:context,body:{request_id:crypto.randomUUID(),expected_revision:latest.revision,count,instruction}};}
+      runContext.current=pending.current.studyHelpContext;
+      const value=await startChatTest(pending.current.conversation,pending.current.body,undefined,runContext.current);
       if(!mounted.current){if(['queued','running'].includes(value.state))void cancelChatTestRun(value.run_id).catch(()=>{});return;}
       accept(value);setResult(undefined);
     }catch(caught){if(mounted.current){if(caught instanceof ApiError&&!caught.retryable&&caught.status>=400&&caught.status<500)pending.current=undefined;setError(caught);}}
     finally{creating.current=false;if(mounted.current)setWorking(false);}
   }
   async function stop(){if(!run)return;try{const value=await cancelChatTestRun(run.run_id);if(mounted.current){accept(value);pending.current=undefined;setError(undefined);}}catch(caught){if(mounted.current)setError(caught);}}
-  async function readResult(){if(!run)return;setWorking(true);try{const saved=await readChatTestResult(run.run_id);if(mounted.current){setResult(saved);setError(undefined);}}catch(caught){if(mounted.current)setError(caught);}finally{if(mounted.current)setWorking(false);}}
+  async function readResult(){if(!run)return;setWorking(true);try{const saved=await readChatTestResult(run.run_id,undefined,runContext.current);if(mounted.current){setResult(saved);setError(undefined);}}catch(caught){if(mounted.current)setError(caught);}finally{if(mounted.current)setWorking(false);}}
   async function study(){
     if(!result||working||!workspace.permitted)return;setWorking(true);setError(undefined);
     try{const descriptor=result.study_start;const attempt=await startStudyAttempt(descriptor.version.id,descriptor.idempotency_key);if(mounted.current)navigation.navigate('attempts',{freshStudy:true,payload:{attempt_id:attempt.id}});}

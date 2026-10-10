@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CaseAttachments } from './CaseAttachments';
+import type { StudyHelpContext } from '../../platform/designC';
 import type { AttachmentPreview, CaseCapabilities, CaseSession } from './types';
 
 const SENTINEL = 'RENULUS_SYNTHETIC_ATTACHMENT_UI_NO_AUTOSAVE';
@@ -43,14 +44,16 @@ describe('temporary attachment review', () => {
   });
 
   it('sends a raw file under temporary scope and requires explicit reviewed-text apply', async () => {
+    const context:StudyHelpContext={attempt_id:'extraction-study',item_id:'study-item',version_id:'study-version',draft_revision:1,policy_revision:1,kind:'chat'};
     const fetch = fetchFixture();
     const apply = vi.fn(async () => ({ ...session, dirty: true }));
     const store = vi.spyOn(Storage.prototype, 'setItem');
-    render(<CaseAttachments session={session} capabilities={capabilities} disabled={false} apply={apply} />);
+    render(<CaseAttachments studyHelpContext={context} session={session} capabilities={capabilities} disabled={false} apply={apply} />);
     expect(screen.getByText(/Up to 20 PDF pages · Images up to 12 MP/)).toBeTruthy();
     selectFile();
     await waitFor(() => expect(screen.getByLabelText('Review extracted text')).toBeTruthy());
     const upload = fetch.mock.calls.find(([path]) => path.endsWith('/extract'))!;
+    expect(fetch.mock.calls.every(([,options])=>(options.headers as Headers).get('X-Renulus-Study-Context')===JSON.stringify(context))).toBe(true);
     expect(upload[1].body).toBeInstanceOf(Blob);
     expect(upload[1].body).not.toBeInstanceOf(FormData);
     expect((upload[1].headers as Headers).get('x-renulus-preview-id')).toBe(job.id);

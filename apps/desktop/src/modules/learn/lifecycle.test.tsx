@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { NavigationProvider } from '../../shell/navigation';
+import type { StudyHelpContext } from '../../platform/designC';
 import Learn from './index';
 
 // Real Learn transport/decoder/navigation; controlled HTTP/SSE producers only.
@@ -23,7 +24,7 @@ function events(run = 'run-a') {
     controller.enqueue(new TextEncoder().encode('data: ' + JSON.stringify({ run_id: run, sequence: ++sequence, type, payload }) + '\n\n'));
   }, close() { controller.close(); } };
 }
-function transport(streams: ReturnType<typeof events>[], thread: (id: string) => Response | Promise<Response>) {
+function transport(streams: ReturnType<typeof events>[], thread: (id: string) => Response | Promise<Response>, studyHelpContext?:StudyHelpContext) {
   const fetch = vi.fn(async (path: string, options: RequestInit) => {
     if (path === '/api/v1/learn/threads') return json({ threads: [first, other] });
     if (path === '/api/v1/content/topics') return json([{ id: 'T21', label: 'Transplantation' }]);
@@ -35,7 +36,7 @@ function transport(streams: ReturnType<typeof events>[], thread: (id: string) =>
   });
   vi.stubGlobal('fetch', fetch);
   window.location.hash = '#/learn';
-  render(<NavigationProvider><Learn /></NavigationProvider>);
+  render(<NavigationProvider><Learn studyHelpContext={studyHelpContext}/></NavigationProvider>);
   return fetch;
 }
 async function ask(fetch: ReturnType<typeof transport>, text = question) {
@@ -46,6 +47,21 @@ async function ask(fetch: ReturnType<typeof transport>, text = question) {
   return JSON.parse(String(fetch.mock.calls.filter(([path]) => path.endsWith('/ask')).at(-1)![1].body));
 }
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+
+it('retains the volatile Study help receipt through legacy Learn reads and SSE while Stop omits it',async()=>{
+  const context:StudyHelpContext={attempt_id:'legacy-study',item_id:'study-item',version_id:'study-version',draft_revision:1,policy_revision:1,kind:'chat'};
+  const source=events();
+  const fetch=transport([source],()=>json(first),context);
+  await screen.findByRole('button',{name:/^Resume transplant/});
+  await ask(fetch);
+  await act(async()=>source.emit('started',{thread_id:'thread-a'}));
+  fireEvent.click(screen.getByRole('button',{name:'Stop'}));
+  await waitFor(()=>expect(fetch.mock.calls.some(([path])=>path.endsWith('/cancel'))).toBe(true));
+  for(const [path,options] of fetch.mock.calls){
+    expect((options.headers as Headers).get('X-Renulus-Study-Context')).toBe(path.endsWith('/cancel')?null:JSON.stringify(context));
+    expect(String(options.body??'')).not.toContain('legacy-study');
+  }
+});
 
 it('keeps composer focus usable while Ask becomes Stop and a failed response restores the question', async () => {
   const source = events();

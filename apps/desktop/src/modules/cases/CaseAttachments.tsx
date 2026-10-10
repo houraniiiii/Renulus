@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { FileText, Square, X } from 'lucide-react';
 import { api, ApiError, isCancelled } from '../../platform/api';
+import { studyHelpHeaders, type StudyHelpContext } from '../../platform/designC';
 import { Button, ErrorState, Input, Notice, Select, Textarea } from '../../ui';
 import type { AttachmentPreview, CaseCapabilities, CaseSession } from './types';
 
@@ -18,9 +19,10 @@ function pause(signal: AbortSignal) {
   });
 }
 
-export function CaseAttachments({ session, capabilities, disabled, apply, keepImage, discussImage, retention }: {
+export function CaseAttachments({ session, capabilities, disabled, apply, keepImage, discussImage, retention, studyHelpContext }: {
   session: CaseSession; capabilities?: CaseCapabilities; disabled: boolean;
   retention?: 'saved' | 'temporary';
+  studyHelpContext?: StudyHelpContext;
   apply: (id: string, text: string) => Promise<CaseSession | null | undefined> | undefined;
   keepImage?: (id: string) => Promise<CaseSession | null | undefined> | undefined;
   discussImage?: (id: string, model: string, question: string) => Promise<void>;
@@ -83,7 +85,7 @@ export function CaseAttachments({ session, capabilities, disabled, apply, keepIm
     setProcessing(true); setError(undefined); setPreview(undefined); setText('');
     try {
       const path = '/cases/sessions/' + encodeURIComponent(session.id) + '/attachments';
-      const headers = { 'Content-Type': media[suffix], 'x-renulus-filename': encodeURIComponent(file.name),
+      const headers = { ...studyHelpHeaders(studyHelpContext), 'Content-Type': media[suffix], 'x-renulus-filename': encodeURIComponent(file.name),
         'x-renulus-case-options': JSON.stringify({ revision: session.revision,
           scope: { kind: 'temporary-case', entity_id: session.id }, title: imageMode ? 'Temporary image' : 'Attachment text', ...(imageMode ? { mode } : {}) }) };
       let value = await api<AttachmentPreview>(path + '/prepare', {
@@ -104,7 +106,7 @@ export function CaseAttachments({ session, capabilities, disabled, apply, keepIm
       });
       if (!alive.current || current.current !== work || work.controller.signal.aborted) return;
       while (value.state === 'reading' || value.state === 'processing') {
-        value = await api<AttachmentPreview>(previewPath(value.id), { signal: work.controller.signal });
+        value = await api<AttachmentPreview>(previewPath(value.id), { signal: work.controller.signal, headers: studyHelpHeaders(studyHelpContext) });
         if (!alive.current || current.current !== work || work.controller.signal.aborted) return;
         if (value.state === 'reading' || value.state === 'processing') await pause(work.controller.signal);
       }

@@ -2,12 +2,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { FileText } from 'lucide-react';
 import { apiResponse, ApiError, isCancelled } from '../../platform/api';
+import { studyHelpHeaders, type StudyHelpContext } from '../../platform/designC';
 import { Badge, Button, ErrorState } from '../../ui';
 import type { CaseAttachment, CaseSession } from './types';
 
-function CaseOriginal({ caseId, attachment, disabled, remove }: {
+function CaseOriginal({ caseId, attachment, disabled, remove, studyHelpContext }: {
   caseId: string; attachment: CaseAttachment; disabled: boolean;
   remove: (id: string) => Promise<CaseSession | null | undefined> | undefined;
+  studyHelpContext?: StudyHelpContext;
 }) {
   const [original, setOriginal] = useState<string>();
   const [busy, setBusy] = useState(false);
@@ -34,7 +36,7 @@ function CaseOriginal({ caseId, attachment, disabled, remove }: {
     setBusy(true); setError(undefined); setCancelled(false);
     try {
       const response = await apiResponse('/cases/sessions/' + encodeURIComponent(caseId) + '/attachments/' +
-        encodeURIComponent(attachment.id) + '/original', { signal: pending.signal, headers: { Accept: attachment.media_type } });
+        encodeURIComponent(attachment.id) + '/original', { signal: pending.signal, headers: { Accept: attachment.media_type,...studyHelpHeaders(studyHelpContext) } });
       const blob = await response.blob();
       if (pending.signal.aborted) return;
       if (!['application/pdf', 'image/png', 'image/jpeg'].includes(blob.type) || blob.type !== attachment.media_type ||
@@ -68,10 +70,11 @@ function CaseOriginal({ caseId, attachment, disabled, remove }: {
   </li>;
 }
 
-export function CaseOriginals({ session, disabled, remove, retention }: {
+export function CaseOriginals({ session, disabled, remove, retention, studyHelpContext }: {
   session: CaseSession; disabled: boolean;
   retention?: 'saved' | 'temporary';
   remove: (id: string) => Promise<CaseSession | null | undefined> | undefined;
+  studyHelpContext?: StudyHelpContext;
 }) {
   const attachments = session.attachments ?? [];
   if (!attachments.length) return null;
@@ -80,6 +83,6 @@ export function CaseOriginals({ session, disabled, remove, retention }: {
     <p className="muted">{retention==='saved'?'Adding or removing a file is saved with this conversation.':retention==='temporary'?'These originals stay temporary until you choose Save conversation.':'Adding or removing a file changes this open case. Choose Save case or Save changes to keep the changes after closing.'}</p>
     <ul className="case-original-list">{attachments.map(attachment => <CaseOriginal
       key={session.id + ':' + attachment.id + ':' + attachment.sha256 + ':' + attachment.original_available}
-      caseId={session.id} attachment={attachment} disabled={disabled} remove={remove} />)}</ul>
+      caseId={session.id} attachment={attachment} disabled={disabled} remove={remove} studyHelpContext={studyHelpContext} />)}</ul>
   </section>;
 }

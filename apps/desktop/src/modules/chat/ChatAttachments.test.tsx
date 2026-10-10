@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { ApiError } from '../../platform/api';
-import type { ConversationSummary } from '../../platform/designC';
+import type { ConversationSummary, StudyHelpContext } from '../../platform/designC';
 import { WorkspaceProvider } from '../workspace';
 import { NavigationProvider } from '../../shell/navigation';
 import { ChatAttachments } from './ChatAttachments';
@@ -33,13 +33,14 @@ it('consumes the Home File handoff once into review, preserves the composer and 
 });
 
 it('uploads only after explicit confirmation and repeats the exact File/pinned command after a lost acknowledgement',async()=>{
+  const context:StudyHelpContext={attempt_id:'attachment-study',item_id:'study-item',version_id:'study-version',draft_revision:2,policy_revision:3,kind:'chat'};
   let uploads=0;
   calls.api.mockImplementation(async(path:string)=>{
     if(path==='/attachments'){if(++uploads===1)throw new ApiError('Synthetic lost acknowledgement',0,'timeout',true);return receipt;}
     return inventory;
   });
   const before=vi.fn(async()=>chat),changed=vi.fn();
-  render(frame(<ChatAttachments conversation={chat} open onOpenChange={()=>{}} intent={intent} beforeAttach={before} onChanged={changed}/>));
+  const view=render(frame(<ChatAttachments studyHelpContext={context} conversation={chat} open onOpenChange={()=>{}} intent={intent} beforeAttach={before} onChanged={changed}/>));
   await screen.findByLabelText('Permission or licence');
   fireEvent.click(screen.getByLabelText('Display this file in Renulus'));
   fireEvent.click(screen.getByLabelText('Keep a local original when this conversation is saved'));
@@ -47,6 +48,7 @@ it('uploads only after explicit confirmation and repeats the exact File/pinned c
   fireEvent.change(screen.getByLabelText('Permission or licence'),{target:{value:'Synthetic original owned for this test'}});
   fireEvent.click(screen.getByRole('button',{name:'Confirm attach'}));
   await screen.findByText('Synthetic lost acknowledgement');
+  view.rerender(frame(<ChatAttachments studyHelpContext={{...context,draft_revision:3}} conversation={chat} open onOpenChange={()=>{}} intent={intent} beforeAttach={before} onChanged={changed}/>));
   expect((screen.getByLabelText('File title') as HTMLInputElement).disabled).toBe(true);
   fireEvent.click(screen.getByRole('button',{name:'Retry same attachment'}));
   await screen.findByText('Attached to this saved conversation.');
@@ -54,8 +56,10 @@ it('uploads only after explicit confirmation and repeats the exact File/pinned c
   expect(requests).toHaveLength(2);
   expect(requests[0][1].body).toBe(file);expect(requests[1][1].body).toBe(file);
   expect(requests[0][1].headers).toEqual(requests[1][1].headers);
+  expect(requests[0][1].headers['X-Renulus-Study-Context']).toBe(JSON.stringify(context));
   const header=requests[0][1].headers['x-renulus-attachment-options'];
   expect(header).not.toContain('ł');
+  expect(header).not.toContain('attachment-study');
   expect(JSON.parse(header)).toMatchObject({conversation:chat.identity,expected_conversation_revision:8,expected_policy_revision:3,expected_context_epoch:12,idempotency_key:intent.request_id,
     title:'Fictional ł kidney notes',rights:{display:true,cache:true,model_input:false,derivation:false,index:false,embedding:false,redistribution:false}});
   expect(before).toHaveBeenCalledTimes(1);expect(changed).toHaveBeenCalledWith({...chat,revision:9});

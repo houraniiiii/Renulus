@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ConversationSummary } from '../../platform/designC';
+import type { ConversationSummary, StudyHelpContext } from '../../platform/designC';
 import type { CaseSession } from '../cases/types';
 import { ApiError } from '../../platform/api';
 import { CaseContext } from './CaseContext';
@@ -14,6 +14,7 @@ afterEach(()=>cleanup());
 
 describe('Case context inside Chat',()=>{
   it('keeps a failed context edit and saves through both owner revisions without sending',async()=>{
+    const context:StudyHelpContext={attempt_id:'case-study',item_id:'study-item',version_id:'study-version',draft_revision:1,policy_revision:1,kind:'chat'};
     calls.api.mockReset();let saved=false,fail=true;
     calls.api.mockImplementation(async(path:string,options?:{method?:string;body?:unknown})=>{
       if(path==='/cases/capabilities')return {};
@@ -25,7 +26,7 @@ describe('Case context inside Chat',()=>{
       return {...session,text:saved?'Revised fictional context':'',revision:saved?5:4};
     });
     const changed=vi.fn(),before=vi.fn(async()=>({...chat,revision:7}));
-    render(<CaseContext conversation={chat} disabled={false} beforeChange={before} onChanged={changed} onStartTeaching={vi.fn()}/>);
+    render(<CaseContext studyHelpContext={context} conversation={chat} disabled={false} beforeChange={before} onChanged={changed} onStartTeaching={vi.fn()}/>);
     fireEvent.click(await screen.findByRole('button',{name:'Edit case context'}));
     fireEvent.change(screen.getByLabelText('Case context text'),{target:{value:'Revised fictional context'}});
     fireEvent.click(screen.getByRole('button',{name:'Save case context'}));
@@ -37,6 +38,7 @@ describe('Case context inside Chat',()=>{
     await waitFor(()=>expect(changed).toHaveBeenCalledWith({...chat,revision:8}));
     const [,options]=calls.api.mock.calls.find(([,options])=>options?.method==='PATCH')!;
     expect(options.body).toEqual({expected_revision:7,case_revision:4,text:'Revised fictional context'});
+    expect(calls.api.mock.calls.every(([,options])=>options?.headers?.['X-Renulus-Study-Context']===JSON.stringify(context))).toBe(true);
     expect(calls.api.mock.calls.some(([path])=>path.endsWith('/messages'))).toBe(false);
   });
 

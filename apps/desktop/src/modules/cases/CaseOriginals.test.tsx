@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CaseOriginals } from './CaseOriginals';
+import type { StudyHelpContext } from '../../platform/designC';
 import type { CaseAttachment, CaseSession } from './types';
 
 const bytes = 'Synthetic original bytes';
@@ -37,9 +38,10 @@ describe('case originals with explicit retention', () => {
 
   it.each([['application/pdf', 'synthetic.pdf'], ['image/png', 'synthetic.png'], ['image/jpeg', 'synthetic.jpg']])(
     'loads a %s original only on View using the authenticated no-store helper, then releases it', async (type, filename) => {
+      const context:StudyHelpContext={attempt_id:'original-study',item_id:'study-item',version_id:'study-version',draft_revision:1,policy_revision:1,kind:'chat'};
       const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response(bytes, { headers: { 'Content-Type': type } }));
       vi.stubGlobal('fetch', fetch);
-      const view = render(<CaseOriginals session={{ ...session, attachments: [{ ...attachment, media_type: type, filename }] }} disabled={false} remove={vi.fn()} />);
+      const view = render(<CaseOriginals studyHelpContext={context} session={{ ...session, attachments: [{ ...attachment, media_type: type, filename }] }} disabled={false} remove={vi.fn()} />);
       expect(fetch).not.toHaveBeenCalled();
       fireEvent.click(screen.getByRole('button', { name: 'View original' }));
       if (type === 'application/pdf') expect((await screen.findByTitle('Original ' + filename)).getAttribute('src')).toBe('blob:synthetic-case-original');
@@ -47,6 +49,7 @@ describe('case originals with explicit retention', () => {
       expect(fetch.mock.calls[0][0]).toBe('/api/v1/cases/sessions/own%20case/attachments/own%20original/original');
       expect(fetch.mock.calls[0][1]).toMatchObject({ credentials: 'same-origin', cache: 'no-store', redirect: 'error' });
       expect((fetch.mock.calls[0][1]!.headers as Headers).get('Authorization')).toBeNull();
+      expect((fetch.mock.calls[0][1]!.headers as Headers).get('X-Renulus-Study-Context')).toBe(JSON.stringify(context));
       fireEvent.click(screen.getByRole('button', { name: 'Close original' }));
       expect(revokeObjectURL).toHaveBeenCalledExactlyOnceWith('blob:synthetic-case-original');
       view.unmount(); expect(revokeObjectURL).toHaveBeenCalledTimes(1);

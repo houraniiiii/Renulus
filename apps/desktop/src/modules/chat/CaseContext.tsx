@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { useEffect, useRef, useState } from 'react';
 import { api, isCancelled } from '../../platform/api';
-import type { ConversationSummary } from '../../platform/designC';
+import { studyHelpHeaders, type ConversationSummary, type StudyHelpContext } from '../../platform/designC';
 import { Button, ErrorState, LoadingState, Notice, Select, Textarea } from '../../ui';
 import { CaseAttachments } from '../cases/CaseAttachments';
 import { CaseOriginals } from '../cases/CaseOriginals';
@@ -12,11 +12,12 @@ import '../cases/cases.css';
 
 interface CaseReceipt {conversation: ConversationSummary; case_revision: number}
 
-export function CaseContext({conversation, disabled, beforeChange, onChanged, onStartTeaching}: {
+export function CaseContext({conversation, disabled, beforeChange, onChanged, onStartTeaching, studyHelpContext}: {
   conversation: ConversationSummary; disabled: boolean;
   beforeChange: () => Promise<ConversationSummary|undefined>;
   onChanged: (value: ConversationSummary) => void;
   onStartTeaching: (id: string) => Promise<void>;
+  studyHelpContext?:StudyHelpContext;
 }) {
   const [session,setSession] = useState<CaseSession>();
   const [capabilities,setCapabilities] = useState<CaseCapabilities>();
@@ -31,6 +32,7 @@ export function CaseContext({conversation, disabled, beforeChange, onChanged, on
   const identity = useRef(conversation.identity.id); identity.current=conversation.identity.id;
   const currentSession = useRef(session); currentSession.current=session;
   const locked=disabled||working;
+  const helpHeaders=studyHelpHeaders(studyHelpContext);
 
   useEffect(()=>{
     setSession(undefined);setEditing(false);setExpanded(false);setText('');setSelected('');setError(undefined);setWorking(false);
@@ -40,7 +42,7 @@ export function CaseContext({conversation, disabled, beforeChange, onChanged, on
     const controller=new AbortController();
     async function read(){
       try{
-        const value=await api<Omit<CaseSession,'messages'>>(conversationPath(conversation)+'/context',{signal:controller.signal});
+        const value=await api<Omit<CaseSession,'messages'>>(conversationPath(conversation)+'/context',{signal:controller.signal,headers:helpHeaders});
         if(controller.signal.aborted)return;
         setSession({...value,messages:[]});
         if(!currentSession.current&&(value.kind==='teaching'||value.text===''))setExpanded(true);
@@ -48,13 +50,13 @@ export function CaseContext({conversation, disabled, beforeChange, onChanged, on
     }
     void read();
     return()=>controller.abort();
-  },[conversation.identity.id,conversation.revision,disabled,working,refresh]);
+  },[conversation.identity.id,conversation.revision,disabled,working,refresh,JSON.stringify(studyHelpContext)]);
   useEffect(()=>{
     const controller=new AbortController();
-    void api<CaseCapabilities>('/cases/capabilities',{signal:controller.signal}).then(setCapabilities).catch(()=>{});
-    void api<{cases:TeachingSummary[]}>('/cases/teaching',{signal:controller.signal}).then(value=>setTeaching(value.cases)).catch(()=>{});
+    void api<CaseCapabilities>('/cases/capabilities',{signal:controller.signal,headers:helpHeaders}).then(setCapabilities).catch(()=>{});
+    void api<{cases:TeachingSummary[]}>('/cases/teaching',{signal:controller.signal,headers:helpHeaders}).then(value=>setTeaching(value.cases)).catch(()=>{});
     return()=>controller.abort();
-  },[]);
+  },[JSON.stringify(studyHelpContext)]);
 
   async function change(action:'edit'|'reveal'|'remove'|'apply'|'keep',identifier?:string,reviewedText?:string){
     if(locked||!currentSession.current)return;
@@ -67,10 +69,10 @@ export function CaseContext({conversation, disabled, beforeChange, onChanged, on
       const suffix=action==='edit'?'/context':action==='reveal'?'/context/reveal':action==='remove'?'/attachments/'+encodeURIComponent(identifier!):'/previews/'+encodeURIComponent(identifier!)+'/'+action;
       const path=conversationPath(latest)+suffix+(action==='remove'?'?expected_revision='+body.expected_revision+'&case_revision='+body.case_revision:'');
       const receipt=await api<CaseReceipt>(path,{method:action==='edit'?'PATCH':action==='remove'?'DELETE':'POST',
-        ...(action==='remove'?{}:{body}),headers:{'Idempotency-Key':crypto.randomUUID()}});
+        ...(action==='remove'?{}:{body}),headers:{'Idempotency-Key':crypto.randomUUID(),...helpHeaders}});
       if(identity.current!==expectedIdentity)return;
       onChanged(receipt.conversation);
-      const value=await api<Omit<CaseSession,'messages'>>(conversationPath(latest)+'/context');
+      const value=await api<Omit<CaseSession,'messages'>>(conversationPath(latest)+'/context',{headers:helpHeaders});
       if(identity.current!==expectedIdentity)return;
       const next={...value,messages:[]};
       setSession(next);currentSession.current=next;
@@ -91,8 +93,8 @@ export function CaseContext({conversation, disabled, beforeChange, onChanged, on
             {session.text?<p className="case-text">{session.text}</p>:<p className="muted">Add the case details you want to discuss. Your question stays in the composer below.</p>}
             <Button variant="secondary" disabled={locked} onClick={()=>{setText(session.text);setEditing(true);}}>Edit case context</Button>
           </>}
-          <CaseOriginals session={session} retention={conversation.retention} disabled={locked} remove={id=>change('remove',id)}/>
-          <CaseAttachments session={session} retention={conversation.retention} capabilities={capabilities} disabled={locked} apply={(id,text)=>change('apply',id,text)} keepImage={id=>change('keep',id)}/>
+          <CaseOriginals studyHelpContext={studyHelpContext} session={session} retention={conversation.retention} disabled={locked} remove={id=>change('remove',id)}/>
+          <CaseAttachments studyHelpContext={studyHelpContext} session={session} retention={conversation.retention} capabilities={capabilities} disabled={locked} apply={(id,text)=>change('apply',id,text)} keepImage={id=>change('keep',id)}/>
           {teaching.length>0&&<details className="chat-teaching-entry"><summary>Start an installed teaching case</summary><Select label="Teaching case" value={selected} disabled={locked} onChange={event=>setSelected(event.target.value)}><option value="">Choose a teaching case</option>{teaching.map(item=><option key={item.id} value={item.id}>{item.title}</option>)}</Select><Button variant="secondary" disabled={locked||!selected} onClick={()=>{setWorking(true);void onStartTeaching(selected).catch(setError).finally(()=>setWorking(false));}}>Start teaching conversation</Button></details>}
         </>:session.teaching&&<>
           <p className="muted">Pinned version {session.teaching.version} · <CaseCurrencyLabel currency={session.teaching.currency}/></p>

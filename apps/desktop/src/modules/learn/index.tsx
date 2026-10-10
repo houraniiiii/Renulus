@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from 're
 import { ArrowLeft, ArrowUp, BookOpen, Plus, Square, Trash2 } from 'lucide-react';
 import { api, ApiError, isCancelled } from '../../platform/api';
 import { stream } from '../../platform/stream';
+import { studyHelpHeaders, type StudyHelpContext } from '../../platform/designC';
 import { useResource } from '../../platform/useResource';
 import { useNavigation } from '../../shell/navigation';
 import { Badge, Button, ErrorState, IconButton, LoadingState, Notice, PageHeader, Select, Textarea } from '../../ui';
@@ -25,8 +26,11 @@ function literatureLink(value: string): string | undefined {
   } catch { /* Unsupported discovery URLs remain plain titles. */ }
 }
 
-export default function Learn() {
+export default function Learn({studyHelpContext:providedContext}: {studyHelpContext?:StudyHelpContext} = {}) {
   const { scope, handoff, navigate } = useNavigation();
+  const studyHelpContext=providedContext??handoff?.studyHelpContext as StudyHelpContext|undefined;
+  const helpHeaders=studyHelpHeaders(studyHelpContext);
+  const helpPayload=studyHelpContext?{studyHelpContext:{...studyHelpContext}}:{};
   const temporary = scope.kind === 'temporary-case' || scope.kind === 'unclassified' || scope.kind === 'saved-case';
   const caseId = typeof handoff?.case_id === 'string' ? handoff.case_id : temporary ? scope.entity_id : undefined;
   const conversation = handoff?.conversation as {type?:string;id?:string}|undefined;
@@ -66,8 +70,8 @@ export default function Learn() {
       composer.current?.querySelector<HTMLElement>(busy ? 'button' : 'textarea')?.focus();
     }
   }, [busy]);
-  const { resource: history, retry: reloadHistory } = useResource(signal => api<{ threads: Thread[] }>('/learn/threads', { signal }));
-  const { resource: topics } = useResource(signal => api<Topic[]>('/content/topics', { signal }));
+  const { resource: history, retry: reloadHistory } = useResource(signal => api<{ threads: Thread[] }>('/learn/threads', { signal,headers:helpHeaders }));
+  const { resource: topics } = useResource(signal => api<Topic[]>('/content/topics', { signal,headers:helpHeaders }));
 
   useEffect(() => {
     alive.current = true;
@@ -82,13 +86,13 @@ export default function Learn() {
     const epoch = invalidateResume(), controller = new AbortController();
     resumeRequest.current = controller;
     setError(null); setRetryThread(null); clearStatuses();
-    try { const value = await api<Thread>('/learn/threads/' + encodeURIComponent(id), { signal: controller.signal }); if (alive.current && viewEpoch.current === epoch && !removedThreads.current.has(id)) { displayThread(value); setPartial(''); } }
+    try { const value = await api<Thread>('/learn/threads/' + encodeURIComponent(id), { signal: controller.signal,headers:helpHeaders }); if (alive.current && viewEpoch.current === epoch && !removedThreads.current.has(id)) { displayThread(value); setPartial(''); } }
     catch (caught) { if (alive.current && viewEpoch.current === epoch && !isCancelled(caught)) { setRetryThread(id); setError(caught); } }
   }
   function fresh() { invalidateResume(); threadIdRef.current = undefined; setThread(null); setMessages([]); setPartial(''); setError(null); setRetryThread(null); clearStatuses(); }
   async function remove(id: string) {
     const epoch = invalidateResume();
-    try { await api('/learn/threads/' + id, { method: 'DELETE' }); removedThreads.current.add(id); if (!alive.current) return; if (threadIdRef.current === id) fresh(); reloadHistory(); }
+    try { await api('/learn/threads/' + id, { method: 'DELETE',headers:helpHeaders }); removedThreads.current.add(id); if (!alive.current) return; if (threadIdRef.current === id) fresh(); reloadHistory(); }
     catch (caught) { if (alive.current && viewEpoch.current === epoch) setError(caught); }
   }
   async function ask(event?: FormEvent) {
@@ -105,13 +109,13 @@ export default function Learn() {
       if (temporary && caseId) {
         if (ticketId.current) await api('/cases/handoffs/' + ticketId.current, { method: 'DELETE', signal: controller.signal });
         ticketId.current = undefined;
-        const currentCase = await api<{ revision: number }>('/cases/sessions/' + encodeURIComponent(caseId), { signal: controller.signal });
+        const currentCase = await api<{ revision: number }>('/cases/sessions/' + encodeURIComponent(caseId), { signal: controller.signal,headers:helpHeaders });
         const wrapperPath='/conversations/case/'+encodeURIComponent(caseId);
-        const summary=wrapperCase?await api<{revision:number}>(wrapperPath,{signal:controller.signal}):undefined;
-        const ticket = await api<{ id: string }>((wrapperCase?wrapperPath:'/cases/sessions/'+encodeURIComponent(caseId))+'/handoff', { method: 'POST', signal: controller.signal, body: { ...(summary?{expected_revision:summary.revision,case_revision:currentCase.revision}:{revision:currentCase.revision}), target: 'explain', question: text } });
+        const summary=wrapperCase?await api<{revision:number}>(wrapperPath,{signal:controller.signal,headers:helpHeaders}):undefined;
+        const ticket = await api<{ id: string }>((wrapperCase?wrapperPath:'/cases/sessions/'+encodeURIComponent(caseId))+'/handoff', { method: 'POST', signal: controller.signal,headers:helpHeaders, body: { ...(summary?{expected_revision:summary.revision,case_revision:currentCase.revision}:{revision:currentCase.revision}), target: 'explain', question: text } });
         caseHandoffId = ticket.id; ticketId.current = ticket.id;
       }
-      for await (const item of stream<RunEvent>('/learn/ask', { method: 'POST', signal: controller.signal, headers: { 'Idempotency-Key': crypto.randomUUID() }, body: { question: text, scope: temporary ? { kind: 'temporary-case', entity_id: caseId ?? scope.entity_id } : { kind: 'study' }, thread_id: temporary ? null : threadId, topic_id: topic || null, teaching_style: style, case_handoff_id: caseHandoffId } })) {
+      for await (const item of stream<RunEvent>('/learn/ask', { method: 'POST', signal: controller.signal, headers: { 'Idempotency-Key': crypto.randomUUID(),...helpHeaders }, body: { question: text, scope: temporary ? { kind: 'temporary-case', entity_id: caseId ?? scope.entity_id } : { kind: 'study' }, thread_id: temporary ? null : threadId, topic_id: topic || null, teaching_style: style, case_handoff_id: caseHandoffId } })) {
         if (!current()) break;
         if (controller.signal.aborted || item.data.sequence <= sequence) continue;
         const data = item.data; sequence = data.sequence; runId.current = data.run_id;
@@ -141,7 +145,7 @@ export default function Learn() {
       if (threadId && !temporary && current() && !removedThreads.current.has(threadId)) {
         const reload = new AbortController(); resumeRequest.current = reload;
         try {
-          const value = await api<Thread>('/learn/threads/' + encodeURIComponent(threadId), { signal: reload.signal });
+          const value = await api<Thread>('/learn/threads/' + encodeURIComponent(threadId), { signal: reload.signal,headers:helpHeaders });
           if (current() && !removedThreads.current.has(threadId)) {
             displayThread(value); reloadHistory();
             if (value.runs?.some(run => run.id === activeRunId && run.state === 'completed')) { runCompleted.current = true; setPartial(''); setQuestion(''); setError(null); setStatus('Complete'); }
@@ -155,7 +159,7 @@ export default function Learn() {
     if (runId.current) { try { const result = await api<{ state: string }>('/learn/runs/' + runId.current + '/cancel', { method: 'POST' }); runCompleted.current = result.state === 'completed'; setStatus(runCompleted.current ? 'Complete' : 'Stopped · partial explanation not saved'); if (runCompleted.current) return; } catch (caught) { setError(caught); } }
     abort.current?.abort();
   }
-  function citation(value: Citation) { navigate('library', { payload: { document_id: value.document_id, passage_id: value.passage_id ?? value.id, revision_id: value.revision_id ?? value.document_revision, page: value.page ?? value.page_number ?? value.locators?.find(location => location.page)?.page } }); }
+  function citation(value: Citation) { navigate('library', { payload: { ...helpPayload, document_id: value.document_id, passage_id: value.passage_id ?? value.id, revision_id: value.revision_id ?? value.document_revision, page: value.page ?? value.page_number ?? value.locators?.find(location => location.page)?.page } }); }
   async function openLiteratureSource(event: MouseEvent<HTMLAnchorElement>, url: string) {
     // Parent supplies the native bridge; this page also works in a browser.
     const bridge = window.renulus as (typeof window.renulus & { openSource?: (url: string) => Promise<void> });
@@ -184,7 +188,7 @@ export default function Learn() {
   }
 
   return <>
-    <PageHeader title={temporary ? 'Explore your case question' : 'What would you like to understand?'} description={temporary ? (wrapperCase&&handoff?.retention==='saved'?'The completed explanation stays in your saved Case.':'This explanation shares your temporary case context.') : 'Ask freely across nephrology, then explore the explanation and its evidence.'} actions={temporary && caseId ? <Button variant="secondary" disabled={busy} onClick={() => navigate(wrapperCase?'chat':'cases', { scope: { kind: 'temporary-case', entity_id: caseId }, payload: wrapperCase?{conversation,retention:handoff?.retention}:{case_id:caseId} })}><ArrowLeft size={17} />Return to case</Button> : !temporary && <Button variant="secondary" disabled={busy} onClick={fresh}><Plus size={17} />New study</Button>} />
+    <PageHeader title={temporary ? 'Explore your case question' : 'What would you like to understand?'} description={temporary ? (wrapperCase&&handoff?.retention==='saved'?'The completed explanation stays in your saved Case.':'This explanation shares your temporary case context.') : 'Ask freely across nephrology, then explore the explanation and its evidence.'} actions={temporary && caseId ? <Button variant="secondary" disabled={busy} onClick={() => navigate(wrapperCase?'chat':'cases', { scope: { kind: 'temporary-case', entity_id: caseId }, payload: wrapperCase?{...helpPayload,conversation,retention:handoff?.retention}:{...helpPayload,case_id:caseId} })}><ArrowLeft size={17} />Return to case</Button> : !temporary && <Button variant="secondary" disabled={busy} onClick={fresh}><Plus size={17} />New study</Button>} />
     <div className="learn-layout"><section className="learn-main">
       {!messages.length && <div className="learning-invitation"><p>Start with a question, a mechanism or a decision you would like to reason through.</p><div className="question-starters">{['How should I reason through AKI?', 'Explain kidney transplant rejection.', 'How do dialysis modalities differ?'].map(value => <button key={value} onClick={() => setQuestion(value)}>{value}</button>)}</div></div>}
       <div className="conversation" aria-label="Learning discussion">{messages.map(message => <article key={message.id} className={'learning-message message-' + message.role}><strong className="message-author">{message.role === 'user' ? 'Your question' : 'Renulus'}</strong><div className="prose learning-answer">{message.content}</div>{message.citations?.length ? <div className="citation-row">{message.citations.map(source)}</div> : null}</article>)}{partial && <article className="learning-message"><strong className="message-author">Renulus <Badge tone="neutral">{busy ? 'Explaining' : 'Partial'}</Badge></strong><div className="prose learning-answer">{partial}</div></article>}</div>

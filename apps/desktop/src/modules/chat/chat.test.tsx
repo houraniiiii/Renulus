@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ConversationSummary, PassageDraft } from '../../platform/designC';
+import type { ConversationSummary, PassageDraft, StudyHelpContext } from '../../platform/designC';
 import { WorkspaceProvider } from '../workspace';
 import { NavigationProvider } from '../../shell/navigation';
 import Chat from './index';
@@ -18,6 +18,26 @@ const frame=(element:React.ReactNode)=><NavigationProvider><WorkspaceProvider po
 afterEach(()=>cleanup());
 
 describe('Chat volatile handoffs',()=>{
+  it('carries Study help on reads, drafts and send while Stop stays neutral',async()=>{
+    setup();
+    const context:StudyHelpContext={attempt_id:'study-attempt',item_id:'current-item',version_id:'pinned-version',draft_revision:4,policy_revision:2,kind:'chat'};
+    calls.send.mockImplementation(async(_chat,_input,onEvent)=>{onEvent({run_id:'help-run',sequence:1,type:'started',payload:{}});await new Promise<void>(()=>{});});
+    render(frame(<Chat identity={chat.identity} studyHelpContext={context}/>));
+    const composer=await screen.findByLabelText('Message Renulus');
+    fireEvent.change(composer,{target:{value:'Fictional help request'}});
+    await waitFor(()=>expect(calls.api.mock.calls.some(([path,options])=>path.endsWith('/draft')&&options?.method==='PUT')).toBe(true));
+    fireEvent.click(screen.getByRole('button',{name:'Send'}));
+    await waitFor(()=>expect(calls.send).toHaveBeenCalledTimes(1));
+    expect(calls.send.mock.calls[0][4]).toEqual(context);
+    fireEvent.click(screen.getByRole('button',{name:'Stop'}));
+    await waitFor(()=>expect(calls.api.mock.calls.some(([path])=>path.endsWith('/help-run/cancel'))).toBe(true));
+    for(const [path,options] of calls.api.mock.calls){
+      if(path.endsWith('/cancel')||path.endsWith('/runs'))expect(options?.headers?.['X-Renulus-Study-Context']).toBeUndefined();
+      else expect(options?.headers?.['X-Renulus-Study-Context']).toBe(JSON.stringify(context));
+      expect(JSON.stringify(options?.body??{})).not.toContain('study-attempt');
+    }
+  });
+
   it('appends a passage once, keeps the existing draft and never sends automatically',async()=>{
     setup();const consumed=vi.fn();
     const passage:PassageDraft & {id:string}={id:'passage-action',text:'Selected fictional passage',title:'A source',reference:{target:{type:'library_revision',id:'saved-revision'}}};

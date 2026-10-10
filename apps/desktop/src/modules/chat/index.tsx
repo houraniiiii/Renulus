@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Archive, ArrowUp, Paperclip, Square, Trash2, X } from 'lucide-react';
 import { api, ApiError, isCancelled } from '../../platform/api';
-import type { ContentReference, ConversationIdentity, ConversationSummary, PageResult, PassageDraft, ProjectSummary } from '../../platform/designC';
+import { studyHelpHeaders, type ContentReference, type ConversationIdentity, type ConversationSummary, type PageResult, type PassageDraft, type ProjectSummary, type StudyHelpContext } from '../../platform/designC';
 import { Badge, Button, ErrorState, IconButton, Input, LoadingState, Notice, Select, Textarea } from '../../ui';
 import { useWorkspace } from '../workspace';
 import { CaseContext } from './CaseContext';
@@ -25,6 +25,7 @@ export interface ChatPageProps {
   attachmentIntent?: AttachmentIntent;
   onAttachmentIntentConsumed?: (requestId: string) => void;
   onConversation?: (value: ConversationSummary|null) => void;
+  studyHelpContext?: StudyHelpContext;
 }
 const changed = () => window.dispatchEvent(new Event('renulus:records-changed'));
 const signature = (text: string, refs: ContentReference[]) => JSON.stringify({text,refs});
@@ -64,6 +65,8 @@ export default function ChatPage(props: ChatPageProps) {
   function accept(value: ConversationSummary) {chatRef.current=value;setChat(value);setTitle(value.title);}
   const incoming = props.identity ?? props.conversation?.identity;
   const incomingKey = incoming ? incoming.type+':'+incoming.id : 'new';
+  const helpHeaders = studyHelpHeaders(props.studyHelpContext);
+  const helpKey = JSON.stringify(props.studyHelpContext);
 
   useEffect(() => {
     const version=++epoch.current, controller=new AbortController();
@@ -74,10 +77,10 @@ export default function ChatPage(props: ChatPageProps) {
       try {
         if (!incoming) {setLoading(false);return;}
         const kind=incoming.type==='learn_thread'?'learning':'case';
-        const value=await api<ConversationSummary>('/conversations/'+kind+'/'+encodeURIComponent(incoming.id),{signal:controller.signal});
+        const value=await api<ConversationSummary>('/conversations/'+kind+'/'+encodeURIComponent(incoming.id),{signal:controller.signal,headers:helpHeaders});
         const [page,draft,runs] = await Promise.all([
-          api<PageResult<Message>>(conversationPath(value)+'/messages',{signal:controller.signal}),
-          api<Draft>(conversationPath(value)+'/draft',{signal:controller.signal}),
+          api<PageResult<Message>>(conversationPath(value)+'/messages',{signal:controller.signal,headers:helpHeaders}),
+          api<Draft>(conversationPath(value)+'/draft',{signal:controller.signal,headers:helpHeaders}),
           api<PageResult<ConversationRun>>(conversationPath(value)+'/runs',{signal:controller.signal}),
         ]);
         if (epoch.current!==version) return;
@@ -87,12 +90,12 @@ export default function ChatPage(props: ChatPageProps) {
         const running=runs.items?.find(run=>run.state==='running');
         if(running){activeRun.current=running.run_id;visibleRun.current=running.run_id;setBusy(true);setRecovering(true);setStatus('Response is running');}
         else if(runs.items?.[0]&&runs.items[0].state!=='completed'){
-          const latest=await api<ConversationRun>(conversationPath(value)+'/runs/'+encodeURIComponent(runs.items[0].run_id),{signal:controller.signal});
+          const latest=await api<ConversationRun>(conversationPath(value)+'/runs/'+encodeURIComponent(runs.items[0].run_id),{signal:controller.signal,headers:helpHeaders});
           if(epoch.current!==version)return;
           setStatus(latest.state==='cancelled'?'Stopped. Your draft is retained.':'Response did not finish. Your draft is retained.');
           if(latest.error)setError(new ApiError(latest.error.message,409,latest.error.code,latest.error.retryable));
         }
-        void api<PageResult<ProjectSummary>>('/study/projects?limit=100',{signal:controller.signal}).then(result=>{
+        void api<PageResult<ProjectSummary>>('/study/projects?limit=100',{signal:controller.signal,headers:helpHeaders}).then(result=>{
           if (epoch.current===version) setProjects(result.items);
         }).catch(()=>{});
       } catch(caught) {if(!isCancelled(caught)&&epoch.current===version){setError(caught);setLoading(false);}}
@@ -104,7 +107,7 @@ export default function ChatPage(props: ChatPageProps) {
       if(current?.retention==='temporary'&&run) void api(conversationPath(current)+'/runs/'+encodeURIComponent(run)+'/cancel',{method:'POST'}).catch(()=>{});
       streamAbort.current?.abort();activeRun.current=undefined;
     };
-  },[incomingKey]);
+  },[incomingKey,helpKey]);
 
   useEffect(()=>{
     if(!recovering||!chat||chat.retention!=='saved')return;
@@ -114,13 +117,13 @@ export default function ChatPage(props: ChatPageProps) {
       const current=chatRef.current,run=activeRun.current;
       if(!current||!run)return;
       try{
-        const result=await api<ConversationRun>(conversationPath(current)+'/runs/'+encodeURIComponent(run),{signal:controller.signal});
+        const result=await api<ConversationRun>(conversationPath(current)+'/runs/'+encodeURIComponent(run),{signal:controller.signal,headers:helpHeaders});
         if(version!==epoch.current)return;
         if(result.conversation)accept(result.conversation);
         setPartial(result.partial_text??'');
         if(result.state==='running'){timer=setTimeout(()=>void poll(),750);return;}
         await refreshMessages(result.conversation??current,version);
-        const draft=await api<Draft>(conversationPath(current)+'/draft',{signal:controller.signal});
+        const draft=await api<Draft>(conversationPath(current)+'/draft',{signal:controller.signal,headers:helpHeaders});
         if(version!==epoch.current)return;
         setText(draft.text);setRefs(draft.content_refs);persisted.current=signature(draft.text,draft.content_refs);
         activeRun.current=undefined;setBusy(false);setRecovering(false);
@@ -131,7 +134,7 @@ export default function ChatPage(props: ChatPageProps) {
     }
     void poll();
     return()=>{controller.abort();if(timer)clearTimeout(timer);};
-  },[recovering,chat?.identity.id]);
+  },[recovering,chat?.identity.id,helpKey]);
 
   useEffect(()=>{if(confirmDelete)dialog.current?.showModal();},[confirmDelete]);
   useEffect(()=>{
@@ -144,14 +147,14 @@ export default function ChatPage(props: ChatPageProps) {
         const current=chatRef.current;
         if(!current||epoch.current!==version)return;
         try {
-          const saved=await api<Draft>(conversationPath(current)+'/draft',{method:'PUT',body:{expected_revision:current.revision,text,content_refs:refs},headers:{'Idempotency-Key':crypto.randomUUID()}});
+          const saved=await api<Draft>(conversationPath(current)+'/draft',{method:'PUT',body:{expected_revision:current.revision,text,content_refs:refs},headers:{'Idempotency-Key':crypto.randomUUID(),...helpHeaders}});
           if(epoch.current!==version)return;
           persisted.current=value;accept({...current,revision:saved.conversation_revision});setStatus(current.retention==='saved'?'Draft saved':'Temporary draft');
         }catch(caught){if(epoch.current===version)setError(caught);}
       });
     },400);
     return()=>clearTimeout(timer);
-  },[text,refs,loading,busy,chat?.revision,chat?.lifecycle]);
+  },[text,refs,loading,busy,chat?.revision,chat?.lifecycle,helpKey]);
 
   useEffect(()=>{
     const intent=props.passageIntent;
@@ -172,7 +175,7 @@ export default function ChatPage(props: ChatPageProps) {
   },[props.sendIntent,loading,chat?.identity.id]);
 
   async function refreshMessages(current: ConversationSummary,version=epoch.current) {
-    const page=await api<PageResult<Message>>(conversationPath(current)+'/messages');
+    const page=await api<PageResult<Message>>(conversationPath(current)+'/messages',{headers:helpHeaders});
     if(epoch.current===version){setMessages(page.items);setCursor(page.next_cursor);}
   }
   async function flushDraft() {
@@ -183,7 +186,7 @@ export default function ChatPage(props: ChatPageProps) {
     const draftText=textRef.current,draftRefs=refsRef.current,value=signature(draftText,draftRefs);
     if(value===persisted.current)return current;
     const draft=await api<Draft>(conversationPath(current)+'/draft',{method:'PUT',
-      body:{expected_revision:current.revision,text:draftText,content_refs:draftRefs},headers:{'Idempotency-Key':crypto.randomUUID()}});
+      body:{expected_revision:current.revision,text:draftText,content_refs:draftRefs},headers:{'Idempotency-Key':crypto.randomUUID(),...helpHeaders}});
     if(version!==epoch.current)return;
     const updated={...current,revision:draft.conversation_revision};
     persisted.current=value;accept(updated);return updated;
@@ -216,7 +219,7 @@ export default function ChatPage(props: ChatPageProps) {
             if(event.type==='error')setError(new ApiError(event.payload.message??'Retry this request.',409,event.payload.code??'response_failed',event.payload.retryable));
           }
         }
-      },controller.signal);
+      },controller.signal,props.studyHelpContext);
       if(!terminal&&!controller.signal.aborted)throw new ApiError('The response was interrupted. Your draft is retained.',0,'response_interrupted',true);
       if(epoch.current===version)await refreshMessages(chatRef.current??current,version);
     }catch(caught){if(epoch.current===version&&!isCancelled(caught)){setError(caught);if(current.retention==='saved'&&activeRun.current&&!terminal){watching=true;setRecovering(true);setStatus('Checking running response');}}}
@@ -234,7 +237,7 @@ export default function ChatPage(props: ChatPageProps) {
     const latest=chatRef.current??current;
     try {
       const path=conversationPath(latest)+(action==='rename'?'':'/'+action);
-      const result=await api<ConversationSummary>(path,{method:action==='rename'?'PATCH':action==='project'?'PUT':'POST',body:{expected_revision:latest.revision,...body},headers:{'Idempotency-Key':crypto.randomUUID()}});
+      const result=await api<ConversationSummary>(path,{method:action==='rename'?'PATCH':action==='project'?'PUT':'POST',body:{expected_revision:latest.revision,...body},headers:{'Idempotency-Key':crypto.randomUUID(),...helpHeaders}});
       if(result.retention==='saved')changed();
       if(version!==epoch.current)return;
       accept(result);callback.current.onConversation?.(result);setError(undefined);
@@ -242,16 +245,16 @@ export default function ChatPage(props: ChatPageProps) {
   }
   async function remove() {
     const current=chatRef.current;if(!current)return;
-    try{await api(conversationPath(current)+'?expected_revision='+current.revision,{method:'DELETE',headers:{'Idempotency-Key':crypto.randomUUID()}});changed();callback.current.onConversation?.(null);setChat(undefined);chatRef.current=undefined;setText('');setMessages([]);}catch(caught){setError(caught);}
+    try{await api(conversationPath(current)+'?expected_revision='+current.revision,{method:'DELETE',headers:{'Idempotency-Key':crypto.randomUUID(),...helpHeaders}});changed();callback.current.onConversation?.(null);setChat(undefined);chatRef.current=undefined;setText('');setMessages([]);}catch(caught){setError(caught);}
     setConfirmDelete(false);dialog.current?.close();
   }
   async function fresh(temporary:boolean) {
-    try{const value=await createConversation({temporary});accept(value);setLoading(false);callback.current.onConversation?.(value);}catch(caught){setError(caught);}
+    try{const value=await createConversation({temporary},undefined,undefined,props.studyHelpContext);accept(value);setLoading(false);callback.current.onConversation?.(value);}catch(caught){setError(caught);}
   }
   async function more() {
     if(!cursor||!chat)return;
     const version=epoch.current;
-    try{const page=await api<PageResult<Message>>(conversationPath(chat)+'/messages?cursor='+encodeURIComponent(cursor));if(version!==epoch.current)return;setMessages(previous=>[...previous,...page.items.filter(item=>!previous.some(old=>old.id===item.id))]);setCursor(page.next_cursor);}catch(caught){if(version===epoch.current)setError(caught);}
+    try{const page=await api<PageResult<Message>>(conversationPath(chat)+'/messages?cursor='+encodeURIComponent(cursor),{headers:helpHeaders});if(version!==epoch.current)return;setMessages(previous=>[...previous,...page.items.filter(item=>!previous.some(old=>old.id===item.id))]);setCursor(page.next_cursor);}catch(caught){if(version===epoch.current)setError(caught);}
   }
 
   if(loading)return <LoadingState label="Opening conversation"/>;
@@ -261,13 +264,13 @@ export default function ChatPage(props: ChatPageProps) {
     <header className="chat-heading"><div><p className="chat-eyebrow">{chat.kind==='case'?'Case discussion':'Learning conversation'}</p><h1>{chat.title}</h1></div><div className="chat-tools"><Badge tone={chat.retention==='temporary'?'warning':'neutral'}>{chat.retention==='temporary'?'Temporary':chat.lifecycle==='archived'?'Archived':'Saved'}</Badge><details><summary>Manage</summary><div className="chat-management"><Input label="Conversation title" value={title} onChange={event=>setTitle(event.target.value)} maxLength={120}/><Button variant="secondary" disabled={busy||!title.trim()} onClick={()=>void mutate('rename',{title:title.trim()})}>Rename</Button>{chat.retention==='temporary'?<Button disabled={busy} onClick={()=>void mutate('save')}>Save conversation</Button>:<Button variant="ghost" disabled={busy} onClick={()=>void mutate(chat.lifecycle==='archived'?'restore':'archive')}><Archive size={16}/>{chat.lifecycle==='archived'?'Restore':'Archive'}</Button>}<Select label="Project" disabled={busy||chat.retention==='temporary'} value={chat.project_id??''} onChange={event=>void mutate('project',{project_id:event.target.value||null})}><option value="">Unassigned</option>{projects.map(project=><option key={project.id} value={project.id}>{project.title}</option>)}</Select><Button variant="danger" disabled={busy} onClick={()=>setConfirmDelete(true)}><Trash2 size={16}/>Delete conversation</Button></div></details></div></header>
     {chat.retention==='temporary'&&<Notice tone="warning">This conversation stays temporary until you choose Save. Closing Renulus discards it.</Notice>}
     {chat.lifecycle==='archived'&&<Notice>Archived conversations keep their history and draft. Restore to continue.</Notice>}
-    {chat.kind==='case'&&<CaseContext conversation={chat} disabled={disabled} beforeChange={flushDraft} onChanged={value=>{accept(value);callback.current.onConversation?.(value);if(value.retention==='saved')changed();}} onStartTeaching={async teaching_case_id=>{const value=await createConversation({kind:'case',teaching_case_id,temporary:chat.retention==='temporary',project_id:chat.project_id});callback.current.onConversation?.(value);if(value.retention==='saved')changed();}}/>}
+    {chat.kind==='case'&&<CaseContext studyHelpContext={props.studyHelpContext} conversation={chat} disabled={disabled} beforeChange={flushDraft} onChanged={value=>{accept(value);callback.current.onConversation?.(value);if(value.retention==='saved')changed();}} onStartTeaching={async teaching_case_id=>{const value=await createConversation({kind:'case',teaching_case_id,temporary:chat.retention==='temporary',project_id:chat.project_id},undefined,undefined,props.studyHelpContext);callback.current.onConversation?.(value);if(value.retention==='saved')changed();}}/>}
     <div className="chat-transcript" aria-label="Message history">{messages.map(message=><article className={'chat-message chat-message-'+message.role} key={message.id}><p className="chat-role">{message.role==='user'?'You':'Renulus'}</p><div className="chat-message-text">{message.content}</div>{message.content_refs?.length>0&&<div className="chat-references">{message.content_refs.map((reference,index)=><Button key={index} variant="ghost" onClick={()=>workspace.open(reference)}>Open source {index+1}</Button>)}</div>}</article>)}{cursor&&<Button variant="secondary" onClick={()=>void more()}>Load more history</Button>}{partial&&!messages.some(message=>message.run_id===visibleRun.current&&message.role==='assistant')&&<article className="chat-message chat-message-assistant"><p className="chat-role">Renulus {busy?'Â· responding':''}</p><div className="chat-message-text">{partial}</div></article>}{messages.length===0&&!partial&&<div className="chat-empty"><h2>What would you like to understand?</h2><p>{chat.kind==='case'?'Discuss a case, ask for missing information, or work through a teaching case.':'Ask a nephrology question. Choose guided teaching when you would like to work through it step by step.'}</p></div>}</div>
     {Boolean(error)&&<ErrorState error={error} title="Your draft is kept" onRetry={()=>{setError(undefined);void send();}}/>}
     <form className="chat-composer" onSubmit={(event:FormEvent)=>{event.preventDefault();void send();}}><Textarea label={chat.kind==='case'?'Your case question':'Message Renulus'} value={text} onChange={event=>setText(event.target.value)} rows={3} maxLength={16000} disabled={disabled}/>{refs.length>0&&<div className="chat-reference-chips">{refs.map((reference,index)=><span key={index}><Button variant="ghost" onClick={()=>workspace.open(reference)}>Source {index+1}</Button><IconButton label={'Remove source '+(index+1)} disabled={busy} onClick={()=>setRefs(previous=>previous.filter((_,i)=>i!==index))}><X size={14}/></IconButton></span>)}</div>}<div className="chat-composer-footer"><div className="chat-composer-options"><IconButton label="Attach file" disabled={disabled} onClick={()=>setAttachmentsOpen(value=>!value)}><Paperclip size={18}/></IconButton><Select label="Teaching" value={style} onChange={event=>setStyle(event.target.value as 'direct'|'guided')} disabled={disabled}><option value="direct">Direct</option><option value="guided">Guided</option></Select></div><span className="chat-status" role="status">{status}</span>{busy?<Button variant="secondary" onClick={()=>void stop()}><Square size={16}/>Stop</Button>:<Button type="submit" disabled={disabled||!text.trim()}><ArrowUp size={17}/>Send</Button>}</div></form>
-    <ChatAttachments key={incomingKey} conversation={chat} open={attachmentsOpen} onOpenChange={setAttachmentsOpen} disabled={disabled} intent={props.attachmentIntent} onConsumed={props.onAttachmentIntentConsumed} beforeAttach={flushDraft} onChanged={value=>{accept(value);if(value.retention==='saved')changed();}}/>
-    <CreateChatTest key={'test:'+incomingKey} conversation={chat} disabled={disabled} prepare={flushDraft}/>
-    {chat.kind==='case'&&<CaseHandoffActions conversation={chat} question={text} disabled={disabled} prepare={flushDraft}/>}
+    <ChatAttachments studyHelpContext={props.studyHelpContext} key={incomingKey} conversation={chat} open={attachmentsOpen} onOpenChange={setAttachmentsOpen} disabled={disabled} intent={props.attachmentIntent} onConsumed={props.onAttachmentIntentConsumed} beforeAttach={flushDraft} onChanged={value=>{accept(value);if(value.retention==='saved')changed();}}/>
+    <CreateChatTest studyHelpContext={props.studyHelpContext} key={'test:'+incomingKey} conversation={chat} disabled={disabled} prepare={flushDraft}/>
+    {chat.kind==='case'&&<CaseHandoffActions studyHelpContext={props.studyHelpContext} conversation={chat} question={text} disabled={disabled} prepare={flushDraft}/>}
     <dialog ref={dialog} onCancel={()=>setConfirmDelete(false)} className="chat-delete-dialog"><h2>Delete this conversation?</h2><p>Its messages and owned originals will be removed. Separately retained learning memory remains inspectable.</p><div className="actions"><Button variant="secondary" onClick={()=>{setConfirmDelete(false);dialog.current?.close();}}>Keep conversation</Button><Button variant="danger" onClick={()=>void remove()}>Delete conversation</Button></div></dialog>
   </section>;
 }

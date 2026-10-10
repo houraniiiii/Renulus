@@ -1,5 +1,5 @@
 import { api } from '../../platform/api';
-import type { ContentReference, ConversationIdentity, ConversationSummary } from '../../platform/designC';
+import { studyHelpHeaders, type ContentReference, type ConversationIdentity, type ConversationSummary, type StudyHelpContext } from '../../platform/designC';
 import { importOptionsHeader } from '../library/file-formats';
 import type { Rights } from '../library/types';
 
@@ -17,9 +17,9 @@ export interface AttachmentCommand {
   expected_context_epoch:number;idempotency_key:string;filename:string;title:string;rights:Rights;
   metadata:{source_id:string;source_owner:string;access_class:string;edition:string|null};
 }
-export function attachmentInventory(chat:ConversationSummary,signal?:AbortSignal):Promise<AttachmentInventory>{
-  return api('/attachments/'+chat.kind+'/'+encodeURIComponent(chat.identity.id),{signal});
+export function attachmentInventory(chat:ConversationSummary,signal?:AbortSignal,studyHelpContext?:StudyHelpContext):Promise<AttachmentInventory>{
+  return api('/attachments/'+chat.kind+'/'+encodeURIComponent(chat.identity.id),{signal,headers:studyHelpHeaders(studyHelpContext)});
 }
-export function uploadAttachment(file:File,command:AttachmentCommand,signal?:AbortSignal):Promise<Attachment>{
-  return api('/attachments',{method:'POST',body:file,signal,headers:{'x-renulus-attachment-options':importOptionsHeader(command)}});
+export function uploadAttachment(file:File,command:AttachmentCommand,signal?:AbortSignal,studyHelpContext?:StudyHelpContext):Promise<Attachment>{
+  return api('/attachments',{method:'POST',body:file,signal,headers:{'x-renulus-attachment-options':importOptionsHeader(command),...studyHelpHeaders(studyHelpContext)}});
 }

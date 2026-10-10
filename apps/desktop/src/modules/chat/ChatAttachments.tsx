@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ApiError, isCancelled } from '../../platform/api';
-import type { ConversationSummary } from '../../platform/designC';
+import type { ConversationSummary, StudyHelpContext } from '../../platform/designC';
 import { Button, ErrorState, Input, LoadingState, Notice } from '../../ui';
 import { useWorkspace } from '../workspace';
 import { attachmentInventory, uploadAttachment, type AttachmentCommand, type AttachmentIntent, type AttachmentInventory } from './attachments';
@@ -9,6 +9,7 @@ interface Props {
   conversation:ConversationSummary;open:boolean;onOpenChange:(open:boolean)=>void;disabled?:boolean;
   intent?:AttachmentIntent;onConsumed?:(id:string)=>void;beforeAttach:()=>Promise<ConversationSummary|undefined>;
   onChanged:(conversation:ConversationSummary)=>void;
+  studyHelpContext?:StudyHelpContext;
 }
 export function ChatAttachments(props:Props){
   const workspace=useWorkspace();
@@ -19,7 +20,7 @@ export function ChatAttachments(props:Props){
   const [inventory,setInventory]=useState<AttachmentInventory>(),[loading,setLoading]=useState(false),[busy,setBusy]=useState(false);
   const [error,setError]=useState<unknown>(),[message,setMessage]=useState('');
   const key=useRef<string>(crypto.randomUUID()),consumed=useRef(new Set<string>());
-  const pending=useRef<{file:File;command:AttachmentCommand}|undefined>(undefined);
+  const pending=useRef<{file:File;command:AttachmentCommand;studyHelpContext?:StudyHelpContext}|undefined>(undefined);
   const mounted=useRef(true);
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
   function select(value:File,requestId:string=crypto.randomUUID()){
@@ -35,32 +36,34 @@ export function ChatAttachments(props:Props){
   useEffect(()=>{
     if(!props.open||!workspace.permitted)return;
     const controller=new AbortController();setLoading(true);
-    attachmentInventory(props.conversation,controller.signal).then(value=>{setInventory(value);setError(undefined);})
+    attachmentInventory(props.conversation,controller.signal,props.studyHelpContext).then(value=>{setInventory(value);setError(undefined);})
       .catch(caught=>{if(!isCancelled(caught))setError(caught);}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
     return()=>controller.abort();
-  },[props.open,props.conversation.identity.id,props.conversation.revision,workspace.permitted]);
+  },[props.open,props.conversation.identity.id,props.conversation.revision,workspace.permitted,JSON.stringify(props.studyHelpContext)]);
   async function attach(){
     if(!file||busy||props.disabled||!workspace.permitted)return;
     setBusy(true);setError(undefined);
     try{
       if(!pending.current){
+        const studyHelpContext=props.studyHelpContext?{...props.studyHelpContext}:undefined;
         await props.beforeAttach();
-        const live=await attachmentInventory(props.conversation);
+        const live=await attachmentInventory(props.conversation,undefined,studyHelpContext);
         if(live.conversation.type!==props.conversation.identity.type||live.conversation.id!==props.conversation.identity.id
           ||!Number.isInteger(live.policy_revision)||!Number.isInteger(live.context_epoch))
           throw new ApiError('Reopen this conversation before attaching a file.',409,'attachment_context_changed');
-        pending.current={file,command:{conversation:live.conversation,expected_conversation_revision:live.conversation_revision,
+        pending.current={file,studyHelpContext,command:{conversation:live.conversation,expected_conversation_revision:live.conversation_revision,
           expected_policy_revision:live.policy_revision,expected_context_epoch:live.context_epoch,idempotency_key:key.current,
           filename:file.name,title:title.trim(),rights:{display,cache,index:false,embedding:false,model_input:modelInput,derivation:derive,
             evaluation:false,redistribution:false,licence:'user-supplied permission',permission_reference:permission.trim(),attribution:owner.trim()},
           metadata:{source_id:'R02',source_owner:owner.trim()||'User',access_class:'user-owned',edition:edition.trim()||null}}};
       }
-      const receipt=await uploadAttachment(pending.current.file,pending.current.command);
+      const context=pending.current.studyHelpContext;
+      const receipt=await uploadAttachment(pending.current.file,pending.current.command,undefined,context);
       if(!mounted.current)return;
       const latest={...props.conversation,revision:receipt.conversation_revision};
       props.onChanged(latest);
       pending.current=undefined;setFile(undefined);setMessage(receipt.retention==='temporary'?'Attached temporarily. No original was saved.':'Attached to this saved conversation.');
-      void attachmentInventory(latest).then(value=>{if(mounted.current)setInventory(value);}).catch(caught=>{if(mounted.current)setError(caught);});
+      void attachmentInventory(latest,undefined,context).then(value=>{if(mounted.current)setInventory(value);}).catch(caught=>{if(mounted.current)setError(caught);});
     }catch(caught){
       if(!mounted.current)return;
       if(caught instanceof ApiError&&!caught.retryable&&caught.status>=400&&caught.status<500){pending.current=undefined;key.current=crypto.randomUUID();}
