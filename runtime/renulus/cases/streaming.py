@@ -86,7 +86,6 @@ async def discuss(repo: CaseRepository, run: Run, messages: list[dict]) -> Async
     with repo._lock:
         if run.terminal and run.events:
             # Replaying is volatile, never a second inference or saved operation.
-            repo._load(run.case_id)
             replay = list(run.events)
         else:
             replay = None
@@ -95,10 +94,25 @@ async def discuss(repo: CaseRepository, run: Run, messages: list[dict]) -> Async
             if not run.cancel.is_set():
                 run.status = "running"
     if replay is not None:
-        for event in replay:
-            with repo._lock:
-                repo._load(run.case_id)
-            yield event
+        sequence = 0
+        try:
+            if run.status == "cancelled":
+                # Cancellation remains neutral even when the preceding partial
+                # response belongs to an obsolete policy or restored context.
+                yield Event(run_id=run.id, sequence=1, type="cancelled", payload={})
+                return
+            for event in replay:
+                with repo._lock:
+                    repo.check_run_boundary(run)
+                    repo._load(run.case_id)
+                sequence += 1
+                yield event
+        except ApiError as error:
+            cancelled = run.cancel.is_set() or error.code in ("case_deleted", "case_run_cancelled", "case_not_found")
+            # Do not mutate the original terminal receipt or call finish_error:
+            # it would return the old completed event instead of this refusal.
+            yield Event(run_id=run.id, sequence=sequence + 1, type="cancelled" if cancelled else "failed",
+                        payload={} if cancelled else {"error": safe_error(error)})
         return
     yield repo.event(run, "started", {"case_id": run.case_id, "revision": run.revision,
                                     "scope": run.scope.model_dump(mode="json")})

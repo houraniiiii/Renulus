@@ -9,9 +9,8 @@ under test. Separate owner suites prove their late publication boundaries.
 Late-publication inventory reviewed against the actual owner implementations;
 existing bounded proofs are reused, not claimed rerun by this module:
 * original Learn: service.check_run(conn=...) in answer's write transaction;
-  original Case: _current_run before delta/complete (new boundary probes below).
-  Case terminal replay is a separate reported epoch gap: streaming.discuss only
-  reloads the Case before replay. This module does not claim to close that gap.
+  original Case: _current_run before delta/complete, check_run_boundary for
+  terminal cache replay (new boundary/HTTP scheduling probes below).
 * typed Chat: test_design_c_conversations.test_context_change_during_reply_blocks_late_assistant_publication;
   Study handoffs: test_design_c_study_help.test_commit_rechecks_help_receipt_and_rolls_back_on_same_transaction_change.
 * saved generation: test_saved_generation.test_changes_during_provider_wait_prevent_stale_publication;
@@ -22,6 +21,18 @@ existing bounded proofs are reused, not claimed rerun by this module:
   suppression/source changes, explicit restore capture barriers).
 * attachment/extraction/Notes: test_attachment_producer, test_saved_extraction,
   test_design_c_notes.test_mounted_note_publication_rechecks_study_before_actual_import.
+
+Recorded-replay classification (read-only audit): original Learn's completed
+request selects canonical learn_runs and rereads learn_messages in the API;
+it does not replay an in-memory text cache or restart a provider. Shared HTTP
+policy fences that new read. Legacy generated practice has canonical command
+receipts on restart, with a newly captured boundary, AND in-process events
+bound to their original policy/epoch. Original Cases has only volatile terminal
+Run.events, even when the underlying Case was explicitly saved. Its boundary
+must remain the original one. Wrapped chat command receipts are canonical for
+saved chats and contain completion identity/state; their history is read through
+the owner. Temporary wrappers keep volatile command receipts. None of these
+replay paths should turn an interrupted provider request into new inference.
 
 Limits: route denial/dispatch and selected valid owner replays, not every success
 payload or authentication flow. No installed-renderer, native, credential,
@@ -483,3 +494,143 @@ def test_original_learn_and_case_prepared_producers_refuse_changed_boundary(asse
     assert transport.calls == 0
     assert services.db.fetch_all("SELECT * FROM learn_messages WHERE role='assistant'") == []
     assert not any(row["role"] == "assistant" for row in cases.get(case["id"])["messages"])
+
+
+CASE_TEXT = "SYNTHETIC_CASE_TERMINAL_CACHE"
+
+
+class CaseTextTransport(OutputTransport):
+    async def stream(self, *args, **kwargs):
+        self.calls += 1
+        yield CASE_TEXT
+
+
+def sse_values(response):
+    assert response.status_code == 200, response.text
+    return [json.loads(line[6:]) for line in response.text.splitlines() if line.startswith("data: ")]
+
+
+def completed_case(services, client, saved=False):
+    from renulus.cases.models import StartCase
+    cases = services.get("cases")
+    case = cases.start(StartCase(text="Original synthetic Case input"))
+    if saved:
+        case = cases.save(case["id"], case["revision"])
+    transport = CaseTextTransport()
+    services.registry["provider"] = transport
+    body = {"revision": case["revision"], "message": "Synthetic question", "request_id": "inventory-case-terminal"}
+    url = "/api/v1/cases/sessions/" + case["id"] + "/discuss"
+    events = sse_values(client.post(url, json=body))
+    assert events[-1]["type"] == "completed" and CASE_TEXT in str(events)
+    return cases, case, transport, url, body, events
+
+
+@pytest.mark.parametrize("change", ["cycle", "restore"])
+def test_original_case_http_replay_rechecks_boundary_after_preparation(assembled, monkeypatch, change):
+    _, services, client = assembled
+    cases, case, transport, url, body, original_events = completed_case(services, client)
+    original = cases.begin_discussion
+
+    def restore_between_prepare_and_stream(*args, **kwargs):
+        result = original(*args, **kwargs)
+        boundary(services, change)
+        return result
+
+    monkeypatch.setattr(cases, "begin_discussion", restore_between_prepare_and_stream)
+    response = client.post(url, json=body)
+    # A Test cycle is also fenced by shared HTTP policy. Restore keeps that
+    # policy revision unchanged, so the recorded producer must fence its epoch.
+    assert CASE_TEXT not in response.text, response.text
+    if response.status_code == 200:
+        events = sse_values(response)
+        assert len(events) == 1 and events[0]["type"] == "failed"
+        assert events[0]["payload"]["error"]["code"] == ("dependency_changed" if change == "restore" else "assistance_changed")
+    else:
+        assert_denied(response, "assistance_changed")
+    assert transport.calls == 1
+    assert len(cases.get(case["id"])["messages"]) == 2
+
+
+@pytest.mark.parametrize("change", ["active", "cycle", "restore"])
+def test_original_case_terminal_checks_each_event_without_active_run_requirement(assembled, change):
+    from renulus.cases.streaming import discuss
+    _, services, client = assembled
+    cases, case, transport, _, _, recorded = completed_case(services, client)
+    run = cases._runs[recorded[0]["run_id"]]
+    original_receipt = list(run.events)
+
+    async def partial_replay():
+        stream = discuss(cases, run, [])
+        first = await anext(stream)
+        code = boundary(services, change)
+        rest = [event async for event in stream]
+        return first, code, rest
+
+    first, code, rest = asyncio.run(partial_replay())
+    assert first.type == "started"  # completed run passes a current boundary
+    assert len(rest) == 1 and rest[0].type == "failed"
+    assert rest[0].sequence == 2
+    assert rest[0].payload["error"]["code"] == ("dependency_changed" if change == "restore" else code)
+    assert CASE_TEXT not in str(rest)
+    assert run.events == original_receipt and run.status == "completed"
+    assert transport.calls == 1
+
+
+@pytest.mark.parametrize("saved", [False, True])
+def test_original_case_normal_terminal_replay_keeps_explicit_save_semantics(assembled, saved):
+    _, services, client = assembled
+    cases, case, transport, url, body, original = completed_case(services, client, saved=saved)
+    assert sse_values(client.post(url, json=body)) == original
+    assert transport.calls == 1
+    current = cases.get(case["id"])
+    assert len(current["messages"]) == 2 and current["dirty"]
+    rows = services.db.fetch_all("SELECT * FROM case_sessions WHERE id=?", (case["id"],))
+    assert len(rows) == int(saved)
+    if rows:
+        assert CASE_TEXT not in str(rows)  # original API requires explicit Save
+
+
+@pytest.mark.parametrize("temporary", [False, True])
+def test_wrapped_case_terminal_replay_keeps_saved_or_temporary_retention(assembled, temporary):
+    _, services, client = assembled
+    transport = CaseTextTransport()
+    services.registry["provider"] = transport
+    created = client.post("/api/v1/conversations", json={"kind": "case", "temporary": temporary,
+        "text": "Synthetic wrapped Case context"})
+    assert created.status_code == 201, created.text
+    chat = created.json()
+    url = "/api/v1/conversations/case/" + chat["identity"]["id"]
+    body = {"expected_revision": chat["revision"], "text": "Synthetic question", "request_id": "inventory-wrapped-case"}
+    first = sse_values(client.post(url + "/messages", json=body))
+    assert first[-1]["type"] == "completed", first
+    assert CASE_TEXT in str(first)
+    replay = sse_values(client.post(url + "/messages", json=body))
+    assert replay[-1]["type"] == "completed" and transport.calls == 1, replay
+    history = client.get(url + "/messages").json()["items"]
+    assert len(history) == 2 and CASE_TEXT in str(history)
+    rows = services.db.fetch_all("SELECT * FROM case_sessions WHERE id=?", (chat["identity"]["id"],))
+    assert len(rows) == int(not temporary)
+    if rows:
+        assert CASE_TEXT in str(rows)  # wrapped saved conversation publishes
+
+
+def test_original_case_cancelled_replay_is_neutral_after_restore_and_test(assembled):
+    from renulus.cases.models import StartCase, DiscussCase
+    from renulus.cases.streaming import discuss
+    _, services, _ = assembled
+    cases = services.get("cases")
+    case = cases.start(StartCase(text="Synthetic cancellation context"))
+    run, _ = cases.begin_discussion(case["id"], DiscussCase(revision=case["revision"],
+        message="Synthetic prompt", request_id="inventory-cancelled-case"))
+    cases.append_delta(run, CASE_TEXT)
+    cases.cancel(run.id)
+    cases.finish_error(run, cancelled=True)
+    boundary(services, "restore")
+    boundary(services, "active")
+
+    async def replay():
+        return [event async for event in discuss(cases, run, [])]
+
+    events = asyncio.run(replay())
+    assert len(events) == 1 and events[0].type == "cancelled" and events[0].payload == {}
+    assert events[0].sequence == 1 and CASE_TEXT not in str(events)

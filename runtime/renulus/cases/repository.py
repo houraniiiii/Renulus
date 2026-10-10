@@ -629,11 +629,15 @@ class CaseRepository:
         self._changed(session)
         return message_id
 
-    def _current_run(self, run: Run) -> Session:
+    def check_run_boundary(self, run: Run):
+        """Fence output, including a completed run's volatile replay buffer."""
         with closing(self.db.connect()) as conn:
             require_assistance(conn, expected_revision=run.policy_revision)
             if run.context_epoch is not None and context_epoch_in(conn) != run.context_epoch:
                 raise ApiError('dependency_changed', 'The learning context changed. Retry this request.', 409, True)
+
+    def _current_run(self, run: Run) -> Session:
+        self.check_run_boundary(run)
         if run.cancel.is_set() or run.status == "cancelled":
             raise ApiError("case_run_cancelled", "This response was stopped", 409)
         session = self._load(run.case_id)
