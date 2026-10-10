@@ -152,6 +152,12 @@ class SavedGenerationService:
             raise ApiError("generation_capacity", "Finish or cancel an active generation job before starting another", 409, True)
 
     def _view(self, conn, row):
+        # A restored running checkpoint has no right to resume model work. Its
+        # local epoch is deliberately not portable. Reconcile stale progress
+        # even when this process did not own the pre-restore execution.
+        if row["state"] in ("queued", "running") and row["context_epoch"] != context_epoch_in(conn):
+            conn.execute("UPDATE assessment_test_jobs SET state='failed',error_code='generation_context_changed',updated_at=? WHERE id=?", (utc_now(), row["id"]))
+            row = {**row, "state": "failed", "error_code": "generation_context_changed"}
         checkpoint = self._checkpoint(row)
         # The frozen contract also guards restored progress/count invariants.
         Job(id=row["id"], operation=row["operation"], idempotency_key=row["idempotency_key"],

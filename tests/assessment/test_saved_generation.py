@@ -18,6 +18,7 @@ from renulus.server import create_app
 from renulus.storage import utc_now
 from renulus.storage.assessment_policy import advance_policy
 from renulus.storage.invalidation import bump_context_epoch
+from renulus.storage.backup import export_records
 
 
 def batch(start=0, count=5):
@@ -59,6 +60,9 @@ def generation(tmp_path, monkeypatch):
         app.include_router(create_router(app.state.services), prefix="/api/v1")
     services = app.state.services
     service = services.get("saved_generation")
+    owners = {id(getattr(callback, "__self__", None)) for callback in services.on_startup
+              if isinstance(getattr(callback, "__self__", None), SavedGenerationService)}
+    assert owners == {id(service)}, "One assembled generation service owns the router and startup recovery"
     provider = services.get("provider")
     transport = SyntheticTransport()
     provider._settings["connections"]["codex"] = {"access_token": "synthetic-generation-token", "expires_at": 9999999999}
@@ -423,3 +427,27 @@ async def test_active_test_neutral_cancel_stops_real_provider_and_replay_never_d
     with pytest.raises(ApiError) as error:
         service.read(row["id"])
     assert error.value.code == "assistance_restricted"
+
+
+@pytest.mark.asyncio
+async def test_actual_json_restore_invalidates_active_and_orphaned_jobs_without_provider_replay(generation):
+    app, service, transport = generation
+    transport.release = asyncio.Event()
+    row = await service.create(request())
+    await transport.started.wait()
+    bundle = export_records(app.state.services)
+    recovery = app.state.services.get("data_recovery")
+    recovery.restore_json(bundle, confirm_backup_date=True, confirmed_exported_at=bundle["exported_at"])
+    result = service.read(row["id"])
+    assert result["state"] == "failed" and result["error_code"] == "generation_context_changed"
+    assert not result["can_retry"] and result["result"] is None
+    await service.tasks[row["id"]]
+    assert len(transport.calls) == 1 and service.db.fetch_all("SELECT id FROM assessment_test_versions") == []
+    # Import the actual prior running checkpoint into the live process: there
+    # is no owner task, and no automatic startup/retry callback may run it.
+    service.db.execute("DELETE FROM assessment_test_jobs WHERE id=?", (row["id"],))
+    recovery.restore_json(bundle, confirm_backup_date=True, confirmed_exported_at=bundle["exported_at"])
+    result = service.read(row["id"])
+    assert result["state"] == "failed" and result["error_code"] == "generation_context_changed"
+    assert service.db.fetch_one("SELECT state FROM assessment_test_jobs WHERE id=?", (row["id"],))["state"] == "failed"
+    assert service.tasks == {} and len(transport.calls) == 1

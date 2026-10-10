@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Progress polling is read-only. Model work needs an explicit create or retry."""
+"""Progress polling never starts model work. Create and retry are explicit."""
 import sqlite3
 import inspect
 
