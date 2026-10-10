@@ -362,6 +362,111 @@ async function actionResponse(page, route, action, expected = 200, method = 'POS
   return captured.body;
 }
 
+// Evaluated in the owned renderer only around one saved synthetic Confirm attach.
+// CDP does not retain this upload's response body; observe a clone of the real fetch
+// response instead. The app receives the identical promise/Response, without replay.
+export function installAttachmentCapture(spec) {
+  const require = (condition, message) => { if (!condition) throw new Error(message); };
+  const origin = new URL(spec.origin), limit = 64 * 1024;
+  require(origin.protocol === 'http:' && origin.hostname === '127.0.0.1' && origin.port
+    && origin.origin === spec.origin && location.origin === spec.origin && location.hash === spec.hash
+    && spec.retention === 'saved' && spec.conversation?.type === 'learn_thread'
+    && /^thread_[a-f0-9]{32}$/.test(spec.conversation.id)
+    && spec.hash === '#/chat/learn_thread/' + spec.conversation.id
+    && /^(?:synthetic-reading\.(?:pdf|docx|csv|xlsx|md|html|xml|png|jpg|tiff)|synthetic-denied-entity\.xml)$/.test(spec.filename)
+    && Number.isSafeInteger(spec.bytes) && spec.bytes > 0 && spec.bytes < limit
+    && /^[a-f0-9]{64}$/.test(spec.sha256), 'Attachment capture requires its exact saved synthetic original.');
+  const original = globalThis.fetch, endpoint = spec.origin + '/api/v1/attachments';
+  let settled = false, reader, timer, resolve, reject;
+  const result = new Promise((yes, no) => { resolve = yes; reject = no; });
+  result.catch(() => {}); // A UI action may fail before the host awaits the observer.
+  const restore = () => { if (globalThis.fetch === observedFetch) globalThis.fetch = original; };
+  const finish = (error, value) => {
+    if (settled) return;
+    settled = true; clearTimeout(timer); restore();
+    if (error) { if (reader) void reader.cancel().catch(() => {}); reject(new Error(error)); }
+    else resolve(value);
+  };
+  function match(args) {
+    const [input, init] = args;
+    // Do not read arbitrary Request bodies, temporary input or credential values.
+    if (typeof input !== 'string' || !init || init.method !== 'POST'
+      || location.origin !== spec.origin || location.hash !== spec.hash) return;
+    const url = new URL(input, spec.origin);
+    if (url.href !== endpoint || url.username || url.password || !(init.body instanceof File)
+      || init.body.name !== spec.filename || init.body.size !== spec.bytes
+      || !(init.headers instanceof Headers)) return;
+    if ([...init.headers.keys()].some(name => !['accept', 'x-renulus-attachment-options'].includes(name))) return;
+    const options = init.headers.get('x-renulus-attachment-options');
+    if (!options || options.length > 16_000) return;
+    const command = JSON.parse(options);
+    if (command.conversation?.type !== spec.conversation.type || command.conversation.id !== spec.conversation.id
+      || command.filename !== spec.filename || command.title !== spec.filename
+      || !/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(command.idempotency_key ?? '')
+      || !['expected_conversation_revision', 'expected_policy_revision', 'expected_context_epoch']
+        .every(name => Number.isSafeInteger(command[name]) && command[name] >= 0)
+      || command.rights?.display !== true || command.rights.cache !== true
+      || command.metadata?.source_owner !== 'Renulus synthetic fixture author') return;
+    return { file: init.body, key: command.idempotency_key };
+  }
+  async function observe(response, request) {
+    // Clone synchronously, before the app's continuation can consume the body.
+    require(response.url === endpoint && !response.redirected && response.status === 201,
+      'Attachment capture requires the actual nonredirected 201 response.');
+    const headers = Object.fromEntries(['content-type', 'cache-control', 'x-content-type-options', 'content-length']
+      .map(name => [name, response.headers.get(name)]));
+    require(/^application\/json(?:;|$)/i.test(headers['content-type'] ?? '') && headers['cache-control'] === 'no-store'
+      && (headers['content-length'] === null || /^\d+$/.test(headers['content-length'])
+        && Number(headers['content-length']) <= limit), 'Attachment response headers or size are invalid.');
+    reader = response.clone().body.getReader();
+    const digest = await crypto.subtle.digest('SHA-256', await request.file.arrayBuffer());
+    require(Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, '0')).join('') === spec.sha256,
+      'Attachment request original SHA differs from the checked fixture.');
+    const chunks = []; let length = 0;
+    while (!settled) {
+      const { value, done } = await reader.read(); if (done) break;
+      length += value.byteLength;
+      require(length <= limit, 'Attachment response exceeds the capture byte bound.'); chunks.push(value);
+    }
+    if (settled) return;
+    const bytes = new Uint8Array(length); let offset = 0;
+    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+    finish(null, { status: response.status, headers, bytes: Array.from(bytes), request: {
+      method: 'POST', path: '/api/v1/attachments', conversation: spec.conversation, idempotency_key: request.key,
+      filename: spec.filename, sha256: spec.sha256, bytes: spec.bytes } });
+  }
+  function observedFetch(...args) {
+    let request;
+    try { request = match(args); } catch { /* Nonmatching input remains untouched. */ }
+    const pending = Reflect.apply(original, this, args);
+    if (request) {
+      restore(); // One actual upload only; later app traffic is never observed.
+      void pending.then(response => {
+        if (!settled) return observe(response, request);
+      }, () => { finish('The actual attachment fetch failed.'); })
+        .catch(error => finish(error.message?.startsWith('Attachment ') ? error.message : 'Attachment response capture failed.'));
+    }
+    return pending;
+  }
+  globalThis.fetch = observedFetch;
+  timer = setTimeout(() => finish('Attachment response capture timed out.'), 120_000);
+  return { result, dispose: () => finish('Attachment response capture disposed.') };
+}
+
+async function attachmentResponse(page, chat, fixture, action) {
+  const capture = await page.evaluateHandle(installAttachmentCapture, { origin: new URL(page.url()).origin,
+    hash: chatHash(chat), conversation: chat.identity, retention: chat.retention,
+    filename: fixture.filename, bytes: fixture.bytes, sha256: fixture.sha256 });
+  try {
+    const [record] = await Promise.all([capture.evaluate(value => value.result), action()]);
+    check(record.status === 201 && record.headers['cache-control'] === 'no-store'
+      && record.bytes.length <= 64 * 1024, 'The actual attachment response was not a bounded saved publication.');
+    return json(Buffer.from(record.bytes));
+  } finally {
+    try { await capture.evaluate(value => value.dispose()); } finally { await capture.dispose(); }
+  }
+}
+
 async function poll(work, accepts, label, timeout = 180_000, interval = 500) {
   const deadline = Date.now() + timeout;
   let value;
@@ -468,7 +573,7 @@ async function launch(request, identity, evidence, profileName, report) {
   const startedAt = Date.now();
   const application = await electron.launch({ executablePath: request.executable, args: [], cwd: path.dirname(request.executable), env, timeout: 360_000 });
   // Retain ownership even if window/readiness validation subsequently fails.
-  const current = { application, env, profile, identities: [], page: null };
+  const current = { application, env, profile, executable: request.executable, identities: [], page: null };
   report.current = current;
   const { page, ...timing } = await waitForDesignCWindow(application, { startedAt, timeout: 360_000 }); current.page = page;
   page.setDefaultTimeout(30_000);
@@ -492,6 +597,7 @@ async function launch(request, identity, evidence, profileName, report) {
   check(current.identities.length === 2 && current.identities.every(item => item.created && item.executable)
     && current.identities.some(item => item.pid === native.pid && samePath(item.executable, request.executable))
     && current.identities.some(item => item.pid === native.children[0] && samePath(item.executable, python)), 'Physical main/backend identities could not be established.');
+  current.mainPid = native.pid;
   const meta = await api(page, '/meta'), connections = await api(page, '/connections');
   check(meta.api_version === 1 && connections.selected_provider === null
     && connections.connections.every(item => item.status === 'disconnected'), 'Acceptance requires its own disconnected synthetic profile.');
@@ -592,9 +698,70 @@ export function completeCoreReceipt(report) {
 
 const chatPath = chat => '/conversations/' + chat.kind + '/' + encodeURIComponent(chat.identity.id);
 const chatHash = chat => '#/chat/' + chat.identity.type + '/' + chat.identity.id;
+
+export async function freshHiddenFrame() {
+  let timer;
+  try {
+    await Promise.race([
+      (async () => { await document.fonts.ready; await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); })(),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('The hidden renderer did not produce a fresh frame within five seconds.')), 5_000); }),
+    ]);
+  } finally { clearTimeout(timer); }
+}
+
+export async function captureHiddenWindow({ BrowserWindow }, expected) {
+  const same = (left, right) => typeof left === 'string' && typeof right === 'string'
+    && left.replaceAll('\\', '/').toLowerCase() === right.replaceAll('\\', '/').toLowerCase();
+  if (!Number.isSafeInteger(expected.pid) || process.pid !== expected.pid || !same(process.execPath, expected.executable))
+    throw new Error('The hidden capture executable/process identity differs.');
+  const windows = BrowserWindow.getAllWindows().filter(window => !window.isDestroyed());
+  const matches = windows.filter(window => window.webContents.getURL() === expected.url);
+  const hidden = window => !window.isDestroyed() && !window.isVisible() && !window.isFocused() && !window.isFocusable();
+  if (matches.length !== 1 || !windows.every(hidden)) throw new Error('The exact owned hidden capture window is unavailable.');
+  const window = matches[0];
+  const image = await window.capturePage(undefined, { stayHidden: true, stayAwake: false });
+  if (!hidden(window) || window.webContents.getURL() !== expected.url) throw new Error('The hidden capture window changed.');
+  const size = image.getSize();
+  if (image.isEmpty() || size.width < 1 || size.height < 1 || size.width > 4096 || size.height > 4096
+    || size.width * size.height > 12_000_000) throw new Error('The hidden capture has invalid dimensions.');
+  const bytes = image.toPNG();
+  if (bytes.length > 16 * 1024 * 1024) throw new Error('The hidden capture exceeds its byte bound.');
+  return bytes.toString('base64');
+}
+
+async function captureDeadline(pending, milliseconds) {
+  let timer;
+  try { return await Promise.race([pending, new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error('The owned hidden capture exceeded its deadline.')), milliseconds);
+  })]); } finally { clearTimeout(timer); }
+}
+
+export async function hiddenScreenshotBytes(current) {
+  const url = current.page.url(), parsed = new URL(url);
+  check(parsed.protocol === 'http:' && parsed.hostname === '127.0.0.1' && parsed.port
+    && !parsed.username && !parsed.password && !parsed.search && ['/', '/index.html'].includes(parsed.pathname),
+    'The capture requires the owned loopback renderer URL.');
+  const before = await hiddenWindowState(current.application);
+  check(before.filter(window => window.url === url).length === 1, 'The exact owned capture page is unavailable.');
+  try {
+    await captureDeadline(current.page.evaluate(freshHiddenFrame), 5_100);
+    const encoded = await captureDeadline(current.application.evaluate(captureHiddenWindow,
+      { url, executable: current.executable, pid: current.mainPid }), 15_000);
+    check(typeof encoded === 'string' && encoded.length <= Math.ceil(16 * 1024 * 1024 / 3) * 4
+      && /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded), 'Invalid hidden PNG encoding.');
+    const bytes = Buffer.from(encoded, 'base64');
+    const raster = validateReaderRaster(bytes);
+    check(raster.width <= 4096 && raster.height <= 4096, 'The hidden PNG dimensions exceed the bound.');
+    return bytes;
+  } finally {
+    const after = await captureDeadline(hiddenWindowState(current.application), 5_000);
+    check(after.filter(window => window.url === url).length === 1, 'The owned capture page changed.');
+  }
+}
+
 async function screenshot(current, evidence, name) {
-  await hiddenWindowState(current.application);
-  await current.page.screenshot({ path: path.join(evidence, name + '.png'), fullPage: true });
+  const bytes = await hiddenScreenshotBytes(current);
+  await writeFile(path.join(evidence, name + '.png'), bytes, { flag: 'wx' });
 }
 export async function captureFailureScreenshot(current, evidence, report, temporaryPhase) {
   if (!current?.page || temporaryPhase) return;
@@ -864,8 +1031,8 @@ async function uploadReaderOriginal(page, chat, fixtures, fixture) {
   await page.getByLabel('Keep a local original when this conversation is saved', { exact: true }).check();
   await page.getByLabel('Send selected content to my learning model', { exact: true }).check();
   await page.getByLabel('Permission or licence', { exact: true }).fill('CC0 synthetic original for local reader validation; no patient data.');
-  const attachment = await actionResponse(page, '/attachments',
-    () => page.getByRole('button', { name: 'Confirm attach', exact: true }).click(), 201);
+  const attachment = await attachmentResponse(page, chat, fixture,
+    () => page.getByRole('button', { name: 'Confirm attach', exact: true }).click());
   validateReaderOriginal(fixture, attachment.original, attachment.media_type);
   check(attachment.retention === 'saved' && attachment.filename === fixture.filename && attachment.reference?.target?.id === attachment.id
     && attachment.reference.target.type === 'attachment' && attachment.conversation?.type === chat.identity.type

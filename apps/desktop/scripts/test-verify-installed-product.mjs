@@ -4,9 +4,11 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createHash } from 'node:crypto';
+import { createHash, webcrypto } from 'node:crypto';
+import { runInNewContext } from 'node:vm';
 import { installedAcceptancePlan, validateInstalledRequest, validateInstallationReceipts, isolatedEnvironment,
   validateCompleteReport, validateFrozenScript, validateFrozenExport, validateAcceptanceChanges, captureResponse, captureFailureScreenshot,
+  installAttachmentCapture, freshHiddenFrame, captureHiddenWindow, hiddenScreenshotBytes,
   requiredGates, remainingOwnedIdentities, inside,
   coreGates, readerGates, deferredGates, completeCoreReceipt, designCEvidenceRoot, ownedArtifact, validateHiddenWindows, waitForDesignCWindow,
   validateConversation, validateSavedTest, validateActiveTest, validateFinalAttempt, validateAssistanceRefusal, safeFailure,
@@ -105,26 +107,178 @@ test('failure screenshot is skipped for temporary work or missing owned page bef
   }
 });
 
-test('failure pixels require a hidden owned window and screenshot errors never replace the primary failure', async () => {
-  const evidence = path.join(designCEvidenceRoot, 'c-12345678'), calls = [];
-  const primary = { message: 'actual primary response failure' }, report = { error: primary };
-  const current = { application: { evaluate: async () => [{ visible: false, focused: false }] },
-    page: { screenshot: async options => { calls.push(options); } } };
-  await captureFailureScreenshot(current, evidence, report, false);
-  assert.deepEqual(calls, [{ path: path.join(evidence, 'failure.png'), fullPage: true }]);
-  assert.equal(report.failureScreenshot, 'failure.png'); assert.equal(report.error, primary);
-  current.page.screenshot = async () => { throw new Error('owned screenshot unavailable'); };
+const hiddenCaptureFixture = () => {
+  const events = [], png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64');
+  const url = 'http://127.0.0.1:12345/#/projects';
+  const state = { visible: false, focused: false, focusable: false, destroyed: false, url, width: 1, height: 1 };
+  const window = { isDestroyed: () => state.destroyed, isVisible: () => state.visible,
+    isFocused: () => state.focused, isFocusable: () => state.focusable, webContents: { getURL: () => state.url },
+    capturePage: async (rectangle, options) => {
+      assert.equal(rectangle, undefined); assert.deepEqual(options, { stayHidden: true, stayAwake: false });
+      events.push('capturePage');
+      return { isEmpty: () => false, getSize: () => ({ width: state.width, height: state.height }), toPNG: () => png };
+    } };
+  const electron = { BrowserWindow: { getAllWindows: () => [window] } };
+  const current = { executable: process.execPath, mainPid: process.pid,
+    application: { evaluate: async (fn, input) => {
+      events.push(fn === captureHiddenWindow ? 'capture-identity' : 'hidden-state'); return fn(electron, input);
+    } }, page: { url: () => url, evaluate: async fn => { assert.equal(fn, freshHiddenFrame); events.push('fresh-frame'); } } };
+  return { current, electron, window, state, events, png, expected: { url, executable: current.executable, pid: current.mainPid } };
+};
+
+test('hidden screenshots use BrowserWindow capturePage with false awake and before/after hidden checks', async () => {
+  const f = hiddenCaptureFixture();
+  assert.deepEqual(await hiddenScreenshotBytes(f.current), f.png);
+  assert.deepEqual(f.events, ['hidden-state', 'fresh-frame', 'capture-identity', 'capturePage', 'hidden-state']);
+});
+
+test('fresh hidden frame waits for fonts then exactly two frames, and bounds an unready renderer', async () => {
+  const events = []; let timeout;
+  const context = { document: { fonts: { ready: Promise.resolve().then(() => events.push('fonts')) } },
+    requestAnimationFrame: fn => { events.push('frame'); fn(); },
+    setTimeout: (fn, milliseconds) => { assert.equal(milliseconds, 5_000); timeout = fn; return 1; },
+    clearTimeout: id => { assert.equal(id, 1); events.push('clear-timeout'); } };
+  const frame = runInNewContext('(' + freshHiddenFrame.toString() + ')', context);
+  await frame(); assert.deepEqual(events, ['fonts', 'frame', 'frame', 'clear-timeout']);
+  context.document.fonts.ready = new Promise(() => {});
+  const pending = frame(); timeout(); await assert.rejects(pending, /five seconds/);
+});
+
+test('capture refuses wrong executable/PID/URL, visible/focusable windows and oversized PNG dimensions', async () => {
+  for (const mutate of [f => { f.expected.executable += '.other'; }, f => { f.expected.pid++; },
+    f => { f.expected.url += '/other'; }, f => { f.state.visible = true; }, f => { f.state.focused = true; },
+    f => { f.state.focusable = true; }, f => { f.state.destroyed = true; }]) {
+    const f = hiddenCaptureFixture(); mutate(f);
+    await assert.rejects(captureHiddenWindow(f.electron, f.expected));
+    assert.deepEqual(f.events, []);
+  }
+  const f = hiddenCaptureFixture(); f.state.width = 4097;
+  await assert.rejects(captureHiddenWindow(f.electron, f.expected), /dimensions/);
+  const changed = hiddenCaptureFixture();
+  const capture = changed.window.capturePage;
+  changed.window.capturePage = async (...args) => { const image = await capture(...args); changed.state.visible = true; return image; };
+  await assert.rejects(hiddenScreenshotBytes(changed.current), /hidden and unfocused/);
+  assert.equal(changed.events.at(-1), 'hidden-state');
+});
+
+test('failure screenshot errors remain secondary, with no page.screenshot or foreground fallback', async () => {
+  const evidence = path.join(designCEvidenceRoot, 'c-12345678');
+  const primary = { message: 'actual primary response failure' };
+  const f = hiddenCaptureFixture(), current = f.current;
+  f.window.capturePage = async () => { throw new Error('owned screenshot unavailable'); };
   const failed = { error: primary };
   await captureFailureScreenshot(current, evidence, failed, false);
   assert.equal(failed.failureScreenshot, undefined);
   assert.deepEqual(failed.failureScreenshotError, { message: 'owned screenshot unavailable' });
   assert.equal(failed.error, primary);
-  current.application.evaluate = async () => [{ visible: true, focused: false }];
-  current.page.screenshot = async () => { throw new Error('must refuse visible pixels before screenshot'); };
+  assert.equal(f.events.at(-1), 'hidden-state');
+  f.state.visible = true;
   const visible = { error: primary };
   await captureFailureScreenshot(current, evidence, visible, false);
   assert.match(visible.failureScreenshotError.message, /hidden and unfocused/);
   assert.equal(visible.error, primary);
+});
+
+const attachmentCaptureFixture = (t, options = {}) => {
+  const bytes = Buffer.from('synthetic original only'), filename = 'synthetic-reading.pdf';
+  const conversation = { type: 'learn_thread', id: 'thread_' + 'a'.repeat(32) };
+  const spec = { origin: 'http://127.0.0.1:12345', hash: '#/chat/learn_thread/' + conversation.id,
+    conversation, retention: 'saved', filename, bytes: bytes.length, sha256: hash(bytes) };
+  const command = { conversation, filename, title: filename, idempotency_key: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    expected_conversation_revision: 1, expected_policy_revision: 0, expected_context_epoch: 0,
+    rights: { display: true, cache: true }, metadata: { source_owner: 'Renulus synthetic fixture author' } };
+  const headers = new Headers({ Accept: 'application/json', 'x-renulus-attachment-options': JSON.stringify(command) });
+  const file = new File([bytes], filename), init = { method: 'POST', headers, body: file };
+  const endpoint = spec.origin + '/api/v1/attachments', calls = [], events = [];
+  const body = options.body ?? JSON.stringify({ original: { sha256: spec.sha256 }, retention: 'saved' });
+  const response = new Response(body, { status: options.status ?? 201,
+    headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...options.headers } });
+  Object.defineProperty(response, 'url', { value: options.url ?? endpoint });
+  const clone = response.clone.bind(response);
+  response.clone = () => { events.push('clone'); return clone(); };
+  const pending = options.rejection ? Promise.reject(options.rejection) : Promise.resolve(response);
+  const original = function (...args) { calls.push({ receiver: this, args }); return pending; };
+  const context = { fetch: original, location: { origin: spec.origin, hash: spec.hash }, URL, File, Headers,
+    Uint8Array, crypto: webcrypto, setTimeout, clearTimeout };
+  const install = runInNewContext('(' + installAttachmentCapture.toString() + ')', context);
+  const capture = install(spec); t.after(() => capture.dispose());
+  return { spec, command, init, context, capture, install, endpoint, original, response, pending, calls, events };
+};
+
+test('single-use upload observer clones before UI consumption and preserves exact fetch promise/Response/args/this', async t => {
+  const f = attachmentCaptureFixture(t), receiver = { owned: true }, args = [f.endpoint, f.init];
+  const pending = Reflect.apply(f.context.fetch, receiver, args);
+  assert.equal(pending, f.pending); assert.equal(f.context.fetch, f.original);
+  const actual = await pending;
+  assert.equal(actual, f.response); assert.deepEqual(f.events, ['clone']);
+  const normalBody = await actual.json(), record = await f.capture.result;
+  assert.deepEqual(JSON.parse(Buffer.from(record.bytes).toString()), normalBody);
+  assert.equal(record.request.idempotency_key, f.command.idempotency_key);
+  assert.equal(record.request.sha256, f.spec.sha256);
+  assert.deepEqual(Object.keys(record.headers), ['content-type', 'cache-control', 'x-content-type-options', 'content-length']);
+  assert.equal(f.calls.length, 1); assert.equal(f.calls[0].receiver, receiver);
+  assert.equal(f.calls[0].args[0], args[0]); assert.equal(f.calls[0].args[1], args[1]);
+  assert.equal(f.init.body.name, f.spec.filename);
+  f.context.fetch(...args); await Promise.resolve();
+  assert.equal(f.calls.length, 2); assert.deepEqual(f.events, ['clone']); // No second observation.
+});
+
+test('upload observer never clones nonmatching routes/owners/temporary inputs or credential-bearing requests', async t => {
+  for (const mutate of [f => { f.endpoint += '?other=1'; }, f => { f.endpoint += '/other'; },
+    f => { f.endpoint = f.endpoint.replace(':12345', ':54321'); }, f => { f.init.method = 'GET'; },
+    f => { f.command.conversation = { type: 'learn_thread', id: 'tmp_other' }; },
+    f => { f.command.idempotency_key = 'unbound'; }, f => { f.command.expected_policy_revision = -1; },
+    f => { f.command.filename = 'private.pdf'; }, f => { f.command.title = 'private title'; },
+    f => { f.command.rights.cache = false; }, f => { f.command.metadata.source_owner = 'Other'; },
+    f => { f.init.body = new File(['different-size'], f.spec.filename); },
+    f => { f.init.body = new Blob(['unclassified']); }, f => { f.context.location.hash = '#/chat/temporary'; },
+    ...['Authorization', 'x-renulus-token', 'Cookie', 'X-Renulus-Study-Context'].map(name => f => { f.init.headers.set(name, 'not-observed'); })]) {
+    const f = attachmentCaptureFixture(t); mutate(f);
+    f.init.headers.set('x-renulus-attachment-options', JSON.stringify(f.command));
+    const pending = f.context.fetch(f.endpoint, f.init);
+    assert.equal(pending, f.pending); assert.equal(await pending, f.response);
+    assert.deepEqual(f.events, []); assert.equal(f.calls.length, 1);
+    f.capture.dispose(); await assert.rejects(f.capture.result, /disposed/);
+    assert.equal(f.context.fetch, f.original);
+  }
+});
+
+test('capture installation refuses unsaved or unbound synthetic scope before replacing fetch', async t => {
+  const f = attachmentCaptureFixture(t); f.capture.dispose();
+  for (const mutate of [s => { s.retention = 'temporary'; }, s => { s.origin = 'http://127.0.0.1:12346'; },
+    s => { s.origin = 'https://example.invalid'; }, s => { s.filename = 'other.pdf'; },
+    s => { s.sha256 = ''; }, s => { s.bytes = 65536; }, s => { s.conversation.type = 'case'; },
+    s => { s.hash += '/other'; }, s => { s.conversation.id = 'tmp_private'; }]) {
+    const spec = structuredClone(f.spec); mutate(spec);
+    assert.throws(() => f.install(spec), /exact saved synthetic original/);
+    assert.equal(f.context.fetch, f.original);
+  }
+});
+
+test('capture refuses wrong response status/origin/headers and oversized bytes without altering the actual response', async t => {
+  for (const options of [{ status: 409 }, { url: 'http://127.0.0.1:12345/other' },
+    { headers: { 'content-type': 'text/html' } }, { headers: { 'cache-control': 'public' } },
+    { headers: { 'content-length': '65537' } }, { body: 'a'.repeat(65537) }]) {
+    const f = attachmentCaptureFixture(t, options);
+    assert.equal(f.context.fetch(f.endpoint, f.init), f.pending);
+    const actual = await f.pending, appText = await actual.text();
+    await assert.rejects(f.capture.result, /Attachment /);
+    assert.equal(appText, options.body ?? JSON.stringify({ original: { sha256: f.spec.sha256 }, retention: 'saved' }));
+    assert.equal(f.calls.length, 1); assert.equal(f.context.fetch, f.original);
+  }
+});
+
+test('wrong original SHA and fetch failure cannot substitute a body, retry or change original rejection', async t => {
+  const wrong = attachmentCaptureFixture(t); wrong.spec.sha256 = 'f'.repeat(64);
+  wrong.context.fetch(wrong.endpoint, wrong.init);
+  await (await wrong.pending).json();
+  await assert.rejects(wrong.capture.result, /SHA differs/);
+  assert.equal(wrong.calls.length, 1);
+  const error = new Error('synthetic transport failure'), failed = attachmentCaptureFixture(t, { rejection: error });
+  const pending = failed.context.fetch(failed.endpoint, failed.init);
+  assert.equal(pending, failed.pending); await assert.rejects(pending, value => value === error);
+  await assert.rejects(failed.capture.result, /actual attachment fetch failed/);
+  assert.equal(failed.calls.length, 1); assert.deepEqual(failed.events, []);
 });
 
 const ingestionFixture = () => {
