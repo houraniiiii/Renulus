@@ -17,6 +17,28 @@ from renulus.storage import utc_now
 from test_design_c_policy import start_test
 
 
+def test_settled_shutdown_replays_on_a_new_loop_without_reopening_admission(tmp_path):
+    app = create_app(tmp_path / 'repeated-shutdown-profile', token='synthetic-session')
+    releases = []
+    app.state.services.on_shutdown.append(lambda: releases.append('settled'))
+
+    async def observe():
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),
+                base_url='http://testserver', headers={'x-renulus-token': 'synthetic-session'}) as client:
+            result = await client.post('/api/v1/runtime/shutdown', json={'timeout_seconds': 1})
+            assert result.status_code == 200, result.text
+            assert result.json() == {'state': 'settled', 'api_version': 1}
+            refused = await client.post('/api/v1/memory/facts', json={
+                'text': 'Synthetic late note.', 'scope': {'kind': 'study'},
+                'idempotency_key': 'repeated-shutdown-late'})
+            assert refused.status_code == 503
+            assert refused.json()['error']['code'] == 'runtime_stopping'
+
+    asyncio.run(observe())
+    asyncio.run(observe())
+    assert releases == ['settled']
+
+
 @pytest.fixture
 async def extracting_app(tmp_path, monkeypatch):
     app = create_app(tmp_path / 'extracting-profile', token='synthetic-session')

@@ -55,10 +55,11 @@ class Services:
         if self._shutdown_task is None:
             self._shutdown_task = asyncio.create_task(self._shutdown(), name='renulus-profile-drain')
         # Observation timeout/cancellation does not cancel the profile owner.
-        done, _ = await asyncio.wait({self._shutdown_task}, timeout=timeout)
-        if not done:
-            raise ApiError('runtime_shutdown_pending',
-                'Renulus is still finishing local work. Keep this profile open and retry closing', 503, True)
+        if not self._shutdown_task.done():
+            done, _ = await asyncio.wait({self._shutdown_task}, timeout=timeout)
+            if not done:
+                raise ApiError('runtime_shutdown_pending',
+                    'Renulus is still finishing local work. Keep this profile open and retry closing', 503, True)
         if self.shutdown_status()['state'] == 'failed':
             raise ApiError('runtime_shutdown_failed',
                 'Local cleanup failed. This profile remains owned and cannot close yet', 503, True)
