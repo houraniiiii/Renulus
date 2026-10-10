@@ -111,3 +111,13 @@ both Study and Test. They retained origin, mode and pinned provenance and emitte
 personal evidence without reviewed eligibility (backend-pytest-13.txt).
 These are published-version consumer checks, not generation/import/scheduler
 producer acceptance. No provider request was made.
+
+After the clean normal merge of parent baseline `2122f875`, the full current
+whole-attempt persistence suite passed all 24 cases in `backend-pytest-15.txt`.
+All five actual HTTP/SQLite renderer journeys and eight controller checks passed
+in `frontend-connected-07.txt`; the desktop source/Electron typecheck passed
+with `tsconfig-desktop.json` (`typescript-desktop-06.txt`). All receipts remain
+under the same owned scratch root. The synthetic HTTP server was stopped after
+verification. Home/Memory still omit `assessment-test-answer`, and the shell
+still needs help/reference consumers. These passes do not close DC13/DC14/DC15
+or establish assembled hidden-app, native, producer or export/restore acceptance.
