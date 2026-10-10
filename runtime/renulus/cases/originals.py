@@ -5,6 +5,7 @@ import binascii
 import hashlib
 
 from renulus.contracts import ApiError, durable_id
+from renulus.storage.database import utc_now
 
 CHUNK_BYTES = 48 * 1024
 MAX_ORIGINALS = 16
@@ -66,6 +67,10 @@ def save_originals(conn, case_id, attachments):
     kept = {a['id'] for a in attachments}
     for row in conn.execute('SELECT id FROM case_attachments WHERE case_id=?', (case_id,)):
         if row['id'] not in kept:
+            # Save owns this transaction: rollback retains both the original
+            # and its availability; an older ZIP must not revive a removed one.
+            conn.execute('INSERT OR REPLACE INTO deletion_ledger VALUES(?,?,?)',
+                         ('case_attachment', row['id'], utc_now()))
             conn.execute('DELETE FROM case_attachments WHERE id=? AND case_id=?', (row['id'], case_id))
     for attachment in attachments:
         if attachment['data'] is None:

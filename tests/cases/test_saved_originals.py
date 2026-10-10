@@ -130,12 +130,14 @@ def test_failed_save_rolls_back_case_metadata_and_parts_and_keeps_temporary_orig
     with pytest.raises(sqlite3.IntegrityError):
         repository.save(case["id"], edited["revision"])
     assert canonical_state(services) == before
+    assert not services.db.is_deleted("case_attachment", first["id"])
     live = repository.get(case["id"])
     assert live["dirty"] and live["attachments"][0]["saved"] is False
     assert repository.original(case["id"], second["id"])[1] == raw_second
     assert CaseRepository(services).original(case["id"], first["id"])[1] == raw_first
     services.db.execute("DROP TRIGGER reject_original_part")
     repository.save(case["id"], live["revision"])
+    assert services.db.is_deleted("case_attachment", first["id"])
     assert CaseRepository(services).original(case["id"], second["id"])[1] == raw_second
     assert not services.db.fetch_all("SELECT * FROM case_attachment_parts WHERE attachment_id=?", (first["id"],))
 

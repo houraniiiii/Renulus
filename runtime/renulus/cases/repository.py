@@ -6,6 +6,7 @@ lock. An async caller receives a pinned context and must commit via its guard.
 """
 
 import asyncio
+from contextlib import nullcontext
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -252,6 +253,21 @@ class CaseRepository:
             self._changed(session)
             return self._view(session)
 
+    def start_conversation(self, title: str, text: str = "", teaching_case_id: str | None = None) -> dict:
+        """New Design C entry can start empty; legacy StartCase is unchanged."""
+        if teaching_case_id:
+            return self.start(StartCase(kind="teaching", teaching_case_id=teaching_case_id))
+        if text:
+            return self.start(StartCase(title=title, text=text))
+        with self._lock:
+            if len(self._sessions) >= MAX_SESSIONS:
+                raise ApiError("case_capacity", "Close a case before starting another", 429)
+            now = utc_now()
+            session = Session(id=durable_id("case"), kind="daily", title=title, text="",
+                              created_at=now, updated_at=now)
+            self._sessions[session.id] = session
+            return self._view(session)
+
     def reveal(self, case_id: str, revision: int) -> dict:
         with self._lock:
             session = self._load(case_id)
@@ -303,11 +319,12 @@ class CaseRepository:
             self._changed(session)
             return self._view(session)
 
-    def save(self, case_id: str, revision: int) -> dict:
+    def save(self, case_id: str, revision: int, *, conn=None, allow_active: bool = False) -> dict:
         with self._lock:
             session = self._load(case_id)
             self._check_revision(session, revision)
-            self._check_idle(session)
+            if not allow_active:
+                self._check_idle(session)
             if not session.dirty:
                 return self._view(session)
             now = utc_now()
@@ -319,7 +336,7 @@ class CaseRepository:
                       json.dumps(session.teaching, ensure_ascii=False) if session.teaching else None,
                       session.revealed_count, int(session.debriefed), session.created_at,
                       session.updated_at, now)
-            with self.db.transaction() as conn:
+            with nullcontext(conn) if conn is not None else self.db.transaction() as conn:
                 if self._is_deleted(case_id, conn):
                     raise ApiError("case_deleted", "This case has been deleted", 410)
                 previous = conn.execute("SELECT revision FROM case_sessions WHERE id=?",

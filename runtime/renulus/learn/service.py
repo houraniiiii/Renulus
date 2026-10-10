@@ -51,11 +51,15 @@ class LearnService:
             "SELECT * FROM learn_runs WHERE thread_id=? ORDER BY created_at", (thread_id,))
         return thread
 
-    def create_thread(self, title="New study", topic_id=None, teaching_style="direct"):
-        identifier, now = durable_id("thread"), utc_now()
-        self.db.execute("INSERT INTO learn_threads VALUES(?,?,?,?,?,?)",
-                        (identifier, title[:120], topic_id, teaching_style, now, now))
-        return self.get_thread(identifier)
+    def create_thread(self, title="New study", topic_id=None, teaching_style="direct", *, conn=None, identifier=None):
+        identifier, now = identifier or durable_id("thread"), utc_now()
+        values = (identifier, title[:120], topic_id, teaching_style, now, now)
+        if conn is None:
+            self.db.execute("INSERT INTO learn_threads VALUES(?,?,?,?,?,?)", values)
+            return self.get_thread(identifier)
+        conn.execute("INSERT INTO learn_threads VALUES(?,?,?,?,?,?)", values)
+        return {**dict(conn.execute("SELECT * FROM learn_threads WHERE id=?", (identifier,)).fetchone()),
+                "messages": [], "runs": []}
 
     async def delete_thread(self, identifier):
         for run in list(self.active.values()):
