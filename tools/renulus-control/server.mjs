@@ -25,6 +25,7 @@ export const toolDefinitions = [
   ['renulus_close', 'Normally close the owned app and wait for verified main/backend exit, up to 45 seconds. Surviving children or essential forced cleanup are reported as failures.', empty],
   ['renulus_upload', 'Select one declared synthetic PDF/PNG/JPEG using the exact fileInputs locator from the latest snapshot. Requires the fixed CLI fixture root/manifest. Uses setInputFiles; no chooser, absolute paths, account imports or inline bytes. Wait for the app result separately.', z.object({ locator: z.object({ css: short.min(1) }).strict(), fixture: z.string().max(100).regex(FIXTURE_NAME) }).strict()],
   ['renulus_resize', 'Resize only the owned hidden Flow BrowserWindow in device-independent pixels. No focus/show or position changes. Returns actual outer/content dimensions; take a screenshot to inspect layout.', z.object({ width: z.number().int().min(RESIZE.minWidth).max(RESIZE.maxWidth), height: z.number().int().min(RESIZE.minHeight).max(RESIZE.maxHeight) }).strict()],
+  ['renulus_zoom', 'Set a declared 100–200% zoom on the owned hidden renderer. No OS input, focus or window changes. Inspect a fresh snapshot and screenshot afterwards.', z.object({ percent: z.union([z.literal(100), z.literal(125), z.literal(150), z.literal(175), z.literal(200)]) }).strict()],
 ];
 
 export function createServer(controller) {

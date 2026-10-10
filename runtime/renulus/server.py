@@ -186,7 +186,7 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
     # Separate feature routers preserve the existing module/legacy APIs. Their
     # schemas have already been checked and applied before any startup backfill.
     for name in ("learn.conversation_api", "study.project_api", "study.home_api",
-                 "assessment.test_api", "assessment.attempt_api", "storage.workspace_api"):
+                 "assessment.test_api", "assessment.attempt_api", "assessment.generation_api", "storage.workspace_api"):
         path = Path(__file__).parent.joinpath(*name.split(".")).with_suffix(".py")
         if path.exists():
             feature = importlib.import_module("renulus." + name)

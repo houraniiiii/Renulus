@@ -120,7 +120,10 @@ Hidden development checks do not replace matching source/runtime provenance
 or establish generation, memory capture or installed acceptance.
 
 The Design C controller checks the owned `.desktop-shell` for readiness, so
-collapsed navigation also starts correctly. Its declared synthetic upload
+collapsed navigation also starts correctly. Its bounded `renulus_zoom` tool sets
+only the owned hidden renderer to declared 100/125/150/175/200 percent levels;
+inspect actual layout and keyboard behavior after changing it. No OS input or
+caller evaluation is accepted. Its declared synthetic upload
 contract now covers PDF, PNG/JPEG/TIFF, DOCX/XLSX, CSV, Markdown, HTML and XML.
 Office files require their bounded package directory, text requires valid UTF-8
 without NULs, and every payload still requires its fixed size/SHA-256 declaration.

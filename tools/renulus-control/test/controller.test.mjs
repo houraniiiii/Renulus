@@ -82,11 +82,12 @@ async function fixture(overrides = {}) {
         userData: path.join(options.env.RENULUS_PROFILE, 'desktop'), ...state,
         children: [{ pid: backendPid, executable: python, profile: options.env.RENULUS_PROFILE, exited: false }] };
     };
-    let windowSize = [1400, 960];
+    let windowSize = [1400, 960], zoomFactor = 1;
     app.browserWindow = async target => { assert.equal(target, page); return { evaluate: async (fn, arg) => fn({
       isDestroyed: () => closed, isVisible: () => state.windows[0].visible, isFocused: () => state.windows[0].focused, isFocusable: () => state.windows[0].focusable,
       setSize: (width, height, animate) => { assert.equal(animate, false); calls.push(['resize', width, height]); windowSize = overrides.clampResize ? [800, 600] : [width, height]; if (overrides.focusOnResize) state.windows[0].focused = true; },
       getSize: () => windowSize, getContentSize: () => [windowSize[0] - 16, windowSize[1] - 39],
+      webContents: { setZoomFactor: value => { calls.push(['zoom', value]); zoomFactor = overrides.clampZoom ? 1 : value; if (overrides.focusOnZoom) state.windows[0].focused = true; }, getZoomFactor: () => zoomFactor },
       capturePage: async (rect, opts) => { assert.equal(rect, undefined); assert.equal(opts.stayHidden, true); assert.equal(opts.stayAwake, false); calls.push('capturePage'); return { toPNG: () => png }; },
     }, arg), dispose: async () => { calls.push('dispose'); } }; };
     app.close = async () => {
@@ -396,6 +397,18 @@ test('resize targets only the owned page, preserves hidden state and returns mea
   assert.ok(f.calls.indexOf('observe') < resizeIndex); assert.ok(f.calls.lastIndexOf('observe') > resizeIndex); assert.ok(f.calls.includes('dispose'));
   for (const args of [{ width: 639, height: 540 }, { width: 640, height: 1601 }, { width: 640.5, height: 540 }, { width: 640, height: 540, show: false }]) await assert.rejects(f.controller.run('renulus_resize', args), { code: 'invalid_argument' });
   assert.equal(f.calls.filter(call => Array.isArray(call) && call[0] === 'resize').length, 1);
+});
+
+test('zoom changes only the hidden owned renderer and verifies actual scale', async t => {
+  const f = await fixture(); t.after(() => f.controller.shutdown()); await f.controller.run('renulus_start');
+  assert.deepEqual(await f.controller.run('renulus_zoom', { percent: 200 }), { performed: 'renulus_zoom', percent: 200, hidden: true });
+  assert.ok(f.calls.some(call => Array.isArray(call) && call[0] === 'zoom' && call[1] === 2));
+  for (const args of [{ percent: 99 }, { percent: 201 }, { percent: 200, windowId: 1 }, { percent: '200' }]) await assert.rejects(f.controller.run('renulus_zoom', args), { code: 'invalid_argument' });
+  const g = await fixture({ clampZoom: true }); t.after(() => g.controller.shutdown()); await g.controller.run('renulus_start');
+  await assert.rejects(g.controller.run('renulus_zoom', { percent: 200 }), { code: 'zoom_not_applied' });
+  const h = await fixture({ focusOnZoom: true }); await h.controller.run('renulus_start');
+  await assert.rejects(h.controller.run('renulus_zoom', { percent: 200 }), { code: 'visible_window' });
+  assert.equal(h.controller.application, null);
 });
 
 test('cancelling an active file selection aborts Playwright and closes only the owned lifecycle', async t => {

@@ -365,6 +365,13 @@ function resizeHidden(window, { width, height }) {
   const [actualWidth, actualHeight] = window.getSize(), [contentWidth, contentHeight] = window.getContentSize();
   return { width: actualWidth, height: actualHeight, contentWidth, contentHeight, hidden: true };
 }
+function zoomHidden(window, { percent }) {
+  const hidden = () => !window.isDestroyed() && !window.isVisible() && !window.isFocused() && !window.isFocusable();
+  if (!hidden()) return { unsafe: true };
+  window.webContents.setZoomFactor(percent / 100);
+  if (!hidden()) return { unsafe: true };
+  return { percent: Math.round(window.webContents.getZoomFactor() * 100), hidden: true };
+}
 function fileInputDescriptions(elements) {
   return elements.slice(0, 8).filter(element => element.tagName === 'INPUT' && element.type === 'file' && /^[A-Za-z0-9_:.-]{1,128}$/.test(element.id)).map(element => ({
     locator: { css: 'input[type="file"][id="' + element.id + '"]' },
@@ -550,6 +557,18 @@ export class RenulusController {
       await budget.wait(this.observe());
       check(result.width === args.width && result.height === args.height, 'resize_not_applied', 'The native window did not accept the requested dimensions.');
       this.log('window-resize', JSON.stringify(result));
+      return { performed: name, ...result };
+    }
+    if (name === 'renulus_zoom') {
+      check(Object.keys(args).join(',') === 'percent' && [100, 125, 150, 175, 200].includes(args.percent), 'invalid_argument', 'Zoom accepts only one declared percent: 100, 125, 150, 175 or 200.');
+      const handle = await budget.wait(this.application.browserWindow(this.page));
+      let result;
+      try { result = await budget.wait(handle.evaluate(zoomHidden, args)); }
+      finally { await handle.dispose().catch(() => {}); }
+      if (result.unsafe) { this.fault = new ControlError('visible_window', 'The owned zoom target was visible, focused or focusable.'); throw this.fault; }
+      await budget.wait(this.observe());
+      check(result.percent === args.percent, 'zoom_not_applied', 'The renderer did not accept the requested zoom.');
+      this.log('renderer-zoom', JSON.stringify(result));
       return { performed: name, ...result };
     }
     if (name === 'renulus_screenshot') {

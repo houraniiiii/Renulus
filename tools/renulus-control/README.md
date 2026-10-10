@@ -45,6 +45,11 @@ node C:/Renulus/dev/repo/tools/renulus-control/server.mjs --repo C:/Renulus/dev/
 | --fixture-root | Optional fixed absolute owned synthetic fixture directory; uploads are disabled when omitted |
 
 The source executable is the existing apps/desktop/node_modules/electron/dist/electron.exe.
+
+`renulus_zoom` changes only the owned hidden renderer at declared 100, 125, 150,
+175 or 200 percent values. Send `{"name":"renulus_zoom","arguments":{"percent":200}}`
+then inspect a fresh snapshot and screenshot. The controller checks hidden state
+before and after and verifies the actual zoom; no OS shortcut or caller code runs.
 No CLI setting can be supplied through a tool. Compiled source/package preflight
 requires the hidden background and owner-liveness contracts, including
 RENULUS_BACKGROUND_TEST, RENULUS_BACKGROUND_OWNER_PID and background events.

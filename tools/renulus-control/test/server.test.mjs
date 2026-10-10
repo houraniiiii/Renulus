@@ -5,7 +5,7 @@ import { EventEmitter } from 'node:events';
 import { createServer, bindLifecycle, toolDefinitions, locatorSchema } from '../server.mjs';
 
 test('bounded tool schemas reject endpoint/executable/eval/profile parameters and nonexact locators', () => {
-  assert.equal(toolDefinitions.length, 13);
+  assert.equal(toolDefinitions.length, 14);
   assert.deepEqual(toolDefinitions.slice(0, 11).map(definition => definition[0]), ['renulus_start', 'renulus_snapshot', 'renulus_click', 'renulus_fill', 'renulus_press', 'renulus_select', 'renulus_wait', 'renulus_screenshot', 'renulus_errors', 'renulus_restart', 'renulus_close']);
   for (const name of ['renulus_start', 'renulus_restart', 'renulus_close', 'renulus_snapshot']) {
     const schema = toolDefinitions.find(definition => definition[0] === name)[2];
