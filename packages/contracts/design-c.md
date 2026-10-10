@@ -273,6 +273,7 @@ Exact proposed persisted names/identity and relation columns:
 | assessment_attempt_exposure (Assessment/004) | id PK, attempt_id → assessment_test_attempts.id | Owned item/question/key/family version snapshot and kind; not learning evidence |
 | assessment_question_reports (Assessment/003) | id PK, original version_id/attempt_id, nullable live_version_id/live_attempt_id | Independent item/question/key/family pins, question_snapshot_json and request_hash; neutral report survives deleted source |
 | assessment_test_jobs (Assessment/003) | id PK, original published_version_id, nullable live_published_version_id | Retained original requested_count/request_hash and optional accepted_count; inputs/checkpoints obey durable boundary; never ownership of a source |
+| assessment_test_imports (Assessment/005) | id PK; historical source_revision_id/published_version_id and separate nullable live pointers | Explicit private import original, terms/locators, user-reviewed candidates and bounded normalization; owns neither Library nor saved test |
 | assessment_test_commands (Assessment/003) | idempotency_key PK | operation, target_type, target_id, request_hash, result_json, created_at; separate from legacy and attempt command ledgers |
 
 These names are frozen proposals for review, not independently reserved new

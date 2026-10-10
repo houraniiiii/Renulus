@@ -267,12 +267,15 @@ UNAVAILABLE_REFERENCE_COLUMNS = (
     ("assessment_question_reports", "version_id", "live_version_id"),
     ("assessment_question_reports", "attempt_id", "live_attempt_id"),
     ("assessment_test_jobs", "published_version_id", "live_published_version_id"),
+    ("assessment_test_imports", "source_revision_id", "live_source_revision_id"),
+    ("assessment_test_imports", "published_version_id", "live_published_version_id"),
 )
 MIGRATION_RESERVATIONS = {
     "learn-002": "saved Learn sidecar", "cases-003": "saved Case sidecar",
     "knowledge-003": "owned attachment references", "study-002": "projects and memberships",
     "assessment-003": "saved tests, versions, reports and jobs",
     "assessment-004": "new whole-attempt drafts, exposure and timing",
+    "assessment-005": "private test-import originals, candidates and bounded explicit refinement",
 }
 
 # Scalar row inventories for the producer's additive migration proposal. These
@@ -298,6 +301,7 @@ TABLE_COLUMNS = {
     "assessment_question_reports": ("id", "version_id", "live_version_id", "attempt_id", "live_attempt_id", "item_id", "question_id", "question_version", "key_version", "family_id", "family_version", "question_snapshot_json", "report_text", "idempotency_key", "request_hash", "created_at"),
     "assessment_test_jobs": ("id", "operation", "state", "idempotency_key", "request_hash", "inputs_json", "checkpoint_json", "settings_revision", "policy_revision", "context_epoch", "requested_count", "validated_count", "accepted_count", "published_version_id", "live_published_version_id", "error_code", "created_at", "updated_at"),
     "assessment_test_commands": ("idempotency_key", "operation", "target_type", "target_id", "request_hash", "result_json", "created_at"),
+    "assessment_test_imports": ("id", "title", "state", "revision", "source_kind", "source_revision_id", "live_source_revision_id", "original_text", "original_sha256", "original_json", "candidates_json", "checkpoint_json", "policy_revision", "context_epoch", "call_count", "idempotency_key", "request_hash", "published_version_id", "live_published_version_id", "error_code", "created_at", "updated_at"),
 }
 
 

@@ -101,6 +101,7 @@ TOMBSTONES = {
     "attachment": "knowledge_attachments", "attachment_original": "knowledge_attachment_originals",
     "goal": "study_project_goals", "update_entry": "update_entries",
     "project_chat": "study_project_chats", "project_document": "study_project_documents",
+    "test_import": "assessment_test_imports",
 }
 
 # Historical pins remain untouched. These optional live pointers are cleared
@@ -111,6 +112,8 @@ UNAVAILABLE_REFERENCES = {
     "assessment_question_reports": (("live_version_id", "assessment_test_versions", "id"),
         ("live_attempt_id", "assessment_test_attempts", "id")),
     "assessment_test_jobs": (("live_published_version_id", "assessment_test_versions", "id"),),
+    "assessment_test_imports": (("live_source_revision_id", "knowledge_revisions", "id"),
+        ("live_published_version_id", "assessment_test_versions", "id")),
     "knowledge_documents": (("active_revision", "knowledge_revisions", "id"),
         ("latest_revision", "knowledge_revisions", "id")),
 }

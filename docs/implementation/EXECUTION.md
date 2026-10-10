@@ -34,6 +34,28 @@ their real producers/consumers and required evidence are integrated. No live
 provider request, personal-profile migration or launcher promotion is part of
 this prerequisite wave.
 
+### Attachment and import prerequisites — continuation from 2122f875
+
+Integrated actual ordinary attachment producer as aef0a6c4 (source 6a633ae2),
+chat/legacy deletion callers as 8cfa395e (source ce9567c2), and router mount as
+d8dcc056. The assembled migration/attachment/conversation batch passed 64
+checks with one test-only migration-name lookup failure. Its corrected import
+migration suite passed all seven checks. Receipts are
+C:/Renulus/scratch/design-c/integration/attachments-import005-run1.xml and
+C:/Renulus/scratch/design-c/integration/import005-run2.xml; the initial failure
+is retained. Owner/attachment revocation, journal-before-delete, rollback,
+locked-original restart cleanup and temporary byte isolation use real owners.
+
+Lead publishes assessment005, exact contract inventory, test_import tombstone,
+unavailable live references and restore interruption for explicit private imports.
+Pauli owns only new assessment/import_models.py, import_service.py, import_api.py,
+modules/imports and tests/assessment/test_saved_imports.py. The lead separately
+reserves assessment/fictionalisation.py, its tests and the trusted publication
+method in generation_service.py; Zeno owns new learn/chat_test_* and Chat callers.
+Six existing workers continue disjoint leases. No ticket is closed by these
+prerequisites. The historical 18 normalization flags remain unstaged. Controller
+c02 was closed normally before loading the new backend; owner state is untouched.
+
 ### DC02 foundation slice — validated before dependent feature writes
 
 The lead added a schema-2/known-migration compatibility gate, exact schema-1

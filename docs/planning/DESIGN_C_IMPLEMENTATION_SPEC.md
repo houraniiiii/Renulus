@@ -942,11 +942,34 @@ This table records outcomes against the existing tickets, not a replacement plan
 | DC14 | In progress — Russell + lead | Shared policy/middleware deny help and late publication. Whole Test submit/draft barrier, exposure, score-cohort and integrated bypass proof pending. |
 | DC15 | In progress — Russell | Published clock high-water/pause/result columns; actual timer/recovery producer and connected expiry checks pending. |
 | DC16 | Connected slice integrated — Pauli + lead; acceptance open | Backend `dd1f7c12`, restore `037b895d`, renderer `520c538c`: 36 lane actual DB and three real-router UI journeys. Tests mount and saved-five Study consumer/hidden proof remain open. |
-| DC17 | Reserved — Pauli import lane + parent DDL/integration | New disjoint import service/models/API/renderer/tests lease. Consumes actual DC08 capability/eligibility and immutable collection contracts; contract/DDL publication precedes producer persistence. |
-| DC18 | Not started — bounded Chat/generation interface | Trusted volatile fictional transformation, same saved-version Chat card/Workspace and full attempt consumers pending. |
+| DC17 | In progress — Pauli import lane + parent DDL/integration | Assessment005 adds independent private original/candidate records and historical/live pins. Seven actual migration checks pass; producer API/renderer, extraction rights and full recovery evidence remain open. |
+| DC18 | In progress — Zeno + parent trusted producer | Frozen volatile ChatTest API and parent fictionalisation/publication helpers; count 5/10/20, Quick exactly five. Trusted privacy, same saved-version card/Workspace and full attempt consumer proof remain open. |
 | DC19 | Connected slice integrated — Kant/Pauli + lead; acceptance open | Scheduler `e1d7c515`, trusted producer `d79f9c4c`, hook tests `0acf3fb6`/`bee764de`, renderer `91a7148a`, Settings/Tests mounts `f24fbfce`, recovery calls `837ea3d0`. Safe API/export integrated; hidden/reopen and populated final review remain open. |
 | DC20 | Not started — lead + independent reviewers | Requires all producer/consumer integrations and populated-profile coverage. |
 | DC21 | Not started — release lead | Current installed Flow app remains selected until DC20 and matching delivery evidence pass. |
+
+DC17 implementation clarification: one assessment_test_imports table owns the
+explicitly accepted pasted/extracted private original, SHA-256, terms/locators,
+mutable candidates and three-call explicit normalization budget. Library and
+published-version pins are historical IDs with separate nullable live pointers;
+neither is a pruning edge. Assessment005 is additive, included in the known
+migration gate, and restore interrupts running imports without resuming provider
+work. Existing assessment_test_commands supplies mutation replay outcomes under
+target_type=test_import. Literal Answer/Key markers supply initial candidates;
+normalization cannot invent certainty, and every retained item needs deliberate
+user review before personal Ready publication. No reviewed-bank status is granted.
+
+DC18 producer reservation: the lead owns assessment/fictionalisation.py and the
+private saved_generation.publish_fictional_artifact method. Zeno owns new
+learn/chat_test_models.py, chat_test_service.py and chat_test_api.py plus their
+integration test and existing Chat callers. Source text, request IDs/hashes and
+events remain volatile for saved and temporary chats alike. The selected route
+transforms in batches of five, then independently reviews the complete proposed
+artifact against raw source in a separate volatile call. Conservative identifying
+overlap refusal supplements that review. Only the exact process-minted artifact
+with a live validation receipt may be published, with policy/context/route checked
+again in the publication transaction. Durable keys derive fresh artifact receipts,
+never source/request identity. This adds no renderer attestation or new provider.
 
 Pass 1 has reproduced material recovery failures and is reviewing assessment and
 reader seams. Fixes use one typed whole-row identity (table plus full PK tuple),

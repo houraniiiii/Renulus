@@ -42,6 +42,10 @@ def invalidate_restored_context(conn):
         conn.execute("UPDATE assessment_test_jobs SET state='failed',error_code='interrupted',updated_at=? "
             "WHERE state IN ('queued','running') AND operation IN ('generate_test','nightly_test','daily_suggestions')", (utc_now(),))
     exists = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='memory_jobs'").fetchone()
+    imports = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='assessment_test_imports'").fetchone()
+    if imports:
+        conn.execute("UPDATE assessment_test_imports SET state='failed',error_code='interrupted',updated_at=? "
+                     "WHERE state='running'", (utc_now(),))
     if exists:
         conn.execute("UPDATE memory_jobs SET state='cancelled',error_code='restore_interrupted',updated_at=? "
                      "WHERE state IN ('queued','running')", (utc_now(),))
