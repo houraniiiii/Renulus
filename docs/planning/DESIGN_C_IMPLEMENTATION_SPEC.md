@@ -992,6 +992,16 @@ Restore also invalidates Memory and Library derived readiness in the canonical
 transaction and advances a local, non-exported context generation. DC06/DC19
 publishers must check that generation, as well as input revisions, so a restore
 cannot publish stale personalisation. Recovery does not start provider work.
+Pass-3 C5 clarified the delayed-worker boundary: the restore transaction marks
+every restored/pre-existing evidence identity with a local, non-exported capture
+barrier, including sources without a historical job. Automatic inferred Memory
+capture and global Retry cannot consume it. Explicit Capture revalidates the
+canonical source, scope, suppression and current policy, then consumes that one
+barrier atomically with enqueue. Structured `infer=False` capture and new learning
+after restore retain their existing behavior. A recorded eligible cancelled job
+offers Capture this learning; no synthetic job or discovery UI is invented for
+no-history sources. This preserves the no-provider-restart rule after the restore
+returns, not just during its transaction.
 DC04 additionally requires a real `case_attachment` tombstone when an attachment
 is removed from a saved case; merely removing its current row allows an older
 backup to restore the bytes. These are implementation prerequisites, not passes
