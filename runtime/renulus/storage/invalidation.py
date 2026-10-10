@@ -4,6 +4,7 @@ from .database import utc_now
 
 CONTEXT_EPOCH = "design_c.context_epoch"
 LIBRARY_DIRTY = "knowledge.restore_dirty"
+MEMORY_RESTORE_CAPTURE_PREFIX = "memory.restore_capture:"
 
 
 def context_epoch(db):
@@ -33,6 +34,15 @@ def invalidate_restored_context(conn):
     conn.execute("INSERT INTO preferences VALUES(?,'true',?) ON CONFLICT(key) DO UPDATE SET "
         "value=excluded.value,updated_at=excluded.updated_at", (LIBRARY_DIRTY, utc_now()))
     bump_context_epoch(conn)
+    # A restored immutable source is not new learning. Mark the complete merged
+    # evidence set, including rows that never had a capture job. Memory decides
+    # whether material needs inference; only an explicit capture may consume that
+    # local barrier for inference work. New evidence created after this transaction
+    # is unmarked. These identity/epoch markers are outside the export whitelist.
+    conn.execute("INSERT INTO preferences(key,value,updated_at) "
+        "SELECT ? || id,?,? FROM learning_evidence WHERE 1 "
+        "ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at",
+        (MEMORY_RESTORE_CAPTURE_PREFIX, str(context_epoch_in(conn)), utc_now()))
     # Epoch integers belong to one profile. An imported producer can coincidentally
     # carry the destination's next epoch, but its process/task cannot be restored.
     # Keep validated checkpoints; require an explicit retry rather than adopting

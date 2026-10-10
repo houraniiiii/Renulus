@@ -11,7 +11,7 @@ from renulus.storage.backup import export_records, restore_records
 from renulus.storage.compatibility import LEGACY_COLUMN_DEFAULTS, LEGACY_SCHEMA
 from renulus.storage.recovery_limits import SEGMENTED_LIMITS
 from renulus.storage.recovery_records import installed_schema, prune_deleted
-from renulus.storage.invalidation import context_epoch
+from renulus.storage.invalidation import context_epoch, invalidate_restored_context, MEMORY_RESTORE_CAPTURE_PREFIX
 from renulus.design_c_contracts import TABLE_COLUMNS
 from renulus.storage.assessment_policy import policy_snapshot, require_assistance, advance_policy
 
@@ -191,6 +191,36 @@ def test_restore_invalidates_derived_state_atomically_without_provider_work(tmp_
     assert target.db.fetch_one("SELECT value FROM preferences WHERE key='knowledge.restore_dirty'")["value"] == "true"
     assert 'design_c.context_epoch' not in str(export_records(target))
     assert target.db.fetch_all("SELECT * FROM memory_jobs") == []
+
+
+def test_restore_capture_barriers_are_transactional_local_and_cover_sources_without_jobs(tmp_path):
+    source = create_app(tmp_path / "barrier-source").state.services
+    target = create_app(tmp_path / "barrier-target").state.services
+    # Storage treats these as opaque canonical identities. Eligibility/inference
+    # belongs to Memory and is exercised through real producers in its suite.
+    for services, identifier in ((source, 'imported-evidence'), (target, 'existing-evidence')):
+        services.db.execute("INSERT INTO learning_evidence VALUES(?,'study-interest',NULL,NULL,'{}','now')",
+                            (identifier,))
+    target.get('data_recovery').restore_json(export_records(source), confirm_backup_date=True,
+                                            confirmed_exported_at=None)
+    markers = target.db.fetch_all("SELECT key,value FROM preferences WHERE key LIKE 'memory.restore_capture:%' ORDER BY key")
+    assert markers == [{'key': MEMORY_RESTORE_CAPTURE_PREFIX + name, 'value': '1'}
+                       for name in ('existing-evidence', 'imported-evidence')]
+    assert target.db.fetch_all('SELECT * FROM memory_jobs') == []
+    target.db.execute("INSERT INTO learning_evidence VALUES('new-evidence','study-interest',NULL,NULL,'{}','now')")
+    assert target.db.fetch_one('SELECT key FROM preferences WHERE key=?',
+                              (MEMORY_RESTORE_CAPTURE_PREFIX + 'new-evidence',)) is None
+    assert MEMORY_RESTORE_CAPTURE_PREFIX not in str(export_records(target))
+    with pytest.raises(RuntimeError, match='rollback'):
+        with target.db.transaction() as conn:
+            invalidate_restored_context(conn)
+            assert conn.execute('SELECT value FROM preferences WHERE key=?',
+                                (MEMORY_RESTORE_CAPTURE_PREFIX + 'new-evidence',)).fetchone()['value'] == '2'
+            raise RuntimeError('rollback')
+    assert context_epoch(target.db) == 1
+    assert target.db.fetch_one('SELECT key FROM preferences WHERE key=?',
+                              (MEMORY_RESTORE_CAPTURE_PREFIX + 'new-evidence',)) is None
+    assert target.db.fetch_all("SELECT key,value FROM preferences WHERE key LIKE 'memory.restore_capture:%' ORDER BY key") == markers
 
 
 def test_restore_interrupts_foreign_producers_even_when_local_epoch_coincides(tmp_path):
