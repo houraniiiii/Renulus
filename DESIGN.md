@@ -7,11 +7,10 @@ Design C is the selected replacement as of October 10, 2026. Follow the
 screen map, later user decisions, interactions and acceptance. DC01 reconciles
 the editable Figma references before implementation uses them as visual targets.
 
-The app currently implements Flow, selected on October 4. The foundations below
-describe its existing code and reusable visual language. Its layout and retention
-behaviour are baseline evidence, not requirements to preserve where C supersedes
-them. Update this implementation record from actual C components as they land;
-do not document a prototype as a shipped capability.
+The canonical source now implements the Design C shell and connected modules.
+The installed default remains the previously validated Flow delivery until the
+DC20/DC21 gates pass. Source checks and hidden app evidence are recorded in the
+spec and execution record; they do not establish matching Windows delivery.
 
 ## Character
 
@@ -64,24 +63,23 @@ and real operations before treating a screen as complete.
 
 ## Layout and responsive behaviour
 
-Flow's implemented baseline has a 212px left rail, an open learning area and
-quiet continuation content. Its narrow layout expands navigation inline and
-stacks columns. These describe the existing shell.
-
-The C target has global destinations and projects/chats on the left, a central
-conversation or destination, and an optional adjustable workspace on the right.
-DC01/DC03/DC07 define and verify its dimensions, collapsed states, pane-aware
-layouts and resize behaviour. The spec distinguishes observed Figma dimensions
-from proposed implementation defaults; neither the old rail width nor the
-prototype's 360px workspace is a fixed C requirement.
+The source C shell has global destinations and projects/chats on the left, a
+central conversation or destination and an optional adjustable Workspace on the
+right. Its expanded rail is 272px and the Workspace starts at 480px. At narrow
+widths the selected Workspace becomes the focused pane with a Back to chat
+action; the rail collapses and retains search/navigation controls. The separator
+supports keyboard resizing. Safe tab references, reader locations and width are
+stored through canonical Workspace preferences; source text and transient Study
+receipts are not layout preferences.
 
 ## Accessibility and state
 
-The existing focus outline is 2px teal with a 3px offset; reduced motion removes
-movement. Flow currently uses Ctrl+K for destination search, Alt+1–8 for routes
-and Escape for the destination dialog. C must provide coherent keyboard and
-focus behaviour across navigation, chat, readers and assessment, with the
-spec's narrow-window, zoom and high-contrast checks.
+The focus outline is 2px teal with a 3px offset; reduced motion removes movement.
+C uses the shared destination search and keyboard/focus primitives across
+navigation, chat, readers and assessment. Hidden source checks cover narrow
+windows, 200% zoom and keyboard reachability at their documented scope. Physical
+Windows accessibility and the complete matching installed matrix remain separate
+acceptance gates.
 
 Conversation scope must be clear. Saved-by-default behaviour and optional
 temporary mode follow the C spec; payloads do not belong in URL/history.

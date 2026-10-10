@@ -253,8 +253,9 @@ durable; refuse completion with a recoverable saving error if that cannot be
 established. A submit request cannot silently overtake a pending save. Reconcile
 lost acknowledgements against backend state before retrying or claiming loss.
 
-**Planning default for unfinished Test:** one active Test per profile. Leaving or
-pausing preserves its restriction across shell navigation and restart. Offer
+**Planning default for unfinished Test:** one active Test per profile. Leaving
+preserves its restriction across shell navigation and restart; Test cannot be
+paused. Offer
 Resume or Review and finish; submitting early counts blanks and restores study
 access. Settings needed for recovery remain available. Enforce the policy at the
 backend operations as well as UI; hiding a Workspace button alone is insufficient.
@@ -819,7 +820,7 @@ outcome/acceptance; update dependencies here rather than spawning competing plan
 | Reading and knowledge | All eight categories read inside the workspace. Eligible, successfully extracted fixtures complete passage → draft → answer/source jump; OCR failures, missing locators and restricted/preview-only inputs have truthful states. Permissions, deletion and revision replacement are honored. |
 | Learning organisation | Notes/goals/global plan edits persist and actual activity explains progress; memory edit/delete affects later personalisation. |
 | Tests | All four origins → setup → Study/help/submit/Next or Test/draft/mark/review/final → results/mistakes/Retake. Local question reporting persists without revealing help or changing scores; results/history remain separated. |
-| Timing/recovery | Untimed pause, timed Study, timed Test close/sleep/expiry; unsaved/late requests, duplicate actions and exact resume. |
+| Timing/recovery | Untimed Study pause/resume; untimed Test saved resume without pausing; timed Study and timed Test close/sleep/expiry; unsaved/late requests, duplicate actions and exact resume. |
 | Background jobs | Daily suggestions/nightly tests deduplicate, cancel, recover and honour deletion/disable/route state. |
 | Migration and data | Old populated profile upgrade, interrupted writes/migrations, export/restore and deletion including originals, references and derived indexes. |
 | Visual/accessibility | 1440×900, 1000×720, 640×540 and 200% zoom; pane-aware layout, keyboard navigation, focus return, contrast, long text, reduced motion and high-contrast behavior. |
