@@ -53,6 +53,32 @@ Opening a preview never silently imports into Library or sends model context.
 
 ## Requests, pagination and errors
 
+Exact proposed route names (all under `/api/v1`): `/conversations` for list/create;
+`/conversations/{chat_kind}/{chat_id}` for read/rename/delete, with `/messages`,
+`/draft`, `/archive`, `/restore`, `/save` and `/project` actions. `chat_kind` is
+`learning|case`; resolve to the original Learn/case owner. `/projects` and
+`/projects/{project_id}/chats|documents|goals` are Study-owned.
+`/assessment/tests`, `/assessment/tests/{test_id}/versions`,
+`/assessment/test-attempts` and `/assessment/test-attempts/{attempt_id}` are the
+new M4 collection/whole-attempt routes; subactions are `/draft`, `/present`,
+`/help`, `/submit-answer`, `/submit`, `/pause`, `/resume` and `/reports`.
+Existing `/assessment/sessions` and generated routes retain their meanings.
+`/assessment/test-jobs/{job_id}` reads work; `/cancel` returns its durable winner.
+
+Create input: `{kind,title,temporary:false,project_id:null}`. Response:
+`{identity:{type:learn_thread|case,id},kind,retention,lifecycle,revision,title,
+project_id,created_at,updated_at}`. Mutation targets are carried by routes;
+body carries `expected_revision` plus operation fields. Draft body:
+`{expected_revision,text,content_refs}`. Message page:
+`{conversation,items:[{id,run_id,role,content,created_at,content_refs}],next_cursor}`.
+Test start: `{version:{type:saved_test_version,id},mode,timing:{kind:untimed}}`;
+timed setup instead sends `{kind:timed,duration_seconds}`. Draft write:
+`{expected_revision,position,answers:[{item_id,option_ids,marked}]}`; Test submit:
+`{expected_draft_revision,latest_draft}` (full displayed state) or the same
+revision without latest_draft once durable. Results never include answer keys
+until the server policy permits them. Exact validated response shapes follow
+the Python models and fixtures; command bodies cannot set retention/policy.
+
 Proposed module routes remain under `/api/v1`; routes listed here are not installed.
 
 | Operation | Minimum input/result | Authority |
@@ -161,13 +187,44 @@ the alternative before durable processing of original details.
 
 ## Migration and old-backup proposals for integration
 
-No schema number is claimed by this branch. Parent reserves named additive
-migrations through the existing checksum ledger; module owners propose DDL.
-Proposed reservation order: conversation identity/retention/attachment tombstones;
-typed relations/project membership; saved tests/versions; new attempts/drafts/
-exposure/timing; jobs/preferences. Do not rewrite legacy tables or their IDs.
-Increase the supported profile schema and truthful health schema only when the
+Parent reserves schema compatibility 1→2 and exact migrations `learn-002`,
+`cases-003`, `knowledge-003`, `study-002`, `assessment-003` (saved tests) and
+`assessment-004` (new attempt/timing). This worker implements no DDL. Do not
+rewrite legacy tables or their IDs. Increase truthful health schema only when
 parent proves refusal by older runtimes, atomic interrupted upgrade and replay.
+
+Exact proposed persisted names/identity and relation columns:
+
+| Table (owner/migration) | Identity / relation columns | Semantics |
+| --- | --- | --- |
+| learn_conversations (Learn/002) | thread_id PK → learn_threads.id | Saved-only sidecar: lifecycle, revision, draft_text, draft_refs_json, draft_revision; original ID |
+| case_conversations (Cases/003) | case_id PK → case_sessions.id | Same saved-only sidecar, case kind; no temporary rows |
+| study_projects (Study/002) | id PK | Independently owned project, title/lifecycle/revision |
+| study_project_chats (Study/002) | id PK, project_id → study_projects.id, chat_kind + chat_id → learn_threads.id or case_sessions.id | Both edges link; UNIQUE(chat_kind,chat_id), sole membership authority |
+| study_project_documents (Study/002) | id PK, project_id → study_projects.id, revision_id → knowledge_revisions.id | Both edges link; UNIQUE(project_id,revision_id) |
+| study_project_goals (Study/002) | id PK, project_id → study_projects.id | Owned goal; does not rewrite study.goals |
+| knowledge_attachments (Knowledge/003) | id PK, chat_kind + chat_id → learn_threads.id or case_sessions.id | Owned saved-chat attachment; retention saved only |
+| knowledge_attachment_originals (Knowledge/003) | id PK, attachment_id → knowledge_attachments.id | Owned bytes/preview reference, separate extraction/index status; one authority |
+| assessment_tests (Assessment/003) | id PK | Collection identity/lifecycle; newest version derived by ordinal, no reverse cascade |
+| assessment_test_versions (Assessment/003) | id PK, test_id → assessment_tests.id | Owned immutable manifest; ordinal/origin/review_quality/items_json/terms/provenance/digest |
+| assessment_test_attempts (Assessment/004) | id PK, version_id → assessment_test_versions.id | Link to pinned version; independent history, unavailable marker on deletion |
+| assessment_attempt_drafts (Assessment/004) | attempt_id PK → assessment_test_attempts.id | Owned revision/answers_json/position; no scores |
+| assessment_attempt_exposure (Assessment/004) | id PK, attempt_id → assessment_test_attempts.id | Owned item/question/key/family version snapshot and kind; not learning evidence |
+| assessment_question_reports (Assessment/003) | id PK, version_id → assessment_test_versions.id, nullable attempt_id → assessment_test_attempts.id | Links; neutral local report pinned to item/version; unavailable provenance permitted |
+| assessment_test_jobs (Assessment/003) | id PK, nullable published_version_id → assessment_test_versions.id | Link outcome; inputs/checkpoints obey durable boundary; never ownership of a source |
+
+These names are frozen proposals for review, not independently reserved new
+migrations. In particular M2 must reuse existing case attachment/original rows
+for legacy saved cases instead of copying their bytes into new attachment tables.
+Knowledge attachments provide the shared ordinary-chat entry; legacy case
+attachment references retain their existing IDs and route through the Case owner.
+Neither sidecar stores project_id: the API derives it from study_project_chats.
+Metadata preference storage keeps saved typed references and server-validated
+context only. JSON references in draft_refs_json, immutable test provenance and
+job inputs need explicit typed traversal/revalidation; column-suffix heuristics
+are insufficient. Relation proposals in the Python module specify parent table/
+column, child table/column, ownership/link and any discriminator condition.
+Existing legacy relationships must remain in the parent's installed registry.
 
 Explicit converters must inspect known source format/schema/column inventory
 before exact-column validation against the target. Supported source inventories:
