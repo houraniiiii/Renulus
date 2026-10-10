@@ -419,3 +419,118 @@ reconstructed. The parent owns combined Home/Memory/attempt/renderer acceptance
 and ticket disposition. Hidden UI, installed/native acceptance, all legacy
 routes and live subscriptions remain outside this checkpoint. No ticket is
 marked complete. This final recheck changes only this reserved report path.
+
+### C5 — Recovery can autonomously infer from restored ordinary learning
+
+**Confirmed P1 at `51f208b4`.** The C3 fresh-fingerprint rule also covered
+ordinary `study-answer` and `learning-point` material with `infer=True`. Moving
+the provider call outside the restore transaction did not meet the spec's
+_Recovery does not start provider work_ guarantee. `MemoryService.recovery_guard`
+wakes the normal worker after recovery, and its ordinary two-second scan can
+enqueue new inferred captures for restored evidence without another user action.
+The old provider execution is not replayed; a fresh job still starts autonomous
+provider work for historical restored learning.
+
+Bounded reproductions used actual assembled services/migrations, a completed
+ordinary Learn answer, production `data_recovery.restore_json`, normal Memory
+worker, ProviderManager, Mem0 OSS, QdrantLocal and SHA-validated public offline
+FastEmbed assets. Only the remote provider transport was synthetic, and external
+connections were refused. The process scheduling lock held the actual worker
+until restore completed; no inference was active when restore was admitted.
+
+| Reproduction | Observed failure before the repair |
+| --- | --- |
+| R39 queued ordinary capture | Restore itself makes zero provider calls and cancels the old job with `restore_interrupted`. The normal worker then creates one fresh fingerprint/job, makes one synthetic transport inference call and commits one fact without explicit capture or retry. |
+| R40 never-scanned ordinary source | No Memory job exists before or during restore. On normal worker resume, the restored source still creates one inferred job/call/fact without an explicit action. A guard restricted to historical interrupted jobs cannot prevent this case. |
+
+The distinction is source identity and user action. New eligible learning
+created after restore may be automatically captured on a later normal scan.
+Structured scalar evidence can also be freshly resolved without inference.
+Restored inferred sources need deliberate capture; simply waiting for the
+normal scan does not make them new learning.
+
+Original proof scripts and exit-zero receipts are retained outside Git:
+
+- `C:/Renulus/scratch/design-c/dc-review-assessment/pass2/recheck-restore-inference.py`
+- `C:/Renulus/scratch/design-c/dc-review-assessment/pass2/recheck-restore-inference01.txt`
+- `C:/Renulus/scratch/design-c/dc-review-assessment/pass2/recheck-restore-inference-results.json`
+- `C:/Renulus/scratch/design-c/dc-review-assessment/pass2/recheck-restore-unscanned.py`
+- `C:/Renulus/scratch/design-c/dc-review-assessment/pass2/recheck-restore-unscanned01.txt`
+- `C:/Renulus/scratch/design-c/dc-review-assessment/pass2/recheck-restore-unscanned-results.json`
+
+**Authorised repair:** parent foundation `009b8780` adds the local preference
+barrier `storage.invalidation.MEMORY_RESTORE_CAPTURE_PREFIX`, exactly
+`memory.restore_capture:` plus canonical evidence ID. The restore transaction
+bumps the local context epoch, marks every merged evidence ID with that epoch,
+and emits no jobs. It includes destination, imported and never-scanned rows.
+The existing export whitelist excludes these markers. No raw text, scope, new
+schema or export change is required. The parent's three foundation checks cover
+rollback, export exclusion and new post-restore IDs remaining unmarked.
+
+Memory source checkpoint `d98915592c2f0a0b4d50bd7b8fcdbfb49aa60f28` changes
+only `runtime/renulus/memory/repository.py`,
+`tests/memory/test_service.py` and `tests/memory/test_whole_attempt_evidence.py`.
+It imports the published constant and enforces:
+
+- Automatic enqueue resolves current canonical material, policy and suppression,
+  then refuses inferred material with a restore marker. It does not block
+  structured `infer=False` captures or ordinary policy-only recovery.
+- Existing global Retry can queue failed rows directly. The worker's canonical
+  `_capture_error_in` therefore checks the same barrier before provider work
+  and publication, returning `restore_interrupted` for marked inferred material.
+  Global Retry never consumes the marker.
+- Existing explicit `POST /api/v1/memory/captures` with `{evidence_id, scope}`
+  validates current source, scope, policy and suppression. Successful enqueue
+  consumes the marker in the same canonical transaction. Denial, insertion
+  failure and replay of a still-cancelled/failed terminal receipt preserve it.
+- Equal fingerprints from foreign profiles cannot revive an old execution.
+  Explicit capture can requeue the same `cancelled/restore_interrupted` receipt;
+  automatic enqueue cannot. Requeue preserves its attempts counter; the next
+  claim increments it and refuses late foreign execution output. A forged stored
+  receipt scope is refused. Completed same-fingerprint receipts remain unchanged.
+
+**Verification at the clean source checkpoint:** `c5/green01.xml` passes 15
+focused checks in 79.13 seconds, and `c5/http01.xml` adds two distinct HTTP checks
+in 12.24 seconds. They prove queued, never-scanned and reopened Memory-service
+restore barriers using the actual Learn producer and running Memory worker,
+zero implicit inference before deliberate capture, real ProviderManager/Mem0/
+FastEmbed/Qdrant extraction afterwards, automatic inference for new evidence,
+policy-only inferred recovery, structured scalar recovery, equal foreign
+fingerprints with execution fencing, global Retry refusal, atomic marker
+rollback, completed receipts and cancellation/suppression retention. Actual HTTP
+requests also refuse active-Test and wrong-scope capture, then deleted/forged
+whole commitments, without consuming markers. Reopen here means a new actual
+MemoryService over its retained SQLite profile; it is not an Electron/process
+reopen claim.
+
+`c5/red01.xml` preserves the initial three actual autonomous-inference failures
+and equal foreign receipt failure. Its global Retry check initially observed
+the context mismatch reason; the final fixture also exercises a foreign equal
+epoch, the case that requires the additional worker guard. Three initial fixture
+uniqueness failures are preserved and corrected by idempotent marker upserts;
+they are harness errors, not additional product findings. Existing Starlette/
+httpx and local-Qdrant warnings do not qualify provider or installed acceptance.
+
+The affected five-module Memory regression passes **91 checks** in 185.79
+seconds at `d9891559`: repository, service, Study-answer capture, API and whole
+attempt evidence (`c5/regression01.xml`). Those checks include the earlier
+focused tests; the counts are not additive. Follow-up test checkpoint
+`a4898f2645a7974976d2fca7203b3349de6ad921` adds one distinct passing check
+in 12.91 seconds (`c5/retry-http01.xml`). It creates an actual failed inferred
+Learn capture through ProviderManager/Mem0 with a synthetic transport error,
+restores a failed receipt with a foreign equal fingerprint, invokes actual
+`POST /api/v1/memory/retry` and observes zero new inference calls or facts. The
+marker remains. Actual `POST /api/v1/memory/captures` then requeues that same
+row, consumes the marker and completes one fresh actual extraction/fact. No
+production code changed for this additional proof. Final receipts and profiles
+are under `C:/Renulus/scratch/design-c/dc-review-assessment/c5/`.
+
+**Disposition:** C5 no longer reproduces in these bounded production paths
+with foundation `009b8780` and Memory `d9891559`; the source is ready for
+integration. `MemoryService` and the existing router require no API changes.
+Parent renderer checkpoint `e5209f17` supplies deliberate capture for
+an exact interrupted receipt through the existing endpoint; its 25 renderer
+checks and typecheck are parent-reported. No-history restored evidence stays
+quiet and receives no discovery job. This worker makes no renderer/shared
+storage changes. Combined hidden app/installed acceptance and final feature
+disposition remain with the parent; no ticket is closed here.
