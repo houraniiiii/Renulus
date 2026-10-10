@@ -87,6 +87,14 @@ study-help-01.xml. Actual delayed Chat completion and safe failure bookkeeping,
 Notes, full reader help and combined hidden acceptance remain open. No ticket
 closure or installed default cutover is claimed.
 
+Actual delayed Chat regression reproduced a stale Study receipt leaving the saved
+command running despite refusing assistant publication (study-chat-red.xml). A
+fixed neutral SQL fallback now closes only an existing running command/Learn run
+as interrupted; it cannot write messages, drafts, sidecars or evidence, recreate a
+deleted owner or overwrite a terminal winner. The affected Study-help/conversation
+suite passes 39/39 in study-chat-green.xml (168.01s). Lead releases
+learn/conversation_stream.py back to Zeno after this checkpoint.
+
 ### DC02 foundation slice — validated before dependent feature writes
 
 The lead added a schema-2/known-migration compatibility gate, exact schema-1

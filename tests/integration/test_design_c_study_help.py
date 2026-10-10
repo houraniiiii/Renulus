@@ -112,3 +112,44 @@ def test_commit_rechecks_help_receipt_and_rolls_back_on_same_transaction_change(
                 conn.execute('INSERT INTO preferences VALUES(?,?,?)', ('synthetic.help-output','PRIVATE_HELP_KEY_SENTINEL',utc_now()))
     assert services.get('whole_attempts').get(attempt['id'])['draft_revision'] == attempt['draft_revision']
     assert services.db.fetch_one("SELECT * FROM preferences WHERE key='synthetic.help-output'") is None
+
+
+@pytest.mark.asyncio
+async def test_delayed_actual_chat_keeps_draft_and_records_neutral_interruption(study):
+    app, attempt, context = study
+    services = app.state.services
+    entered, release = asyncio.Event(), asyncio.Event()
+    class DelayedProvider:
+        async def stream(self, messages, **options):
+            entered.set()
+            await release.wait()
+            yield "STALE_ASSISTANT_SENTINEL"
+        async def cancel(self, run_id):
+            return True
+    services.registry.update(provider=DelayedProvider(), knowledge=None, retrieval=None, memory=None)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1") as client:
+        created = await client.post("/api/v1/conversations", json={"title":"Study assistance"})
+        chat = created.json()
+        identifier = chat["identity"]["id"]
+        route = "/api/v1/conversations/learning/" + identifier
+        send = asyncio.create_task(client.post(route + "/messages",
+            json={"text":"Explain this public question", "request_id":"delayed-study-help-send",
+                "expected_revision":chat["revision"]},
+            headers={"Idempotency-Key":"delayed-study-help-send", "X-Renulus-Study-Context":json.dumps(context)}))
+        await asyncio.wait_for(entered.wait(), 3)
+        invalidate(app, attempt)
+        release.set()
+        response = await asyncio.wait_for(send, 5)
+        assert "STALE_ASSISTANT_SENTINEL" not in response.text
+        command = services.db.fetch_one("SELECT result_json FROM conversation_commands WHERE idempotency_key=?",
+            ("delayed-study-help-send",))
+        receipt = json.loads(command["result_json"])
+        assert receipt["state"] == "interrupted"
+        assert services.db.fetch_one("SELECT COUNT(*) AS n FROM learn_messages WHERE thread_id=? AND role='assistant'",
+            (identifier,))["n"] == 0
+        assert services.db.fetch_one("SELECT state FROM learn_runs WHERE id=?", (receipt["run_id"],))["state"] == "interrupted"
+        draft = await client.get(route + "/draft")
+        assert draft.json()["text"] == "Explain this public question"
+        neutral = await client.get(route + "/runs/" + receipt["run_id"] + "?neutral=true",
+            headers={"X-Renulus-Study-Context":json.dumps(context)})
+        assert neutral.json() == {"run_id":receipt["run_id"], "state":"interrupted"}

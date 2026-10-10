@@ -9,6 +9,7 @@ from renulus.contracts import ApiError, ContextScope, Event, Scope, durable_id
 from renulus.storage.database import utc_now
 from renulus.storage.invalidation import context_epoch_in
 from renulus.storage.assessment_policy import policy_snapshot
+from renulus.storage.publication import record_interrupted_conversation
 from renulus.cases.models import DiscussCase
 from renulus.cases.streaming import discuss, sse
 from .conversation_repository import command, require_assistance
@@ -316,20 +317,26 @@ class ConversationStreams:
             message=error.message if isinstance(error,ApiError) else 'The response could not finish. Your draft is retained.'
             yield sse(Event(run_id=run.id,sequence=1000000,type='error',payload={'code':code,'message':message,'retryable':True}))
         finally:
-            if not terminal:
-                if entry['kind']=='learning':
-                    await repo.learn.cancel(run.id)
-                else:
-                    repo.cases.cancel(run.id)
-                    from renulus.cases.streaming import cancel_provider
-                    await cancel_provider(repo.cases,run.id)
-                try:
-                    with repo._lock,repo.cases._lock,repo.db.transaction() as conn:
-                        self._finish(conn,entry,'interrupted' if entry.get('shutdown') else 'cancelled',{'code':'response_interrupted',
-                            'message':'The response did not finish. Your draft is retained.','retryable':True})
-                except Exception:
-                    pass
-            self.active.pop(run.id,None)
+            try:
+                if not terminal:
+                    try:
+                        if entry['kind']=='learning':
+                            await repo.learn.cancel(run.id)
+                        else:
+                            repo.cases.cancel(run.id)
+                            from renulus.cases.streaming import cancel_provider
+                            await cancel_provider(repo.cases,run.id)
+                        with repo._lock,repo.cases._lock,repo.db.transaction() as conn:
+                            self._finish(conn,entry,'interrupted' if entry.get('shutdown') else 'cancelled',{'code':'response_interrupted',
+                                'message':'The response did not finish. Your draft is retained.','retryable':True})
+                    except Exception:
+                        pass
+            finally:
+                if entry['saved']:
+                    receipt = record_interrupted_conversation(repo.db, entry['kind'], entry['id'], run.id)
+                    if receipt is not None:
+                        entry['receipt'] = receipt
+                self.active.pop(run.id,None)
 
     async def cancel(self, kind, identifier, run_id):
         entry=self.active.get(run_id)
