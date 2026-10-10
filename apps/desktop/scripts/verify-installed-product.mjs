@@ -467,6 +467,152 @@ async function attachmentResponse(page, chat, fixture, action) {
   }
 }
 
+// These are the real UI's binary fetches, not a new fetch or a CDP byte repair.
+// Each installation observes one exact saved-fixture asset/original request.
+export function installReaderBinaryCapture(spec) {
+  const require = (condition, message) => { if (!condition) throw new Error(message); };
+  const origin = new URL(spec.origin), asset = spec.operation === 'asset';
+  const allowed = { pdf: ['pdf:1', 'pdf:2'], docx: ['docx:rId1'], png: ['image:1'], jpg: ['image:1'], tiff: ['image:1', 'image:2'] };
+  const extension = spec.filename?.split('.').at(-1);
+  require(origin.protocol === 'http:' && origin.hostname === '127.0.0.1' && origin.port && origin.origin === spec.origin
+    && location.origin === spec.origin && location.hash === spec.hash && spec.retention === 'saved'
+    && spec.conversation?.type === 'learn_thread' && /^thread_[a-f0-9]{32}$/.test(spec.conversation.id)
+    && spec.hash === '#/chat/learn_thread/' + spec.conversation.id
+    && spec.reference?.target?.type === 'attachment' && /^attachment_[a-f0-9]{32}$/.test(spec.reference.target.id)
+    && /^(?:synthetic-reading\.(?:pdf|docx|csv|xlsx|md|html|xml|png|jpg|tiff)|synthetic-denied-entity\.xml)$/.test(spec.filename)
+    && /^[a-f0-9]{64}$/.test(spec.sha256) && Number.isSafeInteger(spec.bytes) && spec.bytes > 0 && spec.bytes < 65536
+    && ['asset', 'original'].includes(spec.operation) && (!asset || allowed[extension]?.includes(spec.assetId))
+    && [1, 2].includes(spec.page) && [1, 101].includes(spec.firstRow)
+    && (spec.page === 1 || ['pdf', 'tiff'].includes(extension)) && (spec.firstRow === 1 || extension === 'csv')
+    && [null, 'Dialysis'].includes(spec.sheet) && (spec.sheet === null || extension === 'xlsx')
+    && (!asset || spec.assetId === 'docx:rId1' || Number(spec.assetId.split(':')[1]) === spec.page),
+  'Reader capture requires one exact saved synthetic original/view.');
+  const endpoint = spec.origin + '/api/v1/readers/' + spec.operation;
+  const limit = asset ? 16 * 1024 * 1024 : spec.bytes, original = globalThis.fetch;
+  let settled = false, resolve, reject, reader, timer;
+  const result = new Promise((yes, no) => { resolve = yes; reject = no; }); result.catch(() => {});
+  const restore = () => { if (globalThis.fetch === observedFetch) globalThis.fetch = original; };
+  const finish = (error, value) => {
+    if (settled) return;
+    settled = true; clearTimeout(timer); restore();
+    if (error) { if (reader) void reader.cancel().catch(() => {}); reject(new Error(error)); } else resolve(value);
+  };
+  const canonical = value => JSON.stringify(value, (_key, item) => item && typeof item === 'object' && !Array.isArray(item)
+    ? Object.fromEntries(Object.keys(item).sort().map(key => [key, item[key]])) : item);
+  function matches(args) {
+    const [input, init] = args;
+    if (typeof input !== 'string' || !init || init.method !== 'POST' || typeof init.body !== 'string' || init.body.length > 4096
+      || location.origin !== spec.origin || location.hash !== spec.hash || !(init.headers instanceof Headers)) return false;
+    const url = new URL(input, spec.origin);
+    if (url.href !== endpoint || url.username || url.password
+      || [...init.headers.keys()].some(name => !['accept', 'content-type'].includes(name))
+      || init.headers.get('content-type') !== 'application/json') return false;
+    const body = JSON.parse(init.body);
+    const keys = ['reference', 'conversation', 'page', 'sheet', 'first_row', 'row_limit', ...(asset ? ['asset_id', 'original_sha256'] : [])];
+    return Object.keys(body).every(key => keys.includes(key))
+      && canonical(body.conversation) === canonical(spec.conversation)
+      && Object.keys(body.reference ?? {}).every(key => ['target', 'locator'].includes(key))
+      && canonical(body.reference?.target) === canonical(spec.reference.target)
+      && canonical(body.reference?.locator ?? null) === canonical(spec.reference.locator ?? null)
+      && body.page === spec.page && (body.sheet ?? null) === spec.sheet && body.first_row === spec.firstRow && body.row_limit === 100
+      && (!asset || body.asset_id === spec.assetId && body.original_sha256 === spec.sha256);
+  }
+  async function observe(response) {
+    require(response.url === endpoint && !response.redirected && response.status === 200,
+      'Reader binary capture requires the actual nonredirected 200 response.');
+    const headers = Object.fromEntries(['content-type', 'cache-control', 'x-content-type-options', 'content-length',
+      'content-security-policy', 'content-disposition'].map(name => [name, response.headers.get(name)]));
+    require(headers['content-type'] === (asset ? 'image/png' : 'application/octet-stream') && headers['cache-control'] === 'no-store'
+      && (headers['content-length'] === null || /^\d+$/.test(headers['content-length']) && Number(headers['content-length']) <= limit),
+      'Reader binary response headers or size are invalid.');
+    reader = response.clone().body.getReader(); // Synchronous clone before the app consumes its blob.
+    const chunks = []; let length = 0;
+    while (!settled) {
+      const { value, done } = await reader.read(); if (done) break;
+      length += value.byteLength;
+      require(length <= limit, 'Reader binary response exceeds the capture byte bound.'); chunks.push(value);
+    }
+    if (settled) return;
+    require(headers['content-length'] === null || length === Number(headers['content-length']), 'Reader binary response length differs.');
+    const bytes = new Uint8Array(length); let offset = 0;
+    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+    finish(null, { status: response.status, headers, bytes: Array.from(bytes) });
+  }
+  function observedFetch(...args) {
+    let matched = false; try { matched = matches(args); } catch { /* Other requests are untouched. */ }
+    const pending = Reflect.apply(original, this, args);
+    if (matched) {
+      restore();
+      void pending.then(response => { if (!settled) return observe(response); }, () => finish('The actual Reader binary fetch failed.'))
+        .catch(error => finish(error.message?.startsWith('Reader binary ') ? error.message : 'Reader binary capture failed.'));
+    }
+    return pending;
+  }
+  globalThis.fetch = observedFetch;
+  timer = setTimeout(() => finish('Reader binary capture timed out.'), 30_000);
+  return { result, dispose: () => finish('Reader binary capture disposed.') };
+}
+
+export function observedBinaryBytes(bytes) {
+  check(Buffer.isBuffer(bytes) && bytes.length <= 16 * 1024 * 1024, 'Synthetic byte diagnostics exceed their bound.');
+  return { length: bytes.length, first16Hex: bytes.subarray(0, 16).toString('hex'), sha256: sha(bytes) };
+}
+
+export function observeReaderCdp(page, matches) {
+  let settled = false, resolve;
+  const result = new Promise(yes => { resolve = yes; });
+  const finish = value => {
+    if (settled) return;
+    settled = true; clearTimeout(timer); page.off('response', onResponse); resolve(value);
+  };
+  const onResponse = response => {
+    try { if (!matches(response)) return; } catch { return; }
+    page.off('response', onResponse); // Observe only the same single actual request.
+    void (async () => ({ status: 'observed', httpStatus: response.status(), contentType: response.headers()['content-type'],
+      ...observedBinaryBytes(await response.body()) }))().then(finish, () => finish({ status: 'unavailable' }));
+  };
+  const timer = setTimeout(() => finish({ status: 'unavailable' }), 30_000);
+  page.on('response', onResponse);
+  return { result, dispose: () => finish({ status: 'unavailable' }) };
+}
+
+async function readerBinaryAction(page, chat, attachment, fixture, view, action, progress) {
+  validateReaderOriginal(fixture, attachment.original, attachment.media_type);
+  check(attachment.retention === 'saved' && attachment.conversation?.type === chat.identity.type
+    && attachment.conversation.id === chat.identity.id, 'Binary capture requires the actual saved original owner.');
+  const spec = { origin: new URL(page.url()).origin, hash: chatHash(chat), conversation: chat.identity,
+    retention: chat.retention, reference: attachment.reference, filename: fixture.filename, sha256: fixture.sha256,
+    bytes: fixture.bytes, operation: view.assetId ? 'asset' : 'original', page: view.page ?? 1,
+    sheet: view.sheet ?? null, firstRow: view.firstRow ?? 1, assetId: view.assetId };
+  const capture = await page.evaluateHandle(installReaderBinaryCapture, spec);
+  const observation = { route: '/readers/' + spec.operation, ...(spec.assetId ? { assetId: spec.assetId } : {}),
+    clone: { status: 'pending' }, cdp: { status: 'pending' } };
+  progress.binaryObservation = observation;
+  // CDP is diagnostic only. Never decode/repair it or use it as replacement data.
+  const cdp = observeReaderCdp(page, response => {
+    if (response.url() !== spec.origin + '/api/v1/readers/' + spec.operation || response.request().method() !== 'POST') return false;
+    const body = response.request().postDataJSON();
+    return body?.reference?.target?.type === 'attachment' && body.reference.target.id === attachment.id
+      && body.conversation?.type === chat.identity.type && body.conversation.id === chat.identity.id
+      && body.page === spec.page && (body.sheet ?? null) === spec.sheet && body.first_row === spec.firstRow && body.row_limit === 100
+      && (!spec.assetId || body.asset_id === spec.assetId && body.original_sha256 === fixture.sha256);
+  });
+  const diagnostic = cdp.result.then(value => { observation.cdp = value; });
+  try {
+    const bytes = capture.evaluate(value => value.result).then(record => {
+      const body = Buffer.from(record.bytes);
+      observation.clone = { status: 'observed', httpStatus: record.status, contentType: record.headers['content-type'],
+        ...observedBinaryBytes(body) };
+      return { body, headers: record.headers, observation };
+    });
+    const [record, actionResult] = await Promise.all([bytes, action(), diagnostic]);
+    return { record, actionResult };
+  } finally {
+    cdp.dispose();
+    try { await capture.evaluate(value => value.dispose()); } finally { await capture.dispose(); }
+  }
+}
+
 async function poll(work, accepts, label, timeout = 180_000, interval = 500) {
   const deadline = Date.now() + timeout;
   let value;
@@ -1040,11 +1186,11 @@ async function uploadReaderOriginal(page, chat, fixtures, fixture) {
   return attachment;
 }
 
-async function prepareReaderDownload(page, reader, fixture) {
-  const pending = captureResponse(page, response => new URL(response.url()).pathname === '/api/v1/readers/original'
-    && response.request().method() === 'POST', { binary: true, label: 'POST /readers/original' });
-  const [{ body: data, headers }] = await Promise.all([pending,
-    reader.getByRole('button', { name: 'Prepare original download', exact: true }).click()]);
+async function prepareReaderDownload(page, reader, chat, attachment, fixture, document, progress) {
+  const { record: { body: data, headers } } = await readerBinaryAction(page, chat, attachment, fixture,
+    { page: document.payload?.page ?? 1, sheet: fixture.gate === 'reader-xlsx' ? 'Dialysis' : null,
+      firstRow: document.payload?.table?.first_row ?? 1 },
+    () => reader.getByRole('button', { name: 'Prepare original download', exact: true }).click(), progress);
   check(sha(data) === fixture.sha256 && data.length === fixture.bytes,
     'The real original-download action changed the uploaded bytes.');
   check(headers['content-type'] === 'application/octet-stream' && headers['x-content-type-options'] === 'nosniff'
@@ -1118,33 +1264,31 @@ async function readerFixtureJourney(current, chat, fixtures, fixture, evidence, 
   progress.stage = 'attachment-upload';
   const attachment = await uploadReaderOriginal(page, chat, fixtures, fixture);
   const assets = [], externalRequests = [];
-  const onResponse = response => {
-    if (new URL(response.url()).pathname !== '/api/v1/readers/asset' || response.request().method() !== 'POST') return;
-    const body = response.request().postDataJSON();
-    if (body?.reference?.target?.id !== attachment.id) return;
-    assets.push((async () => {
-      check(response.status() === 200 && response.headers()['content-type'] === 'image/png'
-        && body.original_sha256 === fixture.sha256, 'Actual reader asset failed or lost its original pin.');
-      return { assetId: body.asset_id, ...validateReaderRaster(await response.body()) };
-    })().catch(error => ({ error: error.message })));
-  };
+  async function assetAction(assetId, pageNumber, action) {
+    const { record, actionResult } = await readerBinaryAction(page, chat, attachment, fixture,
+      { assetId, page: pageNumber }, action, progress);
+    assets.push({ assetId, ...record }); return actionResult;
+  }
   const deny = route => { externalRequests.push(route.request().url()); return route.abort('blockedbyclient'); };
   await page.context().route(fixtures.manifest.external_origin + '/**', deny);
-  page.on('response', onResponse);
   try {
     progress.stage = 'reader-open';
-    let document = await readerResponse(page, attachment, () => page.locator('.chat-attached-file')
+    const open = () => readerResponse(page, attachment, () => page.locator('.chat-attached-file')
       .filter({ hasText: fixture.filename }).getByRole('button', { name: 'Open file', exact: true }).click());
+    const firstAsset = fixture.gate === 'reader-pdf' ? 'pdf:1' : fixture.gate === 'reader-images' ? 'image:1'
+      : fixture.gate === 'reader-docx' ? 'docx:rId1' : null;
+    let document = await (firstAsset ? assetAction(firstAsset, 1, open) : open());
     validateReaderDocument(fixture, document, attachment);
     progress.stage = 'reader-render';
     const reader = page.getByRole('region', { name: 'Document reader', exact: true });
     await reader.getByRole('heading', { name: attachment.title, exact: true }).waitFor();
     const positions = [];
     async function raster(assetId) {
-      const rows = await poll(() => Promise.all(assets), values => values.some(row => row.assetId === assetId) || values.some(row => row.error), 'Actual reader raster', 30_000);
-      check(!rows.some(row => row.error), rows.find(row => row.error)?.error ?? 'Reader raster failed.');
+      const captured = assets.find(row => row.assetId === assetId);
+      check(captured, 'The actual UI did not request the expected fixture asset.');
+      progress.binaryObservation = captured.observation;
+      const result = { assetId, ...validateReaderRaster(captured.body) };
       await poll(() => reader.getByAltText('Source page', { exact: true }).evaluateAll(images => images.every(image => image.complete && image.naturalWidth > 0) && images.length > 0), Boolean, 'Decoded reader image', 30_000);
-      const result = rows.find(row => row.assetId === assetId);
       if (fixture.expect.width) check(result.width === fixture.expect.width && result.height === fixture.expect.height, 'Decoded image size differs from the original.');
       return result;
     }
@@ -1155,7 +1299,8 @@ async function readerFixtureJourney(current, chat, fixtures, fixture, evidence, 
       const kind = fixture.expect.kind === 'pdf' ? 'pdf' : 'image';
       positions.push(await savedReaderPosition(page, chat, attachment, kind === 'pdf' ? { kind, physical_page: 1 } : { kind, frame: 1 }));
       progress.stage = 'second-page-or-frame';
-      document = await readerResponse(page, attachment, () => reader.getByRole('button', { name: 'Next', exact: true }).click());
+      document = await assetAction(kind + ':2', 2,
+        () => readerResponse(page, attachment, () => reader.getByRole('button', { name: 'Next', exact: true }).click()));
       validateReaderDocument(fixture, document, attachment);
       check(document.payload.page === 2, 'Next did not open the second physical page/frame.');
       const nextRaster = await raster(document.payload.asset_id);
@@ -1203,7 +1348,7 @@ async function readerFixtureJourney(current, chat, fixtures, fixture, evidence, 
         'Preview-only image exposed an extracted passage action.');
     }
     progress.stage = 'original-download';
-    const original = await prepareReaderDownload(page, reader, fixture);
+    const original = await prepareReaderDownload(page, reader, chat, attachment, fixture, document, progress);
     let inert;
     progress.stage = 'inert-markup';
     if (fixture.expect.inert) {
@@ -1223,10 +1368,10 @@ async function readerFixtureJourney(current, chat, fixtures, fixture, evidence, 
     progress.stage = 'screenshot';
     await screenshot(current, evidence, 'reader-' + fixture.filename.replaceAll('.', '-'));
     return { filename: fixture.filename, mediaType: fixture.media_type, attachmentId: attachment.id, attachment,
-      original, previewState: document.preview_state, positions, selection, assets: await Promise.all(assets), inert,
+      original, previewState: document.preview_state, positions, selection,
+      assets: assets.map(item => ({ assetId: item.assetId, ...validateReaderRaster(item.body), observation: item.observation })), inert,
       scope: 'Actual saved attachment, Workspace reader, guarded selection/draft and prepared original. No native Save dialog, model, OCR or ingestion claim.' };
   } finally {
-    page.off('response', onResponse);
     await page.context().unroute(fixtures.manifest.external_origin + '/**', deny);
   }
 }
@@ -1280,21 +1425,17 @@ async function reopenSelectedPdfJourney(current, chat, fixtures, report, evidenc
   // Closing the pane unmounts any warm reader without deleting its saved tab/locator.
   const closeWorkspace = page.getByRole('button', { name: 'Close workspace', exact: true });
   if (await closeWorkspace.isVisible()) await closeWorkspace.click();
-  const pendingAsset = captureResponse(page, response => {
-    if (new URL(response.url()).pathname !== '/api/v1/readers/asset' || response.request().method() !== 'POST') return false;
-    const body = response.request().postDataJSON();
-    if (body?.reference?.target?.id !== attachment.id || body.asset_id !== 'pdf:2') return false;
-    check(body.original_sha256 === fixture.sha256, 'Reopened PDF asset lost its immutable original pin.');
-    return true;
-  }, { binary: true, label: 'POST /readers/asset (reopened PDF page 2)', timeout: 30_000 });
-  const [document, asset] = await Promise.all([readerResponse(page, attachment, async () => {
-    await navigate(page, chatHash(chat));
+  await navigate(page, chatHash(chat));
+  const progress = { filename: fixture.filename, stage: 'reopened-pdf-page2' };
+  report.pdfReopenObservation = progress;
+  const { actionResult: document, record: asset } = await readerBinaryAction(page, chat, attachment, fixture,
+    { assetId: 'pdf:2', page: 2 }, () => readerResponse(page, attachment, async () => {
     if (!await page.getByLabel('Attach files to chat', { exact: true }).isVisible())
       await page.getByRole('button', { name: 'Attach file', exact: true }).click();
     // Opening the existing attachment preserves its stored locator. No preferences are injected.
     await page.locator('.chat-attached-file').filter({ hasText: fixture.filename })
       .getByRole('button', { name: 'Open file', exact: true }).click();
-  }), pendingAsset]);
+  }), progress);
   check(asset.headers['content-type'] === 'image/png', 'Reopened PDF asset is not its expected PNG raster.');
   const raster = validateReaderRaster(asset.body);
   const tab = page.locator('[role="tab"][id="dc-tab-' + encodeURIComponent('attachment:' + attachment.id) + '"]');

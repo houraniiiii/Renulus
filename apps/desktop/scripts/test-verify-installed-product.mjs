@@ -9,6 +9,7 @@ import { runInNewContext } from 'node:vm';
 import { installedAcceptancePlan, validateInstalledRequest, validateInstallationReceipts, isolatedEnvironment,
   validateCompleteReport, validateFrozenScript, validateFrozenExport, validateAcceptanceChanges, captureResponse, captureFailureScreenshot,
   installAttachmentCapture, freshHiddenFrame, captureHiddenWindow, hiddenScreenshotBytes,
+  installReaderBinaryCapture, observedBinaryBytes, observeReaderCdp,
   requiredGates, remainingOwnedIdentities, inside,
   coreGates, readerGates, deferredGates, completeCoreReceipt, designCEvidenceRoot, ownedArtifact, validateHiddenWindows, waitForDesignCWindow,
   validateConversation, validateSavedTest, validateActiveTest, validateFinalAttempt, validateAssistanceRefusal, safeFailure,
@@ -279,6 +280,153 @@ test('wrong original SHA and fetch failure cannot substitute a body, retry or ch
   assert.equal(pending, failed.pending); await assert.rejects(pending, value => value === error);
   await assert.rejects(failed.capture.result, /actual attachment fetch failed/);
   assert.equal(failed.calls.length, 1); assert.deepEqual(failed.events, []);
+});
+
+const readerCaptureFixture = (t, options = {}) => {
+  const data = options.data ?? hiddenCaptureFixture().png;
+  const conversation = { type: 'learn_thread', id: 'thread_' + 'a'.repeat(32) };
+  const reference = { target: { type: 'attachment', id: 'attachment_' + 'b'.repeat(32) }, locator: null };
+  const spec = { origin: 'http://127.0.0.1:12345', hash: '#/chat/learn_thread/' + conversation.id,
+    conversation, reference, retention: 'saved', filename: 'synthetic-reading.pdf', sha256: digest, bytes: data.length,
+    operation: 'asset', assetId: 'pdf:1', page: 1, sheet: null, firstRow: 1, ...options.spec };
+  const body = { reference, conversation, page: spec.page, first_row: spec.firstRow, row_limit: 100,
+    ...(spec.sheet === null ? {} : { sheet: spec.sheet }),
+    ...(spec.operation === 'asset' ? { asset_id: spec.assetId, original_sha256: spec.sha256 } : {}) };
+  const init = { method: 'POST', headers: new Headers({ Accept: 'application/json', 'Content-Type': 'application/json' }),
+    body: JSON.stringify(body) };
+  const endpoint = spec.origin + '/api/v1/readers/' + spec.operation, events = [], calls = [];
+  const response = new Response(data, { status: options.status ?? 200, headers: {
+    'content-type': spec.operation === 'asset' ? 'image/png' : 'application/octet-stream',
+    'cache-control': 'no-store', 'x-content-type-options': 'nosniff', ...options.headers } });
+  Object.defineProperty(response, 'url', { value: options.url ?? endpoint });
+  const clone = response.clone.bind(response); response.clone = () => { events.push('clone'); return clone(); };
+  const pending = options.rejection ? Promise.reject(options.rejection) : Promise.resolve(response);
+  const original = function (...args) { calls.push({ receiver: this, args }); return pending; };
+  let expire;
+  const context = { fetch: original, location: { origin: spec.origin, hash: spec.hash }, URL, Headers, Uint8Array,
+    setTimeout: (callback, milliseconds) => { assert.equal(milliseconds, 30_000); expire = callback; return 1; }, clearTimeout: () => {} };
+  const install = runInNewContext('(' + installReaderBinaryCapture.toString() + ')', context);
+  const capture = install(spec); t.after(() => capture.dispose());
+  return { data, spec, body, init, endpoint, response, pending, original, context, capture, install, events, calls, expire: () => expire() };
+};
+
+test('binary observer preserves actual PNG bytes and original fetch promise/Response/args/this before UI blob consumption', async t => {
+  const f = readerCaptureFixture(t), receiver = { owned: true }, args = [f.endpoint, f.init];
+  const pending = Reflect.apply(f.context.fetch, receiver, args);
+  assert.equal(pending, f.pending); assert.equal(f.context.fetch, f.original);
+  const response = await pending; assert.equal(response, f.response); assert.deepEqual(f.events, ['clone']);
+  const uiBytes = Buffer.from(await (await response.blob()).arrayBuffer());
+  const record = await f.capture.result, actual = Buffer.from(record.bytes);
+  assert.deepEqual(actual, f.data); assert.deepEqual(actual, uiBytes);
+  assert.equal(validateReaderRaster(actual).width, 1);
+  assert.equal(f.calls.length, 1); assert.equal(f.calls[0].receiver, receiver);
+  assert.equal(f.calls[0].args[0], args[0]); assert.equal(f.calls[0].args[1], args[1]);
+  assert.equal(record.headers['content-type'], 'image/png');
+  f.context.fetch(...args); await Promise.resolve(); assert.deepEqual(f.events, ['clone']);
+});
+
+test('binary observation uses exact asset/page views and byte-identical originals across saved fixture categories', async t => {
+  for (const spec of [{ assetId: 'pdf:2', page: 2 },
+    { filename: 'synthetic-reading.docx', assetId: 'docx:rId1' },
+    { filename: 'synthetic-reading.png', assetId: 'image:1' },
+    { filename: 'synthetic-reading.jpg', assetId: 'image:1' },
+    { filename: 'synthetic-reading.tiff', assetId: 'image:2', page: 2 },
+    { operation: 'original', page: 2 },
+    { operation: 'original', filename: 'synthetic-reading.csv', firstRow: 101 },
+    { operation: 'original', filename: 'synthetic-reading.xlsx', sheet: 'Dialysis' },
+    { operation: 'original', filename: 'synthetic-denied-entity.xml' }]) {
+    const f = readerCaptureFixture(t, { spec });
+    const pending = f.context.fetch(f.endpoint, f.init);
+    assert.equal(pending, f.pending); assert.equal(await pending, f.response);
+    assert.deepEqual(Buffer.from((await f.capture.result).bytes), f.data);
+    assert.equal(f.calls.length, 1); assert.deepEqual(f.events, ['clone']);
+  }
+});
+
+test('binary observer never clones another owner/original/view, temporary scope, credential request or extra input', async t => {
+  for (const mutate of [f => { f.endpoint += '?other=1'; }, f => { f.endpoint += '/other'; },
+    f => { f.endpoint = f.endpoint.replace(':12345', ':54321'); }, f => { f.init.method = 'GET'; },
+    f => { f.context.location.hash = '#/chat/temporary'; },
+    f => { f.body.conversation = { type: 'learn_thread', id: 'tmp-other' }; },
+    f => { f.body.reference = { target: { type: 'library_revision', id: 'other' } }; },
+    f => { f.body.reference = { target: { ...f.spec.reference.target, id: 'attachment_' + 'c'.repeat(32) } }; },
+    f => { f.body.original_sha256 = 'c'.repeat(64); }, f => { f.body.asset_id = 'pdf:2'; },
+    f => { f.body.page = 2; }, f => { f.body.first_row = 101; }, f => { f.body.row_limit = 200; },
+    f => { f.body.sheet = 'Dialysis'; }, f => { f.body.text = 'not-observed'; },
+    ...['Authorization', 'Cookie', 'x-renulus-token', 'X-Renulus-Study-Context'].map(name => f => { f.init.headers.set(name, 'not-observed'); })]) {
+    const f = readerCaptureFixture(t); mutate(f); f.init.body = JSON.stringify(f.body);
+    const pending = f.context.fetch(f.endpoint, f.init);
+    assert.equal(pending, f.pending); assert.equal(await pending, f.response);
+    assert.deepEqual(f.events, []); assert.equal(f.calls.length, 1);
+    f.capture.dispose(); await assert.rejects(f.capture.result, /disposed/);
+    assert.equal(f.context.fetch, f.original);
+  }
+});
+
+test('binary capture scope cannot be expanded to unknown fixtures, assets or inconsistent page/sheet/row views', async t => {
+  const f = readerCaptureFixture(t); f.capture.dispose();
+  for (const mutate of [s => { s.retention = 'temporary'; }, s => { s.origin = 'http://127.0.0.1:12346'; },
+    s => { s.filename = 'private.pdf'; }, s => { s.bytes = 65536; }, s => { s.sha256 = ''; },
+    s => { s.operation = 'resolve'; }, s => { s.assetId = 'pdf:3'; }, s => { s.page = 2; },
+    s => { s.reference.target.type = 'note_revision'; }, s => { s.firstRow = 101; }, s => { s.sheet = 'Dialysis'; }]) {
+    const spec = structuredClone(f.spec); mutate(spec);
+    assert.throws(() => f.install(spec), /exact saved synthetic original/); assert.equal(f.context.fetch, f.original);
+  }
+});
+
+test('binary status/header/stream bounds fail without replacing bytes, retrying or aborting the app response', async t => {
+  for (const options of [{ status: 409 }, { url: 'http://127.0.0.1:12345/other' },
+    { headers: { 'content-type': 'text/html' } }, { headers: { 'cache-control': 'public' } },
+    { headers: { 'content-length': '16777217' } }, { headers: { 'content-length': '1' } },
+    { spec: { operation: 'original', bytes: 1 } }]) {
+    const f = readerCaptureFixture(t, options);
+    assert.equal(f.context.fetch(f.endpoint, f.init), f.pending);
+    const uiBytes = Buffer.from(await (await f.pending).arrayBuffer());
+    await assert.rejects(f.capture.result, /Reader binary /);
+    assert.deepEqual(uiBytes, f.data); assert.equal(f.calls.length, 1); assert.equal(f.context.fetch, f.original);
+  }
+});
+
+test('binary capture timeout/disposal and transport rejection preserve original fetch behavior', async t => {
+  const f = readerCaptureFixture(t); f.expire();
+  await assert.rejects(f.capture.result, /timed out/); assert.equal(f.context.fetch, f.original);
+  assert.equal(f.context.fetch(f.endpoint, f.init), f.pending); assert.deepEqual(f.events, []);
+  const error = new Error('synthetic binary transport failure'), failed = readerCaptureFixture(t, { rejection: error });
+  const pending = failed.context.fetch(failed.endpoint, failed.init);
+  assert.equal(pending, failed.pending); await assert.rejects(pending, value => value === error);
+  await assert.rejects(failed.capture.result, /actual Reader binary fetch failed/);
+  assert.equal(failed.calls.length, 1); assert.deepEqual(failed.events, []);
+});
+
+test('byte diagnostics describe actual observations without repairing corrupt or base64-shaped PNG data', () => {
+  const original = hiddenCaptureFixture().png;
+  const transformed = Buffer.from(original.toString('utf8'));
+  const encodedText = Buffer.from(original.toString('base64'));
+  assert.deepEqual(observedBinaryBytes(original), { length: original.length,
+    first16Hex: original.subarray(0, 16).toString('hex'), sha256: hash(original) });
+  for (const bytes of [transformed, encodedText, Buffer.from('not PNG')]) {
+    assert.notEqual(observedBinaryBytes(bytes).sha256, hash(original));
+    assert.throws(() => validateReaderRaster(bytes), /not a raster PNG/);
+  }
+  assert.throws(() => observedBinaryBytes('unclassified'), /bound/);
+  assert.deepEqual(Object.keys(observedBinaryBytes(original)), ['length', 'first16Hex', 'sha256']);
+});
+
+test('CDP binary diagnostics retain only bounded metadata for the bound response and dispose all listeners', async () => {
+  let listener, reads = 0;
+  const page = { on: (_name, fn) => { listener = fn; }, off: (_name, fn) => { if (listener === fn) listener = undefined; } };
+  const bytes = hiddenCaptureFixture().png;
+  const bound = { status: () => 200, headers: () => ({ 'content-type': 'image/png' }), body: async () => { reads++; return bytes; } };
+  const observer = observeReaderCdp(page, response => response === bound);
+  listener({ body: () => { throw new Error('unbound body must not be read'); } }); assert.equal(reads, 0);
+  listener(bound); assert.equal(listener, undefined);
+  assert.deepEqual(await observer.result, { status: 'observed', httpStatus: 200, contentType: 'image/png', ...observedBinaryBytes(bytes) });
+  assert.equal(reads, 1); observer.dispose();
+  const pending = observeReaderCdp(page, () => true); pending.dispose();
+  assert.deepEqual(await pending.result, { status: 'unavailable' }); assert.equal(listener, undefined);
+  const evicted = observeReaderCdp(page, () => true);
+  listener({ ...bound, body: async () => { throw new Error('synthetic inspector eviction'); } });
+  assert.deepEqual(await evicted.result, { status: 'unavailable' }); assert.equal(listener, undefined);
 });
 
 const ingestionFixture = () => {
