@@ -10,8 +10,9 @@ findings are reviewed progress omission (R8, P1), Home draft loss on a policy
 change without navigation (R3, P2), reader row-position loss on restart (R7,
 P2), and saved Chat attachments missing from Workspace Files (R10, P2).
 R9 records misleading edited-key copy. Notes creation and receipt propagation
-into Reader remain specific consumer gates. R4/R5/R6 retain their earlier
-qualification; the resolved R1/R2 probes were not redundantly repeated.
+into Reader remain specific consumer gates. The same-baseline hidden follow-up
+below reconfirms R4 preview styles and R6 transient error feedback; R5 retains
+its earlier qualification. The resolved R1/R2 probes were not repeated.
 Figma Test timing copy is reconciled across ten existing C specimens with
 verified screenshots. Timed lifecycle, other media/extraction paths and Windows
 delivery remain outside this pass's acceptance. This report closes no ticket.
@@ -175,6 +176,85 @@ native final PNG during this pass; it explicitly says Test cannot be paused.
 No further Figma change or full-page metadata request was necessary.
 This report recommends exact owner actions and records evidence; it does not
 implement shared paths or change feature-ticket disposition.
+
+## Same-baseline hidden UX follow-up and coverage — October 10, 2026
+
+Canonical was exactly `319ff190610d6b6ff1a5f44f2e65aa5620a7f7c6`; the clean
+lane was `ab941c18`, with this canonical commit already merged. Only the report
+differs from the previously built `f69f6792` source. Renderer/native hashes match
+the prior pass. No rebuild, shared source change or Figma rewrite was needed.
+The installed interface-design review and Impeccable audit guidance continued
+to govern hierarchy, readable state copy and the bounded keyboard/zoom checks.
+
+The fresh owned profile was `C:/Renulus/scratch/dcctl/rev1/c/s-59e2b4de/p`.
+The fixed controller client was operated through file-backed strict tool
+requests, without caller evaluation, OS input or foreground windows. All 51
+requests succeeded. Five native captures, request/results and source hashes are
+listed in `C:/Renulus/scratch/dcctl/rev1/probes/ux-319-20261010/manifest.json`.
+Restart and final close were normal, with empty forced/remaining PID lists and
+null fault. Final close finished at 14:12:21.706 UTC. Zero live provider calls.
+
+**R6 remains P2 on current committed bytes.** Through Tests, create
+`DC01 319 hidden UX recheck`, three reviewed questions, Continue to Study and
+Start Study. On question 1, RN-AAV-001 has no authored hint. Click Hint.
+Request 020 reaches the visible heading “This action needs recovery”; request
+022 reaches its hidden state without dismissal, retry or another user action.
+Request 023 again shows enabled Hint and no explanation. The two-second
+refresh still calls `AttemptSession.accept`, which clears `error` on every
+successful read. Captures 0001/0002 already show the cleared screen; they do
+not claim visible error pixels. Retain action feedback until a relevant
+successful action, explicit dismissal or retry; describe unavailable authored
+help truthfully instead of losing the reason during draft polling.
+
+**R4 remains P2 on current committed bytes.** Ask in chat creates the actual
+saved conversation `thread_269ffc13e641470694c3e1563969b89a` without Send.
+`preview-seed.json` records an explicit production `PUT /workspace/preferences`
+fixture containing only that saved context and the UI-created reviewed version
+`test_version_f05a55809f4b49e59ad54677e108f569`, preferred width 480. This
+reference seed proves restoration; it does not accept an absent Test-tab-open
+producer. Restart normally, choose Study question and open Workspace before
+visiting Tests. At 1440×900 outer / 1424×861 content, capture 0003 shows default
+list markers, joined “Reviewed bankReviewed” and “3questions”, and compressed
+hierarchy. Visit Tests, return to the same Chat and retained preview: capture
+0005 shows the correctly separated labels, question-count hierarchy and
+spacing. The preview must load its own existing styles independently of route
+entry. Tests/shell owners retain that source fix.
+
+At 1000×900 outer / 984×861 content and native 200% zoom, the restored preview
+uses a focused single pane. Tab from Use a timer reaches Continue to Study
+with visible focus in capture 0004. This checks that named transition/control;
+it does not establish full tab order, pointer resizing or Windows DPI behavior.
+All five captures are under `C:/Renulus/scratch/dcctl/rev1/c/s-59e2b4de/out/`.
+
+Two preliminary terminal clients delayed output and were interrupted before UX
+actions. Read-only checks found none of their six exact observed process IDs
+remaining. Their startups are operator recovery, not successful normal
+close evidence. The earlier s-60e257ce session receipt gained a further launch;
+the prior manifest retains its original three-launch/three-close receipt
+snapshot and unchanged screenshot hashes. Current normal-close acceptance
+rests on the fresh s-59e2b4de session above.
+
+| Screen/state | Connected coverage and exact open scope |
+| --- | --- |
+| Home / default New chat | The 84+mount pass rendered the real Home composer and isolated draft loss through actual Test policy start/release without navigation. R3 remains open; provider-backed daily suggestions and complete recovery focus are not accepted. |
+| Chat | Actual Study-to-saved-Chat preparation, retained public-question draft, CSV upload/rights/Open file and reader were checked on 84+mount. This follow-up reconfirms preparation and draft restoration. No Send or model-response acceptance. |
+| Library / reader | The 873 pass covered actual PDF page 3 and CSV rows 101–200; 84+mount covered real Chat CSV upload/preview and restart. R7 position loss and R10 Files inventory remain open. This is not full format/extraction/OCR or Library eligibility acceptance. |
+| Tests collection / setup / Import | Actual reviewed creation, pasted private-original review, edited-key re-selection and explicit Imported/Personal/Ready Version 1 publication passed on 84+mount. Current restored setup recheck confirms R4. R9 edited-key copy, media imports, normalization/retry and native chooser remain open. |
+| Study / assistance | Actual Study answer commitment and summary, Notes pane opening and Ask in chat were checked on 84+mount. Current R6 recheck uses a UI-started reviewed Study. G1 Notes creation and G2 Reader receipt/abort consumer remain open. |
+| Test / results / restricted navigation | Actual Untimed Imported Test, Home restriction, no Pause action, keyboard final submission and personal 0/2 result passed on 84+mount. Ten route denials and eight Study-help guard tests retain their separate backend scope. Timed expiry/sleep, ambiguous acknowledgement and full results/filter/export behavior remain open. |
+| Workspace / keyboard / narrow / zoom | The retained passes cover real mounting, 480 preference restoration, keyboard width changes and safe tabs. This follow-up adds 1000×900 / 200% restored-preview focus and desktop before/after route pixels. Pointer drag, concurrent preference writes and general focus routing remain open. |
+| Project / Goals | Earlier recorded continuation covers real project context, no inherited Chat tabs and truthful empty Goals. Current 319 baseline full project creation/goal workflows were not rerun or accepted. |
+| Settings / Nightly / delivery | Earlier continuation covers actual Off preferences and keyboard/narrow/200% rendering. Current full Settings and enabled Nightly workflows were not rerun. Physical dialogs, installed Windows delivery, scaling/high contrast and subscription acceptance remain separate gates. |
+| Editable Figma C | DC01 checklist covers representative C screens and 46 Test specimens. `81:5381` and ten related frames have screenshot-verified unpausable Test copy in `fc732598`. Design pixels establish the visual contract, not connected feature completion. |
+
+The highest-priority data finding remains R8 reviewed progress omission. No
+other lane is blocked by this report, no source repair is attempted here and
+no feature ticket is marked complete. The remaining producer/consumer gates
+in the preceding section continue to apply.
+
+Checkpoint checks passed: `git diff --check` and the public workspace check
+(18,426 public files, 1,169 local links, 27 topics and 199 subtopics). The exact
+lane root and status identify this report as the sole Git content change.
 
 ## Reservation, commits and source identity
 
