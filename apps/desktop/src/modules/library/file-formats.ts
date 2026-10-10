@@ -1,6 +1,7 @@
 import type { Capabilities } from './types';
 
 const textExtensions = new Set(['txt', 'md']);
+const markupExtensions = new Set(['csv', 'html', 'htm', 'xml']);
 const imageExtensions = new Set(['png', 'jpg', 'jpeg', 'tif', 'tiff']);
 const officeExtensions = new Set(['docx', 'pptx', 'xlsx']);
 const officeMedia: Record<string, string> = {
@@ -12,6 +13,7 @@ const officeMedia: Record<string, string> = {
 export function canImportFile(filename: string, capabilities: Capabilities | null): boolean {
   const extension = filename.split('.').at(-1)?.toLowerCase() ?? '';
   if (textExtensions.has(extension)) return capabilities?.text_import === true;
+  if (markupExtensions.has(extension)) return capabilities?.markup_import === true;
   if (officeExtensions.has(extension)) return capabilities?.office_import === true;
   if (extension === 'pdf' || imageExtensions.has(extension)) return capabilities?.pdf_image_import === true;
   return false;
@@ -21,8 +23,8 @@ export function fileImportProblem(file: File, capabilities: Capabilities | null)
   if (file.size > 64 * 1024 * 1024) return 'This file exceeds 64 MiB. Choose a smaller document.';
   if (file.size === 0) return 'This file is empty. Choose a file with study material.';
   const extension = file.name.split('.').at(-1)?.toLowerCase() ?? '';
-  if (!textExtensions.has(extension) && !imageExtensions.has(extension) && !officeExtensions.has(extension) && extension !== 'pdf') {
-    return 'Choose a PDF, PNG, JPEG, TIFF, text, DOCX, PPTX or XLSX file.';
+  if (!textExtensions.has(extension) && !markupExtensions.has(extension) && !imageExtensions.has(extension) && !officeExtensions.has(extension) && extension !== 'pdf') {
+    return 'Choose PDF, PNG, JPEG, TIFF, text, CSV, HTML, XML, DOCX, PPTX or XLSX.';
   }
   if (!capabilities) return 'Check document processing availability before importing this file.';
   if (!canImportFile(file.name, capabilities)) return 'Processing this file format is unavailable. Check Connections, then refresh processing availability.';

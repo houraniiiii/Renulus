@@ -30,7 +30,7 @@ def create_router(services):
 
     @router.post("/original")
     def original(body: ReaderRequest):
-        source = repository.original(body)
+        source = repository.download(body)
         return Response(source.data, media_type="application/octet-stream", headers={
             "Content-Disposition": "attachment; filename*=UTF-8''" + quote(source.filename, safe=""),
             "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",

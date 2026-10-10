@@ -5,6 +5,9 @@ function ordinal(value: unknown): value is number {
 }
 
 export function sourceLocationLabel(locators: Locator[]): string {
+  const table = locators.map(value => value.content_locator).find(value => value?.kind === 'table');
+  if (table?.kind === 'table') return (table.sheet_name ? 'Sheet ' + table.sheet_name + ' · ' : '') +
+    'Rows ' + table.first_row + '–' + table.last_row + ' · columns ' + table.first_column + '–' + table.last_column;
   const pages = [...new Set(locators.map(value => value.page).filter(ordinal))];
   if (pages.length) return 'Page ' + pages.join(', ');
   const slides = [...new Set(locators.filter(value => value.format === 'pptx').map(value => value.slide).filter(ordinal))];

@@ -130,3 +130,24 @@ def test_declared_limits_reject_csv_and_deep_xml_before_renderer_publication():
     with pytest.raises(ApiError) as caught:
         text_payload(("<x>" * 81 + "SYNTHETIC" + "</x>" * 81).encode(), ".xml", request())
     assert caught.value.code == "reader_markup_limit"
+
+
+def test_new_markup_adapters_feed_actual_hybrid_chunker_with_synthetic_tokenizer(tmp_path):
+    # Real installed Docling transform/serialization; not an embedding-helper proof.
+    from tokenizers import Tokenizer, models, pre_tokenizers
+    from renulus.knowledge.engines import DoclingExtractor
+    tokenizer = Tokenizer(models.WordLevel({"[UNK]": 0}, unk_token="[UNK]"))
+    tokenizer.pre_tokenizer = pre_tokenizers.Whitespace()
+    extractor = DoclingExtractor(None)
+    extractor._tokenizer = tokenizer
+    samples = {".csv": b"topic,value\nSYNTHETIC AKI,15%\n", ".html": b"<p>SYNTHETIC transplant study</p><script>OMIT_SCRIPT</script>",
+               ".xml": b"<study>SYNTHETIC glomerular context</study>"}
+    for suffix, raw in samples.items():
+        path = tmp_path / ("SYNTHETIC" + suffix); path.write_bytes(raw)
+        extracted = extractor.extract_file(path, "SYNTHETIC extraction")
+        assert extracted.passages and extracted.document["schema_name"] == "DoclingDocument"
+        assert "OMIT_SCRIPT" not in json.dumps(extracted.document)
+        locators = [location for passage in extracted.passages for location in passage["locators"]]
+        assert locators and all("content_locator" in location for location in locators)
+        volatile = extractor.extract_bytes(raw, path.name, "SYNTHETIC volatile extraction")
+        assert volatile.passages == extracted.passages

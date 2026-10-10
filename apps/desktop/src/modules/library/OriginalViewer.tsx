@@ -44,6 +44,7 @@ export default function OriginalViewer({ citation, wholeOriginal }: { citation: 
         {imageExtension && <div className="actions"><a className="button button-secondary" href={original.url} download={'renulus-original.' + imageExtension}>Save original (.{imageExtension})</a></div>}
       </figure> :
       original.text !== undefined ? <pre className="library-original-text">{original.text}</pre> :
-        <iframe className="library-original" title="Original document viewer" src={original.url + (citation.page !== null ? '#page=' + citation.page : '')} />)}
+        original.type === 'application/pdf' ? <iframe className="library-original" title="Original document viewer" src={original.url + (citation.page !== null ? '#page=' + citation.page : '')} /> :
+          <p className="muted">Use Read in app for this format. Raw markup is never mounted as a document.</p>)}
   </>;
 }

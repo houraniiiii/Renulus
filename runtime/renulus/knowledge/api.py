@@ -7,13 +7,15 @@ from typing import Literal
 from urllib.parse import unquote
 
 from fastapi import APIRouter, Query, Request
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from ..contracts import ApiError, ContextScope, Event, Scope
 from .collection import CollectionCatalogue
 from .engines import MAX_BYTES
 from .models import Rights, SourceMetadata, own_text_rights
+from .reader import ReaderRepository
+from .reader_models import ReaderRequest
 from .repository import KnowledgeRepository, MEDIA, TERMINAL
 from .worker import IngestionWorker
 
@@ -183,10 +185,12 @@ def create_router(services) -> APIRouter:
 
     @router.get("/revisions/{revision_id}/original")
     def original(revision_id: str):
-        path, media_type = repository.original(revision_id)
-        return FileResponse(path, media_type=media_type, filename="document" + path.suffix,
-            content_disposition_type="inline", headers={"Cache-Control": "no-store",
-            "X-Content-Type-Options": "nosniff", "Content-Security-Policy": "default-src 'none'"})
+        request = ReaderRequest(reference={"target": {"type": "library_revision", "id": revision_id}})
+        source = ReaderRepository(services).download(request)
+        markup = source.media_type in {"text/html", "application/xml", "text/xml"}
+        return Response(source.data, media_type="application/octet-stream" if markup else source.media_type,
+            headers={"Cache-Control": "no-store", "Content-Disposition": "attachment" if markup else "inline",
+                     "X-Content-Type-Options": "nosniff", "Content-Security-Policy": "default-src 'none'; sandbox"})
 
     @router.get("/collection/preview")
     def preview(source_id: str | None = None, limit: int = 250, offset: int = 0):

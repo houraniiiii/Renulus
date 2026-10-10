@@ -8,6 +8,8 @@ from pathlib import Path
 
 from ..contracts import ApiError
 from ..cases.originals import load_metadata, read_original
+from ..storage.assessment_policy import policy_snapshot, require_assistance
+from ..storage.invalidation import context_epoch_in
 from .models import Rights
 from .reader_binary import binary_asset, docx_payload, image_payload, pdf_payload, xlsx_payload
 from .reader_models import ReaderRequest
@@ -44,10 +46,6 @@ class Original:
 class ReaderRepository:
     def __init__(self, services):
         self.services, self.db, self.paths = services, services.db, services.paths
-        self._policy_snapshot = self._require_assistance = self._context_epoch_in = None
-
-    def bind_shared_policy(self, policy_snapshot, require_assistance, context_epoch_in):
-        """Parent supplies its shared helpers; this module owns no policy state."""
         self._policy_snapshot = policy_snapshot
         self._require_assistance = require_assistance
         self._context_epoch_in = context_epoch_in
@@ -72,8 +70,9 @@ class ReaderRepository:
     def _owned_path(self, value, folder):
         if not value:
             raise ApiError("original_missing", "Restore a full backup containing this original", 404)
+        folder = folder.resolve()
         path = Path(value).resolve()
-        if not path.is_relative_to(folder.resolve()) or not path.is_file():
+        if not folder.is_relative_to(self.paths.library.resolve()) or not path.is_relative_to(folder) or not path.is_file():
             raise ApiError("original_missing", "The retained original is unavailable", 404)
         return path
 
@@ -234,6 +233,11 @@ class ReaderRepository:
         data = binary_asset(original.data, MEDIA_SUFFIX.get(original.media_type), request.asset_id)
         self._check_current(request, original)
         return data
+
+    def download(self, request):
+        original = self.original(request)
+        self._check_current(request, original)
+        return original
 
     def passage(self, request):
         original = self.original(request, "passage")

@@ -29,6 +29,7 @@ export interface Locator {
   cell_bbox?: { l: number; t: number; r: number; b: number; coord_origin: string };
   bbox?: { l: number; t: number; r: number; b: number; coord_origin: string };
   page_size?: { width: number; height: number };
+  content_locator?: import('../../platform/designC').ContentLocator;
 }
 export interface Passage {
   id: string; text: string; context_text: string; document_id: string; document_revision: string;
@@ -43,4 +44,4 @@ export interface CatalogueEntry {
   processing_status: string; error_code: string | null;
 }
 export interface Catalogue { entries: CatalogueEntry[]; total: number; offset: number }
-export interface Capabilities { text_import: boolean; pdf_image_import: boolean; office_import?: boolean; temporary_extraction: boolean }
+export interface Capabilities { text_import: boolean; pdf_image_import: boolean; office_import?: boolean; markup_import?: boolean; temporary_extraction: boolean }

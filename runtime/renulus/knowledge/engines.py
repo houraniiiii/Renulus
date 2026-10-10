@@ -261,6 +261,10 @@ class DoclingExtractor:
 
     def extract_file(self, path: Path, title: str) -> Extracted:
         from .office import OFFICE_MEDIA
+        if path.suffix.lower() in (".csv", ".html", ".htm", ".xml"):
+            from .reader_extraction import extract_markup
+            with path.open("rb") as source:
+                return extract_markup(self, source.read(4 * 1024 * 1024 + 1), path.suffix.lower(), title)
         if path.suffix.lower() in OFFICE_MEDIA:
             with self._conversion_lock:
                 return self._extract_office(path)
@@ -300,6 +304,9 @@ class DoclingExtractor:
         suffix = Path(filename).suffix.lower()
         if len(data) > TEMP_MAX_BYTES:
             raise ApiError("document_limit", "Temporary input is limited to 10 MiB", 413)
+        if suffix in (".csv", ".html", ".htm", ".xml"):
+            from .reader_extraction import extract_markup
+            return extract_markup(self, data, suffix, title)
         if suffix not in (".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".txt", ".md"):
             raise ApiError("unsupported_file", "Choose a PDF, image or UTF-8 text input", 415)
         if suffix in (".txt", ".md"):

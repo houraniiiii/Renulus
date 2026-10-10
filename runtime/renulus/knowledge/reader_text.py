@@ -158,26 +158,33 @@ def xml_payload(data):
     return ReaderPayload(kind="text", blocks=(block("code", text, 0),))
 
 
-def csv_payload(text, request):
+def csv_rows(text):
     try:
         dialect = csv.Sniffer().sniff(text[:8192], delimiters=",;\t|")
     except csv.Error:
         dialect = csv.excel
     reader = csv.reader(StringIO(text), dialect, strict=True)
-    rows, total, columns, count = [], 0, 0, 0
+    total, columns = 0, 0
     try:
         for number, row in enumerate(reader, 1):
-            count = number
             total += len(row)
             columns = max(columns, len(row))
             if total > MAX_CELLS or columns > MAX_COLUMNS or number > 100000:
                 raise ApiError("reader_table_limit", "The table exceeds 100,000 cells or 200 columns", 413)
             if any(len(cell) > 20000 for cell in row):
                 raise ApiError("reader_table_limit", "A table cell exceeds 20,000 characters", 413)
-            if request.first_row <= number < request.first_row + request.row_limit:
-                rows.append(tuple(ReaderCell(display=value, value=value) for value in row))
+            yield number, row
     except csv.Error:
         raise ApiError("reader_csv_invalid", "The CSV quoting or cell size is invalid", 422) from None
+
+
+def csv_payload(text, request):
+    rows, columns, count = [], 0, 0
+    for number, row in csv_rows(text):
+        count = number
+        columns = max(columns, len(row))
+        if request.first_row <= number < request.first_row + request.row_limit:
+            rows.append(tuple(ReaderCell(display=value, value=value) for value in row))
     return ReaderPayload(kind="table", table=ReaderTable(format="csv", first_row=request.first_row,
         total_rows=count, total_columns=columns, rows=tuple(rows)))
 

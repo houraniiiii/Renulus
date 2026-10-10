@@ -10,6 +10,8 @@ from renulus.contracts import ApiError
 from renulus.knowledge.models import own_text_rights
 from renulus.knowledge.reader_api import create_router
 from renulus.server import create_app
+from renulus.storage.assessment_policy import advance_policy
+from renulus.storage.invalidation import bump_context_epoch
 
 
 @pytest.fixture
@@ -39,12 +41,13 @@ def test_queued_then_failed_original_reads_and_bounded_passage_use_actual_router
     response = client.post("/api/v1/readers/resolve", json={"reference": reference})
     assert response.status_code == 200
     body = response.json()
-    assert body["preview_state"] == "ready" and not body["capabilities"]["passage"]
+    assert body["preview_state"] == "ready" and body["capabilities"]["passage"]
     item = body["payload"]["blocks"][1]
     selected = client.post("/api/v1/readers/passage", json={"reference": reference,
-        "original_sha256": body["original"]["sha256"], "locator": item["locator"]})
+        "original_sha256": body["original"]["sha256"], "locator": item["locator"],
+        "expected_policy_revision": body["policy_revision"], "expected_context_epoch": body["context_epoch"]})
     assert item["text"] == "Study reversible causes."
-    assert selected.status_code == 503 and selected.json()["error"]["code"] == "reader_policy_unavailable"
+    assert selected.status_code == 200 and selected.json()["text"] == "Study reversible causes."
     db = reader_app.state.services.db
     db.execute("UPDATE knowledge_revisions SET status='failed' WHERE id=?", (reference["target"]["id"],))
     assert client.post("/api/v1/readers/resolve", json={"reference": reference}).json()["preview_state"] == "ready"
@@ -65,9 +68,10 @@ def test_display_and_model_permissions_are_independent_and_delete_removes_read_a
     body = client.post("/api/v1/readers/resolve", json={"reference": reference}).json()
     assert body["preview_state"] == "ready" and not body["capabilities"]["passage"]
     denied = client.post("/api/v1/readers/passage", json={"reference": reference,
-        "original_sha256": body["original"]["sha256"], "locator": {"kind": "table", "format": "csv",
+        "original_sha256": body["original"]["sha256"], "expected_policy_revision": body["policy_revision"],
+        "expected_context_epoch": body["context_epoch"], "locator": {"kind": "table", "format": "csv",
             "first_row": 2, "last_row": 2, "first_column": 1, "last_column": 2}})
-    assert denied.status_code == 503  # Shared policy is a real unresolved prerequisite.
+    assert denied.status_code == 403
     rights["display"] = False
     db.execute("UPDATE knowledge_revisions SET rights_json=? WHERE id=?", (json.dumps(rights), reference["target"]["id"]))
     assert client.post("/api/v1/readers/original", json={"reference": reference}).status_code == 403
@@ -82,6 +86,9 @@ def test_malicious_html_is_inert_and_invalid_xml_reports_failure_while_retaining
     response = client.post("/api/v1/readers/resolve", json={"reference": reference})
     assert response.status_code == 200 and "SYNTHETIC dialysis" in response.text
     assert "fetch(" not in response.text and "file:///" not in response.text
+    old_route = client.get("/api/v1/library/revisions/" + reference["target"]["id"] + "/original")
+    assert old_route.status_code == 200 and old_route.headers["content-type"] == "application/octet-stream"
+    assert old_route.headers["content-disposition"] == "attachment"
     xml = saved_source(reader_app, tmp_path, "SYNTHETIC.xml", b'<!DOCTYPE x [<!ENTITY e "unsafe">]><x>&e;</x>')
     result = client.post("/api/v1/readers/resolve", json={"reference": xml}).json()
     assert result["preview_state"] == "failed" and result["error"]["code"] == "reader_xml_invalid"
@@ -102,21 +109,51 @@ def test_hash_mismatch_missing_original_and_uninstalled_attachment_schema_are_ho
     assert response.status_code == 503 and response.json()["error"]["code"] == "reader_schema_unavailable"
 
 
-def test_policy_rechecked_after_actual_parse_before_passage_publication(reader_app, tmp_path):
+def test_persisted_shared_policy_and_restore_epoch_refuse_stale_passages(reader_app, tmp_path):
     reference = saved_source(reader_app, tmp_path, "SYNTHETIC.txt", b"SYNTHETIC glomerular study")
     client = TestClient(reader_app)
     body = client.post("/api/v1/readers/resolve", json={"reference": reference}).json()
-    operations = []
-    # Contract-boundary check only; this does not establish the parent's active-Test producer.
-    def snapshot(conn):
-        return {"revision": 3, "active_test_id": None, "assistance_allowed": True}
-    def require(conn, *, expected_revision=None):
-        operations.append(expected_revision)
-        if operations.count(3) == 2:
-            raise ApiError("active_test_help_denied", "SYNTHETIC policy changed", 403)
-        return 3
-    reader_app.state.services.get("readers").bind_shared_policy(snapshot, require, lambda conn: 1)
-    result = client.post("/api/v1/readers/passage", json={"reference": reference,
+    db = reader_app.state.services.db
+    command = {"reference": reference,
         "original_sha256": body["original"]["sha256"], "locator": body["payload"]["blocks"][0]["locator"],
-        "expected_policy_revision": 3, "expected_context_epoch": 1})
-    assert result.status_code == 403 and operations == [3, 3]
+        "expected_policy_revision": body["policy_revision"], "expected_context_epoch": body["context_epoch"]}
+    with db.transaction() as conn:
+        conn.execute("INSERT INTO assessment_test_attempts(id,version_id,version_snapshot_json,mode,status,clock_high_water_at,created_at,updated_at) VALUES(?,?,'{}','test','active',?,?,?)",
+            ("SYNTHETIC_attempt", "SYNTHETIC_version", "2026-10-10T00:00:00Z", "2026-10-10T00:00:00Z", "2026-10-10T00:00:00Z"))
+        advance_policy(conn)
+    assert client.post("/api/v1/readers/resolve", json={"reference": reference}).status_code == 409
+    assert client.post("/api/v1/readers/passage", json=command).json()["error"]["code"] == "assistance_restricted"
+    with db.transaction() as conn:
+        conn.execute("UPDATE assessment_test_attempts SET status='submitted' WHERE id='SYNTHETIC_attempt'")
+        advance_policy(conn)
+    assert client.post("/api/v1/readers/passage", json=command).json()["error"]["code"] == "assistance_changed"
+    current = client.post("/api/v1/readers/resolve", json={"reference": reference}).json()
+    command["expected_policy_revision"] = current["policy_revision"]
+    assert client.post("/api/v1/readers/passage", json=command).status_code == 200
+    with db.transaction() as conn:
+        bump_context_epoch(conn)
+    assert client.post("/api/v1/readers/passage", json=command).json()["error"]["code"] == "reader_context_changed"
+
+
+def test_legacy_case_original_keeps_exact_bytes_and_case_authority(reader_app):
+    from io import BytesIO
+    from PIL import Image
+    from renulus.cases.models import StartCase
+    from renulus.cases.originals import accepted_original
+    cases = reader_app.state.services.get("cases")
+    buffer = BytesIO(); Image.new("RGB", (20, 20), "white").save(buffer, format="PNG")
+    original_bytes = buffer.getvalue()
+    original = accepted_original("SYNTHETIC.png", "SYNTHETIC saved Case original", "image/png", original_bytes)
+    case = cases.start(StartCase(text="SYNTHETIC saved Case"))
+    case = cases.attach(case["id"], case["revision"], original)
+    case = cases.save(case["id"], case["revision"])
+    client = TestClient(reader_app)
+    body = {"reference": {"target": {"type": "attachment", "id": original["id"]}},
+            "conversation": {"type": "case", "id": case["id"]}}
+    result = client.post("/api/v1/readers/resolve", json=body)
+    assert result.status_code == 200 and result.json()["authority"] == "case"
+    assert not result.json()["capabilities"]["passage"]  # Legacy rights are not silently broadened.
+    assert client.post("/api/v1/readers/original", json=body).content == original_bytes
+    assert cases.original(case["id"], original["id"])[1] == original_bytes
+    body["conversation"] = {"type": "learn_thread", "id": "SYNTHETIC_other"}
+    assert client.post("/api/v1/readers/resolve", json=body).status_code == 403

@@ -344,7 +344,7 @@ export default function LibraryPage({ onPassage }: { onPassage?: (passage: Passa
           {replacement && <Notice><p>Retrying {replacement.title}. Edition and original terms will be retained.</p></Notice>}
           <Input label="Title" value={title} disabled={busy} onChange={event => setTitle(event.target.value)} maxLength={500} />
           {mode === 'text' ? <Textarea label="Your study note" value={text} disabled={busy} onChange={event => setText(event.target.value)} hint="Deliberately added study material is saved in your personal library." /> : <>
-            <Input label="Choose a study document" type="file" disabled={busy} accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.txt,.md,.docx,.pptx,.xlsx" hint="PDF, image, text, Word (.docx), PowerPoint (.pptx) or Excel (.xlsx)." error={fileProblem} onChange={event => { setFile(event.target.files?.[0] ?? null); setAllowed(false); }} />
+            <Input label="Choose a study document" type="file" disabled={busy} accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.txt,.md,.csv,.html,.htm,.xml,.docx,.pptx,.xlsx" hint="PDF, image, text, CSV, HTML, XML, Word (.docx), PowerPoint (.pptx) or Excel (.xlsx)." error={fileProblem} onChange={event => { setFile(event.target.files?.[0] ?? null); setAllowed(false); }} />
             {file && <p className="field-hint">Selected: {file.name} · {(file.size / 1024 / 1024).toFixed(2)} MiB</p>}
             <label className="library-check"><input type="checkbox" checked={allowed} disabled={busy} onChange={event => setAllowed(event.target.checked)} />I have permission to read, store, index and use this file for local learning.</label>
             <p className="muted">Maximum 64 MiB. Original terms remain attached to the file.</p>

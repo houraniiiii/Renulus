@@ -151,7 +151,10 @@ class KnowledgeRepository:
                 raise
 
     def capabilities(self):
-        return self.assets.capabilities()
+        result = self.assets.capabilities()
+        import importlib.util
+        result["markup_import"] = bool(result["text_import"] and importlib.util.find_spec("defusedxml"))
+        return result
 
     def extract_bytes(self, data: bytes, filename: str, title: str):
         if self.capabilities()["temporary_extraction"] is not True:
