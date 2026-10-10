@@ -47,7 +47,9 @@ export default function CandidateEditor({ candidate, ordinal, locked, immutable,
         onClick={() => onEdit({ stem, options, explanation, topic_id: candidate.topic_id }, discard)}>Save edits</Button>
         <Button variant="ghost" disabled={locked} onClick={discard}>Discard unsaved edits</Button></div></div>}
     {!immutable && !candidate.removed && <div className="import-resolution">
-      {(candidate.key_state === 'missing' || candidate.key_state === 'ambiguous') && <Notice tone="warning">{candidate.key_state === 'missing'
+      {(candidate.key_state === 'missing' || candidate.key_state === 'ambiguous') && <Notice tone="warning">{candidate.edited
+        ? 'Your edit requires a new answer review. Select the correct answers and confirm them against the unchanged original.'
+        : candidate.key_state === 'missing'
         ? 'The original supplies no clear answer. Choose only answers you can personally resolve.'
         : 'The original supplies conflicting answers. Resolve the conflict against the original.'}</Notice>}
       <label className="import-check"><input type="checkbox" checked={confirmed} disabled={disabled || dirty}

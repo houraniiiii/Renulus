@@ -36,6 +36,7 @@ export function originalSlice(text: string, span: TextSpan) { return Array.from(
 export function keyLabel(candidate: ImportCandidate) {
   if (candidate.removed) return 'Removed from set';
   if (candidate.review_confirmed) return 'Reviewed by you';
+  if (candidate.edited) return 'Review after edit';
   return candidate.key_state === 'missing' ? 'Answer missing' : candidate.key_state === 'ambiguous' ? 'Original keys conflict' : 'Needs your review';
 }
 export function importMessage(draft: ImportDraft) {

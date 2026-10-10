@@ -135,6 +135,9 @@ it('recovers lost acknowledgements, edits/removes/reviews and publishes actual p
   fireEvent.change(within(question()).getByLabelText('Question text'), { target: { value: 'Personal transplant learning edit' } });
   fireEvent.click(within(question()).getByRole('button', { name: 'Save edits' }));
   await waitFor(() => expect(screen.queryByRole('button', { name: 'Save edits' })).toBeNull());
+  expect(within(question()).getByText('Review after edit')).toBeTruthy();
+  expect(within(question()).getByText('Your edit requires a new answer review. Select the correct answers and confirm them against the unchanged original.')).toBeTruthy();
+  expect(within(question()).queryByText('The original supplies no clear answer. Choose only answers you can personally resolve.')).toBeNull();
   await waitFor(() => { const answer = within(question()).getByLabelText('Correct answer A') as HTMLInputElement; expect(answer.disabled).toBe(false); expect(answer.checked).toBe(false); });
   fireEvent.click(within(question()).getByLabelText('Correct answer A'));
   fireEvent.click(within(question()).getByLabelText('I checked this question and chosen answers against the original'));
