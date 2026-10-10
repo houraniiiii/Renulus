@@ -278,3 +278,90 @@ for result in results:
 outcome=unittest.TextTestRunner(verbosity=1).run(suite)
 sys.exit(0 if outcome.wasSuccessful() else 1)
 ```
+
+## October 10 follow-up — connected imports and DC20 scope
+
+The pass-1 text and its illustrative repro above remain historical evidence.
+Later leases authorized collection, generation/nightly and import feature work.
+Those source paths are now frozen after handoff. The active DC20 reservation is
+exactly this report and `tests/integration/test_design_c_populated_upgrade.py`.
+All new profiles, archived old source and receipts stay beneath
+`C:/Renulus/scratch/design-c/dc-review-data/`. No fake migration DDL, live
+provider, owner profile, credentials, native input, push or ticket closure.
+
+### DC17 hidden receipt and independent boundary fixes
+
+The app-scoped hidden journey used the actual Tests-mounted ImportPanel and a
+private pasted synthetic original: personally review Q1, edit/resolve/review Q2,
+remove Q3 from the saved set, explicitly publish two personal questions, open
+the exact version, start Test and save both answers. A normal app restart kept
+both answers, the edited wording and help restrictions. A neutral report during
+Test retained native private import provenance. Explicit submission produced
+2/2 personal, zero blanks/excluded. Reopening the import kept the original Q2
+wording and removed Q3, alongside the edited candidate. The narrow hidden view
+was also checked at 1000×720 / 125%. No normalization or generation call ran.
+
+`imports/hidden-final.json` contains read-only SQLite assertions, identities,
+original SHA and five capture paths. The controller receipt is
+`c/s-7e1a4429/out/receipt.json`: normal restart and final close, no forced or
+remaining processes and no controller fault. Source build SHA is
+`c4b3e337fa58ee3e2754ffbf2d485cc74d0421db6a7d339ed36f3a5cc223d615`.
+This is hidden app evidence, not native installation or a packaged release.
+
+Two subsequent independent P1 findings were reproduced and fixed in separate
+bounded commits. C4 `13c14729`, integrated `a2a5f2d4`, checks current retained
+source/display/integrity authority before import Save replay, including a changed
+key/hash. `imports/c4-red.xml` retains three reproduced failures;
+`imports/c4-final2.xml` passed 35 with zero skips. C1 `f5d660aa`, integrated
+`1b12c19f`, retains the trusted native import or fictional envelope in private
+`question-report-snapshot/2`; old projections remain explicitly incomplete.
+Actual producer → attempt → report → typed deletion → Recovery JSON checks
+passed 21 (`imports/c1-run1.xml`), and two legacy checks passed
+(`imports/c1-legacy.xml`). Neither changed DDL or exposed private provenance
+through the neutral receipt. Pass-2 findings remain preserved in their owners'
+reports; these receipts do not close a feature ticket.
+
+### DC20 inventory and first actual upgrade slice
+
+The inventory identified already-proven individual behavior in contract,
+migration/import005, attachment, generation/nightly and import/report owner
+suites. Those checks are not duplicated as independent low-level guards here.
+The missing seam is a populated old profile upgraded by the actual coordinated
+app, followed by current producer writes and coordinated recovery/deletion.
+
+The new harness archives committed `1b30a89687cfcc5fb13b1cf824bbc43c19f870ed`
+runtime, its committed Hermes source, content and helper manifest. It verifies
+the captured schema1 records/inventory against the committed fixture manifest,
+restores them through the old production Recovery, and uses real old Learn,
+Library and Case-original producers. A subsequent slice also adds/edits an old
+manual learner-memory fact through its owner. No historical DDL is invented.
+Old ZIP2 restoration into separate schema1 profiles rebases originals rather
+than copying a SQLite profile with stale absolute paths.
+
+The first five checks passed on source through `08d9272f` (`dc20-4.xml`):
+populated schema1 → coordinated schema2 startup/reopen; deterministic legacy
+backfill creates two versions once; old runtime refuses the upgraded profile;
+real process exit 73 while executing committed assessment003; restart completes
+that script; actual old JSON, ZIP1 and ZIP2 restore exact historical records and
+the promised media. Case bytes use canonical SQLite parts; Library originals
+use promoted files. Records-only JSON intentionally carries no original bytes.
+
+The interruption is **per migration script**, not whole-profile rollback:
+assessment003 tables and ledger entry roll back, earlier committed scripts and
+the schema2 stamp persist, and a current restart resumes. Old runtime refusal
+after that stamp is the supported downgrade behavior. The trace marker records
+the actual `CREATE INDEX assessment_tests_recent` statement reached immediately
+before `os._exit(73)`; integrity and historical rows are checked after restart.
+
+Retained initial receipts distinguish harness mistakes from product defects:
+`dc20-1.xml` omitted required archived Hermes files; `dc20-2.xml` omitted the
+synthetic USERPROFILE; `dc20-3.xml` incorrectly assumed file-backed Case originals.
+The latter run already passed upgrade/reopen and real interruption. No source
+fix was made for those harness errors.
+
+The first combined producer setup exposed an assembly prerequisite at
+`08d9272f`: committed Notes owner existed, but `create_app` did not mount its
+router/register `notes`, so `Services.get('notes')` returned 503. Reported early;
+`dc20-5.xml` retains the three setup errors. The lead published the actual
+`knowledge.note_api` mount in `a4439597`; the acceptance harness will consume the
+normal shared merge and use the assembled owner, without a substitute router.
