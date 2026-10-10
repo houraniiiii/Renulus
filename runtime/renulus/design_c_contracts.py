@@ -289,6 +289,7 @@ TABLE_COLUMNS = {
     "study_project_goals": ("id", "project_id", "title", "topic_id", "target_date", "status", "progress_json", "revision", "created_at", "updated_at"),
     "knowledge_attachments": ("id", "chat_kind", "chat_id", "title", "media_type", "revision", "extraction_state", "index_state", "created_at", "updated_at"),
     "knowledge_attachment_originals": ("id", "attachment_id", "role", "original_path", "sha256", "bytes", "created_at"),
+    "knowledge_attachment_metadata": ("attachment_id", "filename", "source_id", "metadata_json", "rights_json", "preview_state", "preview_revision", "preview_json", "extraction_revision", "extraction_json", "processing_json"),
     "assessment_tests": ("id", "title", "lifecycle", "revision", "created_at", "updated_at"),
     "assessment_test_versions": ("id", "test_id", "ordinal", "origin", "review_quality", "status", "items_json", "source_refs_json", "provenance_json", "terms", "sha256", "created_at"),
     "assessment_test_attempts": ("id", "version_id", "live_version_id", "version_snapshot_json", "mode", "status", "draft_revision", "committed_json", "result_json", "timing_kind", "duration_seconds", "started_at", "deadline_at", "paused_seconds", "clock_high_water_at", "paused_at", "created_at", "updated_at", "finalized_at"),

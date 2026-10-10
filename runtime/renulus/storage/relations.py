@@ -42,6 +42,7 @@ PARENTS = {
         Binding("learn_threads", ("chat_id",), "owned", ("chat_kind", "learning")),
         Binding("case_sessions", ("chat_id",), "owned", ("chat_kind", "case"))),
     "knowledge_attachment_originals": (own("knowledge_attachments", "attachment_id"),),
+    "knowledge_attachment_metadata": (own("knowledge_attachments", "attachment_id"),),
     "knowledge_source_status_events": (own("knowledge_documents", "document_id"),),
     "memory_history": (own("memory_facts", "record_id"),),
     "memory_requests": (own("memory_facts", "record_id"),),

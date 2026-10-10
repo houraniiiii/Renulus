@@ -29,8 +29,6 @@ def test_installed_feature_inventory_and_retry_outcomes_survive_recovery(tmp_pat
     services = create_app(tmp_path / "inventory").state.services
     with services.db.connect() as conn:
         for table, expected in TABLE_COLUMNS.items():
-            if table.startswith("knowledge_attachment"):
-                continue  # Knowledge003 is published with its original/media policy.
             installed = {row["name"] for row in conn.execute(f'PRAGMA table_info("{table}")')}
             assert installed == set(expected), table
         assert conn.execute("PRAGMA foreign_key_check").fetchall() == []

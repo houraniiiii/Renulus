@@ -85,6 +85,14 @@ their clean existing worktree. Separate owned profiles remain outside Git.
 
 ### Additive schema publication and policy seam
 
+Knowledge003 is now published with exact attachment/original inventories and a
+separate metadata/rights/preview sidecar. The reader router joins the assembled
+API. Eleven migration/policy/typed-recovery checks passed; installed inventory
+checks now include these tables. The reader run passed 33 checks and exposed
+three stale expectations that assumed the schema was absent; the reader owner
+is updating those tests. Typed attachment-original ZIP promotion, deletion and
+rollback evidence remains open and is owned by integration.
+
 Lead migrations Learn002, Cases003, Study002 and Assessment003/004 implement
 the published sidecars, memberships, goals, collection/version/report/job records
 and independent attempt snapshots. Exact installed column inventories are checked
