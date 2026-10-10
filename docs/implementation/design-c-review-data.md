@@ -363,5 +363,83 @@ The first combined producer setup exposed an assembly prerequisite at
 `08d9272f`: committed Notes owner existed, but `create_app` did not mount its
 router/register `notes`, so `Services.get('notes')` returned 503. Reported early;
 `dc20-5.xml` retains the three setup errors. The lead published the actual
-`knowledge.note_api` mount in `a4439597`; the acceptance harness will consume the
-normal shared merge and use the assembled owner, without a substitute router.
+`knowledge.note_api` mount in `a4439597`. The normal merge of `4316fde0` consumed
+that mount, Notes `7116e427`/`820d1906` and Progress `77e139d9`. The completed
+harness uses `services.get('notes')` from the actual assembled app.
+
+### DC20 completed populated acceptance — October 10, 2026
+
+The final receipt `C:/Renulus/scratch/design-c/dc-review-data/dc20-9.xml` records
+**eight passed, zero failures/errors/skips**, in 225.07 seconds. The tested
+production source is the normal shared baseline through `4316fde0`; lane HEAD
+before this completion commit is `cf9b93b10b9c238bbe01176bf60d6ba27ac3ef8d`.
+No material recovery failure remains in this bounded suite. Later canonical
+commits are not implicitly covered by this receipt. The original pass-1 findings
+and their reproduced failures above remain intact.
+
+| Combined scenario | Actual evidence | Result |
+| --- | --- | --- |
+| Populated schema1 upgrade and reopen | Archived committed old runtime restores the captured fixture, writes Learn/Library/Case originals and two memory revisions; current `create_app` applies real migrations, preserves historical rows and IDs, backfills two legacy versions once, then reopens without duplicates. Old runtime refuses schema2. | 1 passed |
+| Interrupted coordinated upgrade | Child process exits 73 at the committed assessment003 index statement. Failed-script tables/ledger roll back, SQLite integrity passes, earlier scripts/schema2 stamp remain, and current restart completes with preserved history. | 1 passed |
+| Old JSON/ZIP1/ZIP2 into current app | Original schema1 exports from the old runtime preserve captured Learn/Case/assessment/Knowledge/memory/evidence rows. ZIP originals retain their respective file/SQLite-parts representation; JSON retains records without original bytes. Restore invalidates local context and Library readiness without memory work. | 3 passed |
+| Current producers, restore, reopen and deletion in JSON/ZIP1/ZIP2 | A genuinely upgraded profile produces Project/Goal, two Notes revisions, saved Chat/PNG/draft, edited and personally resolved import, reviewed-bank version, generated version, whole attempts and native private reports. Older restore honors owner tombstones; post-deletion exports restore into fresh profiles with retained independent history and without removed owners/media. | 3 passed |
+
+The current chain uses real registered repositories and migrations. Generation
+routes through the actual selected ProviderManager to one installed synthetic
+transport batch: Codex `gpt-6.1-sol`, five accepted questions, one call total.
+Its in-memory synthetic token is absent from exports. External socket connects
+are rejected; exact loopback addresses are allowed for Windows asyncio's
+self-pipe. Child environments strip account/provider variables and use only
+lane-owned profile/cache/temp paths. No live provider or credential was used.
+
+The imported personal attempt retains one correct answer, one unanswered and
+denominator two; the reviewed attempt retains two correct out of two. Actual
+Study Progress retains three reviewed answers (one captured old plus two new),
+with personal questions excluded. Submitted result JSON, attempt snapshots,
+immutable versions and private question-report snapshots survive all three
+restores. Deleting the imported live version clears its submitted attempt's
+live pointer while preserving its historical result and report provenance.
+
+Project deletion removes memberships and Goal while preserving independent
+Chat/Notes owners. Chat deletion removes owned attachment metadata/originals.
+Import/version deletion and Case remove-attachment plus Save resist older
+archive resurrection. ZIP Notes deletion also resists older archives. A final
+export after those deletions, restored into a fresh profile, checks both ZIP
+source filters and JSON filtering: deleted owners/media stay absent, the
+independent old Library original survives ZIP, and memory/history, reports,
+attempt results and Study Progress remain. Foreign-key checks pass.
+
+Restore advances local context and memory index epochs, leaves memory readiness
+non-ready and sets Library restore-dirty. Local `design_c.context_epoch`,
+`knowledge.restore_dirty` and `nightly.state` are absent from exported preferences.
+Reopening creates no duplicate legacy versions or generation/import tasks;
+memory jobs remain empty. This suite uses completed producer jobs, so it does
+not add a second proof of the separate active-job restore-interruption guards.
+
+`dc20-6.xml` retains the strict attachment admission failure from an invalid
+minimal PNG CRC; the fixture was corrected to a valid synthetic PNG.
+`dc20-7.xml` retains the harness's overly strict socket guard blocking the
+Windows asyncio self-pipe; the guard now permits exact loopback only. Neither
+required a production change. `dc20-8.xml` passed the three combined scenarios
+before the final fresh-profile source-filter checks. `dc20-9.xml` is the final
+complete result; earlier receipts remain available.
+
+Reproduce from this worktree with the installed contributor Python, a synthetic
+profile/cache/temp environment under the lane scratch root, and offline helper
+flags. The harness itself creates uniquely named profiles and archives the
+committed old source; it requires that commit and the committed fixture manifest.
+
+```powershell
+C:/Renulus/dev/python/Scripts/python.exe -m pytest tests/integration/test_design_c_populated_upgrade.py -p no:cacheprovider -q --basetemp=C:/Renulus/scratch/design-c/dc-review-data/dc20-pytest9 --junitxml=C:/Renulus/scratch/design-c/dc-review-data/dc20-9.xml
+```
+
+Remaining acceptance is explicit. The historical runtime runs with installed
+Python/dependencies; this is not a historical packaged executable or matching C
+Windows installation. Library/Notes extraction remains queued here: original
+and revision preservation is proved, successful extraction/index rebuild is
+not. This whole populated harness does not claim mounted HTTP Notes rights or
+Study help/context/stale-draft behavior. Poincare's disjoint Notes test/report
+lease owns that acceptance, and received the actual passing seams and resolved
+mount prerequisite. Worker/native/helper and final matching-source integration
+remain separately scoped. No source/schema changes or feature-ticket closure
+are part of this two-file checkpoint.

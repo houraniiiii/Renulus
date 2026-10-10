@@ -26,6 +26,7 @@ OLD_COMMIT = '1b30a89687cfcc5fb13b1cf824bbc43c19f870ed'
 FIXTURES = REPO / 'packages/contracts/fixtures/design-c'
 PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAE0lEQVR4nGP8//8/AwMDEwMYAAAkBgMBXaJOiAAAAABJRU5ErkJggg=='
 HISTORY_TABLES = ('learn_threads', 'learn_messages', 'learn_runs', 'case_sessions', 'case_attachments',
+    'knowledge_documents', 'knowledge_revisions', 'knowledge_passages', 'knowledge_jobs',
     'assessment_sessions', 'assessment_items', 'assessment_attempts',
     'assessment_exposure', 'assessment_generated_sessions', 'assessment_generated_items',
     'assessment_generated_attempts', 'memory_facts', 'memory_history', 'learning_evidence')
@@ -105,11 +106,18 @@ def legacy():
 
 @pytest.fixture(scope='module', autouse=True)
 def no_network():
-    def forbidden(*args, **kwargs):
-        raise AssertionError('DC20 populated upgrade cannot use live providers or network')
+    connect, connect_ex = socket.socket.connect, socket.socket.connect_ex
+    def local_only(original):
+        def guarded(instance, address):
+            # Windows asyncio's self-pipe is a loopback socketpair. No external
+            # endpoint is permitted; the selected provider transport is synthetic.
+            if isinstance(address, tuple) and address[0] in ('127.0.0.1', '::1'):
+                return original(instance, address)
+            raise AssertionError('DC20 populated upgrade cannot use live providers or external network')
+        return guarded
     with pytest.MonkeyPatch.context() as monkeypatch:
-        monkeypatch.setattr(socket.socket, 'connect', forbidden)
-        monkeypatch.setattr(socket.socket, 'connect_ex', forbidden)
+        monkeypatch.setattr(socket.socket, 'connect', local_only(connect))
+        monkeypatch.setattr(socket.socket, 'connect_ex', local_only(connect_ex))
         yield
 
 
@@ -158,6 +166,9 @@ def assert_legacy_history(services, legacy, *, additional=False):
     original = json.loads((legacy['profile'] / 'legacy-export.json').read_text(encoding='utf-8'))['records']
     for table in HISTORY_TABLES:
         expected, actual = original.get(table, []), rows(services.db, table)
+        if table == 'knowledge_revisions':
+            expected = [{**row, 'original_path': None} for row in expected]
+            actual = [{**row, 'original_path': None} for row in actual]
         if additional:
             assert all(row in actual for row in expected), table
         else:
@@ -288,7 +299,7 @@ def populated(legacy):
     from renulus.knowledge.note_models import CreateNote, EditNote
     from renulus.learn.conversation_models import NewConversation
     from renulus.storage.assessment_policy import policy_snapshot
-    from renulus.study.project_models import NewProject
+    from renulus.study.project_models import GoalInput, NewProject
 
     services = create_app(old_clone(legacy, 'current-producers')).state.services
     services.get('saved_tests').backfill_legacy()
@@ -300,6 +311,9 @@ def populated(legacy):
         idempotency_key='dc20-note-create', project_id=project['id']))
     note2 = notes.save(EditNote(title='SYNTHETIC revised glomerular note', text=NOTE_TWO,
         idempotency_key='dc20-note-edit', expected_revision_id=note1['revision_id']), document_id=note1['document_id'])
+    project = projects.get(project['id'])
+    projects.goal(project['id'], GoalInput(expected_revision=project['revision'],
+        title='SYNTHETIC dialysis learning goal', topic_id='T01'), 'create-goal', key='dc20-goal-create')
     with services.db.transaction() as conn:
         policy_revision = policy_snapshot(conn)['revision']
     attachment = services.get('knowledge_attachments').upload(AttachmentUpload(conversation=chat['identity'],
@@ -360,6 +374,9 @@ def populated(legacy):
     progress = services.get('study').progress()
     assert sum(group['answered'] for group in progress['groups'].values()) == 3  # One captured old + two current reviewed; personal excluded.
     records = export_records(services)
+    assert 'dc20-synthetic-token' not in json.dumps(records)
+    assert all(row['key'] not in {'design_c.context_epoch', 'knowledge.restore_dirty', 'nightly.state'}
+               for row in records['records']['preferences'])
     archives = {}
     for number in (1, 2):
         directory, _ = services.get('data_recovery').backup(format_version=number)
@@ -409,7 +426,10 @@ def test_populated_upgrade_current_producers_restore_reopen_and_owned_deletions(
         assert all(row['original_path'] is None for row in rows(services.db, 'knowledge_revisions'))
         assert all(row['original_path'] is None for row in rows(services.db, 'knowledge_attachment_originals'))
         assert rows(services.db, 'case_attachment_parts') == []
+        with pytest.raises(ApiError):
+            services.get('notes').get(populated['notes'][1]['document_id'])
     else:
+        assert services.get('knowledge').original(legacy['revision_id'])[0].read_text() == 'SYNTHETIC legacy transplant original with preserved ownership.\n'
         for note, text in zip(populated['notes'], (NOTE_ONE, NOTE_TWO)):
             assert services.get('notes').get(note['document_id'], revision_id=note['revision_id'])['text'] == text
         for original in rows(services.db, 'knowledge_attachment_originals'):
@@ -419,6 +439,7 @@ def test_populated_upgrade_current_producers_restore_reopen_and_owned_deletions(
     assert services.get('saved_tests').backfill_legacy()['created'] == 0
     assert services.get('study').progress() == populated['progress']
     assert rows(services.db, 'memory_jobs') == []
+    assert services.get('saved_generation').tasks == services.get('saved_imports').tasks == {}
 
     # Delete actual owners then restore the older populated snapshot. Membership
     # deletion must not propagate into independently owned chats/Library notes.
@@ -427,6 +448,7 @@ def test_populated_upgrade_current_producers_restore_reopen_and_owned_deletions(
     recover_current(services, populated, format)
     assert rows(services.db, 'study_projects') == []
     assert rows(services.db, 'study_project_chats') == rows(services.db, 'study_project_documents') == []
+    assert rows(services.db, 'study_project_goals') == []
     assert services.db.fetch_one('SELECT id FROM learn_threads WHERE id=?', (populated['chat']['identity']['id'],))
     assert services.db.fetch_one('SELECT id FROM knowledge_documents WHERE id=?', (populated['notes'][0]['document_id'],))
 
@@ -439,9 +461,13 @@ def test_populated_upgrade_current_producers_restore_reopen_and_owned_deletions(
     if format != 'json':
         note = populated['notes'][1]
         services.get('notes').delete(note['document_id'], DeleteNote(expected_revision_id=note['revision_id'], idempotency_key='dc20-note-delete'))
+    case = services.get('cases').get(legacy['case_id'])
+    case = services.get('cases').remove_attachment(case['id'], legacy['attachment_id'], case['revision'])
+    services.get('cases').save(case['id'], case['revision'])
     recover_current(services, populated, format)
     assert not services.db.fetch_one('SELECT id FROM learn_threads WHERE id=?', (chat['identity']['id'],))
     assert rows(services.db, 'knowledge_attachments') == rows(services.db, 'knowledge_attachment_originals') == []
+    assert rows(services.db, 'case_attachments') == rows(services.db, 'case_attachment_parts') == []
     assert not services.db.fetch_one('SELECT id FROM assessment_test_imports WHERE id=?', (imported['id'],))
     assert not services.db.fetch_one('SELECT id FROM assessment_test_versions WHERE id=?', (populated['imported']['result']['version_id'],))
     for attempt in populated['attempts']:
@@ -459,5 +485,28 @@ def test_populated_upgrade_current_producers_restore_reopen_and_owned_deletions(
     assert populated['transport'].calls == [('codex', 'gpt-6.1-sol')]
     with services.db.connect() as conn:
         assert conn.execute('PRAGMA foreign_key_check').fetchall() == []
+    # Export the deleted state too. Both archive source filters must retain
+    # independent history while omitting removed owners and their media.
+    filtered = export_records(services)
+    fresh = create_app(legacy['root'] / ('post-delete-restore-' + format)).state.services
+    if format == 'json':
+        fresh.get('data_recovery').restore_json(filtered, confirm_backup_date=True, confirmed_exported_at=filtered['exported_at'])
+    else:
+        directory, _ = services.get('data_recovery').backup(format_version=int(format[-1]))
+        restore_zip(fresh, directory / 'backup.zip')
+        assert fresh.get('knowledge').original(legacy['revision_id'])[0].read_text() == 'SYNTHETIC legacy transplant original with preserved ownership.\n'
+        assert not fresh.db.fetch_one('SELECT id FROM knowledge_documents WHERE id=?', (populated['notes'][0]['document_id'],))
+    for table in ('study_projects', 'study_project_chats', 'study_project_documents', 'study_project_goals',
+            'knowledge_attachments', 'knowledge_attachment_originals', 'case_attachments', 'case_attachment_parts', 'assessment_test_imports'):
+        assert rows(fresh.db, table) == [], table
+    assert rows(fresh.db, 'memory_facts') == rows(services.db, 'memory_facts')
+    assert rows(fresh.db, 'memory_history') == rows(services.db, 'memory_history')
+    assert rows(fresh.db, 'assessment_question_reports') == rows(services.db, 'assessment_question_reports')
+    assert fresh.get('study').progress() == populated['progress']
+    for attempt in populated['attempts']:
+        assert json.loads(fresh.db.fetch_one('SELECT result_json FROM assessment_test_attempts WHERE id=?', (attempt['id'],))['result_json']) == attempt['result']
+    assert fresh.get('saved_generation').tasks == fresh.get('saved_imports').tasks == {}
+    assert rows(fresh.db, 'memory_jobs') == []
+    fresh.get('knowledge').index.close()
     services.get('knowledge').index.close()
 
