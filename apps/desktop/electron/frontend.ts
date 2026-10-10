@@ -25,7 +25,14 @@ export async function startFrontend(dist: string, backendPort: number, token: st
       const headers = { ...incoming.headers, host: '127.0.0.1:' + backendPort, 'x-renulus-token': token };
       delete headers.authorization;
       const upstream = httpRequest({ host: '127.0.0.1', port: backendPort, path: incoming.url, method: incoming.method, headers }, result => {
-        response.writeHead(result.statusCode ?? 502, { 'Content-Type': result.headers['content-type'] ?? 'application/json', 'Cache-Control': 'no-store' });
+        const apiHeaders: Record<string, string | string[]> = { 'Content-Type': result.headers['content-type'] ?? 'application/json', 'Cache-Control': 'no-store' };
+        // Originals have a stricter document policy than the trusted app shell.
+        // Keep it through the proxy rather than granting shell permissions.
+        for (const name of ['content-security-policy', 'content-disposition', 'permissions-policy']) {
+          const value = result.headers[name];
+          if (value !== undefined) apiHeaders[name] = value;
+        }
+        response.writeHead(result.statusCode ?? 502, apiHeaders);
         result.on('error', () => response.destroy());
         result.pipe(response);
       });

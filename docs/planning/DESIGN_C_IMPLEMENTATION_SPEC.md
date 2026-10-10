@@ -879,6 +879,24 @@ installation and release acceptance were not performed by this planning pass.
 
 ## 10. Implementation execution — October 10, 2026
 
+Pass 1 reviewed contract validators (`527677f3`) and the three independent
+reports. Accepted additive implementation clarifications: versions retain a
+versioned provenance JSON; collection mutation commands have their own request
+fingerprint/outcome ledger; reports keep an independent question snapshot and
+request hash. Stable legacy mapping uses exact kind/session pins, deterministic
+IDs and tombstone refusal, without rewriting legacy sessions or partial scores.
+Attempts keep frozen Study commitments separate from drafts, immutable terminal
+results, clock high-water and paused-at state. Goals store explicit completion/
+evidence state, rather than deriving progress from chat counts. Recoverable jobs
+retain original requested count and a separate deliberate shorter-set acceptance
+count. These additions repair persistence gaps found before dependent coding;
+they do not alter confirmed Study/Test/retention meanings.
+
+Exact feature leases are in the execution record. Reader, saved-collection and
+attempt implementation may start against these contracts while lead-owned
+additive migrations are finalised. DC01/DC02 and all feature tickets remain
+open until their required evidence and connected producers/consumers pass.
+
 The owner authorised implementation, local commits and matching Windows delivery
 after the documentation baseline `528025ff`. The clean canonical checkout started
 there; `codex/design-c-integration` is the integration branch. Initial lane

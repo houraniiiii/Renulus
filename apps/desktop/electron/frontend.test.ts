@@ -16,6 +16,7 @@ async function fixture() {
   let received: string | undefined;
   const backend = createServer((request, response) => {
     received = request.headers['x-renulus-token'] as string;
+    if (request.url === '/api/v1/original') { response.writeHead(200, { 'Content-Type': 'text/html', 'Content-Security-Policy': "default-src 'none'; sandbox" }); response.end('<p>Synthetic inert original</p>'); return; }
     if (request.url === '/api/v1/stream') { response.writeHead(200, { 'Content-Type': 'text/event-stream' }); response.end('data: {"type":"completed"}\n\n'); return; }
     response.writeHead(200, { 'Content-Type': 'application/json' }); response.end('{"status":"ready"}');
   }); servers.push(backend); await new Promise<void>(resolve => backend.listen(0, '127.0.0.1', resolve));
@@ -44,5 +45,10 @@ describe('native same-origin API boundary', () => {
       expect(policy).toContain("object-src 'none'");
       expect(policy).toContain("connect-src 'self'");
     }
+  });
+  it('retains the original endpoint document CSP', async () => {
+    const app = await fixture();
+    const response = await fetch(app.origin + '/api/v1/original', { headers: { 'x-renulus-token': 'synthetic-session' } });
+    expect(response.headers.get('content-security-policy')).toBe("default-src 'none'; sandbox");
   });
 });

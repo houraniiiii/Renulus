@@ -59,6 +59,29 @@ new record owners must register their deletion aliases/relations and prove
 export/restore. DC06/DC19 must compare the local context epoch before publication.
 
 The entries below preserve earlier implementation evidence. Their Flow selection,
+
+### Published contracts and feature reservations
+
+The lead reviewed `design-c/1` validators at `527677f3`, after the exact-name
+proposals, and integrated all three pass-1 reports (`db96f4a0`, `388687c2`,
+`335e5a86`). The fixture digest follow-up is pending; its manifest is not yet
+published as final evidence. Feature development may use these committed shapes
+and the accepted additive clarifications in section 10 of the existing spec.
+Ticket closure still requires the integrated producers and consumers.
+
+| Owner | Reserved write paths | Scope / synthetic profile |
+| --- | --- | --- |
+| Lead | All module `schema.sql` and `migrations/` paths, storage, server, shared renderer/platform/shell/UI, `apps/desktop/electron/`, `tools/renulus-control/`, root configuration/locks, cross-module tests | Schema sequencing, isolation/controller, shell/policy and integration; `integration` |
+| Reader worker (Poincare) | `runtime/renulus/knowledge/` except schema/migrations; `apps/desktop/src/modules/library/`, new `apps/desktop/src/modules/reader/`; `tests/knowledge/`, `tests/integration/test_design_c_readers.py` | DC08 and Library DC10; `readers` |
+| Collection worker (Pauli) | New `runtime/renulus/assessment/test_repository.py`, `test_api.py`, `test_models.py`; new `apps/desktop/src/modules/tests/`; `tests/assessment/test_saved_tests.py` | DC12 collection/version/report and legacy mapping; `saved-tests` |
+| Attempt worker (Russell) | New `runtime/renulus/assessment/attempt_repository.py`, `attempt_api.py`, `attempt_models.py`; new `apps/desktop/src/modules/attempts/`; `tests/assessment/test_whole_attempts.py` | DC13 then DC14/DC15 core; `attempts` |
+
+Existing assessment repository/router and generation files remain lead-held.
+Collection and attempt workers have disjoint repositories/routers and use a
+small private pinned-version interface. No worker edits another reservation.
+All three feature workers merge the next committed reservation baseline into
+their clean existing worktree. Separate owned profiles remain outside Git.
+
 branches, paths, issue status, time windows and heartbeat instructions describe
 those dated runs; they are not assignments or scheduling instructions for C.
 The current installed baseline and canonical paths are in

@@ -75,14 +75,17 @@ function createWindow() {
     const local = details.url.startsWith(origin + '/') || details.url === origin;
     callback({ cancel: !local && !details.url.startsWith('data:') && !details.url.startsWith('blob:') && !isBuiltinPdfResource(details.url) });
   });
-  isolated.webRequest.onBeforeSendHeaders({ urls: [origin + '/api/v1/*'] }, ownedApiHeaders(owner, token));
+  isolated.webRequest.onBeforeSendHeaders({ urls: [origin + '/api/v1/*'] }, ownedApiHeaders(owner, token, origin));
   owner.webContents.setWindowOpenHandler(({ url }) => {
     if (allowedSourceUrl(url)) void openExternal(url, 'source').catch(() => {
       if (!backgroundTest) reportNativeError('The source could not open', 'Try the source link again after checking your default browser.');
     });
     return { action: 'deny' };
   });
-  owner.webContents.on('will-navigate', (event, url) => { if (new URL(url).origin !== origin) event.preventDefault(); });
+  owner.webContents.on('will-navigate', (event, url) => {
+    const target = new URL(url);
+    if (target.origin !== origin || !['/', '/index.html'].includes(target.pathname)) event.preventDefault();
+  });
   owner.webContents.on('will-attach-webview', event => event.preventDefault());
   owner.once('ready-to-show', () => {
     if (!backgroundTest) owner.show();
