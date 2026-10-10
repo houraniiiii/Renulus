@@ -1,5 +1,7 @@
 import copy
 
+import json
+
 import pytest
 
 from renulus.contracts import ApiError
@@ -125,7 +127,12 @@ def test_actual_updates_review_outbox_changes_library_currency_and_survives_retr
     assert result["review"]["library_sync_state"] == "applied"
     assert knowledge.get_document(note["document_id"])["revisions"][0]["metadata"]["superseded"]
     assert knowledge.retrieve("glomerular", scope=STUDY)["passages"] == []
+    published_events = services.db.fetch_all("SELECT * FROM knowledge_source_status_events ORDER BY id")
+    assert published_events
+    assert any(json.loads(row["payload_json"])["changes"].get("superseded") for row in published_events)
     repeated = updates.reviews.sync_entry("synthetic-currency")
     assert repeated["changes"][0]["state"] == "applied"
-    assert len(services.db.fetch_all("SELECT * FROM knowledge_source_status_events")) == 1
+    # A review can publish both an invalidation and its reviewed status. Retry
+    # must preserve the exact existing events, rather than assume a single event.
+    assert services.db.fetch_all("SELECT * FROM knowledge_source_status_events ORDER BY id") == published_events
     knowledge.index.close()

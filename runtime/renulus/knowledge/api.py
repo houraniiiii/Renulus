@@ -16,7 +16,7 @@ from .engines import MAX_BYTES
 from .models import Rights, SourceMetadata, own_text_rights
 from .reader import ReaderRepository
 from .reader_models import ReaderRequest
-from .repository import KnowledgeRepository, MEDIA, TERMINAL
+from .repository import KnowledgeRepository, MAX_RETRIEVAL_REVISIONS, MEDIA, TERMINAL
 from .worker import IngestionWorker
 
 
@@ -39,6 +39,7 @@ class Retrieve(BaseModel):
     topic_id: str | None = None
     current_only: bool = False
     limit: int = Field(default=8, ge=1, le=50)
+    revision_ids: list[str] | None = Field(default=None, max_length=MAX_RETRIEVAL_REVISIONS)
 
 
 class SelectedBatch(BaseModel):

@@ -17,6 +17,7 @@ from .source_status import SourceStatusJournal
 
 TERMINAL = {"ready", "failed", "cancelled"}
 INDEX_BATCH = 64
+MAX_RETRIEVAL_REVISIONS = 1000
 # Metadata routes must not load the extracted document or original file path.
 REVISION_SUMMARY = ("r.id,r.document_id,r.ordinal,r.status,r.sha256,r.media_type,r.bytes,"
                     "r.metadata_json,r.rights_json,r.embedding_model,r.chunk_tokens,"
@@ -512,7 +513,7 @@ class KnowledgeRepository:
         return documents
 
     def _eligible(self, metadata, rights, topic_id, current_only):
-        if not rights.get("model_input") or not rights.get("index") or not rights.get("embedding"):
+        if not all(rights.get(operation) for operation in ("display", "model_input", "index", "embedding")):
             return False
         if metadata.get("retracted") or metadata.get("superseded") or metadata.get("access_changed"):
             return False
@@ -533,7 +534,21 @@ class KnowledgeRepository:
                 return False
         return True
 
-    def retrieve(self, query, topic_id=None, scope=None, *, limit=8, current_only=False):
+    def retrieve(self, query, topic_id=None, scope=None, *, limit=8, current_only=False,
+                 revision_ids: list[str] | None = None):
+        """Intersect canonical eligibility with an optional caller-owned revision pin.
+
+        None preserves global Library retrieval; an empty list is an empty scope.
+        Capture the supplied list once so concurrent caller mutation cannot widen
+        candidates. Project owners still recheck membership/context before publishing.
+        """
+        revision_filter = None
+        if revision_ids is not None:
+            if (not isinstance(revision_ids, list) or len(revision_ids) > MAX_RETRIEVAL_REVISIONS
+                    or any(not isinstance(value, str) or not 1 <= len(value) <= 128
+                           for value in revision_ids)):
+                raise ApiError("revision_scope_invalid", "Use at most 1,000 revision IDs of 1–128 characters", 422)
+            revision_filter = tuple(dict.fromkeys(revision_ids))
         if self.db.fetch_one("SELECT 1 FROM preferences WHERE key='knowledge.restore_dirty' AND value='true'"):
             raise ApiError("knowledge_rebuild_required", "The restored Library needs its local search rebuild. Open data recovery and retry the rebuild.", 503, True)
         if scope is None:
@@ -547,14 +562,14 @@ class KnowledgeRepository:
             raise ApiError("query_limit", "The retrieval query is too long", 413)
         limit = max(1, min(int(limit), 50))
         with self._lock:
-            eligible = self._retrievable_revisions(scope, topic_id, current_only)
+            eligible = self._retrievable_revisions(scope, topic_id, current_only, revision_ids=revision_filter)
             if not eligible:
                 return {"passages": [], "status": "no_eligible_documents", "current_only": current_only}
         vector = self.embedder.embed([query], query=True)[0]
         with self._index_lock:
             # Embedding may have waited for a cold model or an import batch.
             with self._lock:
-                eligible = self._retrievable_revisions(scope, topic_id, current_only)
+                eligible = self._retrievable_revisions(scope, topic_id, current_only, revision_ids=revision_filter)
             if not eligible:
                 return {"passages": [], "status": "no_eligible_documents", "current_only": current_only}
             matches = self.index.search(query, vector, list(eligible), limit * 3)
@@ -562,7 +577,7 @@ class KnowledgeRepository:
             conn.execute("BEGIN")
             # Search is also expensive: recheck active version, deletion, source
             # status, permissions and page exclusions against the same snapshot.
-            eligible = self._retrievable_revisions(scope, topic_id, current_only, conn=conn)
+            eligible = self._retrievable_revisions(scope, topic_id, current_only, conn=conn, revision_ids=revision_filter)
             passages = []
             for hit in matches:
                 revision = eligible.get(hit["revision_id"])
@@ -587,14 +602,22 @@ class KnowledgeRepository:
                     break
             return {"passages": passages, "status": "ready", "current_only": current_only}
 
-    def _retrievable_revisions(self, scope, topic_id, current_only, *, conn=None):
+    def _retrievable_revisions(self, scope, topic_id, current_only, *, conn=None, revision_ids=None):
+        if revision_ids is not None and not revision_ids:
+            return {}
         sql = ("SELECT " + REVISION_SUMMARY + ",d.title,d.source_id FROM knowledge_revisions r "
                "JOIN knowledge_documents d ON d.active_revision=r.id WHERE d.deleted_at IS NULL "
                "AND d.reserved=0 AND r.status='ready' AND d.scope_kind='personal-library' "
                "AND (d.scope_entity IS NULL OR d.scope_entity=?) "
                "AND EXISTS (SELECT 1 FROM knowledge_passages p WHERE p.revision_id=r.id)")
-        rows = ([dict(row) for row in conn.execute(sql, (scope.entity_id,))]
-                if conn is not None else self.db.fetch_all(sql, (scope.entity_id,)))
+        parameters = (scope.entity_id,)
+        if revision_ids is not None:
+            # One JSON parameter keeps the bounded set below SQLite variable limits.
+            # This predicate applies before the native index ranks any candidates.
+            sql += " AND r.id IN (SELECT value FROM json_each(?))"
+            parameters += (dumps(revision_ids),)
+        rows = ([dict(row) for row in conn.execute(sql, parameters)]
+                if conn is not None else self.db.fetch_all(sql, parameters))
         return {r["id"]: r for r in rows if self._eligible(
             json.loads(r["metadata_json"]), json.loads(r["rights_json"]), topic_id, current_only)}
 
