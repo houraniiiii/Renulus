@@ -21,8 +21,8 @@ copied for these checks.
 | Populated upgrade/recovery `1744e2cb` | Eight tests pass in `scratch/design-c/dc-review-data/dc20-9.xml`: committed schema-1 producers, interrupted script rollback, reopen, old/current JSON and both ZIP versions, original hashes, immutable attempts/reports and typed deletion. Historical runtime uses installed development dependencies, not an old packaged executable. |
 | Notes `dc59d4c2` | Twenty unique checks pass across the retained 18-pass run and corrected two-ZIP run. Actual mounted Study help, current rights, late publication, project membership and deleted-original refusal. No all-green single full-run claim. |
 | C1/C4 independent recheck `2bc84d61` | Real Library/import/fictional producers retain independent report pins after deletion/restore; revoked or missing source refuses Save replay. |
-| C3/C5 Memory | C3 `51f208b4` passes its 76-test scope. A later actual ordinary-inference restore defect remains under repair. Foundation `009b8780` marks restored evidence locally and passes three atomicity/export checks; Memory consumption is still required. |
-| Renderer/build | Exact TypeScript/Vite/Electron build at `397d1032` passes. Canonical Reader/Workspace/attempt/collection selection passes 51 checks; C2/C3 cross-consumer selection passes eight. |
+| C3/C5 Memory | C3 `51f208b4` passes its 76-test scope. C5 `7cdc3fec` consumes local restore barriers `009b8780`: 15 actual worker cases and two deleted/forged HTTP refusals pass; affected regression is running. UI `e5209f17` offers deliberate capture of a recorded restored job, with 25 renderer checks. |
+| Renderer/build | Exact TypeScript/Vite/Electron build through `f5d36ac9` passes. R5 has eight actual backend and 28 renderer/transport checks; R7 `f4fc986f` has 40 Reader/Workspace checks and actual PDF text-position/SQLite reopen proof. |
 | Hidden source UI | Actual attempts and Notes reports retain normal closes/reopens, narrow/200% captures, drafts, revision pins and zero live provider calls. They establish source scope, not an installed pass. |
 | Installed verifier | `ccc453dc` includes real eight-category original/upload/reader/passage journeys. Its 25 JavaScript boundary checks and seven deterministic fixture/parser checks pass. `2e30ee1d` additionally confines all child user/cache directories; owner reports 27 passing boundary checks. Actual installed execution remains pending. |
 
@@ -30,7 +30,8 @@ The current independent pass-3 review found an inherited user-directory escape
 in the verification harness, repaired at `2e30ee1d` before any installed launch.
 The exact base delivery root below is used; no unverified named-child variation
 is selected. Selected PDF text/page restoration and Memory restore inference
-remain material source checks before the freeze.
+have bounded fixes and reproductions. The remaining source gates are the affected
+Memory regression, hidden R5 tab-name recheck and installed recovery-driver handoff.
 
 ## Public manufacture inputs
 
