@@ -21,17 +21,19 @@ copied for these checks.
 | Populated upgrade/recovery `1744e2cb` | Eight tests pass in `scratch/design-c/dc-review-data/dc20-9.xml`: committed schema-1 producers, interrupted script rollback, reopen, old/current JSON and both ZIP versions, original hashes, immutable attempts/reports and typed deletion. Historical runtime uses installed development dependencies, not an old packaged executable. |
 | Notes `dc59d4c2` | Twenty unique checks pass across the retained 18-pass run and corrected two-ZIP run. Actual mounted Study help, current rights, late publication, project membership and deleted-original refusal. No all-green single full-run claim. |
 | C1/C4 independent recheck `2bc84d61` | Real Library/import/fictional producers retain independent report pins after deletion/restore; revoked or missing source refuses Save replay. |
-| C3/C5 Memory | C3 `51f208b4` passes its 76-test scope. C5 `7cdc3fec` consumes local restore barriers `009b8780`: 15 actual worker cases and two deleted/forged HTTP refusals pass; affected regression is running. UI `e5209f17` offers deliberate capture of a recorded restored job, with 25 renderer checks. |
+| C3/C5 Memory | C3 `51f208b4` passes its 76-test scope. C5 `7cdc3fec` consumes local restore barriers `009b8780`: the affected five-module regression passes 91 checks; `760f4b0b` separately proves actual HTTP global Retry refusal followed by explicit capture. The earlier 15+2 checks are included in 91. UI `e5209f17` offers deliberate capture of a recorded restored job, with 25 renderer checks. |
 | Renderer/build | Exact TypeScript/Vite/Electron build through `f5d36ac9` passes. R5 has eight actual backend and 28 renderer/transport checks; R7 `f4fc986f` has 40 Reader/Workspace checks and actual PDF text-position/SQLite reopen proof. |
 | Hidden source UI | Actual attempts and Notes reports retain normal closes/reopens, narrow/200% captures, drafts, revision pins and zero live provider calls. They establish source scope, not an installed pass. |
-| Installed verifier | `ccc453dc` includes real eight-category original/upload/reader/passage journeys. Its 25 JavaScript boundary checks and seven deterministic fixture/parser checks pass. `2e30ee1d` additionally confines all child user/cache directories; owner reports 27 passing boundary checks. Actual installed execution remains pending. |
+| Installed verifier | `ccc453dc` includes real eight-category original/upload/reader/passage journeys and seven passing deterministic fixture/parser checks. `2e30ee1d` confines all child user/cache directories. `f2ac20d2` adds the required PDF page-2 text-selection check after normal installed close/relaunch, including current authorized tab names; 28 boundary checks pass. Actual installed execution remains pending. |
 
 The current independent pass-3 review found an inherited user-directory escape
 in the verification harness, repaired at `2e30ee1d` before any installed launch.
 The exact base delivery root below is used; no unverified named-child variation
 is selected. Selected PDF text/page restoration and Memory restore inference
-have bounded fixes and reproductions. The remaining source gates are the affected
-Memory regression, hidden R5 tab-name recheck and installed recovery-driver handoff.
+have bounded fixes and reproductions. C5's full affected regression and supplemental
+HTTP check are green, with failed reproduction/harness receipts retained in the
+attempt-consumer report. The remaining source gates are the hidden R5 tab-name
+recheck and installed recovery-driver handoff.
 
 ## Public manufacture inputs
 
@@ -52,7 +54,7 @@ backend, renderer and native code from one exact committed revision.
 Python/Node path guards, 39 PowerShell relocation refusals, 17 restage refusals,
 the isolated installer-child environment and builder output-root boundaries
 pass. These checks do not execute NSIS or the application. The current read-only
-plan names `51f208b4`; it must be regenerated for the final source freeze.
+plan names `02c7e371`; it must be regenerated for the final source freeze.
 
 ## Installation and acceptance boundary
 
