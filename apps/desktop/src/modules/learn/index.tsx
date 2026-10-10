@@ -29,6 +29,8 @@ export default function Learn() {
   const { scope, handoff, navigate } = useNavigation();
   const temporary = scope.kind === 'temporary-case' || scope.kind === 'unclassified' || scope.kind === 'saved-case';
   const caseId = typeof handoff?.case_id === 'string' ? handoff.case_id : temporary ? scope.entity_id : undefined;
+  const conversation = handoff?.conversation as {type?:string;id?:string}|undefined;
+  const wrapperCase = conversation?.type==='case'&&conversation.id===caseId;
   const [question, setQuestion] = useState(String(handoff?.question ?? handoff?.case_text ?? ''));
   const [topic, setTopic] = useState(String(handoff?.topic_id ?? ''));
   const [style, setStyle] = useState<'direct' | 'guided'>('direct');
@@ -104,7 +106,9 @@ export default function Learn() {
         if (ticketId.current) await api('/cases/handoffs/' + ticketId.current, { method: 'DELETE', signal: controller.signal });
         ticketId.current = undefined;
         const currentCase = await api<{ revision: number }>('/cases/sessions/' + encodeURIComponent(caseId), { signal: controller.signal });
-        const ticket = await api<{ id: string }>('/cases/sessions/' + encodeURIComponent(caseId) + '/handoff', { method: 'POST', signal: controller.signal, body: { revision: currentCase.revision, target: 'explain', question: text } });
+        const wrapperPath='/conversations/case/'+encodeURIComponent(caseId);
+        const summary=wrapperCase?await api<{revision:number}>(wrapperPath,{signal:controller.signal}):undefined;
+        const ticket = await api<{ id: string }>((wrapperCase?wrapperPath:'/cases/sessions/'+encodeURIComponent(caseId))+'/handoff', { method: 'POST', signal: controller.signal, body: { ...(summary?{expected_revision:summary.revision,case_revision:currentCase.revision}:{revision:currentCase.revision}), target: 'explain', question: text } });
         caseHandoffId = ticket.id; ticketId.current = ticket.id;
       }
       for await (const item of stream<RunEvent>('/learn/ask', { method: 'POST', signal: controller.signal, headers: { 'Idempotency-Key': crypto.randomUUID() }, body: { question: text, scope: temporary ? { kind: 'temporary-case', entity_id: caseId ?? scope.entity_id } : { kind: 'study' }, thread_id: temporary ? null : threadId, topic_id: topic || null, teaching_style: style, case_handoff_id: caseHandoffId } })) {
@@ -180,7 +184,7 @@ export default function Learn() {
   }
 
   return <>
-    <PageHeader title={temporary ? 'Explore your case question' : 'What would you like to understand?'} description={temporary ? 'This explanation shares your temporary case context.' : 'Ask freely across nephrology, then explore the explanation and its evidence.'} actions={temporary && caseId ? <Button variant="secondary" disabled={busy} onClick={() => navigate('cases', { scope: { kind: 'temporary-case', entity_id: caseId }, payload: { case_id: caseId } })}><ArrowLeft size={17} />Return to case</Button> : !temporary && <Button variant="secondary" disabled={busy} onClick={fresh}><Plus size={17} />New study</Button>} />
+    <PageHeader title={temporary ? 'Explore your case question' : 'What would you like to understand?'} description={temporary ? (wrapperCase&&handoff?.retention==='saved'?'The completed explanation stays in your saved Case.':'This explanation shares your temporary case context.') : 'Ask freely across nephrology, then explore the explanation and its evidence.'} actions={temporary && caseId ? <Button variant="secondary" disabled={busy} onClick={() => navigate(wrapperCase?'chat':'cases', { scope: { kind: 'temporary-case', entity_id: caseId }, payload: wrapperCase?{conversation,retention:handoff?.retention}:{case_id:caseId} })}><ArrowLeft size={17} />Return to case</Button> : !temporary && <Button variant="secondary" disabled={busy} onClick={fresh}><Plus size={17} />New study</Button>} />
     <div className="learn-layout"><section className="learn-main">
       {!messages.length && <div className="learning-invitation"><p>Start with a question, a mechanism or a decision you would like to reason through.</p><div className="question-starters">{['How should I reason through AKI?', 'Explain kidney transplant rejection.', 'How do dialysis modalities differ?'].map(value => <button key={value} onClick={() => setQuestion(value)}>{value}</button>)}</div></div>}
       <div className="conversation" aria-label="Learning discussion">{messages.map(message => <article key={message.id} className={'learning-message message-' + message.role}><strong className="message-author">{message.role === 'user' ? 'Your question' : 'Renulus'}</strong><div className="prose learning-answer">{message.content}</div>{message.citations?.length ? <div className="citation-row">{message.citations.map(source)}</div> : null}</article>)}{partial && <article className="learning-message"><strong className="message-author">Renulus <Badge tone="neutral">{busy ? 'Explaining' : 'Partial'}</Badge></strong><div className="prose learning-answer">{partial}</div></article>}</div>

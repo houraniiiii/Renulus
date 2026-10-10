@@ -94,6 +94,7 @@ class Handoff:
     expires_at: str
     question: str = ""
     cancel: asyncio.Event = field(default_factory=asyncio.Event, compare=False)
+    publication: Any = field(default=None, compare=False, repr=False)
 
 
 class CaseRepository:
@@ -484,7 +485,7 @@ class CaseRepository:
                 {"role": "user", "content": "Case material:\n" + text},
                 *[{"role": m["role"], "content": m["content"]} for m in session.messages]]
 
-    def handoff(self, case_id: str, request: HandoffCase) -> dict:
+    def handoff(self, case_id: str, request: HandoffCase, *, publication=None) -> dict:
         with self._lock:
             session = self._load(case_id)
             self._check_revision(session, request.revision)
@@ -497,7 +498,7 @@ class CaseRepository:
             if len(self._handoffs) >= MAX_RUNS:
                 raise ApiError("handoff_capacity", "Finish an existing handoff before starting another", 429)
             ticket = Handoff(durable_id("case_handoff"), case_id, session.revision, request.target,
-                             (now + timedelta(minutes=15)).isoformat(), question=request.question)
+                             (now + timedelta(minutes=15)).isoformat(), question=request.question, publication=publication)
             self._handoffs[ticket.id] = ticket
             teaching = self._teaching_view(session, annotate=False)
             text = session.text
@@ -547,7 +548,8 @@ class CaseRepository:
 
     def commit_handoff(self, ticket_id: str, target: str, content: str, *,
                        cancel: asyncio.Event, scope: ContextScope) -> dict:
-        with self._lock:
+        conversations = self.services.registry.get('conversations')
+        with conversations._lock if conversations is not None else nullcontext(), self._lock:
             ticket = self._current_handoff(ticket_id, target)
             session = self._load(ticket.case_id)
             expected = ContextScope(kind=Scope.TEMPORARY_CASE, entity_id=session.id)
@@ -555,17 +557,20 @@ class CaseRepository:
                 raise ApiError("case_run_cancelled", "This response was stopped", 409)
             if scope != expected:
                 raise ApiError("case_scope_mismatch", "Case handoffs must stay temporary", 409)
-            # Validate the pair before appending either message. Save remains explicit.
-            if ticket.question:
-                if not content.strip() or len(content) > MAX_OUTPUT_CHARACTERS:
-                    raise ApiError("case_response_invalid", "The provider did not return a usable response", 502, True)
-                if len(session.messages) >= MAX_MESSAGES - 2:
-                    raise ApiError("case_context_full", "Start a new session for further discussion", 413)
-                self._check_message_capacity(session, ticket.question + content)
-                session.messages.append({"id": durable_id("case_message"), "role": "user",
-                                         "content": ticket.question, "created_at": utc_now()})
-            self._append_assistant(session, content)
-            return self._view(session)
+            def append():
+                # Legacy tickets retain explicit Save. Only a server wrapper can
+                # install the publication callback on this volatile ticket.
+                if ticket.question:
+                    if not content.strip() or len(content) > MAX_OUTPUT_CHARACTERS:
+                        raise ApiError("case_response_invalid", "The provider did not return a usable response", 502, True)
+                    if len(session.messages) >= MAX_MESSAGES - 2:
+                        raise ApiError("case_context_full", "Start a new session for further discussion", 413)
+                    self._check_message_capacity(session, ticket.question + content)
+                    session.messages.append({"id": durable_id("case_message"), "role": "user",
+                                             "content": ticket.question, "created_at": utc_now()})
+                self._append_assistant(session, content)
+                return self._view(session)
+            return ticket.publication(append) if ticket.publication is not None else append()
 
     def begin_discussion(self, case_id: str, request: DiscussCase, *, attachment: dict | None = None) -> tuple[Run, list[dict]]:
         with self._lock:

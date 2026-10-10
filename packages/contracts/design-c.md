@@ -111,13 +111,27 @@ POST /previews/{preview_id}/apply accepts reviewed text; /keep accepts a prepare
 image original. Upload and extraction preparation reuse the original Cases API
 and remain volatile until this explicit apply/keep action.
 
-Every Case action requires expected_revision (conversation sidecar) and
+Every Case context mutation requires expected_revision (conversation sidecar) and
 case_revision (original Case owner) plus its idempotency key. The committed
 receipt is only {conversation,case_revision}; it contains no Case payload or
 original bytes. Saved wrapper actions call the original Case Save inside their
 command transaction, including case_attachment tombstones for removals.
 Temporary actions and outcomes remain volatile. Failed Save restores the same
 cached owner object and its usable preview; legacy Cases routes keep their
+explicit Save behavior.
+
+POST /handoff accepts {expected_revision,case_revision,target,question}, where
+target is explain|generated-practice. Its original Case ticket exists only in
+memory; the response omits case_text and adds the canonical conversation identity
+and retention for volatile navigation. It never enters the command ledger.
+Original Learn and generated-practice consumers resolve the ticket on the server.
+Only a wrapper-issued ticket has an in-process publication callback: a completed
+explanation or key-free practice receipt saves through the original saved Case
+owner and increments its sidecar in the same transaction. Policy revision,
+context epoch and both owner revisions guard publication; a failed transaction
+restores the same live Session. Temporary handoff output, generated questions
+and practice scores remain volatile. This is not the DC18 fictional-test boundary.
+Legacy tickets have no callback and continue to require explicit Save.
 explicit Save meaning. Installed teaching content changes never repin a saved
 teaching Case or reveal an unrevealed stage.
 

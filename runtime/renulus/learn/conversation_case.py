@@ -3,10 +3,10 @@
 from copy import deepcopy
 import sqlite3
 
-from renulus.cases.models import EditCase
+from renulus.cases.models import EditCase, HandoffCase
 from renulus.contracts import ApiError
 from renulus.storage.database import utc_now
-from renulus.storage.invalidation import bump_context_epoch
+from renulus.storage.invalidation import bump_context_epoch, context_epoch_in
 
 from .conversation_repository import command, require_assistance
 
@@ -24,6 +24,56 @@ class ConversationCases:
             view = self.cases.get(identifier)
             view.pop('messages')
             return view
+
+    def handoff(self, identifier, request):
+        repository, cases = self.conversations, self.cases
+        with repository._lock, cases._lock, self.db.transaction() as conn:
+            policy = require_assistance(conn)
+            epoch = context_epoch_in(conn)
+            summary, _ = repository._get(conn, 'case', identifier)
+            repository._expected(summary, request.expected_revision)
+            if summary['lifecycle'] != 'active':
+                raise ApiError('conversation_archived', 'Restore this conversation before starting a handoff', 409)
+            if request.target == 'explain' and not request.question.strip():
+                raise ApiError('case_question_required', 'Enter a learning question to explain', 422)
+            def publish(append):
+                # The original producer holds the conversation lock before the
+                # Case lock. No provider work happens under these locks.
+                session = cases._load(identifier)
+                before = deepcopy(session.__dict__)
+                metadata = metadata_before = None
+                try:
+                    with cases.defer_context_invalidation(), self.db.transaction() as snapshot:
+                        require_assistance(snapshot, policy)
+                        if context_epoch_in(snapshot) != epoch:
+                            raise ApiError('dependency_changed', 'The learning context changed. Start another handoff.', 409, True)
+                        current, metadata = repository._get(snapshot, 'case', identifier)
+                        repository._expected(current, request.expected_revision)
+                        if current['retention'] == 'temporary':
+                            metadata_before = deepcopy(metadata)
+                        append()
+                        if current['retention'] == 'saved':
+                            cases.save(identifier, session.revision, conn=snapshot)
+                            snapshot.execute('UPDATE case_conversations SET revision=revision+1,updated_at=? WHERE case_id=?',
+                                (utc_now(), identifier))
+                            bump_context_epoch(snapshot)
+                        else:
+                            metadata['summary'].update(revision=current['revision'] + 1, updated_at=session.updated_at)
+                        result = cases._view(session)
+                    return result
+                except BaseException as error:
+                    session.__dict__.clear()
+                    session.__dict__.update(before)
+                    if metadata_before is not None:
+                        metadata.clear()
+                        metadata.update(metadata_before)
+                    if isinstance(error, sqlite3.Error):
+                        raise ApiError('case_save_failed', 'The Case handoff could not be saved. Start another handoff to retry.', 503, True) from None
+                    raise
+            ticket = cases.handoff(identifier, HandoffCase(revision=request.case_revision,
+                target=request.target, question=request.question), publication=publish)
+            ticket.pop('case_text')
+            return {**ticket, 'conversation': summary['identity'], 'retention': summary['retention']}
 
     def change(self, identifier, request, operation, key=None):
         repository, cases = self.conversations, self.cases

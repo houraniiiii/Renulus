@@ -20,6 +20,112 @@ def case_body(client, route, **fields):
     }
 
 
+class HandoffProvider:
+    def __init__(self):
+        self.inputs = []
+
+    def status(self):
+        return {'test_adapter': True}
+
+    async def stream(self, messages, **options):
+        self.inputs.append((messages, options))
+        if options['purpose'] == 'explain':
+            yield 'FICTIONAL_HANDOFF_EXPLANATION_5D86'
+        else:
+            yield json.dumps({'items': [{'stem': 'FICTIONAL_PRACTICE_STEM_5D86',
+                'options': [{'id': 'a', 'text': 'First concept'}, {'id': 'b', 'text': 'Second concept'}],
+                'correct_option_id': 'a', 'explanation': 'Fictional learning rationale', 'source_indices': []}]})
+
+    async def cancel(self, run_id):
+        return True
+
+
+@pytest.mark.parametrize('temporary', [False, True])
+@pytest.mark.parametrize('target', ['explain', 'generated-practice'])
+def test_wrapper_handoff_original_producers_obey_saved_or_temporary_owner(tmp_path, temporary, target):
+    from renulus.storage.backup import export_records
+    profile = tmp_path / 'wrapper-handoff'
+    app = app_at(profile)
+    services = app.state.services
+    provider = HandoffProvider()
+    services.registry['provider'] = provider
+    with TestClient(app) as client:
+        chat = client.post('/api/v1/conversations', json={'kind': 'case', 'temporary': temporary,
+            'text': 'FICTIONAL_HANDOFF_CONTEXT_5D86'}).json()
+        route = '/api/v1/conversations/case/' + chat['identity']['id']
+        ticket_response = client.post(route + '/handoff', json=case_body(client, route,
+            target=target, question='Explain the fictional learning concept' if target == 'explain' else ''))
+        assert ticket_response.status_code == 201, ticket_response.text
+        ticket = ticket_response.json()
+        assert 'case_text' not in ticket
+        assert ticket['conversation'] == chat['identity']
+        assert ticket['retention'] == chat['retention']
+        if target == 'explain':
+            response = client.post('/api/v1/learn/ask', json={'scope': ticket['scope'],
+                'case_handoff_id': ticket['id'], 'question': ticket['question']})
+        else:
+            response = client.post('/api/v1/assessment/practice/generate', json={
+                'context': 'temporary', 'case_handoff_id': ticket['id'], 'prompt': 'Practise this fictional concept',
+                'count': 1, 'idempotency_key': 'wrapper-practice-command'})
+        events = [json.loads(line[6:]) for line in response.text.splitlines() if line.startswith('data: ')]
+        assert events[-1]['type'] == 'completed', json.dumps(events[-1])
+        context = client.get(route + '/context').json()
+        marker = 'FICTIONAL_HANDOFF_EXPLANATION_5D86' if target == 'explain' else 'Generated practice: 1 questions ready.'
+        assert services.get('cases').get(chat['identity']['id'])['messages'][-1]['content'].startswith(marker)
+        assert context['dirty'] is temporary
+        assert client.get(route).json()['revision'] == chat['revision'] + 1
+        assert services.db.fetch_all('SELECT * FROM learn_threads') == []
+        assert services.db.fetch_all('SELECT * FROM assessment_generated_sessions') == []
+        assert services.db.fetch_all('SELECT * FROM learning_evidence') == []
+        exported = json.dumps(export_records(services))
+        assert ticket['id'] not in exported and 'FICTIONAL_PRACTICE_STEM_5D86' not in exported
+        if temporary:
+            assert marker not in exported and chat['identity']['id'] not in exported
+            for path in profile.rglob('*'):
+                if path.is_file():
+                    assert b'FICTIONAL_HANDOFF' not in path.read_bytes()
+    if not temporary:
+        with TestClient(app_at(profile)) as client:
+            reopened = client.get('/api/v1/cases/sessions/' + chat['identity']['id']).json()
+            assert reopened['messages'][-1]['content'].startswith(marker)
+            assert not reopened['dirty']
+
+
+@pytest.mark.parametrize('change', ['policy', 'epoch', 'sidecar', 'save_failure'])
+def test_wrapper_handoff_final_transaction_refuses_changed_guards_and_preserves_session(tmp_path, monkeypatch, change):
+    import sqlite3
+    from renulus.contracts import ApiError
+    from renulus.storage.invalidation import bump_context_epoch
+    app = app_at(tmp_path / 'handoff-publication-guard')
+    services = app.state.services
+    with TestClient(app) as client:
+        chat = client.post('/api/v1/conversations', json={'kind': 'case', 'text': 'Fictional pinned context'}).json()
+        identifier = chat['identity']['id']
+        route = '/api/v1/conversations/case/' + identifier
+        ticket = client.post(route + '/handoff', json=case_body(client, route, target='explain', question='Fictional question')).json()
+        cases = services.get('cases')
+        context = cases.resolve_handoff(ticket['id'], 'explain')
+        original = services.db.fetch_one('SELECT * FROM case_sessions WHERE id=?', (identifier,))
+        session = cases._load(identifier)
+        if change == 'policy':
+            services.db.execute("INSERT INTO assessment_test_attempts(id,version_id,version_snapshot_json,mode,clock_high_water_at,created_at,updated_at) VALUES('handoff-active-test','absent','{}','test',?,?,?)", (chat['created_at'],) * 3)
+        elif change == 'epoch':
+            with services.db.transaction() as conn:
+                bump_context_epoch(conn)
+        elif change == 'sidecar':
+            services.db.execute('UPDATE case_conversations SET revision=revision+1 WHERE case_id=?', (identifier,))
+        else:
+            def refuse_save(*args, **kwargs):
+                raise sqlite3.OperationalError('FICTIONAL_RAW_STORAGE_FAILURE')
+            monkeypatch.setattr(cases, 'save', refuse_save)
+        with pytest.raises(ApiError) as error:
+            cases.commit_handoff(ticket['id'], 'explain', 'FICTIONAL_REFUSED_HANDOFF_RESULT',
+                cancel=context['cancel'], scope=context['scope'])
+        assert 'FICTIONAL_RAW_STORAGE_FAILURE' not in str(error.value)
+        assert cases._load(identifier) is session and session.messages == []
+        assert services.db.fetch_one('SELECT * FROM case_sessions WHERE id=?', (identifier,)) == original
+
+
 def test_case_context_wrapper_saves_replays_and_preserves_legacy_edit_meaning(tmp_path):
     profile = tmp_path / 'case-context'
     app = app_at(profile)

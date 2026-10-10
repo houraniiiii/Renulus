@@ -5,6 +5,7 @@ import type { ContentReference, ConversationIdentity, ConversationSummary, PageR
 import { Badge, Button, ErrorState, IconButton, Input, LoadingState, Notice, Select, Textarea } from '../../ui';
 import { useWorkspace } from '../workspace';
 import { CaseContext } from './CaseContext';
+import { CaseHandoffActions } from './CaseHandoffActions';
 import { conversationPath, createConversation, sendConversation, type ConversationRun, type SendIntent } from './api';
 import './chat.css';
 
@@ -168,6 +169,19 @@ export default function ChatPage(props: ChatPageProps) {
     const page=await api<PageResult<Message>>(conversationPath(current)+'/messages');
     if(epoch.current===version){setMessages(page.items);setCursor(page.next_cursor);}
   }
+  async function flushDraft() {
+    const version=epoch.current;
+    await draftWrite.current;
+    const current=chatRef.current;
+    if(!current||version!==epoch.current)return;
+    const draftText=textRef.current,draftRefs=refsRef.current,value=signature(draftText,draftRefs);
+    if(value===persisted.current)return current;
+    const draft=await api<Draft>(conversationPath(current)+'/draft',{method:'PUT',
+      body:{expected_revision:current.revision,text:draftText,content_refs:draftRefs},headers:{'Idempotency-Key':crypto.randomUUID()}});
+    if(version!==epoch.current)return;
+    const updated={...current,revision:draft.conversation_revision};
+    persisted.current=value;accept(updated);return updated;
+  }
   async function send(value=textRef.current,requestId:string=crypto.randomUUID()) {
     if(!value.trim()||busy||!chatRef.current)return;
     const version=epoch.current,controller=new AbortController();streamAbort.current=controller;
@@ -241,10 +255,11 @@ export default function ChatPage(props: ChatPageProps) {
     <header className="chat-heading"><div><p className="chat-eyebrow">{chat.kind==='case'?'Case discussion':'Learning conversation'}</p><h1>{chat.title}</h1></div><div className="chat-tools"><Badge tone={chat.retention==='temporary'?'warning':'neutral'}>{chat.retention==='temporary'?'Temporary':chat.lifecycle==='archived'?'Archived':'Saved'}</Badge><details><summary>Manage</summary><div className="chat-management"><Input label="Conversation title" value={title} onChange={event=>setTitle(event.target.value)} maxLength={120}/><Button variant="secondary" disabled={busy||!title.trim()} onClick={()=>void mutate('rename',{title:title.trim()})}>Rename</Button>{chat.retention==='temporary'?<Button disabled={busy} onClick={()=>void mutate('save')}>Save conversation</Button>:<Button variant="ghost" disabled={busy} onClick={()=>void mutate(chat.lifecycle==='archived'?'restore':'archive')}><Archive size={16}/>{chat.lifecycle==='archived'?'Restore':'Archive'}</Button>}<Select label="Project" disabled={busy||chat.retention==='temporary'} value={chat.project_id??''} onChange={event=>void mutate('project',{project_id:event.target.value||null})}><option value="">Unassigned</option>{projects.map(project=><option key={project.id} value={project.id}>{project.title}</option>)}</Select><Button variant="danger" disabled={busy} onClick={()=>setConfirmDelete(true)}><Trash2 size={16}/>Delete conversation</Button></div></details></div></header>
     {chat.retention==='temporary'&&<Notice tone="warning">This conversation stays temporary until you choose Save. Closing Renulus discards it.</Notice>}
     {chat.lifecycle==='archived'&&<Notice>Archived conversations keep their history and draft. Restore to continue.</Notice>}
-    {chat.kind==='case'&&<CaseContext conversation={chat} disabled={disabled} beforeChange={async()=>{await draftWrite.current;return chatRef.current;}} onChanged={value=>{accept(value);callback.current.onConversation?.(value);if(value.retention==='saved')changed();}} onStartTeaching={async teaching_case_id=>{const value=await createConversation({kind:'case',teaching_case_id,temporary:chat.retention==='temporary',project_id:chat.project_id});callback.current.onConversation?.(value);if(value.retention==='saved')changed();}}/>}
+    {chat.kind==='case'&&<CaseContext conversation={chat} disabled={disabled} beforeChange={flushDraft} onChanged={value=>{accept(value);callback.current.onConversation?.(value);if(value.retention==='saved')changed();}} onStartTeaching={async teaching_case_id=>{const value=await createConversation({kind:'case',teaching_case_id,temporary:chat.retention==='temporary',project_id:chat.project_id});callback.current.onConversation?.(value);if(value.retention==='saved')changed();}}/>}
     <div className="chat-transcript" aria-label="Message history">{messages.map(message=><article className={'chat-message chat-message-'+message.role} key={message.id}><p className="chat-role">{message.role==='user'?'You':'Renulus'}</p><div className="chat-message-text">{message.content}</div>{message.content_refs?.length>0&&<div className="chat-references">{message.content_refs.map((reference,index)=><Button key={index} variant="ghost" onClick={()=>workspace.open(reference)}>Open source {index+1}</Button>)}</div>}</article>)}{cursor&&<Button variant="secondary" onClick={()=>void more()}>Load more history</Button>}{partial&&!messages.some(message=>message.run_id===visibleRun.current&&message.role==='assistant')&&<article className="chat-message chat-message-assistant"><p className="chat-role">Renulus {busy?'Â· responding':''}</p><div className="chat-message-text">{partial}</div></article>}{messages.length===0&&!partial&&<div className="chat-empty"><h2>What would you like to understand?</h2><p>{chat.kind==='case'?'Discuss a case, ask for missing information, or work through a teaching case.':'Ask a nephrology question. Choose guided teaching when you would like to work through it step by step.'}</p></div>}</div>
     {Boolean(error)&&<ErrorState error={error} title="Your draft is kept" onRetry={()=>{setError(undefined);void send();}}/>}
     <form className="chat-composer" onSubmit={(event:FormEvent)=>{event.preventDefault();void send();}}><Textarea label={chat.kind==='case'?'Your case question':'Message Renulus'} value={text} onChange={event=>setText(event.target.value)} rows={3} maxLength={16000} disabled={disabled}/>{refs.length>0&&<div className="chat-reference-chips">{refs.map((reference,index)=><span key={index}><Button variant="ghost" onClick={()=>workspace.open(reference)}>Source {index+1}</Button><IconButton label={'Remove source '+(index+1)} disabled={busy} onClick={()=>setRefs(previous=>previous.filter((_,i)=>i!==index))}><X size={14}/></IconButton></span>)}</div>}<div className="chat-composer-footer"><div className="chat-composer-options"><IconButton label="Open files workspace" onClick={()=>workspace.showSection('Files')}><Paperclip size={18}/></IconButton><Select label="Teaching" value={style} onChange={event=>setStyle(event.target.value as 'direct'|'guided')} disabled={disabled}><option value="direct">Direct</option><option value="guided">Guided</option></Select></div><span className="chat-status" role="status">{status}</span>{busy?<Button variant="secondary" onClick={()=>void stop()}><Square size={16}/>Stop</Button>:<Button type="submit" disabled={disabled||!text.trim()}><ArrowUp size={17}/>Send</Button>}</div></form>
+    {chat.kind==='case'&&<CaseHandoffActions conversation={chat} question={text} disabled={disabled} prepare={flushDraft}/>}
     <dialog ref={dialog} onCancel={()=>setConfirmDelete(false)} className="chat-delete-dialog"><h2>Delete this conversation?</h2><p>Its messages and owned originals will be removed. Separately retained learning memory remains inspectable.</p><div className="actions"><Button variant="secondary" onClick={()=>{setConfirmDelete(false);dialog.current?.close();}}>Keep conversation</Button><Button variant="danger" onClick={()=>void remove()}>Delete conversation</Button></div></dialog>
   </section>;
 }

@@ -39,6 +39,11 @@ class CaseMutation(Mutation):
     case_revision: Revision
 
 
+class CaseHandoffRequest(CaseMutation):
+    target: Literal['explain', 'generated-practice']
+    question: str = Field(default='', max_length=12000)
+
+
 class CaseContextEdit(CaseMutation):
     text: str = Field(min_length=1, max_length=50000)
 

@@ -7,7 +7,7 @@ from fastapi.responses import StreamingResponse
 
 from renulus.design_c_contracts import ConversationDraft
 from .conversation_models import (Mutation, NewConversation, Rename, ProjectMove, Send,
-    CaseMutation, CaseContextEdit, CaseAttachmentRemove, CasePreviewApply, CasePreviewKeep, CasePreviewText)
+    CaseMutation, CaseContextEdit, CaseAttachmentRemove, CasePreviewApply, CasePreviewKeep, CasePreviewText, CaseHandoffRequest)
 from .conversation_case import ConversationCases
 from .conversation_repository import ConversationRepository
 from .conversation_stream import ConversationStreams
@@ -44,6 +44,10 @@ def create_router(services):
     @router.get('/case/{identifier}/context')
     def case_context(identifier: str):
         return cases.context(identifier)
+
+    @router.post('/case/{identifier}/handoff', status_code=201)
+    def case_handoff(identifier: str, body: CaseHandoffRequest):
+        return cases.handoff(identifier, body)
 
     @router.patch('/case/{identifier}/context')
     def case_edit(identifier: str, body: CaseContextEdit, idempotency_key: str | None = Header(default=None)):
