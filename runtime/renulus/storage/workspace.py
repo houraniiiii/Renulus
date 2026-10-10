@@ -148,4 +148,21 @@ class WorkspaceRepository:
                     continue
                 items.append({"title": row["title"], "status": row["status"], "media_type": row["media_type"],
                     "reference": ContentReference(target={"type": "note_revision" if note else "library_revision", "id": row["id"]}).model_dump(mode="json")})
+            if section == "Files" and context is not None and context.type in {"learn_thread", "case"}:
+                owner = self.services.registry.get("knowledge_attachments")
+                if owner is not None:
+                    kind = "case" if context.type == "case" else "learning"
+                    # Metadata-only enumeration in the same canonical transaction.
+                    # The owner decides live display/original availability; do not
+                    # call its locking inventory method while holding SQLite.
+                    for row in conn.execute("SELECT id,title,media_type FROM knowledge_attachments "
+                            "WHERE chat_kind=? AND chat_id=? ORDER BY created_at,id LIMIT 100", (kind, context.id)):
+                        if owner.authorize_in(conn, row["id"], context=context).get("allowed"):
+                            items.append({"title": row["title"], "status": "Saved attachment", "media_type": row["media_type"],
+                                "reference": ContentReference(target={"type": "attachment", "id": row["id"]}).model_dump(mode="json")})
+                    if kind == "case":
+                        for row in conn.execute("SELECT id,filename,media_type FROM case_attachments WHERE case_id=? ORDER BY id LIMIT 100", (context.id,)):
+                            if owner.authorize_in(conn, row["id"], context=context).get("allowed"):
+                                items.append({"title": row["filename"], "status": "Saved case attachment", "media_type": row["media_type"],
+                                    "reference": ContentReference(target={"type": "attachment", "id": row["id"]}).model_dump(mode="json")})
             return {"items": items}
