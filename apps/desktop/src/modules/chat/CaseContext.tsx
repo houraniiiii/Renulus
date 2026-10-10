@@ -12,11 +12,12 @@ import '../cases/cases.css';
 
 interface CaseReceipt {conversation: ConversationSummary; case_revision: number}
 
-export function CaseContext({conversation, disabled, beforeChange, onChanged, onStartTeaching, studyHelpContext}: {
+export function CaseContext({conversation, disabled, beforeChange, onChanged, onStartTeaching, onDiscussImage, studyHelpContext}: {
   conversation: ConversationSummary; disabled: boolean;
   beforeChange: () => Promise<ConversationSummary|undefined>;
   onChanged: (value: ConversationSummary) => void;
   onStartTeaching: (id: string) => Promise<void>;
+  onDiscussImage?: (id:string, caseRevision:number, model:string, question:string) => Promise<void>;
   studyHelpContext?:StudyHelpContext;
 }) {
   const [session,setSession] = useState<CaseSession>();
@@ -94,7 +95,7 @@ export function CaseContext({conversation, disabled, beforeChange, onChanged, on
             <Button variant="secondary" disabled={locked} onClick={()=>{setText(session.text);setEditing(true);}}>Edit case context</Button>
           </>}
           <CaseOriginals studyHelpContext={studyHelpContext} session={session} retention={conversation.retention} disabled={locked} remove={id=>change('remove',id)}/>
-          <CaseAttachments studyHelpContext={studyHelpContext} session={session} retention={conversation.retention} capabilities={capabilities} disabled={locked} apply={(id,text)=>change('apply',id,text)} keepImage={id=>change('keep',id)}/>
+          <CaseAttachments studyHelpContext={studyHelpContext} session={session} retention={conversation.retention} capabilities={capabilities} disabled={locked} apply={(id,text)=>change('apply',id,text)} keepImage={id=>change('keep',id)} discussImage={onDiscussImage?(id,model,question)=>onDiscussImage(id,session.revision,model,question):undefined}/>
           {teaching.length>0&&<details className="chat-teaching-entry"><summary>Start an installed teaching case</summary><Select label="Teaching case" value={selected} disabled={locked} onChange={event=>setSelected(event.target.value)}><option value="">Choose a teaching case</option>{teaching.map(item=><option key={item.id} value={item.id}>{item.title}</option>)}</Select><Button variant="secondary" disabled={locked||!selected} onClick={()=>{setWorking(true);void onStartTeaching(selected).catch(setError).finally(()=>setWorking(false));}}>Start teaching conversation</Button></details>}
         </>:session.teaching&&<>
           <p className="muted">Pinned version {session.teaching.version} · <CaseCurrencyLabel currency={session.teaching.currency}/></p>

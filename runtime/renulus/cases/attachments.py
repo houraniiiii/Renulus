@@ -306,7 +306,7 @@ class AttachmentPreviews:
             job.state = 'applied'
             return result
 
-    def discuss_image(self, job_id, request):
+    def discuss_image(self, job_id, request, *, consume=True, saved_conversation=False):
         from .models import DiscussCase
         with self.repository._lock:
             job = self.jobs.get(job_id)
@@ -317,10 +317,13 @@ class AttachmentPreviews:
             require_image_model(self.services, request.model)
             image = dict(job.image)
             attachment = self._original(job)
-            message = request.message + '\n[Image input requested. The original stays temporary until you explicitly save this case.]'
+            retention = ('The original is retained in this saved conversation.' if saved_conversation else
+                'The original stays temporary until you explicitly save this case.')
+            message = request.message + '\n[Image input requested. ' + retention + ']'
             run, messages = self.repository.begin_discussion(job.case_id, DiscussCase(
                 revision=request.revision, message=message, request_id=request.request_id), attachment=attachment)
             run.mode, run.model = 'image', request.model
             messages[-1]['content'] = [{'type': 'text', 'text': request.message}, image]
-            self.cancel(job.id)
+            if consume:
+                self.cancel(job.id)
             return run, messages

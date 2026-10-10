@@ -18,6 +18,34 @@ const frame=(element:React.ReactNode)=><NavigationProvider><WorkspaceProvider po
 afterEach(()=>cleanup());
 
 describe('Chat volatile handoffs',()=>{
+  it('sends a reviewed Case image through the conversation stream while retaining the separate composer draft',async()=>{
+    setup();const context:StudyHelpContext={attempt_id:'image-study',item_id:'item',version_id:'version',draft_revision:1,policy_revision:1,kind:'chat'};
+    const caseChat={...chat,kind:'case' as const,identity:{type:'case' as const,id:'image-case'}};
+    const session={id:'image-case',kind:'daily',title:'Fictional image Case',text:'',revision:4,scope:{kind:'saved-case',entity_id:'image-case'},saved:true,dirty:false,messages:[],teaching:null,attachments:[]};
+    const preview={id:'image-preview',case_id:'image-case',revision:4,scope:{kind:'temporary-case',entity_id:'image-case'},mode:'image',filename:'synthetic.png',text:'',ocr:{},image:{media_type:'image/png',data:'AAAA'},error:null};
+    calls.api.mockImplementation(async(path:string)=>{
+      if(path==='/cases/capabilities')return {image_interpretation:{supported:true,models:['approved-image'],max_bytes:8000000},extraction:{supported:false}};
+      if(path==='/cases/teaching')return {cases:[]};
+      if(path.endsWith('/prepare'))return {...preview,state:'reading'};
+      if(path.endsWith('/extract'))return {...preview,state:'ready'};
+      if(path.endsWith('/context'))return session;
+      if(path.endsWith('/draft'))return {text:'Keep this separate draft',content_refs:[],revision:0,conversation_revision:1};
+      if(path.includes('/messages')||path.includes('/study/projects')||path.endsWith('/runs'))return {items:[],next_cursor:null};
+      return caseChat;
+    });
+    calls.send.mockImplementation(async(_chat,_body,onEvent)=>onEvent({run_id:'image-run',sequence:1,type:'completed',payload:{conversation:caseChat}}));
+    render(frame(<Chat identity={caseChat.identity} studyHelpContext={context}/>));
+    fireEvent.change(await screen.findByLabelText('Use this file for'),{target:{value:'image'}});
+    fireEvent.change(screen.getByLabelText('Image to review before sending'),{target:{files:[new File(['synthetic'], 'synthetic.png', {type:'image/png'})]}});
+    const question=await screen.findByLabelText('Question about this image');
+    expect(calls.send).not.toHaveBeenCalled();
+    fireEvent.change(question,{target:{value:'Fictional image learning question'}});
+    fireEvent.click(screen.getByRole('button',{name:'Send image for discussion'}));
+    await waitFor(()=>expect(calls.send).toHaveBeenCalledTimes(1));
+    expect(calls.send.mock.calls[0][1]).toMatchObject({text:'Fictional image learning question',image_preview_id:'image-preview',case_revision:4,model:'approved-image',content_refs:[]});
+    expect(calls.send.mock.calls[0][4]).toEqual(context);
+    expect((screen.getByLabelText('Your case question') as HTMLTextAreaElement).value).toBe('Keep this separate draft');
+  });
   it('flushes a new temporary draft before Save and replays the same command after a lost acknowledgement',async()=>{
     setup();let attempts=0;
     const temporary={...chat,retention:'temporary' as const};

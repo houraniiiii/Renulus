@@ -137,7 +137,7 @@ class ConversationStreams:
     def _finish(self, conn, entry, state, error=None):
         if state=='completed':
             self._guard(conn,entry)
-        summary = self._touch(conn,entry,clear=state=='completed')
+        summary = self._touch(conn,entry,clear=state=='completed' and not entry['request'].image_preview_id)
         receipt = {'run_id':entry['run'].id,'state':state,'conversation':summary}
         if error:
             receipt['error'] = error
@@ -152,19 +152,22 @@ class ConversationStreams:
 
     def begin(self, kind, identifier, request, key=None):
         repo = self.repo
+        if request.image_preview_id and kind != 'case':
+            raise ApiError('image_case_required', 'Discuss this image in its original Case conversation', 422)
         key = key or request.request_id
         if key!=request.request_id or not 8<=len(key)<=128:
             raise ApiError('invalid_idempotency_key','Use the same request ID and request key between 8 and 128 characters',422)
         entry = None
         before = None
+        prepared_run = None
         with repo._lock, repo.cases._lock:
             try:
-                with repo.db.transaction() as conn:
+                with repo.cases.defer_context_invalidation(), repo.db.transaction() as conn:
                     policy = require_assistance(conn)
                     summary,row = repo._get(conn,kind,identifier)
                     saved = summary['retention']=='saved'
                     def start():
-                        nonlocal entry,before
+                        nonlocal entry,before,prepared_run
                         repo._expected(summary,request.expected_revision)
                         if summary['lifecycle']!='active':
                             raise ApiError('conversation_archived','Restore the conversation before sending',409)
@@ -178,6 +181,7 @@ class ConversationStreams:
                         if kind=='learning':
                             _,run = repo.learn.prepare(request.text,scope,identifier if saved else None,
                                 request.topic_id,request.teaching_style,'conversation:'+key,conn=conn)
+                            prepared_run = run
                             messages = None
                             if not saved:
                                 run.context = [{'role':m['role'],'content':m['content']} for m in row['messages']]
@@ -188,7 +192,18 @@ class ConversationStreams:
                         else:
                             owner = repo.cases.get(identifier)
                             before = deepcopy(repo.cases._sessions[identifier])
-                            run,messages = repo.cases.begin_discussion(identifier,DiscussCase(revision=owner['revision'],message=request.text,request_id=request.request_id))
+                            if request.image_preview_id:
+                                from renulus.cases.models import ImageDiscussion
+                                previews = repo.services.get('case_previews')
+                                preview = previews.jobs.get(request.image_preview_id)
+                                if preview is None or preview.case_id != identifier:
+                                    raise ApiError('case_preview_not_found', 'Prepare an image for this Case', 404)
+                                run,messages = previews.discuss_image(request.image_preview_id, ImageDiscussion(
+                                    revision=request.case_revision,message=request.text,request_id=request.request_id,model=request.model),
+                                    consume=False,saved_conversation=saved)
+                            else:
+                                run,messages = repo.cases.begin_discussion(identifier,DiscussCase(revision=owner['revision'],message=request.text,request_id=request.request_id))
+                            prepared_run = run
                             run.model = request.model
                             run.policy_revision,run.context_epoch = policy,context_epoch_in(conn)
                             user = repo.cases._sessions[identifier].messages[-1]
@@ -204,9 +219,10 @@ class ConversationStreams:
                             if kind=='learning' and project and project['project_id']:
                                 run.revision_ids = project['revision_ids']
                             _,sidecar,column,_ = repo._owner(kind)
-                            conn.execute(f'UPDATE {sidecar} SET draft_text=?,draft_refs_json=? WHERE {column}=?',
-                                (request.text,json.dumps([r.model_dump(mode='json') for r in request.content_refs]),identifier))
-                        else:
+                            if not request.image_preview_id:
+                                conn.execute(f'UPDATE {sidecar} SET draft_text=?,draft_refs_json=? WHERE {column}=?',
+                                    (request.text,json.dumps([r.model_dump(mode='json') for r in request.content_refs]),identifier))
+                        elif not request.image_preview_id:
                             row['draft_text']=request.text
                         receipt = {'run_id':run.id,'state':'running','conversation':self._touch(conn,entry)}
                         entry['receipt']=receipt
@@ -220,13 +236,17 @@ class ConversationStreams:
                         receipt=command(conn,'conversation_commands',key,'send',summary['identity']['type'],identifier,request,start)
                     else:
                         receipt=repo._volatile_command(key,'send',kind,identifier,request,start)
+                if entry and request.image_preview_id:
+                    repo.services.get('case_previews').cancel(request.image_preview_id)
             except BaseException:
                 if before is not None:
-                    repo.cases._sessions[identifier]=before
-                if entry:
-                    self.active.pop(entry['run'].id,None)
-                    repo.learn.active.pop(entry['run'].id,None)
-                    repo.cases._runs.pop(entry['run'].id,None)
+                    session = repo.cases._sessions[identifier]
+                    session.__dict__.clear()
+                    session.__dict__.update(before.__dict__)
+                if prepared_run:
+                    self.active.pop(prepared_run.id,None)
+                    repo.learn.active.pop(prepared_run.id,None)
+                    repo.cases._runs.pop(prepared_run.id,None)
                 raise
         if entry is None and receipt['run_id'] in self.active:
             raise ApiError('conversation_busy','This response is already running',409,True)

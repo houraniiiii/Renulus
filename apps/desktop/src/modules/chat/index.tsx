@@ -9,7 +9,7 @@ import { CaseHandoffActions } from './CaseHandoffActions';
 import { ChatAttachments } from './ChatAttachments';
 import { CreateChatTest } from './CreateChatTest';
 import type { AttachmentIntent } from './attachments';
-import { conversationPath, createConversation, sendConversation, type ConversationRun, type SendIntent } from './api';
+import { conversationPath, createConversation, sendConversation, type CaseImageIntent, type ConversationRun, type SendIntent } from './api';
 import './chat.css';
 
 interface Message {id: string; run_id: string; role: 'user'|'assistant'; content: string; content_refs: ContentReference[]}
@@ -57,6 +57,7 @@ export default function ChatPage(props: ChatPageProps) {
   const streamAbort = useRef<AbortController|null>(null);
   const activeRun = useRef<string|undefined>(undefined);
   const visibleRun = useRef<string|undefined>(undefined);
+  const lastSendImage = useRef(false);
   const draftWrite = useRef<Promise<void>>(Promise.resolve());
   const persisted = useRef('');
   const consumed = useRef(new Set<string>());
@@ -192,16 +193,17 @@ export default function ChatPage(props: ChatPageProps) {
     const updated={...current,revision:draft.conversation_revision};
     persisted.current=value;accept(updated);return updated;
   }
-  async function send(value=textRef.current,requestId:string=crypto.randomUUID()) {
+  async function send(value=textRef.current,requestId:string=crypto.randomUUID(),imageIntent?:CaseImageIntent) {
     if(!value.trim()||busy||!chatRef.current)return;
     const version=epoch.current,controller=new AbortController();streamAbort.current=controller;
+    lastSendImage.current=!!imageIntent;
     setBusy(true);setError(undefined);setPartial('');setStatus('Sending');
     await draftWrite.current;
     const current=chatRef.current;
     if(!current||version!==epoch.current)return;
     let terminal=false,watching=false;
     try {
-      await sendConversation(current,{text:value,request_id:requestId,expected_revision:current.revision,teaching_style:style,content_refs:refsRef.current},event=>{
+      await sendConversation(current,{text:value,request_id:requestId,expected_revision:current.revision,teaching_style:style,content_refs:imageIntent?[]:refsRef.current,...imageIntent},event=>{
         if(epoch.current!==version)return;
         activeRun.current=event.run_id;
         visibleRun.current=event.run_id;
@@ -213,7 +215,7 @@ export default function ChatPage(props: ChatPageProps) {
           terminal=true;activeRun.current=undefined;
           if(event.type==='completed') {
             setStatus('Saved');
-            if(textRef.current===value){setText('');setRefs([]);persisted.current=signature('',[]);}
+            if(!imageIntent&&textRef.current===value){setText('');setRefs([]);persisted.current=signature('',[]);}
             if(current.retention==='saved')changed();
           }else{
             setStatus(event.type==='cancelled'?'Stopped. Your draft is retained.':'Response did not finish. Your draft is retained.');
@@ -270,9 +272,9 @@ export default function ChatPage(props: ChatPageProps) {
     <header className="chat-heading"><div><p className="chat-eyebrow">{chat.kind==='case'?'Case discussion':'Learning conversation'}</p><h1>{chat.title}</h1></div><div className="chat-tools"><Badge tone={chat.retention==='temporary'?'warning':'neutral'}>{chat.retention==='temporary'?'Temporary':chat.lifecycle==='archived'?'Archived':'Saved'}</Badge><details><summary>Manage</summary><div className="chat-management"><Input label="Conversation title" value={title} onChange={event=>setTitle(event.target.value)} maxLength={120}/><Button variant="secondary" disabled={busy||!title.trim()} onClick={()=>void mutate('rename',{title:title.trim()})}>Rename</Button>{chat.retention==='temporary'?<Button disabled={busy} onClick={()=>void mutate('save')}>Save conversation</Button>:<Button variant="ghost" disabled={busy} onClick={()=>void mutate(chat.lifecycle==='archived'?'restore':'archive')}><Archive size={16}/>{chat.lifecycle==='archived'?'Restore':'Archive'}</Button>}<Select label="Project" disabled={busy||chat.retention==='temporary'} value={chat.project_id??''} onChange={event=>void mutate('project',{project_id:event.target.value||null})}><option value="">Unassigned</option>{projects.map(project=><option key={project.id} value={project.id}>{project.title}</option>)}</Select><Button variant="danger" disabled={busy} onClick={()=>setConfirmDelete(true)}><Trash2 size={16}/>Delete conversation</Button></div></details></div></header>
     {chat.retention==='temporary'&&<Notice tone="warning">This conversation stays temporary until you choose Save. Closing Renulus discards it.</Notice>}
     {chat.lifecycle==='archived'&&<Notice>Archived conversations keep their history and draft. Restore to continue.</Notice>}
-    {chat.kind==='case'&&<CaseContext studyHelpContext={props.studyHelpContext} conversation={chat} disabled={disabled} beforeChange={flushDraft} onChanged={value=>{accept(value);callback.current.onConversation?.(value);if(value.retention==='saved')changed();}} onStartTeaching={async teaching_case_id=>{const value=await createConversation({kind:'case',teaching_case_id,temporary:chat.retention==='temporary',project_id:chat.project_id},undefined,undefined,props.studyHelpContext);callback.current.onConversation?.(value);if(value.retention==='saved')changed();}}/>}
+    {chat.kind==='case'&&<CaseContext studyHelpContext={props.studyHelpContext} conversation={chat} disabled={disabled} beforeChange={flushDraft} onDiscussImage={async(image_preview_id,case_revision,model,question)=>{try{const latest=await flushDraft();if(latest)await send(question,crypto.randomUUID(),{image_preview_id,case_revision,model});}catch(caught){setError(caught);}}} onChanged={value=>{accept(value);callback.current.onConversation?.(value);if(value.retention==='saved')changed();}} onStartTeaching={async teaching_case_id=>{const value=await createConversation({kind:'case',teaching_case_id,temporary:chat.retention==='temporary',project_id:chat.project_id},undefined,undefined,props.studyHelpContext);callback.current.onConversation?.(value);if(value.retention==='saved')changed();}}/>}
     <div className="chat-transcript" aria-label="Message history">{messages.map(message=><article className={'chat-message chat-message-'+message.role} key={message.id}><p className="chat-role">{message.role==='user'?'You':'Renulus'}</p><div className="chat-message-text">{message.content}</div>{message.content_refs?.length>0&&<div className="chat-references">{message.content_refs.map((reference,index)=><Button key={index} variant="ghost" onClick={()=>workspace.open(reference)}>Open source {index+1}</Button>)}</div>}</article>)}{cursor&&<Button variant="secondary" onClick={()=>void more()}>Load more history</Button>}{partial&&!messages.some(message=>message.run_id===visibleRun.current&&message.role==='assistant')&&<article className="chat-message chat-message-assistant"><p className="chat-role">Renulus {busy?'Â· responding':''}</p><div className="chat-message-text">{partial}</div></article>}{messages.length===0&&!partial&&<div className="chat-empty"><h2>What would you like to understand?</h2><p>{chat.kind==='case'?'Discuss a case, ask for missing information, or work through a teaching case.':'Ask a nephrology question. Choose guided teaching when you would like to work through it step by step.'}</p></div>}</div>
-    {Boolean(error)&&<ErrorState error={error} title="Your draft is kept" onRetry={()=>{setError(undefined);void send();}}/>}
+    {Boolean(error)&&<ErrorState error={error} title="Your draft is kept" onRetry={lastSendImage.current?undefined:()=>{setError(undefined);void send();}}/>}
     <form className="chat-composer" onSubmit={(event:FormEvent)=>{event.preventDefault();void send();}}><Textarea label={chat.kind==='case'?'Your case question':'Message Renulus'} value={text} onChange={event=>setText(event.target.value)} rows={3} maxLength={16000} disabled={disabled}/>{refs.length>0&&<div className="chat-reference-chips">{refs.map((reference,index)=><span key={index}><Button variant="ghost" onClick={()=>workspace.open(reference)}>Source {index+1}</Button><IconButton label={'Remove source '+(index+1)} disabled={busy} onClick={()=>setRefs(previous=>previous.filter((_,i)=>i!==index))}><X size={14}/></IconButton></span>)}</div>}<div className="chat-composer-footer"><div className="chat-composer-options"><IconButton label="Attach file" disabled={disabled} onClick={()=>setAttachmentsOpen(value=>!value)}><Paperclip size={18}/></IconButton><Select label="Teaching" value={style} onChange={event=>setStyle(event.target.value as 'direct'|'guided')} disabled={disabled}><option value="direct">Direct</option><option value="guided">Guided</option></Select></div><span className="chat-status" role="status">{status}</span>{busy?<Button variant="secondary" onClick={()=>void stop()}><Square size={16}/>Stop</Button>:<Button type="submit" disabled={disabled||!text.trim()}><ArrowUp size={17}/>Send</Button>}</div></form>
     <ChatAttachments studyHelpContext={props.studyHelpContext} key={incomingKey} conversation={chat} open={attachmentsOpen} onOpenChange={setAttachmentsOpen} disabled={disabled} intent={props.attachmentIntent} onConsumed={props.onAttachmentIntentConsumed} beforeAttach={flushDraft} onChanged={value=>{accept(value);if(value.retention==='saved')changed();}}/>
     <CreateChatTest studyHelpContext={props.studyHelpContext} key={'test:'+incomingKey} conversation={chat} disabled={disabled} prepare={flushDraft}/>

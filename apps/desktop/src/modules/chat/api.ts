@@ -3,6 +3,7 @@ import { stream } from '../../platform/stream';
 import { studyHelpHeaders, type ContentReference, type ConversationSummary, type StudyHelpContext } from '../../platform/designC';
 
 export interface SendIntent { text: string; request_id: string }
+export interface CaseImageIntent {image_preview_id:string;case_revision:number;model:string}
 export interface RunEvent {
   run_id: string; sequence: number; type: string;
   payload: { text?: string; message?: string; code?: string; retryable?: boolean;
@@ -51,7 +52,7 @@ export async function sendConversation(
   conversation: ConversationSummary,
   input: {text: string; request_id: string; expected_revision: number;
     teaching_style?: 'direct' | 'guided'; topic_id?: string | null; model?: string | null;
-    freshness?: boolean; content_refs?: ContentReference[]},
+    freshness?: boolean; content_refs?: ContentReference[]; image_preview_id?:string;case_revision?:number},
   onEvent: (event: RunEvent) => void,
   signal?: AbortSignal,
   studyHelpContext?: StudyHelpContext,

@@ -285,3 +285,114 @@ def test_temporary_case_context_mutation_has_no_durable_payload_or_command(tmp_p
     for path in profile.rglob('*'):
         if path.is_file():
             assert marker.encode() not in path.read_bytes()
+
+
+@pytest.mark.parametrize('temporary', [False, True])
+def test_wrapper_image_discussion_actual_sdk_preserves_composer_draft_and_owner(tmp_path, temporary):
+    import asyncio
+    import base64
+    from .test_images import connect, upload, image, MODEL, QUESTION, ANSWER, IMAGE_SENTINEL
+    from .conftest import assert_absent_from_profile
+    profile = tmp_path / 'wrapper-image'
+    app = app_at(profile)
+    services = app.state.services
+    manager, bodies = asyncio.run(connect(services))
+    with TestClient(app) as client:
+        chat = client.post('/api/v1/conversations', json={'kind':'case','temporary':temporary}).json()
+        identifier = chat['identity']['id']
+        route = '/api/v1/conversations/case/'+identifier
+        draft = client.put(route+'/draft', json={'expected_revision':chat['revision'], 'text':'Preserved separate question', 'content_refs':[]}).json()
+        case = client.get('/api/v1/cases/sessions/'+identifier).json()
+        preview = upload(client, case).json()
+        assert not bodies
+        body = {'expected_revision':draft['conversation_revision'], 'case_revision':case['revision'],
+            'image_preview_id':preview['id'], 'model':MODEL, 'text':QUESTION, 'request_id':'wrapper-image-command'}
+        stale = client.post(route+'/messages', json={**body,'case_revision':case['revision']+1})
+        assert stale.status_code == 409 and not bodies
+        response = client.post(route+'/messages', json=body)
+        assert response.status_code == 200, response.text
+        events = [json.loads(line[6:]) for line in response.text.splitlines() if line.startswith('data: ')]
+        assert events[-1]['type'] == 'completed', events[-1]
+        assert len(bodies) == 1
+        assert 'input_image' in json.dumps(bodies[0])
+        assert client.get(route+'/draft').json()['text'] == 'Preserved separate question'
+        original = client.get(route+'/context').json()['attachments'][0]
+        assert original['saved'] is not temporary
+        assert client.get(f"/api/v1/cases/sessions/{identifier}/attachments/{original['id']}/original").content == image()
+        assert ANSWER in client.get(route+'/messages').text
+        assert ('The original stays temporary' in client.get(route+'/messages').text) is temporary
+        replay = client.post(route+'/messages', json=body)
+        assert '"replayed":true' in replay.text and len(bodies) == 1
+        if temporary:
+            assert_absent_from_profile(services, IMAGE_SENTINEL, base64.b64encode(image()).decode(), QUESTION, ANSWER)
+        assert manager.status()['live_provider_verified'] is False
+    if not temporary:
+        with TestClient(app_at(profile)) as client:
+            assert ANSWER in client.get(route+'/messages').text
+            assert client.get(route+'/draft').json()['text'] == 'Preserved separate question'
+            assert client.get(f"/api/v1/cases/sessions/{identifier}/attachments/{original['id']}/original").content == image()
+
+
+def test_wrapper_image_failed_checkpoint_preserves_preview_for_same_request_retry(tmp_path, monkeypatch):
+    import asyncio
+    import sqlite3
+    from renulus.learn.conversation_models import Send
+    from .test_images import connect, upload, MODEL
+    app = app_at(tmp_path / 'image-checkpoint-rollback')
+    services = app.state.services
+    _, bodies = asyncio.run(connect(services))
+    with TestClient(app) as client:
+        chat = client.post('/api/v1/conversations', json={'kind':'case'}).json()
+        identifier = chat['identity']['id']
+        case = client.get('/api/v1/cases/sessions/'+identifier).json()
+        preview = upload(client, case).json()
+        body = {'expected_revision':chat['revision'], 'case_revision':case['revision'],
+            'image_preview_id':preview['id'], 'model':MODEL, 'text':'Fictional reviewed image', 'request_id':'retry-image-checkpoint'}
+        cases = services.get('cases')
+        save = cases.save
+        def fail_after_save(*args, **kwargs):
+            save(*args, **kwargs)
+            raise sqlite3.OperationalError('Synthetic image checkpoint failure')
+        monkeypatch.setattr(cases, 'save', fail_after_save)
+        with pytest.raises(sqlite3.OperationalError):
+            services.get('conversations').streaming.begin('case', identifier, Send(**body))
+        assert not bodies
+        assert client.get('/api/v1/cases/attachments/'+preview['id']).json()['state'] == 'ready'
+        assert client.get('/api/v1/conversations/case/'+identifier+'/context').json()['attachments'] == []
+        monkeypatch.setattr(cases, 'save', save)
+        response = client.post('/api/v1/conversations/case/'+identifier+'/messages', json=body)
+        assert response.status_code == 200, response.text
+        assert '"type":"completed"' in response.text, response.text
+        assert len(bodies) == 1
+
+
+def test_text_send_keeps_pre_image_command_hash_shape():
+    from renulus.learn.conversation_models import Send
+    assert Send(expected_revision=1,text='Fictional text',request_id='old-text-command').model_dump(mode='json') == {
+        'expected_revision':1,'text':'Fictional text','request_id':'old-text-command','teaching_style':'direct',
+        'topic_id':None,'model':None,'freshness':None,'content_refs':[]}
+
+
+def test_wrapper_image_discussion_refuses_sdk_answer_after_context_epoch_changes(tmp_path):
+    import asyncio
+    from renulus.storage.invalidation import bump_context_epoch
+    from .test_images import connect, upload, sdk_response, MODEL, ANSWER
+    app = app_at(tmp_path / 'image-late-epoch')
+    services = app.state.services
+    def delayed_response(request):
+        with services.db.transaction() as conn:
+            bump_context_epoch(conn)
+        return sdk_response()
+    _, bodies = asyncio.run(connect(services, infer=delayed_response))
+    with TestClient(app) as client:
+        chat = client.post('/api/v1/conversations', json={'kind':'case'}).json()
+        identifier = chat['identity']['id']
+        route = '/api/v1/conversations/case/'+identifier
+        case = client.get('/api/v1/cases/sessions/'+identifier).json()
+        preview = upload(client, case).json()
+        response = client.post(route+'/messages', json={'expected_revision':chat['revision'], 'case_revision':case['revision'],
+            'image_preview_id':preview['id'], 'model':MODEL, 'text':'Fictional image learning', 'request_id':'image-late-epoch'})
+        assert response.status_code == 200 and len(bodies) == 1
+        events = [json.loads(line[6:]) for line in response.text.splitlines() if line.startswith('data: ')]
+        assert events[-1]['type'] == 'error' and events[-1]['payload']['code'] == 'dependency_changed', events[-1]
+        assert ANSWER not in client.get(route+'/messages').text
