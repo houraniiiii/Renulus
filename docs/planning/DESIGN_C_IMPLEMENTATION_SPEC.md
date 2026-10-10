@@ -927,13 +927,13 @@ This table records outcomes against the existing tickets, not a replacement plan
 | Ticket | Current status / owner | Prerequisite and evidence / remaining gate |
 | --- | --- | --- |
 | DC01 | Design prerequisite passed — design worker + lead | `fbdb99eb` reconciles editable C copy, 480px workspace, narrow/200% compositions and operational states. Lead reviewed representative pixels; connected code acceptance remains with feature owners. |
-| DC02 | Foundation published — lead; feature recovery remains open | Final contracts `17f5d6a4`, sidecar/assessment DDL `db6852f9` and Knowledge003 `8dfb2120`. Exact installed inventory, typed graph, schema-1 conversion and canonical invalidation tested. Attachment media recovery and populated combined upgrade remain open. |
+| DC02 | Foundation published — lead; populated integration remains open | Contracts `17f5d6a4`, sidecar/assessment DDL `db6852f9` and Knowledge003 `8dfb2120`. Typed attachment recovery `f61799c5`, restore interruption `a9d657e8` and cleanup journal `e66bf8fe` tested. Populated combined upgrade and real feature producers remain open. |
 | DC03 | In progress — lead | C shell, typed navigation/volatile handoffs, hidden narrow/zoom controller integrated. Full keyboard/focus/zoom and default-delivery matrix remains open. |
-| DC04 | In progress — Zeno + lead | Saved default/lifecycle/drafts, explicit temporary Save `c4e4a19a`, saved response continuity `c91baae9`, 21 lane backend checks. Case actions, ordinary attachments and integrated policy/hidden journeys remain open. |
+| DC04 | In progress — Zeno + lead | Saved default/lifecycle/drafts, temporary Save `c4e4a19a`, continuity `c91baae9`, Case context/pinned teaching `e80e046e` and neutral run reads `70762aa8` integrated. Ordinary attachment/live cleanup, remaining Case handoffs and complete hidden journeys remain open. |
 | DC05 | In progress — Zeno/M2 + lead | Project membership, shared documents, typed unlink markers and scoped retrieval `6b3e74d5`; Projects UI `8de5f0f6`. Actual linked-source Chat publication and combined deletion/reopen review remain open. |
 | DC06 | In progress — Kant + consumers | 41 assembled Home checks, ten renderer checks and bounded hidden name/single-send evidence `19125498`. Attach, saved-five Study and whole-attempt evidence consumers remain open. |
 | DC07 | In progress — Aquinas + lead | Typed Workspace tabs/480px default/narrow focus and canonical access/preferences integrated; five API checks. Final persistence slice and integrated readers/Test focus review remain open. |
-| DC08 | In progress — Poincare + lead | Canonical inert reader/extraction adapters and shared policy integrated through `7944ecd9`, Knowledge003 `8dfb2120`. Grid details, ordinary attachment producer, typed original recovery and complete hidden eight-format matrix remain open. |
+| DC08 | In progress — Poincare + lead | Inert readers/extraction and policy through `7944ecd9`, Knowledge003 `8dfb2120`, typed original recovery `f61799c5`. Grid details, actual ordinary attachment producer/live deletion and complete hidden eight-format matrix remain open. |
 | DC09 | In progress — Zeno/M2 | Explicit manual/evidence goals `728e4e1a` and Projects UI `8de5f0f6`; four lane backend checks. Notes/project revision editing and actual evidenced consumers remain open. |
 | DC10 | In progress — existing destination owners + lead | Library/readers and useful legacy destinations remain reachable in C. Matching visual/restriction/recovery evidence remains open. |
 | DC11 | In progress — lead | Canonical literal finder `1b7d2256`; two API and twelve affected renderer checks. Populated profile, stale/deleted references and integrated active-Test review remain open. |
@@ -942,9 +942,9 @@ This table records outcomes against the existing tickets, not a replacement plan
 | DC14 | In progress — Russell + lead | Shared policy/middleware deny help and late publication. Whole Test submit/draft barrier, exposure, score-cohort and integrated bypass proof pending. |
 | DC15 | In progress — Russell | Published clock high-water/pause/result columns; actual timer/recovery producer and connected expiry checks pending. |
 | DC16 | Connected slice integrated — Pauli + lead; acceptance open | Backend `dd1f7c12`, restore `037b895d`, renderer `520c538c`: 36 lane actual DB and three real-router UI journeys. Tests mount and saved-five Study consumer/hidden proof remain open. |
-| DC17 | Not started — bounded import lane follows reader extraction | Consumes actual DC08 capability/eligibility and immutable collection contracts; no prototype import acceptance. |
+| DC17 | Reserved — Pauli import lane + parent DDL/integration | New disjoint import service/models/API/renderer/tests lease. Consumes actual DC08 capability/eligibility and immutable collection contracts; contract/DDL publication precedes producer persistence. |
 | DC18 | Not started — bounded Chat/generation interface | Trusted volatile fictional transformation, same saved-version Chat card/Workspace and full attempt consumers pending. |
-| DC19 | In progress — Kant + Pauli + lead | Opt-in scheduler `e1d7c515`, trusted generation extension `d79f9c4c`; 25 scheduler and 53 generation lane checks. Actual shared-hook tests, settings mount/export and recovery-collision proof pending. |
+| DC19 | Connected slice integrated — Kant/Pauli + lead; acceptance open | Scheduler `e1d7c515`, trusted producer `d79f9c4c`, hook tests `0acf3fb6`/`bee764de`, renderer `91a7148a`, Settings/Tests mounts `f24fbfce`, recovery calls `837ea3d0`. Safe API/export integrated; hidden/reopen and populated final review remain open. |
 | DC20 | Not started — lead + independent reviewers | Requires all producer/consumer integrations and populated-profile coverage. |
 | DC21 | Not started — release lead | Current installed Flow app remains selected until DC20 and matching delivery evidence pass. |
 
@@ -981,3 +981,22 @@ running producers even when their integer epoch coincides with the destination.
 Validated checkpoints remain available for deliberate retry; restore does not
 restart provider work. These are engineering safety clarifications, not changes
 to the confirmed app-running/bounded-catch-up requirement.
+
+Attachment cleanup clarification: M2 removes owned rows and emits typed
+attachment/original tombstones inside the caller's canonical deletion transaction.
+`storage.attachment_cleanup.enqueue_in(conn, plan)` journals exact attachment IDs
+and owned relative directories there; `drain(services)` performs file work after
+commit and at startup. Live rows and unsafe paths refuse cleanup; locked/failed
+work remains journalled for retry. This local journal is excluded from export.
+Planning bounds are 200 entries per deletion and 1000 pending entries; exceeding
+them refuses the mutation rather than dropping cleanup. This prevents premature
+file deletion on rollback and lost cleanup after a process exit. The actual
+producer/caller journey must pass before attachment deletion acceptance.
+
+Nightly's reusable status is mounted in Tests, with its preference action opening
+the existing Settings preferences section. Retained jobs open the existing
+GenerationPanel and published jobs select the exact immutable saved version. This
+adapts the separate prototype page to the established shell without duplicating
+settings authority or adding a Generate-now action. Lead inspected Figma Off
+`83:7590`; the approved 22:00/five defaults and future-only recovery boundary
+override its illustrative 21:00 and reopen copy.

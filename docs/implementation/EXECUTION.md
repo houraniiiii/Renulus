@@ -207,6 +207,45 @@ those dated runs; they are not assignments or scheduling instructions for C.
 The current installed baseline and canonical paths are in
 [the workspace guide](../WORKSPACE.md) and [project brief](../PROJECT_BRIEF.md).
 
+### Design C integration continuation — October 10
+
+Canonical `codex/design-c-integration` retains documentation baseline `528025ff`.
+Historical normalization-only flags remain unstaged. Owner profile, originals,
+credentials and installed Flow selection are untouched. The existing
+`renulus-design-c-progress` twenty-minute heartbeat remains active.
+
+Shared baseline `48729826` publishes typed attachment originals `f61799c5`,
+epoch-independent restore interruption `a9d657e8`, postcommit cleanup journal
+`e66bf8fe`, neutral run reads `70762aa8` and safe Nightly API/export assembly.
+Recovery recorded 53 passes and two obsolete zero-preference assertions; the
+updated six-case filter suite passes, proving local invalidation markers exist
+while exported learner preferences remain absent. Receipts under
+`C:/Renulus/scratch/design-c/integration/`: `attachment-recovery01.xml`,
+`filter-markers02.xml`, `restore-invalidation02.xml` (12 passes),
+`neutral-policy03.xml` (four passes), `cleanup-policy02.xml` (seven passes).
+Restore retains validated work and never resumes provider calls.
+
+Case context/pinned teaching `e80e046e`, Nightly connected hook tests `0acf3fb6`,
+generator orphan reconciliation `bee764de`, Nightly renderer `91a7148a`, actual
+Settings/Tests mounts `f24fbfce` and scheduler recovery calls `837ea3d0` integrated.
+Lead inspected Figma Nightly Off `83:7590` and reused C tokens/primitives/assets.
+Build/typecheck, 69 affected renderer checks and one real-router preferences/
+handoff check passed. Hidden source-app checks run in owned
+`C:/Renulus/scratch/dcctl/c02`; Kant owns independent Nightly pixels/reopen.
+Pauli's final generation/scheduler evidence is 89 actual-DDL/ProviderManager
+synthetic checks at `C:/Renulus/scratch/design-c/generation/nightly-assembled-final01.xml`.
+Kant's 44 scheduler cases are covered by corrected recovery/neutral runs; the
+original failed assertion receipts remain dated evidence, not silent clean passes.
+
+Reservations: Russell owns whole attempts; Poincare owns ordinary attachment/
+reader producers; Zeno owns Case/conversation callers and cleanup consumption;
+Kant owns Nightly; Aquinas owns Workspace persistence then independent pass 2.
+Pauli's new DC17 lease is only `assessment/import_{models,service,api}.py`,
+`modules/imports/` and `tests/assessment/test_saved_imports.py`. Lead retains
+schemas/migrations/shared contracts/typed relations, shell/Settings/root files
+and Tests collection integration. Import persistence waits for concrete DDL.
+All feature tickets remain open at their actual producer/consumer gates.
+
 ## Historical implementation record — October 4–6
 
 Final local handover October6: [the delivered app](DELIVERY_20261006.md) follows
