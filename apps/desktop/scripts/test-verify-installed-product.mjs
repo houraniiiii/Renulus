@@ -6,8 +6,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { installedAcceptancePlan, validateInstalledRequest, validateInstallationReceipts, isolatedEnvironment,
   validateCompleteReport, validateFrozenScript, requiredGates, remainingOwnedIdentities, inside,
-  coreGates, deferredGates, completeCoreReceipt, designCEvidenceRoot, ownedArtifact, validateHiddenWindows, waitForDesignCWindow,
-  validateConversation, validateSavedTest, validateActiveTest, validateFinalAttempt, safeFailure } from './verify-installed-product.mjs';
+  coreGates, readerGates, deferredGates, completeCoreReceipt, designCEvidenceRoot, ownedArtifact, validateHiddenWindows, waitForDesignCWindow,
+  validateConversation, validateSavedTest, validateActiveTest, validateFinalAttempt, safeFailure,
+  validateReaderManifest, validateReaderOriginal, validateReaderDocument, validateReaderPassage, validateReaderRaster } from './verify-installed-product.mjs';
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
 const desktop = path.resolve(directory, '..');
@@ -81,7 +82,7 @@ test('the executed harness must match the freeze, allowing only the declared Pow
 });
 
 test('synthetic child environment strips developer, Electron-as-Node and provider inputs', () => {
-  const evidence = path.join(designCEvidenceRoot, 'installed-product-unit-boundary');
+  const evidence = path.join(designCEvidenceRoot, 'c-12345678');
   const env = isolatedEnvironment({ SystemRoot: 'C:/Windows', PATH: 'synthetic-developer-path',
     ELECTRON_RUN_AS_NODE: '1', RENULUS_SESSION_TOKEN: 'synthetic-token', OPENAI_API_KEY: 'synthetic-key',
     RENULUS_PYTHON: 'synthetic-python', RENULUS_PROFILE: 'synthetic-private-placeholder' }, evidence, path.join(evidence, 'profile'));
@@ -139,18 +140,25 @@ test('--plan can run without a freeze, slot, dependencies or profile and never r
 });
 
 
-test('all eight readers and old-profile/recovery gaps remain not-run after successful core work', () => {
+test('only exercised readers pass; old-profile/recovery/native gaps keep the aggregate incomplete', () => {
   const report = { kind: 'actual-installed-product-current-pc', sourceRevision: revision,
     gates: Object.fromEntries(coreGates.map(name => [name, { status: 'passed', proof: { unitOnly: true } }])),
     shutdowns: Array.from({ length: 3 }, () => ({ normalWindowClose: true, ownedBackendObserved: true, remaining: [] })) };
   completeCoreReceipt(report);
   assert.equal(report.status, 'incomplete'); assert.equal(report.coreCompleted, true);
-  assert.equal(Object.keys(deferredGates).filter(name => name.startsWith('reader-')).length, 8);
+  assert.equal(readerGates.length, 8);
+  assert.equal(report.readersCompleted, false);
+  for (const name of readerGates) assert.equal(report.gates[name].status, 'not-run');
   for (const name of ['legacy-profile-upgrade', 'full-backup-restore', ...Object.keys(deferredGates)]) {
     assert.equal(report.gates[name].status, 'not-run'); assert.ok(report.gates[name].reason);
   }
   assert.throws(() => validateCompleteReport(report), /Every/);
-  report.gates['reader-pdf'] = { status: 'passed', proof: { unitOnly: true } };
+  for (const name of readerGates) report.gates[name] = { status: 'passed', proof: { unitOnly: true } };
+  completeCoreReceipt(report);
+  assert.equal(report.readersCompleted, true);
+  assert.deepEqual(report.pendingGates, Object.keys(deferredGates));
+  assert.equal(report.status, 'incomplete');
+  report.gates['legacy-profile-upgrade'] = { status: 'passed', proof: { unitOnly: true } };
   assert.throws(() => completeCoreReceipt(report), /cannot attest/);
 });
 
@@ -234,4 +242,115 @@ test('temporary failure receipts never include Playwright input text or ephemera
   assert.ok(!JSON.stringify(receipt).includes('tmp_unit'));
   assert.match(receipt.message, /withheld/);
   assert.deepEqual(safeFailure(new Error('Immutable artifact mismatch')), { message: 'Immutable artifact mismatch' });
+});
+
+test('compact installed helper profile paths fail before any launch when over 60 characters', () => {
+  const root = path.join(designCEvidenceRoot, 'c-12345678');
+  const profile = path.join(root, 'p');
+  const env = isolatedEnvironment({ SystemRoot: 'C:/Windows' }, root, profile);
+  assert.ok(profile.length <= 60);
+  assert.equal(env.RENULUS_PROFILE, profile);
+  assert.equal(env.TEMP, path.join(root, 't'));
+  assert.throws(() => isolatedEnvironment({ SystemRoot: 'C:/Windows' }, root, path.join(root, 'profile-name-that-is-too-long')), /60 characters/);
+});
+
+const media = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  csv: 'text/csv', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', md: 'text/markdown',
+  html: 'text/html', xml: 'application/xml', png: 'image/png', jpg: 'image/jpeg', tiff: 'image/tiff' };
+const manifestFixture = () => ({ schema: 'design-c-reader-fixtures/1', synthetic: true, pillow_version: 'unit-only',
+  execution_marker: 'DC21_SYNTHETIC_SCRIPT_EXECUTED', external_origin: 'https://design-c-reader.invalid',
+  files: [...Object.entries(media).map(([extension, media_type]) => ({ filename: 'synthetic-reading.' + extension, media_type,
+    gate: 'reader-' + ({ md: 'markdown', png: 'images', jpg: 'images', tiff: 'images' }[extension] ?? extension),
+    bytes: 100, sha256: digest, expect: { kind: 'text' } })),
+  { filename: 'synthetic-denied-entity.xml', media_type: media.xml, gate: 'reader-xml', bytes: 100, sha256: digest, expect: { error: 'reader_xml_invalid' } }] });
+
+test('reader originals require exact bounded names, eight categories and all three image encodings', () => {
+  validateReaderManifest(manifestFixture());
+  for (const mutate of [value => { value.files.pop(); }, value => { value.synthetic = false; },
+    value => { value.external_origin = 'https://example.com'; }, value => { value.execution_marker = 'other'; },
+    value => { value.files[0].filename = '../synthetic-reading.pdf'; }, value => { value.files[0].filename = 'C:/source.pdf'; },
+    value => { value.files[0].filename = value.files[1].filename; }, value => { value.files[0].bytes = 0; },
+    value => { value.files[0].bytes = 65536; }, value => { value.files[0].sha256 = 'invalid'; },
+    value => { value.files[0].media_type = 'text/html'; }, value => { value.files[0].gate = 'reader-images'; }]) {
+    const value = manifestFixture(); mutate(value); assert.throws(() => validateReaderManifest(value));
+  }
+});
+
+const readerFixture = () => {
+  const fixture = manifestFixture().files.find(row => row.filename.endsWith('.pdf'));
+  fixture.expect = { kind: 'pdf', pages: 2 };
+  const attachment = { id: 'attachment-unit', original: { id: 'original-unit' }, revision: 1 };
+  const document = { schema_version: 'reader/1', reference: { target: { type: 'attachment', id: attachment.id } },
+    media_type: fixture.media_type, title: 'Synthetic title',
+    original: { id: attachment.original.id, filename: fixture.filename, bytes: fixture.bytes, sha256: fixture.sha256, available: true },
+    attachment_revision: 1, policy_revision: 2, context_epoch: 3, preview_state: 'ready', error: null,
+    capabilities: { read: true, original: true, passage: true, ocr: false, model_image: false },
+    payload: { kind: 'pdf', page: 1, pages: 2 } };
+  return { fixture, attachment, document };
+};
+
+test('reader acceptance pins original bytes, media, live attachment identity and policy', () => {
+  const baseline = readerFixture();
+  validateReaderDocument(baseline.fixture, baseline.document, baseline.attachment);
+  for (const mutate of [value => { value.original.sha256 = 'c'.repeat(64); }, value => { value.original.bytes++; },
+    value => { value.media_type = 'text/plain'; }, value => { value.reference.target.type = 'library_revision'; },
+    value => { value.reference.target.id = 'wrong'; }, value => { value.original.id = 'wrong'; },
+    value => { value.original.available = false; }, value => { value.original.filename = 'other.pdf'; },
+    value => { value.policy_revision = 0; }, value => { value.context_epoch = -1; },
+    value => { value.attachment_revision++; }, value => { value.preview_state = 'unsupported'; },
+    value => { value.payload.pages = 1; }, value => { value.capabilities.passage = false; }]) {
+    const { fixture, attachment, document } = readerFixture(); mutate(document);
+    assert.throws(() => validateReaderDocument(fixture, document, attachment));
+  }
+  assert.throws(() => validateReaderOriginal(baseline.fixture, {}, baseline.fixture.media_type));
+});
+
+test('XML refusal keeps the original but cannot pass as a readable or selectable preview', () => {
+  const { document, attachment } = readerFixture();
+  const fixture = manifestFixture().files.at(-1);
+  Object.assign(document, { media_type: fixture.media_type, preview_state: 'failed', error: { code: 'reader_xml_invalid' }, payload: null });
+  Object.assign(document.original, { filename: fixture.filename });
+  Object.assign(document.capabilities, { read: false, passage: false });
+  validateReaderDocument(fixture, document, attachment);
+  for (const mutate of [value => { value.capabilities.read = true; }, value => { value.capabilities.passage = true; },
+    value => { value.error.code = 'reader_parse_failed'; }, value => { value.payload = { kind: 'text' }; }]) {
+    const value = structuredClone(document); mutate(value); assert.throws(() => validateReaderDocument(fixture, value, attachment));
+  }
+});
+
+test('image previews cannot be treated as OCR, model interpretation or extracted passages', () => {
+  const { document, attachment } = readerFixture();
+  const fixture = manifestFixture().files.find(row => row.filename.endsWith('.tiff'));
+  fixture.expect = { kind: 'image', pages: 2 };
+  Object.assign(document, { media_type: fixture.media_type, extraction_state: 'unavailable', payload: { kind: 'image', pages: 2 } });
+  document.original.filename = fixture.filename; document.capabilities.passage = false;
+  validateReaderDocument(fixture, document, attachment);
+  for (const key of ['passage', 'ocr', 'model_image']) {
+    const value = structuredClone(document); value.capabilities[key] = true;
+    assert.throws(() => validateReaderDocument(fixture, value, attachment));
+  }
+});
+
+test('passage proof requires exact returned text, typed source and actual locator', () => {
+  const { fixture, document, attachment } = readerFixture();
+  const locator = { kind: 'text', item_ref: 'reader-v1:pdf:2', start: 1, end: 10 };
+  const passage = { title: document.title, text: 'Synthetic', reference: { target: document.reference.target, locator } };
+  validateReaderPassage(fixture, attachment, document, passage, locator, 'Synthetic');
+  for (const mutate of [value => { value.text = 'Other'; }, value => { value.title = 'Other'; },
+    value => { value.reference.target.id = 'Other'; }, value => { value.reference.locator.start = 0; },
+    value => { value.reference.locator.item_ref = 'reader-v1:pdf:1'; }]) {
+    const value = structuredClone(passage); mutate(value);
+    assert.throws(() => validateReaderPassage(fixture, attachment, document, value, locator, 'Synthetic'));
+  }
+});
+
+test('asset receipt requires bounded raster PNG bytes rather than active original markup', () => {
+  const data = Buffer.alloc(32);
+  Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]).copy(data);
+  data.write('IHDR', 12); data.writeUInt32BE(48, 16); data.writeUInt32BE(32, 20);
+  const observed = validateReaderRaster(data);
+  assert.equal(observed.width, 48); assert.equal(observed.height, 32);
+  assert.throws(() => validateReaderRaster(Buffer.from('<html>not a PNG</html>')));
+  data.writeUInt32BE(0, 16); assert.throws(() => validateReaderRaster(data));
+  data.writeUInt32BE(12000000, 16); assert.throws(() => validateReaderRaster(data));
 });

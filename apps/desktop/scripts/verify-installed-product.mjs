@@ -9,7 +9,7 @@ import { createNativeEvidence, assertSyntheticEvidenceDirectory, nativeEvidenceR
 
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repository = path.resolve(desktop, '../..');
-const prerequisiteCommits = ['793eddb4', 'a6b5d597', '16ad199d', 'c9d145af', 'eb821aa3', '8c6c4b18', '5e0c3837', '6145fc70'];
+const prerequisiteCommits = ['793eddb4', 'a6b5d597', '16ad199d', 'c9d145af', 'eb821aa3', '8c6c4b18', '5e0c3837', '6145fc70', '728555e2'];
 const sha = value => createHash('sha256').update(value).digest('hex');
 const check = (condition, message) => { if (!condition) throw new Error(message); };
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -19,15 +19,9 @@ const json = buffer => JSON.parse(buffer.toString('utf8').replace(/^\uFEFF/, '')
 const git = args => execFileSync('git', args, { cwd: repository, windowsHide: true, maxBuffer: 16 * 1024 * 1024 });
 
 export { designCEvidenceRoot };
+export const readerGates = Object.freeze(['reader-pdf', 'reader-docx', 'reader-csv', 'reader-xlsx',
+  'reader-markdown', 'reader-html', 'reader-xml', 'reader-images']);
 export const deferredGates = Object.freeze({
-  'reader-pdf': 'Matching installed C PDF page/selection/original journey not exercised by this core driver.',
-  'reader-docx': 'Matching installed C DOCX text/table/image journey not exercised.',
-  'reader-csv': 'Matching installed C CSV row/selection journey not exercised.',
-  'reader-xlsx': 'Matching installed C XLSX sheet/cell journey not exercised.',
-  'reader-markdown': 'Matching installed C Markdown rendering/selection journey not exercised.',
-  'reader-html': 'Matching installed inert HTML/remote-resource refusal journey not exercised.',
-  'reader-xml': 'Matching installed inert XML/selection journey not exercised.',
-  'reader-images': 'Matching installed PNG/JPEG/TIFF frame journey not exercised.',
   'legacy-profile-upgrade': 'Requires an immutable preserved schema-1 synthetic profile; fresh-state startup is not upgrade proof.',
   'full-backup-restore': 'JSON/ZIP1/ZIP2 restore, originals and real derived rebuild require their separate connected journey.',
   'deletion-reconciliation': 'Project live deletion does not prove old-backup deletion reconciliation.',
@@ -40,17 +34,17 @@ export const coreGates = Object.freeze([
   'test-draft-reopen', 'whole-test', 'temporary-retention', 'normal-reopen',
   'project-delete-preserves-chats', 'final-close',
 ]);
-export const requiredGates = Object.freeze([...coreGates, ...Object.keys(deferredGates)]);
+export const requiredGates = Object.freeze([...coreGates, ...readerGates, ...Object.keys(deferredGates)]);
 
 export function installedAcceptancePlan() {
   return {
     scope: 'Hidden unsigned installed Design C on this Windows PC; signing and a separate PC/VM are optional future work.',
-    prerequisiteCommits, requiredGates, coreGates, deferredGates,
+    prerequisiteCommits, requiredGates, coreGates, readerGates, deferredGates,
     requiredEnvironment: ['RENULUS_NATIVE_SLOT', 'RENULUS_EXPECT_SOURCE_REVISION', 'RENULUS_INSTALLED_PROOF=1',
       'RENULUS_PACKAGED_EXECUTABLE', 'RENULUS_DELIVERY_PROVENANCE', 'RENULUS_INSTALLER_EVIDENCE',
       'RENULUS_NATIVE_EVIDENCE_ROOT=' + designCEvidenceRoot],
     evidenceRoot: designCEvidenceRoot,
-    resourceBound: 'One owned hidden app/backend at a time; two saved draft chats, one project and one real two-question reviewed set; no providers or simulated producer results.',
+    resourceBound: 'One owned hidden app/backend at a time; two saved draft chats, one project, eleven deterministic synthetic originals covering eight reader categories, and one real two-question reviewed set; no providers or simulated producer results.',
     receipt: 'installed-product-evidence.json; absent reader/migration/native gates remain not-run and make the aggregate incomplete/exit 1.',
     parentChecks: ['Assign the exclusive native/helper slot and immutable final source first.',
       'Publish the exact Design C generated/native proof root in shared guards; never bypass those guards.',
@@ -124,6 +118,7 @@ export function isolatedEnvironment(inherited, evidence, profile) {
   check(inside(designCEvidenceRoot, evidence), 'Design C state requires the exact synthetic delivery evidence root.');
   assertSyntheticEvidenceDirectory(evidence);
   check(inside(evidence, profile), 'The profile must be newly owned by this synthetic run.');
+  check(path.resolve(profile).length <= 60, 'The installed helper profile must use at most 60 characters.');
   const env = {};
   for (const name of ['SystemRoot', 'SYSTEMROOT', 'WINDIR', 'COMSPEC', 'ComSpec', 'PATHEXT', 'USERPROFILE', 'LOCALAPPDATA', 'APPDATA']) {
     if (inherited[name]) env[name] = inherited[name];
@@ -133,7 +128,7 @@ export function isolatedEnvironment(inherited, evidence, profile) {
   env.PATH = [path.join(systemRoot, 'System32'), path.join(systemRoot, 'System32', 'Wbem')].join(path.delimiter);
   env.RENULUS_PROFILE = profile;
   env.RENULUS_BACKGROUND_TEST = '1'; env.RENULUS_BACKGROUND_OWNER_PID = String(process.pid);
-  env.TEMP = path.join(evidence, 'temporary'); env.TMP = env.TEMP;
+  env.TEMP = path.join(evidence, 't'); env.TMP = env.TEMP;
   return env; // No inherited Electron-as-Node flag, developer path, token, provider key or runtime override.
 }
 
@@ -160,7 +155,7 @@ async function verifyArtifacts(request) {
   for (const commit of prerequisiteCommits) git(['merge-base', '--is-ancestor', commit, request.revision]);
   const scripts = ['native-journeys.mjs', 'verify-installed-product.mjs', 'native-replacement-evidence.mjs',
     'native-evidence-directory.mjs', 'wait-for-flow-window.mjs', 'synthetic-pdf.mjs', 'pdf-viewer-evidence.mjs',
-    'native-product-backup.mjs', 'operate-owned-save-dialog.ps1', 'inspect-native-backup.py'];
+    'native-product-backup.mjs', 'operate-owned-save-dialog.ps1', 'inspect-native-backup.py', 'design-c-reader-fixtures.py'];
   const driverHashes = {};
   for (const name of scripts) {
     const file = 'apps/desktop/scripts/' + name;
@@ -433,13 +428,15 @@ export function safeFailure(error, temporaryPhase = false) {
 
 export function completeCoreReceipt(report) {
   for (const [name, reason] of Object.entries(deferredGates)) {
-    check(!report.gates[name] || report.gates[name].status === 'not-run', 'The core verifier cannot attest an unexecuted reader/migration/native gate.');
+    check(!report.gates[name] || report.gates[name].status === 'not-run', 'The core verifier cannot attest an unexecuted migration/native gate.');
     report.gates[name] = { status: 'not-run', reason };
   }
   check(coreGates.every(name => report.gates[name]?.status === 'passed'), 'A core journey is incomplete.');
   report.coreCompleted = true;
   report.status = 'incomplete';
-  report.pendingGates = Object.keys(deferredGates);
+  report.readersCompleted = readerGates.every(name => report.gates[name]?.status === 'passed');
+  for (const name of readerGates) report.gates[name] ??= { status: 'not-run', reason: 'Matching installed reader journey was not exercised.' };
+  report.pendingGates = requiredGates.filter(name => report.gates[name]?.status !== 'passed');
   // A successful bounded core is never advertised as complete DC21 acceptance.
   return report;
 }
@@ -586,31 +583,357 @@ async function deleteProjectJourney(page, work) {
   return { deleted, ...retained };
 }
 
+const fixtureMedia = Object.freeze({ pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  csv: 'text/csv', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', md: 'text/markdown',
+  html: 'text/html', xml: 'application/xml', png: 'image/png', jpg: 'image/jpeg', tiff: 'image/tiff' });
+const fixtureGate = extension => 'reader-' + ({ md: 'markdown', png: 'images', jpg: 'images', tiff: 'images' }[extension] ?? extension);
+
+export function validateReaderManifest(manifest) {
+  check(manifest.schema === 'design-c-reader-fixtures/1' && manifest.synthetic === true
+    && typeof manifest.pillow_version === 'string' && manifest.files?.length === 11,
+  'The frozen generator must supply eleven deterministic synthetic originals.');
+  check(manifest.execution_marker === 'DC21_SYNTHETIC_SCRIPT_EXECUTED' && manifest.external_origin === 'https://design-c-reader.invalid',
+    'Reader denial probes must use only their reserved inert marker and invalid origin.');
+  const expected = new Set([...Object.keys(fixtureMedia).map(extension => 'synthetic-reading.' + extension), 'synthetic-denied-entity.xml']);
+  for (const entry of manifest.files) {
+    const extension = entry.filename?.split('.').at(-1);
+    check(expected.delete(entry.filename) && entry.media_type === fixtureMedia[extension] && entry.gate === fixtureGate(extension)
+      && /^[0-9a-f]{64}$/.test(entry.sha256 ?? '') && Number.isInteger(entry.bytes) && entry.bytes > 0 && entry.bytes < 64 * 1024
+      && entry.expect && typeof entry.expect === 'object', 'A reader fixture has an unsafe name, type, size, hash or category.');
+  }
+  check(expected.size === 0, 'A required original format is missing.');
+  return manifest;
+}
+
+async function generateReaderFixtures(identity, evidence) {
+  const directory = path.join(evidence, 'reader-originals');
+  check(inside(evidence, directory), 'Fixture output must belong to this fresh evidence directory.');
+  assertSyntheticEvidenceDirectory(directory);
+  const script = path.join(desktop, 'scripts/design-c-reader-fixtures.py');
+  check(sha(await readFile(script)) === identity.driverHashes['design-c-reader-fixtures.py'].executedSha256,
+    'The frozen fixture generator changed before execution.');
+  const python = path.join(identity.backend, 'python/python.exe');
+  const env = isolatedEnvironment(process.env, evidence, path.join(evidence, 'p'));
+  const generated = json(execFileSync(python, ['-I', '-B', '-X', 'utf8', script, '--output', directory],
+    { env, windowsHide: true, timeout: 30_000, maxBuffer: 1024 * 1024 }));
+  const manifest = validateReaderManifest(json(await readFile(path.join(directory, 'manifest.json'))));
+  check(generated.schema === manifest.schema && generated.files === manifest.files.length && generated.pillow_version === manifest.pillow_version,
+    'The bundled fixture generator returned a mismatched receipt.');
+  for (const fixture of manifest.files) await checkedReaderOriginal(directory, fixture);
+  return { directory, manifest, generator: { python, scriptSha256: sha(await readFile(script)), ...generated } };
+}
+
+async function checkedReaderOriginal(directory, fixture) {
+  const file = path.join(directory, fixture.filename);
+  check(inside(directory, file) && path.basename(file) === fixture.filename, 'Original upload left its declared fixture directory.');
+  assertSyntheticEvidenceDirectory(file);
+  check((await lstat(file)).isFile(), 'Upload only a generated regular original.');
+  const bytes = await readFile(file);
+  check(bytes.length === fixture.bytes && sha(bytes) === fixture.sha256, 'Generated original bytes changed before upload.');
+  return file;
+}
+
+export function validateReaderOriginal(fixture, original, mediaType) {
+  check(original?.sha256 === fixture.sha256 && original.bytes === fixture.bytes && mediaType === fixture.media_type,
+    'Reader/attachment original hash, byte count or format differs from its generated original.');
+}
+
+export function validateReaderDocument(fixture, document, attachment) {
+  validateReaderOriginal(fixture, document.original, document.media_type);
+  check(document.schema_version === 'reader/1' && document.reference?.target?.type === 'attachment'
+    && document.reference.target.id === attachment.id && document.original.id === attachment.original.id
+    && document.original.filename === fixture.filename && document.original.available === true
+    && document.attachment_revision === attachment.revision && document.capabilities?.original === true
+    && Number.isInteger(document.policy_revision) && document.policy_revision >= 1
+    && Number.isInteger(document.context_epoch) && document.context_epoch >= 0,
+  'The reader did not resolve the actual saved attachment owner and current authority.');
+  if (fixture.expect.error) {
+    check(document.preview_state === 'failed' && document.error?.code === fixture.expect.error
+      && document.payload === null && document.capabilities.read === false && document.capabilities.passage === false,
+    'The unsafe XML original was not explicitly refused.');
+  } else {
+    check(document.preview_state === 'ready' && document.error === null && document.capabilities.read === true
+      && document.payload?.kind === fixture.expect.kind, 'The actual reader did not produce the required format.');
+    if (fixture.expect.pages) check(document.payload.pages === fixture.expect.pages, 'Reader page/frame count differs from its original.');
+    if (fixture.expect.kind === 'image') check(document.extraction_state === 'unavailable' && document.capabilities.passage === false
+      && document.capabilities.ocr === false && document.capabilities.model_image === false, 'An image preview incorrectly claims extracted or interpreted content.');
+    else check(document.capabilities.passage === true, 'Eligible text/table selection is unavailable.');
+  }
+}
+
+export function validateReaderPassage(fixture, attachment, document, passage, locator, expectedText) {
+  const reference = passage.reference;
+  check(passage.title === document.title && passage.text === expectedText
+    && reference?.target?.type === 'attachment' && reference.target.id === attachment.id
+    && Object.entries(locator).every(([key, value]) => reference.locator?.[key] === value),
+  'The actual selected passage changed text, source or canonical location.');
+  check(fixture.expect.kind !== 'image' && !fixture.expect.error, 'A preview-only/refused original cannot establish passage acceptance.');
+}
+
+export function validateReaderRaster(bytes) {
+  check(bytes.length > 24 && bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+    && bytes.toString('ascii', 12, 16) === 'IHDR', 'The actual reader asset was not a raster PNG.');
+  const width = bytes.readUInt32BE(16), height = bytes.readUInt32BE(20);
+  check(width > 0 && height > 0 && width * height <= 12_000_000, 'The reader raster has invalid dimensions.');
+  return { sha256: sha(bytes), bytes: bytes.length, width, height };
+}
+
+async function readerResponse(page, attachment, action) {
+  const pending = page.waitForResponse(response => {
+    if (new URL(response.url()).pathname !== '/api/v1/readers/resolve' || response.request().method() !== 'POST') return false;
+    return response.request().postDataJSON()?.reference?.target?.id === attachment.id;
+  }, { timeout: 120_000 });
+  const [response] = await Promise.all([pending, action()]);
+  check(response.status() === 200, 'Actual Workspace reader resolution failed.');
+  return response.json();
+}
+
+async function uploadReaderOriginal(page, chat, fixtures, fixture) {
+  const file = await checkedReaderOriginal(fixtures.directory, fixture);
+  await navigate(page, chatHash(chat));
+  const input = page.getByLabel('Attach files to chat', { exact: true });
+  if (!await input.isVisible()) await page.getByRole('button', { name: 'Attach file', exact: true }).click();
+  await input.setInputFiles(file); // Generated, hash-checked bytes; no native chooser.
+  await page.getByLabel('Source owner or author', { exact: true }).fill('Renulus synthetic fixture author');
+  await page.getByLabel('Display this file in Renulus', { exact: true }).check();
+  await page.getByLabel('Keep a local original when this conversation is saved', { exact: true }).check();
+  await page.getByLabel('Send selected content to my learning model', { exact: true }).check();
+  await page.getByLabel('Permission or licence', { exact: true }).fill('CC0 synthetic original for local reader validation; no patient data.');
+  const attachment = await actionResponse(page, '/attachments',
+    () => page.getByRole('button', { name: 'Confirm attach', exact: true }).click(), 201);
+  validateReaderOriginal(fixture, attachment.original, attachment.media_type);
+  check(attachment.retention === 'saved' && attachment.filename === fixture.filename && attachment.reference?.target?.id === attachment.id
+    && attachment.reference.target.type === 'attachment' && attachment.conversation?.type === chat.identity.type
+    && attachment.conversation.id === chat.identity.id, 'Upload did not publish an original under the intended saved conversation.');
+  return attachment;
+}
+
+async function prepareReaderDownload(page, reader, fixture) {
+  const pending = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/readers/original'
+    && response.request().method() === 'POST');
+  const [response] = await Promise.all([pending, reader.getByRole('button', { name: 'Prepare original download', exact: true }).click()]);
+  const data = await response.body();
+  check(response.status() === 200 && sha(data) === fixture.sha256 && data.length === fixture.bytes,
+    'The real original-download action changed the uploaded bytes.');
+  const headers = response.headers();
+  check(headers['content-type'] === 'application/octet-stream' && headers['x-content-type-options'] === 'nosniff'
+    && headers['content-security-policy'] === "default-src 'none'; sandbox" && headers['content-disposition']?.startsWith('attachment;'),
+  'Original download did not retain its inert attachment response boundary.');
+  const link = reader.getByRole('link', { name: 'Save original', exact: true });
+  await link.waitFor();
+  check(await link.getAttribute('download') === fixture.filename && (await link.getAttribute('href'))?.startsWith('blob:'),
+    'The prepared original must remain a download, never a document frame.');
+  return { sha256: sha(data), bytes: data.length, contentType: headers['content-type'], preparedOnly: true };
+}
+
+async function savedReaderPosition(page, chat, attachment, expected) {
+  return poll(async () => {
+    const preferences = await api(page, '/workspace/preferences');
+    return preferences.tabs.find(tab => tab.context.type === chat.identity.type && tab.context.id === chat.identity.id
+      && tab.retention === 'saved' && tab.content.target.type === 'attachment' && tab.content.target.id === attachment.id)?.position;
+  }, value => !!value && Object.entries(expected).every(([key, item]) => value[key] === item), 'Canonical saved reader position', 30_000);
+}
+
+async function selectReaderPassage(page, reader, fixture, attachment, document, chat) {
+  let locator, text;
+  if (document.payload.kind === 'table') {
+    const table = document.payload.table;
+    const offset = table.rows.findIndex(row => row.some(cell => cell.display === fixture.expect.text));
+    check(offset >= 0, 'The expected table selection is absent from the actual reader.');
+    const column = table.rows[offset].findIndex(cell => cell.display === fixture.expect.text);
+    text = table.rows[offset][column].display;
+    locator = { kind: 'table', format: table.format, sheet_name: table.sheet_name,
+      first_row: table.first_row + offset, last_row: table.first_row + offset, first_column: column + 1, last_column: column + 1 };
+    await reader.getByRole('button', { name: text, exact: true }).click();
+  } else {
+    const block = document.payload.blocks.find(item => item.text.includes(fixture.expect.text));
+    check(block, 'The expected passage is absent from the parsed original.');
+    const start = Array.from(block.text.slice(0, block.text.indexOf(fixture.expect.text))).length;
+    text = fixture.expect.text;
+    locator = { kind: 'text', item_ref: block.item_ref, start, end: start + Array.from(text).length };
+    // A real DOM range in the owned renderer triggers the actual selection handler.
+    // No React state, API response or callback is injected.
+    await reader.locator('[data-reader-item]').filter({ hasText: text }).first().evaluate((element, value) => {
+      const node = element.firstChild;
+      if (!node || node.nodeType !== Node.TEXT_NODE || !node.textContent?.includes(value)) throw new Error('Selectable text node missing.');
+      const start = node.textContent.indexOf(value), range = document.createRange();
+      range.setStart(node, start); range.setEnd(node, start + value.length);
+      const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
+      element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    }, text);
+  }
+  const position = await savedReaderPosition(page, chat, attachment, locator);
+  const passage = await actionResponse(page, '/readers/passage',
+    () => reader.getByRole('button', { name: 'Ask about selected passage', exact: true }).click());
+  validateReaderPassage(fixture, attachment, document, passage, locator, text);
+  const expectedDraft = chat.expectedDraft + '\n\n' + text;
+  const composer = page.getByLabel('Message Renulus', { exact: true });
+  await poll(() => composer.inputValue(), value => value === expectedDraft, 'Reader passage in preserved Chat draft', 30_000);
+  const draft = await poll(() => api(page, chatPath(chat) + '/draft'), value => value.text === expectedDraft
+    && value.content_refs?.some(ref => JSON.stringify(ref) === JSON.stringify(passage.reference)), 'Actual source-linked draft', 30_000);
+  check((await api(page, chatPath(chat) + '/messages')).items.length === 0 && (await api(page, chatPath(chat) + '/runs')).items.length === 0,
+    'Selecting a passage unexpectedly sent a message or invoked a provider.');
+  // Keep the pre-existing core journey's draft; selection and its receipt were checked above.
+  await composer.fill(chat.expectedDraft);
+  await page.getByRole('button', { name: 'Remove source 1', exact: true }).click();
+  await poll(() => api(page, chatPath(chat) + '/draft'), value => value.text === chat.expectedDraft && value.content_refs.length === 0,
+    'Preserved original draft after selection check', 30_000);
+  await page.evaluate(() => window.getSelection()?.removeAllRanges());
+  return { text, reference: passage.reference, draftRevision: draft.revision, position, sent: false };
+}
+
+async function readerFixtureJourney(current, chat, fixtures, fixture, evidence) {
+  const { page } = current;
+  const attachment = await uploadReaderOriginal(page, chat, fixtures, fixture);
+  const assets = [], externalRequests = [];
+  const onResponse = response => {
+    if (new URL(response.url()).pathname !== '/api/v1/readers/asset' || response.request().method() !== 'POST') return;
+    const body = response.request().postDataJSON();
+    if (body?.reference?.target?.id !== attachment.id) return;
+    assets.push((async () => {
+      check(response.status() === 200 && response.headers()['content-type'] === 'image/png'
+        && body.original_sha256 === fixture.sha256, 'Actual reader asset failed or lost its original pin.');
+      return { assetId: body.asset_id, ...validateReaderRaster(await response.body()) };
+    })().catch(error => ({ error: error.message })));
+  };
+  const deny = route => { externalRequests.push(route.request().url()); return route.abort('blockedbyclient'); };
+  await page.context().route(fixtures.manifest.external_origin + '/**', deny);
+  page.on('response', onResponse);
+  try {
+    let document = await readerResponse(page, attachment, () => page.locator('.chat-attached-file')
+      .filter({ hasText: fixture.filename }).getByRole('button', { name: 'Open file', exact: true }).click());
+    validateReaderDocument(fixture, document, attachment);
+    const reader = page.getByRole('region', { name: 'Document reader', exact: true });
+    await reader.getByRole('heading', { name: attachment.title, exact: true }).waitFor();
+    const positions = [];
+    async function raster(assetId) {
+      const rows = await poll(() => Promise.all(assets), values => values.some(row => row.assetId === assetId) || values.some(row => row.error), 'Actual reader raster', 30_000);
+      check(!rows.some(row => row.error), rows.find(row => row.error)?.error ?? 'Reader raster failed.');
+      await poll(() => reader.getByAltText('Source page', { exact: true }).evaluateAll(images => images.every(image => image.complete && image.naturalWidth > 0) && images.length > 0), Boolean, 'Decoded reader image', 30_000);
+      const result = rows.find(row => row.assetId === assetId);
+      if (fixture.expect.width) check(result.width === fixture.expect.width && result.height === fixture.expect.height, 'Decoded image size differs from the original.');
+      return result;
+    }
+    let firstRaster;
+    if (document.payload?.asset_id) firstRaster = await raster(document.payload.asset_id);
+    if (fixture.expect.pages === 2) {
+      const kind = fixture.expect.kind === 'pdf' ? 'pdf' : 'image';
+      positions.push(await savedReaderPosition(page, chat, attachment, kind === 'pdf' ? { kind, physical_page: 1 } : { kind, frame: 1 }));
+      document = await readerResponse(page, attachment, () => reader.getByRole('button', { name: 'Next', exact: true }).click());
+      validateReaderDocument(fixture, document, attachment);
+      check(document.payload.page === 2, 'Next did not open the second physical page/frame.');
+      const nextRaster = await raster(document.payload.asset_id);
+      check(firstRaster.sha256 !== nextRaster.sha256, 'Changing page/frame returned the previous raster.');
+      positions.push(await savedReaderPosition(page, chat, attachment, kind === 'pdf' ? { kind, physical_page: 2 } : { kind, frame: 2 }));
+      check(await reader.getByLabel(kind === 'pdf' ? 'Physical page' : 'Image frame', { exact: true }).inputValue() === '2', 'Reader position control is stale.');
+    }
+    if (fixture.gate === 'reader-csv') {
+      check(document.payload.table.total_rows === fixture.expect.rows && document.payload.table.first_row === 1, 'CSV dimensions changed.');
+      document = await readerResponse(page, attachment, () => reader.getByRole('button', { name: 'Next rows', exact: true }).click());
+      validateReaderDocument(fixture, document, attachment);
+      check(document.payload.table.first_row === 101 && document.payload.table.rows.length === 6, 'CSV row window did not advance exactly.');
+    }
+    if (fixture.gate === 'reader-xlsx') {
+      const table = document.payload.table;
+      check(JSON.stringify(table.sheets) === JSON.stringify(fixture.expect.sheets) && table.sheet_name === 'CKD'
+        && table.rows[1][1].display === '24' && table.rows[1][1].formula === '=A2*2' && table.rows[1][1].cached === true,
+      'The actual XLSX reader lost sheet names or its cached formula result.');
+      await reader.getByRole('button', { name: '24', exact: true }).waitFor();
+      document = await readerResponse(page, attachment, () => reader.getByLabel('Sheet', { exact: true }).selectOption('Dialysis'));
+      validateReaderDocument(fixture, document, attachment);
+      check(document.payload.table.sheet_name === 'Dialysis' && document.payload.table.first_row === 1
+        && document.payload.table.rows[1][1].cached === false && document.payload.table.rows[1][1].display === 'Cached value unavailable',
+      'Sheet change or missing cached formula semantics failed.');
+      await reader.getByRole('button', { name: 'Cached value unavailable', exact: true }).waitFor();
+    }
+    if (fixture.expect.table_cell) {
+      const table = document.payload.blocks.find(block => block.kind === 'table');
+      check(table?.grid?.rows.some(row => row.includes(fixture.expect.table_cell)), 'Document table structure was lost.');
+      await reader.getByRole('table', { name: 'Source document table', exact: true }).getByRole('cell', { name: fixture.expect.table_cell, exact: true }).waitFor();
+    }
+    if (fixture.expect.embedded_image) {
+      const image = document.payload.blocks.find(block => block.kind === 'image');
+      check(image?.asset_id, 'DOCX embedded image missing.'); await raster(image.asset_id);
+    }
+    let selection;
+    if (fixture.expect.text) selection = await selectReaderPassage(page, reader, fixture, attachment, document, chat);
+    if (fixture.expect.error) await reader.getByText(/XML must be complete and contain no DTD or entity declarations/).waitFor();
+    if (fixture.expect.kind === 'image') {
+      check(await reader.getByRole('button', { name: /Discuss this passage|Ask about selected passage/ }).count() === 0,
+        'Preview-only image exposed an extracted passage action.');
+    }
+    const original = await prepareReaderDownload(page, reader, fixture);
+    let inert;
+    if (fixture.expect.inert) {
+      inert = await reader.evaluate((element, marker) => ({ executed: window[marker] !== undefined,
+        activeNodes: element.querySelectorAll('script,iframe,object,embed,form,link,style,svg,math,[onload],[onerror]').length,
+        externalAttributes: [...element.querySelectorAll('[src],[href],[srcset],[action],[data]')].filter(node =>
+          [...node.attributes].some(attribute => attribute.value.includes('design-c-reader.invalid'))).length,
+        text: element.querySelector('.reader-content')?.textContent ?? '' }), fixtures.manifest.execution_marker);
+      check(!inert.executed && inert.activeNodes === 0 && inert.externalAttributes === 0 && externalRequests.length === 0,
+        'Reader markup executed or attempted an external resource; intercepted refusal does not count as inert parsing.');
+      if (fixture.gate === 'reader-html') check(!inert.text.includes(fixtures.manifest.execution_marker)
+        && !inert.text.includes('HIDDEN_REMOTE_FALLBACK') && !inert.text.includes('HIDDEN_FORM'), 'HTML active subtree content was not omitted.');
+      delete inert.text;
+      inert.externalRequests = externalRequests.length;
+      inert.xmlEntityDenied = fixture.expect.error === 'reader_xml_invalid';
+    }
+    await screenshot(current, evidence, 'reader-' + fixture.filename.replaceAll('.', '-'));
+    return { filename: fixture.filename, mediaType: fixture.media_type, attachmentId: attachment.id,
+      original, previewState: document.preview_state, positions, selection, assets: await Promise.all(assets), inert,
+      scope: 'Actual saved attachment, Workspace reader, guarded selection/draft and prepared original. No native Save dialog, model, OCR or ingestion claim.' };
+  } finally {
+    page.off('response', onResponse);
+    await page.context().unroute(fixtures.manifest.external_origin + '/**', deny);
+  }
+}
+
+async function readerJourneys(current, chat, fixtures, evidence, report, pass) {
+  report.readerFixtures = { ...fixtures.generator, manifest: fixtures.manifest };
+  report.readerJourneys = [];
+  for (const gate of readerGates) {
+    const completed = [];
+    try {
+      for (const fixture of fixtures.manifest.files.filter(item => item.gate === gate)) {
+        const receipt = await readerFixtureJourney(current, chat, fixtures, fixture, evidence);
+        completed.push(receipt); report.readerJourneys.push({ gate, ...receipt });
+      }
+      check(completed.length > 0, 'An empty reader category cannot pass.');
+      pass(gate, { originals: completed });
+    } catch (error) {
+      report.gates[gate] = { status: 'failed', error: safeFailure(error), completedOriginals: completed };
+      throw error;
+    }
+  }
+}
+
 export async function runInstalledProduct() {
   const request = validateInstalledRequest(process.env);
   // Published parent helper must accept exactly this root before any state is created.
   nativeEvidenceRoot(designCEvidenceRoot);
-  const evidence = await createNativeEvidence('installed-design-c');
+  const evidence = await createNativeEvidence('c');
   check(inside(designCEvidenceRoot, evidence), 'Generated proof left the Design C scratch root.');
   const report = { kind: 'actual-installed-product-current-pc', checkedAt: new Date().toISOString(),
     slot: request.slot, sourceRevision: request.revision, executable: request.executable, evidence,
     acceptanceScope: installedAcceptancePlan().scope, gates: {}, shutdowns: [], launches: [],
     limits: ['Hidden synthetic disconnected profiles only. No owner profile, providers, fabricated generation or native dialogs.',
       'Real reviewed content and real SQLite/API producers; unit checks never establish installed acceptance.',
-      'Reader, migration/recovery and physical/native gates remain explicit not-run; this core driver cannot close DC21.'] };
-  const pass = (name, proof) => { check(coreGates.includes(name), 'Only an executed core gate can be recorded here.');
+      'Migration/recovery and physical/native gates remain explicit not-run; the bounded core/reader driver cannot close DC21.'] };
+  const pass = (name, proof) => { check([...coreGates, ...readerGates].includes(name), 'Only an executed core/reader gate can be recorded here.');
     report.gates[name] = { status: 'passed', proof }; console.log(JSON.stringify({ gate: name, status: 'passed' })); };
   let current;
   let temporaryPhase = false;
   try {
     const identity = await verifyArtifacts(request); report.identity = identity;
     pass('installed-identity', { hashes: identity.actual, frozenFiles: identity.frozenFiles, inventoryFiles: identity.inventoryFiles });
-    await mkdir(path.join(evidence, 'temporary'));
-    current = await launch(request, identity, evidence, 'profile', report);
+    await mkdir(path.join(evidence, 't'));
+    const fixtures = await generateReaderFixtures(identity, evidence);
+    current = await launch(request, identity, evidence, 'p', report);
     pass('isolated-runtime', report.launches[0]); pass('c-readiness', report.launches[0].timing);
     const work = await savedConversationJourney(current.page);
     pass('saved-conversations', { conversations: work.conversations, draftOnly: true });
     pass('project-membership', { project: work.project, owner: 'study_project_chats' });
+    await readerJourneys(current, work.conversations[0], fixtures, evidence, report, pass);
     const reviewed = await reviewedStudyJourney(current.page);
     pass('saved-reviewed-test', { published: reviewed.published, setup: reviewed.setup });
     pass('whole-study', { attempt: reviewed.study });
@@ -618,7 +941,7 @@ export async function runInstalledProduct() {
     pass('active-test-policy', { id: test.draft.id, policy: test.draft.policy, refusal: test.refusal });
     await screenshot(current, evidence, 'test-durable-draft');
     await normalClose(current, report); current = undefined; delete report.current;
-    current = await launch(request, identity, evidence, 'profile', report);
+    current = await launch(request, identity, evidence, 'p', report);
     const final = await finishTestJourney(current.page, test.draft);
     pass('test-draft-reopen', { id: test.draft.id, draftRevision: test.draft.draft_revision, answers: test.draft.answers });
     pass('whole-test', { attempt: final });
@@ -631,9 +954,9 @@ export async function runInstalledProduct() {
     temporaryPhase = true;
     const temporary = await temporaryJourney(current.page);
     await normalClose(current, report); current = undefined; delete report.current;
-    const scan = await assertNoSentinel(path.join(evidence, 'profile'), temporary.sentinel);
-    const idScan = await assertNoSentinel(path.join(evidence, 'profile'), temporary.chat.identity.id);
-    current = await launch(request, identity, evidence, 'profile', report);
+    const scan = await assertNoSentinel(path.join(evidence, 'p'), temporary.sentinel);
+    const idScan = await assertNoSentinel(path.join(evidence, 'p'), temporary.chat.identity.id);
+    current = await launch(request, identity, evidence, 'p', report);
     const absent = await current.page.evaluate(async route => (await fetch('/api/v1' + route)).status, chatPath(temporary.chat));
     check(absent === 404, 'Restart restored an ordinary temporary conversation.');
     pass('temporary-retention', { ...scan, temporaryIdAbsent: idScan.sentinelAbsent, restartStatus: absent });
