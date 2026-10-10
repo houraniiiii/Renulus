@@ -1,0 +1,45 @@
+.attempt-page { display: grid; gap: var(--space-24); max-width: 1060px; margin-inline: auto; }
+.attempt-page .panel { min-width: 0; }
+.attempt-meta, .attempt-progress { display: flex; gap: var(--space-12); align-items: center; flex-wrap: wrap; color: var(--ink-secondary); }
+.attempt-progress { justify-content: space-between; font-variant-numeric: tabular-nums; }
+.attempt-mode, .attempt-timing, .attempt-options { padding: 0; border: 0; margin: var(--space-24) 0; }
+.attempt-mode legend, .attempt-timing legend, .attempt-options legend { margin-bottom: var(--space-12); font-weight: 600; }
+.attempt-mode { display: grid; gap: var(--space-12); }
+.attempt-mode label { display: flex; gap: var(--space-12); padding: var(--space-16); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-control); }
+.attempt-mode label:has(input:checked) { border-color: var(--renal-teal); background: var(--renal-teal-soft); }
+.attempt-mode strong { display: block; color: var(--ink-strong); font-size: 1.125rem; margin-bottom: var(--space-4); }
+.attempt-timing .field { max-width: 280px; margin-top: var(--space-16); }
+.attempt-stem { max-width: 68ch; font-size: clamp(1.2rem, 1.7vw, 1.5rem); line-height: 1.4; font-weight: 600; margin: var(--space-8) 0 var(--space-24); white-space: pre-wrap; overflow-wrap: anywhere; }
+.attempt-options { display: grid; gap: var(--space-12); }
+.attempt-options label { display: flex; gap: var(--space-12); align-items: baseline; border: 1px solid var(--line); padding: var(--space-16); border-radius: var(--radius-control); cursor: pointer; }
+.attempt-options label.is-selected { background: var(--renal-teal-soft); border-color: var(--renal-teal); }
+.attempt-options input { flex: 0 0 auto; accent-color: var(--renal-teal); }
+.attempt-options:disabled label { cursor: default; }
+.attempt-option-letter { color: var(--ink-secondary); font-weight: 600; }
+.attempt-feedback, .attempt-help { margin-top: var(--space-24); padding: var(--space-24); background: var(--paper); border-left: 3px solid var(--renal-teal); border-radius: 0 var(--radius-control) var(--radius-control) 0; }
+.attempt-feedback dl { display: grid; gap: var(--space-16); }
+.attempt-feedback dt { color: var(--ink-secondary); }
+.attempt-feedback dd { margin: 0; font-weight: 600; }
+.attempt-explanation { white-space: pre-wrap; max-width: var(--reading-measure); }
+.attempt-navigator { display: flex; flex-wrap: wrap; gap: var(--space-8); margin-bottom: var(--space-16); }
+.attempt-navigator .button { min-width: 44px; }
+.attempt-result-score strong { font-size: clamp(2rem, 4vw, 3rem); color: var(--ink-strong); font-weight: 600; }
+.attempt-result-score strong span { font-size: 1.5rem; color: var(--ink-secondary); }
+.attempt-result-score p { margin: 0; color: var(--ink-secondary); }
+.attempt-cohorts { width: 100%; border-collapse: collapse; margin: var(--space-24) 0; }
+.attempt-cohorts caption { text-align: left; font-weight: 600; margin-bottom: var(--space-8); }
+.attempt-cohorts th, .attempt-cohorts td { text-align: left; padding: var(--space-8); border-bottom: 1px solid var(--line); }
+.attempt-cohorts tbody th { text-transform: capitalize; font-weight: 400; }
+.attempt-history { list-style: none; padding: 0; margin: 0; }
+.attempt-history li { display: flex; gap: var(--space-16); justify-content: space-between; align-items: center; padding-block: var(--space-16); border-bottom: 1px solid var(--line-subtle); }
+.attempt-history span { display: block; color: var(--ink-secondary); }
+.attempt-confirm, .attempt-report { border-color: var(--line-emphasis); }
+.attempt-page input { accent-color: var(--renal-teal); }
+.attempt-page input:focus-visible, .attempt-page label:focus-within { outline: 2px solid var(--focus); outline-offset: 3px; }
+.attempt-page .actions { flex-wrap: wrap; }
+@media (max-width: 620px) {
+  .attempt-page { gap: var(--space-16); }
+  .attempt-feedback, .attempt-help { padding: var(--space-16); }
+  .attempt-options label { padding: var(--space-12); }
+  .attempt-history li { flex-wrap: wrap; }
+}
