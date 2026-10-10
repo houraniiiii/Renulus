@@ -10,6 +10,8 @@
     "draft_revision": 2,
     "committed": [],
     "result": null,
+    "clock_high_water_at": "2026-10-10T12:00:00Z",
+    "paused_at": null,
     "timing": {
       "kind": "timed",
       "duration_seconds": 600,

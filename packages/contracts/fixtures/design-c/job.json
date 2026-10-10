@@ -2,6 +2,7 @@
   "id": "job_fiction_1",
   "operation": "generate_test",
   "idempotency_key": "fiction-job-01",
+  "request_hash": "d602da5f983f237ea1c8f4b3f92837aa0a5f6ad61d0d2c0d007a0434ed8a9b97",
   "state": "running",
   "inputs": [
     {
@@ -22,6 +23,7 @@
   "context_epoch": 3,
   "requested_count": 5,
   "validated_count": 5,
+  "accepted_count": null,
   "fictional_artifact": null,
   "published_version": null
 }

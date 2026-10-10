@@ -283,16 +283,17 @@ TABLE_COLUMNS = {
     "study_projects": ("id", "title", "lifecycle", "revision", "created_at", "updated_at"),
     "study_project_chats": ("id", "project_id", "chat_kind", "chat_id", "position", "revision", "created_at"),
     "study_project_documents": ("id", "project_id", "revision_id", "position", "revision", "created_at"),
-    "study_project_goals": ("id", "project_id", "title", "topic_id", "target_date", "progress_kind", "revision", "created_at", "updated_at"),
+    "study_project_goals": ("id", "project_id", "title", "topic_id", "target_date", "status", "progress_json", "revision", "created_at", "updated_at"),
     "knowledge_attachments": ("id", "chat_kind", "chat_id", "title", "media_type", "revision", "extraction_state", "index_state", "created_at", "updated_at"),
     "knowledge_attachment_originals": ("id", "attachment_id", "role", "original_path", "sha256", "bytes", "created_at"),
     "assessment_tests": ("id", "title", "lifecycle", "revision", "created_at", "updated_at"),
-    "assessment_test_versions": ("id", "test_id", "ordinal", "origin", "review_quality", "status", "items_json", "source_refs_json", "terms", "sha256", "created_at"),
-    "assessment_test_attempts": ("id", "version_id", "live_version_id", "version_snapshot_json", "mode", "status", "draft_revision", "committed_json", "result_json", "timing_kind", "duration_seconds", "started_at", "deadline_at", "paused_seconds", "last_reconciled_at", "created_at", "updated_at", "finalized_at"),
+    "assessment_test_versions": ("id", "test_id", "ordinal", "origin", "review_quality", "status", "items_json", "source_refs_json", "provenance_json", "terms", "sha256", "created_at"),
+    "assessment_test_attempts": ("id", "version_id", "live_version_id", "version_snapshot_json", "mode", "status", "draft_revision", "committed_json", "result_json", "timing_kind", "duration_seconds", "started_at", "deadline_at", "paused_seconds", "clock_high_water_at", "paused_at", "created_at", "updated_at", "finalized_at"),
     "assessment_attempt_drafts": ("attempt_id", "revision", "position", "answers_json", "updated_at"),
     "assessment_attempt_exposure": ("id", "attempt_id", "item_id", "question_id", "question_version", "key_version", "family_id", "family_version", "kind", "created_at"),
-    "assessment_question_reports": ("id", "version_id", "live_version_id", "attempt_id", "live_attempt_id", "item_id", "question_id", "question_version", "key_version", "family_id", "family_version", "report_text", "idempotency_key", "created_at"),
-    "assessment_test_jobs": ("id", "operation", "state", "idempotency_key", "request_hash", "inputs_json", "checkpoint_json", "settings_revision", "policy_revision", "context_epoch", "requested_count", "validated_count", "published_version_id", "live_published_version_id", "error_code", "created_at", "updated_at"),
+    "assessment_question_reports": ("id", "version_id", "live_version_id", "attempt_id", "live_attempt_id", "item_id", "question_id", "question_version", "key_version", "family_id", "family_version", "question_snapshot_json", "report_text", "idempotency_key", "request_hash", "created_at"),
+    "assessment_test_jobs": ("id", "operation", "state", "idempotency_key", "request_hash", "inputs_json", "checkpoint_json", "settings_revision", "policy_revision", "context_epoch", "requested_count", "validated_count", "accepted_count", "published_version_id", "live_published_version_id", "error_code", "created_at", "updated_at"),
+    "assessment_test_commands": ("idempotency_key", "operation", "target_type", "target_id", "request_hash", "result_json", "created_at"),
 }
 
 
@@ -344,6 +345,13 @@ class SavedTest(Contract):
     revision: Revision
 
 
+class VersionProvenance(Contract):
+    schema_version: Literal[1] = 1
+    method: Literal["reviewed_pack", "generation", "import", "nightly", "legacy_conversion"]
+    job_id: Identifier | None = None
+    fictional_artifact_id: Identifier | None = None
+
+
 class SavedTestVersion(Contract):
     id: Identifier
     test_id: Identifier
@@ -353,6 +361,7 @@ class SavedTestVersion(Contract):
     status: Literal["ready", "needs_review"]
     items: tuple[QuestionSnapshot, ...] = Field(min_length=1, max_length=50)
     source_refs: tuple[ContentReference, ...] = Field(default=(), max_length=50)
+    provenance: VersionProvenance
     terms: Annotated[str, Field(min_length=1, max_length=2000)]
     created_at: AwareDatetime
 
@@ -439,11 +448,13 @@ class TestAttempt(Contract):
     draft_revision: Annotated[int, Field(ge=0, strict=True)] = 0
     committed: tuple[CommittedAnswer, ...] = Field(default=(), max_length=50)
     result: AttemptResult | None = None
+    clock_high_water_at: AwareDatetime
+    paused_at: AwareDatetime | None = None
     timing: Timing = Field(default_factory=Timing)
 
     @model_validator(mode="after")
     def test_never_pauses(self):
-        if self.mode == "test" and (self.status in ("paused", "timer_expired", "ended") or self.timing.paused_seconds):
+        if self.mode == "test" and (self.status in ("paused", "timer_expired", "ended") or self.timing.paused_seconds or self.paused_at):
             raise ValueError("Test deadlines cannot pause or leave an unsubmitted expiry")
         if self.mode == "test" and self.status == "active" and (self.committed or self.result is not None):
             raise ValueError("Active Test responses cannot expose scored answers or results")
@@ -468,7 +479,7 @@ def test_deadline_reached(attempt: TestAttempt, now: datetime) -> bool:
         raise ValueError("Clock reconciliation requires an aware server timestamp")
     if attempt.mode != "test" or attempt.status != "active" or attempt.timing.kind != "timed":
         return False
-    effective_now = max(now, attempt.timing.last_reconciled_at or now)
+    effective_now = max(now, attempt.clock_high_water_at, attempt.timing.last_reconciled_at or now)
     return effective_now >= attempt.timing.deadline_at
 
 
@@ -561,6 +572,23 @@ class EligibleInput(Contract):
         return self
 
 
+class GoalProgress(Contract):
+    """An empty object is valid; progress is explicit intent or pinned evidence."""
+    evidence_ids: tuple[Identifier, ...] = Field(default=(), max_length=100)
+    manual_intent: Annotated[str, Field(min_length=1, max_length=2000)] | None = None
+
+    @model_validator(mode="after")
+    def unique_evidence(self):
+        if len(set(self.evidence_ids)) != len(self.evidence_ids):
+            raise ValueError("Goal evidence IDs must be unique")
+        return self
+
+
+class GoalState(Contract):
+    status: Literal["active", "completed"] = "active"
+    progress: GoalProgress = Field(default_factory=GoalProgress)
+
+
 def canonical_digest(value) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"),
                                     ensure_ascii=False, allow_nan=False).encode("utf-8")).hexdigest()
@@ -626,6 +654,7 @@ class Job(Contract):
     id: Identifier
     operation: Literal["daily_suggestions", "generate_test", "nightly_test"]
     idempotency_key: Annotated[str, Field(min_length=8, max_length=128)]
+    request_hash: Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
     state: Literal["queued", "running", "needs_review", "failed", "cancelled", "published"]
     inputs: tuple[EligibleInput, ...] = Field(default=(), max_length=100)
     settings_revision: Revision
@@ -633,6 +662,7 @@ class Job(Contract):
     context_epoch: Annotated[int, Field(ge=0, strict=True)] = 0
     requested_count: Literal[5, 10, 20] | None = None
     validated_count: Annotated[int, Field(ge=0, le=20, strict=True)] = 0
+    accepted_count: Annotated[int, Field(ge=1, le=20, strict=True)] | None = None
     fictional_artifact: FictionalTestArtifact | None = None
     published_version: TestVersionIdentity | None = None
 
@@ -642,14 +672,21 @@ class Job(Contract):
             raise ValueError("Test jobs require an explicit 5/10/20 count")
         if self.requested_count and self.validated_count > self.requested_count:
             raise ValueError("Validated progress cannot exceed the requested count")
+        if self.accepted_count is not None and (self.requested_count is None or
+                self.accepted_count > min(self.validated_count, self.requested_count)):
+            raise ValueError("Explicit accepted count must fit validated work and the original request")
         if self.operation != "daily_suggestions":
             if (self.state == "published") != (self.published_version is not None):
                 raise ValueError("Only a published job may carry its durable result")
-            if self.state == "published" and self.validated_count != self.requested_count:
+            if self.state == "published" and self.accepted_count is None and self.validated_count != self.requested_count:
                 raise ValueError("Incomplete work cannot become a Ready test")
         if self.operation == "nightly_test" and self.fictional_artifact is not None:
             raise ValueError("Nightly input cannot come from temporary transformation")
         return self
+
+    @property
+    def effective_count(self) -> int | None:
+        return self.accepted_count if self.accepted_count is not None else self.requested_count
 
 
 def publication_decision(job: Job, current_revisions: Mapping[tuple[str, str], str], *,
@@ -664,7 +701,7 @@ def publication_decision(job: Job, current_revisions: Mapping[tuple[str, str], s
         return "invalidated"
     if any(current_revisions.get(item.dependency.target.key) != item.dependency.expected_revision for item in job.inputs):
         return "invalidated"
-    if job.requested_count and job.validated_count != job.requested_count:
+    if job.effective_count is not None and job.validated_count < job.effective_count:
         return "not_ready"
     return "publishable"
 

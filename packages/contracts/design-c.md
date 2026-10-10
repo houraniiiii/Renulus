@@ -121,6 +121,11 @@ Lost save acknowledgements reconcile against backend revision/outcome.
 - `SavedTest` is collection identity/lifecycle; `SavedTestVersion` is an immutable
   published question/key snapshot manifest. Edit creates a new version. Every
   attempt/card/tab pins the same version identity, with actual item count.
+  Required `provenance` is a versioned object (`schema_version: 1`,
+  `method: reviewed_pack|generation|import|nightly|legacy_conversion`, optional
+  saved job/fictional-artifact IDs), stored as `provenance_json`. An old-backup
+  adapter explicitly chooses `legacy_conversion`; missing provenance is not an
+  attestation. Temporary origins/IDs remain forbidden in provenance.
   `origin: reviewed_bank|generated|imported|nightly` and
   `review_quality: reviewed|personal|needs_review` stay separate from
   `mode: study|test` and timing. Only reviewed-bank/reviewed items can enter bank
@@ -138,7 +143,9 @@ Lost save acknowledgements reconcile against backend revision/outcome.
   `assessment_test_attempts.committed_json` stores independent Study answer
   commitments (and Test answers after final commit); `result_json` stores the
   terminal result with answered/unanswered/excluded/scored counts. Draft updates
-  never write either field. Public `committed` and `result` are withheld during
+  never write either field. Defaults are `committed_json = []` and nullable
+  `result_json`; both stay empty during Test until final atomic publication.
+  Public `committed` and `result` are withheld during
   active Test; Study resume returns committed work without making it editable.
 - Exposure pins question/key/family/item/version and records presented/help
   before returning content. Study assistance precedes hints/sources/notes/chat;
@@ -154,6 +161,9 @@ Lost save acknowledgements reconcile against backend revision/outcome.
   read/write. At deadline, accept no new draft; submit durable predeadline drafts
   and blanks exactly once on reopen if necessary. Backend clock reconciliation
   must not extend a deadline after a backward clock change.
+  Each attempt persists nonnull `clock_high_water_at` from its creation and
+  advances it monotonically; `paused_at` is nullable and used only for Study.
+  Reconciliation uses the later of server time and persisted clock high-water.
 - Timed Study is pauseable as the labelled planning default; expiry preserves
   drafts and committed work and offers Continue untimed/Finish, never submits a
   draft. Invalid/withdrawn pinned items can still finalise, with excluded counts
@@ -163,7 +173,8 @@ Lost save acknowledgements reconcile against backend revision/outcome.
 
 Use existing bounded local job patterns, not a new scheduler/event service.
 `Job` has operation, state, input dependencies, settings/policy revision,
-progress, idempotency key and optional published version. States are queued,
+progress, original request hash/count, idempotency key and optional published
+version. States are queued,
 running, needs_review, failed, cancelled, published. No incomplete result is Ready.
 Within the publication transaction recheck deletion, expected revisions,
 permissions, active-Test policy and opt-in settings. Cancellation winning first
@@ -171,6 +182,12 @@ prevents publication; publication winning first returns published. Retry returns
 the same outcome. Restart may recover validated checkpoints but never starts
 provider work automatically. Daily keys include local day/timezone/scope/settings;
 nightly is off by default and has at most one catch-up.
+Test jobs preserve `requested_count` (5/10/20) and `request_hash`. A deliberate
+shorter-set action may supply `accepted_count` (integer 1–20, at most both
+validated_count and requested_count). Effective publication uses accepted_count
+when supplied, otherwise requested_count; the producer atomically publishes
+exactly that many validated items and never rewrites the original request.
+Without explicit acceptance, partial work cannot become Ready.
 
 Eligible personalisation inputs are saved learning summaries, current eligible
 memory revisions, user goals/preferences and aggregate committed learning
@@ -185,6 +202,11 @@ it transactionally before publication; producers call `bump_context_epoch` for
 relevant edits/deletions/settings changes. Restore's Library dirty marker blocks
 source queries until a real successful rebuild clears it. The parent's storage
 implementation owns these mechanisms; the contract pure check does not run them.
+Project goals default to `status: active` and `progress_json: {}`. Status is
+`active|completed`; public `progress` records optional unique `evidence_ids` and
+explicit `manual_intent`. Empty progress is valid. The backend verifies saved
+evidence eligibility; neither model inference nor invented percentages count as
+completion. These fields do not alter legacy `study.goals`.
 
 DC18 explicit create-test intent can transform temporary text entirely in memory
 into a `FictionalTestArtifact`: validated generalised fictional questions and
@@ -215,7 +237,7 @@ Exact proposed persisted names/identity and relation columns:
 | study_projects (Study/002) | id PK | Independently owned project, title/lifecycle/revision |
 | study_project_chats (Study/002) | id PK, project_id → study_projects.id, chat_kind + chat_id → learn_threads.id or case_sessions.id | Both edges link; UNIQUE(chat_kind,chat_id), sole membership authority |
 | study_project_documents (Study/002) | id PK, project_id → study_projects.id, revision_id → knowledge_revisions.id | Both edges link; UNIQUE(project_id,revision_id) |
-| study_project_goals (Study/002) | id PK, project_id → study_projects.id | Owned goal; does not rewrite study.goals |
+| study_project_goals (Study/002) | id PK, project_id → study_projects.id | Owned goal; status active/completed and progress_json; does not rewrite study.goals |
 | knowledge_attachments (Knowledge/003) | id PK, chat_kind + chat_id → learn_threads.id or case_sessions.id | Owned saved-chat attachment; retention saved only |
 | knowledge_attachment_originals (Knowledge/003) | id PK, attachment_id → knowledge_attachments.id | Owned bytes/preview reference, separate extraction/index status; one authority |
 | assessment_tests (Assessment/003) | id PK | Collection identity/lifecycle; newest version derived by ordinal, no reverse cascade |
@@ -223,8 +245,9 @@ Exact proposed persisted names/identity and relation columns:
 | assessment_test_attempts (Assessment/004) | id PK, original version_id, nullable live_version_id, version_snapshot_json | Independent immutable payload/provenance; original pin has no hard version FK or pruning edge |
 | assessment_attempt_drafts (Assessment/004) | attempt_id PK → assessment_test_attempts.id | Owned revision/answers_json/position; no scores |
 | assessment_attempt_exposure (Assessment/004) | id PK, attempt_id → assessment_test_attempts.id | Owned item/question/key/family version snapshot and kind; not learning evidence |
-| assessment_question_reports (Assessment/003) | id PK, original version_id/attempt_id, nullable live_version_id/live_attempt_id | Independent item/question/key/family pins; neutral report survives deleted source |
-| assessment_test_jobs (Assessment/003) | id PK, original published_version_id, nullable live_published_version_id | Retained outcome; inputs/checkpoints obey durable boundary; never ownership of a source |
+| assessment_question_reports (Assessment/003) | id PK, original version_id/attempt_id, nullable live_version_id/live_attempt_id | Independent item/question/key/family pins, question_snapshot_json and request_hash; neutral report survives deleted source |
+| assessment_test_jobs (Assessment/003) | id PK, original published_version_id, nullable live_published_version_id | Retained original requested_count/request_hash and optional accepted_count; inputs/checkpoints obey durable boundary; never ownership of a source |
+| assessment_test_commands (Assessment/003) | idempotency_key PK | operation, target_type, target_id, request_hash, result_json, created_at; separate from legacy and attempt command ledgers |
 
 These names are frozen proposals for review, not independently reserved new
 migrations. In particular M2 must reuse existing case attachment/original rows
@@ -245,7 +268,10 @@ Attempt version_snapshot_json stores the complete immutable version privately
 at start; public TestAttempt responses omit its keys. A nullable live pointer
 can only equal the original pin or be unavailable; it cannot repin history.
 `unavailable-references.json` supplies an absent-live-version attempt snapshot,
-original report pins and the retained job outcome for migration/restore tests.
+original report pins with an independent private question snapshot/request hash
+and the retained job outcome for migration/restore tests. A report's snapshot
+retains the question/key and original pins even after live pins become unavailable;
+active-Test reads and command replay must still withhold keys.
 
 Foreign keys may guard owned/membership rows. Original provenance pins in
 attempts/reports/job outcomes must survive physical pruning of deleted tests/

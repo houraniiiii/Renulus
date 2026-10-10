@@ -1,0 +1,41 @@
+{
+  "job": {
+    "id": "job_shorter_fiction_1",
+    "operation": "generate_test",
+    "idempotency_key": "fiction-shorter-01",
+    "request_hash": "f36bdee8f5d3b7f0971cecf19c29435c99ead0277b9dde6d764e336b2f0cecfc",
+    "state": "running",
+    "inputs": [
+      {
+        "kind": "memory",
+        "dependency": {
+          "target": {
+            "type": "memory_revision",
+            "id": "memory_revision_fiction_1"
+          },
+          "expected_revision": "2"
+        },
+        "retention": "saved",
+        "content_class": "general_learning"
+      }
+    ],
+    "settings_revision": 1,
+    "policy_revision": 1,
+    "context_epoch": 3,
+    "requested_count": 20,
+    "validated_count": 5,
+    "accepted_count": 5,
+    "fictional_artifact": null,
+    "published_version": null
+  },
+  "effective_count": 5,
+  "goal": {
+    "status": "completed",
+    "progress": {
+      "evidence_ids": [
+        "evidence_fiction_1"
+      ],
+      "manual_intent": "I completed my planned fictional provenance study."
+    }
+  }
+}

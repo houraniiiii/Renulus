@@ -222,7 +222,8 @@
       "title",
       "topic_id",
       "target_date",
-      "progress_kind",
+      "status",
+      "progress_json",
       "revision",
       "created_at",
       "updated_at"
@@ -265,6 +266,7 @@
       "status",
       "items_json",
       "source_refs_json",
+      "provenance_json",
       "terms",
       "sha256",
       "created_at"
@@ -284,7 +286,8 @@
       "started_at",
       "deadline_at",
       "paused_seconds",
-      "last_reconciled_at",
+      "clock_high_water_at",
+      "paused_at",
       "created_at",
       "updated_at",
       "finalized_at"
@@ -320,8 +323,10 @@
       "key_version",
       "family_id",
       "family_version",
+      "question_snapshot_json",
       "report_text",
       "idempotency_key",
+      "request_hash",
       "created_at"
     ],
     "assessment_test_jobs": [
@@ -337,11 +342,21 @@
       "context_epoch",
       "requested_count",
       "validated_count",
+      "accepted_count",
       "published_version_id",
       "live_published_version_id",
       "error_code",
       "created_at",
       "updated_at"
+    ],
+    "assessment_test_commands": [
+      "idempotency_key",
+      "operation",
+      "target_type",
+      "target_id",
+      "request_hash",
+      "result_json",
+      "created_at"
     ]
   }
 }

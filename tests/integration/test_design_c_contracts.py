@@ -19,6 +19,7 @@ from renulus.contracts import ApiError
 from renulus.design_c_contracts import (
     AttemptDraft, ContentReference, Conversation, CreateConversation, Dependency,
     EligibleInput, ErrorEnvelope, Exposure, FictionalTestArtifact, Identity, Job,
+    GoalState, QuestionSnapshot, canonical_digest,
     MessagePage, PageRequest, PersistedAttemptPin, RELATION_PROPOSALS, Relation,
     SavedTestVersion, TABLE_COLUMNS, TestAttempt as Attempt, UNAVAILABLE_REFERENCE_COLUMNS,
     WorkspaceTab, disclosure_allowed, legacy_contract_views, owned_deletion_closure,
@@ -43,7 +44,7 @@ def fixture(name):
 def test_fixture_manifest_pins_captured_and_validated_json_bytes():
     manifest = fixture("fixture-manifest.json")
     assert manifest["provider_calls"] == 0
-    assert len(manifest["files"]) == 10
+    assert len(manifest["files"]) == 11
     for name, entry in manifest["files"].items():
         data = (FIXTURES / name).read_bytes()
         assert len(data) == entry["bytes"]
@@ -209,6 +210,18 @@ def test_module_row_relation_proposals_match_owned_additive_columns(legacy_bundl
         assert not any(edge.child_table == table and edge.child_column == pinned for edge in RELATION_PROPOSALS)
     assert "project_id" not in TABLE_COLUMNS["learn_conversations"]
     assert "project_id" not in TABLE_COLUMNS["case_conversations"]
+    assert proposal["table_columns"] == {table: list(columns) for table, columns in TABLE_COLUMNS.items()}
+    assert TABLE_COLUMNS["assessment_test_commands"] == (
+        "idempotency_key", "operation", "target_type", "target_id", "request_hash", "result_json", "created_at")
+    assert "assessment_commands" in inventory and "assessment_test_commands" not in inventory
+    for table, additions in {
+        "assessment_test_versions": {"provenance_json"},
+        "assessment_test_attempts": {"committed_json", "result_json", "clock_high_water_at", "paused_at"},
+        "assessment_question_reports": {"question_snapshot_json", "request_hash"},
+        "assessment_test_jobs": {"accepted_count"},
+        "study_project_goals": {"status", "progress_json"},
+    }.items():
+        assert additions <= set(TABLE_COLUMNS[table])
 
 
 def test_typed_ownership_preserves_shared_originals_and_namespaces():
@@ -287,6 +300,7 @@ def test_immutable_version_mode_and_attempt_draft_remain_separate(version):
     exposure = Exposure.model_validate(data["exposure"])
     validate_attempt_draft(draft, attempt, version)
     assert version.item_count == 5 and not version.bank_cohort_eligible
+    assert version.provenance.schema_version == 1 and version.provenance.method == "generation"
     assert exposure.kind == "presented" and exposure.version_id == version.id
     assert "correct" not in draft.model_dump_json() and "correct_option_ids" not in attempt.model_dump_json()
     with pytest.raises(ValidationError):
@@ -304,8 +318,14 @@ def test_deleted_version_keeps_original_pin_payload_report_and_job_outcome(versi
     pin = PersistedAttemptPin.model_validate(data["attempt_pin"])
     assert pin.live_version_id is None and pin.version_id == version.id
     assert pin.version_snapshot.items == version.items
+    assert pin.version_snapshot.provenance == version.provenance
     assert data["report"]["version_id"] == version.id and data["report"]["live_version_id"] is None
     assert data["report"]["attempt_id"] == pin.attempt_id and data["report"]["live_attempt_id"] is None
+    report = data["report"]
+    question = QuestionSnapshot.model_validate(report["question_snapshot"])
+    assert question == version.items[0]
+    assert report["request_hash"] == canonical_digest({key: report[key] for key in (
+        "version_id", "attempt_id", "item_id", "report_text")})
     assert data["job_outcome"]["published_version_id"] == version.id
     assert data["job_outcome"]["live_published_version_id"] is None
     with pytest.raises(ValidationError):
@@ -335,6 +355,13 @@ def test_test_policy_and_clock_shapes_cover_precommit_disclosure_and_backward_cl
     assert not deadline_reached(attempt, datetime.fromisoformat("2026-10-10T12:09:59+00:00"))
     assert deadline_reached(attempt, datetime.fromisoformat("2026-10-10T12:10:00+00:00"))
     prior = attempt.model_dump(mode="json")
+    prior["clock_high_water_at"] = "2026-10-10T12:11:00Z"
+    assert deadline_reached(Attempt.model_validate(prior), datetime.fromisoformat("2026-10-10T12:00:00+00:00"))
+    without_high_water = {key: value for key, value in prior.items() if key != "clock_high_water_at"}
+    with pytest.raises(ValidationError):
+        Attempt.model_validate(without_high_water)
+    with pytest.raises(ValidationError):
+        Attempt.model_validate({**prior, "paused_at": "2026-10-10T12:01:00Z"})
     prior["timing"]["last_reconciled_at"] = "2026-10-10T12:11:00Z"
     assert deadline_reached(Attempt.model_validate(prior), datetime.fromisoformat("2026-10-10T12:00:00+00:00"))
     with pytest.raises(ValidationError):
@@ -357,6 +384,43 @@ def test_job_publication_rechecks_epoch_revisions_settings_and_cancel_winner():
     assert publication_decision(published, {}, **kwargs, enabled=False) == "published"
     with pytest.raises(ValidationError):
         Job.model_validate({**published.model_dump(mode="json"), "validated_count": 4})
+
+
+def test_explicit_shorter_set_preserves_original_request_and_publication_winner():
+    data = fixture("accepted-shorter-set.json")
+    job = Job.model_validate(data["job"])
+    original = Job.model_validate({**data["job"], "accepted_count": None})
+    current = {job.inputs[0].dependency.target.key: "2"}
+    kwargs = {"settings_revision": 1, "policy_revision": 1, "context_epoch": 3}
+    assert original.requested_count == job.requested_count == 20
+    assert original.request_hash == job.request_hash
+    assert job.validated_count == job.accepted_count == job.effective_count == data["effective_count"] == 5
+    assert publication_decision(original, current, **kwargs) == "not_ready"
+    assert publication_decision(job, current, **kwargs) == "publishable"
+    published = Job.model_validate({**data["job"], "state": "published",
+        "published_version": {"id": "test_version_fiction_1"}})
+    assert published.requested_count == 20 and published.request_hash == original.request_hash
+    assert publication_decision(published, {}, **kwargs, enabled=False) == "published"
+    for invalid in (0, 6, 21, True):
+        with pytest.raises(ValidationError):
+            Job.model_validate({**data["job"], "accepted_count": invalid})
+    with pytest.raises(ValidationError):
+        Job.model_validate({**data["job"], "accepted_count": 10, "validated_count": 10, "requested_count": 5})
+    with pytest.raises(ValidationError):
+        Job.model_validate({**data["job"], "accepted_count": None, "state": "published",
+            "published_version": {"id": "test_version_fiction_1"}})
+
+
+def test_goal_progress_is_explicit_manual_intent_or_evidence_without_percentages():
+    default = GoalState()
+    assert default.status == "active" and default.progress.model_dump(exclude_unset=True) == {}
+    goal = GoalState.model_validate(fixture("accepted-shorter-set.json")["goal"])
+    assert goal.status == "completed" and goal.progress.evidence_ids == ("evidence_fiction_1",)
+    assert goal.progress.manual_intent
+    for invalid in ({"status": "inferred_complete"}, {"progress": {"percentage": 100}},
+                    {"progress": {"evidence_ids": ["evidence_1", "evidence_1"]}}):
+        with pytest.raises(ValidationError):
+            GoalState.model_validate(invalid)
 
 
 @pytest.mark.parametrize("source_type", ["case", "learn_thread", "library_revision", "attachment", "saved_test_version"])

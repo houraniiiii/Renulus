@@ -10,15 +10,16 @@ used. This directory is inside the DC02 reservation.
 | legacy-schema1-records.json | Real records-only export from the baseline backend: original Learn/saved Case IDs, a reviewed session with one assisted committed answer and two unscored blanks, a separately generated session with one committed answer, exposure/replayed feedback and a synthetic Library note. Installed bank tables are omitted; immutable assessment snapshots remain. |
 | legacy-schema1-inventory.json | Actual original scalar column inventories and checked migration names/checksums. New modules use sidecars and do not change these original shapes. |
 | conversation.json | Saved Learn summary using the original backend ID. No inferred project. |
-| saved-test-version.json | Validated immutable five-item personal version spanning CKD, dialysis, transplantation, glomerular and electrolyte topic labels. Fictional source-provenance exercises, not reviewed clinical questions. |
+| saved-test-version.json | Validated immutable five-item personal version with versioned generation provenance, spanning CKD, dialysis, transplantation, glomerular and electrolyte topic labels. Fictional source-provenance exercises, not reviewed clinical questions. |
 | fictional-artifact.json | Strict generalised fictional question/key artifact with content digest and synthetic privacy-review receipt. No original temporary ID, source edge or prompt. Receipt parsing alone does not prove a real producer's privacy review. |
 | locators.json | Validated physical/printed PDF distinction, DOCX item offsets, CSV rows, XLSX sheet/range and image frame/bounds. Shape evidence only; no reader/OCR claim. |
-| attempt-and-draft.json | Version pin, Test mode/timing, editable unanswered/marked drafts and separate presentation exposure. New M4 persistence is not implemented here. |
-| unavailable-references.json | Independent private attempt payload with its original version ID, nullable live pointer, retained question/report pins and job publication ID after live-source deletion. No hard version FK or pruning edge. |
-| job.json | Eligible memory revision input, full validated count and captured settings/policy/context epoch. Pure publication guard fixture, not a running provider job. |
+| attempt-and-draft.json | Version pin, Test mode/timing, required clock high-water, nullable pause time, editable unanswered/marked drafts, separate Study commitments/results and presentation exposure. New M4 persistence is not implemented here. |
+| unavailable-references.json | Independent private attempt payload/provenance with its original version ID, nullable live pointer, report question snapshot/request hash and job publication ID after live-source deletion. No hard version FK or pruning edge. |
+| job.json | Eligible memory revision input, original request hash/count, full validated count and captured settings/policy/context epoch. Pure publication guard fixture, not a running provider job. |
+| accepted-shorter-set.json | Explicit acceptance of five validated items from an original twenty-item request without changing its hash/count, plus completed goal with explicit manual intent and saved evidence ID. Pure contract evidence. |
 | relations-and-rows.json | Frozen proposed scalar column names, reserved additive migrations, disposable/owned relation columns and separately retained unavailable provenance columns. No DDL. |
 
-`fixture-manifest.json` pins sizes and SHA-256 values for the ten JSON fixtures
+`fixture-manifest.json` pins sizes and SHA-256 values for the eleven JSON fixtures
 using the repository's UTF-8 LF bytes. The generator writes LF explicitly.
 `build_fixtures.py` generates the legacy records through real module repositories
 and validates a locally authored practice batch through the existing generated
@@ -60,6 +61,13 @@ After that final schema/manifest adjustment, all eight affected shape checks
 passed in 0.64 seconds; the 17 other tests were deselected. Receipts are
 `C:/Renulus/scratch/design-c/contracts/contract-results.xml` (24-test run) and
 `C:/Renulus/scratch/design-c/contracts/final-contract-shapes.xml` (final checks).
+The accepted follow-up schema and eleven-fixture digest passed all ten affected
+checks in 0.72 seconds (17 deselected), including explicit shorter-set
+publication, manual/evidenced goal progress, private report snapshots, versioned
+provenance and persisted clock high-water. Receipt:
+`C:/Renulus/scratch/design-c/contracts/followup-contract-shapes.xml`.
+The separate test-command row is reserved by scalar inventory; storage DDL and
+idempotent transaction/replay evidence remain producer/integration work.
 
 Renulus code and synthetic contract scaffolding use MIT. Original Renulus bank
 teaching text/key snapshots inside the legacy export retain CC BY 4.0 and their

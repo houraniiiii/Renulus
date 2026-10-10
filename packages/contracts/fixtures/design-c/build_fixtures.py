@@ -16,6 +16,7 @@ from renulus.design_c_contracts import (
     CONTRACT_VERSION, RELATION_PROPOSALS, TABLE_COLUMNS, MIGRATION_RESERVATIONS,
     QuestionSnapshot, SavedTestVersion, validate_fictional_artifact, TestAttempt,
     AttemptDraft, PersistedAttemptPin, Job, UNAVAILABLE_REFERENCE_COLUMNS,
+    GoalState, canonical_digest,
 )
 from renulus.server import create_app
 from renulus.storage.backup import export_records, eligible_table, validate_records
@@ -43,13 +44,16 @@ def fictional_questions():
 
 
 def derived_fixtures():
-    version = SavedTestVersion.model_validate_json((ROOT / "saved-test-version.json").read_text(encoding="utf-8"))
+    raw_version = json.loads((ROOT / "saved-test-version.json").read_text(encoding="utf-8"))
+    raw_version["provenance"] = {"schema_version": 1, "method": "generation", "job_id": "job_fiction_1"}
+    version = SavedTestVersion.model_validate(raw_version)
+    write("saved-test-version.json", version.model_dump(mode="json"))
     write("relations-and-rows.json", {"contract_version": CONTRACT_VERSION,
         "migration_reservations": MIGRATION_RESERVATIONS,
         "relations": [edge.model_dump(mode="json") for edge in RELATION_PROPOSALS],
         "unavailable_reference_columns": UNAVAILABLE_REFERENCE_COLUMNS, "table_columns": TABLE_COLUMNS})
     attempt = TestAttempt(id="attempt_fiction_1", version={"id": version.id}, mode="test",
-        status="active", draft_revision=2, timing={"kind": "timed", "duration_seconds": 600,
+        status="active", draft_revision=2, clock_high_water_at=DATE, timing={"kind": "timed", "duration_seconds": 600,
             "started_at": DATE, "deadline_at": "2026-10-10T12:10:00Z", "last_reconciled_at": DATE})
     draft = AttemptDraft(attempt_id=attempt.id, version_id=version.id, revision=2, position=1,
         answers=({"item_id": version.items[0].item_id, "option_ids": ["a"], "marked": False},
@@ -68,17 +72,31 @@ def derived_fixtures():
         "report": {"version_id": version.id, "live_version_id": None, "attempt_id": attempt.id,
             "live_attempt_id": None, "item_id": version.items[0].item_id,
             "question_id": version.items[0].question_id, "question_version": "1", "key_version": "1",
-            "family_id": version.items[0].family_id, "family_version": "1"},
+            "family_id": version.items[0].family_id, "family_version": "1",
+            "question_snapshot": version.items[0].model_dump(mode="json"),
+            "request_hash": canonical_digest({"version_id": version.id, "attempt_id": attempt.id,
+                "item_id": version.items[0].item_id, "report_text": "Fictional provenance report"}),
+            "report_text": "Fictional provenance report"},
         "job_outcome": {"published_version_id": version.id, "live_published_version_id": None}})
     job = Job(id="job_fiction_1", operation="generate_test", idempotency_key="fiction-job-01",
+        request_hash=canonical_digest({"operation": "generate_test", "requested_count": 5,
+            "memory_revision_id": "memory_revision_fiction_1"}),
         state="running", settings_revision=1, policy_revision=1, context_epoch=3, requested_count=5, validated_count=5,
         inputs=({"kind": "memory", "dependency": {"target": {"type": "memory_revision", "id": "memory_revision_fiction_1"},
             "expected_revision": "2"}},))
     write("job.json", job.model_dump(mode="json"))
+    shorter = Job.model_validate({**job.model_dump(mode="json"), "id": "job_shorter_fiction_1",
+        "idempotency_key": "fiction-shorter-01", "requested_count": 20, "validated_count": 5,
+        "accepted_count": 5, "request_hash": canonical_digest({"operation": "generate_test",
+            "requested_count": 20, "memory_revision_id": "memory_revision_fiction_1"})})
+    write("accepted-shorter-set.json", {"job": shorter.model_dump(mode="json"),
+        "effective_count": shorter.effective_count,
+        "goal": GoalState(status="completed", progress={"evidence_ids": ["evidence_fiction_1"],
+            "manual_intent": "I completed my planned fictional provenance study."}).model_dump(mode="json")})
     names = ("legacy-schema1-records.json", "legacy-schema1-inventory.json",
              "conversation.json", "saved-test-version.json", "fictional-artifact.json",
              "locators.json", "attempt-and-draft.json", "unavailable-references.json",
-             "job.json", "relations-and-rows.json")
+             "job.json", "relations-and-rows.json", "accepted-shorter-set.json")
     for name in names:
         path = ROOT / name
         path.write_bytes(path.read_bytes().replace(b"\r\n", b"\n"))
@@ -136,6 +154,7 @@ def build(profile: Path):
             "SELECT name,checksum FROM migration_ledger ORDER BY name")})
     version = SavedTestVersion(id="test_version_fiction_1", test_id="test_fiction", ordinal=1,
         origin="generated", review_quality="personal", status="ready", items=questions,
+        provenance={"schema_version": 1, "method": "generation", "job_id": "job_fiction_1"},
         terms="Synthetic contract fixture only; no clinical efficacy or bank-review claim.", created_at=DATE)
     write("saved-test-version.json", version.model_dump(mode="json"))
     artifact = validate_fictional_artifact(questions, artifact_id="fiction_artifact_1",

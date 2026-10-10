@@ -16,8 +16,8 @@
       "sha256": "b33abe29d30b78490e4d12775186a02442b3ece41836ae61188bab681b6791b6"
     },
     "saved-test-version.json": {
-      "bytes": 3869,
-      "sha256": "307111db60bedbd48925f439db4158b148f71e5abb4695363482b5fca11694f7"
+      "bytes": 4010,
+      "sha256": "d83707268462ac544d11793b4d6cba2575c62a104dbcb54afdd49b27c6bb6839"
     },
     "fictional-artifact.json": {
       "bytes": 3758,
@@ -28,20 +28,24 @@
       "sha256": "5851c7fba6857c9378e059eb47e1d1372cc88e30b19998d46a1673b65afb9c86"
     },
     "attempt-and-draft.json": {
-      "bytes": 1734,
-      "sha256": "3c80426f68a2331a8ee5a5073815ddb2986c1dbbcb3a8883712bb2bebe5be139"
+      "bytes": 1808,
+      "sha256": "759825182bcbf607bb4aaf338c1e842cd6ffe77beb40ecf7d7820280f6731e3e"
     },
     "unavailable-references.json": {
-      "bytes": 5026,
-      "sha256": "4e4daaa84185a2b7831a2671293723703a27084237a87c81eac0a3e7e91cbd24"
+      "bytes": 6045,
+      "sha256": "e241627b0bea8d5a9242d86cdd240c5f021f4aab586ad364c9546e5d2b743320"
     },
     "job.json": {
-      "bytes": 601,
-      "sha256": "feeba7d69ed378ae7d11ad542964c64567e720031aff6e9d327dc6fce673b847"
+      "bytes": 713,
+      "sha256": "07cab9cecca69bf244c9909560178eaf7ac096660641565792edb80e5e767bf0"
     },
     "relations-and-rows.json": {
-      "bytes": 8447,
-      "sha256": "e89335920f546c75c6703f472ebe25ed188fc0e9101e0325d14f234e5e102954"
+      "bytes": 8773,
+      "sha256": "be1622ca977511a8fd20bc85dd7181c54770bfd0c3bb09dddd0eda72002f817a"
+    },
+    "accepted-shorter-set.json": {
+      "bytes": 1022,
+      "sha256": "4945febc4ca96bd554887454d31975a3d71c4e2096d201d6f090474eb61ed0c3"
     }
   }
 }
