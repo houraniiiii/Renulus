@@ -25,7 +25,7 @@ copied for these checks.
 | Renderer/build | Exact TypeScript/Vite/Electron build through `f5d36ac9` passes. R5 has eight actual backend and 28 renderer/transport checks; R7 `f4fc986f` has 40 Reader/Workspace checks and actual PDF text-position/SQLite reopen proof. |
 | Hidden source UI | Actual attempts and Notes reports retain normal closes/reopens, narrow/200% captures, drafts, revision pins and zero live provider calls. They establish source scope, not an installed pass. |
 | R5 independent hidden recheck `31e9e4ce` | Two actual attachment readers show distinct authorized tab/Close names before and after normal restart; preferences retain safe references/positions without titles. An initial Reader wait timed out and the controller closed normally; recovery and both subsequent readers passed. The unexplained 409/timeout remains in the report, not a zero-error claim. |
-| Installed verifier | `ccc453dc` includes real eight-category original/upload/reader/passage journeys and seven passing deterministic fixture/parser checks. `2e30ee1d` confines all child user/cache directories. `f2ac20d2` adds PDF page-2 selected-text reopen; `75c05797` adds two fresh Electron launches of the hash-verified upgraded recovery profile. The final verifier has 35 passing boundary checks. Actual installed execution remains pending. |
+| Installed verifier | `ccc453dc` includes real eight-category original/upload/reader/passage journeys and seven passing deterministic fixture/parser checks. `2e30ee1d` confines all child user/cache directories. `f2ac20d2` adds PDF page-2 selected-text reopen; `75c05797` adds two fresh Electron launches of the hash-verified upgraded recovery profile; `576a61bf` adds actual ingestion/normal-close recovery. The final verifier has 39 passing boundary checks. Actual installed execution remains pending. |
 | Installed recovery driver `c96afad8` | Nine stdlib guard tests pass in the canonical checkout. The driver requires exact installed hashes, a genuine closed schema-1 seed and a preserved pre-upgrade snapshot; actual upgrade, JSON/ZIP1/ZIP2 restore, original bytes and effective CPU index rebuild remain unexecuted until manufacture. |
 
 The current independent pass-3 review found an inherited user-directory escape
@@ -70,8 +70,21 @@ before rich events/provider work and inside the publication transaction. Three
 red reproductions and 24 passing actual assembled-owner checks cover active
 Test, a complete Test cycle, restore, replay and the final-write race. The
 retained legacy suite initially failed only during its obsolete assessment-only
-assembly; its module-local fixture is being updated to the complete app, without
-changing production assembly or global test fixtures.
+assembly; its module-local fixture now uses the complete app (`c496d4b9`), without
+changing production assembly or global test fixtures. The 21-check rerun passes
+in `integration/legacy-boundary-regression02.xml`.
+
+Candidate `b6d9930f` was also stopped before payload copy on the independently
+reproduced Case volatile-terminal replay after restore. `dbd1896e` now checks
+policy/context before every rich replay event. Owner receipts cover 41 distinct
+new policy checks across both fixes and the 272-route inventory, with three
+original-producer checks rerun after the final change. `71814442` proves the
+mounted Generation and Chat producers through exact saved setup/workspace and
+whole Study in two real loopback journeys. `527bd253` refreshes canonical chat
+membership on same-chat search navigation while preserving draft and response;
+eleven focused Chat checks and typecheck pass. The independent search rerun
+passes all three actual mounted journeys in `search-connected-03.xml`; its
+test-only checkpoint is integrated at `21f422b6`.
 
 Verifier `576a61bf` adds actual active Library extraction followed by ordinary
 window close and same-job recovery after fresh reopen. Its 39 boundary checks

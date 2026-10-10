@@ -15,7 +15,7 @@ Use [parallel-work rules](../planning/PARALLEL_WORK.md) and record prerequisite
 commits, integrated evidence and remaining limits in the ticket handoff or its
 linked issue. Update this current section when execution starts.
 
-### Current integration checkpoint — 75c05797, manufacture held for DC14 repair
+### Current integration checkpoint — final policy and search repairs integrated
 
 The earlier reservations below are historical. Active work remains against the
 same DC01–DC21 backlog. Canonical root/branch and baseline 528025ff ancestry were
@@ -63,6 +63,36 @@ outcome. The final candidate must include the producer repair. This is a late
 canonical write; middleware still blocks reads during Test, so the finding does
 not establish visible key leakage. The independent lanes close specific
 previously unindexed consumer paths rather than repeat unchanged full suites.
+
+The second candidate `b6d9930f` was likewise stopped during public inventory
+verification, before payload copy, when independent review reproduced stale
+volatile Case replay after restore. Both stopped receipts are retained. The
+repair `dbd1896e` checks the captured policy/epoch before each terminal replay
+event and preserves neutral cancellation. Together with generated-practice
+`eef19e63` and route inventory `c6ec9717`, 41 distinct focused checks pass across
+the owner receipts; three original producer checks were rerun after the final
+Case extraction. No combined full-suite run is claimed. The retained legacy
+suite now uses the complete application fixture (`c496d4b9`) and passes 21 checks
+in `integration/legacy-boundary-regression02.xml`.
+
+The route inventory covers 272 method/path pairs (229 ordinarily guarded, 31
+neutral, 12 attempt-owned). Actual active-Test requests deny the ordinary paths
+before malformed input validation; valid historical/import replays remain
+blocked and current Test outputs remain key-free. Pauli's `71814442` adds two
+actual mounted App journeys: Generation to exact saved setup and whole Study,
+and saved Chat through fictional preparation, pinned workspace card and whole
+Study. Both pass against real HTTP/SQLite and synthetic external transport.
+
+Poincare's actual search check found one current-chat metadata bug after project
+reassignment, while deleted Library navigation and different-chat navigation
+passed. Lead repair `527bd253` resolves the canonical summary on explicit
+same-chat navigation without remounting the composer or disconnecting a stream.
+Eleven Chat checks and typecheck pass; the independent three-journey rerun also
+passes in `dc-review-readers/search-proof/search-connected-03.xml` with no skips.
+The test-only checkpoint is integrated at `21f422b6`. Lead reserved only the three repaired Chat/ModuleOutlet
+paths; Russell's bounded Case repository/streaming expansion is complete.
+Zeno's installed verifier `576a61bf` has 39 passing guard checks, including real
+normal-close ingestion recovery. Actual matching installed gates remain open.
 
 ### Active reservations — initial prerequisite wave
 
