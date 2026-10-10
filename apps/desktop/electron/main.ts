@@ -158,10 +158,12 @@ app.on('before-quit', event => {
   if (stopping) return;
   event.preventDefault(); lifetime.abort();
   if (!stopPromise) stopPromise = (async () => {
-    if (frontend) { frontend.server.closeAllConnections(); await new Promise<void>(resolve => frontend!.server.close(() => resolve())); }
+    // Keep the authenticated reply path reachable while owned workers settle.
+    // A bounded backend timeout leaves the profile and frontend with this app.
     await backend?.stop();
+    if (frontend) { frontend.server.closeAllConnections(); await new Promise<void>(resolve => frontend!.server.close(() => resolve())); }
   })();
-  void stopPromise.then(() => { stopping = true; app.quit(); }, () => { stopPromise = undefined; reportNativeError('Renulus could not finish stopping', 'The owned backend did not exit cleanly. Close this development instance and inspect its lifecycle evidence.'); });
+  void stopPromise.then(() => { stopping = true; app.quit(); }, () => { stopPromise = undefined; reportNativeError('Renulus is still stopping', 'Background work has not finished settling. This instance retains its profile. Try closing again after it finishes.'); });
 });
 if (backgroundOwner !== undefined) {
   const watchOwner = setInterval(() => {

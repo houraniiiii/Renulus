@@ -299,6 +299,7 @@ NEUTRAL = {
     ("GET", "/conversations/test-drafts/runs/{run_id}"),
     ("POST", "/conversations/test-drafts/runs/{run_id}/cancel"),
 }
+AUTHENTICATED_NEUTRAL = {("GET", "/runtime/shutdown"), ("POST", "/runtime/shutdown")}
 ATTEMPT_OWNED = {("GET", "/assessment/test-attempts"), ("POST", "/assessment/test-attempts"),
     ("GET", "/assessment/test-attempts/{attempt_id}"), ("PUT", "/assessment/test-attempts/{attempt_id}/draft"),
     *(("POST", "/assessment/test-attempts/{attempt_id}/" + action) for action in
@@ -333,7 +334,7 @@ def test_assembled_route_method_inventory_denies_every_non_neutral_entry(assembl
     app, services, client = assembled
     entries = sorted(route_inventory(app.routes))
     operations = {(method, path) for method, path, _ in entries}
-    assert NEUTRAL | ATTEMPT_OWNED <= operations
+    assert NEUTRAL | AUTHENTICATED_NEUTRAL | ATTEMPT_OWNED <= operations
     # Cross-check the walk against FastAPI's own schema, including both nested
     # runtime routers. Duplicate policy registration is retained in the receipt.
     schema_operations = {(method.upper(), path.removeprefix("/api/v1"))
@@ -345,11 +346,12 @@ def test_assembled_route_method_inventory_denies_every_non_neutral_entry(assembl
         "renulus.memory.api", "renulus.learn.api", "renulus.cases.api", "renulus.assessment.import_api"}
     active = start(services)
     assert client.get("/api/v1/assessment/policy").json()["active_test_id"] == active["id"]
-    denied = sorted(operations - NEUTRAL - ATTEMPT_OWNED)
+    denied = sorted(operations - NEUTRAL - AUTHENTICATED_NEUTRAL - ATTEMPT_OWNED)
     record_property("route_inventory", json.dumps(entries))
     record_property("distinct_operations", len(operations))
     record_property("guarded_operations", len(denied))
     record_property("neutral_operations", len(NEUTRAL))
+    record_property("authenticated_neutral_operations", len(AUTHENTICATED_NEUTRAL))
     record_property("attempt_owned_operations", len(ATTEMPT_OWNED))
     for method, path in denied:
         # Real mounted routes, malformed/missing bodies: the policy must run
@@ -357,6 +359,13 @@ def test_assembled_route_method_inventory_denies_every_non_neutral_entry(assembl
         response = client.request(method, concrete(path), json={})
         assert_denied(response)
         assert response.headers.get("cache-control") == "no-store"
+    for method, path in sorted(AUTHENTICATED_NEUTRAL):
+        # No session token is configured in this route-inventory fixture.
+        # Shutdown remains neutral during Test, but cannot bypass authentication.
+        response = client.request(method, concrete(path), json={})
+        assert response.status_code == 401
+        assert response.json()["error"]["code"] == "invalid_session"
+    assert services.shutdown_status() == {"state": "open", "api_version": 1}
     for method, path in sorted(NEUTRAL):
         response = client.request(method, concrete(path), json={"inventory_invalid": True})
         assert response.status_code in {200, 201, 202, 204, 400, 404, 409, 422}, (method, path, response.text)
