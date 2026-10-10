@@ -2,6 +2,7 @@
 """Owned synthetic Home checks; no live inference, credentials or owner profile."""
 import json
 import asyncio
+import os
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 
@@ -524,3 +525,113 @@ def test_whole_attempt_home_rejects_untrusted_or_unavailable_evidence(home_whole
         context = service._context(conn)
     assert context.material["learning_activity"] == []
     assert not context.inputs
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("change", ["suppressed", "attempt_deleted", "source_withdrawn", "evidence_revision"])
+@pytest.mark.parametrize("stage", ["during_provider", "cache_read"])
+async def test_whole_attempt_source_and_suppression_rechecked_at_publication_and_cache(home_whole, change, stage):
+    service, transport, owner, attempt, _ = home_whole
+    home_whole_commit(owner, attempt)
+    evidence = service.db.fetch_one("SELECT id FROM learning_evidence WHERE kind='assessment-test-answer'")
+    if stage == "during_provider":
+        transport.release = asyncio.Event()
+    await service.refresh()
+    await asyncio.wait_for(transport.started.wait(), timeout=5)
+    if stage == "cache_read":
+        assert (await finish(service))["suggestions"] == bundle()
+    if change == "suppressed":
+        service.db.execute("INSERT INTO memory_suppression VALUES(?,?)", ("evidence:" + evidence["id"], utc_now()))
+    elif change == "attempt_deleted":
+        service.db.mark_deleted("test_attempt", attempt["id"])
+    elif change == "source_withdrawn":
+        service.services.get("content").question["withdrawn"] = True
+    else:
+        # Even unchanged safe scalars cannot reuse a digest for a changed canonical row.
+        service.db.execute("UPDATE learning_evidence SET created_at=? WHERE id=?",
+                           ("2026-10-10T20:00:00Z", evidence["id"]))
+    if stage == "during_provider":
+        transport.release.set()
+        result = await finish(service)
+        assert result["job"]["state"] == "failed"
+        assert result["job"]["error_code"] == "dependency_changed"
+        assert service.db.fetch_one("SELECT 1 FROM preferences WHERE key='home.suggestions'") is None
+    assert service.read()["suggestions"] is None
+    sent = json.dumps(transport.calls)
+    assert "PRIVATE_HOME_REVIEWED" not in sent and attempt["id"] not in sent
+
+
+@pytest.mark.skipif(os.environ.get("RENULUS_HOME_CONNECTED") != "1",
+                    reason="Opt-in assembled loopback renderer/SQLite consumer proof")
+def test_actual_default_home_renderer_saved_five_study_and_lost_ack_replay(home):
+    import runpy
+    import shutil
+    import socket
+    import subprocess
+    import threading
+    import time
+    from pathlib import Path
+    import uvicorn
+    from renulus.learn.chat_test_api import create_router
+    from renulus.storage.backup import export_records
+
+    app, service, home_transport = home
+    services = app.state.services
+    if "chat_tests" not in services.registry:
+        app.include_router(create_router(services), prefix="/api/v1")
+    services.on_shutdown.append(services.get("chat_tests").close)
+    root = Path(__file__).resolve().parents[2]
+    # Reuse the owner-published original synthetic subscription transport.
+    fictional_type = runpy.run_path(str(root / "tests/integration/test_design_c_chat_tests.py"))["FictionalTransport"]
+    fictional_transport = fictional_type()
+
+    class ConnectedTransport:
+        async def stream(self, provider, model, token, messages):
+            assert (provider, model, token) == ("codex", "gpt-6.1-sol", "synthetic-home-token")
+            payload = json.loads(messages[-1]["content"])
+            if "learning_activity" in payload:
+                async for event in home_transport.stream(provider, model, token, messages):
+                    yield event
+            else:
+                async for event in fictional_transport.stream(provider, model, "synthetic-chat-test-token", messages):
+                    yield event
+
+    services.get("provider")._transport = ConnectedTransport()
+    with socket.socket() as listener:
+        listener.bind(("127.0.0.1", 0))
+        port = listener.getsockname()[1]
+    server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))
+    worker = threading.Thread(target=server.run, daemon=True)
+    worker.start()
+    deadline = time.monotonic() + 15
+    while not server.started and worker.is_alive() and time.monotonic() < deadline:
+        time.sleep(0.05)
+    try:
+        assert server.started, "Owned loopback app did not start"
+        node = shutil.which("node")
+        assert node, "Existing Node runtime required"
+        receipt = Path("C:/Renulus/scratch/design-c/home/home-connected01.xml")
+        receipt.parent.mkdir(parents=True, exist_ok=True)
+        process = subprocess.run([node, "node_modules/vitest/vitest.mjs", "run",
+            "src/modules/home/home.connected.test.tsx", "--reporter=default", "--reporter=junit",
+            "--outputFile=" + str(receipt)], cwd=root / "apps/desktop",
+            env={**os.environ, "RENULUS_HOME_TEST_ORIGIN": f"http://127.0.0.1:{port}"},
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
+        (receipt.parent / "home-connected-stdout.txt").write_text(process.stdout + process.stderr, encoding="utf-8")
+        assert process.returncode == 0, process.stdout + process.stderr
+        assert len(fictional_transport.calls) == 4  # Two original batches and their separate reviews.
+        assert len(services.db.fetch_all("SELECT * FROM assessment_test_versions")) == 2
+        assert len(services.db.fetch_all("SELECT * FROM assessment_test_attempts")) == 2
+        assert len(services.db.fetch_all("SELECT * FROM assessment_attempt_commands WHERE operation='start'")) == 2
+        assert len(services.db.fetch_all("SELECT * FROM learning_evidence WHERE kind='assessment-test-answer'")) == 1
+        assert len(services.db.fetch_all("SELECT * FROM assessment_test_jobs WHERE operation='daily_suggestions'")) == 1
+        assert not services.db.fetch_all("SELECT * FROM assessment_test_jobs WHERE operation != 'daily_suggestions'")
+        assert not services.db.fetch_all("SELECT * FROM memory_jobs")
+        marker = b"HOME_VOLATILE_ORIGINAL_SOURCE_8FA0"
+        assert marker.decode() not in json.dumps(export_records(services))
+        assert all(marker not in path.read_bytes() for path in services.paths.root.rglob("*") if path.is_file())
+        assert all(run.source_text == "" and run.source is None for run in services.get("chat_tests").runs.values())
+    finally:
+        server.should_exit = True
+        worker.join(timeout=15)
+        assert not worker.is_alive(), "Owned loopback backend must stop"
