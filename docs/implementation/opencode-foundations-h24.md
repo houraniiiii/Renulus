@@ -9,7 +9,8 @@ The integration task expanded this lane from memory to the connected shutdown pa
 files are `runtime/renulus/memory/{service,api,providers}.py`,
 `runtime/renulus/{server,services}.py`, `runtime/renulus/runtime/api.py`,
 `apps/desktop/electron/backend{,.test}.ts`, `tests/memory/test_settlement.py`,
-`tests/integration/test_memory_shutdown.py` and this note. Parent owns `main.ts`
+`tests/integration/test_memory_shutdown.py`, the narrow owner-restart fixture in
+`tests/study/test_today_journey.py`, and this note. Parent owns `main.ts`
 and the assembled hidden UI check. No engine, canonical schema or provider was
 replaced. No installation, default launcher, live subscription, private profile,
 push or tracker operation was performed. Memory checkpoint:
@@ -95,6 +96,29 @@ it no longer advises force closure. This lane inspected that change but did not
 edit or commit it. Backend source is stable for the parent UI worker to rebuild
 both backend and main. Installed/native acceptance is not inferred from tests.
 
+The separate [UI lane's run 06](opencode-foundations-ui.md) subsequently rebuilt
+the renderer and Electron entries, launched a fresh hidden backend including
+`f6bdb589`, and observed normal close in **1.126 seconds** with no forced or
+remaining PIDs. Source and all 54 build artifact hashes stayed unchanged through
+launch and close. Its receipts are under
+`C:/Renulus/scratch/oc-foundations/ui/`, including
+`native-lifecycle-06.receipt.json` and `native-ui-06.summary.json`. This verifies
+the normal connected desktop path with the parent's `main.ts` sequencing. Held
+worker timeout/retry is covered by this lane's application and backend tests;
+the UI lane did not inject that timeout.
+
+The final [UI lane's run 07](opencode-foundations-ui.md) rebuilt and launched a
+fresh hidden backend with Services correction `756c8ebc`. It reached readiness
+in **19.326 seconds**, checked the ordinary New chat route, and closed normally
+in **0.740 seconds** at **21:22:32.510 UTC**, with no forced or remaining owned
+PIDs. All 505 source records and 54 artifacts remained unchanged through the
+run; `262e7e3e` changed only the Today test during that interval. Receipts are
+`native-lifecycle-07.receipt.json` and `native-ui-07.summary.json` in the same
+UI scratch directory. This was a fresh synthetic profile, not retained-state
+reopen evidence; the controller could not resume the former profile. Two HTTP
+409 diagnostics are retained, so this does not claim a clean console. The
+closed-task replay branch is covered by the public service regression below.
+
 ## Red/green evidence
 
 Managed interpreter: `C:/Renulus/dev/python/Scripts/python.exe`; synthetic state
@@ -131,6 +155,7 @@ Each numbered cycle added one behavioral scenario before its implementation:
 | 21 | An unbounded library join left existing memory provider admission open | Signal admission closure immediately, then join producers before releasing dependencies |
 | 22 | Replacing a consumer provider adapter made shutdown fail on its capability-only status | Cancellation and final release retain the same registered provider instance |
 | 23 | Repeating completed close from a new loop scheduled a callback on the closed original loop | Read an already-settled drain result directly; pending ownership is unchanged |
+| 24 | Replaying completed application shutdown from a new loop scheduled a callback on the closed original loop | Observe completed Services drain status directly; retain pending ownership and permanent closed admission |
 
 Receipts are `receipts/red-01b.txt`, `red-02.txt` through `red-11.txt`, and the
 corresponding `green-01.txt` through `green-11.txt`. The initial `red-01.txt`
@@ -144,7 +169,7 @@ reproduces premature acknowledgement during an actual original-file write;
 `green-20c.txt` records all eight application cases then present passing.
 `red-21.txt` reproduces provider dispatch while the library join is held;
 `green-21.txt` passes with no outbound attempt and closed public memory admission.
-The latest shutdown-focused regression (`final-shutdown.txt`) passed **38 tests**
+The cycle-21 shutdown regression (`final-shutdown.txt`) passed **38 tests**
 across application shutdown, memory settlement, Test policy and runtime auth.
 The first full run at `ecc3367b` then stalled in the retained generated-practice
 test because the new cancellation hook read a replacement consumer adapter's
@@ -163,6 +188,25 @@ error through public close; the two-line completion check passes `green-23.txt`.
 application shutdown and privacy-scanner cases. No task is reset, transferred or
 restarted: pending drains retain their original loop and worker ownership. This
 adds one test beyond the original 2,437-case coverage inventory.
+The final Study journey then exposed the same completed-task observation issue
+in `Services.shutdown`. `red-24.txt` reproduces it through two authenticated
+shutdown calls from successive loops. `green-24.txt` passes after guarding only
+the wait on an incomplete task; completed failed drains still return their
+existing explicit error, and no owner is restarted or handed to another loop.
+`green-24b.txt` / `.xml` record **34 passed in 97.17 seconds**, covering all
+memory settlement, application shutdown and real privacy-scanner cases. The
+source/test-only correction is `756c8ebc`; it adds a second case beyond the
+original inventory. The Today fixture additionally reuses the same closed app
+for ordinary writes. With the closed-loop error fixed, its exact follow-up
+fails with 503 instead of 200 (`cycle24-today-old-fixture.txt`); a fresh
+application owner over the same SQLite profile is required, without reopening
+the old owner's admission. The integration task explicitly extended this lane
+to that fixture. Commit `262e7e3e` discards the returned closed application and
+creates a fresh application over the same profile for the second TestClient.
+All original score, manual-change, preferences and restart assertions remain.
+`cycle24-today-green.txt` / `.xml` record **1 passed in 7.60 seconds**, with no
+external network attempts and unchanged source hashes throughout the run. This
+is H24 fixture compatibility repair, not a baseline waiver.
 The earlier combined affected run collected at `36777c27` finished with
 **219 passed, 7 skipped, 1 failed** (`regression-final.txt`). Its single failure
 is the parent-owned route inventory fixture treating the authenticated neutral
@@ -211,7 +255,7 @@ complete latest inventory file passed **41 tests** (`inventory-final.txt` and
 started before those commits, with H24 runtime bytes unchanged since `29d14786`.
 
 The integration task subsequently authorized two isolated shards for untouched
-directories. The original process continues untouched. Coverage ownership is
+directories. The original process continued through its assigned prefix. Coverage ownership is
 447 assessment/backup cases from that process, 1,076 cases/content/knowledge/
 learn/retrieval cases in shard A, and 914 integration/memory/regression/runtime/
 study/Updates cases in shard B. Each has its own basetemp and no-external-socket
@@ -229,8 +273,157 @@ repository files were replaced. `baseline-table-proposal.txt` proves the stale
 table inventory test, fixture and runtime registry are each byte-identical to
 the same baseline. These failures remain distinct from the fixed H24 close bug.
 
+Parent then reproduced both legacy-backup failures and the table proposal
+failure in a complete read-only Git archive of `c2bd8964`: **3 failed in 31.28
+seconds**, with identical `current_version: 2` versus `1` and five missing-table
+differences. Receipts are `C:/Renulus/scratch/oc-foundations/parent/`:
+`baseline-backend.txt`, `baseline-backend.xml` and
+`baseline-backend-receipt.json`. A later segmented legacy-history backup case
+has the same version expectation mismatch. Its test, recovery and content
+sources are unchanged from baseline; running it with all six pre-H24 modules
+reproduces **1 failed in 24.01 seconds** (`baseline-segmented-version.txt`/`.xml`).
+The search readiness/context test also inserts the literal `now` into an
+assessment timestamp; reconciliation rejects it as invalid ISO format. That
+exact failure reproduces with all six pre-H24 modules: **1 failed in 7.20
+seconds** (`baseline-search-clock.txt`/`.xml`). Its fixture and assessment
+repository remain byte-identical to baseline.
+Three Learn discovery fallback cases also reproduce with the six pre-H24
+modules: **3 failed in 16.58 seconds** (`baseline-learn-discovery.txt`/`.xml`).
+Their memory double supplies `{"id":"one"}` without a revision or canonical
+fact, so the existing `MemoryContext.capture` guard refuses it before a
+completed explanation. The test, Learn service and memory-context guard are
+unchanged from baseline. No product behavior was weakened to satisfy these
+fixture expectations.
+Four runtime catalogue/capability assertions also reproduce without H24:
+inference-auth catalogue status **1 failed in 8.00 seconds**
+(`baseline-image-catalogue.txt`/`.xml`), plus two failed-auth availability
+variants and one transient-refresh capability expectation **3 failed in 5.78
+seconds** (`baseline-provider-status.txt`/`.xml`). These retain `available` or
+`supported` where the tests expect `unknown`; their correctness is a separate
+baseline follow-up, not a change made to complete H24.
+`baseline-source-checks.json` records baseline and checkout SHA-256 values for
+15 relevant test/implementation files, including the provider manager, auth,
+policy and Hermes adapter; all 15 are byte-identical to `c2bd`.
+
+The assessment fixture repair is parent-owned commit `e57e4d89`. Its focused
+receipts under `C:/Renulus/scratch/oc-foundations/af/` record **40 passed / 5
+failed**, followed by **6 passed** (one overlapping tracer). Matching the exact
+nodeids yields **45 distinct passing cases**, with no missing or additional
+cases. `backend-reconciliation.json` and this lane's
+`latest-coverage-reconciliation.json` retain that as subsequent repair evidence;
+they do not overwrite the original broad-run failures or imply a fresh single
+45-case pass. The parent-owned Updates fixture follow-up similarly preserves
+its initial failures separately. Its `uf/r4/junit.xml` and `session.json` contain
+the exact **86 Updates nodeids: 85 passed, 1 failed in 254.67 seconds**. Every
+node has a final teardown report, with no external network attempts and stable
+source hashes. The real scheduler cancellation and application lifespan cases
+pass with actual Learn/Cases/Assessment owners in the fixture assembly.
+
+That run resolves 68 of the 69 original Updates missing-owner failures. The
+remaining node now reaches its substantive assertion:
+`test_detect_review_exact_copy_invalidate_and_restart_preserve_other_topics`
+expects four eligible Library documents but receives none at line 149, before
+shutdown. With the repaired fixture and all six H24 Python modules loaded from
+`c2bd8964`, the same assertion fails in **10.37 seconds**
+(`baseline-updates-current-documents.txt` / `.xml`). This rules out the H24
+shutdown changes as its cause; it is not a full-baseline archive pass or a
+waiver of the unresolved eligibility assertion. No retrieval behavior or
+acceptance assertion was changed in this lane.
+
+The parent then authorized UF's narrow fixture correction: after correction
+notices invalidate currency, explicitly re-review each exact acquired copy
+through the existing API. All assertions remain. `uf/r5/junit.xml` and
+`session.json` record that same case **passing in 10.39 seconds**, without
+external network attempts or production changes. The exact union of `r4` and
+`r5` therefore has **86 distinct passing Updates cases**, including all 12
+scheduler cases. The 85/1 full-run result and the earlier baseline reproduction
+remain preserved; this is a subsequent fixture repair, not an 86-pass rerun.
+
+The latest collection has **2,439 cases**, including the public-close
+and application-shutdown replay regressions. Final H24 production is `756c8ebc`
+(including memory `f6bdb589`). Electron backend bytes remain at `36777c27`.
+
 Python syntax checks pass. This checkout has no configured Python typechecker,
 and neither mypy nor pyright is installed in the managed interpreter.
+
+## Complete raw backend coverage
+
+All **2,437 assigned nodeids have final teardown reports**, with no missing or
+duplicated ownership. These are unique-case outcomes; a case whose body passes
+but teardown fails is counted once as an error.
+
+| Assigned owner | Unique cases | Passed | Skipped | Failed | Error |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Original assessment/backup prefix | 447 | 383 | 16 | 15 | 33 |
+| Shard A: cases/content/knowledge/learn/retrieval | 1,076 | 977 | 89 | 9 | 1 |
+| Shard B: integration/memory/regression/runtime/study/Updates | 914 | 816 | 22 | 76 | 0 |
+| Total raw assigned coverage | 2,437 | 2,176 | 127 | 100 | 34 |
+
+The raw 134 failing/error cases consist of 119 missing-Learn fixture assembly
+cases (45 Assessment, 2 Content, 3 Library, 69 Updates), 3 backup version
+expectations, 1 saved-case practice cancellation, 3 discovery memory-pin
+fixtures, 1 table proposal, 1 search timestamp, 4 provider capability/status
+assertions, and the 2 H24 completed-task replay regressions fixed in cycles 23
+and 24. The baseline reproductions and subsequent repair receipts above remain
+separate from these original outcomes; this is not a full-suite green claim.
+
+The assigned prefix completed at **20:59:39.997 UTC**, 2,639.26 seconds after its
+first test phase. Shard A exited with pytest status 1 after **1,533.22 seconds**;
+shard B exited with status 1 after **2,239.14 seconds**. Shard A's pytest terminal
+summary says 978 passed plus one teardown error; the unique ledger counts that
+same affected case once, producing 977 passed and one error above.
+
+After all required cases finished, the parent integration instruction explicitly
+authorized terminating only discarded duplicate test execution. The original
+runner had no cooperative stop hook. Its command hashes, creation timestamps,
+PID 32848 launcher and PID 45276 actual runner were verified before stopping
+45276. The launcher then exited, and no descendants remained. This happened at
+**21:12:36 UTC** and is an **operator interruption of synthetic pytest work**,
+not application or worker settlement. No unfinished duplicate case contributes
+to coverage. All profiles and receipts were preserved. Evidence:
+`assigned-prefix-completion.json`, `process-identities-before-cleanup.json`,
+`duplicate-run-interruption.json` and `final-process-audit.json` (zero remaining
+task-owned Python processes at the audit). The subsequent Today run also exited
+naturally; `final-process-audit-after-today.json` confirms zero remaining
+H24-owned Python processes at **21:21:54 UTC**.
+The last baseline probe also exited naturally; its subsequent process audit
+(`final-process-audit-after-baseline.json`) again found zero H24-owned Python
+processes. `raw-receipt-sha256.json` freezes hashes for all 17 raw coverage,
+ownership and cleanup receipt files.
+
+`unique-coverage.json` preserves raw assigned outcomes;
+`latest-coverage-reconciliation.json` adds exact subsequent repairs and the two
+new tests; `latest-case-outcomes.json` maps every one of the 2,439 current nodeids
+to its outcome receipt and original broad owner/outcome;
+`latest-unresolved-failures.json` retains each unresolved nodeid,
+current failure and original failure phases. Including the separately passing
+Today fixture repair, the core H24 affected set has **234 distinct cases:
+227 passed, 7 skipped, no failures/errors**.
+`combined-affected-reconciliation.json` also includes the 86 actual Updates
+scheduler/lifespan cases, for **320 distinct cases: 313 passed, 7 skipped,
+no failures or errors**.
+
+After exact AF, H24, Today and UF receipt reconciliation, all **2,439** current
+cases have an outcome: **2,294 passed, 127 skipped and 18 classified failures**.
+There are zero errors, missing cases or unclassified failures. This projection
+combines disjoint original owners and explicit later repairs; it is not a new
+single-pass result. The remaining failures are:
+
+| Remaining family | Cases | Evidence |
+| --- | ---: | --- |
+| Content/Library reduced module fixture missing Learn | 5 | Identical baseline/current module-inventory probes |
+| Backup current-version expectation | 3 | Two full baseline archive cases; one six-module baseline probe |
+| Saved-case generated-practice cancellation | 1 | Six-module baseline probe |
+| Discovery memory records lack canonical revision | 3 | Six-module baseline probe and identical test/guard sources |
+| Stale table proposal inventory | 1 | Full baseline archive reproduction |
+| Search fixture literal `now` timestamp | 1 | Six-module baseline probe and identical sources |
+| Provider catalogue/capability expectations | 4 | Six-module baseline probes and identical provider sources |
+
+`integrated-source-boundary.json` verifies all 18 paths recorded by UF's final
+`r5` receipt still match their tested hashes, and confirms 2,439 unique entries
+in `latest-case-outcomes.json`. The fixture repair remains owned by the UF lane;
+this lane commits only its own implementation, Today compatibility fixture and
+evidence note.
 
 ## Integration constraints and validation limits
 
@@ -241,9 +434,9 @@ and neither mypy nor pyright is installed in the managed interpreter.
 2. Preserve the event loop during a blocked drain. An uncooperative native worker
    may keep application shutdown blocked indefinitely. Bounded caller errors
    are deliberate; there is no forced termination fallback or fake empty set.
-3. Parent must include its `main.ts` change in the integrated checkpoint and
-   rebuild the hidden application from these stable sources. Hidden UI evidence
-   belongs to the parent lane and must be reported separately from service tests.
+3. Preserve the parent `main.ts` shutdown ordering. The integrated hidden UI
+   run 07 covers these stable production bytes; its lifecycle evidence belongs
+   to the parent lane and is distinct from service tests and held-worker tests.
 
 No hidden UI, packaging, physical Windows dialog or real subscription acceptance
 is claimed by this lane's service receipts. Forced termination remains a distinct
@@ -254,4 +447,6 @@ violations; its optional lease-bookkeeping consolidation is deferred. Expanded
 spec review identified admitted-request ownership (cycle 20), and parent review
 identified delayed admission closure (cycle 21). The latest independent spec
 review found no remaining concrete blocker in request ownership and shutdown
-phases. One complete final backend pytest run remains the validation gate.
+phases. The complete disjoint backend inventory now has teardown receipts for
+all 2,437 original cases. Subsequent fixture repair receipts remain separate
+from those raw outcomes.
