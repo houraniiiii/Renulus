@@ -50,8 +50,39 @@ def test_active_test_permits_typed_chat_cancellation_but_no_run_disclosure(tmp_p
     response = client.post("/api/v1/conversations/learning/synthetic_chat/runs/synthetic_run/cancel")
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "conversation_run_missing"
-    for path in ("/api/v1/conversations/learning/synthetic_chat/runs",
-                 "/api/v1/conversations/learning/synthetic_chat/runs/synthetic_run",
+    assert client.get("/api/v1/conversations/learning/synthetic_chat/runs").json() == {"items": [], "next_cursor": None}
+    assert client.get("/api/v1/conversations/learning/synthetic_chat/runs/synthetic_run?neutral=true").status_code == 404
+    for path in ("/api/v1/conversations/learning/synthetic_chat/runs/synthetic_run",
+                 "/api/v1/conversations/learning/synthetic_chat/runs/synthetic_run?neutral=false",
+                 "/api/v1/conversations/learning/synthetic_chat/runs/synthetic_run?neutral=true&neutral=false",
                  "/api/v1/conversations/learning/synthetic_chat/messages"):
         assert client.get(path).json()["error"]["code"] == "assistance_restricted"
     assert client.post("/api/v1/conversations/other/chat/runs/run/cancel").status_code == 409
+
+
+def test_active_test_neutral_receipts_and_nightly_off_keep_exact_safe_shapes(tmp_path):
+    import json
+    from renulus.learn.conversation_models import NewConversation
+    app = create_app(tmp_path / "neutral")
+    services, client = app.state.services, TestClient(app)
+    conversation = services.get("conversations").create(NewConversation(title="SYNTHETIC private title"))
+    identifier = conversation["identity"]["id"]
+    receipt = {"run_id": "synthetic_run", "state": "failed", "conversation": conversation,
+               "error": {"message": "SYNTHETIC private error"}}
+    services.db.execute("INSERT INTO conversation_commands VALUES(?,?,?,?,?,?,?)",
+        ("synthetic_command", "send", "learn_thread", identifier, "synthetic", json.dumps(receipt), "now"))
+    root = f"/api/v1/conversations/learning/{identifier}/runs"
+    assert client.get(root + "/synthetic_run?neutral=true").json() == {"run_id": "synthetic_run", "state": "failed"}
+    assert client.get(root + "/synthetic_run").json()["conversation"]["title"] == conversation["title"]
+    start_test(services.db)
+    assert client.get(root).json() == {"items": [{"run_id": "synthetic_run", "state": "failed"}], "next_cursor": None}
+    assert client.get(root + "/synthetic_run?neutral=true").json() == {"run_id": "synthetic_run", "state": "failed"}
+    assert client.get(root + "/synthetic_run").status_code == 409
+    preferences = client.get("/api/v1/nightly/preferences").json()
+    assert set(preferences) == {"enabled", "local_time", "question_count", "revision"}
+    response = client.put("/api/v1/nightly/preferences", headers={"Idempotency-Key": "synthetic-disable"},
+        json={**{key: preferences[key] for key in ("local_time", "question_count")}, "enabled": False,
+              "expected_revision": preferences["revision"]})
+    assert response.status_code == 200
+    assert response.json()["enabled"] is False
+    assert set(response.json()) == set(preferences)

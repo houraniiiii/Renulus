@@ -68,6 +68,8 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
         if path in ("/api/v1/health", "/api/v1/meta", "/api/v1/assessment/policy",
                     "/api/v1/runtime/status", "/api/v1/data/recovery", "/api/v1/home/preferences"):
             return False
+        if path in ("/api/v1/nightly", "/api/v1/nightly/preferences") and request.method in {"GET", "PUT"}:
+            return False  # Safe settings/status allow Off while a Test is active.
         if path.startswith(("/api/v1/connections", "/api/v1/retrieval/connections",
                             "/api/v1/assessment/test-attempts")):
             return False  # Attempt owner gates every help/replay operation.
@@ -79,6 +81,15 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
         if request.method == "POST" and re.fullmatch(
                 r"/api/v1/assessment/generation/jobs/[A-Za-z0-9_-]{1,128}/cancel", path):
             return False  # Owner always returns only {id, state}, even on replay.
+        if request.method == "POST" and re.fullmatch(
+                r"/api/v1/nightly/jobs/[A-Za-z0-9_-]{1,128}/cancel", path):
+            return False
+        if request.method == "GET" and re.fullmatch(
+                r"/api/v1/conversations/(?:learning|case)/[A-Za-z0-9_-]{1,128}/runs", path):
+            return False  # List contains only run IDs, states and a bounded cursor.
+        if request.method == "GET" and request.query_params.get("neutral") == "true" and re.fullmatch(
+                r"/api/v1/conversations/(?:learning|case)/[A-Za-z0-9_-]{1,128}/runs/[A-Za-z0-9_-]{1,128}", path):
+            return False  # Producer guarantees exactly {run_id, state}.
         return path.startswith("/api/v1/")
 
     def captured_policy(expected=None):
@@ -188,12 +199,14 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
         services.capabilities[name] = {"status": "installed"}
     # Separate feature routers preserve the existing module/legacy APIs. Their
     # schemas have already been checked and applied before any startup backfill.
-    for name in ("learn.conversation_api", "study.project_api", "study.home_api",
+    for name in ("learn.conversation_api", "study.project_api", "study.home_api", "study.nightly_api",
                  "assessment.test_api", "assessment.attempt_api", "assessment.generation_api", "knowledge.reader_api", "storage.workspace_api", "storage.search_api"):
         path = Path(__file__).parent.joinpath(*name.split(".")).with_suffix(".py")
         if path.exists():
             feature = importlib.import_module("renulus." + name)
             app.include_router(feature.create_router(services), prefix="/api/v1")
+    from .storage.attachment_cleanup import drain as drain_attachment_cleanup
+    services.on_startup.insert(0, lambda: drain_attachment_cleanup(services))
     return app
 
 
