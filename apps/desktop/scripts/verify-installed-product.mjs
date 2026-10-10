@@ -340,12 +340,26 @@ async function api(page, route, body, expected = 200, method = body === undefine
   return response.body;
 }
 
+export function captureResponse(page, matches, { expected = 200, binary = false, label, timeout = 120_000 }) {
+  // Consume the real body as soon as the response arrives. Waiting for a click/navigation
+  // to finish first lets Chromium evict the response from its inspector cache.
+  return page.waitForResponse(matches, { timeout }).then(async response => {
+    check(response.status() === expected, 'The actual UI response failed: ' + label + ' (' + response.status() + ').');
+    const headers = response.headers();
+    try {
+      const body = expected === 204 ? null : await (binary ? response.body() : response.json());
+      return { body, headers };
+    } catch (error) {
+      throw new Error('Actual response body capture failed: ' + label + ': ' + error.message, { cause: error });
+    }
+  });
+}
+
 async function actionResponse(page, route, action, expected = 200, method = 'POST') {
-  const pending = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1' + route
-    && response.request().method() === method, { timeout: 120_000 });
-  const [response] = await Promise.all([pending, action()]);
-  check(response.status() === expected, 'The actual UI action failed: ' + route + ' (' + response.status() + ').');
-  return expected === 204 ? null : response.json();
+  const pending = captureResponse(page, response => new URL(response.url()).pathname === '/api/v1' + route
+    && response.request().method() === method, { expected, label: method + ' ' + route });
+  const [captured] = await Promise.all([pending, action()]);
+  return captured.body;
 }
 
 async function poll(work, accepts, label, timeout = 180_000, interval = 500) {
@@ -581,6 +595,15 @@ const chatHash = chat => '#/chat/' + chat.identity.type + '/' + chat.identity.id
 async function screenshot(current, evidence, name) {
   await hiddenWindowState(current.application);
   await current.page.screenshot({ path: path.join(evidence, name + '.png'), fullPage: true });
+}
+export async function captureFailureScreenshot(current, evidence, report, temporaryPhase) {
+  if (!current?.page || temporaryPhase) return;
+  try {
+    await screenshot(current, evidence, 'failure');
+    report.failureScreenshot = 'failure.png';
+  } catch (error) {
+    report.failureScreenshotError = safeFailure(error); // Preserve the primary journey failure.
+  }
 }
 async function savedConversationJourney(page) {
   await navigate(page, '#/projects');
@@ -822,13 +845,12 @@ export function validateReaderRaster(bytes) {
 }
 
 async function readerResponse(page, attachment, action) {
-  const pending = page.waitForResponse(response => {
+  const pending = captureResponse(page, response => {
     if (new URL(response.url()).pathname !== '/api/v1/readers/resolve' || response.request().method() !== 'POST') return false;
     return response.request().postDataJSON()?.reference?.target?.id === attachment.id;
-  }, { timeout: 120_000 });
-  const [response] = await Promise.all([pending, action()]);
-  check(response.status() === 200, 'Actual Workspace reader resolution failed.');
-  return response.json();
+  }, { label: 'POST /readers/resolve' });
+  const [captured] = await Promise.all([pending, action()]);
+  return captured.body;
 }
 
 async function uploadReaderOriginal(page, chat, fixtures, fixture) {
@@ -852,13 +874,12 @@ async function uploadReaderOriginal(page, chat, fixtures, fixture) {
 }
 
 async function prepareReaderDownload(page, reader, fixture) {
-  const pending = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/readers/original'
-    && response.request().method() === 'POST');
-  const [response] = await Promise.all([pending, reader.getByRole('button', { name: 'Prepare original download', exact: true }).click()]);
-  const data = await response.body();
-  check(response.status() === 200 && sha(data) === fixture.sha256 && data.length === fixture.bytes,
+  const pending = captureResponse(page, response => new URL(response.url()).pathname === '/api/v1/readers/original'
+    && response.request().method() === 'POST', { binary: true, label: 'POST /readers/original' });
+  const [{ body: data, headers }] = await Promise.all([pending,
+    reader.getByRole('button', { name: 'Prepare original download', exact: true }).click()]);
+  check(sha(data) === fixture.sha256 && data.length === fixture.bytes,
     'The real original-download action changed the uploaded bytes.');
-  const headers = response.headers();
   check(headers['content-type'] === 'application/octet-stream' && headers['x-content-type-options'] === 'nosniff'
     && headers['content-security-policy'] === "default-src 'none'; sandbox" && headers['content-disposition']?.startsWith('attachment;'),
   'Original download did not retain its inert attachment response boundary.');
@@ -925,8 +946,9 @@ async function selectReaderPassage(page, reader, fixture, attachment, document, 
   return { text, reference: passage.reference, draftRevision: draft.revision, position, sent: false };
 }
 
-async function readerFixtureJourney(current, chat, fixtures, fixture, evidence) {
+async function readerFixtureJourney(current, chat, fixtures, fixture, evidence, progress) {
   const { page } = current;
+  progress.stage = 'attachment-upload';
   const attachment = await uploadReaderOriginal(page, chat, fixtures, fixture);
   const assets = [], externalRequests = [];
   const onResponse = response => {
@@ -943,9 +965,11 @@ async function readerFixtureJourney(current, chat, fixtures, fixture, evidence) 
   await page.context().route(fixtures.manifest.external_origin + '/**', deny);
   page.on('response', onResponse);
   try {
+    progress.stage = 'reader-open';
     let document = await readerResponse(page, attachment, () => page.locator('.chat-attached-file')
       .filter({ hasText: fixture.filename }).getByRole('button', { name: 'Open file', exact: true }).click());
     validateReaderDocument(fixture, document, attachment);
+    progress.stage = 'reader-render';
     const reader = page.getByRole('region', { name: 'Document reader', exact: true });
     await reader.getByRole('heading', { name: attachment.title, exact: true }).waitFor();
     const positions = [];
@@ -958,10 +982,12 @@ async function readerFixtureJourney(current, chat, fixtures, fixture, evidence) 
       return result;
     }
     let firstRaster;
+    progress.stage = 'initial-raster-and-position';
     if (document.payload?.asset_id) firstRaster = await raster(document.payload.asset_id);
     if (fixture.expect.pages === 2) {
       const kind = fixture.expect.kind === 'pdf' ? 'pdf' : 'image';
       positions.push(await savedReaderPosition(page, chat, attachment, kind === 'pdf' ? { kind, physical_page: 1 } : { kind, frame: 1 }));
+      progress.stage = 'second-page-or-frame';
       document = await readerResponse(page, attachment, () => reader.getByRole('button', { name: 'Next', exact: true }).click());
       validateReaderDocument(fixture, document, attachment);
       check(document.payload.page === 2, 'Next did not open the second physical page/frame.');
@@ -971,12 +997,14 @@ async function readerFixtureJourney(current, chat, fixtures, fixture, evidence) 
       check(await reader.getByLabel(kind === 'pdf' ? 'Physical page' : 'Image frame', { exact: true }).inputValue() === '2', 'Reader position control is stale.');
     }
     if (fixture.gate === 'reader-csv') {
+      progress.stage = 'csv-next-rows';
       check(document.payload.table.total_rows === fixture.expect.rows && document.payload.table.first_row === 1, 'CSV dimensions changed.');
       document = await readerResponse(page, attachment, () => reader.getByRole('button', { name: 'Next rows', exact: true }).click());
       validateReaderDocument(fixture, document, attachment);
       check(document.payload.table.first_row === 101 && document.payload.table.rows.length === 6, 'CSV row window did not advance exactly.');
     }
     if (fixture.gate === 'reader-xlsx') {
+      progress.stage = 'xlsx-sheet';
       const table = document.payload.table;
       check(JSON.stringify(table.sheets) === JSON.stringify(fixture.expect.sheets) && table.sheet_name === 'CKD'
         && table.rows[1][1].display === '24' && table.rows[1][1].formula === '=A2*2' && table.rows[1][1].cached === true,
@@ -989,6 +1017,7 @@ async function readerFixtureJourney(current, chat, fixtures, fixture, evidence) 
       'Sheet change or missing cached formula semantics failed.');
       await reader.getByRole('button', { name: 'Cached value unavailable', exact: true }).waitFor();
     }
+    progress.stage = 'document-table-and-images';
     if (fixture.expect.table_cell) {
       const table = document.payload.blocks.find(block => block.kind === 'table');
       check(table?.grid?.rows.some(row => row.includes(fixture.expect.table_cell)), 'Document table structure was lost.');
@@ -999,14 +1028,17 @@ async function readerFixtureJourney(current, chat, fixtures, fixture, evidence) 
       check(image?.asset_id, 'DOCX embedded image missing.'); await raster(image.asset_id);
     }
     let selection;
+    progress.stage = 'passage-selection-and-draft';
     if (fixture.expect.text) selection = await selectReaderPassage(page, reader, fixture, attachment, document, chat);
     if (fixture.expect.error) await reader.getByText(/XML must be complete and contain no DTD or entity declarations/).waitFor();
     if (fixture.expect.kind === 'image') {
       check(await reader.getByRole('button', { name: /Discuss this passage|Ask about selected passage/ }).count() === 0,
         'Preview-only image exposed an extracted passage action.');
     }
+    progress.stage = 'original-download';
     const original = await prepareReaderDownload(page, reader, fixture);
     let inert;
+    progress.stage = 'inert-markup';
     if (fixture.expect.inert) {
       inert = await reader.evaluate((element, marker) => ({ executed: window[marker] !== undefined,
         activeNodes: element.querySelectorAll('script,iframe,object,embed,form,link,style,svg,math,[onload],[onerror]').length,
@@ -1021,6 +1053,7 @@ async function readerFixtureJourney(current, chat, fixtures, fixture, evidence) 
       inert.externalRequests = externalRequests.length;
       inert.xmlEntityDenied = fixture.expect.error === 'reader_xml_invalid';
     }
+    progress.stage = 'screenshot';
     await screenshot(current, evidence, 'reader-' + fixture.filename.replaceAll('.', '-'));
     return { filename: fixture.filename, mediaType: fixture.media_type, attachmentId: attachment.id, attachment,
       original, previewState: document.preview_state, positions, selection, assets: await Promise.all(assets), inert,
@@ -1036,15 +1069,18 @@ async function readerJourneys(current, chat, fixtures, evidence, report, pass) {
   report.readerJourneys = [];
   for (const gate of readerGates) {
     const completed = [];
+    let activeOriginal;
     try {
       for (const fixture of fixtures.manifest.files.filter(item => item.gate === gate)) {
-        const receipt = await readerFixtureJourney(current, chat, fixtures, fixture, evidence);
+        // Only a validated synthetic fixture filename and fixed phase names enter failure provenance.
+        activeOriginal = { filename: fixture.filename, stage: 'starting' };
+        const receipt = await readerFixtureJourney(current, chat, fixtures, fixture, evidence, activeOriginal);
         completed.push(receipt); report.readerJourneys.push({ gate, ...receipt });
       }
       check(completed.length > 0, 'An empty reader category cannot pass.');
       pass(gate, { originals: completed });
     } catch (error) {
-      report.gates[gate] = { status: 'failed', error: safeFailure(error), completedOriginals: completed };
+      report.gates[gate] = { status: 'failed', error: safeFailure(error), failedOriginal: activeOriginal, completedOriginals: completed };
       throw error;
     }
   }
@@ -1077,11 +1113,13 @@ async function reopenSelectedPdfJourney(current, chat, fixtures, report, evidenc
   // Closing the pane unmounts any warm reader without deleting its saved tab/locator.
   const closeWorkspace = page.getByRole('button', { name: 'Close workspace', exact: true });
   if (await closeWorkspace.isVisible()) await closeWorkspace.click();
-  const pendingAsset = page.waitForResponse(response => {
+  const pendingAsset = captureResponse(page, response => {
     if (new URL(response.url()).pathname !== '/api/v1/readers/asset' || response.request().method() !== 'POST') return false;
     const body = response.request().postDataJSON();
-    return body?.reference?.target?.id === attachment.id && body.asset_id === 'pdf:2';
-  }, { timeout: 30_000 });
+    if (body?.reference?.target?.id !== attachment.id || body.asset_id !== 'pdf:2') return false;
+    check(body.original_sha256 === fixture.sha256, 'Reopened PDF asset lost its immutable original pin.');
+    return true;
+  }, { binary: true, label: 'POST /readers/asset (reopened PDF page 2)', timeout: 30_000 });
   const [document, asset] = await Promise.all([readerResponse(page, attachment, async () => {
     await navigate(page, chatHash(chat));
     if (!await page.getByLabel('Attach files to chat', { exact: true }).isVisible())
@@ -1090,9 +1128,8 @@ async function reopenSelectedPdfJourney(current, chat, fixtures, report, evidenc
     await page.locator('.chat-attached-file').filter({ hasText: fixture.filename })
       .getByRole('button', { name: 'Open file', exact: true }).click();
   }), pendingAsset]);
-  check(asset.status() === 200 && asset.headers()['content-type'] === 'image/png'
-    && asset.request().postDataJSON().original_sha256 === fixture.sha256, 'Reopened PDF asset lost its immutable original pin.');
-  const raster = validateReaderRaster(await asset.body());
+  check(asset.headers['content-type'] === 'image/png', 'Reopened PDF asset is not its expected PNG raster.');
+  const raster = validateReaderRaster(asset.body);
   const tab = page.locator('[role="tab"][id="dc-tab-' + encodeURIComponent('attachment:' + attachment.id) + '"]');
   // Identity chooses the tab. The current authorized title supplies its visible/close labels;
   // no generic Attachment label or duplicate-title ordering is used as identity.
@@ -1228,14 +1265,12 @@ async function verifyReopenedIngestion(page, checkpoint) {
     () => page.getByRole('button', { name: 'Search', exact: true }).click());
   const hit = validateIngestionPassage(checkpoint, retrieved.passages);
   const passage = page.locator('.library-passage').filter({ has: page.getByText(hit.text, { exact: true }) });
-  const pending = page.waitForResponse(response => {
+  const pending = captureResponse(page, response => {
     const url = new URL(response.url());
     return response.request().method() === 'GET' && url.pathname === '/api/v1/library/revisions/' + checkpoint.revision_id + '/citation'
       && url.searchParams.get('passage_id') === hit.id;
-  });
-  const [response] = await Promise.all([pending, passage.getByRole('button', { name: 'Inspect citation', exact: true }).click()]);
-  check(response.status() === 200, 'Mounted Library citation inspection failed.');
-  const citation = await response.json();
+  }, { label: 'GET /library/revisions/{revision_id}/citation' });
+  const [{ body: citation }] = await Promise.all([pending, passage.getByRole('button', { name: 'Inspect citation', exact: true }).click()]);
   validateIngestionPassage(checkpoint, retrieved.passages, citation);
   await page.getByRole('complementary', { name: 'Source reader', exact: true })
     .getByRole('heading', { name: checkpoint.title, exact: true }).waitFor();
@@ -1575,6 +1610,7 @@ export async function runInstalledProduct() {
     completeCoreReceipt(report); process.exitCode = 1;
   } catch (error) {
     report.status = 'failed'; report.error = safeFailure(error, temporaryPhase); process.exitCode = 1;
+    await captureFailureScreenshot(current ?? report.current, evidence, report, temporaryPhase);
   } finally {
     const owned = current ?? report.current;
     if (owned) {

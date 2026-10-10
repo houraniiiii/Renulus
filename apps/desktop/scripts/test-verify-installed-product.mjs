@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { installedAcceptancePlan, validateInstalledRequest, validateInstallationReceipts, isolatedEnvironment,
-  validateCompleteReport, validateFrozenScript, validateFrozenExport, validateAcceptanceChanges,
+  validateCompleteReport, validateFrozenScript, validateFrozenExport, validateAcceptanceChanges, captureResponse, captureFailureScreenshot,
   requiredGates, remainingOwnedIdentities, inside,
   coreGates, readerGates, deferredGates, completeCoreReceipt, designCEvidenceRoot, ownedArtifact, validateHiddenWindows, waitForDesignCWindow,
   validateConversation, validateSavedTest, validateActiveTest, validateFinalAttempt, validateAssistanceRefusal, safeFailure,
@@ -35,6 +35,98 @@ const receiptFixture = () => ({
 });
 const validate = f => validateInstallationReceipts(f.request, f.delivery, f.installation, f.actual);
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+
+const captureRace = (binary = false) => {
+  let resolveResponse, evicted = false;
+  const events = [], expected = binary ? Buffer.from([0, 1, 255, 10, 13]) : { original: { sha256: digest }, page: 2 };
+  const headers = { 'content-type': binary ? 'application/octet-stream' : 'application/json', 'cache-control': 'no-store' };
+  const read = async () => {
+    events.push('read-body');
+    if (evicted) throw new Error('Request content was evicted from inspector cache');
+    return expected;
+  };
+  const response = { status: () => 200, headers: () => headers, json: read, body: read };
+  const page = { waitForResponse: () => new Promise(resolve => { resolveResponse = resolve; }) };
+  const action = async () => {
+    events.push('action-start'); resolveResponse(response);
+    await Promise.resolve(); // Response continuation can consume bytes while the UI action is still pending.
+    evicted = true; events.push('navigation');
+  };
+  return { page, action, response, events, expected, headers };
+};
+
+test('JSON response bytes are captured before action completion can evict them; old late ordering fails', async () => {
+  const old = captureRace();
+  const late = old.page.waitForResponse(() => true);
+  const [response] = await Promise.all([late, old.action()]);
+  await assert.rejects(response.json(), /evicted/);
+  assert.deepEqual(old.events, ['action-start', 'navigation', 'read-body']);
+
+  const current = captureRace();
+  const pending = captureResponse(current.page, () => true, { label: 'POST /readers/resolve' });
+  const [captured] = await Promise.all([pending, current.action()]);
+  assert.deepEqual(current.events, ['action-start', 'read-body', 'navigation']);
+  assert.deepEqual(captured.body, current.expected);
+  assert.deepEqual(captured.headers, current.headers);
+});
+
+test('eager binary capture preserves the exact original bytes and response headers across action navigation', async () => {
+  const current = captureRace(true);
+  const pending = captureResponse(current.page, () => true, { binary: true, label: 'POST /readers/original' });
+  const [captured] = await Promise.all([pending, current.action()]);
+  assert.deepEqual(current.events, ['action-start', 'read-body', 'navigation']);
+  assert.ok(Buffer.isBuffer(captured.body)); assert.deepEqual(captured.body, current.expected);
+  assert.equal(hash(captured.body), hash(current.expected)); assert.deepEqual(captured.headers, current.headers);
+});
+
+test('early capture retains status and parse failures without a second request or substitute payload', async () => {
+  let requests = 0, reads = 0;
+  const page = response => ({ waitForResponse: async (_matches, options) => {
+    requests++; assert.equal(options.timeout, 120_000); return response;
+  } });
+  await assert.rejects(captureResponse(page({ status: () => 409, json: () => { reads++; } }), () => true,
+    { label: 'POST /readers/resolve' }), /readers\/resolve \(409\)/);
+  assert.equal(reads, 0); assert.equal(requests, 1);
+  const failure = new Error('invalid actual JSON');
+  await assert.rejects(captureResponse(page({ status: () => 200, headers: () => ({}), json: async () => { reads++; throw failure; } }),
+    () => true, { label: 'POST /readers/resolve' }), error => error.cause === failure && /readers\/resolve.*invalid actual JSON/.test(error.message));
+  assert.equal(reads, 1); assert.equal(requests, 2);
+  const empty = await captureResponse(page({ status: () => 204, headers: () => ({ 'cache-control': 'no-store' }), json: () => { reads++; } }),
+    () => true, { expected: 204, label: 'DELETE /synthetic' });
+  assert.equal(empty.body, null); assert.equal(reads, 1); assert.equal(requests, 3);
+});
+
+test('failure screenshot is skipped for temporary work or missing owned page before any app inspection', async () => {
+  const current = { page: {}, application: { evaluate: () => { throw new Error('must not inspect temporary pixels'); } } };
+  const report = { error: { message: 'primary failure' } }, before = structuredClone(report);
+  for (const [owned, temporary] of [[current, true], [undefined, false], [{ page: null }, false]]) {
+    await captureFailureScreenshot(owned, designCEvidenceRoot, report, temporary);
+    assert.deepEqual(report, before);
+  }
+});
+
+test('failure pixels require a hidden owned window and screenshot errors never replace the primary failure', async () => {
+  const evidence = path.join(designCEvidenceRoot, 'c-12345678'), calls = [];
+  const primary = { message: 'actual primary response failure' }, report = { error: primary };
+  const current = { application: { evaluate: async () => [{ visible: false, focused: false }] },
+    page: { screenshot: async options => { calls.push(options); } } };
+  await captureFailureScreenshot(current, evidence, report, false);
+  assert.deepEqual(calls, [{ path: path.join(evidence, 'failure.png'), fullPage: true }]);
+  assert.equal(report.failureScreenshot, 'failure.png'); assert.equal(report.error, primary);
+  current.page.screenshot = async () => { throw new Error('owned screenshot unavailable'); };
+  const failed = { error: primary };
+  await captureFailureScreenshot(current, evidence, failed, false);
+  assert.equal(failed.failureScreenshot, undefined);
+  assert.deepEqual(failed.failureScreenshotError, { message: 'owned screenshot unavailable' });
+  assert.equal(failed.error, primary);
+  current.application.evaluate = async () => [{ visible: true, focused: false }];
+  current.page.screenshot = async () => { throw new Error('must refuse visible pixels before screenshot'); };
+  const visible = { error: primary };
+  await captureFailureScreenshot(current, evidence, visible, false);
+  assert.match(visible.failureScreenshotError.message, /hidden and unfocused/);
+  assert.equal(visible.error, primary);
+});
+
 const ingestionFixture = () => {
   const checkpoint = { document_id: 'doc-unit', revision_id: 'rev-unit', title: 'Synthetic Library original',
     fixture: { filename: 'synthetic-reading.pdf', sha256: digest, bytes: 512, media_type: 'application/pdf',
