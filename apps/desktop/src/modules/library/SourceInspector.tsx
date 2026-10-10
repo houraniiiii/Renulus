@@ -1,6 +1,9 @@
 import { api, apiPath, ApiError } from '../../platform/api';
 import { useResource } from '../../platform/useResource';
-import { ErrorState, LoadingState, Notice } from '../../ui';
+import { ErrorState, LoadingState, Notice, Button } from '../../ui';
+import { useState } from 'react';
+import Reader from '../reader';
+import type { PassageDraft } from '../../platform/designC';
 import OriginalViewer from './OriginalViewer';
 import { officeOriginalExtension } from './file-formats';
 import { sourceLocationLabel } from './source-locators';
@@ -42,13 +45,17 @@ async function loadCitation(documentId: string, location: SourceLocation, signal
   }
 }
 
-export default function SourceInspector({ document, location }: { document: LibraryDocument; location: SourceLocation }) {
+export default function SourceInspector({ document, location, onPassage }: { document: LibraryDocument; location: SourceLocation; onPassage?: (passage: PassageDraft) => void }) {
+  const [reading, setReading] = useState(false);
   const { resource, retry } = useResource(signal => loadCitation(document.id, location, signal));
   const revision = document.revisions.find(value => value.id === (location.revisionId ?? document.latest_revision));
   const officeFormat = revision ? officeOriginalExtension(revision.media_type) : null;
   const noTextImage = revision?.status === 'ready' && revision.media_type.startsWith('image/') && revision.passage_count === 0;
   const result = resource.status === 'ready' ? resource.data : null;
   return <>
+    {revision && <div className="actions"><Button variant="secondary" onClick={() => setReading(value => !value)}>{reading ? 'Close in-app reader' : 'Read in app'}</Button></div>}
+    {reading && revision && <Reader reference={{ target: { type: 'library_revision', id: revision.id },
+      locator: location.page !== null ? { kind: 'pdf', physical_page: location.page } : null }} onPassage={onPassage} />}
     {revision && <dl>
       <div><dt>Edition and publication</dt><dd>{revision.metadata.edition ?? 'Edition unverified'}{revision.metadata.publication_date ? ' · ' + revision.metadata.publication_date : ''}</dd></div>
       <div><dt>Source currentness</dt><dd>{revision.metadata.latest_final_verified && revision.metadata.content_reviewed ? 'Latest final verified and content reviewed' : 'Not verified as current guidance'}</dd></div>

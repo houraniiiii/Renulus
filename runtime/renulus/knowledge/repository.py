@@ -23,7 +23,8 @@ REVISION_SUMMARY = ("r.id,r.document_id,r.ordinal,r.status,r.sha256,r.media_type
                     "r.created_at,r.activated_at")
 MEDIA = {".pdf": "application/pdf", ".png": "image/png", ".jpg": "image/jpeg",
          ".jpeg": "image/jpeg", ".tif": "image/tiff", ".tiff": "image/tiff",
-         ".txt": "text/plain", ".md": "text/markdown", **OFFICE_MEDIA}
+         ".txt": "text/plain", ".md": "text/markdown", ".csv": "text/csv",
+         ".html": "text/html", ".htm": "text/html", ".xml": "application/xml", **OFFICE_MEDIA}
 
 
 def dumps(value) -> str:
@@ -696,7 +697,7 @@ class KnowledgeRepository:
 
     def original(self, revision_id):
         row = self.db.fetch_one("SELECT r.id,r.document_id,r.status,r.original_path,r.rights_json,r.media_type,d.deleted_at FROM knowledge_revisions r JOIN knowledge_documents d ON d.id=r.document_id WHERE r.id=?", (revision_id,))
-        if not row or row["deleted_at"] or row["status"] != "ready" or not row["original_path"]:
+        if not row or row["deleted_at"] or row["status"] == "deleted" or not row["original_path"]:
             raise ApiError("original_missing", "The original is no longer available", 404)
         if not json.loads(row["rights_json"])["display"]:
             raise ApiError("display_denied", "Display permission is unavailable", 403)

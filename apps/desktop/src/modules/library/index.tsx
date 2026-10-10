@@ -13,6 +13,7 @@ import { sourceLocationLabel } from './source-locators';
 import ImportStatus from './ImportStatus';
 import QueueStatus from './QueueStatus';
 import './library.css';
+import type { PassageDraft } from '../../platform/designC';
 
 const libraryScope = { kind: 'personal-library' as const };
 const permissions: Rights = { display: true, cache: true, index: true, embedding: true, model_input: true,
@@ -68,7 +69,7 @@ async function loadCataloguePage(path: string, offset: number, signal: AbortSign
   return { path, page };
 }
 
-export default function LibraryPage() {
+export default function LibraryPage({ onPassage }: { onPassage?: (passage: PassageDraft) => void } = {}) {
   const navigation = useNavigation();
   const temporary = navigation.scope.kind === 'temporary-case' || navigation.scope.kind === 'unclassified';
   const [mode, setMode] = useState<'browse' | 'text' | 'file' | 'catalogue'>('browse');
@@ -436,7 +437,7 @@ export default function LibraryPage() {
       <aside className="library-reader" aria-label="Source reader">{selectedDocument ? <>
         <h2 ref={readerHeading} tabIndex={-1}>{selectedDocument.title}</h2><Button variant="ghost" onClick={returnFromReader}>Return to sources</Button><div className="library-meta"><Badge tone={statusTone(selectedDocument.status)}>{statusLabel(selectedDocument.status)}</Badge><span>{selectedDocument.source_id}</span></div>
         {selectedDocument.latest_revision && (selectedDocument.status !== 'ready' || selectedDocument.active_revision !== selectedDocument.latest_revision) && <ImportStatus key={selectedDocument.id + ':' + selectedDocument.latest_revision} document={selectedDocument} disabled={busy || temporary} onDocument={updateSelectedDocument} onLibraryChange={() => { documents.retry(); catalogue.retry(); }} onReimport={beginReimport} />}
-        <SourceInspector key={selectedDocument.id + ':' + sourceLocation.revisionId + ':' + sourceLocation.page + ':' + sourceLocation.passageId} document={selectedDocument} location={sourceLocation} />
+        <SourceInspector key={selectedDocument.id + ':' + sourceLocation.revisionId + ':' + sourceLocation.page + ':' + sourceLocation.passageId} document={selectedDocument} location={sourceLocation} onPassage={onPassage} />
         <Button variant="danger" busy={busy} onClick={() => void remove(selectedDocument)}>Remove from library</Button>
       </> : <><FileText size={26} aria-hidden="true" /><h2>Keep the source in view</h2><p>Select a document or a passage to inspect its edition, permissions and original location.</p></>}</aside>
     </div>
