@@ -1,0 +1,12 @@
+.study-notes { display: flex; flex-direction: column; gap: var(--space-16); padding: var(--space-24); min-width: 0; }
+.notes-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-8); }
+.notes-heading h3 { margin: 0; font-size: 18px; font-weight: 600; }
+.study-notes form { display: flex; flex-direction: column; gap: var(--space-16); }
+.notes-meta { margin: 0; color: var(--ink-muted); font-size: 13px; }
+.study-notes .notes-editor { min-height: 360px; resize: vertical; background: var(--paper); border-color: var(--line-subtle); padding: var(--space-16); line-height: 1.5; }
+.notes-use, .notes-save { width: 100%; justify-content: flex-start; }
+.notes-actions, .notes-history { display: flex; flex-wrap: wrap; gap: var(--space-8); }
+.notes-history h4 { flex-basis: 100%; margin: 0; }
+.notes-original { white-space: pre-wrap; overflow-wrap: anywhere; width: 100%; background: var(--paper); padding: var(--space-16); }
+.notes-delete { padding: var(--space-16); border: 1px solid var(--line); border-radius: var(--radius-control); }
+@container (max-width: 420px) { .study-notes { padding: var(--space-16); } }

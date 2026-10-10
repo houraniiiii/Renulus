@@ -1,6 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { api, ApiError, isCancelled } from '../platform/api';
-import { studyHelpHeaders, type PassageDraft } from '../platform/designC';
+import { studyHelpHeaders, type ConversationSummary, type PassageDraft } from '../platform/designC';
+import { NotesDraftProvider, NotesPanel } from '../modules/notes';
 import { createConversation } from '../modules/chat/api';
 import { WorkspacePanel, WorkspaceProvider, useWorkspace, workspaceLayout } from '../modules/workspace';
 import { validContext } from '../modules/workspace/state';
@@ -74,7 +75,7 @@ export function ShellWorkspaceProvider({ children }: { children: ReactNode }) {
   return <WorkspaceProvider context={context} onContextChange={setContext} authorize={authorize}
     policy={policy ?? { active_test_id: null, revision: 0, assistance_allowed: false }}
     onPreferencesChange={preferencesChanged}>
-    <HydrateWorkspace />{children}
+    <NotesDraftProvider><HydrateWorkspace />{children}</NotesDraftProvider>
     {saveError && <div className="workspace-save-notice" role="status">Workspace references could not be saved. Your open tabs are kept in this window.</div>}
   </WorkspaceProvider>;
 }
@@ -112,7 +113,37 @@ function WorkspaceEntries({ section, ...props }: WorkspaceEntryProps & { section
 }
 const Files = (props: WorkspaceEntryProps) => <WorkspaceEntries {...props} section="Files" />;
 const Sources = (props: WorkspaceEntryProps) => <WorkspaceEntries {...props} section="Sources" />;
-const Notes = (props: WorkspaceEntryProps) => <WorkspaceEntries {...props} section="Notes" />;
+function Notes(props: WorkspaceEntryProps) {
+  const help = useStudyHelp();
+  const navigation = useNavigation();
+  const workspace = useWorkspace();
+  const [scope, setScope] = useState<{ projectId?: string }>();
+  const [error, setError] = useState<unknown>();
+  const createKey = useRef(crypto.randomUUID());
+  const identity = props.context?.identity;
+  useEffect(() => {
+    const controller = new AbortController();
+    setError(undefined); setScope(undefined);
+    if (!identity || identity.type === 'project') setScope({ projectId: identity?.id });
+    else void api<ConversationSummary>('/conversations/' + (identity.type === 'case' ? 'case' : 'learning') + '/' + encodeURIComponent(identity.id),
+      { signal: controller.signal, headers: studyHelpHeaders(help.context) }).then(value => { if (!controller.signal.aborted) setScope({ projectId: value.project_id ?? undefined }); })
+      .catch(caught => { if (!isCancelled(caught)) setError(caught); });
+    return () => controller.abort();
+  }, [identity?.type, identity?.id, help.context]);
+  if (props.context?.retention === 'temporary') return <Notice>Study notes are saved separately. Open a saved chat or project to create a note.</Notice>;
+  if (error) return <ErrorState error={error} title="Note context is unavailable" />;
+  if (!scope) return <LoadingState label="Opening note context" />;
+  return <NotesPanel key={scope.projectId ?? 'personal'} projectId={scope.projectId} signal={props.signal} studyHelpContext={help.context}
+    onOpen={note => props.open(note.reference)} onUse={async passage => {
+      const conversation = !identity || identity.type === 'project'
+        ? await createConversation({ kind: 'learning', project_id: scope.projectId }, props.signal, createKey.current, help.context) : undefined;
+      if (props.signal.aborted) return;
+      navigation.navigate('chat', { payload: { ...(navigation.route === 'chat' ? navigation.handoff : {}),
+        conversation: conversation?.identity ?? identity, retention: 'saved', studyHelpContext: help.context,
+        passageIntent: { ...passage, id: crypto.randomUUID() } } });
+      if (workspaceLayout(window.innerWidth - 272, workspace.preferredWidth).mode === 'focused') workspace.close();
+    }} />;
+}
 const Goals = (props: WorkspaceEntryProps) => <WorkspaceEntries {...props} section="Goals" />;
 
 function TestPreview({ reference }: import('../modules/workspace').SavedTestPreviewProps) {
@@ -125,6 +156,8 @@ function TestPreview({ reference }: import('../modules/workspace').SavedTestPrev
 export function WorkspaceHost({ contentRef }: { contentRef: React.RefObject<HTMLDivElement | null> }) {
   const workspace = useWorkspace();
   const navigation = useNavigation();
+  const studyHelp = useStudyHelp();
+  const passageCreateKey = useRef(crypto.randomUUID());
   const [width, setWidth] = useState(0);
   const [error, setError] = useState<unknown>(null);
   useEffect(() => {
@@ -149,10 +182,11 @@ export function WorkspaceHost({ contentRef }: { contentRef: React.RefObject<HTML
     try {
       const identity = workspace.context?.identity;
       const summary = !identity || identity.type === 'project' ? await createConversation({ kind: 'learning',
-        project_id: identity?.type === 'project' ? identity.id : undefined }) : undefined;
+        project_id: identity?.type === 'project' ? identity.id : undefined }, undefined, passageCreateKey.current, studyHelp.context) : undefined;
       navigation.navigate('chat', { payload: {
         ...(navigation.route === 'chat' ? navigation.handoff : {}),
         conversation: summary?.identity ?? identity, retention: summary?.retention ?? workspace.context?.retention,
+        studyHelpContext: studyHelp.context,
         passageIntent: { ...passage, id: crypto.randomUUID() },
       } });
     } catch (failure) { setError(failure instanceof ApiError ? failure : new Error('The selected passage could not be added. Your reader is kept.')); }
