@@ -1,4 +1,4 @@
-/* Flow palette and proportions ported from the accepted UX exploration. */
+/* Shared Renulus palette; Design C shell uses the reconciled editable references. */
 :root {
   --renal-teal: #17675f;
   --renal-teal-hover: #11564f;
@@ -32,7 +32,9 @@
   --radius-control: 7px;
   --radius-panel: 12px;
   --radius: 12px;
-  --rail-width: 212px;
+  --rail-width: 272px;
+  --rail-collapsed-width: 72px;
+  --header-height: 72px;
   --reading-measure: 72ch;
   --shadow-overlay: 0 16px 56px #18392f24;
   --font-ui: 'Source Sans 3 Variable', 'Segoe UI', sans-serif;

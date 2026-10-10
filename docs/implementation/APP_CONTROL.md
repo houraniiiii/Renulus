@@ -118,3 +118,12 @@ Actual Windows installation, physical file dialogs, external browser sign-in
 and full packaged/connected journeys keep their separate acceptance scopes.
 Hidden development checks do not replace matching source/runtime provenance
 or establish generation, memory capture or installed acceptance.
+
+The Design C controller checks the owned `.desktop-shell` for readiness, so
+collapsed navigation also starts correctly. Its declared synthetic upload
+contract now covers PDF, PNG/JPEG/TIFF, DOCX/XLSX, CSV, Markdown, HTML and XML.
+Office files require their bounded package directory, text requires valid UTF-8
+without NULs, and every payload still requires its fixed size/SHA-256 declaration.
+The observed Attach and test-import input labels are supported. These tooling
+changes do not prove any reader or import capability; validate each connected
+flow through its actual UI and backend.

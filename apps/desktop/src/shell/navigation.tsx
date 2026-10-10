@@ -2,6 +2,12 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import type { ContextScope } from '../platform/contracts';
 
 export const routes = [
+  { id: 'newchat', label: 'New chat', module: 'home' },
+  { id: 'chat', label: 'Chat', module: 'chat' },
+  { id: 'projects', label: 'Projects', module: 'projects' },
+  { id: 'tests', label: 'Tests', module: 'tests' },
+  { id: 'attempts', label: 'Attempt', module: 'attempts' },
+  { id: 'more', label: 'More', module: 'more' },
   { id: 'study', label: 'Today', module: 'study' },
   { id: 'learn', label: 'Learn', module: 'learn' },
   { id: 'library', label: 'Library', module: 'library' },
@@ -20,14 +26,37 @@ export interface Navigation {
   handoff?: Record<string, unknown>;
   revision: number;
   navigate: (route: RouteId, options?: NavigationOptions) => void;
+  consumeIntent: (kind: 'sendIntent' | 'passageIntent', id: string) => void;
   startFreshStudy: () => void;
 }
 const NavigationContext = createContext<Navigation | null>(null);
 export function routeFromHash(hash: string): RouteId {
   const name = hash.replace(/^#\/?/, '').split(/[?\/]/)[0];
-  if (name === 'home' || name === '') return 'study';
+  if (name === 'home' || name === '') return 'newchat';
   if (name === 'test') return 'assessment';
-  return routes.some(route => route.id === name) ? name as RouteId : 'study';
+  return routes.some(route => route.id === name) ? name as RouteId : 'newchat';
+}
+const savedId = /^[A-Za-z0-9_-]{1,128}$/;
+export function savedHandoffFromHash(hash: string): Record<string, unknown> | undefined {
+  const parts = hash.replace(/^#[/]?/, '').split('/');
+  if (parts[0] === 'chat' && parts.length === 3 && ['learn_thread', 'case'].includes(parts[1]) && savedId.test(parts[2])) {
+    return { conversation: { type: parts[1], id: parts[2] }, retention: 'saved' };
+  }
+  if (parts.length === 2 && savedId.test(parts[1])) {
+    if (parts[0] === 'projects') return { project_id: parts[1] };
+    if (parts[0] === 'attempts') return { attempt_id: parts[1] };
+    if (parts[0] === 'tests') return { version_id: parts[1] };
+  }
+  return undefined;
+}
+export function destinationHash(route: RouteId, payload?: Record<string, unknown>): string {
+  if (route === 'chat' && payload?.retention === 'saved' && payload.conversation && typeof payload.conversation === 'object') {
+    const conversation = payload.conversation as { type?: unknown; id?: unknown };
+    if (['learn_thread', 'case'].includes(String(conversation.type)) && typeof conversation.id === 'string' && savedId.test(conversation.id)) return '#/chat/' + conversation.type + '/' + conversation.id;
+  }
+  const key = route === 'projects' ? 'project_id' : route === 'attempts' ? 'attempt_id' : route === 'tests' ? 'version_id' : undefined;
+  const id = key ? payload?.[key] : undefined;
+  return '#/' + route + (typeof id === 'string' && savedId.test(id) ? '/' + id : '');
 }
 export function nextScope(current: ContextScope, route: RouteId, options: NavigationOptions = {}): ContextScope {
   if (options.freshStudy) return { kind: 'study' };
@@ -39,7 +68,7 @@ export function nextScope(current: ContextScope, route: RouteId, options: Naviga
 export function NavigationProvider({ children }: { children: ReactNode }) {
   const [route, setRoute] = useState(() => routeFromHash(window.location.hash));
   const [scope, setScope] = useState<ContextScope>(() => ({ kind: route === 'cases' ? 'temporary-case' : 'study' }));
-  const [handoff, setHandoff] = useState<Record<string, unknown>>();
+  const [handoff, setHandoff] = useState<Record<string, unknown> | undefined>(() => savedHandoffFromHash(window.location.hash));
   const [revision, setRevision] = useState(0);
   const ownHash = useRef<string | undefined>(undefined);
   function navigate(next: RouteId, options: NavigationOptions = {}) {
@@ -47,9 +76,9 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setHandoff(options.freshStudy ? undefined : options.payload);
     setRoute(next);
     setRevision(value => value + 1);
-    // Only a public destination enters history; payload and scope remain volatile.
-    const hash = '#/' + next;
-    if (window.location.hash !== hash) { ownHash.current = hash; window.location.hash = '/' + next; }
+    // Only validated saved identities enter history; drafts/temporary IDs never do.
+    const hash = destinationHash(next, options.payload);
+    if (window.location.hash !== hash) { ownHash.current = hash; window.location.hash = hash; }
   }
   useEffect(() => {
     const onHash = () => {
@@ -57,13 +86,22 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       const next = routeFromHash(window.location.hash);
       setRoute(next);
       setScope(current => nextScope(current, next));
-      setHandoff(undefined);
+      setHandoff(savedHandoffFromHash(window.location.hash));
       setRevision(value => value + 1);
     };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
-  return <NavigationContext.Provider value={{ route, scope, handoff, revision, navigate, startFreshStudy: () => navigate('study', { freshStudy: true }) }}>{children}</NavigationContext.Provider>;
+  function consumeIntent(kind: 'sendIntent' | 'passageIntent', id: string) {
+    setHandoff(current => {
+      const intent = current?.[kind];
+      if (!intent || typeof intent !== 'object') return current;
+      const value = intent as { request_id?: unknown; id?: unknown };
+      if ((kind === 'sendIntent' ? value.request_id : value.id) !== id) return current;
+      const next = { ...current }; delete next[kind]; return next;
+    });
+  }
+  return <NavigationContext.Provider value={{ route, scope, handoff, revision, navigate, consumeIntent, startFreshStudy: () => navigate('study', { freshStudy: true }) }}>{children}</NavigationContext.Provider>;
 }
 export function useNavigation(): Navigation {
   const context = useContext(NavigationContext);

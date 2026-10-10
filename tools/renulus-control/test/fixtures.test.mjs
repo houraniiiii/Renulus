@@ -4,7 +4,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { mkdir, mkdtemp, writeFile, symlink, link, rename, truncate } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { parseCli, loadFixtureCatalog, readSyntheticFixture, FIXTURES } from '../controller.mjs';
+import { parseCli, loadFixtureCatalog, readSyntheticFixture, fixtureMedia, FIXTURES } from '../controller.mjs';
 
 const parent = process.env.RENULUS_CONTROL_TEST_ROOT ? path.dirname(process.env.RENULUS_CONTROL_TEST_ROOT) : process.platform === 'win32' ? 'C:/rn-control' : os.tmpdir();
 await mkdir(parent, { recursive: true });
@@ -95,4 +95,36 @@ test('size, hashes and media signatures are verified with bounded reads and canc
   await assert.rejects(readSyntheticFixture(g.config, await loadFixtureCatalog(g.config), name), { code: 'fixture_type' });
   const h = await fixture(), hCatalog = await loadFixtureCatalog(h.config);
   await assert.rejects(readSyntheticFixture(h.config, hCatalog, name, AbortSignal.abort()), { name: 'AbortError' });
+});
+
+test('new inert text and TIFF categories still require declared verified bytes', async () => {
+  const files = [
+    ['synthetic-table.csv', Buffer.from('domain,value\nCKD,=1+1\n'), 'text/csv'],
+    ['synthetic-note.md', Buffer.from('# Synthetic dialysis note\n'), 'text/markdown'],
+    ['synthetic-page.html', Buffer.from('<h1>Synthetic</h1>'), 'text/html'],
+    ['synthetic-tree.xml', Buffer.from('<synthetic>education</synthetic>'), 'application/xml'],
+    ['synthetic-scan.tiff', Buffer.from([73, 73, 42, 0, 8, 0, 0, 0]), 'image/tiff'],
+  ];
+  const f = await fixture(files.map(([file, bytes]) => record(file, bytes)));
+  for (const [file, bytes] of files) await writeFile(path.join(f.config.fixtureRoot, file), bytes);
+  const catalog = await loadFixtureCatalog(f.config);
+  for (const [file, bytes, media] of files) {
+    const result = await readSyntheticFixture(f.config, catalog, file);
+    assert.equal(result.receipt.mimeType, media); assert.deepEqual(result.payload.buffer, bytes);
+  }
+  await writeFile(path.join(f.config.fixtureRoot, files[0][0]), Buffer.alloc(files[0][1].length, 65));
+  await assert.rejects(readSyntheticFixture(f.config, catalog, files[0][0]), { code: 'fixture_integrity' });
+});
+
+test('invalid text, empty documents and arbitrary ZIPs cannot pass a new extension', () => {
+  for (const suffix of ['md', 'html', 'csv', 'xml']) {
+    for (const bytes of [Buffer.from([0xff, 0xfe]), Buffer.from('bad\0text'), Buffer.from('  ')]) {
+      assert.throws(() => fixtureMedia('synthetic-document.' + suffix, bytes), { code: 'fixture_type' });
+    }
+  }
+  for (const suffix of ['docx', 'xlsx']) {
+    assert.throws(() => fixtureMedia('synthetic-package.' + suffix, Buffer.from('PK')), { code: 'fixture_type' });
+    assert.throws(() => fixtureMedia('synthetic-package.' + suffix, Buffer.alloc(22)), { code: 'fixture_type' });
+  }
+  assert.throws(() => fixtureMedia('synthetic-image.tif', Buffer.from('not a TIFF')), { code: 'fixture_type' });
 });

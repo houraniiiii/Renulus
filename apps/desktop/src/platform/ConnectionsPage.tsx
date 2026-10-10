@@ -6,6 +6,7 @@ import { Badge, Button, ErrorState, Input, LoadingState, Notice, PageHeader, Sel
 import type { Health } from './contracts';
 import { DataManagement } from './DataManagement';
 import { RetrievalConnections } from './RetrievalConnections';
+import { NamePreference } from '../modules/home/NamePreference';
 
 type Provider = 'codex' | 'opencode-go';
 type Availability = 'unknown' | 'available' | 'unavailable' | 'account_unsupported';
@@ -72,7 +73,7 @@ function statusLabel(status: string): string {
 }
 
 export function ConnectionsPage() {
-  const [section, setSection] = useState<'subscriptions' | 'sources' | 'data'>('subscriptions');
+  const [section, setSection] = useState<'subscriptions' | 'sources' | 'data' | 'preferences'>('subscriptions');
   const { resource, retry } = useResource(async signal => {
     const [health, connections] = await Promise.all([
       api<Health>('/health', { signal }), api<Connections>('/connections', { signal }),
@@ -262,7 +263,7 @@ export function ConnectionsPage() {
   return <>
     <PageHeader title="Connections" description="Choose the subscription Renulus uses for your learning." actions={<Button variant="secondary" disabled={!!busy} onClick={retry}><RefreshCw size={16} />Refresh status</Button>} />
     <nav className="actions connection-settings" aria-label="Connection settings">
-      {([{ id: 'subscriptions', label: 'Learning subscriptions' }, { id: 'sources', label: 'Sources and retrieval' }, { id: 'data', label: 'Your study data' }] as const).map(item =>
+      {([{ id: 'subscriptions', label: 'Learning subscriptions' }, { id: 'sources', label: 'Sources and retrieval' }, { id: 'data', label: 'Your study data' }, { id: 'preferences', label: 'Preferences' }] as const).map(item =>
         <Button key={item.id} variant={section === item.id ? 'secondary' : 'ghost'} aria-pressed={section === item.id} disabled={!!busy || signingIn} onClick={() => setSection(item.id)}>{item.label}</Button>)}
     </nav>
     {section === 'subscriptions' && <>
@@ -328,5 +329,6 @@ export function ConnectionsPage() {
     </>}
     {section === 'sources' && <RetrievalConnections openSource={window.renulus?.openSource} />}
     {section === 'data' && <DataManagement />}
+    {section === 'preferences' && <NamePreference />}
   </>;
 }

@@ -87,7 +87,15 @@ export async function apiResponse(path: string, options: ApiOptions = {}): Promi
       ...init, headers, body: requestBody, signal: controller.signal,
       credentials: 'same-origin', cache: 'no-store', redirect: 'error',
     });
-    if (!response.ok) throw await responseError(response);
+    if (!response.ok) {
+      const failure = await responseError(response);
+      if (failure.code === 'assistance_restricted' || failure.code === 'assistance_changed') window.dispatchEvent(new Event('renulus:assessment-policy'));
+      throw failure;
+    }
+    if (init.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(init.method.toUpperCase())) {
+      window.dispatchEvent(new Event('renulus:records-changed'));
+      if (url.startsWith('/api/v1/assessment/test-attempts')) window.dispatchEvent(new Event('renulus:assessment-policy'));
+    }
     return response;
   } catch (error) {
     if (signal?.aborted) throw new DOMException('Request cancelled.', 'AbortError');

@@ -42,6 +42,8 @@ function mockApi(savedFirst = false) {
   let live = savedFirst ? snapshot : temporary;
   let failSave = false;
   const fetch = vi.fn(async (path: string, options: RequestInit) => {
+    if (path.endsWith('/assessment/policy')) return json({ revision: 1, active_test_id: null, assistance_allowed: true });
+    if (path.startsWith('/api/v1/conversations') || path.startsWith('/api/v1/study/projects')) return json({ items: [] });
     if (path.endsWith('/health')) return json({ status: 'ok' });
     if (path.endsWith('/capabilities')) return json({
       inputs: { text: { supported: true }, pdf: { supported: false }, image: { supported: false } },
@@ -84,7 +86,7 @@ describe('shell scope banner and explicit case snapshots', () => {
     window.history.replaceState(null, '', '#/cases');
     render(<App />);
     expect(banner()?.textContent).toContain(temporaryLabel);
-    fireEvent.change(screen.getByLabelText('What would you like to discuss?'), { target: { value: SENTINEL } });
+    fireEvent.change(await screen.findByLabelText('What would you like to discuss?'), { target: { value: SENTINEL } });
     const start = screen.getByRole('button', { name: /Start temporary case/ }) as HTMLButtonElement;
     await waitFor(() => expect(start.disabled).toBe(false));
     fireEvent.click(start);
@@ -138,15 +140,15 @@ describe('shell scope banner and explicit case snapshots', () => {
     expect(fixture.fetch.mock.calls.filter(([path]) => path.endsWith('/save'))).toHaveLength(0);
   });
 
-  it('labels saved scope as a snapshot and still requires explicit Save for new changes', () => {
+  it('labels saved scope as a snapshot and still requires explicit Save for new changes', async () => {
     mockApi();
     window.history.replaceState(null, '', '#/study');
     render(<App />);
     expect(banner()).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Open saved scope' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Open saved scope' }));
     expect(screen.getByTestId('scope').textContent).toBe('saved-case:case_synthetic');
     expect(banner()?.textContent).toContain(savedLabel);
-    expect(document.querySelector('.workspace-footer')?.textContent).toContain('Temporary context');
+    expect(banner()?.textContent).not.toContain('not saved');
     fireEvent.click(screen.getByRole('button', { name: 'Branch case' }));
     expect(screen.getByTestId('scope').textContent).toBe('temporary-case:case_synthetic');
     expect(banner()?.textContent).toContain(temporaryLabel);
@@ -155,11 +157,11 @@ describe('shell scope banner and explicit case snapshots', () => {
     expect(screen.getByTestId('handoff').textContent).toBe('');
   });
 
-  it('labels unclassified context separately and preserves its guard until explicit End', () => {
+  it('labels unclassified context separately and preserves its guard until explicit End', async () => {
     mockApi();
     window.history.replaceState(null, '', '#/study');
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Open unclassified scope' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Open unclassified scope' }));
     expect(banner()?.textContent).toContain('Unclassified context · not saved');
     fireEvent.click(screen.getByRole('button', { name: 'Continue in Test' }));
     expect(screen.getByTestId('scope').textContent).toBe('unclassified:');

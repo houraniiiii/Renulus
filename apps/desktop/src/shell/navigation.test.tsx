@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { NavigationProvider, nextScope, routeFromHash, useNavigation } from './navigation';
+import { NavigationProvider, destinationHash, savedHandoffFromHash, nextScope, routeFromHash, useNavigation } from './navigation';
 
 afterEach(cleanup);
 function Probe() {
@@ -10,7 +10,14 @@ function Probe() {
 }
 describe('navigation and retention boundary', () => {
   it('resolves all destination aliases and safe unknown routes', () => {
-    expect(routeFromHash('#/learn')).toBe('learn'); expect(routeFromHash('#/test')).toBe('assessment'); expect(routeFromHash('#/home')).toBe('study'); expect(routeFromHash('#/unknown')).toBe('study');
+    expect(routeFromHash('#/learn')).toBe('learn'); expect(routeFromHash('#/test')).toBe('assessment'); expect(routeFromHash('#/home')).toBe('newchat'); expect(routeFromHash('#/unknown')).toBe('newchat');
+  });
+  it('round-trips only canonical saved identities without serialising private handoffs', () => {
+    const conversation = { type: 'learn_thread', id: 'thread_original' };
+    expect(savedHandoffFromHash(destinationHash('chat', { conversation, retention: 'saved', text: 'PRIVATE_DRAFT' }))).toEqual({ conversation, retention: 'saved' });
+    expect(destinationHash('chat', { conversation, retention: 'temporary', text: 'PRIVATE_DRAFT' })).toBe('#/chat');
+    expect(savedHandoffFromHash('#/chat/learn_thread/../secret')).toBeUndefined();
+    expect(destinationHash('projects', { project_id: 'invalid/id' })).toBe('#/projects');
   });
   it('inherits temporary scope across Explain and Test even if a caller requests study', () => {
     expect(nextScope({ kind: 'study' }, 'cases')).toEqual({ kind: 'temporary-case' });

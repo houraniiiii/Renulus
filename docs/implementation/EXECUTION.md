@@ -147,6 +147,19 @@ remain with their current owners. The worker reuses the existing selected-provid
 and small-batch validators, and publishes through the trusted saved-version seam.
 No DC16 closure precedes actual integrated 5/10/20, recovery and cancellation proof.
 
+The lead's C shell baseline connects default Home and Tests, saved-identity routes,
+typed volatile send/passage intents and the contextual Workspace provider. Local
+Workspace preferences contain only validated saved references; temporary contexts
+are refused, removed originals retain already-known unavailable tabs, and deleted
+contexts no longer reopen. Display permission is independent from extraction.
+Five real assembled-API/SQLite Workspace checks passed in
+`integration/workspace01.xml`; 25 shell/navigation/Workspace renderer regressions,
+desktop typecheck and build passed. The controller accepts the eight declared file
+categories and collapsed-shell readiness; all 47 guard checks passed using owned
+root `C:/Renulus/scratch/dcctl/u04`. Reader and attachment adapters still require
+their producer integration before connected acceptance. Historical profile,
+originals, credentials and installed Flow selection remain untouched.
+
 The entries below preserve earlier implementation evidence. Their Flow selection,
 branches, paths, issue status, time windows and heartbeat instructions describe
 those dated runs; they are not assignments or scheduling instructions for C.

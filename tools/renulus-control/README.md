@@ -140,7 +140,8 @@ The original eleven tools retain their contracts. Snapshot adds `fileInputs`,
 a bounded list of exact CSS locators, labels, accepted types and disabled state
 for the existing Library/Case inputs. Supported labels are `Choose a study document`,
 `PDF or image for text extraction`, `Image to keep in case` and
-`Image to review before sending`. Other inputs, including account/backup/profile
+`Image to review before sending`, `Attach`, `Attach files to chat` and
+`Choose a test document`. Other inputs, including account/backup/profile
 imports and directory selection, are not upload targets. A changed or disabled
 input is refused. A fresh snapshot is required after each file selection and
 after changing Case input mode. No renderer or native source modification is needed.
@@ -156,7 +157,8 @@ The root must contain `.renulus-control-fixtures.json` with exactly:
 - `files`: 1–32 records, each containing only `path`, `size` and `sha256`.
 
 Each `path` is a flat lowercase basename matching
-`synthetic-[a-z0-9][a-z0-9-]{0,79}.pdf`, `.png`, `.jpg` or `.jpeg`;
+`synthetic-[a-z0-9][a-z0-9-]{0,79}` with extension `.pdf`, `.png`, `.jpg`,
+`.jpeg`, `.tif`, `.tiff`, `.docx`, `.xlsx`, `.csv`, `.md`, `.html` or `.xml`;
 credential/account/profile names are refused. Size is an integer from 1 through
 10 MiB; SHA-256 is 64 lowercase hex digits. The manifest is at most 16 KiB.
 Use explicit fixture filenames to create declarations; do not enumerate personal

@@ -9,9 +9,9 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 export const LIMITS = Object.freeze({ operation: 15_000, lifecycle: 45_000, start: 360_000, logs: 1_000, line: 2_048, snapshot: 48_000, image: 8_000_000 });
 export const FIXTURES = Object.freeze({ marker: '.renulus-control-fixtures.json', bytes: 10 * 1024 * 1024, manifestBytes: 16_384, count: 32 });
-export const FIXTURE_NAME = /^synthetic-[a-z0-9][a-z0-9-]{0,79}\.(?:pdf|png|jpg|jpeg)$/;
+export const FIXTURE_NAME = /^synthetic-[a-z0-9][a-z0-9-]{0,79}\.(?:pdf|png|jpg|jpeg|tif|tiff|docx|xlsx|csv|md|html|xml)$/;
 export const RESIZE = Object.freeze({ minWidth: 640, maxWidth: 2560, minHeight: 540, maxHeight: 1600 });
-const UPLOAD_LABELS = new Set(['Choose a study document', 'PDF or image for text extraction', 'Image to keep in case', 'Image to review before sending']);
+const UPLOAD_LABELS = new Set(['Choose a study document', 'PDF or image for text extraction', 'Image to keep in case', 'Image to review before sending', 'Attach', 'Attach files to chat', 'Choose a test document']);
 const SENSITIVE_INPUT = /(?:password|token|secret|credential|api.?key|account|email|login|authorization|one.?time.?code|backup|restore|profile)/i;
 const ROOT_MARKER = '.renulus-control.json';
 const GROUPS = ['docling', 'embedding', 'ocr'];
@@ -156,17 +156,56 @@ export async function loadFixtureCatalog(config, signal) {
   return { root, records };
 }
 
+const FIXTURE_TYPES = Object.freeze({
+  '.pdf': 'application/pdf', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+  '.tif': 'image/tiff', '.tiff': 'image/tiff',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  '.csv': 'text/csv', '.md': 'text/markdown', '.html': 'text/html', '.xml': 'application/xml',
+});
+function officeFixture(buffer, required) {
+  // Inspect the bounded directory only; never extract or execute package content.
+  let end = -1;
+  for (let i = buffer.length - 22; i >= Math.max(0, buffer.length - 65557); i--) {
+    if (buffer.readUInt32LE(i) === 0x06054b50) { end = i; break; }
+  }
+  if (end < 0 || buffer.readUInt16LE(end + 4) || buffer.readUInt16LE(end + 6)) return false;
+  const count = buffer.readUInt16LE(end + 10), size = buffer.readUInt32LE(end + 12), start = buffer.readUInt32LE(end + 16);
+  if (!count || count > 4096 || start + size !== end) return false;
+  let at = start; const names = new Set();
+  for (let n = 0; n < count; n++) {
+    if (at + 46 > end || buffer.readUInt32LE(at) !== 0x02014b50 || buffer.readUInt16LE(at + 8) & 1) return false;
+    const nameLength = buffer.readUInt16LE(at + 28), extra = buffer.readUInt16LE(at + 30), comment = buffer.readUInt16LE(at + 32);
+    if (at + 46 + nameLength + extra + comment > end) return false;
+    const name = buffer.subarray(at + 46, at + 46 + nameLength).toString('utf8');
+    if (name.startsWith('/') || name.includes('..') || name.includes('\\') || names.has(name)) return false;
+    names.add(name); at += 46 + nameLength + extra + comment;
+  }
+  return at === end && names.has('[Content_Types].xml') && names.has(required);
+}
+export function fixtureMedia(name, buffer) {
+  const ext = path.extname(name), mimeType = FIXTURE_TYPES[ext];
+  let valid = false;
+  if (ext === '.pdf') valid = buffer.subarray(0, 5).equals(Buffer.from('%PDF-'));
+  else if (ext === '.png') valid = buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  else if (ext === '.jpg' || ext === '.jpeg') valid = buffer.subarray(0, 3).equals(Buffer.from([255, 216, 255]));
+  else if (ext === '.tif' || ext === '.tiff') valid = buffer.subarray(0, 4).equals(Buffer.from([73,73,42,0])) || buffer.subarray(0, 4).equals(Buffer.from([77,77,0,42]));
+  else if (ext === '.docx' || ext === '.xlsx') valid = officeFixture(buffer, ext === '.docx' ? 'word/document.xml' : 'xl/workbook.xml');
+  else if (mimeType) {
+    try { const value = new TextDecoder('utf-8', { fatal: true }).decode(buffer); valid = value.trim().length > 0 && !value.includes('\0'); } catch { valid = false; }
+  }
+  check(valid, 'fixture_type', 'Fixture bytes do not match the declared supported document type.');
+  return mimeType;
+}
+
 export async function readSyntheticFixture(config, catalog, name, signal) {
-  check(typeof name === 'string' && FIXTURE_NAME.test(name) && !SENSITIVE_INPUT.test(name), 'invalid_fixture', 'Supply one declared synthetic PDF/PNG/JPEG basename without directories.');
+  check(typeof name === 'string' && FIXTURE_NAME.test(name) && !SENSITIVE_INPUT.test(name), 'invalid_fixture', 'Supply one declared supported synthetic document basename without directories.');
   check(catalog?.records.has(name), 'undeclared_fixture', 'This file is not declared in the fixed synthetic fixture manifest.');
   check(samePath(await fixtureLocation(config), catalog.root), 'unsafe_fixture_root', 'The fixture root changed.');
   const record = catalog.records.get(name);
   const buffer = await fixtureBytes(catalog.root, name, record.size, signal);
   check(buffer.length === record.size && createHash('sha256').update(buffer).digest('hex') === record.sha256, 'fixture_integrity', 'The synthetic fixture size or SHA-256 differs from its declaration.');
-  const extension = path.extname(name);
-  const mimeType = extension === '.pdf' ? 'application/pdf' : extension === '.png' ? 'image/png' : 'image/jpeg';
-  const signature = extension === '.pdf' ? buffer.subarray(0, 5).equals(Buffer.from('%PDF-')) : extension === '.png' ? buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) : buffer.subarray(0, 3).equals(Buffer.from([255, 216, 255]));
-  check(signature, 'fixture_type', 'Fixture bytes do not have the declared PDF/PNG/JPEG signature.');
+  const mimeType = fixtureMedia(name, buffer);
   return { payload: { name, mimeType, buffer }, receipt: { fixture: name, bytes: buffer.length, sha256: record.sha256, mimeType } };
 }
 async function hashFile(file, signal) {
@@ -611,8 +650,8 @@ export class RenulusController {
       check(pages.length <= 1, 'ambiguous_flow', 'More than one Flow page is present in the owned app.');
       if (pages.length === 1) {
         const page = pages[0];
-        const navigation = page.getByRole('navigation', { name: 'Main navigation', exact: true });
-        if (await budget.wait(navigation.count()) === 1 && await budget.wait(navigation.isVisible())) {
+        const shell = page.locator('.desktop-shell');
+        if (await budget.wait(shell.count()) === 1 && await budget.wait(shell.isVisible())) {
           const origin = new URL(page.url()).origin;
           check(!this.origin || this.origin === origin, 'wrong_page', 'The Flow origin differs from the initially owned renderer origin.');
           this.page = page; this.origin = origin;
