@@ -61,6 +61,29 @@ class SavedGenerationService:
         self.db.execute("UPDATE assessment_test_jobs SET state='failed',error_code='interrupted',updated_at=? "
             "WHERE operation IN ('generate_test','nightly_test') AND state IN ('queued','running')", (utc_now(),))
 
+    async def publish_fictional_artifact(self, artifact, *, expected_policy_revision, expected_context_epoch):
+        """Private producer seam; no renderer route accepts artifact authority."""
+        from .fictionalisation import publication_receipt
+        with self.db.transaction() as conn:
+            receipt = publication_receipt(self.services, conn, artifact,
+                expected_policy_revision=expected_policy_revision, expected_context_epoch=expected_context_epoch)
+            if receipt.result is not None:
+                self.services.get("saved_tests").pinned_version(conn, receipt.result["version_id"])
+                return dict(receipt.result)
+            version = SavedTestVersion(id="fictional_version_"+artifact.validation_id,
+                test_id="fictional_test_"+artifact.validation_id, ordinal=1, origin="generated",
+                review_quality="personal", status="ready", items=artifact.questions,
+                provenance={"method":"generation", "fictional_artifact_id":artifact.id},
+                terms="Generalised fictional personal learning practice; no reviewed-bank or clinical verification claim.",
+                created_at=utc_now())
+            result = self.services.get("saved_tests").publish_version(conn, version, title="Fictional learning practice",
+                provenance={"schema":"saved-test-provenance/1", "fictionalisation": {
+                    "boundary":artifact.boundary_version,"validation_id":artifact.validation_id,
+                    "sha256":artifact.sha256,"route":receipt.route,"privacy_review":"independent-selected-model+overlap/1"}},
+                idempotency_key="fictional-publish:"+artifact.validation_id)
+        receipt.result = {key:result[key] for key in ("test_id","version_id","item_count")}
+        return dict(receipt.result)
+
     def reconcile_nightly(self, conn) -> int:
         """Neutral owner hook for status/tick; never start or inspect provider work.
 
