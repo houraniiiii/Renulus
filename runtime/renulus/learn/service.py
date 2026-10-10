@@ -1,6 +1,6 @@
 import asyncio
 from collections.abc import AsyncIterator
-from contextlib import suppress
+from contextlib import suppress, closing, nullcontext
 from dataclasses import dataclass, field
 import hashlib
 import inspect
@@ -8,6 +8,8 @@ import json
 
 from renulus.contracts import ApiError, ContextScope, Event, Scope, durable_id
 from renulus.storage import utc_now
+from renulus.storage.assessment_policy import require_assistance
+from renulus.storage.invalidation import context_epoch_in
 from .evidence import check_citations, conversation_history, freshness_requested, source_context
 from .memory_context import MemoryContext, guarded_stream
 
@@ -25,6 +27,10 @@ class ActiveRun:
     cancelled: asyncio.Event = field(default_factory=asyncio.Event)
     case_handoff_id: str | None = None
     context: list[dict] = field(default_factory=list)
+    policy_revision: int | None = None
+    context_epoch: int | None = None
+    revision_ids: list[str] | None = None
+    publication: object = None
 
 
 class LearnService:
@@ -70,7 +76,10 @@ class LearnService:
             self.db.mark_deleted("learn_thread", identifier, conn)
         return {"deleted": True}
 
-    def prepare(self, question, scope, thread_id, topic_id, style, idempotency_key, *, case_handoff_id=None):
+    def prepare(self, question, scope, thread_id, topic_id, style, idempotency_key, *, case_handoff_id=None, conn=None):
+        with nullcontext(conn) if conn is not None else closing(self.db.connect()) as snapshot:
+            policy_revision = require_assistance(snapshot)
+            context_epoch = context_epoch_in(snapshot)
         persistent = scope.kind == Scope.STUDY
         if scope.kind not in (Scope.STUDY, Scope.TEMPORARY_CASE, Scope.UNCLASSIFIED):
             raise ApiError("invalid_scope", "Use the matching case or assessment flow for this input")
@@ -96,6 +105,7 @@ class LearnService:
                 thread = self.create_thread(question[:80], topic_id, style)
                 thread_id = thread["id"]
         run = ActiveRun(durable_id("run"), thread_id if persistent else None, scope)
+        run.policy_revision, run.context_epoch = policy_revision, context_epoch
         if case_context:
             run.cancelled = case_context["cancel"]
             run.case_handoff_id = case_handoff_id
@@ -103,7 +113,8 @@ class LearnService:
         self.active[run.id] = run
         if persistent:
             now = utc_now()
-            with self.db.transaction() as conn:
+            with nullcontext(conn) if conn is not None else self.db.transaction() as conn:
+                self.check_run(run, conn=conn)
                 if self.db.is_deleted("learn_thread", thread_id):
                     raise ApiError("thread_deleted", "This study thread has been deleted", 409)
                 conn.execute("INSERT INTO learn_runs VALUES(?,?,?,?,?,?,?)",
@@ -113,6 +124,12 @@ class LearnService:
                 conn.execute("UPDATE learn_threads SET updated_at=?,teaching_style=? WHERE id=?",
                              (now, style, thread_id))
         return None, run
+
+    def check_run(self, run, *, conn=None):
+        with nullcontext(conn) if conn is not None else closing(self.db.connect()) as snapshot:
+            require_assistance(snapshot, expected_revision=run.policy_revision)
+            if run.context_epoch is not None and context_epoch_in(snapshot) != run.context_epoch:
+                raise ApiError('dependency_changed', 'The learning context changed. Retry this request.', 409, True)
 
     async def cancel(self, run_id):
         run = self.active.get(run_id)
@@ -185,6 +202,7 @@ class LearnService:
         memory_context = MemoryContext()
         fresh = run.scope.kind == Scope.STUDY and freshness_requested(question, freshness)
         try:
+            self.check_run(run)
             yield event("started", {"thread_id": run.thread_id, "scope": run.scope.kind})
             if run.cancelled.is_set():
                 yield event("cancelled")
@@ -195,10 +213,13 @@ class LearnService:
             if knowledge and run.scope.kind == Scope.STUDY:
                 # Retrieval queries contain learning questions; raw temporary case text stays out.
                 try:
+                    restriction = {'revision_ids': run.revision_ids} if run.revision_ids is not None else {}
+                    if restriction and 'revision_ids' not in inspect.signature(knowledge.retrieve).parameters:
+                        raise ApiError('project_retrieval_unavailable', 'Project document retrieval is not ready', 503, True)
                     if inspect.iscoroutinefunction(knowledge.retrieve):
-                        result = await knowledge.retrieve(question, topic_id=topic_id, scope=run.scope, **({"current_only": True} if fresh else {}))
+                        result = await knowledge.retrieve(question, topic_id=topic_id, scope=run.scope, **restriction, **({"current_only": True} if fresh else {}))
                     else:
-                        result = await asyncio.to_thread(knowledge.retrieve, question, topic_id=topic_id, scope=run.scope, **({"current_only": True} if fresh else {}))
+                        result = await asyncio.to_thread(knowledge.retrieve, question, topic_id=topic_id, scope=run.scope, **restriction, **({"current_only": True} if fresh else {}))
                     if inspect.isawaitable(result):
                         result = await result
                     citations = result.get("passages", []) if isinstance(result, dict) else result
@@ -206,9 +227,9 @@ class LearnService:
                     # Keep relevant eligible evidence discoverable across that seam.
                     if not citations and topic_id and not run.cancelled.is_set():
                         if inspect.iscoroutinefunction(knowledge.retrieve):
-                            result = await knowledge.retrieve(question, scope=run.scope, **({"current_only": True} if fresh else {}))
+                            result = await knowledge.retrieve(question, scope=run.scope, **restriction, **({"current_only": True} if fresh else {}))
                         else:
-                            result = await asyncio.to_thread(knowledge.retrieve, question, scope=run.scope, **({"current_only": True} if fresh else {}))
+                            result = await asyncio.to_thread(knowledge.retrieve, question, scope=run.scope, **restriction, **({"current_only": True} if fresh else {}))
                         if inspect.isawaitable(result):
                             result = await result
                         citations = result.get("passages", []) if isinstance(result, dict) else result
@@ -219,6 +240,7 @@ class LearnService:
                 except Exception:
                     citations = []
                     yield event("retrieval-failed", {"message": "Evidence retrieval was unavailable. This answer is not source-verified."})
+            self.check_run(run)
             yield event("sources", {"citations": citations,
                 "verification": "retrieved" if citations else "not-verified"})
             if run.cancelled.is_set():
@@ -279,7 +301,7 @@ class LearnService:
             if run.thread_id:
                 history = await conversation_history(self.get_thread(run.thread_id)["messages"],
                     knowledge, run.scope, topic_id, fresh)
-            elif run.case_handoff_id:
+            elif run.case_handoff_id or run.context:
                 history = [*run.context, {"role": "user", "content": question}]
             else:
                 history = [{"role": "user", "content": question}]
@@ -320,11 +342,13 @@ class LearnService:
                 checked = await check_citations(knowledge, citations, run.scope, topic_id, True)
                 if checked != citations:
                     raise ApiError("explain_sources_changed", "Source eligibility changed before this answer. Start a new explanation.", 409, True)
+            self.check_run(run)
             stream = guarded_stream(provider, history, memory_context=memory_context, db=self.db,
                                     scope=run.scope, run_id=run.id, model=model,
                                     system=system, purpose="explain")
             try:
                 async for text in stream:
+                    self.check_run(run)
                     if run.cancelled.is_set():
                         break
                     answer += text
@@ -344,6 +368,7 @@ class LearnService:
                     raise ApiError("explain_sources_changed", "Source eligibility changed during this answer. Start a new explanation.", 409, True)
             if run.thread_id:
                 with self.db.transaction() as conn:
+                    self.check_run(run, conn=conn)
                     current = conn.execute("SELECT state FROM learn_runs WHERE id=?", (run.id,)).fetchone()
                     deleted = conn.execute("SELECT 1 FROM deletion_ledger WHERE entity_type='learn_thread' AND entity_id=?",
                                            (run.thread_id,)).fetchone()
@@ -371,6 +396,8 @@ class LearnService:
                                  "answer_reference": {"message_id": message_id, "run_id": run.id,
                                      "sha256": hashlib.sha256(answer.encode("utf-8")).hexdigest(),
                                      "version": 1}}), now))
+                    if run.publication:
+                        run.publication(conn)
                 if memory:
                     try:
                         memory.notify()
@@ -378,6 +405,7 @@ class LearnService:
                         yield event("memory-capture-unavailable", {"message":
                             "The explanation was saved. Learner memory capture will retry later."})
             case_result = None
+            self.check_run(run)
             if run.case_handoff_id:
                 case_result = self.services.get("cases").commit_handoff(
                     run.case_handoff_id, "explain", answer, cancel=run.cancelled, scope=run.scope)

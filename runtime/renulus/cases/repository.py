@@ -6,7 +6,7 @@ lock. An async caller receives a pinned context and must commit via its guard.
 """
 
 import asyncio
-from contextlib import nullcontext
+from contextlib import nullcontext, closing
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -17,6 +17,8 @@ from typing import Any, Literal
 
 from renulus.contracts import ApiError, ContextScope, Event, Scope, durable_id
 from renulus.storage.database import utc_now
+from renulus.storage.assessment_policy import require_assistance
+from renulus.storage.invalidation import context_epoch_in
 
 from .currency import pinned_currency
 from .models import DiscussCase, EditCase, HandoffCase, StartCase
@@ -74,6 +76,8 @@ class Run:
     sequence: int = 0
     output: str = ""
     iterator: Any = None
+    policy_revision: int | None = None
+    context_epoch: int | None = None
 
     @property
     def terminal(self) -> bool:
@@ -329,7 +333,7 @@ class CaseRepository:
                 return self._view(session)
             now = utc_now()
             # Only public user/assistant messages are eligible, never tools/provider dumps.
-            permitted = [{key: message[key] for key in ("id", "role", "content", "created_at")}
+            permitted = [{key: message[key] for key in ("id", "role", "content", "created_at", "run_id", "content_refs") if key in message}
                          for message in session.messages if message["role"] in ("user", "assistant")]
             values = (session.id, session.revision, session.kind, session.title, session.text,
                       json.dumps(permitted, ensure_ascii=False),
@@ -530,6 +534,9 @@ class CaseRepository:
 
     def begin_discussion(self, case_id: str, request: DiscussCase, *, attachment: dict | None = None) -> tuple[Run, list[dict]]:
         with self._lock:
+            with closing(self.db.connect()) as conn:
+                policy_revision = require_assistance(conn)
+                context_epoch = context_epoch_in(conn)
             session = self._load(case_id)
             fingerprint = hashlib.sha256(json.dumps(
                 {"revision": request.revision, "message": request.message}, sort_keys=True).encode()).hexdigest()
@@ -561,6 +568,7 @@ class CaseRepository:
             run = Run(id=durable_id("case_run"), case_id=case_id, revision=session.revision,
                       request_id=request.request_id, fingerprint=fingerprint,
                       scope=ContextScope(kind=Scope.TEMPORARY_CASE, entity_id=case_id))
+            run.policy_revision, run.context_epoch = policy_revision, context_epoch
             session.active_run_id = run.id
             self._runs[run.id] = run
             return run, deepcopy(self._context(session))
@@ -582,6 +590,10 @@ class CaseRepository:
         return message_id
 
     def _current_run(self, run: Run) -> Session:
+        with closing(self.db.connect()) as conn:
+            require_assistance(conn, expected_revision=run.policy_revision)
+            if run.context_epoch is not None and context_epoch_in(conn) != run.context_epoch:
+                raise ApiError('dependency_changed', 'The learning context changed. Retry this request.', 409, True)
         if run.cancel.is_set() or run.status == "cancelled":
             raise ApiError("case_run_cancelled", "This response was stopped", 409)
         session = self._load(run.case_id)

@@ -4,6 +4,29 @@ from fastapi.testclient import TestClient
 import pytest
 import json
 
+
+class ConversationProvider:
+    def __init__(self):
+        self.inputs = []
+        self.fail = False
+        self.on_reply = None
+
+    async def stream(self, messages, **options):
+        self.inputs.append(messages.copy())
+        if self.on_reply:
+            self.on_reply()
+        yield 'Fictional learning response.'
+        if self.fail:
+            raise RuntimeError('FICTIONAL_RAW_PROVIDER_FAILURE')
+
+    async def cancel(self, run_id):
+        return True
+
+
+def event_payloads(response):
+    assert response.status_code == 200, response.text
+    return [json.loads(line[6:]) for line in response.text.splitlines() if line.startswith('data: ')]
+
 from renulus.server import create_app
 from renulus.learn.conversation_api import create_router
 
@@ -127,3 +150,82 @@ def test_message_pages_pin_snapshot_and_reject_cross_chat_cursor(tmp_path):
             cursor = page['next_cursor']
         assert seen == [f'message-{i}' for i in range(5)]
         assert 'message-later' in [x['id'] for x in client.get(path).json()['items']]
+
+
+@pytest.mark.parametrize('kind',['learning','case'])
+def test_saved_wrapper_send_checkpoints_failure_and_success_then_replays_after_restart(tmp_path,kind):
+    profile=tmp_path/'send-restart'
+    app=app_at(profile)
+    provider=ConversationProvider()
+    app.state.services.registry.update(provider=provider,knowledge=None,retrieval=None,memory=None)
+    with TestClient(app) as client:
+        chat=client.post('/api/v1/conversations',json={'kind':kind}).json()
+        path=f"/api/v1/conversations/{kind}/{chat['identity']['id']}"
+        body={'expected_revision':chat['revision'],'request_id':'failure-request-123','text':'Explain fictional dialysis.'}
+        provider.fail=True
+        failed=event_payloads(client.post(path+'/messages',json=body,headers={'Idempotency-Key':body['request_id']}))
+        assert failed[-1]['type']=='error'
+        assert 'FICTIONAL_RAW_PROVIDER_FAILURE' not in json.dumps(failed)
+        assert client.get(path+'/draft').json()['text']==body['text']
+        current=client.get(path).json()
+        provider.fail=False
+        success={**body,'expected_revision':current['revision'],'request_id':'success-request-123'}
+        completed=event_payloads(client.post(path+'/messages',json=success,headers={'Idempotency-Key':success['request_id']}))
+        assert completed[-1]['type']=='completed', completed
+        assert client.get(path+'/draft').json()['text']==''
+        assert [row['role'] for row in client.get(path+'/messages').json()['items']]==['user','user','assistant']
+    restarted=app_at(profile)
+    restarted.state.services.registry.update(provider=ConversationProvider(),knowledge=None,retrieval=None,memory=None)
+    with TestClient(restarted) as client:
+        replay=event_payloads(client.post(path+'/messages',json=success,headers={'Idempotency-Key':success['request_id']}))
+        assert replay[-1]['type']=='completed' and replay[-1]['payload']['replayed'] is True
+        assert restarted.state.services.get('provider').inputs==[]
+        assert client.post(path+'/messages',json={**success,'text':'Changed text'},headers={'Idempotency-Key':success['request_id']}).status_code==409
+
+
+@pytest.mark.parametrize('kind',['learning','case'])
+def test_temporary_multi_turn_generation_stays_out_of_profile_and_export(tmp_path,kind):
+    from renulus.storage.backup import export_records
+    profile=tmp_path/'temporary-generation'
+    app=app_at(profile)
+    provider=ConversationProvider()
+    app.state.services.registry.update(provider=provider,knowledge=None,retrieval=None,memory=None)
+    marker='FICTIONAL_VOLATILE_MULTI_TURN_36985'
+    with TestClient(app) as client:
+        chat=client.post('/api/v1/conversations',json={'kind':kind,'temporary':True}).json()
+        path=f"/api/v1/conversations/{kind}/{chat['identity']['id']}"
+        for text,key in [(marker,'first-temp-request'),('Continue the previous explanation','second-temp-request')]:
+            current=client.get(path).json()
+            completed=event_payloads(client.post(path+'/messages',json={'expected_revision':current['revision'],'text':text,'request_id':key}))
+            assert completed[-1]['type']=='completed',completed
+        assert marker in json.dumps(provider.inputs[-1])
+        assert 'Fictional learning response.' in json.dumps(provider.inputs[-1])
+        assert len(client.get(path+'/messages').json()['items'])==4
+        assert client.get('/api/v1/conversations').json()['items']==[]
+        exported=json.dumps(export_records(app.state.services))
+        assert marker not in exported and 'Fictional learning response.' not in exported
+        assert chat['identity']['id'] not in exported
+    for file in profile.rglob('*'):
+        if file.is_file():
+            data=file.read_bytes()
+            assert marker.encode() not in data and chat['identity']['id'].encode() not in data
+
+
+@pytest.mark.parametrize('kind',['learning','case'])
+def test_context_change_during_reply_blocks_late_assistant_publication(tmp_path,kind):
+    from renulus.storage.invalidation import bump_context_epoch
+    app=app_at(tmp_path/'context-change')
+    provider=ConversationProvider()
+    def invalidate():
+        with app.state.services.db.transaction() as conn:
+            bump_context_epoch(conn)
+    provider.on_reply=invalidate
+    app.state.services.registry.update(provider=provider,knowledge=None,retrieval=None,memory=None)
+    with TestClient(app) as client:
+        chat=client.post('/api/v1/conversations',json={'kind':kind}).json()
+        path=f"/api/v1/conversations/{kind}/{chat['identity']['id']}"
+        result=event_payloads(client.post(path+'/messages',json={'expected_revision':chat['revision'],'text':'Fictional learning request','request_id':'invalidated-reply-123'}))
+        assert result[-1]['type']=='error'
+        assert result[-1]['payload']['code']=='dependency_changed'
+        assert [row['role'] for row in client.get(path+'/messages').json()['items']]==['user']
+        assert client.get(path+'/draft').json()['text']=='Fictional learning request'

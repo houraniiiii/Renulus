@@ -69,6 +69,9 @@ def safe_error(error: Exception, *, trusted_runtime: bool = False) -> dict:
         "image_input_unsupported": "The selected account rejected image input for this model",
         "image_input_unsupported": "The selected account does not support image input for this model",
         "connection_changed": "The selected connection changed. Review the image and send it again",
+        "assistance_restricted": "Submit the active Test before opening learning help.",
+        "assistance_changed": "The assessment policy changed. Retry this learning action.",
+        "dependency_changed": "The learning context changed. Retry this request.",
     }
     if isinstance(error, ApiError) and error.code in messages:
         return {"code": error.code, "message": messages[error.code], "retryable": error.retryable}
