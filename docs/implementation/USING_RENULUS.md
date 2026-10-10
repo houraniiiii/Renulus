@@ -1,7 +1,8 @@
 # Using Renulus
 
 **Status checked October 10, 2026.** The Design C instructions below describe
-connected source at **`009b8780`**. They extend the source reviewed at
+connected source at **`009b8780`**, with the Memory restore update below checked
+at backend **`7cdc3fec`** and UI **`e5209f17`**. They extend the source reviewed at
 `51f208b4`; they do not establish a matching installed release or launcher
 cutover. The normal shortcut still opens **Flow `f1c49444`**, content 1.4.2,
 at `C:/Renulus/app`, with the learning/account profile at
@@ -354,12 +355,16 @@ or reopening does not replay those provider tasks. Generation/import need an
 explicit retry with still-valid source/permissions; Nightly waits for a future
 eligible time. Local rebuild readiness is separate from model capture.
 
-**Source recovery limit at `009b8780`:** restored Memory evidence is marked for
-explicit inference capture, but the automatic Memory consumer does not yet read
-that marker. Still-eligible boundary-interrupted evidence can be reconsidered
-automatically after recovery. Do not treat this snapshot as proof of inference-free
-Memory restore. Corrections, deletions and explicit cancellation still constrain
-capture. This open consumer must be rechecked before installed cutover.
+After restore, model inference from old Memory evidence stays paused, including
+evidence without a historical capture job. New learning follows normal capture
+eligibility. Eligible structured captures that need no model inference can
+proceed without provider calls; local recall rebuilding is separate.
+
+Under **Memory → Memory jobs**, eligible recorded cancelled restore jobs offer
+**Capture this learning**. This deliberate action uses that job's stored evidence
+and scope and may run your selected model. **Retry pending jobs** does not lift
+the restore inference pause. Explicit capture still refuses deleted, suppressed
+after correction/removal, unavailable or policy-restricted sources.
 
 Check **Recovery status → Library search/Learning memory**. For **Blocked**,
 **Partial** or **Failed**, read cleanup/error details, use **Retry local rebuild**
