@@ -99,3 +99,15 @@ Four actual HTTP journeys plus eight controller checks passed in
 `frontend-connected-05.txt`; five focused authority/expiry/publication/provenance
 backend checks passed in `backend-pytest-11.txt`. Both receipts remain in the
 same owned scratch root, alongside the preserved failing reproduction.
+
+At merged baseline 8e9f4403, the actual Tests pinned-version setup navigated
+through the shared NavigationProvider to default AttemptsPage, retaining Test
+mode and an exact 60-second duration. Setup/handoff created no attempt; Start
+Test established the timer. That journey and the earlier four HTTP journeys
+plus eight controller checks passed in frontend-connected-06.txt. Three
+parameterised backend checks published original synthetic generated/imported/
+nightly versions through the actual trusted collection writer, then exercised
+both Study and Test. They retained origin, mode and pinned provenance and emitted
+personal evidence without reviewed eligibility (backend-pytest-13.txt).
+These are published-version consumer checks, not generation/import/scheduler
+producer acceptance. No provider request was made.

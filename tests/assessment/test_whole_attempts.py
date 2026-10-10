@@ -13,6 +13,7 @@ from renulus.assessment.attempt_api import create_router
 from renulus.assessment.attempt_models import StartAttempt, SubmitAttempt
 from renulus.assessment.attempt_repository import WholeAttemptRepository
 from renulus.contracts import ApiError
+from renulus.design_c_contracts import SavedTestVersion
 from renulus.assessment.test_api import create_router as collection_router
 from renulus.services import Services
 from renulus.storage import Database
@@ -365,6 +366,50 @@ def test_personal_edited_bank_origin_never_becomes_reviewed_by_selecting_test_mo
     assert final["cohorts"]["personal"]["denominator"] == 3 and final["cohorts"]["fresh"]["denominator"] == 0
     payloads = [json.loads(row["payload_json"]) for row in services.db.fetch_all("SELECT * FROM learning_evidence")]
     assert all(not payload["reviewed"] and not payload["bank_cohort_eligible"] for payload in payloads)
+
+
+@pytest.mark.parametrize("origin,method", [("generated", "generation"), ("imported", "import"), ("nightly", "nightly")])
+def test_published_personal_origins_keep_mode_and_eligibility_separate(whole, origin, method):
+    """Consumer contract only: trusted synthetic publication, no origin producer/model substitute."""
+    client, services, _, source_id = whole
+    repository = services.get("saved_tests")
+    with services.db.transaction() as conn:
+        raw = repository.pinned_version(conn, source_id).model_dump(mode="json")
+        raw.update(id="synthetic_" + origin + "_version", test_id="synthetic_" + origin + "_test",
+                   origin=origin, review_quality="personal", provenance={"method": method})
+        for index, item in enumerate(raw["items"]):
+            item.update(item_id=origin + "_item_" + str(index), question_id=origin + "_question_" + str(index),
+                        family_id=origin + "_family_" + str(index), stem="Original synthetic consumer question " + str(index))
+        version = SavedTestVersion.model_validate(raw)
+        repository.publish_version(conn, version, title="Original synthetic " + origin,
+            provenance={"schema": "saved-test-provenance/1", "consumer_fixture": origin},
+            idempotency_key="synthetic-consumer-publish-" + origin)
+    setup = client.get("/api/v1/assessment/tests/versions/" + version.id + "/setup")
+    assert setup.status_code == 200 and setup.json()["can_start"]
+    for mode in ("study", "test"):
+        response = client.post(BASE, json={"version": {"type": "saved_test_version", "id": version.id}, "mode": mode},
+                               headers={"Idempotency-Key": "start-consumer-" + origin + "-" + mode})
+        assert response.status_code == 201, response.text
+        attempt = response.json()
+        assert attempt["version_id"] == version.id and attempt["origin"] == origin
+        if mode == "study":
+            committed = commit(client, attempt, key="commit-consumer-" + origin).json()
+            final = finish(client, committed, key="finish-consumer-" + origin).json()["result"]
+        else:
+            final = finish(client, attempt, draft(attempt), key="submit-consumer-" + origin).json()["result"]
+        assert final["mode"] == mode and final["review_quality"] == "personal"
+        assert final["cohorts"]["personal"]["denominator"] == len(final["items"])
+        assert all(final["cohorts"][bucket]["denominator"] == 0 for bucket in ("fresh", "assisted", "repeat"))
+        evidence = services.db.fetch_all("SELECT kind,entity_id,payload_json FROM learning_evidence WHERE entity_id=?", (attempt["id"],))
+        assert len(evidence) == len(final["items"])
+        for row in evidence:
+            payload = json.loads(row["payload_json"])
+            assert row["kind"] == "assessment-test-answer" and row["entity_id"] == attempt["id"]
+            assert payload["mode"] == mode and payload["origin"] == origin and payload["version_id"] == version.id
+            assert payload["score_bucket"] == "personal" and not payload["reviewed"] and not payload["bank_cohort_eligible"]
+            assert "correct_option_ids" not in payload and "explanation" not in payload
+        snapshot = json.loads(services.db.fetch_one("SELECT version_snapshot_json FROM assessment_test_attempts WHERE id=?", (attempt["id"],))["version_snapshot_json"])
+        assert snapshot["pinned_provenance"]["consumer_fixture"] == origin
 
 
 def test_start_refuses_lost_review_attestation_without_creating_partial_attempt(whole, content):

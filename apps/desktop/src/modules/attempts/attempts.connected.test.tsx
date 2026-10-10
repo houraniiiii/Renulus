@@ -2,7 +2,9 @@
 /** Opt-in actual HTTP/SQLite producer journey; no fetch response fixtures. */
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AttemptPage } from './index';
+import AttemptsPage, { AttemptPage } from './index';
+import TestsPage from '../tests';
+import { NavigationProvider, useNavigation } from '../../shell/navigation';
 import type { Attempt } from './types';
 import { env } from 'node:process';
 
@@ -28,7 +30,32 @@ beforeEach(async () => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
+function ConnectedVersionRoute() {
+  const navigation = useNavigation();
+  return navigation.route === 'attempts' ? <AttemptsPage /> : <TestsPage />;
+}
+
 connected('actual attempt page → router → collection/SQLite', () => {
+  it('consumes the Tests pinned-version handoff through the default page with exact mode and timing', async () => {
+    window.history.replaceState(null, '', '#/tests/' + versionId);
+    render(<NavigationProvider><ConnectedVersionRoute /></NavigationProvider>);
+    fireEvent.change(await screen.findByRole('combobox', { name: 'Mode' }), { target: { value: 'test' } });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Use a timer' }));
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Minutes' }), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue to Test' }));
+    await screen.findByRole('button', { name: 'Start Test' });
+    expect((screen.getByRole('spinbutton', { name: 'Duration in minutes' }) as HTMLInputElement).value).toBe('1');
+    expect((await remote<{ items: { version_id: string }[] }>('/assessment/test-attempts')).items.some(item => item.version_id === versionId)).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Start Test' }));
+    fireEvent.click(await screen.findByRole('radio', { name: 'Token a' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Review and submit test' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Submit test' }));
+    await screen.findByRole('heading', { name: 'Test results' });
+    const list = await remote<{ items: { id: string; version_id: string }[] }>('/assessment/test-attempts');
+    const final = await remote<Attempt>('/assessment/test-attempts/' + list.items.find(item => item.version_id === versionId)!.id);
+    expect(final.version_id).toBe(versionId); expect(final.mode).toBe('test');
+    expect(final.timing.duration_seconds).toBe(60); expect(final.result!.correct).toBe(1);
+  });
   it('commits Study explicitly and restores locked feedback after page reopen', async () => {
     const page = render(<AttemptPage versionId={versionId} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Start Study' }));
