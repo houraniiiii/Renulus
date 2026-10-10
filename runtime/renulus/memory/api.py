@@ -12,6 +12,7 @@ def create_router(services):
     if service is None:
         service = services.registry['memory'] = MemoryService(services)
         services.on_startup.append(service.start)
+        services.on_stopping.append(service.begin_shutdown)
         services.on_shutdown.append(service.shutdown)
     router = APIRouter(prefix='/memory', tags=['memory'])
 

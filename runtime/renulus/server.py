@@ -10,6 +10,7 @@ import asyncio
 import json
 import re
 
+from anyio import BrokenResourceError, ClosedResourceError, EndOfStream
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -23,6 +24,66 @@ from .storage.assessment_policy import policy_snapshot, require_assistance
 
 MODULE_ORDER = ("runtime", "content", "knowledge", "retrieval", "learn", "cases",
                 "assessment", "memory", "study", "updates")
+SHUTDOWN_CONTROL_PATHS = frozenset(('/api/v1/health', '/api/v1/meta',
+    '/api/v1/runtime/status', '/api/v1/runtime/shutdown'))
+
+
+class _RequestOwnership:
+    """Keep admitted handlers alive through real work after a client leaves."""
+    def __init__(self, app, services):
+        self.app, self.services = app, services
+
+    async def __call__(self, scope, receive, send):
+        if scope['type'] != 'http' or scope['path'] in SHUTDOWN_CONTROL_PATHS:
+            return await self.app(scope, receive, send)
+        interrupted = False
+        disconnected = False
+        receivers = set()
+
+        def interrupt():
+            nonlocal interrupted
+            interrupted = True
+            for receiver in tuple(receivers):
+                receiver.cancel()
+
+        async def owned_receive():
+            if interrupted:
+                return {'type': 'http.disconnect'}
+            receiver = asyncio.current_task()
+            receivers.add(receiver)
+            try:
+                # Preserve Request.is_disconnected()'s nonblocking receive.
+                return await receive()
+            except asyncio.CancelledError:
+                if interrupted:
+                    return {'type': 'http.disconnect'}
+                raise
+            except (BrokenResourceError, ClosedResourceError, EndOfStream):
+                return {'type': 'http.disconnect'}
+            finally:
+                receivers.discard(receiver)
+
+        async def owned_send(message):
+            nonlocal disconnected
+            if not disconnected:
+                try:
+                    await send(message)
+                except (BrokenResourceError, ClosedResourceError, OSError):
+                    disconnected = True
+                    interrupt()
+
+        try:
+            task = self.services.admit_request(lambda: self.app(scope, owned_receive, owned_send), interrupt)
+        except ApiError as error:
+            response = JSONResponse({'error': {'code': error.code, 'message': error.message,
+                'retryable': error.retryable}}, status_code=error.status, headers={'Cache-Control': 'no-store'})
+            return await response(scope, receive, send)
+        try:
+            await asyncio.shield(task)
+        except asyncio.CancelledError:
+            disconnected = True
+            interrupt()
+            raise  # Only the observer leaves; Services still owns the handler.
 
 
 def create_app(profile: str | Path, token: str | None = None, source_root=None) -> FastAPI:
@@ -54,6 +115,8 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
     app = FastAPI(title="Renulus local API", version=__version__, docs_url=None, redoc_url=None, lifespan=lifespan)
     app.state.services = services
     app.state.session_token = token
+    # Inside authentication/policy middleware, outside the actual route handler.
+    app.add_middleware(_RequestOwnership, services=services)
 
     def reconcile_attempts():
         owner = services.registry.get("whole_attempts")
@@ -127,8 +190,9 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
             if not token or not secrets.compare_digest(supplied, token):
                 return JSONResponse({"error": {"code": "invalid_session",
                     "message": "Reconnect the application", "retryable": True}}, status_code=401)
-        if services.stopping and request.url.path not in (
-                '/api/v1/health', '/api/v1/meta', '/api/v1/runtime/status', '/api/v1/runtime/shutdown'):
+        if request.url.path in SHUTDOWN_CONTROL_PATHS:
+            return await call_next(request)
+        if services.stopping:
             return policy_error(ApiError('runtime_stopping',
                 'Renulus is closing this profile. Wait for local work to finish', 503, True))
         await asyncio.to_thread(reconcile_attempts)
@@ -237,6 +301,7 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
     # Its router lifespan also stops this worker. The explicit desktop drain
     # must join it before acknowledging settlement or releasing offline helpers.
     if 'knowledge_worker' in services.registry:
+        services.on_stopping.append(lambda: services.registry['knowledge_worker'].stop(0))
         services.on_shutdown.append(lambda: asyncio.to_thread(
             services.registry['knowledge_worker'].stop, None))
     return app

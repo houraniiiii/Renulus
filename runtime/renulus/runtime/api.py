@@ -60,13 +60,18 @@ class ShutdownRequest(_Input):
 def register(services: Services) -> ProviderManager:
     if "provider" not in services.registry:
         services.registry["provider"] = ProviderManager(services.paths)
-        services.on_shutdown.append(services.registry["provider"].close)
+        services.on_shutdown_dependencies.append(services.registry["provider"].close)
+        async def cancel_requests():
+            manager = services.registry['provider']
+            for run_id in tuple(manager.status()['active_runs']):
+                await manager.cancel(run_id)
+        services.on_shutdown.append(cancel_requests)
     if "helpers" not in services.registry:
         services.registry["helpers"] = HelperAssets(services.paths)
         services.on_startup.append(services.registry["helpers"].startup.start)
         # Shutdown runs in reverse order: retain controlled temp/offline settings
         # until provider streams and all module workers have been stopped.
-        services.on_shutdown.insert(0, services.registry["helpers"].startup.close)
+        services.on_shutdown_dependencies.insert(0, services.registry["helpers"].startup.close)
     if "context" not in services.registry:
         services.registry["context"] = services.registry["provider"].context
     return services.registry["provider"]

@@ -2,13 +2,15 @@
 import asyncio
 import json
 import threading
+from pathlib import Path
 from types import SimpleNamespace
 
 import httpx
 import pytest
 from tokenizers import Tokenizer, models
 
-from renulus.contracts import ContextScope, Scope
+from renulus.contracts import ApiError, ContextScope, Scope
+from renulus.memory.models import ManualFact
 from renulus.server import create_app
 from renulus.storage import utc_now
 
@@ -21,7 +23,7 @@ async def extracting_app(tmp_path, monkeypatch):
     services = app.state.services
     control = SimpleNamespace(entered=threading.Event(), release=threading.Event(),
         finalizing=threading.Event(), finish=threading.Event(), settled=threading.Event(),
-        replied=asyncio.Event(), provider_closed=asyncio.Event())
+        replied=asyncio.Event(), provider_closed=asyncio.Event(), dispatch_provider=False, outbound=[])
     tokenizer = services.paths.helpers / 'synthetic-tokenizer.json'
     tokenizer.parent.mkdir(parents=True, exist_ok=True)
     Tokenizer(models.WordLevel({'[UNK]': 0}, unk_token='[UNK]')).save(str(tokenizer))
@@ -40,6 +42,13 @@ async def extracting_app(tmp_path, monkeypatch):
         def extract(self, text, binding):
             control.entered.set()
             assert control.release.wait(10)
+            if control.dispatch_provider:
+                from renulus.memory.providers import ApprovedLLM, generation_binding
+                token = generation_binding.set(binding)
+                try:
+                    ApprovedLLM().generate_response([{'role': 'user', 'content': text}])
+                finally:
+                    generation_binding.reset(token)
             return ['Synthetic dialysis learning point']
 
         def close(self):
@@ -65,7 +74,7 @@ async def extracting_app(tmp_path, monkeypatch):
                     'text': 'Synthetic dialysis learning point'}), utc_now()))
     memory.enqueue('synthetic-evidence', scope)
     # This dependency is released after memory in the actual callback order.
-    services.on_shutdown.insert(0, control.provider_closed.set)
+    services.on_shutdown_dependencies.insert(0, control.provider_closed.set)
     try:
         yield app, control
     finally:
@@ -121,6 +130,55 @@ async def test_shutdown_requires_a_configured_session_even_in_an_unlocked_test_a
 
 
 @pytest.mark.asyncio
+async def test_blocked_library_join_cannot_delay_memory_or_provider_admission_closure(extracting_app, monkeypatch):
+    app, control = extracting_app
+    services = app.state.services
+    memory, worker = services.get('memory'), services.get('knowledge_worker')
+    joined, release_library = threading.Event(), threading.Event()
+    original_stop = worker.stop
+
+    def held_stop(timeout=5):
+        if timeout is None:
+            joined.set()
+            assert release_library.wait(10)
+        original_stop(timeout)
+
+    class Provider:
+        async def cancel(self, identifier):
+            return True
+        def status(self):
+            return {'active_runs': []}
+        async def stream(self, *args, **kwargs):
+            control.outbound.append(kwargs['run_id'])
+            yield '{"memory": []}'
+
+    services.registry['provider'] = Provider()
+    monkeypatch.setattr(worker, 'stop', held_stop)
+    control.dispatch_provider = True
+    await memory.start()
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),
+            base_url='http://testserver', headers={'x-renulus-token': 'synthetic-session'}) as client:
+        try:
+            assert await asyncio.to_thread(control.entered.wait, 3)
+            response = await client.post('/api/v1/runtime/shutdown', json={'timeout_seconds': .05})
+            assert response.status_code == 503
+            assert joined.is_set()
+            control.release.set()
+            assert await asyncio.to_thread(control.finalizing.wait, 3)
+            assert control.outbound == [], 'An earlier library join left memory provider admission open'
+            with pytest.raises(ApiError) as caught:
+                memory.add(ManualFact(text='Synthetic late point', scope=ContextScope(kind=Scope.STUDY),
+                                     idempotency_key='blocked-library-late'))
+            assert caught.value.code == 'memory_stopping'
+        finally:
+            control.release.set()
+            control.finish.set()
+            release_library.set()
+        assert (await client.post('/api/v1/runtime/shutdown', json={'timeout_seconds': 1})).json()['state'] == 'settled'
+        assert memory.repository.list() == []
+
+
+@pytest.mark.asyncio
 async def test_failed_drain_is_explicit_and_never_reopens_admission(tmp_path):
     app = create_app(tmp_path / 'failed-drain-profile', token='synthetic-session')
     def unavailable_finalizer():
@@ -134,6 +192,49 @@ async def test_failed_drain_is_explicit_and_never_reopens_admission(tmp_path):
         assert (await client.get('/api/v1/runtime/shutdown')).json()['state'] == 'failed'
         assert (await client.post('/api/v1/memory/retry')).status_code == 503
         assert (await client.post('/api/v1/runtime/shutdown', json={})).status_code == 503
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('disconnect', [False, True], ids=['connected', 'cancelled-client'])
+async def test_shutdown_retains_an_admitted_library_writer_until_it_really_finishes(tmp_path, monkeypatch, disconnect):
+    app = create_app(tmp_path / 'admitted-import-profile', token='synthetic-session')
+    services = app.state.services
+    entered, release = threading.Event(), threading.Event()
+    dependencies_released = asyncio.Event()
+    services.on_shutdown_dependencies.insert(0, dependencies_released.set)
+    original_write = Path.write_bytes
+
+    def write(path, data):
+        if path.name == 'original.txt' and path.is_relative_to(services.paths.library):
+            entered.set()
+            assert release.wait(10), 'Test did not release the actual Library original writer'
+        return original_write(path, data)
+
+    monkeypatch.setattr(Path, 'write_bytes', write)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),
+            base_url='http://testserver', headers={'x-renulus-token': 'synthetic-session'}) as client:
+        request = asyncio.create_task(client.post('/api/v1/library/import/text', json={
+            'text': 'Synthetic dialysis study note', 'scope': {'kind': Scope.LIBRARY.value},
+            'idempotency_key': 'held-original'}))
+        try:
+            assert await asyncio.to_thread(entered.wait, 3)
+            if disconnect:
+                request.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await request
+            result = await client.post('/api/v1/runtime/shutdown', json={'timeout_seconds': .05})
+            assert result.status_code == 503, result.text
+            assert result.json()['error']['code'] == 'runtime_shutdown_pending'
+            assert not dependencies_released.is_set()
+            assert (await client.get('/api/v1/runtime/shutdown')).json()['state'] == 'draining'
+        finally:
+            release.set()
+            response, = await asyncio.gather(request, return_exceptions=True)
+        if not disconnect:
+            assert response.status_code == 202, response.text
+        assert (await client.post('/api/v1/runtime/shutdown', json={'timeout_seconds': 1})).json()['state'] == 'settled'
+        assert dependencies_released.is_set()
+        assert services.db.fetch_one('SELECT COUNT(*) n FROM knowledge_documents')['n'] == 1
 
 
 @pytest.mark.asyncio

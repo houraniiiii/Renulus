@@ -56,7 +56,7 @@ class MemoryService:
             yield
 
     def _require_open(self):
-        if self._stopping:
+        if self._stopping or self.services.stopping:
             raise ApiError('memory_stopping', 'Learner memory is closing; retry after reopening the profile', 409, True)
 
     @contextmanager
@@ -187,7 +187,7 @@ class MemoryService:
 
     def _capture_current(self, job):
         with self._capture_state:
-            admitted = not self._stopping and job['id'] in self._active_runs
+            admitted = not self._stopping and not self.services.stopping and job['id'] in self._active_runs
         return admitted and self.repository.current(job)
 
     async def _in_thread(self, function, *args):
@@ -438,16 +438,20 @@ class MemoryService:
                 # A bounded observation expired, not the work. Do not unwind
                 # lifespan into provider/IPC teardown while a worker needs it.
 
+    def begin_shutdown(self):
+        """Seal and request cancellation without waiting on another owner."""
+        with self._capture_state:
+            self._stopping = True
+            if self._close_task is None:
+                self._close_task = asyncio.create_task(self._close(), name='renulus-memory-drain')
+
     async def close(self, *, timeout=5.0):
         """Stop admission and await settlement; timeout never releases ownership.
 
         Keep the original event loop/provider reply path alive after a timeout.
         Another close call observes the same drain; it does not restart work.
         """
-        with self._capture_state:
-            self._stopping = True
-            if self._close_task is None:
-                self._close_task = asyncio.create_task(self._close(), name='renulus-memory-drain')
+        self.begin_shutdown()
         done, _ = await asyncio.wait({self._close_task}, timeout=timeout)
         if not done:
             raise ApiError('memory_close_timeout',

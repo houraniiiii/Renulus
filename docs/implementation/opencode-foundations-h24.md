@@ -67,11 +67,19 @@ HTTP 503 / `runtime_shutdown_failed`. Success is exactly
 reports open, draining, settled or failed. Health, meta and runtime status remain
 reachable; shutdown/status are neutral while a Test is active.
 
-The drain preserves reverse callback dependency order and additionally joins
-the existing library ingestion worker with `stop(None)` off the event loop.
-That worker previously lived only in a nested router lifespan, which would
-otherwise run after the desktop acknowledgement. Memory settlement completes
-before provider/helper release. A bounded observer does not change that order.
+The drain first seals admission and calls synchronous signal-only hooks. Memory
+begins its retained drain immediately; the library worker receives `stop(0)`.
+All producer shutdown callbacks then start before any join is awaited, including
+the library worker's `stop(None)` off the event loop. A held library join cannot
+delay memory cancellation or allow another extraction/provider attempt.
+
+Admitted HTTP handlers retain ownership even after their client disconnects.
+Shutdown signals disconnect without abandoning the actual handler: an accepted
+Library import must finish its real file/SQLite work before acknowledgement.
+After all producers and admitted requests settle, provider/helper dependencies
+close in reverse dependency order. Control/status requests remain available
+without policy reconciliation writes during drain. A bounded observer timeout
+does not cancel or reorder this shared drain.
 
 For a ready owned backend, Electron `stop()` posts the authenticated request over
 the owned loopback port, with an independent eight-second deadline covering
@@ -119,6 +127,8 @@ Each numbered cycle added one behavioral scenario before its implementation:
 | 17 | A successful acknowledgement left the library worker running | Existing library worker is joined before acknowledgement |
 | 18 | An app without a configured session could invoke shutdown | Shutdown requires a configured, matching token |
 | 19 | Callback failure escaped as generic HTTP 500 | Explicit failed drain, retained admission and blocked application owner |
+| 20 | Shutdown acknowledged while an accepted Library original writer was held | Connected and cancelled-client requests retain real writer ownership through settlement |
+| 21 | An unbounded library join left existing memory provider admission open | Signal admission closure immediately, then join producers before releasing dependencies |
 
 Receipts are `receipts/red-01b.txt`, `red-02.txt` through `red-11.txt`, and the
 corresponding `green-01.txt` through `green-11.txt`. The initial `red-01.txt`
@@ -127,8 +137,17 @@ outside the controlled interval before `red-01b` reproduced the actual failure.
 Additional regression cases cover normal completion, public Stop, commit-first
 Stop, no late canonical publication and recovery after successful settlement.
 The first expanded memory regression passed **39 tests** (`green-15b.txt`).
-The new application integration checks passed individually through cycle 19;
-the combined affected regression run is in progress at this source checkpoint.
+The application integration checks passed through cycle 21. `red-20b.txt`
+reproduces premature acknowledgement during an actual original-file write;
+`green-20c.txt` records all eight application cases then present passing.
+`red-21.txt` reproduces provider dispatch while the library join is held;
+`green-21.txt` passes with no outbound attempt and closed public memory admission.
+The latest shutdown-focused regression (`final-shutdown.txt`) passed **38 tests**
+across application shutdown, memory settlement, Test policy and runtime auth.
+The earlier combined affected run collected at `36777c27` finished with
+**219 passed, 7 skipped, 1 failed** (`regression-final.txt`). Its single failure
+is the parent-owned route inventory fixture treating the authenticated neutral
+shutdown endpoint as a non-neutral route (expected 409; received 401).
 Cycle 15 initially over-restricted canonical edits during rebuild; the existing
 epoch test caught that regression. The final lease-based guard restores those
 edits (`green-15b.txt`). `red-12.txt` was an import setup error; `red-12b.txt`
@@ -141,6 +160,9 @@ regressions cover stalled decoding, late replies, failure variants, shared stop
 and idempotence. `12-final-vitest.txt`: **36 tests passed** in backend and existing
 backend-child tests, including a real owned Windows child-death check.
 `12-final-typecheck.txt`: desktop TypeScript checking passed.
+`receipts/integrated-desktop-typecheck.txt` also passed after the parent main.ts
+quit sequencing change. Electron backend bytes remain at `36777c27`; cycles
+20/21 change Python runtime bytes and require restarting the hidden backend.
 
 A broad Python run was attempted with external networking disabled and all
 optional RENULUS environment inputs removed. It was stopped after early errors;
@@ -171,4 +193,9 @@ No hidden UI, packaging, physical Windows dialog or real subscription acceptance
 is claimed by this lane's service receipts. Forced termination remains a distinct
 outcome. First checkpoint review found no standards violations and two spec gaps
 (application-callback cancellation and queued provider dispatch); cycles 13 and
-14 reproduce and fix those gaps. Expanded checkpoint review is pending.
+14 reproduce and fix those gaps. Expanded standards review found no hard
+violations; its optional lease-bookkeeping consolidation is deferred. Expanded
+spec review identified admitted-request ownership (cycle 20), and parent review
+identified delayed admission closure (cycle 21). The latest independent spec
+review found no remaining concrete blocker in request ownership and shutdown
+phases. One complete final backend pytest run remains the validation gate.
