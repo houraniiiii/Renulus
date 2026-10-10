@@ -419,7 +419,26 @@ class KnowledgeRepository:
                     self._schedule_cleanup(conn, previous, False)
 
     def _schedule_cleanup(self, conn, revision_id, remove_original):
-        conn.execute("INSERT INTO knowledge_cleanup(revision_id,remove_original,created_at) VALUES(?,?,?) ON CONFLICT(revision_id) DO UPDATE SET remove_original=MAX(remove_original,excluded.remove_original)", (revision_id, int(remove_original), utc_now()))
+        # A saved note revision is an immutable original even when its derived
+        # extraction is cancelled or fails. Explicit owner deletion still
+        # upgrades the durable cleanup task and removes all revision bytes.
+        row = conn.execute("SELECT r.metadata_json,r.status,d.deleted_at,d.scope_kind,d.scope_entity,d.reserved "
+            "FROM knowledge_revisions r JOIN knowledge_documents d ON d.id=r.document_id WHERE r.id=? "
+            "AND NOT EXISTS(SELECT 1 FROM deletion_ledger WHERE "
+            "(entity_type IN ('knowledge-document','document') AND entity_id=d.id) OR "
+            "(entity_type IN ('knowledge-revision','revision') AND entity_id=r.id))", (revision_id,)).fetchone()
+        retain_note = False
+        if (row and not row["deleted_at"] and row["status"] != "deleted" and not row["reserved"]
+                and row["scope_kind"] == Scope.LIBRARY.value and row["scope_entity"] is None):
+            try:
+                retain_note = "study-note" in SourceMetadata.model_validate_json(row["metadata_json"]).asset_role
+            except ValueError:
+                pass
+        remove_original = bool(remove_original and not retain_note)
+        conn.execute("INSERT INTO knowledge_cleanup(revision_id,remove_original,created_at) VALUES(?,?,?) "
+            "ON CONFLICT(revision_id) DO UPDATE SET remove_original=CASE WHEN ? THEN 0 "
+            "ELSE MAX(remove_original,excluded.remove_original) END",
+            (revision_id, int(remove_original), utc_now(), int(retain_note)))
 
     def _cancel_in(self, conn, job_id, revision_id, reason):
         conn.execute("UPDATE knowledge_jobs SET state='cancelled',phase=?,finished_at=? WHERE id=? AND state IN ('queued','processing')", (reason, utc_now(), job_id))
