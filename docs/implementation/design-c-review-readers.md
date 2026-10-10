@@ -874,3 +874,107 @@ actual ordinary queued replacement to the earlier guards. The prior merged
 extraction checks in reader-parent-2122-results.xml. Full desktop TypeScript and
 four Reader React checks passed after that normal shared merge (45f8235c).
 No feature closure or packaged/OCR import acceptance is claimed.
+
+### Shared producer checkpoint for independent reader/data pass 2
+
+Normal merge 873bad79 completed at d61b9392. Three conflicts were confined to
+this report, attachments.py and test_attachment_producer.py: incoming duplicate
+producer history omitted the later Attach policy/context pins and follow-up
+documentation. Those lane additions were retained; all automatically merged
+parent owner/router/schema/contract changes were preserved. No reset/checkout
+or unowned conflict edit was used.
+
+The producer fixture now relies on the actual parent-mounted attachment router,
+removing its former duplicate router inclusion. Forty-three connected checks
+passed in reader-parent-873b-results.xml: all 34 trusted extraction/operation
+checks, live inventory/upload pins, saved upload/original/passage/reopen, actual
+uploaded PDF/DOCX/CSV/XLSX/Markdown/HTML/XML/PNG/JPEG/TIFF originals and native
+assets, and actual learning/case plus legacy owner deletion/volatile forget.
+The caller's journal/tombstone/owner deletion now connects to this M2 service;
+this supersedes the earlier pending router/delete prerequisite. Full desktop
+TypeScript passed against the merged shared source. All state/evidence remains
+under C:/Renulus/scratch/design-c/dc-review-readers.
+
+Consumer prerequisites: Pauli uses import_original/recheck_import_original with
+operation=import for Normalize and final version publication; original inspection
+uses require_original_display on its canonical source pin and reads its own
+immutable private body. Home/Chat uses inventory policy/context/conversation pins
+for explicit upload and owns source-rights UI/volatile File handoff. Private
+source descriptors stay backend-only. No Knowledge DDL or dependency addition
+is needed for either seam.
+
+Still open: complete attachment promotion through the original Conversation
+owner, upload interruption/orphan-folder reconciliation, durable extraction/
+preview cache, actual saved PDF/image OCR import proof, safe active link handling
+and PDF text alignment, notes/Library destination completion, and packaged hidden
+reader/Attach/selection journeys. DC08/DC10/DC17 feature closure is not asserted.
+Exact changes in this checkpoint are tests/knowledge/test_attachment_producer.py
+and this report. Independent pass 2 starts from a committed clean lane.
+
+### Study-help Reader request context checkpoint
+
+Reader consumes the parent-owned optional ReaderProps.studyHelpContext receipt
+and sends X-Renulus-Study-Context=JSON.stringify(context) on /readers/resolve,
+/readers/asset, /readers/original and /readers/passage requests. Both PDF/image
+page assets and inline document image assets use the same explicit header.
+Ordinary Reader requests omit it. No context, renderer key or raw snapshot is
+added to request bodies, ContentReference locators or persisted positions.
+
+The serialized receipt is part of the ephemeral Reader session identity. A
+changed attempt/item/version/draft/policy/kind remounts the session, aborts old
+resolve/asset/original/passage requests, clears selection and prepared download
+state, and revokes owned Blob URLs. Late responses cannot display an old source,
+create an old original/preview URL or call onPassage for the previous receipt.
+No server authority is inferred from the renderer receipt.
+
+Eleven Reader React checks passed with the existing shared same-origin transport
+and controlled fetch responses in reader-grid-vitest-results.json. Seven new
+checks cover all four request kinds with and without the exact header, inline
+images, unchanged canonical references/bodies, and late resolve/asset/original/
+passage completion after an item/draft or policy change. Prepared downloads and
+actual DOM selections are cleared on context replacement. Binary fixtures are
+transport fixtures; this run does not establish image decoding or native format
+acceptance. Full desktop TypeScript passed with the pinned existing dependencies.
+Runtime/cache/evidence paths remain under the synthetic lane scratch directory.
+
+Parent prerequisites: publish the optional shared scalar ReaderProps field and
+pass it from Study/Workspace; validate owner exposure before and after Reader
+reads and before each transaction commit through the inherited server guard.
+The shared type is not yet in local baseline 3259ccf2, so the frontend recognizes
+the optional property without copying or editing the shared declaration. No
+backend, shared type, shell, DDL or dependency file was changed by this checkpoint.
+Integrated Study-help authorization, restart/persistence and hidden packaged
+journeys still require parent/consumer evidence. No feature ticket is closed.
+
+Exact changed paths:
+
+- apps/desktop/src/modules/reader/Reader.tsx
+- apps/desktop/src/modules/reader/Reader.test.tsx
+- docs/implementation/design-c-review-readers.md
+
+### Required-format passage, rights and reopen checkpoint
+
+Normal merge efada051 completed at b8d81606 without conflicts or discarded lane
+content. The existing actual upload/reader format test now also takes canonical
+passages from PDF, DOCX, CSV, XLSX, Markdown, HTML and XML, explicitly appends
+them to the saved Conversation draft with their typed locators, and verifies
+the complete draft/references after reopening the actual application services.
+Seven references are retained; no learning message or provider request is sent.
+
+All ten original variants (the seven formats plus PNG/JPEG/TIFF) reopen with
+exact retained bytes and identical inert payloads. Current model_input revocation
+denies passage use for each text/table format while retained reading/originals
+remain available. Image previews do not attest to OCR: all three image variants
+explicitly return reader_selection_unavailable for attempted image passage use.
+The upload remains not_requested extraction/index authority; this connected
+reader proof does not establish saved Docling extraction for these attachments.
+
+The expanded format check passed in formats-selection-run1-results.xml. All 34
+actual saved-extraction checks also passed against efada051 in
+saved-extraction-parent-efada-run1-results.xml, including real pinned Docling/
+HybridChunker and FastEmbed/LanceDB text/CSV ingestion, caller snapshot pins,
+rights/tombstones/original integrity and reopen. The trusted DC17 helper commits
+remain 20e95641 and fbe7b4a0; no new helper implementation or DDL is required.
+No hidden renderer, saved PDF/image OCR import or feature closure is claimed.
+
+Exact lane changes are tests/knowledge/test_attachment_producer.py and this report.

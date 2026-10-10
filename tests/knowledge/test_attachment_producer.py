@@ -379,6 +379,8 @@ def test_ordinary_upload_all_required_formats_connect_to_actual_reader_and_nativ
         files["SYNTHETIC." + extension] = image.getvalue()
     services = app.state.services
     chat, client = conversation(app), TestClient(app)
+    draft_url = "/api/v1/conversations/learning/" + chat["identity"]["id"] + "/draft"
+    retained, draft_text, draft_refs = [], "SYNTHETIC retained draft", []
     for number, (filename, data) in enumerate(files.items()):
         request = upload_request(app, chat, key=f"SYNTHETIC_format_{number:03}", filename=filename)
         uploaded = client.post("/api/v1/attachments", content=data, headers={"x-renulus-attachment-options": request.model_dump_json()})
@@ -391,15 +393,75 @@ def test_ordinary_upload_all_required_formats_connect_to_actual_reader_and_nativ
         assert body["preview_state"] == "ready", (filename, body["error"])
         assert client.post("/api/v1/readers/original", json=read_body(receipt)).content == data
         assert "fetch(" not in json.dumps(body["payload"])
+        retained.append((receipt, data, body["payload"]))
         if body["payload"]["asset_id"]:
             asset = client.post("/api/v1/readers/asset", json={**read_body(receipt),
                 "asset_id": body["payload"]["asset_id"], "original_sha256": body["original"]["sha256"]})
             assert asset.status_code == 200 and asset.content.startswith(b"\x89PNG\r\n\x1a\n")
         if receipt["media_type"].startswith("image/"):
             assert body["capabilities"]["ocr"] is False and body["capabilities"]["passage"] is False
+            # A decoded image preview must never attest to absent OCR text.
+            locator = {"kind": "image", "frame": 1}
+            selected = client.post("/api/v1/readers/passage", json={**read_body(receipt), "locator": locator,
+                "original_sha256": body["original"]["sha256"], "expected_policy_revision": body["policy_revision"],
+                "expected_context_epoch": body["context_epoch"]})
+            assert selected.status_code == 422 and selected.json()["error"]["code"] == "reader_selection_unavailable"
+            continue
+        payload = body["payload"]
+        if payload["table"]:
+            grid = payload["table"]
+            row_number = grid["first_row"] + len(grid["rows"]) - 1
+            locator = {"kind": "table", "format": grid["format"], "sheet_name": grid["sheet_name"],
+                "first_row": row_number, "last_row": row_number, "first_column": 1,
+                "last_column": grid["total_columns"]}
+            expected_text = "\t".join(cell["display"] for cell in grid["rows"][-1])
+        else:
+            item = next((item for item in payload["blocks"] if item["kind"] == "table"), payload["blocks"][0])
+            locator, expected_text = item["locator"], item["text"]
+        selected = client.post("/api/v1/readers/passage", json={**read_body(receipt), "locator": locator,
+            "original_sha256": body["original"]["sha256"], "expected_policy_revision": body["policy_revision"],
+            "expected_context_epoch": body["context_epoch"]})
+        assert selected.status_code == 200, (filename, selected.text)
+        passage = selected.json()
+        assert passage["text"] == expected_text and passage["reference"]["locator"] == locator
+        assert passage["reference"]["target"] == receipt["reference"]["target"]
+        draft_text += "\n\n" + passage["text"]
+        draft_refs.append(passage["reference"])
+        merged = client.put(draft_url, json={"text": draft_text, "content_refs": draft_refs,
+            "expected_revision": chat["revision"]})
+        assert merged.status_code == 200, (filename, merged.text)
+        chat = services.get("conversations").get("learning", chat["identity"]["id"])
+        # Revoked model permission must remove passage authority, while the
+        # same retained original and inert reading remain available.
+        rights = own_text_rights().model_dump()
+        rights["model_input"] = False
+        services.db.execute("UPDATE knowledge_attachment_metadata SET rights_json=? WHERE attachment_id=?",
+            (json.dumps(rights), receipt["id"]))
+        restricted = client.post("/api/v1/readers/resolve", json=read_body(receipt))
+        assert restricted.status_code == 200 and not restricted.json()["capabilities"]["passage"]
+        assert client.post("/api/v1/readers/original", json=read_body(receipt)).content == data
+        denied = client.post("/api/v1/readers/passage", json={**read_body(receipt), "locator": locator,
+            "original_sha256": body["original"]["sha256"], "expected_policy_revision": body["policy_revision"],
+            "expected_context_epoch": body["context_epoch"]})
+        assert denied.status_code == 403 and denied.json()["error"]["code"] == "reader_passage_denied"
     listed = client.get("/api/v1/attachments/learning/" + chat["identity"]["id"])
     assert listed.status_code == 200 and len(listed.json()["items"]) == len(files)
     assert all(item["access"] == {"allowed": True} for item in listed.json()["items"])
+    assert services.db.fetch_one("SELECT COUNT(*) AS count FROM learn_messages WHERE thread_id=?",
+        (chat["identity"]["id"],))["count"] == 0
+    reopened = create_app(services.paths.root)
+    try:
+        other = TestClient(reopened)
+        for receipt, data, payload in retained:
+            assert other.post("/api/v1/readers/original", json=read_body(receipt)).content == data
+            result = other.post("/api/v1/readers/resolve", json=read_body(receipt))
+            assert result.status_code == 200 and result.json()["payload"] == payload
+            assert not result.json()["capabilities"]["passage"]
+        draft = other.get(draft_url)
+        assert draft.status_code == 200 and draft.json()["text"] == draft_text
+        assert draft.json()["content_refs"] == draft_refs and len(draft_refs) == 7
+    finally:
+        reopened.state.services.get("knowledge").index.close()
 
 
 def test_individual_delete_journals_locked_file_then_actual_startup_finishes_cleanup(app, monkeypatch):
