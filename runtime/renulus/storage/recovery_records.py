@@ -13,7 +13,7 @@ import sqlite3
 from ..contracts import ApiError
 from .backup import (SAFE_PREFERENCES, eligible_table, portable_records,
                      validate_record_row)
-from .recovery_archive import canonical_json, owned_path
+from .recovery_archive import canonical_json, owned_path, ORIGINAL_TABLES
 from .relations import PARENTS, TOMBSTONES, reconcile_unavailable_references
 
 
@@ -87,7 +87,7 @@ def validate_stream_row(name, row, table, limits, *, portable=False):
             raise ApiError("backup_limit", "A canonical identity/reference exceeds the format-2 graph bound", 413)
     if portable:
         for key, value in row.items():
-            if key.endswith("_path") and not (name == "knowledge_revisions" and key == "original_path") and value not in (None, ""):
+            if key.endswith("_path") and not (name in ORIGINAL_TABLES and key == "original_path") and value not in (None, ""):
                 raise ApiError("backup_path", "The backup contains a nonportable acquisition or engine path")
         if name == "knowledge_revisions" and row["extraction_json"] is not None:
             raise ApiError("backup_format", "Format 2 excludes derived structured extraction documents")
@@ -105,7 +105,7 @@ def line_for(row, limits):
 
 def _select(table, name):
     projection = ["NULL AS " + quoted(column) if column.endswith("_path") and not
-                  (name == "knowledge_revisions" and column == "original_path") or
+                  (name in ORIGINAL_TABLES and column == "original_path") or
                   name == "knowledge_revisions" and column == "extraction_json" else quoted(column)
                   for column in table.columns]
     where, parameters = "", ()
@@ -142,7 +142,7 @@ def snapshot_rows(conn, definitions, limits, *, paths=None):
         # before rowid; all other identities/active slots keep normal merge policy.
         for row in conn.execute(f'SELECT {",".join(projection)} FROM {quoted(name)}{where} ORDER BY rowid', parameters):
             copied = portable_records({name: [dict(row)]}, originals=True)[name][0]
-            if paths and name == "knowledge_revisions" and copied["original_path"]:
+            if paths and name in ORIGINAL_TABLES and copied["original_path"]:
                 try:
                     copied["original_path"] = Path(copied["original_path"]).relative_to(paths.root).as_posix()
                 except ValueError:
@@ -255,6 +255,14 @@ def apply_staged(conn, stage, definitions, limits, exported_at):
             removed_originals.append(dict(row))
             if len(removed_originals) > limits.originals:
                 raise ApiError("backup_limit", "Deleted target originals exceed the recovery file-count budget", 413)
+    if "knowledge_attachment_originals" in definitions:
+        for row in conn.execute("SELECT o.id,o.attachment_id,o.role,o.original_path,o.bytes,o.sha256,o.created_at,"
+                "a.chat_kind,a.chat_id,a.media_type FROM main.knowledge_attachment_originals AS o "
+                "JOIN main.knowledge_attachments AS a ON a.id=o.attachment_id "
+                f'WHERE o.original_path IS NOT NULL AND {blocked_condition(definitions["knowledge_attachment_originals"], "o")}'):
+            removed_originals.append(dict(row))
+            if len(removed_originals) > limits.originals:
+                raise ApiError("backup_limit", "Deleted target originals exceed the recovery file-count budget", 413)
     removed, inserted, excluded = 0, 0, 0
     for name, table in definitions.items():
         if name == "deletion_ledger":
@@ -272,6 +280,10 @@ def apply_staged(conn, stage, definitions, limits, exported_at):
             conflicts = [column for column in table.columns if column != "installed_at"]
         if name == "knowledge_revisions":
             conflicts, code = ["document_id", "sha256", "bytes", "media_type"], "backup_original_conflict"
+        if name == "knowledge_attachment_originals":
+            conflicts, code = ["attachment_id", "role", "sha256", "bytes"], "backup_original_conflict"
+        if name == "knowledge_attachments":
+            conflicts, code = ["chat_kind", "chat_id", "media_type"], "backup_original_conflict"
         if name in ('case_attachments', 'case_attachment_parts'):
             conflicts, code = list(table.columns), 'backup_case_original_conflict'
         if conflicts:
@@ -282,7 +294,7 @@ def apply_staged(conn, stage, definitions, limits, exported_at):
         columns = ",".join(map(quoted, table.columns))
         # Verified descriptors supply rebased original paths in the promotion
         # transaction. Portable archive paths are never installed as live paths.
-        selected = ",".join("NULL" if name == "knowledge_revisions" and column == "original_path"
+        selected = ",".join("NULL" if name in ORIGINAL_TABLES and column == "original_path"
                             else "source." + quoted(column) for column in table.columns)
         # Existing identities always win, including the target active bank slot.
         # INSERT OR IGNORE would conceal CHECK/NOT NULL/secondary-key corruption.

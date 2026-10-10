@@ -18,6 +18,8 @@ from .compatibility import convert_legacy_row
 from .recovery_archive import (BLOCK, FULL_FORMAT, _read_member, canonical_json,
                                descriptor_for, original_path, owned_path,
                                strict_json, validate_archive, verify_file)
+from .recovery_archive import (original_rows_in, original_row_in, validate_original_row,
+                               require_original_rights, validate_descriptor, ORIGINAL_TABLES)
 from .recovery_limits import SEGMENTED_LIMITS
 from .recovery_records import (check_workspace, copy_snapshot, insert_row,
                                installed_schema, line_for, prune_deleted, quoted,
@@ -40,13 +42,9 @@ def file_digest(path):
 
 def _originals(conn, services, limits):
     entries, total = [], 0
-    for row in conn.execute("SELECT r.*,d.scope_kind,d.deleted_at FROM knowledge_revisions r JOIN knowledge_documents d ON d.id=r.document_id WHERE r.original_path IS NOT NULL"):
-        if row["scope_kind"] != "personal-library" or row["deleted_at"]:
-            raise ApiError("backup_scope", "Only retained personal-library originals can be backed up")
+    for row in original_rows_in(conn):
         entry = descriptor_for(row, row["original_path"], limits)
-        rights = strict_json(row["rights_json"])
-        if not isinstance(rights, dict) or rights.get("cache") is not True or rights.get("display") is not True:
-            raise ApiError("backup_rights", "Original backup requires local caching and display permission", 403)
+        require_original_rights(row, code="backup_rights")
         original_path(services.paths, entry)
         total += entry["bytes"]
         entries.append(entry)
@@ -356,17 +354,11 @@ def _stage_record_rows(services, directory, records, *, exported_at, omissions, 
         for number, source_entry in enumerate(originals):
             if number >= limits.originals:
                 raise ApiError("backup_limit", "Selected originals exceed the format-2 count budget", 413)
-            if not isinstance(source_entry, dict) or set(source_entry) != {"path", "document_id", "revision_id", "bytes", "sha256", "staged"}:
+            if not isinstance(source_entry, dict) or "staged" not in source_entry:
                 raise ApiError("backup_manifest", "Select verified original descriptors with their owned staged paths")
             entry = {key: value for key, value in source_entry.items() if key != "staged"}
-            if any(not isinstance(entry[key], str) for key in ("path", "document_id", "revision_id", "sha256")) or type(entry["bytes"]) is not int:
-                raise ApiError("backup_manifest", "A selected original has invalid field types")
-            row = stage.execute("SELECT r.*,d.scope_kind,d.deleted_at FROM knowledge_revisions r JOIN knowledge_documents d ON d.id=r.document_id WHERE r.id=?", (entry["revision_id"],)).fetchone()
-            if not row or descriptor_for(row, entry["path"], limits) != entry or row["original_path"] != entry["path"]:
-                raise ApiError("backup_manifest", "A selected original is not bound to a retained canonical revision")
-            rights = strict_json(row["rights_json"])
-            if row["scope_kind"] != "personal-library" or row["deleted_at"] or not isinstance(rights, dict) or rights.get("cache") is not True or rights.get("display") is not True:
-                raise ApiError("backup_scope", "A selected original lacks retained Library scope or caching/display permission")
+            validate_descriptor(entry)
+            validate_original_row(original_row_in(stage, entry), entry, limits)
             original_path(services.paths, entry)
             if entry["path"] in declared:
                 raise ApiError("backup_duplicates", "Selected originals repeat a canonical file identity")
@@ -400,7 +392,8 @@ def _stage_record_rows(services, directory, records, *, exported_at, omissions, 
             selected.append({**entry, "staged": destination_path})
             if number % 32 == 0:
                 check_workspace(directory, limits)
-        if stage.execute("SELECT COUNT(*) FROM knowledge_revisions WHERE original_path IS NOT NULL").fetchone()[0] != len(selected):
+        if sum(stage.execute(f'SELECT COUNT(*) FROM "{table}" WHERE original_path IS NOT NULL').fetchone()[0]
+               for table in ORIGINAL_TABLES if table in definitions) != len(selected):
             raise ApiError("backup_manifest", "Selected canonical originals are missing their verified bytes")
     validate_staged_merge(services, stage_path, definitions, directory, limits, exported_at)
     return ValidatedRecordStage(directory, bundle, selected, stage_path, file_digest(stage_path), counts, size, limits)
@@ -462,15 +455,8 @@ def _stage_originals(services, archive, infos, manifest, stage, directory, limit
     verified.mkdir()
     originals, total = [], 0
     for index, entry in enumerate(entries):
-        if not isinstance(entry, dict) or set(entry) != {"path", "document_id", "revision_id", "bytes", "sha256"} or \
-                any(not isinstance(entry[key], str) for key in ("path", "document_id", "revision_id", "sha256")) or type(entry["bytes"]) is not int:
-            raise ApiError("backup_manifest", "An original descriptor has an invalid format")
-        row = stage.execute("SELECT r.*,d.scope_kind,d.deleted_at FROM knowledge_revisions r JOIN knowledge_documents d ON d.id=r.document_id WHERE r.id=?", (entry["revision_id"],)).fetchone()
-        if not row or descriptor_for(row, entry["path"], limits) != entry or row["original_path"] != entry["path"]:
-            raise ApiError("backup_manifest", "An original descriptor differs from its canonical revision")
-        rights = strict_json(row["rights_json"])
-        if row["scope_kind"] != "personal-library" or row["deleted_at"] or not isinstance(rights, dict) or rights.get("cache") is not True or rights.get("display") is not True:
-            raise ApiError("backup_scope", "An original lacks retained Library scope or caching/display permission")
+        validate_descriptor(entry)
+        validate_original_row(original_row_in(stage, entry), entry, limits)
         original_path(services.paths, entry)
         if entry["path"] in declared or entry["path"] not in infos:
             raise ApiError("backup_duplicates", "An original is duplicated or missing from the ZIP")
@@ -488,7 +474,8 @@ def _stage_originals(services, archive, infos, manifest, stage, directory, limit
             check_workspace(directory, limits)
     if declared != set(infos):
         raise ApiError("backup_manifest", "The ZIP contains files not bound by its manifest")
-    if stage.execute("SELECT COUNT(*) FROM knowledge_revisions WHERE original_path IS NOT NULL").fetchone()[0] != len(entries):
+    if sum(stage.execute(f'SELECT COUNT(*) FROM "{table}" WHERE original_path IS NOT NULL').fetchone()[0]
+           for table in ORIGINAL_TABLES if table in {row[0] for row in stage.execute("SELECT name FROM sqlite_master WHERE type='table'")}) != len(entries):
         raise ApiError("backup_manifest", "Canonical originals are missing from the manifest")
     return originals
 

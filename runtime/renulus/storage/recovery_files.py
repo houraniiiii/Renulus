@@ -12,6 +12,7 @@ import shutil
 from ..contracts import ApiError
 from .recovery_archive import (DEFAULT_LIMITS, ORIGINAL, canonical_json, original_path,
                                owned_path, strict_json, verify_file)
+from .recovery_archive import validate_descriptor
 from .recovery_limits import SEGMENTED_LIMITS
 
 TRANSACTIONS = "state/recovery/transactions"
@@ -47,7 +48,8 @@ class OriginalTransaction:
         self.entries = []
         for action, entries in (("promote", promotions), ("remove", removals)):
             for entry in entries:
-                descriptor = {key: entry[key] for key in ("path", "document_id", "revision_id", "bytes", "sha256")}
+                descriptor = {key: value for key, value in entry.items() if key != "staged"}
+                validate_descriptor(descriptor)
                 descriptor["action"] = action
                 if action == "promote":
                     descriptor["staged"] = entry["staged"].relative_to(self.paths.root).as_posix()
@@ -153,9 +155,11 @@ def recover_file_journals(services):
             raise ApiError("recovery_journal", "Recovery journal exceeds its versioned metadata bounds", 409)
         seen = set()
         for entry in data["entries"]:
-            if not isinstance(entry, dict) or set(entry) != ({"path", "document_id", "revision_id", "bytes", "sha256", "action"} |
-                    ({"staged"} if entry.get("action") == "promote" else set())) or \
-                    entry["action"] not in ("promote", "remove") or type(entry["bytes"]) is not int or \
+            if not isinstance(entry, dict) or entry.get("action") not in ("promote", "remove"):
+                raise ApiError("recovery_journal", "Recovery journal has an invalid original action", 409)
+            validate_descriptor({key: value for key, value in entry.items() if key not in {"action", "staged"}})
+            if ("staged" in entry) != (entry["action"] == "promote") or \
+                    type(entry["bytes"]) is not int or \
                     not 0 <= entry["bytes"] <= limits.original_bytes or \
                     not isinstance(entry["sha256"], str) or not re.fullmatch(r"[0-9a-f]{64}", entry["sha256"]):
                 raise ApiError("recovery_journal", "Recovery journal has an invalid original descriptor", 409)

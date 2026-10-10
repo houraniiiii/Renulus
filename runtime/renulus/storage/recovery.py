@@ -12,10 +12,12 @@ from ..contracts import ApiError
 from .backup import (apply_records, portable_records, record_references, records_only_bundle,
                      snapshot_omissions)
 from .database import utc_now
-from .relations import original_blocked
+from .relations import identity
 from .invalidation import invalidate_restored_context
 from .recovery_archive import (DEFAULT_LIMITS, backup_to, descriptor_for, original_path,
                                owned_path, strict_json, verify_file)
+from .recovery_archive import (ORIGINAL_TABLES, original_identity, original_rows,
+                               original_row_in, require_original_rights)
 from .recovery_files import OriginalTransaction, recover_file_journals, remove_owned_tree
 from .recovery_limits import SEGMENTED_LIMITS
 from .recovery_records import apply_staged, installed_schema
@@ -222,10 +224,11 @@ class Recovery:
         else:
             # Rebase only the explicit supported original column. Never use a source path.
             records = portable_records(bundle["records"], originals=True)
-            descriptors = {entry["revision_id"]: entry for entry in originals}
-            for row in records.get("knowledge_revisions", []):
-                entry = descriptors.get(row["id"])
-                row["original_path"] = str(original_path(self.services.paths, entry)) if entry else None
+            descriptors = {original_identity(entry): entry for entry in originals}
+            for table in ORIGINAL_TABLES:
+                for row in records.get(table, []):
+                    entry = descriptors.get((table, row["id"]))
+                    row["original_path"] = str(original_path(self.services.paths, entry)) if entry else None
             rebased = {**bundle, "records": records}
         with self.mutation():
             try:
@@ -238,29 +241,28 @@ class Recovery:
                         conn.execute("PRAGMA temp_store=FILE")
                         conn.execute("PRAGMA cache_size=-2048")
                         result, removed_revisions = apply_staged(conn, staged.stage, installed_schema(conn, limits), limits, bundle["exported_at"])
-                        current = {"knowledge_revisions": removed_revisions}
-                        def is_blocked(revision_id, document_id):
+                        removed_rows = removed_revisions
+                        def is_blocked(table, identifier):
                             return bool(conn.execute("SELECT 1 FROM temp.recovery_blocked WHERE "
-                                "(table_name='knowledge_revisions' AND identity=json_array(?)) OR "
-                                "(table_name='knowledge_documents' AND identity=json_array(?)) LIMIT 1",
-                                (revision_id, document_id)).fetchone())
+                                "table_name=? AND identity=json_array(?) LIMIT 1",
+                                (table, identifier)).fetchone())
                     else:
                         result, blocked, current = apply_records(conn, rebased)
-                        def is_blocked(revision_id, document_id):
-                            return original_blocked(revision_id, document_id, blocked)
+                        removed_rows = original_rows(current)
+                        def is_blocked(table, identifier):
+                            return identity(table, (identifier,)) in blocked
                     promotions, removals, restored = [], [], 0
                     for entry in originals:
                         # The union of newer target and imported markers is already applied.
-                        if is_blocked(entry["revision_id"], entry["document_id"]):
+                        table, original_id = original_identity(entry)
+                        if is_blocked(table, original_id):
                             continue
-                        row = conn.execute("SELECT * FROM knowledge_revisions WHERE id=?", (entry["revision_id"],)).fetchone()
+                        row = original_row_in(conn, entry)
                         if not row:
                             continue
-                        document = conn.execute("SELECT scope_kind,deleted_at FROM knowledge_documents WHERE id=?", (row["document_id"],)).fetchone()
-                        rights = strict_json(row["rights_json"])
-                        if not document or document["scope_kind"] != "personal-library" or document["deleted_at"] or \
-                                not isinstance(rights, dict) or rights.get("cache") is not True or rights.get("display") is not True:
-                            raise ApiError("backup_rights", "The target revision no longer permits this original's local caching and display; no records were restored", 409)
+                        require_original_rights(row, code="backup_rights")
+                        if descriptor_for(row, entry["path"], limits) != {key: value for key, value in entry.items() if key != "staged"}:
+                            raise ApiError("backup_original_conflict", "The target original differs from its verified descriptor", 409)
                         target = original_path(self.services.paths, entry)
                         if row["original_path"] not in (None, str(target)):
                             raise ApiError("backup_original_conflict", "An existing revision has a different original location", 409)
@@ -270,10 +272,11 @@ class Recovery:
                             verify_file(target, entry)
                         else:
                             promotions.append(entry)
-                        conn.execute("UPDATE knowledge_revisions SET original_path=? WHERE id=?", (str(target), entry["revision_id"]))
+                        conn.execute(f'UPDATE "{table}" SET original_path=? WHERE id=?', (str(target), original_id))
                         restored += 1
-                    for row in current.get("knowledge_revisions", []):
-                        if not row["original_path"] or not is_blocked(row["id"], row["document_id"]):
+                    for row in removed_rows:
+                        table = "knowledge_attachment_originals" if "attachment_id" in row.keys() else "knowledge_revisions"
+                        if not row["original_path"] or not is_blocked(table, row["id"]):
                             continue
                         try:
                             relative = Path(row["original_path"]).relative_to(self.services.paths.root).as_posix()

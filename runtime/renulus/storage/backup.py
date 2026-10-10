@@ -21,7 +21,7 @@ MAX_JSON_BYTES = 16 * 1024 * 1024
 SAFE_PREFIXES = ("content_", "learn_", "case_", "cases_", "assessment_",
                  "memory_", "study_", "knowledge_", "library_", "update_")
 COMMON_TABLES = {"learning_evidence", "deletion_ledger", "preferences", "conversation_commands"}
-SAFE_PREFERENCES = {"study.goals", "memory.enabled", "learn.teaching_style", "home.preferences"}
+SAFE_PREFERENCES = {"study.goals", "memory.enabled", "learn.teaching_style", "home.preferences", "nightly.preferences"}
 CATALOGUE_OMISSION = (
     "Acquisition catalogue is input metadata tied to external collection paths; "
     "retained library metadata remains in knowledge_documents and knowledge_revisions."
@@ -129,7 +129,7 @@ def portable_records(records, *, originals=False):
                 copied["extraction_json"] = None
             for key in copied:
                 if key.endswith("_path"):
-                    if originals and name == "knowledge_revisions" and key == "original_path":
+                    if originals and name in {"knowledge_revisions", "knowledge_attachment_originals"} and key == "original_path":
                         continue
                     copied[key] = "" if name == "knowledge_catalogue" else None
             result[name].append(copied)
@@ -302,6 +302,12 @@ def apply_records(conn, bundle):
             if existing and name == "knowledge_revisions" and any(
                     existing[key] != row[key] for key in ("document_id", "sha256", "bytes", "media_type")):
                 raise ApiError("backup_original_conflict", "A document revision differs from this profile; no records were restored", 409)
+            if existing and name == "knowledge_attachment_originals" and any(
+                    existing[key] != row[key] for key in ("attachment_id", "role", "sha256", "bytes")):
+                raise ApiError("backup_original_conflict", "An attachment original differs from this profile; no records were restored", 409)
+            if existing and name == "knowledge_attachments" and any(
+                    existing[key] != row[key] for key in ("chat_kind", "chat_id", "media_type")):
+                raise ApiError("backup_original_conflict", "An attachment belongs to a different owner; no records were restored", 409)
             if existing and name in ('case_attachments', 'case_attachment_parts') and any(
                     existing[key] != value for key, value in row.items()):
                 raise ApiError('backup_case_original_conflict', 'A saved case original differs from this profile; no records were restored', 409)

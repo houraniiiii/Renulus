@@ -24,10 +24,15 @@ from .relations import allow_row
 MIB = 1024 * 1024
 BLOCK = MIB
 FULL_FORMAT = "renulus-full-backup"
-ORIGINAL = re.compile(r"library/knowledge/(doc_[a-zA-Z0-9_-]{1,100})/(rev_[a-zA-Z0-9_-]{1,100})/original\.(pdf|png|jpg|jpeg|tif|tiff|txt|md|pptx|docx|xlsx)")
+EXTENSIONS = r"pdf|png|jpg|jpeg|tif|tiff|txt|md|pptx|docx|xlsx|csv|html|xml"
+LIBRARY_ORIGINAL = re.compile(r"library/knowledge/(doc_[a-zA-Z0-9_-]{1,100})/(rev_[a-zA-Z0-9_-]{1,100})/original\.(" + EXTENSIONS + r")")
+ATTACHMENT_ORIGINAL = re.compile(r"library/attachments/([a-zA-Z0-9_-]{1,128})/(original|preview)\.(" + EXTENSIONS + r")")
+ORIGINAL = re.compile(r"(?:" + LIBRARY_ORIGINAL.pattern + "|" + ATTACHMENT_ORIGINAL.pattern + r")")
+ORIGINAL_TABLES = {"knowledge_revisions", "knowledge_attachment_originals"}
 MEDIA = {"pdf": "application/pdf", "png": "image/png", "jpg": "image/jpeg",
          "jpeg": "image/jpeg", "tif": "image/tiff", "tiff": "image/tiff",
-         "txt": "text/plain", "md": "text/markdown",
+         "txt": "text/plain", "md": "text/markdown", "csv": "text/csv",
+         "html": "text/html", "xml": "application/xml",
          "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
          "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
          "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}
@@ -93,9 +98,14 @@ def owned_path(paths, relative):
 def original_path(paths, descriptor):
     if not isinstance(descriptor, dict) or not isinstance(descriptor.get("path"), str):
         raise ApiError("backup_path", "An original needs a safe relative library path")
-    match = ORIGINAL.fullmatch(descriptor["path"])
-    if not match or descriptor.get("document_id") != match[1] or descriptor.get("revision_id") != match[2]:
-        raise ApiError("backup_path", "An original is outside its document revision library")
+    if descriptor.get("kind") == "chat-attachment":
+        match = ATTACHMENT_ORIGINAL.fullmatch(descriptor["path"])
+        if not match or descriptor.get("attachment_id") != match[1]:
+            raise ApiError("backup_path", "An original is outside its attachment library")
+    else:
+        match = LIBRARY_ORIGINAL.fullmatch(descriptor["path"])
+        if not match or descriptor.get("document_id") != match[1] or descriptor.get("revision_id") != match[2]:
+            raise ApiError("backup_path", "An original is outside its document revision library")
     return owned_path(paths, descriptor["path"])
 
 
@@ -123,16 +133,99 @@ def verify_file(path, descriptor, *, unique=True):
 
 
 def descriptor_for(row, relative, limits=DEFAULT_LIMITS):
-    match = ORIGINAL.fullmatch(relative) if isinstance(relative, str) else None
-    if not match or row["document_id"] != match[1] or row["id"] != match[2] or \
-            row["media_type"] != MEDIA[match[3]]:
-        raise ApiError("backup_path", "The original path does not match its canonical document and media type")
+    if "attachment_id" in row.keys():
+        match = ATTACHMENT_ORIGINAL.fullmatch(relative) if isinstance(relative, str) else None
+        if not match or row["attachment_id"] != match[1] or row["role"] != match[2] or \
+                (row["role"] == "original" and row["media_type"] != MEDIA[match[3]]):
+            raise ApiError("backup_path", "The original path does not match its canonical attachment and media type")
+        result = {"kind": "chat-attachment", "path": relative, "original_id": row["id"],
+                  "attachment_id": row["attachment_id"], "chat_kind": row["chat_kind"], "chat_id": row["chat_id"]}
+    else:
+        match = LIBRARY_ORIGINAL.fullmatch(relative) if isinstance(relative, str) else None
+        if not match or row["document_id"] != match[1] or row["id"] != match[2] or \
+                row["media_type"] != MEDIA[match[3]]:
+            raise ApiError("backup_path", "The original path does not match its canonical document and media type")
+        result = {"path": relative, "revision_id": row["id"], "document_id": row["document_id"]}
     if type(row["bytes"]) is not int or not 0 <= row["bytes"] <= limits.original_bytes:
         raise ApiError("backup_limit", "An original exceeds the backup file size limit", 413)
     if not isinstance(row["sha256"], str) or not re.fullmatch(r"[0-9a-f]{64}", row["sha256"]):
         raise ApiError("backup_integrity", "An original needs an exact canonical SHA-256")
-    return {"path": relative, "revision_id": row["id"], "document_id": row["document_id"],
-            "bytes": row["bytes"], "sha256": row["sha256"]}
+    return {**result, "bytes": row["bytes"], "sha256": row["sha256"]}
+
+
+def descriptor_keys(entry):
+    return ({"kind", "path", "original_id", "attachment_id", "chat_kind", "chat_id", "bytes", "sha256"}
+            if entry.get("kind") == "chat-attachment" else {"path", "revision_id", "document_id", "bytes", "sha256"})
+
+
+def validate_descriptor(entry):
+    if not isinstance(entry, dict) or set(entry) != descriptor_keys(entry) or \
+            any(not isinstance(value, str) for key, value in entry.items() if key != "bytes") or \
+            type(entry["bytes"]) is not int:
+        raise ApiError("backup_manifest", "An original descriptor has an invalid format")
+    if entry.get("kind") == "chat-attachment" and entry["chat_kind"] not in {"learning", "case"}:
+        raise ApiError("backup_scope", "An attachment needs a canonical conversation owner")
+
+
+def original_identity(entry):
+    return (("knowledge_attachment_originals", entry["original_id"]) if entry.get("kind") == "chat-attachment"
+            else ("knowledge_revisions", entry["revision_id"]))
+
+
+def original_rows(records):
+    documents = {row["id"]: row for row in records.get("knowledge_documents", [])}
+    for row in records.get("knowledge_revisions", []):
+        document = documents.get(row["document_id"], {})
+        yield {**row, "scope_kind": document.get("scope_kind"), "deleted_at": document.get("deleted_at")}
+    attachments = {row["id"]: row for row in records.get("knowledge_attachments", [])}
+    metadata = {row["attachment_id"]: row for row in records.get("knowledge_attachment_metadata", [])}
+    owners = {"learning": {row["id"] for row in records.get("learn_threads", [])},
+              "case": {row["id"] for row in records.get("case_sessions", [])}}
+    for row in records.get("knowledge_attachment_originals", []):
+        parent, meta = attachments.get(row["attachment_id"], {}), metadata.get(row["attachment_id"], {})
+        yield {**row, "chat_kind": parent.get("chat_kind"), "chat_id": parent.get("chat_id"),
+               "media_type": parent.get("media_type"), "rights_json": meta.get("rights_json"),
+               "owner_exists": parent.get("chat_id") in owners.get(parent.get("chat_kind"), set())}
+
+
+def original_rows_in(conn):
+    yield from conn.execute("SELECT r.*,d.scope_kind,d.deleted_at FROM knowledge_revisions r "
+                           "JOIN knowledge_documents d ON d.id=r.document_id WHERE r.original_path IS NOT NULL")
+    if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='knowledge_attachment_originals'").fetchone():
+        yield from conn.execute("SELECT o.*,a.chat_kind,a.chat_id,a.media_type,m.rights_json,"
+            "CASE a.chat_kind WHEN 'learning' THEN EXISTS(SELECT 1 FROM learn_threads WHERE id=a.chat_id) "
+            "WHEN 'case' THEN EXISTS(SELECT 1 FROM case_sessions WHERE id=a.chat_id) ELSE 0 END AS owner_exists "
+            "FROM knowledge_attachment_originals o JOIN knowledge_attachments a ON a.id=o.attachment_id "
+            "LEFT JOIN knowledge_attachment_metadata m ON m.attachment_id=a.id WHERE o.original_path IS NOT NULL")
+
+
+def original_row_in(conn, entry):
+    table, identifier = original_identity(entry)
+    if table == "knowledge_revisions":
+        return conn.execute("SELECT r.*,d.scope_kind,d.deleted_at FROM knowledge_revisions r "
+            "JOIN knowledge_documents d ON d.id=r.document_id WHERE r.id=?", (identifier,)).fetchone()
+    return conn.execute("SELECT o.*,a.chat_kind,a.chat_id,a.media_type,m.rights_json,"
+        "CASE a.chat_kind WHEN 'learning' THEN EXISTS(SELECT 1 FROM learn_threads WHERE id=a.chat_id) "
+        "WHEN 'case' THEN EXISTS(SELECT 1 FROM case_sessions WHERE id=a.chat_id) ELSE 0 END AS owner_exists "
+        "FROM knowledge_attachment_originals o JOIN knowledge_attachments a ON a.id=o.attachment_id "
+        "LEFT JOIN knowledge_attachment_metadata m ON m.attachment_id=a.id WHERE o.id=?", (identifier,)).fetchone()
+
+
+def require_original_rights(row, *, code="backup_scope"):
+    if "attachment_id" in row.keys():
+        retained = row["chat_kind"] in {"learning", "case"} and row["owner_exists"]
+    else:
+        retained = row["scope_kind"] == "personal-library" and not row["deleted_at"]
+    rights = strict_json(row["rights_json"]) if row["rights_json"] else None
+    if not retained or not isinstance(rights, dict) or rights.get("cache") is not True or rights.get("display") is not True:
+        raise ApiError(code, "Original backup/restore requires a saved owner and local caching/display permission", 409)
+
+
+def validate_original_row(row, entry, limits):
+    validate_descriptor(entry)
+    if not row or descriptor_for(row, entry["path"], limits) != entry or row["original_path"] != entry["path"]:
+        raise ApiError("backup_manifest", "An original descriptor differs from its canonical owner and bytes")
+    require_original_rights(row)
 
 
 def backup_to(services, output, limits=DEFAULT_LIMITS):
@@ -151,14 +244,12 @@ def backup_to(services, output, limits=DEFAULT_LIMITS):
                 from .backup import primary_keys
                 keys = primary_keys(conn, name)
                 records[name] = [row for row in rows if allow_row(name, row, keys, blocked)]
-        documents = {row["id"]: row for row in records.get("knowledge_documents", [])}
         originals, total = [], 0
-        for row in records.get("knowledge_revisions", []):
+        paths_by_identity = {}
+        for row in original_rows(records):
             if not row["original_path"]:
                 continue
-            document = documents.get(row["document_id"])
-            if not document or document["scope_kind"] != "personal-library" or document["deleted_at"]:
-                raise ApiError("backup_scope", "Only retained personal-library originals can be backed up")
+            require_original_rights(row, code="backup_rights")
             source_path = Path(row["original_path"])
             try:
                 relative = source_path.relative_to(services.paths.root).as_posix()
@@ -167,12 +258,12 @@ def backup_to(services, output, limits=DEFAULT_LIMITS):
             descriptor = descriptor_for(row, relative, limits)
             source_path = original_path(services.paths, descriptor)
             verify_file(source_path, descriptor)
-            rights = strict_json(row["rights_json"])
-            if not isinstance(rights, dict) or rights.get("cache") is not True or rights.get("display") is not True:
-                raise ApiError("backup_rights", "Local caching and display permission are required for original backup", 403)
-            row["original_path"] = relative
+            paths_by_identity[original_identity(descriptor)] = relative
             originals.append(descriptor)
             total += descriptor["bytes"]
+        for table in ORIGINAL_TABLES:
+            for row in records.get(table, []):
+                row["original_path"] = paths_by_identity.get((table, row["id"]))
         if len(originals) > limits.originals or total > limits.total_original_bytes:
             raise ApiError("backup_limit", "The original count or expanded backup size exceeds this bounded backup", 413)
         bundle["records"], bundle["data_kind"] = records, "full-backup"
@@ -360,24 +451,16 @@ def validate_archive(services, directory, limits=DEFAULT_LIMITS, *, merge_valida
             entries = manifest["originals"]
             if not isinstance(entries, list) or len(entries) > limits.originals:
                 raise ApiError("backup_limit", "The backup has too many original files", 413)
-            revisions = {row["id"]: row for row in bundle["records"].get("knowledge_revisions", [])}
-            documents = {row["id"]: row for row in bundle["records"].get("knowledge_documents", [])}
+            rows_by_identity = {}
+            for row in original_rows(bundle["records"]):
+                table = "knowledge_attachment_originals" if "attachment_id" in row else "knowledge_revisions"
+                rows_by_identity[(table, row["id"])] = row
             declared, originals, total = {"manifest.json", "records.json"}, [], 0
             verified = directory / "verified"
             verified.mkdir()
             for index, entry in enumerate(entries):
-                if not isinstance(entry, dict) or set(entry) != {"path", "document_id", "revision_id", "bytes", "sha256"}:
-                    raise ApiError("backup_manifest", "The original-file manifest is invalid")
-                if any(not isinstance(entry[key], str) for key in ("path", "document_id", "revision_id", "sha256")) or type(entry["bytes"]) is not int:
-                    raise ApiError("backup_manifest", "The original-file descriptor has invalid field types")
-                row = revisions.get(entry.get("revision_id"))
-                if not row or descriptor_for(row, entry["path"], limits) != entry or row["original_path"] != entry["path"]:
-                    raise ApiError("backup_manifest", "An original does not match its canonical revision")
-                document = documents.get(entry["document_id"])
-                rights = strict_json(row["rights_json"])
-                if not document or document["scope_kind"] != "personal-library" or document["deleted_at"] or not isinstance(rights, dict) or \
-                        rights.get("cache") is not True or rights.get("display") is not True:
-                    raise ApiError("backup_scope", "The backup original lacks retained library scope or caching/display permission")
+                validate_descriptor(entry)
+                validate_original_row(rows_by_identity.get(original_identity(entry)), entry, limits)
                 original_path(services.paths, entry)
                 if entry["path"] in declared or entry["path"] not in infos:
                     raise ApiError("backup_duplicates", "An original is duplicated or missing from this ZIP")
@@ -393,12 +476,12 @@ def validate_archive(services, directory, limits=DEFAULT_LIMITS, *, merge_valida
                 originals.append({**entry, "staged": staged})
             if declared != set(infos):
                 raise ApiError("backup_manifest", "The ZIP contains files not declared by its manifest")
-            if {row["original_path"] for row in revisions.values() if row["original_path"]} != declared - {"manifest.json", "records.json"}:
+            if {row["original_path"] for row in rows_by_identity.values() if row["original_path"]} != declared - {"manifest.json", "records.json"}:
                 raise ApiError("backup_manifest", "Canonical originals are missing from the backup manifest")
             for name, rows in bundle["records"].items():
                 for row in rows:
                     if any(value not in (None, "") for key, value in row.items() if key.endswith("_path")
-                           and not (name == "knowledge_revisions" and key == "original_path")):
+                           and not (name in ORIGINAL_TABLES and key == "original_path")):
                         raise ApiError("backup_path", "The backup contains a nonportable acquisition or engine path")
             return ValidatedArchive(directory, bundle, originals)
     except (zipfile.BadZipFile, EOFError, zlib.error, struct.error, RuntimeError, NotImplementedError):

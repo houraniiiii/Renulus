@@ -63,7 +63,12 @@ def test_iterable_delivery_selection_reexports_exact_library_without_learner_sta
     restored = recovery.restore_preview(filtered["preview_token"], filtered["exported_at"], True)
     assert restored["restored_originals"] == 4 and restored["rebuild"]["status"] == "required"
     assert scratch.db.fetch_one("SELECT COUNT(*) AS n FROM learning_evidence")["n"] == 0
-    assert scratch.db.fetch_one("SELECT COUNT(*) AS n FROM preferences")["n"] == 0
+    # Restore creates only local invalidation markers; no learner preferences
+    # enter this selected delivery snapshot or the next exported archive.
+    assert scratch.db.fetch_all("SELECT key,value FROM preferences ORDER BY key") == [
+        {"key": "design_c.context_epoch", "value": "1"},
+        {"key": "knowledge.restore_dirty", "value": "true"},
+    ]
     assert scratch.db.fetch_one("SELECT COUNT(*) AS n FROM deletion_ledger")["n"] == 1
     directory, manifest = recovery.backup(format_version=2)
     try:
