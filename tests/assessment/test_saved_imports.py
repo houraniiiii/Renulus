@@ -342,6 +342,48 @@ def test_actual_json_restore_interrupts_foreign_epoch_collision_and_keeps_edits(
     assert transport.calls == []
 
 
+@pytest.mark.parametrize("format_version", [1, 2])
+def test_both_actual_zip_formats_restore_private_import_and_immutable_version(imports, tmp_path, format_version):
+    app, service, transport = imports
+    published = resolve_all(service, service.create(request("synthetic-zip-published")))
+    published = service.save(published["id"], command(published, "synthetic-zip-save"))
+    pending = service.create(request("synthetic-zip-running"))
+    service.db.execute("UPDATE assessment_test_imports SET state='running',context_epoch=5,call_count=1 WHERE id=?", (pending["id"],))
+    source = app.state.services
+    directory, manifest = source.get("data_recovery").backup(format_version=format_version)
+    assert manifest["format_version"] == format_version
+    data = (directory / "backup.zip").read_bytes()
+    destination = create_app(tmp_path / f"synthetic-import-zip-{format_version}")
+    services = destination.state.services
+    if "saved_imports" not in services.registry:
+        destination.include_router(create_router(services), prefix="/api/v1")
+    services.db.execute("INSERT INTO preferences VALUES('design_c.context_epoch','4',?)", (utc_now(),))
+    recovery = services.get("data_recovery")
+    identifier, upload = recovery.begin_preview()
+    keep = False
+    try:
+        (upload / "input.zip").write_bytes(data)
+        checked = recovery.complete_preview(identifier, upload)
+        keep = True
+    finally:
+        recovery.end_upload(upload, keep=keep)
+    recovery.restore_preview(checked["preview_token"], checked["exported_at"], True)
+    restored = services.get("saved_imports")
+    row = restored.read(pending["id"])
+    assert row["state"] == "failed" and row["error_code"] == "interrupted" and row["call_count"] == 1
+    assert row["candidates"] == pending["candidates"] and restored.original(pending["id"])["text"] == TEXT
+    assert services.db.fetch_one("SELECT value FROM preferences WHERE key='design_c.context_epoch'")["value"] == "5"
+    assert restored.read(published["id"])["result"] == published["result"]
+    version_id = published["result"]["version_id"]
+    setup = services.get("saved_tests").setup_version(version_id)
+    assert setup["can_start"] and setup["version"]["item_count"] == 2
+    with services.db.transaction() as conn:
+        version = services.get("saved_tests").pinned_version(conn, version_id)
+    assert version.items[0].correct_option_ids == ("a",)
+    assert version.origin == "imported" and version.review_quality == "personal"
+    assert not restored.tasks and transport.calls == []
+
+
 @pytest.mark.asyncio
 async def test_private_import_deletion_tombstone_blocks_restore_and_preserves_saved_version(imports, tmp_path):
     app, service, _ = imports
