@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, apiResponse, ApiError, isCancelled } from '../../platform/api';
 import { Button, ErrorState, LoadingState, Notice } from '../../ui';
-import type { ContentLocator, PassageDraft, ReaderProps } from '../../platform/designC';
+import type { ContentLocator, PassageDraft } from '../../platform/designC';
 import { studyHelpHeaders } from '../../platform/designC';
-import type { ReaderBlock, ReaderDocument } from './types';
+import { validLocator } from '../workspace/state';
+import type { ReaderBlock, ReaderDocument, ReaderProps } from './types';
 import './reader.css';
 
 /** Only trusted app code calls the API. Assets are decoded/rasterised PNGs. */
@@ -76,11 +77,19 @@ function TextBlock({ block, query }: { block: ReaderBlock; query: string }) {
   return <p {...attributes}>{content}</p>;
 }
 
+function safePosition(value: unknown): ContentLocator | null {
+  if (!validLocator(value)) return null;
+  if ((value.kind === 'pdf' && value.physical_page > 300) || (value.kind === 'image' && value.frame > 300)
+      || (value.kind === 'table' && value.first_row > 100000)) return null;
+  return value;
+}
+
 function ReaderSession(props: ReaderProps) {
   const { reference, conversation, onPassage, studyHelpContext } = props;
   const studyContext = JSON.stringify(studyHelpContext);
   const headers = studyHelpHeaders(studyHelpContext);
-  const locator = reference.locator;
+  const locator = safePosition(props.position) ?? safePosition(reference.locator);
+  const locatorKey = JSON.stringify(locator);
   const [page, setPage] = useState(locator?.kind === 'pdf' ? locator.physical_page : locator?.kind === 'image' ? locator.frame : 1);
   const [sheet, setSheet] = useState(locator?.kind === 'table' ? locator.sheet_name ?? undefined : undefined);
   const [firstRow, setFirstRow] = useState(locator?.kind === 'table' ? locator.first_row : 1);
@@ -98,6 +107,32 @@ function ReaderSession(props: ReaderProps) {
   const download = useRef<string | null>(null);
   const [originalUrl, setOriginalUrl] = useState<string>();
   const [loadedKey, setLoadedKey] = useState<string>();
+  const content = useRef<HTMLElement>(null);
+  const lastPosition = useRef<string | undefined>(undefined);
+  const lastPositionLoad = useRef<string | undefined>(undefined);
+  const positionCallback = useRef(props.onPositionChange);
+  positionCallback.current = props.onPositionChange;
+
+  function emitPosition(position: ContentLocator) {
+    const safe = safePosition(position);
+    if (!safe || !positionCallback.current || props.signal?.aborted) return;
+    const key = JSON.stringify(safe);
+    if (lastPosition.current === key) return;
+    // A cell/text interaction can precede the preview's passive effect. Do not
+    // let that effect replace the user's new location with the window default.
+    if (document && loadedKey === requestKey) lastPositionLoad.current = loadedKey + ':' + document.original.sha256;
+    lastPosition.current = key;
+    positionCallback.current(safe);
+  }
+
+  useEffect(() => {
+    // Workspace echoes emitted positions; an echo must not jump a selected cell
+    // or trigger another request. A genuinely restored location hydrates state.
+    if (locatorKey === lastPosition.current) return;
+    setPage(locator?.kind === 'pdf' ? locator.physical_page : locator?.kind === 'image' ? locator.frame : 1);
+    setSheet(locator?.kind === 'table' ? locator.sheet_name ?? undefined : undefined);
+    setFirstRow(locator?.kind === 'table' ? locator.first_row : 1);
+  }, [locatorKey]);
   useEffect(() => {
     const controller = new AbortController();
     setError(undefined); setSelection(null); setLoadedKey(undefined); setBusy(false); setActionError(undefined);
@@ -107,6 +142,29 @@ function ReaderSession(props: ReaderProps) {
     }).catch(caught => { if (!controller.signal.aborted && !isCancelled(caught)) setError(caught); });
     return () => controller.abort();
   }, [requestKey, retry, studyContext]);
+  useEffect(() => {
+    if (!document || loadedKey !== requestKey || !document.payload || props.signal?.aborted) return;
+    const payload = document.payload;
+    const textPosition = locator?.kind === 'text' && payload.blocks.some(block =>
+      block.item_ref === locator.item_ref && locator.end <= Array.from(block.text).length) ? locator : null;
+    if (textPosition && locatorKey !== lastPosition.current) {
+      const block = Array.from(content.current?.querySelectorAll<HTMLElement>('[data-reader-block]') ?? [])
+        .find(element => element.dataset.readerBlock === textPosition.item_ref);
+      block?.scrollIntoView?.({ block: 'start' });
+    }
+    const load = loadedKey + ':' + document.original.sha256;
+    if (lastPositionLoad.current === load || !positionCallback.current) return;
+    let next: ContentLocator | null = null;
+    if (payload.kind === 'pdf' && payload.page != null) next = { kind: 'pdf', physical_page: payload.page };
+    else if (payload.kind === 'image' && payload.page != null) next = { kind: 'image', frame: payload.page };
+    else if (payload.table && payload.table.rows.length > 0 && payload.table.total_columns > 0) {
+      const table = payload.table;
+      next = { kind: 'table', format: table.format, sheet_name: table.sheet_name,
+        first_row: table.first_row, last_row: table.first_row + table.rows.length - 1,
+        first_column: 1, last_column: table.total_columns };
+    } else if (payload.kind === 'text') next = textPosition ?? safePosition(payload.blocks[0]?.locator);
+    if (next && safePosition(next)) { lastPositionLoad.current = load; emitPosition(next); }
+  }, [document, loadedKey, requestKey, locatorKey, props.onPositionChange, props.signal]);
   useEffect(() => () => {
     pendingAction.current?.abort();
     if (download.current) URL.revokeObjectURL(download.current);
@@ -153,15 +211,17 @@ function ReaderSession(props: ReaderProps) {
     const end = start + Array.from(range.toString()).length;
     const itemRef = blockElement.dataset.readerItem;
     const item = document?.payload?.blocks.find(item => item.item_ref === itemRef);
-    if (item && end > start && end <= Array.from(item.text).length) setSelection({ kind: 'text', item_ref: item.item_ref, start, end });
-    else setSelection(null);
+    if (item && end > start && end <= Array.from(item.text).length) {
+      const position: ContentLocator = { kind: 'text', item_ref: item.item_ref, start, end };
+      setSelection(position); emitPosition(position);
+    } else setSelection(null);
   }
 
   if (error) return <ErrorState title="The source could not be opened" error={error} onRetry={() => setRetry(value => value + 1)} />;
   if (!document || loadedKey !== requestKey) return <LoadingState label="Opening source" />;
   const payload = document.payload;
   const table = payload?.table;
-  return <section className="reader" aria-label="Document reader">
+  return <section ref={content} className="reader" aria-label="Document reader">
     <header className="reader-header"><h2>{document.title}</h2><div className="reader-tools">
       {originalUrl ? <a className="button button-secondary" href={originalUrl} download={document.original.filename}>Save original</a> :
         <Button variant="secondary" busy={busy} onClick={() => void prepareOriginal()}>Prepare original download</Button>}
@@ -192,13 +252,21 @@ function ReaderSession(props: ReaderProps) {
         {Array.from({ length: table.total_columns }, (_, index) => <th scope="col" key={index}>Column {index + 1}</th>)}</tr></thead>
         <tbody>{table.rows.map((row, offset) => <tr key={firstRow + offset}><th scope="row">{firstRow + offset}</th>{row.map((cell, column) => <td key={column}>
           <button className="reader-cell" title={cell.formula ? cell.formula + (cell.cached ? '' : ' · no cached result') : cell.number_format ?? undefined}
-            onClick={() => setSelection({ kind: 'table', format: table.format, sheet_name: table.sheet_name,
-              first_row: firstRow + offset, last_row: firstRow + offset, first_column: column + 1, last_column: column + 1 })}>
+            onClick={() => {
+              const position: ContentLocator = { kind: 'table', format: table.format, sheet_name: table.sheet_name,
+                first_row: firstRow + offset, last_row: firstRow + offset, first_column: column + 1, last_column: column + 1 };
+              setSelection(position); emitPosition(position);
+            }}>
             <Highlight text={cell.display} query={query} /></button></td>)}</tr>)}</tbody></table></div>
     </>}
     {!!payload?.blocks.length && <div className="reader-content" onMouseUp={captureSelection} onKeyUp={captureSelection}>
       {payload.blocks.map(item => item.kind === 'image' && item.asset_id ? <Asset key={item.item_ref} assetId={item.asset_id} request={request} sha256={document.original.sha256} zoom={1} studyHelpContext={studyHelpContext} /> :
-        <div className="reader-block" key={item.item_ref}><TextBlock block={item} query={query} />
+        <div className="reader-block" data-reader-block={item.item_ref} key={item.item_ref}
+          onClick={() => {
+            if (window.getSelection()?.isCollapsed === false) return;
+            const position = safePosition(item.locator); if (position) emitPosition(position);
+          }}>
+          <TextBlock block={item} query={query} />
           {onPassage && document.capabilities.passage && item.text.length > 0 && Array.from(item.text).length <= 8000 && <Button variant="ghost" disabled={busy}
             onClick={() => void discuss({ kind: 'text', item_ref: item.item_ref, start: 0, end: Array.from(item.text).length })}>Discuss this passage</Button>}</div>)}
     </div>}

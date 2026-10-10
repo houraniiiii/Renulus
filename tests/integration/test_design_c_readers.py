@@ -35,6 +35,72 @@ def saved_source(app, tmp_path, filename, data):
     return {"target": {"type": "library_revision", "id": result["revision_id"]}}
 
 
+@pytest.mark.parametrize("format", ["csv", "xlsx", "pdf"])
+def test_saved_reader_location_reopens_actual_original_at_page_or_table_window(reader_app, tmp_path, format):
+    from io import BytesIO
+
+    if format == "csv":
+        data = b"".join(f"SYNTHETIC row {row},value {row}\n".encode() for row in range(1, 251))
+    elif format == "xlsx":
+        from openpyxl import Workbook
+        workbook = Workbook(); workbook.active.title = "SYNTHETIC CKD"
+        selected = workbook.create_sheet("SYNTHETIC Transplant")
+        for row in range(1, 251):
+            selected.append([f"SYNTHETIC row {row}", f"value {row}"])
+        buffer = BytesIO(); workbook.save(buffer); data = buffer.getvalue(); workbook.close()
+    else:
+        import pypdfium2 as pdfium
+        document = pdfium.PdfDocument.new()
+        for _ in range(5):
+            document.new_page(240, 100).close()
+        buffer = BytesIO(); document.save(buffer); data = buffer.getvalue(); document.close()
+    reference = saved_source(reader_app, tmp_path, "SYNTHETIC-location." + format, data)
+    client = TestClient(reader_app)
+    chat = client.post("/api/v1/conversations", json={"kind": "learning"})
+    assert chat.status_code in (200, 201), chat.text
+    position = {"kind": "pdf", "physical_page": 3} if format == "pdf" else {
+        "kind": "table", "format": format, "sheet_name": "SYNTHETIC Transplant" if format == "xlsx" else None,
+        "first_row": 101, "last_row": 200, "first_column": 1, "last_column": 2}
+    preferences = {"width": 480, "tabs": [{"context": chat.json()["identity"], "retention": "saved",
+        "content": reference, "position": position}]}
+    saved = client.put("/api/v1/workspace/preferences", json=preferences)
+    assert saved.status_code == 200, saved.text
+    reopened_app = create_app(tmp_path / "synthetic-reader-profile")
+    reopened = TestClient(reopened_app)
+    restored = reopened.get("/api/v1/workspace/preferences")
+    assert restored.status_code == 200 and restored.json() == saved.json()
+    tab = restored.json()["tabs"][0]; locator = tab["position"]
+    assert set(tab) == {"content", "context", "retention", "position"}
+    assert "original_path" not in restored.text and str(tmp_path) not in restored.text
+    # Same mapping as the production Reader, now against saved SQLite and real parsers.
+    request = {"reference": tab["content"], "conversation": tab["context"]}
+    if locator["kind"] == "pdf":
+        request["page"] = locator["physical_page"]
+    else:
+        request.update(first_row=locator["first_row"], sheet=locator["sheet_name"])
+    opened = reopened.post("/api/v1/readers/resolve", json=request)
+    assert opened.status_code == 200, opened.text
+    body = opened.json(); payload = body["payload"]
+    assert body["preview_state"] == "ready" and body["original"]["sha256"] == hashlib.sha256(data).hexdigest()
+    if format == "pdf":
+        assert payload["page"] == 3 and payload["pages"] == 5
+        asset = reopened.post("/api/v1/readers/asset", json={**request, "asset_id": payload["asset_id"],
+            "original_sha256": body["original"]["sha256"]})
+        assert asset.status_code == 200 and asset.content.startswith(b"\x89PNG\r\n\x1a\n")
+    else:
+        table = payload["table"]
+        assert table["format"] == format and table["first_row"] == 101 and table["total_rows"] == 250
+        assert table["rows"][0][0]["display"] == "SYNTHETIC row 101"
+        assert table["rows"][-1][1]["display"] == "value 200"
+        assert table["sheet_name"] == position["sheet_name"]
+    # A saved location grants no authority when current display rights are revoked.
+    rights = own_text_rights().model_dump(); rights["display"] = False
+    reopened_app.state.services.db.execute("UPDATE knowledge_revisions SET rights_json=? WHERE id=?",
+        (json.dumps(rights), reference["target"]["id"]))
+    assert reopened.post("/api/v1/readers/resolve", json=request).status_code == 403
+    assert reopened.get("/api/v1/workspace/preferences").json() == saved.json()
+
+
 def test_queued_then_failed_original_reads_and_bounded_passage_use_actual_router(reader_app, tmp_path):
     reference = saved_source(reader_app, tmp_path, "SYNTHETIC.md", b"# SYNTHETIC AKI\n\nStudy reversible causes.")
     client = TestClient(reader_app)  # No lifespan: no background extraction/provider jobs.

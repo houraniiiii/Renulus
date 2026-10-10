@@ -1,4 +1,11 @@
-import type { ContentLocator, ContentReference } from '../../platform/designC';
+import type { ContentLocator, ContentReference, ReaderProps as SharedReaderProps } from '../../platform/designC';
+
+/** Workspace supplies these optional reading positions; no paths or pixel offsets. */
+export interface ReaderProps extends SharedReaderProps {
+  position?: ContentLocator | null;
+  onPositionChange?: (position: ContentLocator | null) => void;
+  signal?: AbortSignal;
+}
 
 export interface ReaderBlock {
   kind: 'paragraph' | 'heading' | 'list_item' | 'code' | 'image' | 'table';
