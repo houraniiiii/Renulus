@@ -451,3 +451,220 @@ async def test_actual_json_restore_invalidates_active_and_orphaned_jobs_without_
     assert result["state"] == "failed" and result["error_code"] == "generation_context_changed"
     assert service.db.fetch_one("SELECT state FROM assessment_test_jobs WHERE id=?", (row["id"],))["state"] == "failed"
     assert service.tasks == {} and len(transport.calls) == 1
+
+
+class BoundaryNightlyGuard:
+    """External owner boundary only; scheduler eligibility needs its connected suite."""
+    def __init__(self):
+        self.calls = []
+        self.denied = False
+        self.stop_after = None
+
+    def require_publication(self, conn, row):
+        assert conn.in_transaction and row["operation"] == "nightly_test"
+        self.calls.append((row["state"], row["validated_count"]))
+        if self.denied or self.stop_after is not None and row["validated_count"] >= self.stop_after:
+            raise ApiError("nightly_ineligible", "Synthetic owner revoked publication", 409)
+
+
+def nightly_request(**values):
+    return CreateGenerationRequest(idempotency_key="nightly:2026-10-10", title="Synthetic nightly practice", **values)
+
+
+def nightly_schedule():
+    return {"day": "2026-10-10", "timezone": "Europe/Warsaw", "preferences_revision": 1,
+            "home_settings_revision": 1, "eligibility_token": "synthetic-nightly-eligibility"}
+
+
+@pytest.fixture
+def nightly_boundary(generation):
+    app, service, transport = generation
+    guard = BoundaryNightlyGuard()
+    app.state.services.registry["nightly"] = guard
+    return app, service, transport, guard
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("count", [5, 10, 20])
+async def test_trusted_nightly_boundary_batches_publish_actual_personal_versions(nightly_boundary, count):
+    app, service, transport, guard = nightly_boundary
+    rows = await asyncio.gather(*(service.create_nightly(nightly_request(count=count), schedule=nightly_schedule()) for _ in range(4)))
+    identifier = rows[0]["id"]
+    assert len({row["id"] for row in rows}) == 1
+    result = await finish(service, identifier)
+    assert result["state"] == "published", result
+    stored = service.db.fetch_one("SELECT * FROM assessment_test_jobs WHERE id=?", (identifier,))
+    assert stored["operation"] == "nightly_test"
+    assert json.loads(stored["checkpoint_json"])["nightly"] == nightly_schedule()
+    assert len(transport.calls) == count // 5
+    assert guard.calls.count(("running", count)) >= 2, "Final publication rechecks the guard inside its transaction"
+    with service.db.transaction() as conn:
+        version = app.state.services.get("saved_tests").pinned_version(conn, result["result"]["version_id"])
+    assert version.item_count == count and version.origin == "nightly"
+    assert version.provenance.method == "nightly" and version.provenance.job_id == identifier
+    assert version.review_quality == "personal" and not version.bank_cohort_eligible
+    assert service.list_jobs()["items"] == [result]
+    assert await service.create_nightly(nightly_request(count=count), schedule=nightly_schedule()) == result
+    assert len(transport.calls) == count // 5
+    assert not any(key in json.dumps(result) for key in ("PRIVATE_", "eligibility_token", "checkpoint_json", "correct_option_ids"))
+
+
+@pytest.mark.asyncio
+async def test_nightly_missing_or_denied_owner_rolls_back_and_published_replay_remains_safe(generation):
+    app, service, transport = generation
+    with pytest.raises(ApiError) as error:
+        await service.create_nightly(nightly_request(), schedule=nightly_schedule())
+    assert error.value.code == "nightly_unavailable"
+    assert service.db.fetch_all("SELECT id FROM assessment_test_jobs") == [] and transport.calls == []
+    guard = BoundaryNightlyGuard()
+    app.state.services.registry["nightly"] = guard
+    guard.denied = True
+    with pytest.raises(ApiError) as error:
+        await service.create_nightly(nightly_request(), schedule=nightly_schedule())
+    assert error.value.code == "nightly_ineligible"
+    assert service.db.fetch_all("SELECT id FROM assessment_test_jobs") == [] and transport.calls == []
+    guard.denied = False
+    row = await service.create_nightly(nightly_request(), schedule=nightly_schedule())
+    published = await finish(service, row["id"])
+    guard.denied = True
+    assert await service.create_nightly(nightly_request(), schedule=nightly_schedule()) == published
+    assert len(transport.calls) == 1
+    assert service.read(row["id"])["state"] == "published", "Safe existing progress remains readable after disable"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("change", ["extra", "missing", "date", "revision", "key", "topic", "source"])
+async def test_nightly_trusted_checkpoint_exact_shape_and_reserved_renderer_keys(nightly_boundary, change):
+    _, service, transport, _ = nightly_boundary
+    schedule, values = nightly_schedule(), {}
+    if change == "extra":
+        schedule["prompt"] = "RAW_TEMPORARY_SENTINEL"
+    elif change == "missing":
+        del schedule["eligibility_token"]
+    elif change == "date":
+        schedule["day"] = "2026-02-30"
+    elif change == "revision":
+        schedule["preferences_revision"] = True
+    elif change == "key":
+        schedule["day"] = "2026-10-11"
+    elif change == "topic":
+        values["topic_id"] = "T01"
+    else:
+        values["source_refs"] = [{"target": {"type": "library_revision", "id": "synthetic-source"}}]
+    with pytest.raises(ApiError) as error:
+        await service.create_nightly(nightly_request(**values), schedule=schedule)
+    assert error.value.code == "invalid_request"
+    with pytest.raises(ApiError) as error:
+        await service.create(nightly_request())
+    assert error.value.code == "invalid_request"
+    assert service.db.fetch_all("SELECT id FROM assessment_test_jobs") == [] and transport.calls == []
+
+
+@pytest.mark.asyncio
+async def test_nightly_guard_revocation_stops_waiting_stream_without_next_chunk(nightly_boundary):
+    _, service, transport, guard = nightly_boundary
+    transport.release = asyncio.Event()
+    row = await service.create_nightly(nightly_request(), schedule=nightly_schedule())
+    await asyncio.wait_for(transport.started.wait(), timeout=5)
+    guard.denied = True
+    await asyncio.wait_for(service.tasks[row["id"]], timeout=3)
+    result = service.read(row["id"])
+    assert result["state"] == "failed" and result["error_code"] == "nightly_ineligible"
+    assert not result["can_retry"] and result["validated_count"] == 0
+    assert len(transport.calls) == 1 and service.db.fetch_all("SELECT id FROM assessment_test_versions") == []
+
+
+@pytest.mark.asyncio
+async def test_nightly_guard_before_second_batch_retains_validated_work(nightly_boundary):
+    _, service, transport, guard = nightly_boundary
+    guard.stop_after = 5
+    row = await service.create_nightly(nightly_request(count=10), schedule=nightly_schedule())
+    result = await finish(service, row["id"])
+    assert result["state"] == "failed" and result["validated_count"] == 5
+    assert len(transport.calls) == 1 and service.db.fetch_all("SELECT id FROM assessment_test_versions") == []
+
+
+@pytest.mark.asyncio
+async def test_nightly_guard_in_final_publication_transaction_refuses_late_revocation(nightly_boundary, monkeypatch):
+    _, service, transport, guard = nightly_boundary
+    publish = service._publish
+    def revoked(conn, row, checkpoint, **kwargs):
+        guard.denied = True
+        return publish(conn, row, checkpoint, **kwargs)
+    monkeypatch.setattr(service, "_publish", revoked)
+    row = await service.create_nightly(nightly_request(), schedule=nightly_schedule())
+    result = await finish(service, row["id"])
+    assert result["state"] == "failed" and result["validated_count"] == 5
+    assert result["error_code"] == "nightly_ineligible"
+    assert service.db.fetch_all("SELECT id FROM assessment_tests") == []
+    assert service.db.fetch_all("SELECT id FROM assessment_test_versions") == [] and len(transport.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_nightly_explicit_shorter_and_action_replay_recheck_owner(nightly_boundary):
+    _, service, transport, guard = nightly_boundary
+    transport.responses = [batch(count=2)]
+    row = await service.create_nightly(nightly_request(), schedule=nightly_schedule())
+    result = await finish(service, row["id"])
+    assert result["state"] == "needs_review" and result["validated_count"] == 2
+    assert service.db.fetch_all("SELECT id FROM assessment_test_versions") == []
+    guard.denied = True
+    for operation, action in (("retry", GenerationAction(idempotency_key="synthetic-nightly-retry")),
+                              ("accept_shorter", AcceptShorterRequest(idempotency_key="synthetic-nightly-short", accepted_count=2))):
+        with pytest.raises(ApiError) as error:
+            await service.action(row["id"], operation, action)
+        assert error.value.code == "nightly_ineligible"
+    guard.denied = False
+    action = AcceptShorterRequest(idempotency_key="synthetic-nightly-short", accepted_count=2)
+    accepted = await service.action(row["id"], "accept_shorter", action)
+    assert accepted["state"] == "published" and accepted["effective_count"] == 2
+    guard.denied = True
+    assert await service.action(row["id"], "accept_shorter", action) == accepted
+    assert len(transport.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_nightly_cancel_remains_neutral_during_test_and_owner_disable(nightly_boundary):
+    _, service, transport, guard = nightly_boundary
+    transport.release = asyncio.Event()
+    row = await service.create_nightly(nightly_request(), schedule=nightly_schedule())
+    await asyncio.wait_for(transport.started.wait(), timeout=5)
+    guard.denied = True
+    stamp = utc_now()
+    service.db.execute("INSERT INTO assessment_test_attempts(id,version_id,version_snapshot_json,mode,clock_high_water_at,created_at,updated_at) "
+        "VALUES('synthetic-active-test','synthetic-version','{}','test',?,?,?)", (stamp, stamp, stamp))
+    action = GenerationAction(idempotency_key="synthetic-nightly-neutral-cancel")
+    assert await service.action(row["id"], "cancel", action) == {"id": row["id"], "state": "cancelled"}
+    assert await service.action(row["id"], "cancel", action) == {"id": row["id"], "state": "cancelled"}
+    with pytest.raises(ApiError) as error:
+        service.read(row["id"])
+    assert error.value.code == "assistance_restricted"
+    assert service.services.get("provider").status()["active_runs"] == []
+    assert len(transport.calls) == 1 and service.db.fetch_all("SELECT id FROM assessment_test_versions") == []
+
+
+@pytest.mark.asyncio
+async def test_nightly_restart_and_actual_restore_never_replay_provider(nightly_boundary):
+    app, service, transport, _ = nightly_boundary
+    transport.release = asyncio.Event()
+    row = await service.create_nightly(nightly_request(), schedule=nightly_schedule())
+    await asyncio.wait_for(transport.started.wait(), timeout=5)
+    bundle = export_records(app.state.services)
+    recovery = app.state.services.get("data_recovery")
+    recovery.restore_json(bundle, confirm_backup_date=True, confirmed_exported_at=bundle["exported_at"])
+    result = service.read(row["id"])
+    assert result["state"] == "failed" and result["error_code"] == "interrupted"
+    assert not result["can_retry"]
+    await asyncio.wait_for(service.tasks[row["id"]], timeout=3)
+    service.db.execute("DELETE FROM assessment_test_jobs WHERE id=?", (row["id"],))
+    recovery.restore_json(bundle, confirm_backup_date=True, confirmed_exported_at=bundle["exported_at"])
+    assert service.list_jobs()["items"][0]["error_code"] == "interrupted"
+    assert service.tasks == {} and len(transport.calls) == 1
+    for state in ("queued", "running"):
+        service.db.execute("UPDATE assessment_test_jobs SET state=? WHERE id=?", (state, row["id"]))
+        restarted = SavedGenerationService(app.state.services)
+        restarted.recover()
+        result = restarted.read(row["id"])
+        assert result["state"] == "failed" and result["error_code"] == "interrupted"
+        assert restarted.tasks == {} and len(transport.calls) == 1
+    assert service.db.fetch_all("SELECT id FROM assessment_test_versions") == []

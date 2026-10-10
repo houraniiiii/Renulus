@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: MIT
 """Saved-input generation intent; renderer text cannot attest retention or review."""
+from datetime import date
 from typing import Annotated, Literal
 
-from pydantic import Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from renulus.design_c_contracts import ContentReference, EligibleInput, Identifier
 from .contracts import Command
@@ -24,6 +25,22 @@ class CreateGenerationRequest(Command):
         if len({entry.target.key for entry in self.source_refs}) != len(self.source_refs):
             raise ValueError("Select each source revision once")
         return self
+
+
+class NightlySchedule(BaseModel):
+    """Trusted scheduler checkpoint; never accepted by the renderer create API."""
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    day: Annotated[str, Field(strict=True, pattern=r"^\d{4}-\d{2}-\d{2}$")]
+    timezone: Annotated[str, Field(strict=True, min_length=1, max_length=128)]
+    preferences_revision: Annotated[int, Field(strict=True, ge=1)]
+    home_settings_revision: Annotated[int, Field(strict=True, ge=1)]
+    eligibility_token: Annotated[str, Field(strict=True, min_length=1, max_length=128)]
+
+    @field_validator("day")
+    @classmethod
+    def valid_day(cls, value):
+        date.fromisoformat(value)
+        return value
 
 
 class GenerationAction(Command):

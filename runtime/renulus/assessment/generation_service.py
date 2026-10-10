@@ -9,6 +9,8 @@ import re
 from types import SimpleNamespace
 import unicodedata
 
+from pydantic import ValidationError
+
 from renulus.contracts import ApiError, ContextScope, Scope, durable_id
 from renulus.design_c_contracts import (
     ContentReference, Job, QuestionSnapshot, SavedTestVersion, canonical_digest,
@@ -19,7 +21,7 @@ from renulus.storage.invalidation import context_epoch_in
 from renulus.storage.relations import TOMBSTONES
 from .generated_contracts import GeneratedBatch
 from .generated_streaming import SYSTEM, citation, retrieve
-from .generation_models import CreateGenerationRequest
+from .generation_models import CreateGenerationRequest, NightlySchedule
 
 MAX_CALLS = 12
 MAX_RECEIPTS = 40
@@ -57,7 +59,7 @@ class SavedGenerationService:
     def recover(self):
         # Never repeat model work on startup, restore or a progress GET.
         self.db.execute("UPDATE assessment_test_jobs SET state='failed',error_code='interrupted',updated_at=? "
-            "WHERE operation='generate_test' AND state IN ('queued','running')", (utc_now(),))
+            "WHERE operation IN ('generate_test','nightly_test') AND state IN ('queued','running')", (utc_now(),))
 
     def _route(self):
         status = self.services.get("provider").status()
@@ -125,7 +127,7 @@ class SavedGenerationService:
 
     @staticmethod
     def _row(conn, identifier):
-        row = conn.execute("SELECT * FROM assessment_test_jobs WHERE id=? AND operation='generate_test'", (identifier,)).fetchone()
+        row = conn.execute("SELECT * FROM assessment_test_jobs WHERE id=? AND operation IN ('generate_test','nightly_test')", (identifier,)).fetchone()
         if row is None:
             raise ApiError("not_found", "This generation job is unavailable", 404)
         if conn.execute("SELECT 1 FROM deletion_ledger WHERE entity_type='job' AND entity_id=?", (identifier,)).fetchone():
@@ -146,9 +148,32 @@ class SavedGenerationService:
             raise ApiError("generation_checkpoint_limit", "This draft reached its storage bound. Prior batches are retained", 409)
         return value
 
+    def _nightly_guard(self, conn, row):
+        if row["operation"] != "nightly_test":
+            return
+        checkpoint = self._checkpoint(row)
+        try:
+            schedule = NightlySchedule.model_validate(checkpoint.get("nightly"))
+            request = CreateGenerationRequest.model_validate(checkpoint["request"])
+        except (KeyError, ValidationError):
+            raise ApiError("nightly_checkpoint_unavailable", "This nightly checkpoint needs a compatible app version", 409) from None
+        if (request.topic_id is not None or request.source_refs or request.idempotency_key != "nightly:" + schedule.day or
+                request.idempotency_key != row["idempotency_key"] or request.count != row["requested_count"] or
+                [entry.model_dump(mode="json") for entry in request.inputs] != json.loads(row["inputs_json"])):
+            raise ApiError("nightly_checkpoint_unavailable", "This nightly checkpoint is not a trusted saved-input request", 409)
+        # Immutable result replay starts no work. Current assistance and deletion
+        # policy still apply at its caller; a later scheduler token cannot erase it.
+        if row["state"] == "published":
+            return
+        owner = self.services.registry.get("nightly")
+        guard = getattr(owner, "require_publication", None)
+        if not callable(guard):
+            raise ApiError("nightly_unavailable", "Nightly scheduling is unavailable. Retained work has not been published", 503, True)
+        guard(conn, row)
+
     @staticmethod
     def _capacity(conn):
-        if conn.execute("SELECT COUNT(*) FROM assessment_test_jobs WHERE operation='generate_test' AND state IN ('queued','running')").fetchone()[0] >= MAX_ACTIVE:
+        if conn.execute("SELECT COUNT(*) FROM assessment_test_jobs WHERE operation IN ('generate_test','nightly_test') AND state IN ('queued','running')").fetchone()[0] >= MAX_ACTIVE:
             raise ApiError("generation_capacity", "Finish or cancel an active generation job before starting another", 409, True)
 
     def _view(self, conn, row):
@@ -156,8 +181,9 @@ class SavedGenerationService:
         # local epoch is deliberately not portable. Reconcile stale progress
         # even when this process did not own the pre-restore execution.
         if row["state"] in ("queued", "running") and row["context_epoch"] != context_epoch_in(conn):
-            conn.execute("UPDATE assessment_test_jobs SET state='failed',error_code='generation_context_changed',updated_at=? WHERE id=?", (utc_now(), row["id"]))
-            row = {**row, "state": "failed", "error_code": "generation_context_changed"}
+            error_code = "interrupted" if row["operation"] == "nightly_test" else "generation_context_changed"
+            conn.execute("UPDATE assessment_test_jobs SET state='failed',error_code=?,updated_at=? WHERE id=?", (error_code, utc_now(), row["id"]))
+            row = {**row, "state": "failed", "error_code": error_code}
         checkpoint = self._checkpoint(row)
         # The frozen contract also guards restored progress/count invariants.
         Job(id=row["id"], operation=row["operation"], idempotency_key=row["idempotency_key"],
@@ -194,31 +220,53 @@ class SavedGenerationService:
     def list_jobs(self):
         with self.db.transaction() as conn:
             require_assistance(conn)
-            rows = conn.execute("SELECT * FROM assessment_test_jobs j WHERE operation='generate_test' AND NOT EXISTS "
+            rows = conn.execute("SELECT * FROM assessment_test_jobs j WHERE operation IN ('generate_test','nightly_test') AND NOT EXISTS "
                 "(SELECT 1 FROM deletion_ledger WHERE entity_type='job' AND entity_id=j.id) ORDER BY created_at DESC,id DESC LIMIT 50")
             return {"items": [self._view(conn, dict(row)) for row in rows]}
 
     async def create(self, request: CreateGenerationRequest):
-        digest = canonical_digest(request.model_dump(mode="json", exclude={"idempotency_key"}))
+        if request.idempotency_key.startswith("nightly:"):
+            raise ApiError("invalid_request", "Nightly day keys belong to the trusted scheduler", 422)
+        return await self._create(request)
+
+    async def create_nightly(self, request: CreateGenerationRequest, *, schedule: dict) -> dict:
+        try:
+            nightly = NightlySchedule.model_validate(schedule).model_dump(mode="json")
+        except ValidationError:
+            raise ApiError("invalid_request", "Nightly requires the exact trusted schedule checkpoint", 422) from None
+        if request.topic_id is not None or request.source_refs or request.idempotency_key != "nightly:" + nightly["day"]:
+            raise ApiError("invalid_request", "Nightly requires saved learning inputs and its exact day key", 422)
+        return await self._create(request, nightly=nightly)
+
+    async def _create(self, request, *, nightly=None):
+        operation = "nightly_test" if nightly is not None else "generate_test"
+        intent = request.model_dump(mode="json", exclude={"idempotency_key"})
+        digest = canonical_digest({"request": intent, "nightly": nightly}) if nightly is not None else canonical_digest(intent)
         with self.db.transaction() as conn:
             require_assistance(conn)  # Current policy precedes every outcome replay.
             previous = conn.execute("SELECT * FROM assessment_test_jobs WHERE idempotency_key=?", (request.idempotency_key,)).fetchone()
             if previous:
-                if previous["operation"] != "generate_test" or previous["request_hash"] != digest:
+                if previous["operation"] != operation or previous["request_hash"] != digest:
                     raise ApiError("idempotency_conflict", "This request key was already used for different work", 409)
-                return self._view(conn, self._row(conn, previous["id"]))
+                row = self._row(conn, previous["id"])
+                self._nightly_guard(conn, row)
+                return self._view(conn, row)
             self._capacity(conn)
             context = self._context(conn, request)
             identifier, now = durable_id("test_job"), utc_now()
             checkpoint = {"schema": "saved-generation/1", "request": request.model_dump(mode="json"),
                 "route": context["route"], "calls": 0, "items": [], "sources": [], "receipts": [], "execution": durable_id("execution"),
                 "test_id": durable_id("test"), "version_id": durable_id("test_version")}
+            if nightly is not None:
+                checkpoint["nightly"] = nightly
             conn.execute("INSERT INTO assessment_test_jobs "
                 "(id,operation,state,idempotency_key,request_hash,inputs_json,checkpoint_json,settings_revision,policy_revision,context_epoch,"
-                "requested_count,validated_count,created_at,updated_at) VALUES(?,'generate_test','running',?,?,?,?,?,?,?, ?,0,?,?)",
-                (identifier, request.idempotency_key, digest, encode([entry.model_dump(mode="json") for entry in request.inputs]),
+                "requested_count,validated_count,created_at,updated_at) VALUES(?,?,'running',?,?,?,?,?,?,?, ?,0,?,?)",
+                (identifier, operation, request.idempotency_key, digest, encode([entry.model_dump(mode="json") for entry in request.inputs]),
                  self._encode_checkpoint(checkpoint), context["settings"], context["policy"], context["epoch"], request.count, now, now))
-            result = self._view(conn, self._row(conn, identifier))
+            row = self._row(conn, identifier)
+            self._nightly_guard(conn, row)
+            result = self._view(conn, row)
         self._schedule(identifier, checkpoint["execution"])
         return result
 
@@ -244,6 +292,7 @@ class SavedGenerationService:
         checkpoint = self._checkpoint(row)
         if execution is not None and execution != checkpoint["execution"]:
             raise ApiError("generation_stopped", "This execution was superseded", 409)
+        self._nightly_guard(conn, row)
         request = CreateGenerationRequest.model_validate(checkpoint["request"])
         context = self._context(conn, request)
         if context["route"] != checkpoint["route"]:
@@ -432,9 +481,11 @@ class SavedGenerationService:
         refs = tuple(ContentReference(target={"type": "library_revision", "id": source["revision_id"]}) for source in checkpoint["sources"])
         # Deduplicate revision references while retaining each precise native citation in provenance.
         refs = tuple({reference.target.id: reference for reference in refs}.values())
+        nightly = row["operation"] == "nightly_test"
+        method = "nightly" if nightly else "generation"
         version = SavedTestVersion(id=checkpoint["version_id"], test_id=checkpoint["test_id"], ordinal=1,
-            origin="generated", review_quality="personal", status="ready", items=items, source_refs=refs,
-            provenance={"method": "generation", "job_id": row["id"]},
+            origin="nightly" if nightly else "generated", review_quality="personal", status="ready", items=items, source_refs=refs,
+            provenance={"method": method, "job_id": row["id"]},
             terms="Generated personal learning practice; referenced sources retain their original terms. No reviewed-bank claim.", created_at=utc_now())
         self.services.get("saved_tests").publish_version(conn, version, title=checkpoint["request"]["title"],
             provenance={"schema": "saved-test-provenance/1", "items": provenance, "job_id": row["id"],
@@ -478,6 +529,7 @@ class SavedGenerationService:
             require_assistance(conn)
             row = self._row(conn, identifier)
             checkpoint = self._checkpoint(row)
+            self._nightly_guard(conn, row)
             digest = canonical_digest({"operation": operation, "request": request.model_dump(mode="json", exclude={"idempotency_key"})})
             previous = next((receipt for receipt in checkpoint["receipts"] if receipt["key"] == request.idempotency_key), None)
             if previous:
