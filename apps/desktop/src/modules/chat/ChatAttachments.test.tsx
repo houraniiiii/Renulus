@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { ApiError } from '../../platform/api';
 import type { ConversationSummary } from '../../platform/designC';
 import { WorkspaceProvider } from '../workspace';
+import { NavigationProvider } from '../../shell/navigation';
 import { ChatAttachments } from './ChatAttachments';
 import Chat from './index';
 
@@ -15,7 +16,7 @@ const inventory={conversation:chat.identity,conversation_revision:8,policy_revis
 const file=new File(['A fictional educational file.'],'Kidney fictional.txt',{type:'text/plain'});
 const intent={file,request_id:'stable_attachment_123'};
 const receipt={id:'saved-attachment',title:file.name,filename:file.name,revision:1,reference:{target:{type:'attachment',id:'saved-attachment'}},conversation_revision:9,retention:'saved'};
-const frame=(child:React.ReactNode,permitted=true)=><WorkspaceProvider policy={{revision:3,active_test_id:permitted?null:'active-test',assistance_allowed:permitted}}>{child}</WorkspaceProvider>;
+const frame=(child:React.ReactNode,permitted=true)=><NavigationProvider><WorkspaceProvider policy={{revision:3,active_test_id:permitted?null:'active-test',assistance_allowed:permitted}}>{child}</WorkspaceProvider></NavigationProvider>;
 beforeEach(()=>{calls.api.mockReset();calls.send.mockReset();calls.api.mockImplementation(async(path:string)=>path.startsWith('/attachments/')?inventory:path.endsWith('/draft')?{text:'Keep my existing draft',content_refs:[],revision:0,conversation_revision:1}:path.endsWith('/messages')||path.endsWith('/runs')||path.includes('/study/projects')?{items:[],next_cursor:null}:chat);});
 afterEach(()=>cleanup());
 

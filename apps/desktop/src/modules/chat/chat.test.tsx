@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ConversationSummary, PassageDraft } from '../../platform/designC';
 import { WorkspaceProvider } from '../workspace';
+import { NavigationProvider } from '../../shell/navigation';
 import Chat from './index';
 
 const chat:ConversationSummary={identity:{type:'learn_thread',id:'saved-chat'},kind:'learning',retention:'saved',lifecycle:'active',revision:1,title:'CKD learning',project_id:null,created_at:'2026-10-10T00:00:00Z',updated_at:'2026-10-10T00:00:00Z'};
@@ -13,7 +14,7 @@ function setup() {
   calls.send.mockReset();calls.api.mockReset();
   calls.api.mockImplementation(async(path:string)=>path.endsWith('/draft')?{text:'Existing draft',content_refs:[],revision:0,conversation_revision:1}:path.includes('/messages')||path.includes('/study/projects')||path.endsWith('/runs')?{items:[],next_cursor:null}:chat);
 }
-const frame=(element:React.ReactNode)=><WorkspaceProvider policy={{revision:1,active_test_id:null,assistance_allowed:true}}>{element}</WorkspaceProvider>;
+const frame=(element:React.ReactNode)=><NavigationProvider><WorkspaceProvider policy={{revision:1,active_test_id:null,assistance_allowed:true}}>{element}</WorkspaceProvider></NavigationProvider>;
 afterEach(()=>cleanup());
 
 describe('Chat volatile handoffs',()=>{

@@ -7,6 +7,7 @@ import { useWorkspace } from '../workspace';
 import { CaseContext } from './CaseContext';
 import { CaseHandoffActions } from './CaseHandoffActions';
 import { ChatAttachments } from './ChatAttachments';
+import { CreateChatTest } from './CreateChatTest';
 import type { AttachmentIntent } from './attachments';
 import { conversationPath, createConversation, sendConversation, type ConversationRun, type SendIntent } from './api';
 import './chat.css';
@@ -265,6 +266,7 @@ export default function ChatPage(props: ChatPageProps) {
     {Boolean(error)&&<ErrorState error={error} title="Your draft is kept" onRetry={()=>{setError(undefined);void send();}}/>}
     <form className="chat-composer" onSubmit={(event:FormEvent)=>{event.preventDefault();void send();}}><Textarea label={chat.kind==='case'?'Your case question':'Message Renulus'} value={text} onChange={event=>setText(event.target.value)} rows={3} maxLength={16000} disabled={disabled}/>{refs.length>0&&<div className="chat-reference-chips">{refs.map((reference,index)=><span key={index}><Button variant="ghost" onClick={()=>workspace.open(reference)}>Source {index+1}</Button><IconButton label={'Remove source '+(index+1)} disabled={busy} onClick={()=>setRefs(previous=>previous.filter((_,i)=>i!==index))}><X size={14}/></IconButton></span>)}</div>}<div className="chat-composer-footer"><div className="chat-composer-options"><IconButton label="Attach file" disabled={disabled} onClick={()=>setAttachmentsOpen(value=>!value)}><Paperclip size={18}/></IconButton><Select label="Teaching" value={style} onChange={event=>setStyle(event.target.value as 'direct'|'guided')} disabled={disabled}><option value="direct">Direct</option><option value="guided">Guided</option></Select></div><span className="chat-status" role="status">{status}</span>{busy?<Button variant="secondary" onClick={()=>void stop()}><Square size={16}/>Stop</Button>:<Button type="submit" disabled={disabled||!text.trim()}><ArrowUp size={17}/>Send</Button>}</div></form>
     <ChatAttachments key={incomingKey} conversation={chat} open={attachmentsOpen} onOpenChange={setAttachmentsOpen} disabled={disabled} intent={props.attachmentIntent} onConsumed={props.onAttachmentIntentConsumed} beforeAttach={flushDraft} onChanged={value=>{accept(value);if(value.retention==='saved')changed();}}/>
+    <CreateChatTest key={'test:'+incomingKey} conversation={chat} disabled={disabled} prepare={flushDraft}/>
     {chat.kind==='case'&&<CaseHandoffActions conversation={chat} question={text} disabled={disabled} prepare={flushDraft}/>}
     <dialog ref={dialog} onCancel={()=>setConfirmDelete(false)} className="chat-delete-dialog"><h2>Delete this conversation?</h2><p>Its messages and owned originals will be removed. Separately retained learning memory remains inspectable.</p><div className="actions"><Button variant="secondary" onClick={()=>{setConfirmDelete(false);dialog.current?.close();}}>Keep conversation</Button><Button variant="danger" onClick={()=>void remove()}>Delete conversation</Button></div></dialog>
   </section>;

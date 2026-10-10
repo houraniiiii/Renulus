@@ -44,5 +44,12 @@
 .chat-attachment-fields fieldset label { display:flex; gap:var(--space-8); align-items:center; min-height:40px; }
 .chat-attached-file { display:flex; align-items:center; justify-content:space-between; gap:var(--space-16); padding-top:var(--space-16); border-top:1px solid var(--line); }
 .chat-attached-file p { margin:var(--space-4) 0 0; font-size:13px; color:var(--ink-muted); }
+.chat-test-review { display:grid; gap:var(--space-16); padding:var(--space-24); background:var(--rail); border-radius:var(--radius-panel); }
+.chat-test-review h2 { margin:0; font-size:21px; font-weight:600; color:var(--ink-strong); }
+.chat-test-review p { margin:0; color:var(--ink-secondary); max-width:68ch; }
+.chat-test-options { display:grid; grid-template-columns:180px 1fr; gap:var(--space-16); align-items:start; }
+.chat-created-test { display:grid; gap:var(--space-12); padding-top:var(--space-16); border-top:1px solid var(--line); }
+.chat-created-test h3 { margin:0; font-size:18px; }
+@media(max-width:700px) { .chat-test-options { grid-template-columns:1fr; } }
 @media(max-width:700px) { .chat-file-metadata { grid-template-columns:1fr; } .chat-review-heading { flex-wrap:wrap; } }
 @media(max-width:700px) { .chat-heading { flex-wrap:wrap; } .chat-composer-footer { align-items:flex-end; } .chat-status { margin-left:0; } .chat-composer-options .field-label { display:none; } }
