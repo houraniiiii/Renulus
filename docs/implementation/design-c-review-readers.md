@@ -1033,3 +1033,76 @@ Exact changed paths for this checkpoint:
 
 No feature closure, packaged hidden journey or saved PDF/image OCR import
 acceptance is asserted. No Notes feature source was added in this checkpoint.
+
+### Bounded Notes owner proposal and verified reuse prerequisites
+
+The lead's /library/notes seam is accepted for the new Notes adapter. No dedicated
+Notes service/router was found in the scoped Knowledge/Study owners. Reuse
+KnowledgeRepository.import_text, get_document, original and delete_document;
+import_text already supports durable knowledge_jobs idempotency and immutable
+document revisions. Identify saved personal notes by SourceMetadata.asset_role
+containing study-note, not by a competing table or a renderer-supplied path.
+Workspace already maps that role to note_revision references.
+
+The future note_api.create_router(services) should reuse services.get(knowledge),
+register services.registry[notes], and return a /library/notes router for the
+parent mount. The requested new-file reservation is note_models.py,
+note_service.py, note_api.py and tests/knowledge/test_design_c_notes.py only.
+No Notes feature file has been created yet.
+
+Frozen external shape:
+
+- GET /library/notes -> items of document_id, revision_id, ordinal, title,
+  updated_at and canonical ContentReference(target=note_revision).
+- GET /library/notes/{document_id}?revision_id=optional -> those fields plus
+  the retained UTF-8 original text; historical revisions remain readable.
+- POST /library/notes {title,text,idempotency_key,project_id?} -> canonical detail.
+- PUT /library/notes/{document_id}
+  {title,text,expected_revision_id,idempotency_key} -> canonical detail.
+- DELETE /library/notes/{document_id}?expected_revision_id with Idempotency-Key
+  -> document_id, revision_id and deleted=true; later content reads return 404.
+  This acknowledgement narrows the lead's generic successful-mutation detail
+  shape so deletion cannot return an apparently editable live note.
+
+Reads/writes must use shared policy and the inherited scalar Study-help guard,
+never a new policy authority. Metadata/rights are derived from the canonical
+user-owned note; response data contains no filesystem location. Save persistence
+and original reading must work while extraction is queued, failed or unavailable.
+Extraction/index readiness remains separate. Existing project associations must
+retain their scope on edit, and old citations must keep their original revision.
+
+Material gap 1, reproduced with the actual current importer: import_text of
+SYNTHETIC first saved note with SourceMetadata(asset_role=[study-note]),
+process=False and a stable command key, followed by import_text of
+SYNTHETIC second saved note on the same document_id. The first revision
+receives knowledge_cleanup.remove_original=1. Calling actual cleanup deletes
+its bytes; original(first_revision) returns original_missing. The reproducible
+receipt is C:/Renulus/scratch/design-c/dc-review-readers/notes-reuse-probe-run1/receipt.json.
+No providers/helpers/network or private data were used.
+
+The cause is repository._import cancelling queued replacements through
+_cancel_in; _cancel_in schedules destructive original cleanup. _run_job also
+schedules destructive cleanup on extraction failure. A thin wrapper around the
+current importer therefore cannot meet retained note-original/old-citation
+requirements. KnowledgeRepository.import_text/_import also lacks a caller
+expected_revision_id comparison; delete_document likewise has no revision CAS.
+
+Exact additional existing-source reservation/prerequisite: Knowledge
+repository.py only, covering import_text/_import atomic expected_revision_id
+checking (included in command hashing), delete_document optimistic deletion,
+and _cancel_in/_run_job preserving saved study-note originals for non-deletion
+cleanup. Reuse the existing job ledger and cleanup records; no new table,
+column, lockfile or alternate note store is required. Explicit deletion must
+continue to remove the originals. This reservation has been proposed, not used.
+
+Material gap 2: ProjectRepository.document owns shared links but accepts only
+ready active Library revisions. A newly saved queued note cannot use it for the
+lead's immediate project_id association. The Project owner must publish a narrow
+saved-note association operation, e.g. note_saved_in(conn,document_id,revision_id,
+project_id=None), which validates current project scope, preserves existing
+associations on edit and owns all link/revision/tombstone updates. Retrieval
+must keep its existing active-ready eligibility. Notes must not copy project
+membership into metadata or write a competing project-link authority.
+
+Dependent Notes coding awaits these exact prerequisites/reservations. No schema
+change or feature completion is inferred from the API proposal.
