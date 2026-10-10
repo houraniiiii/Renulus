@@ -83,6 +83,26 @@ describe('saved notes editor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
     await waitFor(() => expect(revisions).toEqual(['synthetic_revision_1', 'synthetic_revision_2']));
   });
+  it('keeps revision history closed until the saved-note refresh is ready', async () => {
+    let current = note(), release!: () => void;
+    let refreshing = false;
+    vi.stubGlobal('fetch', vi.fn(async (path: string, options: RequestInit) => {
+      if (options.method === 'PUT') { current = note(2, 'Synthetic edited text'); refreshing = true; return json(current); }
+      if (path.endsWith('/documents/synthetic_note')) return json({ revisions: [{ id: 'synthetic_revision_1', ordinal: 1 }] });
+      if (path.endsWith('/notes')) return json({ items: [current] });
+      if (refreshing) { refreshing = false; return new Promise<Response>(resolve => { release = () => resolve(json(current)); }); }
+      return json(current);
+    }));
+    render(<Harness />); await selectNote(); fill('Synthetic note', 'Synthetic edited text');
+    fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
+    await screen.findByRole('status', { name: 'Opening saved note' });
+    expect(screen.getByRole('button', { name: 'Revision history' }).hasAttribute('disabled')).toBe(true);
+    await act(async () => release());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Revision history' }).hasAttribute('disabled')).toBe(false));
+    fireEvent.click(screen.getByRole('button', { name: 'Revision history' }));
+    expect(await screen.findByRole('button', { name: 'Revision 1' })).toBeTruthy();
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Note' }).hasAttribute('disabled')).toBe(false));
+  });
   it('hides retained saved content when its owner denies a later read', async () => {
     let denied = false;
     vi.stubGlobal('fetch', vi.fn(async (path: string) => {

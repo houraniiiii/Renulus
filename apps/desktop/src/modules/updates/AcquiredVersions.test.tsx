@@ -68,10 +68,10 @@ describe('Exact acquired version review', () => {
     expect(payload().target.original_sha256).toBe('a'.repeat(64));
     fireEvent.change(select, { target: { value: 'rev-b' } });
     expect(payload().target.original_sha256).toBe('b'.repeat(64));
-    expect(payload().changes.latest_final_verified).toBeUndefined(); expect(payload().changes.content_reviewed).toBeUndefined();
+    expect(payload().changes.latest_final_verified).toBe(false); expect(payload().changes.content_reviewed).toBe(false);
     fireEvent.change(screen.getByLabelText('Affected publication URL'), { target: { value: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC9876543/' } });
     expect(payload().target.edition).toBeUndefined(); expect(payload().target.original_sha256).toBeUndefined();
-    expect(payload().changes.latest_final_verified).toBeUndefined(); expect(payload().changes.content_reviewed).toBeUndefined();
+    expect(payload().changes.latest_final_verified).toBe(false); expect(payload().changes.content_reviewed).toBe(false);
   });
   it('does not look up a source family or pinned-only identity and normalizes a complete article identifier', async () => {
     const fetch = vi.fn(async (_path: string) => json({ versions: [], limit: 100, truncated: false }));

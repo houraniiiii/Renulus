@@ -81,7 +81,7 @@ it('creates once, explicitly rebases a retained draft, reads immutable history a
   const first = (await request<{ items: Note[] }>('/library/notes')).items[0];
   expect(first.ordinal).toBe(1); expect(first.reference.target.type).toBe('note_revision');
   const path = '/library/notes/' + first.document_id;
-  fireEvent.change(screen.getByRole('textbox', { name: 'Note' }), { target: { value: 'Synthetic retained local edits' } });
+  fireEvent.change(await screen.findByRole('textbox', { name: 'Note' }), { target: { value: 'Synthetic retained local edits' } });
   await request(path, 'PUT', { title: 'Synthetic concurrent title', text: 'Synthetic concurrent original',
     expected_revision_id: first.revision_id, idempotency_key: 'synthetic-notes-concurrent' });
   fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
@@ -90,6 +90,7 @@ it('creates once, explicitly rebases a retained draft, reads immutable history a
   fireEvent.click(screen.getByRole('button', { name: 'Keep my edits after this revision' }));
   fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
   await screen.findByText('Revision 3 · Saved');
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Revision history' }).hasAttribute('disabled')).toBe(false));
   fireEvent.click(screen.getByRole('button', { name: 'Revision history' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Revision 1' }));
   await screen.findByText('Synthetic first original');

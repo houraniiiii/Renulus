@@ -82,6 +82,7 @@ export default function NotesPanel({ projectId, studyHelpContext, signal, onUse,
         setMessage('Note deleted. Earlier references now show that the source is unavailable.');
       } else {
         const value = { title: result.title, text: result.text, base: result };
+        setLoading(true);
         store.notes.delete(draftKey); store.notes.set(result.document_id, value); store.selected.set(scope, result.document_id);
         select(result.document_id); setDraft(value); setMessage('Saved · Revision ' + result.ordinal); setHistory(undefined);
       }
@@ -119,7 +120,7 @@ export default function NotesPanel({ projectId, studyHelpContext, signal, onUse,
     finally { if (epoch === generation.current) setBusy(false); }
   }
   async function readHistory(revisionId?: string) {
-    if (!draft.base || busy) return;
+    if (!draft.base || busy || loading) return;
     const epoch = generation.current;
     setBusy(true); setError(undefined);
     try {
@@ -153,9 +154,9 @@ export default function NotesPanel({ projectId, studyHelpContext, signal, onUse,
       <p className="notes-meta" role="status">{draft.base ? 'Revision ' + draft.base.ordinal + (dirty ? ' · Unsaved changes' : ' · Saved') : 'Not saved yet'}</p>
       <Button className="notes-save" type="submit" busy={busy} disabled={!valid || !!latest || (!dirty && !pending.current)}><Check size={20} aria-hidden="true" />{pending.current ? (pending.current.method === 'DELETE' ? 'Retry deletion' : 'Retry save') : 'Save note'}</Button>
     </form>}
-    {draft.base && !blocked && <div className="notes-actions"><Button variant="ghost" disabled={busy || !!pending.current} onClick={() => void readHistory()}>Revision history</Button>
-      <Button variant="ghost" disabled={busy} onClick={() => onOpen(draft.base!)}>Open saved original</Button>
-      <Button variant="danger" disabled={busy || !!pending.current} onClick={() => setDeleting(true)}>Delete note</Button></div>}
+    {draft.base && !blocked && <div className="notes-actions"><Button variant="ghost" disabled={busy || loading || !!pending.current} onClick={() => void readHistory()}>Revision history</Button>
+      <Button variant="ghost" disabled={busy || loading} onClick={() => onOpen(draft.base!)}>Open saved original</Button>
+      <Button variant="danger" disabled={busy || loading || !!pending.current} onClick={() => setDeleting(true)}>Delete note</Button></div>}
     {history && <div className="notes-history"><h4>Saved revisions</h4>{history.map(revision => <Button variant="ghost" key={revision.id} disabled={busy} onClick={() => void readHistory(revision.id)}>Revision {revision.ordinal}</Button>)}</div>}
     {historical && <article className="notes-history"><h4>{historical.title} · Revision {historical.ordinal}</h4><p className="notes-original">{historical.text}</p><Button variant="ghost" onClick={() => setHistorical(undefined)}>Close revision</Button></article>}
     {deleting && !blocked && <div className="notes-delete" role="group" aria-label="Confirm note deletion"><p>Delete every revision and its originals? Project links will be removed. Existing citations will show an unavailable source.</p>
