@@ -522,3 +522,49 @@ async def test_library_permission_revocation_keeps_retained_read_but_blocks_mode
         assert len(transport.calls) == before
     finally:
         services.db.execute("UPDATE knowledge_revisions SET rights_json=? WHERE id=?", (stored, note["revision_id"]))
+
+
+@pytest.mark.asyncio
+async def test_actual_extracted_cache_loss_retains_original_but_cannot_normalize(extracted_imports):
+    services, service, transport, note, _ = extracted_imports
+    row = service.create(CreateImportRequest(idempotency_key="actual-derived-cache-loss",
+        original={"kind": "library_revision", "revision_id": note["revision_id"]}))
+    text = service.original(row["id"])["text"]
+    before = len(transport.calls)
+    stored = services.db.fetch_one("SELECT extraction_json FROM knowledge_revisions WHERE id=?", (note["revision_id"],))["extraction_json"]
+    services.db.execute("UPDATE knowledge_revisions SET extraction_json=NULL WHERE id=?", (note["revision_id"],))
+    try:
+        assert service.original(row["id"])["text"] == text
+        with pytest.raises(ApiError) as error:
+            await service.normalize(row["id"], command(row, "actual-cache-loss-normalize"))
+        assert error.value.code == "saved_extraction_unavailable"
+        with pytest.raises(ApiError) as error:
+            service.create(CreateImportRequest(idempotency_key="actual-cache-loss-new-import",
+                original={"kind": "library_revision", "revision_id": note["revision_id"]}))
+        assert error.value.code == "saved_extraction_unavailable"
+        assert len(transport.calls) == before
+    finally:
+        services.db.execute("UPDATE knowledge_revisions SET extraction_json=? WHERE id=?", (stored, note["revision_id"]))
+
+
+@pytest.mark.asyncio
+async def test_actual_source_tombstone_refuses_new_work_and_publication(extracted_imports):
+    services, service, transport, _, _ = extracted_imports
+    source = services.get("knowledge").import_text(TEXT, title="Synthetic separately deleted import source")
+    assert source["status"] == "ready"
+    row = resolve_all(service, service.create(CreateImportRequest(idempotency_key="actual-source-tombstone",
+        original={"kind": "library_revision", "revision_id": source["revision_id"]})))
+    before = len(transport.calls)
+    services.db.mark_deleted("knowledge-revision", source["revision_id"])
+    for action in ("normalize", "save", "original"):
+        with pytest.raises(ApiError) as error:
+            if action == "normalize":
+                await service.normalize(row["id"], command(row, "actual-deleted-source-normalize"))
+            elif action == "save":
+                service.save(row["id"], command(row, "actual-deleted-source-save"))
+            else:
+                service.original(row["id"])
+        assert error.value.code == "saved_extraction_not_found"
+    stored = services.db.fetch_one("SELECT * FROM assessment_test_imports WHERE id=?", (row["id"],))
+    assert stored["original_text"] and stored["source_revision_id"] == source["revision_id"]
+    assert stored["published_version_id"] is None and len(transport.calls) == before
