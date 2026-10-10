@@ -1,0 +1,536 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:renulus:harness:1",
+  "$ref": "#/$defs/PairedStoreManifest",
+  "$defs": {
+    "ConversationIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "learn_thread",
+            "case"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])",
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "title": "ConversationIdentity",
+      "type": "object"
+    },
+    "DomainStoreSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "store_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])",
+          "title": "Store Id",
+          "type": "string"
+        },
+        "generation": {
+          "minimum": 1,
+          "title": "Generation",
+          "type": "integer"
+        },
+        "path": {
+          "maxLength": 512,
+          "minLength": 1,
+          "not": {
+            "pattern": "(?:^|/)(?:[Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9])(?:\\.|/|$)"
+          },
+          "pattern": "^[A-Za-z0-9_-](?:[A-Za-z0-9._-]*[A-Za-z0-9_-])?(/[A-Za-z0-9_-](?:[A-Za-z0-9._-]*[A-Za-z0-9_-])?)*$(?![\\s\\S])",
+          "title": "Path",
+          "type": "string"
+        },
+        "validation": {
+          "enum": [
+            "pending",
+            "valid"
+          ],
+          "title": "Validation",
+          "type": "string"
+        },
+        "engine": {
+          "const": "renulus-sqlite",
+          "title": "Engine",
+          "type": "string"
+        },
+        "schema_version": {
+          "maximum": 2,
+          "minimum": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "store_id",
+        "generation",
+        "path",
+        "validation",
+        "engine",
+        "schema_version"
+      ],
+      "title": "DomainStoreSnapshot",
+      "type": "object"
+    },
+    "HarnessCommandError": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])",
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "title": "HarnessCommandError",
+      "type": "object"
+    },
+    "HarnessCommandIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "protocol": {
+          "const": "renulus-harness/1",
+          "title": "Protocol",
+          "type": "string"
+        },
+        "profile_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])",
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "store_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])",
+          "title": "Store Id",
+          "type": "string"
+        },
+        "generation": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])",
+          "title": "Generation",
+          "type": "string"
+        },
+        "operation_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])",
+          "title": "Operation Id",
+          "type": "string"
+        },
+        "attempt_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])",
+          "title": "Attempt Id",
+          "type": "string"
+        },
+        "request_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])",
+          "title": "Request Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "protocol",
+        "profile_id",
+        "store_id",
+        "generation",
+        "operation_id",
+        "attempt_id",
+        "request_id"
+      ],
+      "title": "HarnessCommandIdentity",
+      "type": "object"
+    },
+    "HarnessCommandOutcome": {
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "outcome": {
+            "not": {
+              "const": "accepted_pending"
+            }
+          }
+        }
+      },
+      "properties": {
+        "protocol": {
+          "const": "renulus-harness/1",
+          "title": "Protocol",
+          "type": "string"
+        },
+        "profile_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])",
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "store_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])",
+          "title": "Store Id",
+          "type": "string"
+        },
+        "generation": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])",
+          "title": "Generation",
+          "type": "string"
+        },
+        "operation_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])",
+          "title": "Operation Id",
+          "type": "string"
+        },
+        "attempt_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])",
+          "title": "Attempt Id",
+          "type": "string"
+        },
+        "request_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "reply",
+          "title": "Kind",
+          "type": "string"
+        },
+        "outcome": {
+          "enum": [
+            "rejected_before_admission",
+            "accepted_pending",
+            "committed_reference",
+            "cancelled_settled",
+            "uncertain_after_disconnect"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "result": {
+          "$ref": "#/$defs/JsonValue",
+          "default": null
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HarnessCommandError"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "protocol",
+        "profile_id",
+        "store_id",
+        "generation",
+        "operation_id",
+        "attempt_id",
+        "request_id",
+        "kind",
+        "outcome"
+      ],
+      "then": {
+        "anyOf": [
+          {
+            "required": [
+              "result"
+            ]
+          },
+          {
+            "properties": {
+              "error": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "error"
+            ]
+          }
+        ]
+      },
+      "title": "HarnessCommandOutcome",
+      "type": "object"
+    },
+    "HarnessEngineReference": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": "harness/1",
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "profile_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])",
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "store_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])",
+          "title": "Store Id",
+          "type": "string"
+        },
+        "engine": {
+          "$ref": "#/$defs/OpenCodeEngine"
+        },
+        "session_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])",
+          "title": "Session Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contract_version",
+        "profile_id",
+        "store_id",
+        "engine",
+        "session_id"
+      ],
+      "title": "HarnessEngineReference",
+      "type": "object"
+    },
+    "JsonValue": {},
+    "OpenCodeEngine": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "const": "opencode",
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "const": "2.0.26",
+          "title": "Version",
+          "type": "string"
+        },
+        "source_commit": {
+          "const": "4b6fea2875e4f2e3e8a8fee181803e54f7056845",
+          "title": "Source Commit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "source_commit"
+      ],
+      "title": "OpenCodeEngine",
+      "type": "object"
+    },
+    "PairedStoreManifest": {
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "state": {
+            "const": "active"
+          }
+        }
+      },
+      "properties": {
+        "contract_version": {
+          "const": "harness/1",
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "profile_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])",
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "snapshot_generation": {
+          "minimum": 1,
+          "title": "Snapshot Generation",
+          "type": "integer"
+        },
+        "cohort_source": {
+          "const": "4b6fea2875e4f2e3e8a8fee181803e54f7056845",
+          "title": "Cohort Source",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "prepared",
+            "active"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "domain_store": {
+          "$ref": "#/$defs/DomainStoreSnapshot"
+        },
+        "runtime_store": {
+          "$ref": "#/$defs/RuntimeStoreSnapshot"
+        }
+      },
+      "required": [
+        "contract_version",
+        "profile_id",
+        "snapshot_generation",
+        "cohort_source",
+        "state",
+        "domain_store",
+        "runtime_store"
+      ],
+      "then": {
+        "properties": {
+          "domain_store": {
+            "properties": {
+              "validation": {
+                "const": "valid"
+              }
+            }
+          },
+          "runtime_store": {
+            "properties": {
+              "validation": {
+                "const": "valid"
+              }
+            }
+          }
+        }
+      },
+      "title": "PairedStoreManifest",
+      "type": "object"
+    },
+    "RuntimeStoreSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "store_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])",
+          "title": "Store Id",
+          "type": "string"
+        },
+        "generation": {
+          "minimum": 1,
+          "title": "Generation",
+          "type": "integer"
+        },
+        "path": {
+          "maxLength": 512,
+          "minLength": 1,
+          "not": {
+            "pattern": "(?:^|/)(?:[Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9])(?:\\.|/|$)"
+          },
+          "pattern": "^[A-Za-z0-9_-](?:[A-Za-z0-9._-]*[A-Za-z0-9_-])?(/[A-Za-z0-9_-](?:[A-Za-z0-9._-]*[A-Za-z0-9_-])?)*$(?![\\s\\S])",
+          "title": "Path",
+          "type": "string"
+        },
+        "validation": {
+          "enum": [
+            "pending",
+            "valid"
+          ],
+          "title": "Validation",
+          "type": "string"
+        },
+        "engine": {
+          "$ref": "#/$defs/OpenCodeEngine"
+        },
+        "schema_version": {
+          "const": "source:4b6fea2875e4f2e3e8a8fee181803e54f7056845",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "store_id",
+        "generation",
+        "path",
+        "validation",
+        "engine",
+        "schema_version"
+      ],
+      "title": "RuntimeStoreSnapshot",
+      "type": "object"
+    },
+    "SavedConversationMapping": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": "harness/1",
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "conversation": {
+          "$ref": "#/$defs/ConversationIdentity"
+        },
+        "retention": {
+          "const": "saved",
+          "title": "Retention",
+          "type": "string"
+        },
+        "runtime": {
+          "$ref": "#/$defs/HarnessEngineReference"
+        }
+      },
+      "required": [
+        "contract_version",
+        "conversation",
+        "retention",
+        "runtime"
+      ],
+      "title": "SavedConversationMapping",
+      "type": "object"
+    }
+  },
+  "title": "Renulus Harness contracts — harness/1"
+}

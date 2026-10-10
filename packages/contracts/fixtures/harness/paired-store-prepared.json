@@ -1,0 +1,27 @@
+{
+  "contract_version": "harness/1",
+  "profile_id": "synthetic-profile",
+  "snapshot_generation": 1,
+  "cohort_source": "4b6fea2875e4f2e3e8a8fee181803e54f7056845",
+  "state": "prepared",
+  "domain_store": {
+    "store_id": "synthetic-domain-store",
+    "engine": "renulus-sqlite",
+    "schema_version": 2,
+    "generation": 1,
+    "path": "domain/renulus.sqlite3",
+    "validation": "pending"
+  },
+  "runtime_store": {
+    "store_id": "synthetic-runtime-store",
+    "engine": {
+      "name": "opencode",
+      "version": "2.0.26",
+      "source_commit": "4b6fea2875e4f2e3e8a8fee181803e54f7056845"
+    },
+    "schema_version": "source:4b6fea2875e4f2e3e8a8fee181803e54f7056845",
+    "generation": 1,
+    "path": "runtime/opencode.sqlite3",
+    "validation": "pending"
+  }
+}

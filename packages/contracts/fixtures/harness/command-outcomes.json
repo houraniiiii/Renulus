@@ -1,0 +1,37 @@
+[
+  {
+    "kind": "reply", "protocol": "renulus-harness/1",
+    "profile_id": "synthetic-profile", "store_id": "synthetic-runtime-store",
+    "generation": "process-one", "operation_id": "operation-one",
+    "attempt_id": "attempt-one", "request_id": "request-one",
+    "outcome": "rejected_before_admission", "error": {"code": "overloaded"}
+  },
+  {
+    "kind": "reply", "protocol": "renulus-harness/1",
+    "profile_id": "synthetic-profile", "store_id": "synthetic-runtime-store",
+    "generation": "process-one", "operation_id": "operation-one",
+    "attempt_id": "attempt-one", "request_id": "request-two",
+    "outcome": "accepted_pending"
+  },
+  {
+    "kind": "reply", "protocol": "renulus-harness/1",
+    "profile_id": "synthetic-profile", "store_id": "synthetic-runtime-store",
+    "generation": "process-one", "operation_id": "operation-one",
+    "attempt_id": "attempt-one", "request_id": "request-three",
+    "outcome": "committed_reference", "result": {"session_id": "ses_synthetic_saved"}
+  },
+  {
+    "kind": "reply", "protocol": "renulus-harness/1",
+    "profile_id": "synthetic-profile", "store_id": "synthetic-runtime-store",
+    "generation": "process-one", "operation_id": "operation-one",
+    "attempt_id": "attempt-one", "request_id": "request-four",
+    "outcome": "cancelled_settled", "result": {"state": "closed"}
+  },
+  {
+    "kind": "reply", "protocol": "renulus-harness/1",
+    "profile_id": "synthetic-profile", "store_id": "synthetic-runtime-store",
+    "generation": "process-one", "operation_id": "operation-one",
+    "attempt_id": "attempt-one", "request_id": "request-five",
+    "outcome": "uncertain_after_disconnect", "error": {"code": "disconnected"}
+  }
+]

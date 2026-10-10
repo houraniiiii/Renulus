@@ -1,0 +1,11 @@
+{
+  "contract_version": "harness/1",
+  "profile_id": "synthetic-profile",
+  "store_id": "synthetic-runtime-store",
+  "engine": {
+    "name": "opencode",
+    "version": "2.0.26",
+    "source_commit": "4b6fea2875e4f2e3e8a8fee181803e54f7056845"
+  },
+  "session_id": "ses_synthetic_saved"
+}
