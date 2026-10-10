@@ -5,6 +5,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+import delivery_paths
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -14,6 +15,23 @@ spec.loader.exec_module(delivery)
 
 
 class DeliveryBoundaries(unittest.TestCase):
+    def test_relocated_public_inputs_and_design_c_outputs_are_exact_and_separate(self):
+        for source in delivery_paths.RELOCATED_PUBLIC_ROOTS:
+            self.assertEqual(delivery.public_input_path(source), source.resolve())
+            with self.assertRaises(ValueError):
+                delivery.generated_path(source / 'must-not-write')
+        root = delivery_paths.DESIGN_C_DELIVERY_ROOT
+        target = root / 'matching-cafe1234/synthetic-fresh-preflight'
+        self.assertEqual(delivery.delivery_output(target, root=root), target.resolve())
+        self.assertFalse(target.exists())
+        for source in (Path('C:/Renulus/dev'), Path('C:/Renulus/dev/python'),
+                       Path('C:/Renulus/data/learning'), Path('C:/Renulus/dev/helper-assets-other')):
+            with self.assertRaises(ValueError):
+                delivery.public_input_path(source)
+        for target in (root.parent, root.parent / 'delivery-other', root / '../escape'):
+            with self.assertRaises(ValueError):
+                delivery_paths.checked_delivery_root(target)
+
     @classmethod
     def setUpClass(cls):
         cls.test_root = delivery.DESKTOP / "test-results" / ("delivery-tests-" + uuid4().hex)

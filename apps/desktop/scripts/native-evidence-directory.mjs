@@ -9,7 +9,8 @@ const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 export const localEvidenceRoot = path.join(desktop, 'test-results');
 export const externalEvidenceRoot = path.resolve('E:/Renulus-native-delivery/desktop-20261005/proofs');
 export const ssdEvidenceRoot = path.resolve('C:/Renulus-native-delivery/desktop-20261005/proofs');
-const authorisedEvidenceRoots = [localEvidenceRoot, externalEvidenceRoot, ssdEvidenceRoot];
+export const designCEvidenceRoot = path.resolve('C:/Renulus/scratch/design-c/delivery');
+const authorisedEvidenceRoots = [localEvidenceRoot, externalEvidenceRoot, ssdEvidenceRoot, designCEvidenceRoot];
 const identity = value => process.platform === 'win32' ? value.toLowerCase() : value;
 
 function rejectReparseAncestors(value) {

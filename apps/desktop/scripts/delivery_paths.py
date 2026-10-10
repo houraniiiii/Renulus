@@ -5,6 +5,8 @@ import re
 DESKTOP = Path(__file__).resolve().parents[1]
 EXTERNAL_DELIVERY_ROOT = Path("C:/Renulus-native-delivery/desktop-20261005")
 PUBLIC_INPUT_ROOT = Path("E:/Renulus-native-delivery/desktop-20261005")
+DESIGN_C_DELIVERY_ROOT = Path("C:/Renulus/scratch/design-c/delivery")
+RELOCATED_PUBLIC_ROOTS = (Path("C:/Renulus/dev/helper-assets"), Path("C:/Renulus/dev/node_modules"))
 PUBLIC_DIRECTORY = re.compile(r"preparation|payloads|environment|temporary|proofs|source-[0-9a-f]{8}|matching-[0-9a-f]{8}|installed-[0-9a-f]{8}")
 DELIVERY_NAME = re.compile(r"[a-z0-9][a-z0-9._-]{0,63}")
 WINDOWS_DEVICE_NAME = re.compile(r"(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?", re.IGNORECASE)
@@ -31,8 +33,11 @@ def checked_delivery_root(value: Path) -> Path:
     """Only the approved C root or one named deliveries child may own outputs."""
     if not value.is_absolute():
         raise ValueError("DeliveryRoot requires an absolute local C path")
-    base = EXTERNAL_DELIVERY_ROOT.resolve()
+    bases = (EXTERNAL_DELIVERY_ROOT.resolve(), DESIGN_C_DELIVERY_ROOT.resolve())
     resolved = value.resolve()
+    base = next((root for root in bases if resolved == root or resolved.is_relative_to(root)), None)
+    if base is None:
+        raise ValueError("DeliveryRoot must stay in an exact authorised generated root")
     if resolved != base:
         if not resolved.is_relative_to(base):
             raise ValueError("DeliveryRoot must stay in the exact authorised C SSD root")
@@ -49,7 +54,7 @@ def checked_delivery_root(value: Path) -> Path:
 
 def public_relative(value: Path, root: Path) -> None:
     relative = value.resolve().relative_to(root.resolve()).parts
-    if root == EXTERNAL_DELIVERY_ROOT and len(relative) >= 3 and relative[0] == "deliveries" and delivery_name(relative[1]):
+    if root in (EXTERNAL_DELIVERY_ROOT, DESIGN_C_DELIVERY_ROOT) and len(relative) >= 3 and relative[0] == "deliveries" and delivery_name(relative[1]):
         relative = relative[2:]
     if not relative or not PUBLIC_DIRECTORY.fullmatch(relative[0]):
         raise ValueError("Public staging excludes source repositories, credentials and application data/profiles")
@@ -58,9 +63,9 @@ def public_relative(value: Path, root: Path) -> None:
 def generated_path(value: Path, *, fresh: bool = False) -> Path:
     if not value.is_absolute():
         raise ValueError("Generated staging requires an absolute path")
-    for root in (DESKTOP / "test-results", EXTERNAL_DELIVERY_ROOT):
+    for root in (DESKTOP / "test-results", EXTERNAL_DELIVERY_ROOT, DESIGN_C_DELIVERY_ROOT):
         if value.absolute().is_relative_to(root.absolute()):
-            if root == EXTERNAL_DELIVERY_ROOT:
+            if root in (EXTERNAL_DELIVERY_ROOT, DESIGN_C_DELIVERY_ROOT):
                 public_relative(value, root)
             return owned_path(value, root, fresh=fresh)
     raise ValueError("Generated staging must stay in desktop test-results or the exact authorised C root; E inputs are read-only")
@@ -70,9 +75,14 @@ def public_input_path(value: Path) -> Path:
     """Admit explicit public inputs on E and fresh staged public bytes on C."""
     if not value.is_absolute():
         raise ValueError("Public inputs require an absolute path")
-    for root in (DESKTOP / "test-results", EXTERNAL_DELIVERY_ROOT, PUBLIC_INPUT_ROOT):
+    for root in RELOCATED_PUBLIC_ROOTS:
+        if value.absolute() == root.absolute() or value.absolute().is_relative_to(root.absolute()):
+            # These exact public dependency trees are inputs only. Keep the
+            # same ancestor reparse checks, including when selecting the root.
+            return owned_path(value, root.parent)
+    for root in (DESKTOP / "test-results", EXTERNAL_DELIVERY_ROOT, PUBLIC_INPUT_ROOT, DESIGN_C_DELIVERY_ROOT):
         if value.absolute().is_relative_to(root.absolute()):
-            if root in (EXTERNAL_DELIVERY_ROOT, PUBLIC_INPUT_ROOT):
+            if root in (EXTERNAL_DELIVERY_ROOT, PUBLIC_INPUT_ROOT, DESIGN_C_DELIVERY_ROOT):
                 public_relative(value, root)
             return owned_path(value, root)
     raise ValueError("Public inputs require an explicit admitted C/E public directory")
