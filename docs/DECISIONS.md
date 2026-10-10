@@ -83,7 +83,7 @@ plugins, MCP controls, schedules or configuration authorities here.
 | Review | User and assistant lead review and validation using concrete evidence; no external-panel prerequisite. |
 | Brand | C — Renal flow, with the selected teal treatment; modern medical, calm, precise and approachable, with a subtle renal reference. |
 | Separation | Preserve the inherited clinical MVP and batch/research project outside the active repository. The normal desktop launcher opens Renulus; the optional legacy reference launcher stays separate. |
-| Current scope | Prepare and deliver the Design C replacement of the existing Flow interface, reusing working backend and Windows capabilities. The October 10 handoff contains the reviewed spec, aligned repo guidance and a committed documentation baseline. Implementation follows as a separate execution task using its dependencies and acceptance evidence. |
+| Current scope | Finish the bounded connected Design C UI and preserve its reusable domain backend, then commit the OpenCode handoff. The later October 10 scope amendment above supersedes standalone Hermes default delivery. DC21 final release is deferred to H20; no OpenCode implementation or default-installation change belongs to this closeout. |
 | Historical implementation heartbeat | The October 5 owner instruction selected one 20-minute heartbeat for that implementation run; its 15- and 30-minute predecessors are historical. This record does not create or reactivate an automation for the C handoff. |
 
 ## Unresolved work

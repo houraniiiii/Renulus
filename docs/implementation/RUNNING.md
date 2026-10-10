@@ -1,9 +1,11 @@
 # Running Renulus
 
-Design C is connected in `codex/design-c-integration`; its matching Windows
-package and default cutover are being validated. The normal launcher still
-selects the Flow installation described below. Source-app checks use separate
-hidden synthetic profiles and do not migrate the owner's profile. Consult the
+Design C is connected in `codex/design-c-integration`. The later October 10 scope
+change ends this task at the [reviewable UI and committed OpenCode handoff](DESIGN_C_OPENCODE_HANDOFF.md).
+DC21's final matching Windows/default release is deferred to combined H20 and
+is not passed. The normal launcher still selects the Flow installation below.
+Source-app checks use separate hidden synthetic profiles and do not migrate
+the owner's profile. Consult the
 [C ticket record](../planning/DESIGN_C_IMPLEMENTATION_SPEC.md#10-implementation-execution--october-10-2026)
 for current acceptance status.
 

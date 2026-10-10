@@ -2,6 +2,12 @@
 
 **Status:** draft — review pending; implementation not authorised by this research request.
 
+**Current disposition:** deferred combined delivery owner. The later Design C
+scope change transfers DC21's original final-default acceptance here. Existing
+manufacture/recovery receipts remain scoped evidence; neither DC21 nor H20 is
+passed, and the normal launcher/profile remains unchanged. See the
+[Design C handoff](../../../implementation/DESIGN_C_OPENCODE_HANDOFF.md).
+
 **Spec:** [S1](../specs/01-harness-control.md), [S2](../specs/02-memory-context.md), [S3](../specs/03-workflows-migration.md)
 
 **Owner:** Integration + F0 and module owners

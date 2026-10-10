@@ -1,5 +1,11 @@
 # OpenCode integration specifications and vertical slices
 
+**Canonical Design C handoff:** H00 is already repaired in `fa3b590c`. H01–H24
+remain future work, and DC21 final delivery is deferred to H20. Consume the
+[integration handoff](../../implementation/DESIGN_C_OPENCODE_HANDOFF.md) and
+[exact captured planning snapshot](../../implementation/opencode-plan-snapshot/README.md)
+before implementation; the dated review text below is preserved for context.
+
 2026-10-10. **Reviewed planning draft: three specs, 56 user stories and 25 vertical slices. All six adaptive research waves are complete; publication awaits the requested skill review. Implementation is not authorised.**
 
 Read the [integration plan](../OPENCODE_V2_INTEGRATION_PLAN.md), then the three specifications:
@@ -16,7 +22,7 @@ Each ticket connects an observable outcome through the existing client/domain fa
 
 | Ticket | Connected outcome | Blocked by | Spec | Owner |
 | --- | --- | --- | --- | --- |
-| [H00](tickets/00-restore-the-existing-saved-generation-retrieval-path.md) | Restore the existing saved-generation retrieval path | — | S3 | M4 + integration |
+| [H00](tickets/00-restore-the-existing-saved-generation-retrieval-path.md) | Completed prerequisite `fa3b590c`: existing saved-generation retrieval | — | S3 | M4 + integration |
 | [H24](tickets/24-keep-memory-worker-ownership-until-extraction-settles.md) | Keep memory-worker ownership until extraction actually settles | — | S2/S3 | M5 + F0/integration |
 | [H01](tickets/01-run-a-persistent-headless-opencode-conversation.md) | Run a persistent headless OpenCode conversation | — | S1 | F0 + integration |
 | [H02](tickets/02-answer-with-an-eligible-library-passage.md) | Answer with an eligible Library passage | H01 | S1/S2 | M2 + M1/F0 |

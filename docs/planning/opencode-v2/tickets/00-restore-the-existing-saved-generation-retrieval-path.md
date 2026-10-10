@@ -1,6 +1,12 @@
 # H00 — Restore the existing saved-generation retrieval path
 
-**Status:** draft — review pending; implementation not authorised by this research request.
+**Status:** existing-product prerequisite completed in the separately authorised Design C closeout — `fa3b590cd40de145c198a64168aa46b82384e2bc`. H12 consumes this repair; do not implement it twice. This does not authorise the OpenCode migration.
+
+The original uncommitted planning snapshot is retained in documentation commit
+`75b4b503085b3592d89f5114b282073847b2159d`. See the
+[current integration handoff](../../../implementation/DESIGN_C_OPENCODE_HANDOFF.md#final-closeout-evidence-and-review-launch)
+for exact red/green receipts, affected 160+1 cases, full App producer recheck and
+the stale fixture/cleanup qualifications.
 
 **Spec:** [S3](../specs/03-workflows-migration.md)
 
@@ -18,11 +24,11 @@ Existing shared retrieval and SavedGenerationService; repair the caller guard mi
 
 ## Acceptance criteria
 
-- [ ] Reproduce the current guard_run mismatch through the public generation flow and retain its failing evidence.
-- [ ] Give shared retrieval an explicit caller-supplied current-job/execution guard; preserve the legacy caller and reject stale work before/after retrieval. A no-op compatibility method is not accepted.
-- [ ] Pass the existing five-question and source-revocation cases with real SQLite/domain validators and synthetic inference; prove one canonical publication.
-- [ ] Rerun the exact current generation/nightly failures affected by this repair and report independent remaining failures without claiming downstream guards passed prematurely.
-- [ ] Keep current checkpoint, retry, source/publication transaction and active-Test semantics; this is a small prerequisite repair, not a new generation subsystem.
+- [x] Reproduce the current guard_run mismatch through the public generation flow and retain its failing evidence.
+- [x] Give shared retrieval an explicit caller-supplied current-job/execution guard; preserve the legacy caller and reject stale work before/after retrieval. A no-op compatibility method is not accepted.
+- [x] Pass the existing five-question and source-revocation cases with real SQLite/domain validators and synthetic inference; prove one canonical publication.
+- [x] Rerun the exact current generation/nightly failures affected by this repair and report independent remaining failures without claiming downstream guards passed prematurely.
+- [x] Keep current checkpoint, retry, source/publication transaction and active-Test semantics; this is a small prerequisite repair, not a new generation subsystem.
 
 ## Blocked by
 

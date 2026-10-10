@@ -1,5 +1,10 @@
 # Using Renulus
 
+**Closeout amendment:** the final connected Design C source and isolated review
+launch are pinned in the [OpenCode integration handoff](DESIGN_C_OPENCODE_HANDOFF.md).
+Its bounded UI repairs extend the dated guide below. OpenCode implementation has
+not started; DC21 default delivery is deferred to combined H20, not passed.
+
 **Status checked October 10, 2026.** The Design C instructions below describe
 connected source at **`009b8780`**, with the Memory restore update below checked
 at backend **`7cdc3fec`** and UI **`e5209f17`**. They extend the source reviewed at
@@ -7,8 +12,8 @@ at backend **`7cdc3fec`** and UI **`e5209f17`**. They extend the source reviewed
 cutover. The normal shortcut still opens **Flow `f1c49444`**, content 1.4.2,
 at `C:/Renulus/app`, with the learning/account profile at
 `C:/Renulus/data/learning`. Former E: paths are compatibility junctions.
-Use the [installed Flow reference](#installed-flow-reference) until the lead
-publishes the Design C cutover. See [delivery status](RUNNING.md#delivery-status)
+Use the [installed Flow reference](#installed-flow-reference) for the unchanged
+normal shortcut until combined H20 delivery. See [delivery status](RUNNING.md#delivery-status)
 and the [October 8 storage report](storage-cleanup-20261008.md).
 
 Renulus is an English-language Windows learning space for nephrology. The

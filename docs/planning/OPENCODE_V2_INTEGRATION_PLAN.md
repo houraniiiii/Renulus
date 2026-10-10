@@ -1,5 +1,12 @@
 # OpenCode v2 integration plan
 
+**Canonical handoff amendment:** the exact older working draft is preserved in
+`75b4b503` and its [snapshot manifest](../implementation/opencode-plan-snapshot/manifest.json).
+The bounded Design C closeout repairs H00 in `fa3b590c`; H12 consumes that
+prerequisite. Read the [final integration handoff](../implementation/DESIGN_C_OPENCODE_HANDOFF.md)
+before starting any H slice. OpenCode implementation remains future work; DC21
+default release is deferred to combined H20, not passed by the current UI review.
+
 2026-10-10. **Reviewed planning draft: six adaptive waves, 25 subagents. Research/specification only; implementation has not started.** The owner's OpenCode selection supersedes the earlier Pi proposal. This plan coordinates with Design C; it does not replace its layout, readers, assessment or retention requirements. The [three specs and 25 vertical slices](opencode-v2/README.md) are ready for the requested seam/breakdown review before GitHub publication.
 
 **Baseline correction during wave 3:** this research checkout remains at

@@ -23,13 +23,53 @@ research disposition confirms H05/H06/H24/H03 remain open at this HEAD. The
 20-minute heartbeat now follows this scope and will end at committed closeout.
 
 The a11f planning worktree at baseline `528025ff` is read-only. Its uncommitted
-working documents will be hash-pinned in a deliberate documentation handoff;
+working documents are hash-pinned in documentation snapshot `75b4b503`;
 its older source and whole DECISIONS file will not be merged. The current
 packaged candidate remains `4c289868`, older than the forthcoming repairs. Flow
 `f1c49444` remains the selected normal installation. Core07 ended with an actual
 Reader original-unavailable raster error; its five earlier gates and failure
 image remain evidence, not an eight-reader pass. Recovery `r-179af503` retains
 its nine scoped gates, excluding populated-transcript/fresh-Electron acceptance.
+
+### Final bounded closeout — product 7a6b4955
+
+The finite list is complete at its revised scope. Final product commit is
+`7a6b4955ff560d6694835e661d3745c545448ac6` on `codex/design-c-integration`;
+the following documentation handoff changes no product bytes. Read
+[DESIGN_C_OPENCODE_HANDOFF](DESIGN_C_OPENCODE_HANDOFF.md) for the complete accepted
+journey/evidence matrix, exact launch, domain contracts, replaceable execution
+adapters and open H ownership.
+
+- H00 `fa3b590c` uses real caller execution guards. Public-route red and 161
+  unique affected cases across 160+1 are retained; actual App producer recheck
+  is 2/2 green after fixing source-pin/cleanup assumptions in the test.
+- Saved-reader contention `e4265578` passes 52 actual API/SQLite checks after
+  its red reproduction. Final hidden app renders eight reader categories and
+  retains exact originals, PDF/CSV source-linked drafts and process reopen.
+- Chat/Case recovery `7a6b4955`/`0db0618c` repairs the only three additional
+  material UI findings. Integrated affected renderer checks pass 33/33;
+  TypeScript, Vite/Electron build, actual saved context/title/draft restart and
+  1000px/200% keyboard focus pass. Component failure injection and actual
+  hidden offline behavior are separately qualified.
+- `close/c/s-2d0b0169/out/evidence-manifest.json` under scratch/dcctl pins 17
+  captures and canonical read-only evidence; SHA-256
+  `5029fab15136c97baa757cd9fd75149c966259cb3102429e0bd08c2d5d72a30c`.
+  Five normal closes, no forced/remaining processes, fault null; idle client
+  disconnected. Operator errors and unavailable-suggestions 409 are retained.
+- All source lanes are frozen. The existing 18 normalization-only flags remain
+  unstaged. The final handoff ends the heartbeat; there is no further packaging
+  or implementation authorization in this task.
+
+H05 lineage/recapture, H06/H18 deleted receipts, H24 actual worker settlement
+and H03 authentication availability remain open. H21 owns temporary graph/
+spills/Save with H01 substrate. DC21 is **deferred to combined H20**. No final
+release, installed eight-reader/native/account or OpenCode two-store pass is
+inferred from this source UI and retained single-store evidence.
+
+### Historical implementation authorization and leases
+
+The following entries retain the earlier execution history. They are superseded
+by the bounded closeout above and are not active release or worker instructions.
 
 The [Design C implementation spec](../planning/DESIGN_C_IMPLEMENTATION_SPEC.md)
 is the current UI replacement backlog and delivery sequence. Tickets DC01–DC21
@@ -44,7 +84,7 @@ Use [parallel-work rules](../planning/PARALLEL_WORK.md) and record prerequisite
 commits, integrated evidence and remaining limits in the ticket handoff or its
 linked issue. Update this current section when execution starts.
 
-### Current integration checkpoint — 4c289868 manufactured; installed acceptance
+### Historical checkpoint — 4c289868 manufacture and attempted installed acceptance
 
 The earlier reservations below are historical. Active work remains against the
 same DC01–DC21 backlog. Canonical root/branch and baseline 528025ff ancestry were

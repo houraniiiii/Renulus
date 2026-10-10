@@ -9,12 +9,12 @@ This ledger distinguishes research resolution from implementation completion. As
 | [Delayed recovery cleanup](w3-04-host-proof-adversary.md) | Cleanup predicate can clear a fresh foreground child | SQL predicate reproduction, not runtime race | H01/H07 | Full-sweep admission quiescence first; selective defer only with proven filtering |
 | [Bypass surfaces](w2-05-configuration-revocation.md) | Stateless/auxiliary/AI-SDK/WS/MCP retries reach distinct effects | Static | H03/H04/H09 | One policy at all real dispatch seams; trusted code is not sandboxed |
 | [Failed reload](w1-04-extensions.md) | Failed generation can restore an older plugin registration | Static | H04 | Effective registry proof; atomic active version; restart activation first |
-| [Temporary storage](w3-04-host-proof-adversary.md) | Instances share DB; oversized tool output spills to disk | Static | H06 | Separate volatile graph/output services; sentinel scans and promotion proof |
+| [Temporary storage](w3-04-host-proof-adversary.md) | Instances share DB; oversized tool output spills to disk | Static | H21 (+H01 substrate) | Separate volatile graph/output services; sentinel scans and promotion proof. Corrected at Design C handoff to match the final saved-only H06 split. |
 | [Current work](w3-03-minimality-design-c.md) | Conversation/jobs/Home/nightly/typed restore already landed | Current committed source | All migration slices | Adapt existing owners and IDs; freeze/reconcile source baseline |
 | [Memory recapture](w4-01-current-memory.md) | Old consumed text reappears after edit/delete under new ID | 4 current service/worker reproductions | H05 | Persist transitive dependencies and terminal invalidation; preserve existing restore barrier |
 | [Typed cascades](w3-01-migration-retention.md) | Old generic cascade fixtures are fixed in current code | 8 helper assertions + current selected tests | H18 | Extend typed relations rather than recreate or repeat obsolete defect |
 | [Deleted receipt payload](w4-03-current-conversations.md) | Deleted draft text/hash remains in receipts/new export | 2 current-kind reproductions | H06/H18 | Reference-only live receipts; opaque retired-operation tombstones; creation receipts included |
-| [Generation retrieval](w4-02-current-workflows.md) | SavedGenerationService lacks helper-required guard_run | Current failing tests + direct probe | H00 then H12 | Narrow caller-guard prerequisite; preserve guarded legacy caller |
+| [Generation retrieval](w4-02-current-workflows.md) | SavedGenerationService lacked helper-required guard_run at the research snapshot | Current failing tests + direct probe; later actual producer rechecks | H00 then H12 | Repaired in Design C `fa3b590c` with explicit real caller authority; H12 consumes the completed prerequisite. See [handoff](../../implementation/DESIGN_C_OPENCODE_HANDOFF.md). |
 | [Publication fence](w4-02-current-workflows.md) | Current saved generation already fences source in commit | Current source, runtime path blocked upstream | H12/H13 | Preserve transaction and bind authority across IPC; retest after H00 |
 | [Nightly semantics](w4-02-current-workflows.md) | Sleep catch-up differs from future-only cold restart | Source + 2 passing recovery tests | H17 | Preserve semantics; reconcile claim-to-submit gap without inference replay |
 | [Capability reset](w3-02-capabilities-evaluation.md) | Stored credential can restore available after mocked401 | Current-unchanged methods + earlier suite failure | H03 | Separate documented support/access/observations; new credential epoch |
@@ -45,5 +45,10 @@ No claim of educational efficacy, live selected-account context capacity or inst
 - W6-03 verified evidence categories and overlapping counts. Nine machine-specific W5 links were replaced with portable commit/path source-map references; the map now includes 29 raw-byte-identified source entries. No aggregate regression-pass count is asserted.
 - W6-04's exact Automatic ordering and standalone one-permit preflight refinements were applied. The initial numeric budgets remain proposals and all runtime/quality gates remain open.
 
-The final implementation frontier is H00 (generation guard), H24 (memory-worker settlement) and H01 (actual embedded host). All are still unchecked. Research/specification review is complete; the requested skill's human seam/breakdown review and GitHub publication remain pending.
+The research frontier was H00 (generation guard), H24 (memory-worker settlement)
+and H01 (actual embedded host). The separately authorised Design C closeout now
+completes H00 (`fa3b590c`); H24 and H01 remain unchecked. Research/specification
+review is complete; the requested skill's human seam/breakdown review and GitHub
+publication remain pending. H20 final default delivery is deferred under the
+revised task scope; no OpenCode implementation or release acceptance is claimed.
 

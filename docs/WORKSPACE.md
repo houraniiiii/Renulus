@@ -12,6 +12,13 @@ part of this repository.
 
 ## This PC's storage layout
 
+The active integration branch is `codex/design-c-integration`. Its current scope
+is the [bounded Design C closeout and OpenCode handoff](implementation/DESIGN_C_OPENCODE_HANDOFF.md),
+not a separate Hermes default cutover. Read the captured planning documents in
+the canonical tree; do not merge older source or modify the original uncommitted
+planning worktree `C:/Users/karol/.codex/worktrees/a11f/repo`. The normal launcher,
+owner profile and credentials remain unchanged.
+
 | Location under `C:/Renulus` | Purpose |
 | --- | --- |
 | `app/` | One unchanged accepted installed app, including its bundled runtime |

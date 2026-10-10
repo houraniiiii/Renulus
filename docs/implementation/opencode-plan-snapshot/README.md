@@ -8,6 +8,12 @@ the exact UTC time, uncommitted status, source/destination paths, byte sizes and
 SHA-256 of all 99 captured files (1,104,430 bytes). Source files were checked
 again before copying. The planning worktree was not modified or staged.
 
+The complete captured version is documentation commit
+`75b4b503085b3592d89f5114b282073847b2159d`. Later canonical H00/H20 and findings
+updates are deliberate reconciliation, not edits to that historical snapshot;
+use `git show 75b4b503:<destination>` with the manifest's committed hashes to
+recover the captured documents.
+
 New planning/research documents are preserved at their corresponding `docs/`
 paths, including the [integration plan](../../planning/OPENCODE_V2_INTEGRATION_PLAN.md),
 [three specs and H tickets](../../planning/opencode-v2/README.md), and
@@ -17,13 +23,16 @@ The older working DECISIONS and user-answer files are stored under
 newer canonical counterparts. Research probe code is preserved as research,
 not executed or installed by this handoff.
 
-The captured files retain their original draft labels and exact bytes. Apply
+The captured files retain their original draft labels and content. The manifest
+records exact source bytes and committed bytes separately for existing Git
+line-ending normalization. Original EOF blank lines are deliberately retained.
+Apply
 these current reconciliation rules when reading them:
 
 - The owner selected OpenCode v2 for the next migration. This task authorizes
   Design C UI closeout, H00's existing-generation repair and documentation only;
   it does not authorize implementing OpenCode or publishing the issue drafts.
-- H00 is being repaired in the Design C baseline. Its final commit/evidence in
+- H00 is repaired in the Design C baseline by `fa3b590c`. Its commit/evidence in
   the integration handoff supersedes the snapshot's unchecked prerequisite;
   H12 must consume it rather than implement the same repair twice.
 - The Temporary storage row of the captured findings ledger predates its own

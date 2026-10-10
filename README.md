@@ -13,8 +13,11 @@ teaching packs and dated evidence. The active `codex/design-c-integration` branc
 implements saved chats/projects, contextual readers, Notes and whole Study/Test
 attempts on the existing Hermes foundation. The
 [Design C implementation spec](docs/planning/DESIGN_C_IMPLEMENTATION_SPEC.md)
-records each ticket's evidence and remaining acceptance gates. Matching Windows
-packaging and default cutover are still in progress.
+records each ticket's evidence and remaining acceptance gates. The owner has
+selected OpenCode v2 for the next harness migration. This task now closes the
+connected Design C UI and [integration handoff](docs/implementation/DESIGN_C_OPENCODE_HANDOFF.md);
+final default Windows delivery is deferred from DC21 to combined H20. The current
+Hermes adapters remain working until their explicit migration replacements land.
 The canonical checkout is `C:/Renulus/dev/repo`; the normal shortcut selects the
 unchanged validated **f1c49444** app at `C:/Renulus/app`. The learning/account
 profile is preserved at `C:/Renulus/data/learning`; normal startup/reopen and

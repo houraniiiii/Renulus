@@ -5,6 +5,11 @@ Confirmed direction updated on 2026-10-04 from the
 The October 9–10 decisions add saved conversations by default and select Design C
 as the UI replacement. The [consolidated C spec](planning/DESIGN_C_IMPLEMENTATION_SPEC.md)
 governs this migration; the status section below describes the existing Flow app.
+The later October 10 instruction selects OpenCode v2 for the next harness phase
+and bounds this task to a connected Design C review baseline and
+[committed handoff](implementation/DESIGN_C_OPENCODE_HANDOFF.md). Python domain/data
+ownership remains. DC21's final default release is deferred to H20, not passed;
+OpenCode implementation and default installation changes are outside this closeout.
 
 Renulus is an independent open-source Windows application for nephrologists
 practising in the EU. Its central job is to support education and learning
