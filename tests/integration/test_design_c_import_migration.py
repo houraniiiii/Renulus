@@ -11,8 +11,6 @@ from renulus.design_c_contracts import TABLE_COLUMNS
 from renulus.server import MODULE_ORDER, create_app
 from renulus.storage import Database, utc_now
 from renulus.storage.backup import export_records, restore_records
-from renulus.storage.invalidation import invalidate_restored_context
-from renulus.storage.relations import reconcile_unavailable_references
 
 
 def import_row(services, **changes):
@@ -65,15 +63,14 @@ def test_import_restore_keeps_private_original_edits_pins_and_interrupts_running
     bundle = export_records(source)
     target = create_app(tmp_path / "target").state.services
     target.db.mark_deleted("knowledge-revision", "removed_revision")
-    restore_records(target, bundle, confirm_older=True)
-    with target.db.transaction() as conn:
-        reconcile_unavailable_references(conn)
-        invalidate_restored_context(conn)
+    target.db.execute("INSERT INTO preferences VALUES('design_c.context_epoch','4',?)", (utc_now(),))
+    target.get("data_recovery").restore_json(bundle, confirm_backup_date=True)
     retained = target.db.fetch_one("SELECT * FROM assessment_test_imports")
     for field in ("original_text", "original_sha256", "original_json", "candidates_json", "source_revision_id", "checkpoint_json", "call_count", "revision"):
         assert retained[field] == original[field], field
     assert retained["live_source_revision_id"] is None
     assert (retained["state"], retained["error_code"]) == ("failed", "interrupted")
+    assert target.db.fetch_one("SELECT value FROM preferences WHERE key='design_c.context_epoch'")["value"] == "5"
     assert target.db.fetch_all("SELECT * FROM memory_jobs") == []
     target.db.mark_deleted("test_import", original["id"])
     restore_records(target, bundle, confirm_older=True)
