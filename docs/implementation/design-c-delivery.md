@@ -159,7 +159,8 @@ It names the executing frozen QA driver, read by PyTorch's stack formatter;
 there was no NUL or owner-file read. Correction `c60da29d` grants read-only
 access to that exact admitted script, rechecking identity/hash through a retained
 handle, with 20 passing guards. The next fresh import diagnostic is running;
-neither diagnostic counts as recovery acceptance.
+neither diagnostic counts as recovery acceptance. Diagnostic `r-c39429d3`
+then completes the actual public import with status Ready and zero refusals.
 Core QA `76cfdff2` passes 49 guard checks; actual run `c-a2284830` passes installed
 identity, isolated hidden C startup, saved Learn/Case conversations and project
 membership, then fails on Playwright response-body capture during the first PDF
@@ -180,6 +181,25 @@ check. The actual renderer has decoded the page, but the inspector's byte
 capture has not passed. A bounded actual-response clone with byte diagnostics
 is being implemented; no encoding cause or complete reader pass is inferred.
 Both app/backend processes closed. Product bytes remain unchanged.
+
+Fresh full installed recovery `r-179af503` exits zero. Receipt
+`C:/Renulus/scratch/design-c/delivery/r-179af503/recovery-evidence.json`, SHA256
+`70494c3dd8bd1d8e5307c336b32979fd3b30023e9a49201466d2edfde6431b1a`,
+passes all nine driver gates: identity/seed, genuine schema-1 upgrade and owner
+reassembly, current producers, and restore/deletion replay for JSON, ZIP1 and
+ZIP2. The unchanged product is `4c289868`; copied QA driver SHA256 is
+`bdc07896af237ec54c4d9ef8e461a5d0d77bcf16ee19462a0da4196aa32c4113`.
+The closed seed manifest SHA256 is
+`210b924d970885b6b08fe7ac5d8d10d4f878e50cbc311b82941f4f98568d8b14`.
+Fifteen history tables and two deterministic legacy versions are preserved;
+current originals, edited Memory and a whole-attempt partial denominator are
+also checked. Each restored/deleted target performs the public rebuild, verifies
+changed index generations and counts, then retrieves exact expected records
+through actual LanceDB/FastEmbed and Mem0/QdrantLocal. Zero provider calls occur.
+JSON remains records-only: its target is subsequently hydrated through the
+real ZIP owner before original-byte retrieval. The pre-upgrade snapshot remains
+byte-checked. This proves owner close/reassembly within the installed interpreter;
+separate fresh Electron launches of the upgraded profile are still required.
 
 Manufacture and installation use fresh `matching-<revision>` and
 `installed-<revision>` destinations. A matching receipt must compare backend,

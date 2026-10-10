@@ -71,6 +71,14 @@ default cutover is claimed. Exact paths/hashes are in delivery preparation recei
 The completed leases in the table above are superseded by these bounded final
 acceptance reservations. The lead retains all other shared and release paths:
 
+Latest recovery checkpoint: `r-179af503` passes all nine actual installed
+upgrade/current-producer/JSON/ZIP1/ZIP2 restore-and-deletion gates, including
+effective local engine rebuild/retrieval and zero provider calls. The closed
+schema-1 snapshot and failed predecessor receipts remain intact. Receipt/hash
+and the records-only JSON qualification are in [delivery evidence](design-c-delivery.md).
+Core/readers QA `3aa74fee` passes 70 guards; actual Core06 is running. Fresh
+Electron reopen of the upgraded profile follows in the same serial slot.
+
 | Owner | Exact current reservation | Required result |
 | --- | --- | --- |
 | Lead | Shared release records, spec and eventual default pointer | Serial installed checks against unchanged product `4c289868`; preserve failed receipts and old default. |
