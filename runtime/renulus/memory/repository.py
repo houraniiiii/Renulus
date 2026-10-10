@@ -3,11 +3,32 @@ import json
 
 from renulus.contracts import ApiError, ContextScope, Scope, durable_id
 from renulus.storage import utc_now
-from renulus.storage.assessment_policy import policy_snapshot
+from renulus.storage.assessment_policy import policy_snapshot, require_assistance
 from renulus.storage.invalidation import context_epoch_in
 
 from .models import ManualFact, clean_text, digest, require_eligible
 from .study_answers import answer_text
+
+
+BOUNDARY_CANCELLATIONS = ('boundary_policy_changed', 'boundary_context_changed', 'restore_interrupted')
+
+
+def capture_fingerprint(conn, source_revision):
+    # Keep source authority separate from disposable local generations so an
+    # interrupted boundary never hides a changed source. Only hashes/scalars
+    # are retained in the existing outbox column, never producer text.
+    return ('memory/2:' + source_revision + ':' + str(require_assistance(conn)) +
+            ':' + str(context_epoch_in(conn)))
+
+
+def fingerprint_parts(value):
+    parts = value.split(':') if isinstance(value, str) else []
+    if (len(parts) != 4 or parts[0] != 'memory/2' or len(parts[1]) != 64 or
+            any(char not in '0123456789abcdef' for char in parts[1]) or
+            not 1 <= len(parts[2]) <= 20 or not 1 <= len(parts[3]) <= 20 or
+            not parts[2].isdigit() or not parts[3].isdigit()):
+        return None
+    return parts[1], int(parts[2]), int(parts[3])
 
 
 class MemoryRepository:
@@ -117,8 +138,8 @@ class MemoryRepository:
         for row in sources:
             conn.execute('INSERT OR REPLACE INTO memory_suppression VALUES(?,?)', (row[0], now))
             if row[0].startswith('evidence:'):
-                conn.execute("UPDATE memory_jobs SET state='cancelled',updated_at=? "
-                             "WHERE evidence_id=? AND state IN ('queued','running','failed')",
+                conn.execute("UPDATE memory_jobs SET state='cancelled',error_code='memory_capture_suppressed',updated_at=? "
+                             "WHERE evidence_id=? AND state IN ('queued','running','failed','cancelled')",
                              (now, row[0][len('evidence:'):]))
 
     def edit(self, identifier, text, expected_revision):
@@ -203,15 +224,20 @@ class MemoryRepository:
                  '; assisted: ' + ('yes' if payload['assisted'] else 'no') +
                  '; repeat: ' + ('yes' if payload['repeat'] else 'no') + '.')
         return {'text': text, 'kind': kind, 'topic_id': topic, 'infer': False,
-                'fingerprint': digest({'evidence': metadata['revision'],
-                    'policy_revision': policy_snapshot(conn)['revision'], 'context_epoch': context_epoch_in(conn)}),
+                'fingerprint': capture_fingerprint(conn, metadata['revision']),
                 'scope': expected, 'entity_id': metadata['entity_id'],
                 'assessment': {field: payload[field] for field in ('mode', 'origin', 'review_quality', 'reviewed',
                     'bank_cohort_eligible', 'assisted', 'repeat', 'score_bucket', 'outcome', 'correct')}}
 
     def material(self, evidence_id, scope: ContextScope, *, conn=None):
         require_eligible(scope)
-        select = (lambda sql, args: conn.execute(sql, args).fetchone()) if conn is not None else self.db.fetch_one
+        if conn is None:
+            with self.db.transaction() as current:
+                return self.material(evidence_id, scope, conn=current)
+        require_assistance(conn)
+        select = lambda sql, args: conn.execute(sql, args).fetchone()
+        if select('SELECT 1 FROM memory_suppression WHERE source_key=?', ('evidence:' + evidence_id,)):
+            raise ApiError('memory_capture_suppressed', 'This source was removed or corrected in memory', 409)
         metadata = select(
             'SELECT kind,json_valid(payload_json) AS payload_valid, CASE WHEN json_valid(payload_json) THEN '
             "json_extract(payload_json,'$.scope.kind') END AS scope_kind, "
@@ -220,10 +246,7 @@ class MemoryRepository:
         if not metadata:
             raise ApiError('memory_evidence_missing', 'This learning evidence is no longer available', 404)
         if metadata['kind'] == 'assessment-test-answer':
-            if conn is not None:
-                return self._whole_material_in(conn, evidence_id, scope)
-            with self.db.transaction() as current:
-                return self._whole_material_in(current, evidence_id, scope)
+            return self._whole_material_in(conn, evidence_id, scope)
         if metadata['kind'] not in ('study-interest', 'assessment-answer', 'learning-point', 'study-answer'):
             raise ApiError('memory_evidence_ineligible', 'This evidence type is not eligible for learner memory', 409)
         if metadata['kind'] == 'study-answer' and (scope.kind != Scope.STUDY or metadata['scope_kind'] != 'study'):
@@ -238,7 +261,7 @@ class MemoryRepository:
                 raise ApiError('memory_evidence_invalid', 'Learning evidence needs a classified scope', 409) from None
         # Inspect classification metadata before fetching any producer text. A
         # caller cannot relabel a stored case reference by supplying study scope.
-        row = self.db.fetch_one('SELECT * FROM learning_evidence WHERE id=?', (evidence_id,))
+        row = select('SELECT * FROM learning_evidence WHERE id=?', (evidence_id,))
         if not row:
             raise ApiError('memory_evidence_missing', 'This learning evidence is no longer available', 404)
         try:
@@ -252,8 +275,8 @@ class MemoryRepository:
             require_eligible(declared)
             if declared != scope:
                 raise ApiError('memory_evidence_scope', 'Learning evidence must keep its original scope', 409)
-        if self.db.is_deleted('learn_thread', row['entity_id']) or self.db.is_deleted(
-                'learning_evidence', evidence_id):
+        if select("SELECT 1 FROM deletion_ledger WHERE (entity_type='learn_thread' AND entity_id=?) "
+                  "OR (entity_type='learning_evidence' AND entity_id=?)", (row['entity_id'], evidence_id)):
             raise ApiError('memory_evidence_deleted', 'This learning evidence has been removed', 409)
         kind, infer = 'study-interest', False
         topic = row['topic_id']
@@ -287,11 +310,11 @@ class MemoryRepository:
             text, kind, infer = clean_text(payload.get('text')), 'learning-point', True
         else:
             raise ApiError('memory_evidence_ineligible', 'This evidence type is not eligible for learner memory', 409)
-        fingerprint = digest({key: row[key] for key in ('id', 'kind', 'topic_id', 'entity_id', 'payload_json')})
+        source_revision = digest({key: row[key] for key in ('id', 'kind', 'topic_id', 'entity_id', 'payload_json')})
         return {'text': text, 'kind': kind, 'topic_id': topic, 'infer': infer,
-                'fingerprint': fingerprint, 'scope': scope, 'entity_id': row['entity_id']}
+                'fingerprint': capture_fingerprint(conn, source_revision), 'scope': scope, 'entity_id': row['entity_id']}
 
-    def enqueue(self, evidence_id, scope: ContextScope):
+    def enqueue(self, evidence_id, scope: ContextScope, *, automatic=False):
         require_eligible(scope)
         with self.db.transaction() as conn:
             material = self.material(evidence_id, scope, conn=conn)
@@ -301,7 +324,25 @@ class MemoryRepository:
             previous = conn.execute('SELECT * FROM memory_jobs WHERE evidence_id=? AND evidence_hash=?',
                                     (evidence_id, material['fingerprint'])).fetchone()
             if previous:
-                return dict(previous)
+                return None if automatic else dict(previous)
+            if automatic:
+                history = conn.execute('SELECT * FROM memory_jobs WHERE evidence_id=?', (evidence_id,)).fetchall()
+                if (conn.execute('SELECT 1 FROM memory_sources WHERE source_key=?',
+                        ('evidence:' + evidence_id,)).fetchone() or
+                        any(row['state'] != 'cancelled' or row['error_code'] not in BOUNDARY_CANCELLATIONS
+                            for row in history)):
+                    return None
+                source_revision = fingerprint_parts(material['fingerprint'])[0]
+                for row in history:
+                    prior = fingerprint_parts(row['evidence_hash'])
+                    if prior is None and row['error_code'] != 'restore_interrupted':
+                        conn.execute("UPDATE memory_jobs SET error_code='memory_fingerprint_unversioned',updated_at=? WHERE id=?",
+                                     (utc_now(), row['id']))
+                        return None
+                    if prior is not None and prior[0] != source_revision:
+                        conn.execute("UPDATE memory_jobs SET error_code='memory_source_changed',updated_at=? WHERE id=?",
+                                     (utc_now(), row['id']))
+                        return None
             identifier, now = durable_id('memoryjob'), utc_now()
             conn.execute('INSERT INTO memory_jobs VALUES(?,?,?,?,?,?,?,?,?)',
                          (identifier, evidence_id, material['fingerprint'], scope.model_dump_json(),
@@ -317,8 +358,19 @@ class MemoryRepository:
     def jobs(self):
         return self.db.fetch_all('SELECT * FROM memory_jobs ORDER BY created_at DESC LIMIT 100')
 
+    def _retire_invalid_recovery(self, evidence_id, code):
+        if code in ('assistance_restricted', 'assistance_changed'):
+            return
+        self.db.execute("UPDATE memory_jobs SET error_code=?,updated_at=? WHERE evidence_id=? "
+            "AND state='cancelled' AND error_code IN "
+            "('boundary_policy_changed','boundary_context_changed','restore_interrupted')",
+            (code, utc_now(), evidence_id))
+
     def scan(self):
         # Immutable producer records are the queue input, never a raw transcript.
+        with self.db.transaction() as conn:
+            if not policy_snapshot(conn)['assistance_allowed']:
+                return
         cursor, queued = '', 0
         while queued < 100:
             rows = self.db.fetch_all(
@@ -327,7 +379,10 @@ class MemoryRepository:
                 "AND e.kind IN ('study-interest','assessment-answer','learning-point','study-answer','assessment-test-answer') "
                 "AND (e.kind='assessment-test-answer' OR json_extract(e.payload_json,'$.scope.kind') IN ('study','personal-library','generated-practice','reviewed-assessment') "
                 "OR (e.kind='study-interest' AND json_extract(e.payload_json,'$.scope') IS NULL)) "
-                'AND NOT EXISTS (SELECT 1 FROM memory_jobs j WHERE j.evidence_id=e.id) '
+                "AND NOT EXISTS (SELECT 1 FROM memory_jobs j WHERE j.evidence_id=e.id AND "
+                "(j.state<>'cancelled' OR j.error_code IS NULL OR j.error_code NOT IN "
+                "('boundary_policy_changed','boundary_context_changed','restore_interrupted'))) "
+                "AND NOT EXISTS (SELECT 1 FROM memory_sources s WHERE s.source_key='evidence:' || e.id) "
                 "AND NOT EXISTS (SELECT 1 FROM memory_suppression s WHERE s.source_key='evidence:' || e.id) "
                 'ORDER BY e.id LIMIT 100', (cursor,))
             if not rows:
@@ -340,17 +395,24 @@ class MemoryRepository:
                         if resolver is None:
                             continue
                         with self.db.transaction() as conn:
+                            require_assistance(conn)
                             metadata = resolver.committed_evidence_in(conn, row['id'])
                             if metadata is None:
-                                continue
+                                raise ApiError('memory_evidence_invalid', 'This answer has no eligible commitment', 409)
                             scope = self._whole_scope(metadata)
                     else:
                         scope = (ContextScope.model_validate_json(row['declared_scope']) if row['declared_scope'] else
                                  ContextScope(kind=Scope.STUDY, entity_id=row['entity_id']))
-                    self.enqueue(row['id'], scope)
-                    queued += 1
-                except (ApiError, ValueError, TypeError, KeyError):
+                    if self.enqueue(row['id'], scope, automatic=True) is not None:
+                        queued += 1
+                except ApiError as error:
+                    # A permanent invalidation closes recovery; another policy
+                    # boundary merely waits for the next safe scan.
+                    self._retire_invalid_recovery(row['id'], error.code)
+                    continue
+                except (ValueError, TypeError, KeyError):
                     # Ineligible input produces no job, audit or error payload.
+                    self._retire_invalid_recovery(row['id'], 'memory_evidence_invalid')
                     continue
                 if queued == 100:
                     break
@@ -364,27 +426,67 @@ class MemoryRepository:
                          (utc_now(), identifier))
         return self.job(identifier)
 
-    def current(self, job, *, conn=None):
-        select = (lambda sql, args: conn.execute(sql, args).fetchone()) if conn is not None else self.db.fetch_one
+    def _capture_error_in(self, conn, job):
+        select = lambda sql, args: conn.execute(sql, args).fetchone()
         row = select('SELECT * FROM memory_jobs WHERE id=?', (job['id'],))
         if row is None or row['state'] != 'running':
-            return False
-        if any(row[field] != job.get(field) for field in ('evidence_id', 'evidence_hash', 'scope')):
-            return False
+            return 'memory_capture_stopped'
+        if any(row[field] != job.get(field) for field in ('evidence_id', 'evidence_hash', 'scope', 'attempts')):
+            return 'memory_job_invalid'
         if select('SELECT 1 FROM memory_suppression WHERE source_key=?', ('evidence:' + job['evidence_id'],)):
-            return False
+            return 'memory_capture_suppressed'
+        if not policy_snapshot(conn)['assistance_allowed']:
+            return 'boundary_policy_changed'
         try:
-            return self.material(job['evidence_id'], ContextScope.model_validate_json(job['scope']), conn=conn)[
-                'fingerprint'] == job['evidence_hash']
-        except (ApiError, ValueError, TypeError, KeyError):
-            return False
+            current = self.material(job['evidence_id'], ContextScope.model_validate_json(job['scope']), conn=conn)['fingerprint']
+        except ApiError as error:
+            return error.code
+        except (ValueError, TypeError, KeyError):
+            return 'memory_evidence_invalid'
+        if current == job['evidence_hash']:
+            return None
+        prior, fresh = fingerprint_parts(job['evidence_hash']), fingerprint_parts(current)
+        if prior is None:
+            source = select('SELECT kind FROM learning_evidence WHERE id=?', (job['evidence_id'],))
+            # The earlier whole-attempt hash already pinned both generations.
+            # Honor it only when exact current source and boundaries reproduce it.
+            if source and source['kind'] == 'assessment-test-answer' and job['evidence_hash'] == digest({
+                    'evidence': fresh[0], 'policy_revision': fresh[1], 'context_epoch': fresh[2]}):
+                return None
+            return 'memory_fingerprint_unversioned'
+        if prior[0] != fresh[0]:
+            return 'memory_source_changed'
+        if prior[1] != fresh[1]:
+            return 'boundary_policy_changed'
+        return 'boundary_context_changed'
+
+    def current(self, job, *, conn=None):
+        if conn is not None:
+            return self._capture_error_in(conn, job) is None
+        with self.db.transaction() as current:
+            return self._capture_error_in(current, job) is None
+
+    @staticmethod
+    def _cancel_stale_in(conn, job, code):
+        # A forged/stopped caller cannot cancel another canonical execution or
+        # overwrite an explicit cancellation, completed capture or restore code.
+        conn.execute("UPDATE memory_jobs SET state='cancelled',error_code=?,updated_at=? "
+                     "WHERE id=? AND state='running' AND evidence_id=? AND evidence_hash=? AND scope=? AND attempts=?",
+                     (code, utc_now(), job['id'], job['evidence_id'], job['evidence_hash'], job['scope'], job['attempts']))
+
+    def cancel_stale(self, job):
+        with self.db.transaction() as conn:
+            code = self._capture_error_in(conn, job)
+            if code is not None:
+                self._cancel_stale_in(conn, job, code)
+        return self.job(job['id'])
 
     def commit_capture(self, job, material, texts):
         with self.db.transaction() as conn:
             # Re-evaluate producer revision/scope and cancellation inside the commit transaction.
-            if not self.current(job, conn=conn):
-                conn.execute("UPDATE memory_jobs SET state='cancelled',updated_at=? WHERE id=? AND state='running'",
-                             (utc_now(), job['id']))
+            code = self._capture_error_in(conn, job)
+            if code is not None:
+                self._cancel_stale_in(conn, job, code)
                 return []
             source = conn.execute('SELECT kind FROM learning_evidence WHERE id=?', (job['evidence_id'],)).fetchone()
             if source and source['kind'] == 'assessment-test-answer':
@@ -402,8 +504,8 @@ class MemoryRepository:
         return identifiers
 
     def cancel(self, identifier):
-        self.db.execute("UPDATE memory_jobs SET state='cancelled',updated_at=? "
-                        "WHERE id=? AND state IN ('queued','running','failed')", (utc_now(), identifier))
+        self.db.execute("UPDATE memory_jobs SET state='cancelled',error_code='explicit_cancelled',updated_at=? "
+                        "WHERE id=? AND state IN ('queued','running','failed','cancelled')", (utc_now(), identifier))
         return self.job(identifier)
 
     def fail(self, identifier, code):

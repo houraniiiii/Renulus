@@ -69,9 +69,15 @@ def test_durable_jobs_restart_cancel_and_source_revision_guard(repository, servi
     assert repository.enqueue('evidence-1', scope)['id'] == job['id']
     claimed = repository.claim(job['id'])
     assert claimed['state'] == 'running'
+    original_execution = claimed
     restarted = MemoryRepository(services)
     assert restarted.job(job['id'])['state'] == 'queued'
     claimed = restarted.claim(job['id'])
+    assert claimed['attempts'] == original_execution['attempts'] + 1
+    assert not restarted.current(original_execution)
+    assert restarted.commit_capture(original_execution, {'unused': True}, ['late pre-restart result']) == []
+    assert restarted.job(job['id'])['state'] == 'running'
+    assert restarted.current(claimed)
     payload = {'scope': scope.model_dump(mode='json'), 'general_learning': True, 'text': 'Newer source revision.'}
     services.db.execute('UPDATE learning_evidence SET payload_json=? WHERE id=?',
                         (json.dumps(payload), 'evidence-1'))

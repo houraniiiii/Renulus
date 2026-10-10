@@ -8,7 +8,9 @@ import pytest
 
 from renulus.contracts import ApiError, ContextScope, Scope
 from renulus.design_c_contracts import SavedTestVersion
+from renulus.memory.models import digest
 from renulus.server import create_app
+from renulus.storage.backup import export_records
 from renulus.storage.invalidation import bump_context_epoch
 from renulus.storage.relations import reconcile_unavailable_references
 
@@ -229,3 +231,157 @@ def test_typed_attempt_authority_ignores_overlapping_learn_tombstone_and_memory_
     with pytest.raises(ApiError) as suppressed:
         repository.material(evidence_id, scope)
     assert suppressed.value.code == 'memory_capture_suppressed' and repository.list() == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('boundary', ['policy_cycle', 'epoch', 'restore'])
+async def test_boundary_interruption_requeues_one_fresh_canonical_scalar_capture(whole_memory, boundary):
+    client, services, repository, _ = whole_memory
+    attempt = start(whole_memory)
+    evidence_id = commit(whole_memory, attempt)
+    scope = ContextScope(kind=Scope.REVIEWED_ASSESSMENT, entity_id=attempt['id'])
+    job = repository.claim(repository.enqueue(evidence_id, scope)['id'])
+    material = repository.material(evidence_id, scope)
+    if boundary == 'policy_cycle':
+        active = start(whole_memory, mode='test', key='memory-recovery-policy-test')
+        assert repository.commit_capture(job, material, ['PRIVATE_LATE_OUTPUT']) == []
+        repository.scan()
+        assert len(repository.jobs()) == 1 and repository.list() == []
+        submitted = client.post(BASE + '/' + active['id'] + '/submit',
+            headers={'Idempotency-Key': 'memory-recovery-policy-submit'},
+            json={'expected_draft_revision': active['draft_revision']})
+        assert submitted.status_code == 200, submitted.text
+        expected_error = 'boundary_policy_changed'
+    elif boundary == 'epoch':
+        with services.db.transaction() as conn:
+            bump_context_epoch(conn)
+        expected_error = 'boundary_context_changed'
+    else:
+        bundle = export_records(services)
+        services.get('data_recovery').restore_json(bundle, confirm_backup_date=True)
+        expected_error = 'restore_interrupted'
+    assert not repository.current(job)
+    assert repository.commit_capture(job, material, ['PRIVATE_LATE_OUTPUT']) == []
+    stale = repository.job(job['id'])
+    assert stale['state'] == 'cancelled' and stale['error_code'] == expected_error
+    assert repository.list() == []
+    repository.scan()
+    repository.scan()
+    fresh = [row for row in repository.jobs() if row['id'] != job['id']]
+    assert len(fresh) == 1 and fresh[0]['state'] == 'queued'
+    assert fresh[0]['evidence_hash'] != job['evidence_hash']
+    memory = services.get('memory')
+    assert (await memory.process_pending())['processed'] == 1
+    facts = repository.list()
+    assert len(facts) == 1 and facts[0]['source_id'] == evidence_id
+    assert facts[0]['text'] == repository.material(evidence_id, scope)['text']
+    assert 'PRIVATE_' not in facts[0]['text']
+    assert repository.job(job['id'])['error_code'] == expected_error
+    with services.db.transaction() as conn:
+        bump_context_epoch(conn)
+    repository.scan()
+    assert len(repository.jobs()) == 2
+    assert (await memory.process_pending())['processed'] == 0
+    await memory.close()
+
+
+@pytest.mark.parametrize('terminal', ['explicit_cancel', 'explicit_after_restore', 'suppressed',
+    'forged', 'evidence_deleted', 'version_deleted', 'source_changed', 'failed'])
+def test_scan_never_requeues_terminal_capture_after_boundary(whole_memory, terminal):
+    _, services, repository, version_id = whole_memory
+    attempt = start(whole_memory)
+    evidence_id = commit(whole_memory, attempt)
+    scope = ContextScope(kind=Scope.REVIEWED_ASSESSMENT, entity_id=attempt['id'])
+    job = repository.claim(repository.enqueue(evidence_id, scope)['id'])
+    material = repository.material(evidence_id, scope)
+    if terminal == 'explicit_after_restore':
+        services.get('data_recovery').restore_json(export_records(services), confirm_backup_date=True)
+        repository.cancel(job['id'])
+    elif terminal == 'explicit_cancel':
+        repository.cancel(job['id'])
+    elif terminal == 'failed':
+        repository.fail(job['id'], 'memory_capture_failed')
+    with services.db.transaction() as conn:
+        bump_context_epoch(conn)
+        if terminal == 'suppressed':
+            conn.execute('INSERT INTO memory_suppression VALUES(?,?)',
+                ('evidence:' + evidence_id, '2026-10-10T12:00:00Z'))
+        elif terminal == 'forged':
+            conn.execute('UPDATE learning_evidence SET payload_json=? WHERE id=?',
+                (json.dumps({'reviewed': True, 'private_key': 'PRIVATE_FORGED'}), evidence_id))
+        elif terminal == 'evidence_deleted':
+            services.db.mark_deleted('learning_evidence', evidence_id, conn)
+        elif terminal == 'version_deleted':
+            conn.execute('DELETE FROM assessment_test_versions WHERE id=?', (version_id,))
+            reconcile_unavailable_references(conn)
+        elif terminal == 'source_changed':
+            # Even a canonical scalar row change must not masquerade as an epoch-only retry.
+            conn.execute('UPDATE learning_evidence SET created_at=? WHERE id=?',
+                ('2026-10-10T12:00:00Z', evidence_id))
+    assert repository.commit_capture(job, material, ['PRIVATE_LATE_OUTPUT']) == []
+    repository.scan()
+    repository.scan()
+    assert len(repository.jobs()) == 1 and repository.list() == []
+    if terminal.startswith('explicit'):
+        assert repository.job(job['id'])['error_code'] == 'explicit_cancelled'
+
+
+@pytest.mark.asyncio
+async def test_worker_queued_before_test_waits_then_recovers_without_inference(whole_memory):
+    client, services, repository, _ = whole_memory
+    attempt = start(whole_memory)
+    evidence_id = commit(whole_memory, attempt)
+    scope = ContextScope(kind=Scope.REVIEWED_ASSESSMENT, entity_id=attempt['id'])
+    job = repository.enqueue(evidence_id, scope)
+    active = start(whole_memory, mode='test', key='memory-queued-test')
+    memory = services.get('memory')
+    assert (await memory.process_pending())['processed'] == 0
+    assert repository.job(job['id'])['error_code'] == 'boundary_policy_changed'
+    assert repository.list() == []
+    assert (await memory.process_pending())['processed'] == 0
+    assert len(repository.jobs()) == 1
+    response = client.post(BASE + '/' + active['id'] + '/submit',
+        headers={'Idempotency-Key': 'memory-queued-submit'},
+        json={'expected_draft_revision': active['draft_revision']})
+    assert response.status_code == 200, response.text
+    assert (await memory.process_pending())['processed'] == 1
+    assert len(repository.jobs()) == 2 and len(repository.list()) == 1
+    assert (await memory.process_pending())['processed'] == 0
+    await memory.close()
+
+
+def test_invalid_source_after_restore_is_terminal_not_polled_again(whole_memory):
+    _, services, repository, _ = whole_memory
+    attempt = start(whole_memory)
+    evidence_id = commit(whole_memory, attempt)
+    scope = ContextScope(kind=Scope.REVIEWED_ASSESSMENT, entity_id=attempt['id'])
+    job = repository.enqueue(evidence_id, scope)
+    services.get('data_recovery').restore_json(export_records(services), confirm_backup_date=True)
+    services.db.execute('UPDATE learning_evidence SET payload_json=? WHERE id=?',
+        (json.dumps({'reviewed': True, 'private_key': 'PRIVATE_FORGED'}), evidence_id))
+    repository.scan()
+    assert repository.job(job['id'])['error_code'] == 'memory_evidence_invalid'
+    services.db.execute('DELETE FROM learning_evidence WHERE id=?', (evidence_id,))
+    repository.scan()
+    assert len(repository.jobs()) == 1 and repository.list() == []
+
+
+def test_existing_whole_capture_hash_is_accepted_only_at_exact_original_boundary(whole_memory):
+    _, services, repository, _ = whole_memory
+    attempt = start(whole_memory)
+    evidence_id = commit(whole_memory, attempt)
+    scope = ContextScope(kind=Scope.REVIEWED_ASSESSMENT, entity_id=attempt['id'])
+    queued = repository.enqueue(evidence_id, scope)
+    with services.db.transaction() as conn:
+        scalar = services.get('whole_attempts').committed_evidence_in(conn, evidence_id)
+    previous_hash = digest({'evidence': scalar['revision'], 'policy_revision': 1, 'context_epoch': 0})
+    services.db.execute('UPDATE memory_jobs SET evidence_hash=? WHERE id=?', (previous_hash, queued['id']))
+    job = repository.claim(queued['id'])
+    assert repository.current(job)
+    with services.db.transaction() as conn:
+        bump_context_epoch(conn)
+    assert not repository.current(job)
+    assert repository.commit_capture(job, {}, ['PRIVATE_LATE_OLD_JOB']) == []
+    repository.scan()
+    assert repository.job(job['id'])['error_code'] == 'memory_fingerprint_unversioned'
+    assert len(repository.jobs()) == 1 and repository.list() == []

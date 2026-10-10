@@ -195,7 +195,7 @@ class MemoryService:
                     self._active_runs.add(job['id'])
                 try:
                     if not self.repository.current(job):
-                        self.repository.cancel(job['id'])
+                        self.repository.cancel_stale(job)
                         continue
                     scope = ContextScope.model_validate_json(job['scope'])
                     material = self.repository.material(job['evidence_id'], scope)
@@ -205,10 +205,13 @@ class MemoryService:
                         texts = await asyncio.to_thread(self._extract, job, material, asyncio.get_running_loop())
                     else:
                         texts = [material['text']]
-                    self.repository.commit_capture(job, material, texts)
-                    processed += 1
+                    if self.repository.commit_capture(job, material, texts):
+                        processed += 1
                 except asyncio.CancelledError:
-                    self.repository.cancel(job['id'])
+                    # A user Stop is already explicit in the canonical outbox.
+                    # Shutdown leaves current work recoverable on restart; a
+                    # crossed boundary retains its distinct cancellation reason.
+                    self.repository.cancel_stale(job)
                     provider = self.services.registry.get('provider')
                     if provider:
                         await provider.cancel(job['id'])
@@ -216,7 +219,7 @@ class MemoryService:
                 except Exception as error:
                     code = error.code if isinstance(error, ApiError) else 'memory_capture_failed'
                     if not self.repository.current(job):
-                        self.repository.cancel(job['id'])
+                        self.repository.cancel_stale(job)
                     else:
                         self.repository.fail(job['id'], code)
                 finally:
