@@ -12,10 +12,10 @@ from threading import RLock
 
 from renulus.contracts import ApiError, durable_id
 from renulus.design_c_contracts import SavedTestVersion
+from renulus.storage.assessment_policy import advance_policy, policy_snapshot, require_assistance
 
 from .attempt_models import DraftState
 
-POLICY_REVISION = "design_c.policy_revision"
 TERMINAL = {"submitted", "ended"}
 HELP_KINDS = {"hint", "sources", "notes", "chat"}
 
@@ -30,13 +30,6 @@ def timestamp(value):
 
 def parse(value):
     return datetime.fromisoformat(value) if value else None
-
-
-def bump_policy_revision_in(conn, now):
-    """Shared parent seam; call in the transaction starting/sealing a Test."""
-    conn.execute("INSERT INTO preferences VALUES(?,'1',?) ON CONFLICT(key) DO UPDATE SET "
-                 "value=CAST(CAST(preferences.value AS INTEGER)+1 AS TEXT),updated_at=excluded.updated_at",
-                 (POLICY_REVISION, timestamp(now)))
 
 
 class WholeAttemptRepository:
@@ -54,10 +47,13 @@ class WholeAttemptRepository:
         with self._lock, self.db.transaction() as conn:
             self._ready(conn)
             self._reconcile_all_in(conn)
+            conn.execute("SAVEPOINT attempt_command")
             try:
                 result = operation(conn)
             except ApiError as caught:
+                conn.execute("ROLLBACK TO attempt_command")
                 error = caught
+            conn.execute("RELEASE attempt_command")
         if error:
             raise error
         return result
@@ -100,9 +96,9 @@ class WholeAttemptRepository:
             # unknowable. Conservatively expire rather than grant extra time.
             effective = max(effective, parse(row["deadline_at"]))
         self._observations[row["id"]] = (effective, tick)
-        row["clock_high_water_at"] = row["last_reconciled_at"] = timestamp(effective)
-        conn.execute("UPDATE assessment_test_attempts SET clock_high_water_at=?,last_reconciled_at=? WHERE id=?",
-                     (row["clock_high_water_at"], row["last_reconciled_at"], row["id"]))
+        row["clock_high_water_at"] = timestamp(effective)
+        conn.execute("UPDATE assessment_test_attempts SET clock_high_water_at=? WHERE id=?",
+                     (row["clock_high_water_at"], row["id"]))
         return effective
 
     def _reconcile_all_in(self, conn):
@@ -128,23 +124,20 @@ class WholeAttemptRepository:
         self._ready(conn)
         self._reconcile_all_in(conn)
 
+    def reconcile_all(self):
+        """Pre-dispatch callback: commit due results before the shared gate reads."""
+        return self._run(lambda conn: None)
+
     def policy_snapshot(self, conn):
         return self.policy_in(conn)
 
     def require_assistance(self, conn, *, expected_revision=None):
-        policy = self.policy_snapshot(conn)
-        if not policy["assistance_allowed"]:
-            raise ApiError("attempt_restricted", "Finish your active Test before using assistance.", 409)
-        if expected_revision is not None and expected_revision != policy["revision"]:
-            raise ApiError("revision_conflict", "Learning access changed. Reopen this question.", 409, True)
-        return policy["revision"]
+        self.reconcile_in(conn)
+        return require_assistance(conn, expected_revision=expected_revision)
 
     @staticmethod
     def _policy_snapshot_in(conn):
-        active = conn.execute("SELECT id FROM assessment_test_attempts WHERE mode='test' AND status='active'").fetchone()
-        revision = conn.execute("SELECT value FROM preferences WHERE key=?", (POLICY_REVISION,)).fetchone()
-        return {"active_test_id": active[0] if active else None,
-                "revision": int(revision[0]) if revision else 0, "assistance_allowed": active is None}
+        return policy_snapshot(conn)
 
     def policy(self):
         return self._run(self._policy_snapshot_in)
@@ -170,7 +163,7 @@ class WholeAttemptRepository:
         conn.execute("INSERT INTO assessment_attempt_commands "
                      "(idempotency_key,operation,target_type,target_id,request_hash,result_json,created_at) VALUES(?,?,?,?,?,?,?)",
                      (key, operation, "test_attempt", attempt_id, hashlib.sha256(encode(request).encode()).hexdigest(),
-                      encode(result), timestamp(self.clock())))
+                      encode(result), self._row(conn, attempt_id)["clock_high_water_at"]))
         return result
 
     @staticmethod
@@ -181,10 +174,13 @@ class WholeAttemptRepository:
             raise ApiError("revision_conflict", "This draft changed. Reopen it before saving.", 409, True)
 
     def _repeat_in(self, conn, row, item):
-        existing = conn.execute("SELECT repeat FROM assessment_attempt_exposure WHERE attempt_id=? AND item_id=? "
-                                "AND kind='presented'", (row["id"], item.item_id)).fetchone()
+        # An internal command receipt freezes freshness without adding columns
+        # to the parent's immutable migration004 exposure inventory.
+        existing = conn.execute("SELECT result_json FROM assessment_attempt_commands WHERE operation='presentation' "
+                                "AND target_id=? AND json_extract(result_json,'$.item_id')=? LIMIT 1",
+                                (row["id"], item.item_id)).fetchone()
         if existing:
-            return bool(existing[0])
+            return json.loads(existing[0])["repeat"]
         repeat = conn.execute("SELECT 1 FROM assessment_attempt_exposure WHERE family_id=? AND attempt_id<>? LIMIT 1",
                               (item.family_id, row["id"])).fetchone() is not None
         legacy = conn.execute("SELECT 1 FROM sqlite_master WHERE name='assessment_exposure'").fetchone()
@@ -194,11 +190,15 @@ class WholeAttemptRepository:
 
     def _expose_in(self, conn, row, item, kind, now):
         repeat = self._repeat_in(conn, row, item)
-        conn.execute("INSERT OR IGNORE INTO assessment_attempt_exposure "
-                     "(id,attempt_id,item_id,question_id,question_version,key_version,family_id,family_version,kind,created_at,repeat) "
-                     "VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-                     (durable_id("exposure"), row["id"], item.item_id, item.question_id, item.question_version,
-                      item.key_version, item.family_id, item.family_version, kind, timestamp(now), int(repeat)))
+        exposure_id = durable_id("exposure")
+        inserted = conn.execute("INSERT OR IGNORE INTO assessment_attempt_exposure "
+                     "(id,attempt_id,item_id,question_id,question_version,key_version,family_id,family_version,kind,created_at) "
+                     "VALUES(?,?,?,?,?,?,?,?,?,?)",
+                     (exposure_id, row["id"], item.item_id, item.question_id, item.question_version,
+                      item.key_version, item.family_id, item.family_version, kind, timestamp(now))).rowcount
+        if inserted and kind == "presented":
+            self._record_in(conn, "presentation:" + exposure_id, "presentation",
+                            {"item_id": item.item_id}, row["id"], {"item_id": item.item_id, "repeat": repeat})
         return repeat
 
     def _availability_in(self, conn, row, item):
@@ -239,7 +239,8 @@ class WholeAttemptRepository:
         effective = parse(row["paused_at"]) if row["status"] == "paused" else now
         return {"id": row["id"], "version_id": row["version_id"], "origin": version.origin,
                 "review_quality": version.review_quality, "mode": row["mode"], "status": row["status"],
-                "item_count": version.item_count, "provenance_unavailable": row["live_version_id"] is None,
+                "item_count": version.item_count, "provenance_unavailable": row["live_version_id"] is None or not conn.execute(
+                    "SELECT 1 FROM assessment_test_versions WHERE id=?", (row["live_version_id"],)).fetchone(),
                 "draft_revision": row["draft_revision"], "position": draft["position"], "answers": answers,
                 "current_item": current, "committed": commitments,
                 "result": json.loads(row["result_json"]) if row["result_json"] else None,
@@ -257,21 +258,28 @@ class WholeAttemptRepository:
             version = self.services.get("saved_tests").pinned_version(conn, request.version.id)
             if version.status != "ready":
                 raise ApiError("test_not_ready", "Resolve this test's questions before starting.", 409)
+            lifecycle = conn.execute("SELECT lifecycle FROM assessment_tests WHERE id=?", (version.test_id,)).fetchone()
+            if not lifecycle or lifecycle[0] != "active":
+                raise ApiError("test_not_active", "Restore this test before starting a new attempt.", 409)
+            candidate = {"live_version_id": version.id, "version_snapshot_json": version.model_dump_json()}
+            if any(self._availability_in(conn, candidate, item) != "current" for item in version.items):
+                raise ApiError("test_not_ready", "This pinned version has a content warning. Resolve it in Tests before starting.", 409)
             now = self.clock()
             attempt_id = durable_id("test_attempt")
             deadline = now + timedelta(seconds=request.timing.duration_seconds) if request.timing.kind == "timed" else None
             conn.execute("INSERT INTO assessment_test_attempts "
                          "(id,version_id,live_version_id,version_snapshot_json,mode,status,draft_revision,timing_kind,"
-                         "duration_seconds,started_at,deadline_at,paused_seconds,last_reconciled_at,created_at,updated_at,"
+                         "duration_seconds,started_at,deadline_at,paused_seconds,created_at,updated_at,"
                          "finalized_at,committed_json,result_json,clock_high_water_at,paused_at) "
-                         "VALUES(?,?,?,?,?,'active',0,?,?,?,?,0,?,?,?,NULL,'[]',NULL,?,NULL)",
+                         "VALUES(?,?,?,?,?,'active',0,?,?,?,?,0,?,?,NULL,'[]',NULL,?,NULL)",
                          (attempt_id, version.id, version.id, version.model_dump_json(), request.mode, request.timing.kind,
                           request.timing.duration_seconds, timestamp(now) if deadline else None, timestamp(deadline) if deadline else None,
-                          timestamp(now), timestamp(now), timestamp(now), timestamp(now)))
+                          timestamp(now), timestamp(now), timestamp(now)))
+            self._observations[attempt_id] = (now, self.monotonic())
             answers = [{"item_id": item.item_id, "option_ids": [], "marked": False} for item in version.items]
             conn.execute("INSERT INTO assessment_attempt_drafts VALUES(?,0,0,?,?)", (attempt_id, encode(answers), timestamp(now)))
             if request.mode == "test":
-                bump_policy_revision_in(conn, now)
+                advance_policy(conn)
             row = self._row(conn, attempt_id)
             self._expose_in(conn, row, version.items[0], "presented", now)
             return self._record_in(conn, key, "start", body, attempt_id, self._view_in(conn, row))
@@ -306,7 +314,7 @@ class WholeAttemptRepository:
         old = self._draft(conn, row)
         if row["mode"] == "study" and state.position > old["position"] and version.items[old["position"]].item_id not in {e["item_id"] for e in committed}:
             raise ApiError("answer_required", "Submit this answer before moving to the next question.", 409)
-        now = timestamp(self.clock())
+        now = row["clock_high_water_at"]
         next_revision = revision + 1
         conn.execute("UPDATE assessment_attempt_drafts SET revision=?,position=?,answers_json=?,updated_at=? WHERE attempt_id=?",
                      (next_revision, state.position, encode([a.model_dump(mode="json") for a in state.answers]), now, row["id"]))
@@ -335,14 +343,13 @@ class WholeAttemptRepository:
             item = self._version(row).items[self._draft(conn, row)["position"]]
             if item.item_id != request.item_id:
                 raise ApiError("revision_conflict", "The current question changed.", 409, True)
-            self._expose_in(conn, row, item, "presented", self.clock())
+            self._expose_in(conn, row, item, "presented", parse(row["clock_high_water_at"]))
             return self._record_in(conn, key, "present", body, attempt_id, self._view_in(conn, row))
         return self._run(operation)
 
     def record_help_in(self, conn, attempt_id, request):
-        policy = self._allowed_in(conn)
-        if policy["revision"] != request.expected_policy_revision:
-            raise ApiError("revision_conflict", "Learning access changed. Reopen this question.", 409, True)
+        self.require_assistance(conn, expected_revision=request.expected_policy_revision)
+        policy = self._policy_snapshot_in(conn)
         row = self._row(conn, attempt_id)
         self._require_active(row, request.expected_revision)
         version = self._version(row)
@@ -351,13 +358,34 @@ class WholeAttemptRepository:
             raise ApiError("attempt_restricted", "Help is available for the current Study question.", 409)
         if any(e["item_id"] == item.item_id for e in json.loads(row["committed_json"])):
             raise ApiError("answer_locked", "This answer is already submitted. Open its feedback.", 409)
+        hint = None
         if request.kind == "hint":
-            raise ApiError("hint_unavailable", "This pinned version has no authored hint. Sources, notes and chat remain available.", 409)
-        self._expose_in(conn, row, item, request.kind, self.clock())
-        return {"references": [ref.model_dump(mode="json") for ref in version.source_refs] if request.kind == "sources" else [],
+            content = self.services.registry.get("content")
+            if version.origin == "reviewed_bank" and content and self._availability_in(conn, row, item) == "current":
+                pinned = content.get_question_version(item.question_id, int(item.question_version))
+                if isinstance(pinned.get("hint"), str) and pinned["hint"].strip():
+                    hint = pinned["hint"][:6000]
+            if hint is None:
+                raise ApiError("hint_unavailable", "No authored hint is available for this pinned question.", 409)
+        self._expose_in(conn, row, item, request.kind, parse(row["clock_high_water_at"]))
+        return {"hint": hint, "references": [ref.model_dump(mode="json") for ref in version.source_refs] if request.kind == "sources" else [],
                 "context": {"attempt_id": row["id"], "item_id": item.item_id, "version_id": version.id,
                             "draft_revision": row["draft_revision"], "policy_revision": policy["revision"], "kind": request.kind},
                 "assisted": True}
+
+    def require_help_context_in(self, conn, context):
+        """Help consumers recheck the receipt before publishing a late response."""
+        self.require_assistance(conn, expected_revision=context["policy_revision"])
+        row = self._row(conn, context["attempt_id"])
+        self._require_active(row, context["draft_revision"])
+        item = self._version(row).items[self._draft(conn, row)["position"]]
+        if row["mode"] != "study" or row["version_id"] != context["version_id"] or item.item_id != context["item_id"]:
+            raise ApiError("revision_conflict", "The Study help context changed.", 409, True)
+        exposure = conn.execute("SELECT 1 FROM assessment_attempt_exposure WHERE attempt_id=? AND item_id=? AND kind=?",
+                                (row["id"], item.item_id, context["kind"])).fetchone()
+        if context["kind"] not in HELP_KINDS or not exposure:
+            raise ApiError("assistance_changed", "Open help from the current Study question first.", 409, True)
+        return policy_snapshot(conn)["revision"]
 
     def help(self, attempt_id, request, key):
         body = request.model_dump(mode="json")
@@ -399,6 +427,7 @@ class WholeAttemptRepository:
                  "exclusion_reason": available if excluded else None,
                  "feedback": {"correct_option_ids": list(item.correct_option_ids) if not excluded else [],
                               "explanation": item.explanation if not excluded else "This pinned item was excluded because its content is no longer current."},
+                 "question": item.model_dump(mode="json", exclude={"correct_option_ids", "explanation"}),
                  "evidence_id": None}
         if not excluded:
             evidence_id = durable_id("evidence")
@@ -430,13 +459,13 @@ class WholeAttemptRepository:
             entries = json.loads(row["committed_json"])
             if any(entry["item_id"] == item.item_id for entry in entries):
                 raise ApiError("answer_locked", "This Study answer is already submitted.", 409)
-            self._expose_in(conn, row, item, "presented", self.clock())
+            self._expose_in(conn, row, item, "presented", parse(row["clock_high_water_at"]))
             answers = json.loads(draft["answers_json"])
             for answer in answers:
                 if answer["item_id"] == item.item_id:
                     answer["option_ids"] = list(request.option_ids)
             self._save_in(conn, row, DraftState(position=draft["position"], answers=answers), request.expected_revision)
-            entries.append(self._commit_in(conn, row, item, request.option_ids, self.clock()))
+            entries.append(self._commit_in(conn, row, item, request.option_ids, parse(row["clock_high_water_at"])))
             row["committed_json"] = encode(entries)
             conn.execute("UPDATE assessment_test_attempts SET committed_json=? WHERE id=?", (row["committed_json"], attempt_id))
             return self._record_in(conn, key, "submit-answer", body, attempt_id, self._view_in(conn, row))
@@ -457,7 +486,9 @@ class WholeAttemptRepository:
                   "excluded": len(entries) - len(included), "unanswered": sum(e["outcome"] == "unanswered" for e in included),
                   "not_submitted": version.item_count - len(entries), "item_count": version.item_count,
                   "reason": reason, "finalized_at": timestamp(now), "draft_revision": row["draft_revision"],
-                  "cohorts": {bucket: {"answered": sum(e["score_bucket"] == bucket for e in included),
+                  "cohorts": {bucket: {"denominator": sum(e["score_bucket"] == bucket for e in included),
+                                        "answered": sum(e["score_bucket"] == bucket and e["outcome"] != "unanswered" for e in included),
+                                        "unanswered": sum(e["score_bucket"] == bucket and e["outcome"] == "unanswered" for e in included),
                                         "correct": sum(e["score_bucket"] == bucket and e["correct"] for e in included)}
                               for bucket in ("fresh", "assisted", "repeat", "personal")}}
         status = "submitted" if row["mode"] == "test" else "ended"
@@ -465,7 +496,7 @@ class WholeAttemptRepository:
                      (status, encode(entries), encode(result), timestamp(now), timestamp(now), row["id"]))
         row.update(status=status, committed_json=encode(entries), result_json=encode(result), finalized_at=timestamp(now))
         if row["mode"] == "test":
-            bump_policy_revision_in(conn, now)
+            advance_policy(conn)
 
     def submit(self, attempt_id, request, key):
         body = request.model_dump(mode="json")

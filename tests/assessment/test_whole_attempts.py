@@ -12,6 +12,7 @@ import pytest
 from renulus.assessment.attempt_api import create_router
 from renulus.assessment.attempt_models import SubmitAttempt
 from renulus.assessment.attempt_repository import WholeAttemptRepository
+from renulus.contracts import ApiError
 from renulus.assessment.test_api import create_router as collection_router
 from renulus.services import Services
 from renulus.storage import Database
@@ -280,3 +281,52 @@ def test_report_and_result_retain_snapshot_when_live_collection_disappears(whole
     assert reopened["provenance_unavailable"] and reopened["result"] == result
     row = services.db.fetch_one("SELECT * FROM assessment_question_reports")
     assert row["live_version_id"] is None and row["version_id"] == version_id
+
+
+def test_shared_reconcile_callback_advances_policy_and_late_help_context_refuses(whole):
+    client, services, clock, _ = whole
+    study = start(whole)
+    receipt = post(client, study, "help", {"expected_revision": 0, "expected_policy_revision": study["policy"]["revision"],
+                   "item_id": study["current_item"]["item_id"], "kind": "hint"}, "pinned-authored-hint").json()
+    assert receipt["hint"] == "An original synthetic hint" and "PRIVATE_" not in json.dumps(receipt)
+    repository = services.get("whole_attempts")
+    with services.db.transaction() as conn:
+        assert repository.require_help_context_in(conn, receipt["context"]) == study["policy"]["revision"]
+    test = start(whole, "test", seconds=10, key="start-expiring-test")
+    clock.advance(10)
+    repository.reconcile_all()
+    policy = client.get("/api/v1/assessment/policy").json()
+    assert policy["assistance_allowed"] and policy["revision"] == test["policy"]["revision"] + 1
+    with services.db.transaction() as conn, pytest.raises(ApiError):
+        repository.require_help_context_in(conn, receipt["context"])
+    repository.reconcile_all()
+    assert client.get("/api/v1/assessment/policy").json() == policy
+
+
+def test_same_process_rollback_uses_monotonic_and_never_rewinds_commit_timestamp(whole):
+    client, services, clock, _ = whole
+    ticks = [0]
+    repository = services.get("whole_attempts")
+    repository.monotonic = lambda: ticks[0]
+    attempt = start(whole, seconds=30)
+    ticks[0] = 10
+    clock.advance(-20)
+    observed = repository.get(attempt["id"])
+    assert observed["status"] == "active" and observed["timing"]["remaining_seconds"] == 20
+    committed = commit(client, observed).json()["committed"][0]
+    assert committed["committed_at"] == "2026-10-10T12:00:10.000000+00:00"
+    assert committed["question"]["stem"] and committed["question"]["options"]
+    assert "correct_option_ids" not in committed["question"]
+
+
+def test_archived_collection_cannot_start_and_repeat_receipt_survives_repository_restart(whole):
+    client, services, clock, version_id = whole
+    first = start(whole)
+    start(whole, key="second-study-exposure")
+    reopened = WholeAttemptRepository(services, clock=clock, monotonic=lambda: 0).get(first["id"])
+    assert reopened["current_item"]["repeat"] is False
+    receipt = services.db.fetch_one("SELECT result_json FROM assessment_attempt_commands WHERE operation='presentation' AND target_id=?", (first["id"],))
+    assert json.loads(receipt["result_json"])["repeat"] is False
+    services.db.execute("UPDATE assessment_tests SET lifecycle='archived'")
+    response = client.post(BASE, json={"version": {"type": "saved_test_version", "id": version_id}}, headers={"Idempotency-Key": "archive-start-refused"})
+    assert response.status_code == 409 and response.json()["error"]["code"] == "test_not_active"
