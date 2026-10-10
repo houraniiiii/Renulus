@@ -16,7 +16,7 @@ spec.loader.exec_module(delivery)
 
 class DeliveryBoundaries(unittest.TestCase):
     def test_relocated_public_inputs_and_design_c_outputs_are_exact_and_separate(self):
-        for source in delivery_paths.RELOCATED_PUBLIC_ROOTS:
+        for source in (*delivery_paths.RELOCATED_PUBLIC_ROOTS, delivery_paths.PUBLIC_INSTALLED_BACKEND):
             self.assertEqual(delivery.public_input_path(source), source.resolve())
             with self.assertRaises(ValueError):
                 delivery.generated_path(source / 'must-not-write')
@@ -25,7 +25,10 @@ class DeliveryBoundaries(unittest.TestCase):
         self.assertEqual(delivery.delivery_output(target, root=root), target.resolve())
         self.assertFalse(target.exists())
         for source in (Path('C:/Renulus/dev'), Path('C:/Renulus/dev/python'),
-                       Path('C:/Renulus/data/learning'), Path('C:/Renulus/dev/helper-assets-other')):
+                       Path('C:/Renulus/data/learning'), Path('C:/Renulus/dev/helper-assets-other'),
+                       Path('C:/Renulus/app'), Path('C:/Renulus/app/resources'),
+                       Path('C:/Renulus/app/resources/backend-other'),
+                       Path('C:/Renulus/app/resources/backend/../../profile')):
             with self.assertRaises(ValueError):
                 delivery.public_input_path(source)
         for target in (root.parent, root.parent / 'delivery-other', root / '../escape'):

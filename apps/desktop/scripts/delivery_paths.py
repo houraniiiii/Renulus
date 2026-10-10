@@ -7,6 +7,10 @@ EXTERNAL_DELIVERY_ROOT = Path("C:/Renulus-native-delivery/desktop-20261005")
 PUBLIC_INPUT_ROOT = Path("E:/Renulus-native-delivery/desktop-20261005")
 DESIGN_C_DELIVERY_ROOT = Path("C:/Renulus/scratch/design-c/delivery")
 RELOCATED_PUBLIC_ROOTS = (Path("C:/Renulus/dev/helper-assets"), Path("C:/Renulus/dev/node_modules"))
+# This directory contains the manifested public embedded runtime, never a profile.
+# Manufacture verifies its complete byte inventory and copies to a fresh output
+# before refreshing source; the installed app and adjacent data remain read-only.
+PUBLIC_INSTALLED_BACKEND = Path("C:/Renulus/app/resources/backend")
 PUBLIC_DIRECTORY = re.compile(r"preparation|payloads|environment|temporary|proofs|source-[0-9a-f]{8}|matching-[0-9a-f]{8}|installed-[0-9a-f]{8}")
 DELIVERY_NAME = re.compile(r"[a-z0-9][a-z0-9._-]{0,63}")
 WINDOWS_DEVICE_NAME = re.compile(r"(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?", re.IGNORECASE)
@@ -75,7 +79,7 @@ def public_input_path(value: Path) -> Path:
     """Admit explicit public inputs on E and fresh staged public bytes on C."""
     if not value.is_absolute():
         raise ValueError("Public inputs require an absolute path")
-    for root in RELOCATED_PUBLIC_ROOTS:
+    for root in (*RELOCATED_PUBLIC_ROOTS, PUBLIC_INSTALLED_BACKEND):
         if value.absolute() == root.absolute() or value.absolute().is_relative_to(root.absolute()):
             # These exact public dependency trees are inputs only. Keep the
             # same ancestor reparse checks, including when selecting the root.
