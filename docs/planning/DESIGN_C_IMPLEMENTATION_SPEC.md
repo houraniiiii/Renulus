@@ -951,8 +951,9 @@ This table records outcomes against the existing tickets, not a replacement plan
 
 DC21 acceptance-tool clarification: product source, renderer/native/backend and
 installed artifact remain pinned to one exact revision. A later acceptance-tool
-revision may be pinned separately when it changes only the bounded verifier,
-its tests and documentation; any product/dependency/build change refuses that
+revision may be pinned separately when it changes only the bounded JavaScript
+installed-product verifier/test, Python installed-recovery verifier/test and
+Markdown documentation; any product/dependency/build change refuses that
 reuse. Both revisions and executed driver hashes must be recorded. This permits
 repairing a harness assumption without rebuilding unchanged product bytes.
 The first installed preflight compared raw Git blobs to Git's exported Windows
@@ -961,6 +962,13 @@ all 5,840 admitted source files (79,611,627 bytes) match the installed candidate
 The failed receipt is retained and establishes no app launch or reader pass.
 The corrected verifier must honor only declared frozen export transformations,
 not normalize arbitrary installed differences or skip source checks.
+The copied recovery driver is hash-bound to the acceptance revision independently
+of the product/bundle/Python hashes. Its original-availability expectations must
+be frozen from the preserved old seed and hash-checked archive manifests before
+upgrade: a records-only old row is not a lost original, while every declared
+present or newly produced original still requires exact bytes and hash. The
+first installed recovery failure remains recorded; no target-derived skip may
+turn a newly missing original into expected absence.
 
 DC17 implementation clarification: one assessment_test_imports table owns the
 explicitly accepted pasted/extracted private original, SHA-256, terms/locators,
