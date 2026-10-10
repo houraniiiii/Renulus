@@ -4,6 +4,11 @@ import asyncio
 from copy import deepcopy
 import hashlib
 import json
+import ipaddress
+import os
+from pathlib import Path
+import shutil
+import socket
 
 from httpx import ASGITransport, AsyncClient
 from pydantic import ValidationError
@@ -20,6 +25,7 @@ from renulus.server import create_app
 from renulus.storage import utc_now
 from renulus.storage.backup import export_records, restore_records
 from renulus.storage.invalidation import bump_context_epoch
+from renulus.knowledge.models import own_text_rights
 
 TEXT = "  1. Which synthetic CKD learning interpretation is supplied?\nA. First interpretation\nB. Second interpretation\nAnswer: A\n\n2. Which dialysis learning option is supported?\nA. First dialysis option\nB. Second dialysis option\n  "
 
@@ -399,3 +405,120 @@ async def test_private_import_deletion_tombstone_blocks_restore_and_preserves_sa
         service.create(request())
     assert error.value.code == "not_found"
     assert app.state.services.get("saved_tests").setup_version(row["result"]["version_id"])["version"]["item_count"] == 2
+
+
+@pytest.fixture(scope="module")
+def extracted_imports(tmp_path_factory):
+    selected = os.environ.get("RENULUS_SAVED_EXTRACTION_ASSETS")
+    if not selected:
+        pytest.skip("Select pinned public offline assets explicitly; extraction is not simulated")
+    root = tmp_path_factory.mktemp("private-saved-extraction")
+    manifest = json.loads((Path(__file__).parents[2] / "packaging/runtime/helper-assets.json").read_text())
+    for record in manifest["groups"]["embedding"]["files"]:
+        source = Path(selected) / record["path"]
+        assert source.stat().st_size == record["size"] and hashlib.sha256(source.read_bytes()).hexdigest() == record["sha256"]
+        target = root / "helpers" / record["path"]
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+    (root / "helpers/manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    with pytest.MonkeyPatch.context() as guard:
+        guard.setattr("renulus.server.MODULE_ORDER", ("runtime", "content", "knowledge", "learn", "cases", "assessment", "memory", "study"))
+        connect, connect_ex = socket.socket.connect, socket.socket.connect_ex
+        def local_only(original):
+            def checked(instance, address):
+                if isinstance(address, tuple) and ipaddress.ip_address(address[0]).is_loopback:
+                    return original(instance, address)
+                raise AssertionError("Private saved imports forbid external connections")
+            return checked
+        guard.setattr(socket.socket, "connect", local_only(connect))
+        guard.setattr(socket.socket, "connect_ex", local_only(connect_ex))
+        app = create_app(root)
+        services = app.state.services
+        if "saved_imports" not in services.registry:
+            app.include_router(create_router(services), prefix="/api/v1")
+        provider = services.get("provider")
+        provider._settings["connections"]["codex"] = {"access_token": "synthetic-import-token", "expires_at": 9999999999}
+        provider._settings["selected_provider"] = "codex"
+        provider._settings.setdefault("selected_models", {})["codex"] = "gpt-6.1-sol"
+        transport = SyntheticTransport()
+        provider._transport = transport
+        knowledge = services.get("knowledge")
+        note = knowledge.import_text(TEXT, title="Synthetic extracted nephrology questions")
+        assert note["status"] == "ready", note
+        csv = root / "synthetic-private-test.csv"
+        csv.write_text("question,first_option,second_option\nWhich synthetic dialysis value is supplied?,First table option,Second table option\n", encoding="utf-8")
+        table = knowledge.import_file(csv, rights=own_text_rights())
+        assert table["status"] == "ready", table
+        try:
+            yield services, services.get("saved_imports"), transport, note, table
+        finally:
+            knowledge.index.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kind", ["note", "table"])
+async def test_actual_docling_saved_source_normalizes_publishes_and_starts_personal_attempt(extracted_imports, kind):
+    services, service, transport, note, table = extracted_imports
+    selected = note if kind == "note" else table
+    row = service.create(CreateImportRequest(idempotency_key="actual-extracted-" + kind,
+        title="Synthetic saved " + kind + " private practice", original={"kind": "library_revision", "revision_id": selected["revision_id"]}))
+    original = service.original(row["id"])
+    text = original["text"]
+    assert original["original"]["source_pin"]["revision_id"] == selected["revision_id"]
+    assert original["original"]["source_pin"]["original_sha256"] == hashlib.sha256((services.paths.root / original["original"]["source_pin"]["original"]["relative_path"]).read_bytes()).hexdigest()
+    assert original["original"]["segments"] and original["original"]["terms"]
+    if kind == "note":
+        output = normalized(text)
+        assert output["candidates"]
+    else:
+        assert any(segment["reference"].get("locator", {}).get("kind") == "table" for segment in original["original"]["segments"])
+        stem, first, second = "Which synthetic dialysis value is supplied?", "First table option", "Second table option"
+        def span(value):
+            start = text.index(value)
+            return {"start": start, "end": start + len(value)}
+        output = {"candidates": [{"span": {"start": 0, "end": len(text)}, "stem_span": span(stem), "stem": stem,
+            "options": [{"id": "a", "text": first, "span": span(first)}, {"id": "b", "text": second, "span": span(second)}],
+            "explanation": "", "explanation_span": None}]}
+    before = len(transport.calls)
+    transport.responses = [None] * before + [output]
+    await service.normalize(row["id"], command(row, "actual-source-normalize-" + kind))
+    row = await finish(service, row["id"])
+    assert row["state"] == "draft" and row["call_count"] == 1
+    assert all(not item["review_confirmed"] for item in row["candidates"])
+    assert len(transport.calls) == before + 1 and transport.calls[-1][:2] == ("codex", "gpt-6.1-sol")
+    row = resolve_all(service, row)
+    published = service.save(row["id"], command(row, "actual-source-save-" + kind))
+    version_id = published["result"]["version_id"]
+    with services.db.transaction() as conn:
+        version = services.get("saved_tests").pinned_version(conn, version_id)
+    assert version.origin == "imported" and version.review_quality == "personal" and not version.bank_cohort_eligible
+    assert version.source_refs[0].target.id == selected["revision_id"]
+    attempts = services.get("whole_attempts")
+    attempt = attempts.start(StartAttempt(version={"type": "saved_test_version", "id": version_id}, mode="test"), "actual-source-attempt-" + kind)
+    result = attempts.submit(attempt["id"], SubmitAttempt(expected_draft_revision=attempt["draft_revision"]), "actual-source-submit-" + kind)
+    assert result["status"] == "submitted"
+    assert service.original(row["id"])["text"] == text
+
+
+@pytest.mark.asyncio
+async def test_library_permission_revocation_keeps_retained_read_but_blocks_model_use_and_save(extracted_imports):
+    services, service, transport, note, _ = extracted_imports
+    row = resolve_all(service, service.create(CreateImportRequest(idempotency_key="actual-rights-revoke",
+        original={"kind": "library_revision", "revision_id": note["revision_id"]})))
+    text = service.original(row["id"])["text"]
+    before = len(transport.calls)
+    stored = services.db.fetch_one("SELECT rights_json FROM knowledge_revisions WHERE id=?", (note["revision_id"],))["rights_json"]
+    rights = json.loads(stored)
+    services.db.execute("UPDATE knowledge_revisions SET rights_json=? WHERE id=?", (json.dumps({**rights, "model_input": False, "derivation": False}), note["revision_id"]))
+    try:
+        assert service.original(row["id"])["text"] == text
+        assert service.read(row["id"])["candidates"] == row["candidates"]
+        with pytest.raises(ApiError) as error:
+            await service.normalize(row["id"], command(row, "actual-rights-normalize"))
+        assert error.value.code == "saved_extraction_denied"
+        with pytest.raises(ApiError) as error:
+            service.save(row["id"], command(row, "actual-rights-save"))
+        assert error.value.code == "saved_extraction_denied"
+        assert len(transport.calls) == before
+    finally:
+        services.db.execute("UPDATE knowledge_revisions SET rights_json=? WHERE id=?", (stored, note["revision_id"]))
