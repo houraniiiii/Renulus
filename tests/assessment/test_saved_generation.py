@@ -443,7 +443,7 @@ async def test_actual_json_restore_invalidates_active_and_orphaned_jobs_without_
     recovery = app.state.services.get("data_recovery")
     recovery.restore_json(bundle, confirm_backup_date=True, confirmed_exported_at=bundle["exported_at"])
     result = service.read(row["id"])
-    assert result["state"] == "failed" and result["error_code"] == "generation_context_changed"
+    assert result["state"] == "failed" and result["error_code"] == "interrupted"
     assert not result["can_retry"] and result["result"] is None
     await service.tasks[row["id"]]
     assert len(transport.calls) == 1 and service.db.fetch_all("SELECT id FROM assessment_test_versions") == []
@@ -452,7 +452,7 @@ async def test_actual_json_restore_invalidates_active_and_orphaned_jobs_without_
     service.db.execute("DELETE FROM assessment_test_jobs WHERE id=?", (row["id"],))
     recovery.restore_json(bundle, confirm_backup_date=True, confirmed_exported_at=bundle["exported_at"])
     result = service.read(row["id"])
-    assert result["state"] == "failed" and result["error_code"] == "generation_context_changed"
+    assert result["state"] == "failed" and result["error_code"] == "interrupted"
     assert service.db.fetch_one("SELECT state FROM assessment_test_jobs WHERE id=?", (row["id"],))["state"] == "failed"
     assert service.tasks == {} and len(transport.calls) == 1
 
