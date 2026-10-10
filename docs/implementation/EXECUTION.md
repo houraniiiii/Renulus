@@ -15,7 +15,7 @@ Use [parallel-work rules](../planning/PARALLEL_WORK.md) and record prerequisite
 commits, integrated evidence and remaining limits in the ticket handoff or its
 linked issue. Update this current section when execution starts.
 
-### Current integration checkpoint — 31e9e4ce
+### Current integration checkpoint — 75c05797, manufacture held for DC14 repair
 
 The earlier reservations below are historical. Active work remains against the
 same DC01–DC21 backlog. Canonical root/branch and baseline 528025ff ancestry were
@@ -43,6 +43,26 @@ all three formats. Receipts preserve initial harness errors and exact limits;
 queued extraction/rebuild and packaged old-runtime execution are not implied.
 DC21 public inputs and guarded staging plan pass; no matching C package/default
 cutover is claimed. Exact paths/hashes are in delivery preparation receipts.
+
+The completed leases in the table above are superseded by these bounded final
+acceptance reservations. The lead retains all other shared and release paths:
+
+| Owner | Exact current reservation | Required result |
+| --- | --- | --- |
+| Aquinas | `docs/implementation/design-c-review-integration.md` only | Hidden DC10 Memory/Updates/Settings navigation, local failure states and real active-Test restrictions. |
+| Zeno | Existing four verifier/fixture paths above | Actual-execution findings and a bounded normal-ingestion lifecycle proposal; parent owns installed runs. `75c05797` integrates two upgraded-profile Electron launches; 35 JS boundary checks pass. |
+| Pauli | New `apps/desktop/src/shell/assessment-producers.connected.test.tsx` only | Actual mounted Generation Ready/setup/Study and Chat Create Test/card/workspace/Study with production HTTP/SQLite and a synthetic external provider transport. |
+| Russell | New `tests/integration/test_design_c_policy_inventory.py`; `runtime/renulus/assessment/generated_repository.py` and `generated_streaming.py` | Actual assembled route inventory and repair of legacy generation prepared before Test but published during it. Capture policy/context and recheck at event/replay and atomic publication boundaries. |
+| Poincare | New `apps/desktop/src/shell/search.connected.test.tsx` only | Actual displayed search-result navigation after source deletion and project reassignment; production destination authorization. |
+
+Manufacture of `75c05797` passed the full-factory NSIS preflight, then was
+deliberately stopped during public inventory verification on the DC14 finding,
+before copying/compressing a delivery. No installer or promotion resulted.
+`delivery/preparation/stopped-75c05797.json` and the build log preserve this
+outcome. The final candidate must include the producer repair. This is a late
+canonical write; middleware still blocks reads during Test, so the finding does
+not establish visible key leakage. The independent lanes close specific
+previously unindexed consumer paths rather than repeat unchanged full suites.
 
 ### Active reservations — initial prerequisite wave
 

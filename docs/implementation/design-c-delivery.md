@@ -25,7 +25,7 @@ copied for these checks.
 | Renderer/build | Exact TypeScript/Vite/Electron build through `f5d36ac9` passes. R5 has eight actual backend and 28 renderer/transport checks; R7 `f4fc986f` has 40 Reader/Workspace checks and actual PDF text-position/SQLite reopen proof. |
 | Hidden source UI | Actual attempts and Notes reports retain normal closes/reopens, narrow/200% captures, drafts, revision pins and zero live provider calls. They establish source scope, not an installed pass. |
 | R5 independent hidden recheck `31e9e4ce` | Two actual attachment readers show distinct authorized tab/Close names before and after normal restart; preferences retain safe references/positions without titles. An initial Reader wait timed out and the controller closed normally; recovery and both subsequent readers passed. The unexplained 409/timeout remains in the report, not a zero-error claim. |
-| Installed verifier | `ccc453dc` includes real eight-category original/upload/reader/passage journeys and seven passing deterministic fixture/parser checks. `2e30ee1d` confines all child user/cache directories. `f2ac20d2` adds the required PDF page-2 text-selection check after normal installed close/relaunch, including current authorized tab names; 28 boundary checks pass. Actual installed execution remains pending. |
+| Installed verifier | `ccc453dc` includes real eight-category original/upload/reader/passage journeys and seven passing deterministic fixture/parser checks. `2e30ee1d` confines all child user/cache directories. `f2ac20d2` adds PDF page-2 selected-text reopen; `75c05797` adds two fresh Electron launches of the hash-verified upgraded recovery profile. The final verifier has 35 passing boundary checks. Actual installed execution remains pending. |
 | Installed recovery driver `c96afad8` | Nine stdlib guard tests pass in the canonical checkout. The driver requires exact installed hashes, a genuine closed schema-1 seed and a preserved pre-upgrade snapshot; actual upgrade, JSON/ZIP1/ZIP2 restore, original bytes and effective CPU index rebuild remain unexecuted until manufacture. |
 
 The current independent pass-3 review found an inherited user-directory escape
@@ -35,7 +35,7 @@ is selected. Selected PDF text/page restoration and Memory restore inference
 have bounded fixes and reproductions. C5's full affected regression and supplemental
 HTTP check are green, with failed reproduction/harness receipts retained in the
 attempt-consumer report. R5's hidden recheck and the recovery-driver handoff are
-integrated. The last verifier extension adds normal hidden Electron close/reopen
+integrated. The completed verifier extension adds normal hidden Electron close/reopen
 of that driver's exact upgraded synthetic profile; it does not substitute owner
 reassembly in one Python interpreter for a fresh application process.
 
@@ -57,8 +57,12 @@ backend, renderer and native code from one exact committed revision.
 
 Python/Node path guards, 39 PowerShell relocation refusals, 17 restage refusals,
 the isolated installer-child environment and builder output-root boundaries
-pass. These checks do not execute NSIS or the application. The current read-only
-plan names `02c7e371`; it must be regenerated for the final source freeze.
+pass. The `75c05797` manufacture run passed the full-factory NSIS preflight but
+was deliberately stopped during public inventory verification when the route
+audit reproduced legacy generation publishing after a Test began. No delivery
+payload copy, installer or promotion resulted. Its build log and
+`preparation/stopped-75c05797.json` are preserved. A final freeze must include
+the producer repair and regenerate the matching plan.
 
 ## Installation and acceptance boundary
 
