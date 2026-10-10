@@ -6,10 +6,15 @@ const renderer = process.env.RENULUS_RENDERER_BUNDLE;
 const native = process.env.RENULUS_NATIVE_BUNDLE;
 const output = process.env.RENULUS_DELIVERY_OUTPUT;
 const revision = process.env.RENULUS_DELIVERY_REVISION;
-const authorizedRoot = path.resolve('C:/Renulus-native-delivery/desktop-20261005');
-const requestedRoot = process.env.RENULUS_DELIVERY_ROOT || authorizedRoot;
+const authorizedRoots = ['C:/Renulus-native-delivery/desktop-20261005', 'C:/Renulus/scratch/design-c/delivery'].map(value => path.resolve(value));
+const requestedRoot = process.env.RENULUS_DELIVERY_ROOT || authorizedRoots[0];
 if (!/^[Cc]:[\\/]/.test(requestedRoot) || /[\x00-\x1f]/.test(requestedRoot)) throw new Error('DeliveryRoot requires an absolute local C SSD path.');
 const deliveryRoot = path.resolve(requestedRoot);
+const authorizedRoot = authorizedRoots.find(root => {
+  const relative = path.relative(root, deliveryRoot);
+  return !relative || (!relative.startsWith('..') && !path.isAbsolute(relative));
+});
+if (!authorizedRoot) throw new Error('DeliveryRoot must stay below an exact authorised C root.');
 const rootRelative = path.relative(authorizedRoot, deliveryRoot);
 if (rootRelative) {
   const parts = rootRelative.split(path.sep);

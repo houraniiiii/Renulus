@@ -11,7 +11,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from delivery_paths import DESKTOP, EXTERNAL_DELIVERY_ROOT, PUBLIC_INPUT_ROOT, checked_delivery_root, generated_path, public_input_path
+from delivery_paths import DESKTOP, DESIGN_C_DELIVERY_ROOT, EXTERNAL_DELIVERY_ROOT, PUBLIC_INPUT_ROOT, checked_delivery_root, generated_path, public_input_path
 
 spec = importlib.util.spec_from_file_location("stage_delivery", Path(__file__).with_name("stage-delivery.py"))
 delivery = importlib.util.module_from_spec(spec)
@@ -177,7 +177,8 @@ try {
                               env=environment, capture_output=True, text=True, check=False)
 
     def test_builder_admits_default_and_named_c_root_without_manufacture(self):
-        for root in (None, EXTERNAL_DELIVERY_ROOT / "deliveries/relocation-check-never-created"):
+        for root in (None, EXTERNAL_DELIVERY_ROOT / "deliveries/relocation-check-never-created",
+                     DESIGN_C_DELIVERY_ROOT, DESIGN_C_DELIVERY_ROOT / "deliveries/relocation-check-never-created"):
             output = (root or EXTERNAL_DELIVERY_ROOT) / "matching-cafe1234/never-created"
             result = self.config(output, root)
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -189,6 +190,9 @@ try {
         cases = [(root / family, None) for root in (EXTERNAL_DELIVERY_ROOT, PUBLIC_INPUT_ROOT)
                  for family in ("repo/private", "data/learning", "profiles/native", "credentials/auth.json")]
         cases += [(PUBLIC_INPUT_ROOT / "matching-cafe1234", None),
+                  (DESIGN_C_DELIVERY_ROOT / "data/learning", DESIGN_C_DELIVERY_ROOT),
+                  (DESIGN_C_DELIVERY_ROOT / "repo/private", DESIGN_C_DELIVERY_ROOT),
+                  (EXTERNAL_DELIVERY_ROOT / "matching-cafe1234", DESIGN_C_DELIVERY_ROOT),
                   (EXTERNAL_DELIVERY_ROOT.parent / "desktop-20261005-other/matching-cafe1234", None),
                   (EXTERNAL_DELIVERY_ROOT / "matching-cafe1234", named),
                   (Path("C:/Users/karol/.codex/auth.json"), None)]
@@ -200,7 +204,9 @@ try {
 
     def test_builder_refuses_invalid_root_and_mocked_junction(self):
         output = EXTERNAL_DELIVERY_ROOT / "matching-cafe1234"
-        for root in (PUBLIC_INPUT_ROOT, EXTERNAL_DELIVERY_ROOT / "repo",
+        for root in (PUBLIC_INPUT_ROOT, DESIGN_C_DELIVERY_ROOT.parent,
+                     DESIGN_C_DELIVERY_ROOT / "profiles", Path(str(DESIGN_C_DELIVERY_ROOT) + '-other'),
+                     EXTERNAL_DELIVERY_ROOT / "repo",
                      EXTERNAL_DELIVERY_ROOT / "data", EXTERNAL_DELIVERY_ROOT / "credentials",
                      EXTERNAL_DELIVERY_ROOT / "deliveries/nul.txt",
                      EXTERNAL_DELIVERY_ROOT / "deliveries/alias."):
