@@ -840,3 +840,37 @@ Exact paths added/changed in this follow-up:
 - runtime/renulus/knowledge/reader.py
 - tests/knowledge/test_saved_extraction.py
 - docs/implementation/design-c-review-readers.md
+
+### Operation-specific DC17 reads and latest revision follow-up
+
+import_original and KnowledgeRepository.saved_extraction_in now accept
+operation=import|read (default import). Import requires active_revision and
+latest_revision to match, so a real queued replacement makes the older active
+source stale for new refinement/publication. Read requires current display/cache
+and permits historical/currentness inspection after processing rights change;
+the metadata still records source restrictions. recheck_import_original(conn,
+pin, operation=read) compares immutable original/content/extraction hashes rather
+than the full rights/currentness fingerprint. Import rechecks retain full
+fingerprint/policy/context pins. Both operations enforce shared active-Test
+restrictions, saved Library scope, reserved status, tombstones and private
+original integrity.
+
+Reader.require_original_display(conn, pin) delegates to
+KnowledgeRepository.require_original_display_in and returns allowed, current
+rights/metadata, backend-only original descriptor and current policy/context
+revisions. It consumes only a canonical server-side pin (revision_id,
+original_sha256 and optional document_id), never renderer attestation. This
+authorizes DC17 to show its own immutable original_text/segments after loss of
+derived Knowledge extraction. It returns no text or locators and establishes
+no normalization/Save authority. Display/cache revocation, any document/revision
+tombstone and missing/changed original bytes still deny inspection. Pasted
+imports remain DC17's independent original authority.
+
+Thirty-four actual offline saved-extraction tests passed in
+saved-extraction-operations-run1-results.xml, adding rights revocation, retained
+inspection after derived cache loss, source-status warning inspection, and an
+actual ordinary queued replacement to the earlier guards. The prior merged
+2122f875 baseline passed 80 combined attachment/access/format/grid/Reader/saved
+extraction checks in reader-parent-2122-results.xml. Full desktop TypeScript and
+four Reader React checks passed after that normal shared merge (45f8235c).
+No feature closure or packaged/OCR import acceptance is claimed.

@@ -162,13 +162,18 @@ class KnowledgeRepository:
             raise ApiError("temporary_extraction_unavailable", "The verified temporary extraction path is not available", 503, True)
         return self.extractor.extract_bytes(data, filename, title)
 
-    def saved_extraction_in(self, conn, revision_id, *, expected_fingerprint=None,
+    def saved_extraction_in(self, conn, revision_id, *, operation="import", expected_fingerprint=None,
                             expected_policy_revision=None, expected_context_epoch=None):
         """Trusted saved extraction; caller owns snapshot/publication transaction."""
         from .saved_extraction import saved_extraction_in
-        return saved_extraction_in(self, conn, revision_id,
+        return saved_extraction_in(self, conn, revision_id, operation=operation,
             expected_fingerprint=expected_fingerprint, expected_policy_revision=expected_policy_revision,
             expected_context_epoch=expected_context_epoch)
+
+    def require_original_display_in(self, conn, pin):
+        """Authorize another owner's immutable private source body for inspection."""
+        from .saved_extraction import require_original_display_in
+        return require_original_display_in(self, conn, pin)
 
     @staticmethod
     def _scope(scope) -> ContextScope:

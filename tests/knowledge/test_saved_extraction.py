@@ -151,6 +151,8 @@ def test_all_parent_tombstone_aliases_block_live_rows_without_exposure(saved, co
     with code("saved_extraction_not_found") as caught:
         saved["services"].get("readers").recheck_import_original(conn, pin)
     assert "SYNTHETIC" not in caught.value.message and "library/" not in caught.value.message
+    with code("saved_extraction_not_found"):
+        saved["services"].get("readers").require_original_display(conn, pin)
 
 
 @pytest.mark.parametrize("state,expected", [("queued", "pending"), ("processing", "pending"),
@@ -247,6 +249,8 @@ def test_private_original_existence_and_actual_bytes_are_rechecked(saved, conn, 
             path.write_bytes(bytes([original[0] ^ 1]) + original[1:])
         with code("original_missing"):
             saved["services"].get("readers").recheck_import_original(conn, pin)
+        with code("original_missing"):
+            saved["services"].get("readers").require_original_display(conn, pin)
     finally:
         path.write_bytes(original)
 
@@ -280,3 +284,68 @@ def test_import_requires_caller_transaction_and_complete_server_pin(saved):
         with code("saved_extraction_invalid_pin"):
             reader.recheck_import_original(conn, {"revision_id": saved["note"]["revision_id"],
                 "fingerprint": None, "policy_revision": None, "context_epoch": None})
+
+
+@pytest.mark.parametrize("operation", ["model_input", "derivation"])
+def test_retained_text_remains_readable_after_refinement_rights_revocation(saved, conn, operation):
+    pin = snapshot(saved, conn)
+    reader = saved["services"].get("readers")
+    update_rights(saved, conn, **{operation: False})
+    with code("saved_extraction_denied"):
+        reader.recheck_import_original(conn, pin)
+    result = reader.recheck_import_original(conn, pin, operation="read")
+    assert result["text"] == pin["text"] and result["segments"] == pin["segments"]
+    assert result["fingerprint"] != pin["fingerprint"]
+    assert reader.require_original_display(conn, pin)["allowed"]
+
+
+@pytest.mark.parametrize("operation", ["display", "cache"])
+def test_read_does_not_bypass_current_display_or_cache_denial(saved, conn, operation):
+    pin = snapshot(saved, conn)
+    reader = saved["services"].get("readers")
+    update_rights(saved, conn, **{operation: False})
+    with code("saved_extraction_denied"):
+        reader.recheck_import_original(conn, pin, operation="read")
+    with code("saved_extraction_denied"):
+        reader.require_original_display(conn, pin)
+
+
+def test_retained_body_authorization_survives_derived_extraction_cache_loss(saved, conn):
+    pin = snapshot(saved, conn)
+    conn.execute("UPDATE knowledge_revisions SET extraction_json=NULL WHERE id=?", (pin["revision_id"],))
+    conn.execute("DELETE FROM knowledge_passages WHERE revision_id=?", (pin["revision_id"],))
+    reader = saved["services"].get("readers")
+    with code("saved_extraction_unavailable"):
+        reader.import_original(conn, pin["revision_id"])
+    allowed = reader.require_original_display(conn, pin)
+    assert allowed["allowed"] and allowed["original"]["sha256"] == pin["original_sha256"]
+    assert "text" not in allowed and "segments" not in allowed
+
+
+def test_source_status_warning_allows_inspection_but_denies_further_import(saved, conn):
+    pin = snapshot(saved, conn)
+    metadata = dict(pin["metadata"], superseded=True)
+    conn.execute("UPDATE knowledge_revisions SET metadata_json=? WHERE id=?", (json.dumps(metadata), pin["revision_id"]))
+    reader = saved["services"].get("readers")
+    with code("saved_extraction_denied"):
+        reader.import_original(conn, pin["revision_id"])
+    assert reader.import_original(conn, pin["revision_id"], operation="read")["metadata"]["superseded"]
+    assert reader.require_original_display(conn, pin)["metadata"]["superseded"]
+
+
+def test_actual_pending_replacement_blocks_old_active_import_but_keeps_private_read(saved):
+    services = saved["services"]
+    knowledge, reader = services.get("knowledge"), services.get("readers")
+    old = knowledge.import_text("SYNTHETIC immutable old private question")
+    with services.db.transaction() as conn:
+        pin = reader.import_original(conn, old["revision_id"])
+    replacement = knowledge.import_text("SYNTHETIC pending new private question",
+        document_id=old["document_id"], process=False)
+    assert replacement["status"] == "queued"
+    with services.db.transaction() as conn:
+        with code("saved_extraction_stale"):
+            reader.recheck_import_original(conn, pin)
+        assert reader.recheck_import_original(conn, pin, operation="read")["text"] == pin["text"]
+        assert reader.require_original_display(conn, pin)["allowed"]
+        with code("saved_extraction_pending"):
+            reader.import_original(conn, replacement["revision_id"])

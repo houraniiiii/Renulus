@@ -100,31 +100,24 @@ def _original(repository, row):
             "media_type": row["media_type"], "bytes": size, "sha256": row["sha256"]}
 
 
-def saved_extraction_in(repository, conn, revision_id, *, expected_fingerprint=None,
-                        expected_policy_revision=None, expected_context_epoch=None):
-    """Resolve and optionally repin canonical successful saved Library extraction.
-
-    No connection, transaction control, conversion, index, helper, or provider is
-    opened here. Original existence/integrity is a bounded read of the private
-    canonical location, including at publication. This result is backend-only.
-    """
+def _source_in(repository, conn, revision_id, *, operation, expected_policy_revision=None,
+               expected_context_epoch=None):
     if not conn.in_transaction:
         fail("snapshot_required", "Begin the caller transaction before resolving a source", 422)
+    if not isinstance(operation, str) or operation not in {"import", "read"}:
+        fail("operation_invalid", "Choose import or read source permission", 422)
     policy_revision = require_assistance(conn, expected_revision=expected_policy_revision)
     epoch = context_epoch_in(conn)
     if expected_context_epoch is not None and epoch != expected_context_epoch:
         fail("context_changed", "Learning context changed; reopen the import source", retryable=True)
     if not isinstance(revision_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", revision_id):
         fail("not_found", "The saved source revision is unavailable", 404)
-    if expected_fingerprint is not None and (not isinstance(expected_fingerprint, str)
-            or not re.fullmatch(r"[a-f0-9]{64}", expected_fingerprint)):
-        fail("invalid_pin", "Use the fingerprint captured by the trusted source resolver", 422)
     tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     if not {"knowledge_documents", "knowledge_revisions", "knowledge_passages",
             "knowledge_source_status_events"} <= tables:
         fail("unavailable", "Saved extraction storage is unavailable", 503, True)
     row = conn.execute("SELECT r.*,d.title,d.source_id,d.scope_kind,d.scope_entity,d.reserved,"
-                       "d.deleted_at,d.active_revision FROM knowledge_revisions r "
+                       "d.deleted_at,d.active_revision,d.latest_revision FROM knowledge_revisions r "
                        "JOIN knowledge_documents d ON d.id=r.document_id WHERE r.id=?", (revision_id,)).fetchone()
     if row is None or row["deleted_at"] or row["status"] == "deleted":
         fail("not_found", "The saved source revision is unavailable", 404)
@@ -134,7 +127,7 @@ def saved_extraction_in(repository, conn, revision_id, *, expected_fingerprint=N
             fail("not_found", "The saved source revision is unavailable", 404)
     if row["scope_kind"] != "personal-library" or row["scope_entity"] is not None or row["reserved"]:
         fail("denied", "This source cannot enter a saved private test import", 403)
-    if row["media_type"] not in SUPPORTED_MEDIA:
+    if operation == "import" and row["media_type"] not in SUPPORTED_MEDIA:
         fail("unsupported", "This saved format is not supported for test import; paste text instead", 415)
     try:
         rights = Rights.model_validate_json(row["rights_json"], strict=True).model_dump()
@@ -145,18 +138,57 @@ def saved_extraction_in(repository, conn, revision_id, *, expected_fingerprint=N
             repository.source_status.events(row["source_id"], conn)).model_dump()
     except (ValueError, TypeError):
         fail("unavailable", "Source permissions or provenance need repair", 503)
-    if (not all(rights[key] is True for key in ("display", "cache", "model_input", "derivation"))
-            or any(metadata[key] for key in ("retracted", "superseded", "repository_removed", "access_changed", "replaced_topics"))
+    operations = ("display", "cache", "model_input", "derivation") if operation == "import" else ("display", "cache")
+    if not all(rights[key] is True for key in operations):
+        fail("denied", "Current source permissions do not permit this operation", 403)
+    if operation == "import" and (
+            any(metadata[key] for key in ("retracted", "superseded", "repository_removed", "access_changed", "replaced_topics"))
             or metadata["publication_status"] in ("draft", "preprint")
             or metadata["correction"] and not metadata["content_reviewed"]):
         fail("denied", "Current source permissions or status do not permit test import", 403)
+    return row, rights, metadata, policy_revision, epoch
+
+
+def require_original_display_in(repository, conn, pin):
+    """Authorize DC17's own immutable retained text/locators without regenerating.
+
+    The pin must come from the canonical import row, never renderer attestation.
+    Ready extraction/active revision is unnecessary for inspecting that retained
+    body. Display/cache, tombstones, shared policy and actual original integrity
+    still apply. No body is read from or accepted in the supplied pin.
+    """
+    if (not isinstance(pin, dict) or not isinstance(pin.get("revision_id"), str)
+            or not isinstance(pin.get("original_sha256"), str)
+            or not re.fullmatch(r"[a-f0-9]{64}", pin["original_sha256"])):
+        fail("invalid_pin", "Use the source pin from the canonical private import", 422)
+    row, rights, metadata, policy_revision, epoch = _source_in(repository, conn, pin["revision_id"], operation="read")
+    original = _original(repository, row)
+    if original["sha256"] != pin["original_sha256"] or (
+            pin.get("document_id") is not None and pin["document_id"] != row["document_id"]):
+        fail("stale", "The retained source original changed")
+    return {"allowed": True, "rights": rights, "metadata": metadata, "original": original,
+            "policy_revision": policy_revision, "context_epoch": epoch}
+
+
+def saved_extraction_in(repository, conn, revision_id, *, operation="import", expected_fingerprint=None,
+                        expected_policy_revision=None, expected_context_epoch=None):
+    """Resolve saved successful extraction without a new connection or engine.
+
+    The caller owns its snapshot/publication transaction. Private original
+    existence/integrity is a bounded read; the result remains backend-only.
+    """
+    row, rights, metadata, policy_revision, epoch = _source_in(repository, conn, revision_id, operation=operation,
+        expected_policy_revision=expected_policy_revision, expected_context_epoch=expected_context_epoch)
+    if expected_fingerprint is not None and (not isinstance(expected_fingerprint, str)
+            or not re.fullmatch(r"[a-f0-9]{64}", expected_fingerprint)):
+        fail("invalid_pin", "Use the fingerprint captured by the trusted source resolver", 422)
     if row["status"] in ("queued", "processing"):
         fail("pending", "This saved source has not finished extraction", retryable=True)
     if row["status"] in ("failed", "cancelled"):
         fail("failed", "Saved extraction failed or was cancelled; retry or paste text", 422, True)
     if row["status"] != "ready":
         fail("unavailable", "Successful saved extraction is unavailable", 503, True)
-    if row["active_revision"] != row["id"]:
+    if operation == "import" and (row["active_revision"] != row["id"] or row["latest_revision"] != row["id"]):
         fail("stale", "This saved revision was replaced; select the current source", retryable=True)
     extraction_json = row["extraction_json"]
     try:
@@ -179,7 +211,7 @@ def saved_extraction_in(repository, conn, revision_id, *, expected_fingerprint=N
             if (not isinstance(locators, list) or not all(isinstance(value, dict) for value in locators)
                     or not isinstance(headings, list) or not all(isinstance(value, str) for value in headings)):
                 raise ValueError()
-            if any(locator.get("page") in excluded for locator in locators):
+            if operation == "import" and any(locator.get("page") in excluded for locator in locators):
                 fail("denied", "The source contains excluded pages; a whole-source import is unavailable", 403)
             text = passage["text"]
             if not isinstance(text, str) or not text.strip():
