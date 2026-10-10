@@ -5,7 +5,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, Header, Query, Response
 
 from renulus.design_c_contracts import ConversationDraft
-from .conversation_models import NewConversation
+from .conversation_models import Mutation, NewConversation, Rename
 from .conversation_repository import ConversationRepository
 
 
@@ -42,5 +42,22 @@ def create_router(services):
     def save_draft(kind: Literal["learning", "case"], identifier: str, body: ConversationDraft,
                    idempotency_key: str | None = Header(default=None)):
         return repository.save_draft(kind, identifier, body, idempotency_key)
+
+    @router.patch("/{kind}/{identifier}")
+    def rename(kind: Literal["learning", "case"], identifier: str, body: Rename, idempotency_key: str | None = Header(default=None)):
+        return repository.change(kind, identifier, body, "rename", idempotency_key)
+
+    @router.post("/{kind}/{identifier}/archive")
+    def archive(kind: Literal["learning", "case"], identifier: str, body: Mutation, idempotency_key: str | None = Header(default=None)):
+        return repository.change(kind, identifier, body, "archive", idempotency_key)
+
+    @router.post("/{kind}/{identifier}/restore")
+    def restore(kind: Literal["learning", "case"], identifier: str, body: Mutation, idempotency_key: str | None = Header(default=None)):
+        return repository.change(kind, identifier, body, "restore", idempotency_key)
+
+    @router.delete("/{kind}/{identifier}")
+    async def delete(kind: Literal["learning", "case"], identifier: str, expected_revision: int = Query(ge=1),
+                     idempotency_key: str | None = Header(default=None)):
+        return await repository.delete(kind, identifier, Mutation(expected_revision=expected_revision), idempotency_key)
 
     return router

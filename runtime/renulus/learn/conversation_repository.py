@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MIT
 """Typed chat metadata adapts Learn and Cases; it never duplicates transcripts."""
 import base64
-from contextlib import closing
 from copy import deepcopy
 import hmac
 import json
@@ -13,7 +12,7 @@ from renulus.design_c_contracts import ConversationDraft, canonical_digest
 from renulus.storage.database import utc_now
 from renulus.storage.invalidation import bump_context_epoch
 
-from .conversation_models import NewConversation
+from .conversation_models import Mutation, NewConversation
 
 
 OWNERS = {"learning": ("learn_threads", "learn_conversations", "thread_id", "learn_thread"),
@@ -95,7 +94,7 @@ class ConversationRepository:
 
     def create(self, request: NewConversation, idempotency_key=None):
         created_case = None
-        with self._lock, self.db.transaction() as conn:
+        with self._lock, self.cases._lock, self.db.transaction() as conn:
             require_assistance(conn)
             if request.temporary:
                 digest = canonical_digest(request.model_dump(mode="json"))
@@ -139,12 +138,12 @@ class ConversationRepository:
                 raise
 
     def get(self, kind, identifier):
-        with self._lock, self.db.transaction() as conn:
+        with self._lock, self.cases._lock, self.db.transaction() as conn:
             require_assistance(conn)
             return self._get(conn, kind, identifier)[0]
 
     def draft(self, kind, identifier):
-        with self._lock, self.db.transaction() as conn:
+        with self._lock, self.cases._lock, self.db.transaction() as conn:
             require_assistance(conn)
             summary, row = self._get(conn, kind, identifier)
             return {"text": row["draft_text"], "content_refs": json.loads(row["draft_refs_json"]),
@@ -168,7 +167,7 @@ class ConversationRepository:
                 raise ApiError("content_unavailable", "A referenced saved item is no longer available", 409)
 
     def save_draft(self, kind, identifier, request: ConversationDraft, idempotency_key=None):
-        with self._lock, self.db.transaction() as conn:
+        with self._lock, self.cases._lock, self.db.transaction() as conn:
             require_assistance(conn)
             summary, row = self._get(conn, kind, identifier)
             if summary["retention"] == "temporary":
@@ -205,20 +204,25 @@ class ConversationRepository:
             value = json.loads(raw)
             if value["scope"] != scope:
                 raise ValueError
-            return value["after"]
+            return value
         except (ValueError, KeyError, TypeError):
             raise ApiError("invalid_cursor", "Reload this conversation history", 422) from None
 
     def messages(self, kind, identifier, limit=50, cursor=None):
         if not 1 <= limit <= 100:
             raise ApiError("invalid_page", "Use a page size between 1 and 100", 422)
-        with self._lock, self.db.transaction() as conn:
+        with self._lock, self.cases._lock, self.db.transaction() as conn:
             require_assistance(conn)
             summary, metadata = self._get(conn, kind, identifier)
             scope = ["messages", kind, identifier]
-            after = self._uncursor(cursor, scope) if cursor else None
+            page = self._uncursor(cursor, scope) if cursor else {}
+            after = page.get("after")
             if kind == "learning" and summary["retention"] == "saved":
-                where, args = "thread_id=?", [identifier]
+                boundary = page.get("boundary")
+                if boundary is None:
+                    last = conn.execute("SELECT created_at,id FROM learn_messages WHERE thread_id=? ORDER BY created_at DESC,id DESC LIMIT 1", (identifier,)).fetchone()
+                    boundary = list(last) if last else ["", ""]
+                where, args = "thread_id=? AND (created_at,id)<=(?,?)", [identifier, *boundary]
                 if after:
                     where += " AND (created_at,id)>(?,?)"
                     args += after
@@ -233,20 +237,22 @@ class ConversationRepository:
                 else:
                     source = metadata["messages"]
                 rows = sorted(deepcopy(source), key=lambda row: (row["created_at"], row["id"]))
-                rows = [row for row in rows if not after or [row["created_at"], row["id"]] > after][:limit + 1]
+                boundary = page.get("boundary") or ([rows[-1]["created_at"], rows[-1]["id"]] if rows else ["", ""])
+                rows = [row for row in rows if [row["created_at"], row["id"]] <= boundary and (not after or [row["created_at"], row["id"]] > after)][:limit + 1]
                 for row in rows:
                     row.setdefault("run_id", row["id"])
                     row.setdefault("content_refs", [])
-            next_cursor = self._cursor({"scope": scope, "after": [rows[limit - 1]["created_at"], rows[limit - 1]["id"]]}) if len(rows) > limit else None
+            next_cursor = self._cursor({"scope": scope, "boundary": boundary, "after": [rows[limit - 1]["created_at"], rows[limit - 1]["id"]]}) if len(rows) > limit else None
             return {"conversation": summary["identity"], "items": rows[:limit], "next_cursor": next_cursor}
 
     def list(self, limit=50, cursor=None, lifecycle="active", project_id=None):
         if not 1 <= limit <= 100:
             raise ApiError("invalid_page", "Use a page size between 1 and 100", 422)
-        with self._lock, self.db.transaction() as conn:
+        with self._lock, self.cases._lock, self.db.transaction() as conn:
             require_assistance(conn)
             scope = ["conversations", lifecycle, project_id]
-            after = self._uncursor(cursor, scope) if cursor else None
+            page = self._uncursor(cursor, scope) if cursor else {}
+            after = page.get("after")
             parts = []
             for kind, (table, sidecar, column, target_type) in OWNERS.items():
                 parts.append(f"SELECT c.id,c.title,c.created_at,max(c.updated_at,s.updated_at) updated_at,"
@@ -254,7 +260,8 @@ class ConversationRepository:
                     f"JOIN {sidecar} s ON s.{column}=c.id LEFT JOIN study_project_chats p "
                     f"ON p.chat_kind='{kind}' AND p.chat_id=c.id WHERE NOT EXISTS (SELECT 1 FROM deletion_ledger d "
                     f"WHERE d.entity_type='{target_type}' AND d.entity_id=c.id)")
-            where, args = "lifecycle=?", [lifecycle]
+            boundary = page.get("boundary") or utc_now()
+            where, args = "lifecycle=? AND updated_at<=?", [lifecycle, boundary]
             if project_id:
                 where += " AND project_id=?"
                 args.append(project_id)
@@ -270,7 +277,98 @@ class ConversationRepository:
                 candidates.append(value)
             if len(candidates) > limit:
                 last = candidates[limit - 1]
-                next_cursor = self._cursor({"scope": scope, "after": [last["updated_at"], last["kind"], last["identity"]["id"]]})
+                next_cursor = self._cursor({"scope": scope, "boundary": boundary, "after": [last["updated_at"], last["kind"], last["identity"]["id"]]})
             else:
                 next_cursor = None
             return {"items": candidates[:limit], "next_cursor": next_cursor}
+
+    def _volatile_command(self, key, operation, kind, identifier, request, action):
+        if key is None:
+            return action()
+        digest = canonical_digest({"operation": operation, "target_type": self._owner(kind)[3],
+            "target_id": identifier, "request": request.model_dump(mode="json")})
+        previous = self._temporary_commands.get(key)
+        if previous:
+            if previous[0] != digest:
+                raise ApiError("idempotency_conflict", "This request key was already used", 409)
+            return deepcopy(previous[1])
+        result = action()
+        self._temporary_commands[key] = (digest, deepcopy(result))
+        return result
+
+    def change(self, kind, identifier, request, operation, idempotency_key=None):
+        with self._lock, self.cases._lock, self.db.transaction() as conn:
+            require_assistance(conn)
+            self._owner(kind)
+            temporary = self._temporary.get((kind, identifier))
+            def change():
+                summary, metadata = self._get(conn, kind, identifier)
+                self._expected(summary, request.expected_revision)
+                if summary["retention"] == "temporary":
+                    if operation != "rename":
+                        raise ApiError("temporary_archive_unavailable", "Save this conversation before archiving it", 409)
+                    metadata["summary"]["title"] = request.title
+                    metadata["summary"]["revision"] += 1
+                    metadata["summary"]["updated_at"] = utc_now()
+                    if kind == "case":
+                        self.cases._sessions[identifier].title = request.title
+                    return deepcopy(metadata["summary"])
+                table, sidecar, column, _ = self._owner(kind)
+                if operation == "rename":
+                    if kind == "case":
+                        from renulus.cases.models import EditCase
+                        state = self.cases.get(identifier)
+                        updated = self.cases.edit(identifier, EditCase(revision=state["revision"], title=request.title))
+                        self.cases.save(identifier, updated["revision"], conn=conn)
+                    else:
+                        conn.execute(f"UPDATE {table} SET title=?,updated_at=? WHERE id=?", (request.title, utc_now(), identifier))
+                else:
+                    conn.execute(f"UPDATE {sidecar} SET lifecycle=? WHERE {column}=?",
+                                 ("archived" if operation == "archive" else "active", identifier))
+                conn.execute(f"UPDATE {sidecar} SET revision=revision+1,updated_at=? WHERE {column}=?", (utc_now(), identifier))
+                bump_context_epoch(conn)
+                return self._saved(conn, kind, identifier)[0]
+            if temporary:
+                return self._volatile_command(idempotency_key, operation, kind, identifier, request, change)
+            return command(conn, "conversation_commands", idempotency_key, operation, self._owner(kind)[3], identifier, request, change)
+
+    async def delete(self, kind, identifier, request: Mutation, idempotency_key=None):
+        self._owner(kind)
+        # Stop local runs before deleting their canonical authority. No provider
+        # is called in a SQLite transaction or while a synchronous lock is held.
+        if kind == "learning":
+            for run in list(self.learn.active.values()):
+                if run.thread_id == identifier:
+                    await self.learn.cancel(run.id)
+        with self._lock, self.cases._lock, self.db.transaction() as conn:
+            require_assistance(conn)
+            temporary = self._temporary.get((kind, identifier))
+            def remove():
+                summary, _ = self._get(conn, kind, identifier)
+                self._expected(summary, request.expected_revision)
+                if temporary:
+                    if kind == "case":
+                        state = self.cases.get(identifier)
+                        self.cases.close(identifier, state["revision"])
+                    self._temporary.pop((kind, identifier))
+                    return {"identity": summary["identity"], "deleted": True}
+                table, _, _, target_type = self._owner(kind)
+                self.owner_removed(conn, kind, identifier)
+                if kind == "case":
+                    session = self.cases._sessions.pop(identifier, None)
+                    if session:
+                        self.cases._invalidate_runs(session)
+                        self.cases._changed_scope(session)
+                    self.cases._deleted.add(identifier)
+                conn.execute(f"DELETE FROM {table} WHERE id=?", (identifier,))
+                self.db.mark_deleted(target_type, identifier, conn)
+                bump_context_epoch(conn)
+                return {"identity": summary["identity"], "deleted": True}
+            if temporary:
+                return self._volatile_command(idempotency_key, "delete", kind, identifier, request, remove)
+            return command(conn, "conversation_commands", idempotency_key, "delete", self._owner(kind)[3], identifier, request, remove)
+
+    def owner_removed(self, conn, kind, identifier):
+        for row in conn.execute("SELECT id FROM study_project_chats WHERE chat_kind=? AND chat_id=?", (kind, identifier)):
+            self.db.mark_deleted("project_chat", row["id"], conn)
+        conn.execute("DELETE FROM study_project_chats WHERE chat_kind=? AND chat_id=?", (kind, identifier))
