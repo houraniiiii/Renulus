@@ -11,6 +11,12 @@ def context_epoch(db):
     return int(row["value"]) if row else 0
 
 
+def context_epoch_in(conn):
+    """Capture the local generation in the caller's canonical transaction."""
+    row = conn.execute("SELECT value FROM preferences WHERE key=?", (CONTEXT_EPOCH,)).fetchone()
+    return int(row["value"]) if row else 0
+
+
 def bump_context_epoch(conn):
     conn.execute("INSERT INTO preferences VALUES(?,'1',?) ON CONFLICT(key) DO UPDATE SET "
         "value=CAST(CAST(preferences.value AS INTEGER)+1 AS TEXT),updated_at=excluded.updated_at",

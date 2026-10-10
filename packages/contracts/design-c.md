@@ -238,6 +238,7 @@ Exact proposed persisted names/identity and relation columns:
 | study_project_chats (Study/002) | id PK, project_id → study_projects.id, chat_kind + chat_id → learn_threads.id or case_sessions.id | Both edges link; UNIQUE(chat_kind,chat_id), sole membership authority |
 | study_project_documents (Study/002) | id PK, project_id → study_projects.id, revision_id → knowledge_revisions.id | Both edges link; UNIQUE(project_id,revision_id) |
 | study_project_goals (Study/002) | id PK, project_id → study_projects.id | Owned goal; status active/completed and progress_json; does not rewrite study.goals |
+| conversation_commands (Learn/002), study_project_commands (Study/002), assessment_attempt_commands (Assessment/004) | idempotency_key PK, operation, target_type, target_id, request_hash, result_json, created_at | Separate saved mutation authorities, exact hash/outcome replay, no live-target FK; current policy checked before replay |
 | knowledge_attachments (Knowledge/003) | id PK, chat_kind + chat_id → learn_threads.id or case_sessions.id | Owned saved-chat attachment; retention saved only |
 | knowledge_attachment_originals (Knowledge/003) | id PK, attachment_id → knowledge_attachments.id | Owned bytes/preview reference, separate extraction/index status; one authority |
 | assessment_tests (Assessment/003) | id PK | Collection identity/lifecycle; newest version derived by ordinal, no reverse cascade |

@@ -66,7 +66,8 @@ PARENTS = {
         Binding("case_sessions", ("chat_id",), "link", ("chat_kind", "case"))),
     "learning_evidence": tuple(Binding(parent, ("entity_id",), "owned", ("kind", kind))
         for kind, parent in (("study-interest", "learn_threads"), ("study-answer", "learn_threads"),
-            ("assessment-answer", "assessment_attempts"), ("generated-answer", "assessment_generated_attempts"))),
+            ("assessment-answer", "assessment_attempts"), ("generated-answer", "assessment_generated_attempts"),
+            ("assessment-test-answer", "assessment_test_attempts"))),
     "content_pack_topics": (link("content_packs", "pack_id", "pack_version"), link("content_topics", "topic_id", "topic_version")),
     "content_pack_cases": (link("content_packs", "pack_id", "pack_version"), link("content_case_versions", "case_id", "case_version")),
     "content_pack_questions": (link("content_packs", "pack_id", "pack_version"), link("content_question_versions", "question_id", "question_version")),
@@ -94,7 +95,10 @@ TOMBSTONES = {
     "assessment_attempt": "assessment_attempts",
     "generated_session": "assessment_generated_sessions", "generated_item": "assessment_generated_items",
     "generated_attempt": "assessment_generated_attempts", "project": "study_projects",
-    "test": "assessment_tests", "update_entry": "update_entries",
+    "test": "assessment_tests", "saved_test": "assessment_tests",
+    "saved_test_version": "assessment_test_versions", "test_attempt": "assessment_test_attempts",
+    "attachment": "knowledge_attachments", "attachment_original": "knowledge_attachment_originals",
+    "goal": "study_project_goals", "update_entry": "update_entries",
 }
 
 # Historical pins remain untouched. These optional live pointers are cleared

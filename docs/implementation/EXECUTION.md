@@ -62,8 +62,8 @@ export/restore. DC06/DC19 must compare the local context epoch before publicatio
 
 The lead reviewed `design-c/1` validators at `527677f3`, after the exact-name
 proposals, and integrated all three pass-1 reports (`db96f4a0`, `388687c2`,
-`335e5a86`). The fixture digest follow-up is pending; its manifest is not yet
-published as final evidence. Feature development may use these committed shapes
+`335e5a86`). Final contract follow-ups are integrated through `17f5d6a4`; the
+27-case suite and all eleven committed fixture digests passed. Feature development may use these committed shapes
 and the accepted additive clarifications in section 10 of the existing spec.
 Ticket closure still requires the integrated producers and consumers.
 
@@ -82,6 +82,30 @@ Collection and attempt workers have disjoint repositories/routers and use a
 small private pinned-version interface. No worker edits another reservation.
 Feature workers merge the next committed reservation baseline into
 their clean existing worktree. Separate owned profiles remain outside Git.
+
+### Additive schema publication and policy seam
+
+Lead migrations Learn002, Cases003, Study002 and Assessment003/004 implement
+the published sidecars, memberships, goals, collection/version/report/job records
+and independent attempt snapshots. Exact installed column inventories are checked
+against the final Python contracts. Command outcomes have separate saved-only
+`conversation_commands`, `study_project_commands` and `assessment_attempt_commands`
+ledgers; no command has a foreign key to its live target. Hash/outcome replay
+remains subject to the current assessment policy. Temporary commands stay volatile.
+Knowledge003 is published separately with its original/media recovery handling.
+
+Shared storage seams are `assessment_policy.policy_snapshot(conn)`,
+`require_assistance(conn, expected_revision=...)`, `advance_policy(conn)` and
+`invalidation.context_epoch_in(conn)`. Test start/finalisation advances policy
+inside the attempt transaction. Producers capture and recheck policy/context
+before publication; their private pinned content stays out of renderer responses.
+The lead will assemble feature routers only from reviewed connected slices.
+
+The canonical root and documentation baseline ancestry were rechecked. Linked
+worktrees use their exact per-worktree root after removal of the shared root
+override. Eighteen historical status-only normalization flags remain preserved.
+An earlier migration run failed before setup because its scratch parent did not
+exist; the corrected run passed all 35 migration/contract checks.
 
 The entries below preserve earlier implementation evidence. Their Flow selection,
 branches, paths, issue status, time windows and heartbeat instructions describe

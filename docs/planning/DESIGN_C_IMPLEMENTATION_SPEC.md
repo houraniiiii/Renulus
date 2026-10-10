@@ -892,6 +892,15 @@ retain original requested count and a separate deliberate shorter-set acceptance
 count. These additions repair persistence gaps found before dependent coding;
 they do not alter confirmed Study/Test/retention meanings.
 
+Accepted persistence clarification: saved chat, project and whole-attempt
+commands each need a separate durable hash/outcome ledger, with the same exact
+columns as collection commands and no live-target foreign key. This supplies
+the existing retry/conflict contract without mixing writers or retaining
+temporary payloads. The lead owns their additive DDL and recovery inclusion.
+Profile-wide policy uses a local generation checked before replay and again
+before publication; start/finalisation changes it atomically. Local policy and
+context generations are excluded from canonical exports.
+
 Exact feature leases are in the execution record. Reader, saved-collection and
 attempt implementation may start against these contracts while lead-owned
 additive migrations are finalised. DC01/DC02 and all feature tickets remain

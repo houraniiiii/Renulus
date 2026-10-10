@@ -278,6 +278,9 @@ MIGRATION_RESERVATIONS = {
 # Scalar row inventories for the producer's additive migration proposal. These
 # describe only new tables. They neither execute DDL nor modify legacy columns.
 TABLE_COLUMNS = {
+    "conversation_commands": ("idempotency_key", "operation", "target_type", "target_id", "request_hash", "result_json", "created_at"),
+    "study_project_commands": ("idempotency_key", "operation", "target_type", "target_id", "request_hash", "result_json", "created_at"),
+    "assessment_attempt_commands": ("idempotency_key", "operation", "target_type", "target_id", "request_hash", "result_json", "created_at"),
     "learn_conversations": ("thread_id", "lifecycle", "revision", "draft_text", "draft_refs_json", "draft_revision", "updated_at"),
     "case_conversations": ("case_id", "lifecycle", "revision", "draft_text", "draft_refs_json", "draft_revision", "updated_at"),
     "study_projects": ("id", "title", "lifecycle", "revision", "created_at", "updated_at"),

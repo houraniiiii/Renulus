@@ -8,10 +8,12 @@ from renulus.contracts import ApiError
 from renulus.server import create_app
 from renulus.storage import Database
 from renulus.storage.backup import export_records, restore_records
-from renulus.storage.compatibility import LEGACY_COLUMN_DEFAULTS
+from renulus.storage.compatibility import LEGACY_COLUMN_DEFAULTS, LEGACY_SCHEMA
 from renulus.storage.recovery_limits import SEGMENTED_LIMITS
 from renulus.storage.recovery_records import installed_schema, prune_deleted
 from renulus.storage.invalidation import context_epoch
+from renulus.design_c_contracts import TABLE_COLUMNS
+from renulus.storage.assessment_policy import policy_snapshot, require_assistance, advance_policy
 
 
 PROJECT_FIXTURE = """
@@ -23,14 +25,68 @@ CREATE TABLE study_project_documents(
 """
 
 
+def test_installed_feature_inventory_and_retry_outcomes_survive_recovery(tmp_path):
+    services = create_app(tmp_path / "inventory").state.services
+    with services.db.connect() as conn:
+        for table, expected in TABLE_COLUMNS.items():
+            if table.startswith("knowledge_attachment"):
+                continue  # Knowledge003 is published with its original/media policy.
+            installed = {row["name"] for row in conn.execute(f'PRAGMA table_info("{table}")')}
+            assert installed == set(expected), table
+        assert conn.execute("PRAGMA foreign_key_check").fetchall() == []
+    for table in ("conversation_commands", "study_project_commands", "assessment_attempt_commands"):
+        services.db.execute(f'INSERT INTO "{table}" VALUES(?,?,?,?,?,?,?)',
+            (table + "_key", "create", "synthetic", "original_id", "hash", '{"id":"original_id"}', "now"))
+    bundle = export_records(services)
+    target = create_app(tmp_path / "restored").state.services
+    restore_records(target, bundle, confirm_older=True)
+    for table in ("conversation_commands", "study_project_commands", "assessment_attempt_commands"):
+        assert dict(target.db.fetch_one(f'SELECT * FROM "{table}"')) == dict(services.db.fetch_one(f'SELECT * FROM "{table}"'))
+
+
+def test_policy_revision_blocks_late_help_even_after_test_finishes(tmp_path):
+    services = create_app(tmp_path / "policy").state.services
+    with services.db.transaction() as conn:
+        captured = require_assistance(conn)
+        conn.execute("INSERT INTO assessment_test_attempts(id,version_id,version_snapshot_json,mode,clock_high_water_at,created_at,updated_at) VALUES('test','deleted_version','{}','test','now','now','now')")
+        assert advance_policy(conn) == 2
+        assert policy_snapshot(conn)["active_test_id"] == "test"
+        with pytest.raises(ApiError, match="Submit the active Test"):
+            require_assistance(conn, expected_revision=captured)
+        conn.execute("UPDATE assessment_test_attempts SET status='submitted' WHERE id='test'")
+        assert advance_policy(conn) == 3
+        with pytest.raises(ApiError, match="policy changed"):
+            require_assistance(conn, expected_revision=captured)
+        assert require_assistance(conn) == 3
+    assert "design_c.assessment_policy_revision" not in {row["key"] for row in export_records(services)["records"]["preferences"]}
+
+
 def fixture(services):
-    services.db.apply_migration("fixture-projects-001", PROJECT_FIXTURE)
     imported = services.registry["knowledge"].import_text("SYNTHETIC shared CKD document", process=False)
-    services.db.execute("INSERT INTO study_projects VALUES('project_synthetic')")
-    services.db.execute("INSERT INTO study_project_documents VALUES(?,?)",
+    services.db.execute("INSERT INTO study_projects(id,title,created_at,updated_at) VALUES('project_synthetic','Synthetic project','now','now')")
+    services.db.execute("INSERT INTO study_project_documents(id,project_id,revision_id,created_at) VALUES('link_synthetic',?,?,'now')",
         ("project_synthetic", imported["revision_id"]))
     services.db.mark_deleted("project", "project_synthetic")
     return imported
+
+
+def test_composite_link_identity_preserves_independent_endpoints(tmp_path):
+    db = Database(tmp_path / "composite.sqlite3")
+    db.apply_migration("fixture-composite", """
+      CREATE TABLE knowledge_documents(id TEXT PRIMARY KEY);
+      CREATE TABLE knowledge_revisions(id TEXT PRIMARY KEY,document_id TEXT);
+    """ + PROJECT_FIXTURE)
+    db.execute("INSERT INTO knowledge_documents VALUES('document')")
+    db.execute("INSERT INTO knowledge_revisions VALUES('revision','document')")
+    db.execute("INSERT INTO study_projects VALUES('project')")
+    db.execute("INSERT INTO study_project_documents VALUES('project','revision')")
+    db.mark_deleted("project", "project")
+    with db.transaction() as conn:
+        conn.execute("PRAGMA defer_foreign_keys=ON")
+        prune_deleted(conn, installed_schema(conn, SEGMENTED_LIMITS), SEGMENTED_LIMITS)
+    assert db.fetch_all("SELECT * FROM study_project_documents") == []
+    assert db.fetch_one("SELECT id FROM knowledge_revisions")["id"] == "revision"
+    assert db.fetch_one("SELECT id FROM knowledge_documents")["id"] == "document"
 
 
 @pytest.mark.parametrize("recovery_path", ["json", "segmented"])
@@ -82,6 +138,7 @@ def test_schema_one_populated_json_upgrades_exact_known_columns_without_reclassi
     source = create_app(tmp_path / "source").state.services
     thread = source.registry["learn"].create_thread("SYNTHETIC transplant learning")
     bundle = {**export_records(source), "schema_version": 1}
+    bundle["records"] = {name: rows for name, rows in bundle["records"].items() if name in LEGACY_SCHEMA}
     target = create_app(tmp_path / "target").state.services
     target.db.execute("ALTER TABLE learn_threads ADD COLUMN lifecycle TEXT NOT NULL DEFAULT 'active'")
     with pytest.raises(ApiError, match="explicitly supported column"):
