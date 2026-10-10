@@ -15,6 +15,54 @@ spec.loader.exec_module(driver)
 
 
 class AdmissionTests(unittest.TestCase):
+    def test_refusal_diagnostics_keep_denial_and_redact_outside_directories(self):
+        root = Path("C:/Renulus/scratch/design-c/delivery/r-0123abcd")
+        bundle = Path("C:/Renulus/scratch/design-c/delivery/installed-0123abcd/resources/backend")
+        boundary = driver.SafetyBoundary(root, root / "h", root / "b", bundle)
+        attempts = ((str(root / "h/model.onnx"), "wb", driver.os.O_WRONLY),
+                    (str(root / "b/state/renulus.sqlite3"), "r+b", driver.os.O_RDWR),
+                    (str(bundle / "dependencies/public.py"), "w", driver.os.O_CREAT),
+                    ("C:/Users/owner/private/note.txt", "rb", 0))
+        for args in attempts:
+            with self.assertRaises(driver.ProofError):
+                boundary.check("open", args)
+        self.assertEqual(boundary.attempts, ["open"] * 4)
+        self.assertEqual(boundary.refused_details[0], {"event": "open", "mode": "wb",
+            "flags": driver.os.O_WRONLY, "path": {"root": "helpers", "relative_path": "model.onnx"}})
+        self.assertEqual(boundary.refused_details[1]["path"],
+                         {"root": "snapshot", "relative_path": "state/renulus.sqlite3"})
+        self.assertEqual(boundary.refused_details[2]["path"],
+                         {"root": "bundle", "relative_path": "dependencies/public.py"})
+        self.assertEqual(boundary.refused_details[3]["path"], {"root": "outside", "basename": "note.txt"})
+        encoded = driver.json.dumps(boundary.refused_details)
+        self.assertNotIn("owner", encoded)
+        self.assertNotIn("private", encoded)
+        self.assertNotIn(str(bundle), encoded)
+        # Known-root labels never authorize an operation or record allowed reads.
+        boundary.check("open", (str(bundle / "dependencies/public.py"), "rb", 0))
+        self.assertEqual(len(boundary.refused_details), 4)
+
+    def test_null_device_refusal_can_be_described_without_device_io(self):
+        root = Path("C:/Renulus/scratch/design-c/delivery/r-0123abcd")
+        boundary = driver.SafetyBoundary(root, root / "h", root / "b")
+        # Describe a hypothetical refusal only. Whether Windows resolves NUL
+        # inside the current root is not established by a simulated audit call.
+        for mode, flags in (("rb", 0), ("r+b", driver.os.O_RDWR), ("wb", driver.os.O_WRONLY)):
+            boundary._record_refusal("open", ("nul", mode, flags))
+        self.assertEqual([row["mode"] for row in boundary.refused_details], ["rb", "r+b", "wb"])
+        self.assertTrue(all(row["path"] == {"root": "device", "basename": "NUL"}
+                            for row in boundary.refused_details))
+
+    def test_refusal_diagnostics_are_bounded_and_do_not_record_network_targets(self):
+        root = Path("C:/Renulus/scratch/design-c/delivery/r-0123abcd")
+        boundary = driver.SafetyBoundary(root, root / "h", root / "b")
+        for unused in range(20):
+            with self.assertRaises(driver.ProofError):
+                boundary.check("socket.getaddrinfo", ("private-provider.invalid", 443))
+        self.assertEqual(len(boundary.attempts), 20)
+        self.assertEqual(boundary.refused_details, [{"event": "socket.getaddrinfo"}] * 16)
+        self.assertNotIn("private-provider", driver.json.dumps(boundary.refused_details))
+
     def test_user_cache_environment_and_network_cannot_escape(self):
         root = Path("C:/Renulus/scratch/design-c/delivery/r-0123abcd")
         supplied = {"SystemRoot": "C:/Windows", "USERPROFILE": "C:/Users/owner",

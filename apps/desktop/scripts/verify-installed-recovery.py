@@ -4,6 +4,7 @@
 prepare reserves a compact future schema1 profile. The parent seeds it through
 the reviewed old runtime and freezes seed.json. verify upgrades and exercises
 actual bundled owners. --help/importing this module performs no application work.
+diagnose-import records one public Library import failure; it is not acceptance.
 No Electron, pytest, providers, installation or profile discovery is used.
 """
 from __future__ import annotations
@@ -14,7 +15,7 @@ from contextlib import closing, contextmanager
 import hashlib
 import json
 import os
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 import re
 import secrets
 import shutil
@@ -306,7 +307,70 @@ class SafetyBoundary:
         self.bundle = Path(bundle).resolve() if bundle else None
         self.provisioning = False
         self.attempts = []
+        self.refused_details = []
         self.reparse_refusals = 0
+
+    def _path_diagnostic(self, value):
+        # Describe the attempted path lexically; never open or resolve a denied
+        # target while recording it. Outside roots expose only a basename.
+        if isinstance(value, int):
+            return {"root": "descriptor"}
+        if not isinstance(value, (str, bytes, os.PathLike)):
+            return {"root": "unavailable"}
+        raw = os.fsdecode(value)
+        if raw.startswith("file:"):
+            uri = urlsplit(raw)
+            if uri.netloc:
+                return {"root": "outside"}
+            raw = unquote(uri.path)
+            if re.match(r"^/[A-Za-z]:/", raw):
+                raw = raw[1:]
+        if raw.replace("/", "\\").lower() in ("nul", "\\\\.\\nul"):
+            return {"root": "device", "basename": "NUL"}
+        candidate = PureWindowsPath(os.path.abspath(raw))
+        for name, root in (("snapshot", self.snapshot), ("helpers", self.helpers),
+                           ("bundle", self.bundle), ("run", self.root)):
+            if root is not None and candidate.is_relative_to(PureWindowsPath(root)):
+                relative = candidate.relative_to(PureWindowsPath(root)).as_posix()
+                if relative.isprintable() and len(relative) <= 240:
+                    return {"root": name, "relative_path": relative}
+                return {"root": name, "basename": "<redacted>"}
+        basename = candidate.name
+        return {"root": "outside", "basename": basename if basename.isprintable() and len(basename) <= 120
+                else "<redacted>"}
+
+    def _record_refusal(self, event, args):
+        if len(self.refused_details) >= 16:
+            return
+        detail = {"event": event}
+        try:
+            if event == "open":
+                file, mode, flags = args
+                detail["path"] = self._path_diagnostic(file)
+                detail["mode"] = mode if mode is None or (isinstance(mode, str) and
+                    re.fullmatch(r"[rwaxbt+]{1,8}", mode)) else "<redacted>"
+                detail["flags"] = flags if type(flags) is int else None
+            elif event in ("os.mkdir", "os.remove", "os.rmdir", "os.chmod", "os.utime",
+                           "shutil.rmtree", "sqlite3.connect"):
+                detail["path"] = self._path_diagnostic(args[0])
+            elif event in ("os.rename", "os.link"):
+                detail["paths"] = [self._path_diagnostic(value) for value in args[:2]]
+            frame = sys._getframe(1)
+            try:
+                for unused in range(12):
+                    if frame is None:
+                        break
+                    caller = self._path_diagnostic(frame.f_code.co_filename)
+                    if caller.get("root") == "bundle":
+                        detail["caller"] = {**caller, "line": frame.f_lineno}
+                        break
+                    frame = frame.f_back
+            finally:
+                del frame
+        except Exception:
+            # Diagnostic formatting cannot replace the original denial.
+            detail = {"event": event, "path": {"root": "unavailable"}}
+        self.refused_details.append(detail)
 
     def path(self, value, *, writing):
         if not isinstance(value, (str, bytes, os.PathLike)):
@@ -364,6 +428,7 @@ class SafetyBoundary:
                 require(False, "Child processes/external handoffs are refused")
         except ProofError:
             self.attempts.append(event)
+            self._record_refusal(event, args)
             raise
 
 
@@ -378,6 +443,38 @@ def configure_safety(root, bundle):
     boundary = SafetyBoundary(root, root / "h", root / "b", bundle)
     sys.addaudithook(boundary.check)
     return boundary
+
+
+def diagnose_import(args, identity):
+    """Parent serial public-import probe; no old seed or recovery acceptance."""
+    root = checked_run(DELIVERY / ("r-" + (args.run_id or secrets.token_hex(4))), fresh=True)
+    root.mkdir()
+    boundary = configure_safety(root, args.bundle)
+    result, helper_copy, error_type = None, None, None
+    try:
+        helper_copy, contract = provision_helpers(args.bundle, root, boundary)
+        with application(root, "u", args.bundle, boundary) as services:
+            from renulus.knowledge.models import SourceMetadata, own_text_rights
+            source = root / "synthetic-current-1.txt"
+            source.write_text(TEXT + "\nSynthetic retained revision 1.\n", encoding="utf-8")
+            imported = services.get("knowledge").import_file(source,
+                title="SYNTHETIC installed recovery 1", metadata=SourceMetadata(),
+                rights=own_text_rights(), process=True)
+            result = {key: imported[key] for key in ("document_id", "revision_id", "status")}
+            result["job"] = {key: imported["job"].get(key) for key in
+                             ("id", "state", "phase", "error_code", "error_message")}
+        assert_helpers(root, contract)
+        assert_bundled_modules(args.bundle)
+    except Exception as error:
+        error_type = type(error).__name__
+    receipt = {"format": "renulus-installed-recovery-diagnostic/1", "status": "diagnostic-only",
+               "acceptance": False, "identity": identity, "run_root": str(root),
+               "operation": "public knowledge.import_file", "helpers": helper_copy,
+               "result": result, "error_type": error_type,
+               "refused_operations": boundary.attempts, "refused_details": boundary.refused_details,
+               "reparse_syscalls_refused": boundary.reparse_refusals}
+    write_json(root / "diagnostic.json", receipt)
+    return receipt
 
 
 def rows(db, table):
@@ -868,7 +965,8 @@ def verify(args, identity):
         return receipt
     except Exception as error:
         failure = {"status": "failed", "passed_gates": list(gates), "error_type": type(error).__name__,
-                   "error_code": getattr(error, "code", None), "refused_operations": boundary.attempts}
+                   "error_code": getattr(error, "code", None), "refused_operations": boundary.attempts,
+                   "refused_details": boundary.refused_details}
         if isinstance(error, ProofError):
             failure["assertion"] = str(error)
         write_json(root / "recovery-failure.json", failure)
@@ -880,22 +978,27 @@ def verify(args, identity):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="phase", required=True)
-    for name in ("prepare", "verify"):
+    for name in ("prepare", "verify", "diagnose-import"):
         command = commands.add_parser(name)
         command.add_argument("--bundle", required=True, type=Path)
         command.add_argument("--expected-source", required=True)
         for field in ("bundle", "inventory", "python", "driver"):
             command.add_argument("--" + field + "-sha256", required=True)
         command.add_argument("--slot", required=True)
-        if name == "prepare":
+        if name in ("prepare", "diagnose-import"):
             command.add_argument("--run-id", help="Optional eight lowercase hex; otherwise fresh random")
         else:
             command.add_argument("--run-root", required=True, type=Path)
             command.add_argument("--seed-sha256", required=True)
     args = parser.parse_args(argv)
     try:
-        identity = validate_identity(args, complete=args.phase == "verify")
-        result = prepare(args, identity) if args.phase == "prepare" else verify(args, identity)
+        identity = validate_identity(args, complete=args.phase in ("verify", "diagnose-import"))
+        if args.phase == "prepare":
+            result = prepare(args, identity)
+        elif args.phase == "diagnose-import":
+            result = diagnose_import(args, identity)
+        else:
+            result = verify(args, identity)
     except Exception as error:
         print(json.dumps({"status": "failed", "error_type": type(error).__name__,
                           "error_code": getattr(error, "code", None),
