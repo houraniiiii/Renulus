@@ -22,6 +22,7 @@ import shutil
 import sqlite3
 import sys
 import tempfile
+from threading import Lock
 from datetime import datetime, timezone
 from types import MappingProxyType
 import zipfile
@@ -216,6 +217,7 @@ def validate_identity(args, *, complete):
     return {"source_revision": args.expected_source, "bundle": str(bundle),
             "bundle_sha256": args.bundle_sha256, "inventory_sha256": args.inventory_sha256,
             "python_sha256": args.python_sha256, "driver_sha256": args.driver_sha256,
+            "driver_path": str(driver.resolve()),
             "slot": args.slot, "runtime": runtime_snapshot(), "inventory": checked}
 
 
@@ -300,11 +302,43 @@ def isolated_environment(root, inherited):
     return result
 
 
+class FrozenSourceRead:
+    """One admitted source file; retain a read handle to avoid recursive audit opens."""
+    def __init__(self, path, expected_sha256):
+        path = Path(path)
+        require(path.is_absolute() and ".." not in path.parts, "Exact frozen source path required")
+        no_reparse(path)
+        self.path, self.sha256 = path.resolve(), checked_hash(expected_sha256)
+        self._lock = Lock()
+        self._file = self.path.open("rb")
+        try:
+            self.require_unchanged()
+        except Exception:
+            self._file.close()
+            raise
+
+    def require_unchanged(self):
+        with self._lock:
+            try:
+                no_reparse(self.path)
+                require(os.path.samestat(self.path.stat(), os.fstat(self._file.fileno())),
+                        "Frozen source identity changed")
+                self._file.seek(0)
+                require(hashlib.file_digest(self._file, "sha256").hexdigest() == self.sha256,
+                        "Frozen source bytes changed")
+            except OSError:
+                raise ProofError("Frozen source is unavailable") from None
+
+    def close(self):
+        self._file.close()
+
+
 class SafetyBoundary:
     """Python audit refusal boundary; never supplies simulated application results."""
-    def __init__(self, root, helpers, snapshot, bundle=None):
+    def __init__(self, root, helpers, snapshot, bundle=None, *, driver_source=None):
         self.root, self.helpers, self.snapshot = root.resolve(), helpers.resolve(), snapshot.resolve()
         self.bundle = Path(bundle).resolve() if bundle else None
+        self.driver_source = driver_source
         self.provisioning = False
         self.attempts = []
         self.refused_details = []
@@ -380,6 +414,10 @@ class SafetyBoundary:
         # does not open files, so this cannot recurse into the open audit event.
         no_reparse(path)
         path = path.resolve()
+        if self.driver_source is not None and path == self.driver_source.path:
+            require(not writing, "Frozen QA source is read-only")
+            self.driver_source.require_unchanged()
+            return
         if writing:
             require(path.is_relative_to(self.root), "Write leaves owned recovery evidence")
             require(not path.is_relative_to(self.snapshot), "Preupgrade snapshot is immutable")
@@ -432,7 +470,12 @@ class SafetyBoundary:
             raise
 
 
-def configure_safety(root, bundle):
+def configure_safety(root, bundle, *, identity):
+    # Identity admission already checked this exact executing copy and its hash.
+    # Bind it before the hook; hashing its retained handle never reopens a path.
+    require(Path(identity["driver_path"]) == Path(__file__).absolute(),
+            "Admitted executing source path changed")
+    source = FrozenSourceRead(identity["driver_path"], identity["driver_sha256"])
     environment = isolated_environment(root, os.environ)
     for name in ENV_PATHS:
         Path(environment[name]).mkdir(parents=True, exist_ok=True)
@@ -440,7 +483,7 @@ def configure_safety(root, bundle):
     os.environ.update(environment)
     os.chdir(root)
     tempfile.tempdir = environment["TEMP"]
-    boundary = SafetyBoundary(root, root / "h", root / "b", bundle)
+    boundary = SafetyBoundary(root, root / "h", root / "b", bundle, driver_source=source)
     sys.addaudithook(boundary.check)
     return boundary
 
@@ -449,7 +492,7 @@ def diagnose_import(args, identity):
     """Parent serial public-import probe; no old seed or recovery acceptance."""
     root = checked_run(DELIVERY / ("r-" + (args.run_id or secrets.token_hex(4))), fresh=True)
     root.mkdir()
-    boundary = configure_safety(root, args.bundle)
+    boundary = configure_safety(root, args.bundle, identity=identity)
     result, helper_copy, error_type = None, None, None
     try:
         helper_copy, contract = provision_helpers(args.bundle, root, boundary)
@@ -870,7 +913,7 @@ def verify(args, identity):
     snapshot_files = [{**row, "path": row["path"][2:]} for row in seed["files"] if row["path"].startswith("u/")]
     validate_inventory(root / "b", snapshot_files)
     original_expectations = freeze_library_originals(root, seed, old)
-    boundary = configure_safety(root, args.bundle)
+    boundary = configure_safety(root, args.bundle, identity=identity)
     journal = (root / "events.jsonl").open("x", encoding="utf-8")
     gates = {}
     def mark(name, evidence):

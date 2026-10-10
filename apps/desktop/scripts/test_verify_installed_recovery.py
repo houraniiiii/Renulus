@@ -7,6 +7,7 @@ import shutil
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 spec = importlib.util.spec_from_file_location(
     "installed_recovery", Path(__file__).with_name("verify-installed-recovery.py"))
@@ -135,6 +136,57 @@ class FileGuardTests(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.root)
+
+    def frozen_source_fixture(self):
+        proofs = self.root / "proofs"
+        proofs.mkdir()
+        path, data = proofs / "driver.py", b"# synthetic frozen QA source\n"
+        path.write_bytes(data)
+        root = self.root / "run"
+        root.mkdir()
+        return path, data, root
+
+    def test_frozen_source_allows_only_exact_hash_bound_read(self):
+        path, data, root = self.frozen_source_fixture()
+        digest = hashlib.sha256(data).hexdigest()
+        with driver.closing(driver.FrozenSourceRead(path, digest)) as source:
+            boundary = driver.SafetyBoundary(root, root / "h", root / "b", driver_source=source)
+            boundary.check("open", (str(path), "r", 32896))
+            self.assertEqual(path.read_bytes(), data)
+            sibling = path.with_name("same-bytes.py")
+            sibling.write_bytes(data)
+            for target in (sibling, path.parent):
+                with self.assertRaises(driver.ProofError):
+                    boundary.check("open", (str(target), "rb", 0))
+            for mode, flags in (("w", 0), ("r+", 0), (None, driver.os.O_WRONLY),
+                                (None, driver.os.O_RDWR), (None, driver.os.O_CREAT)):
+                with self.assertRaises(driver.ProofError):
+                    boundary.check("open", (str(path), mode, flags))
+            self.assertEqual(path.read_bytes(), data)
+        with self.assertRaises(driver.ProofError):
+            driver.FrozenSourceRead(path, "0" * 64)
+
+    def test_frozen_source_rechecks_bytes_before_every_read(self):
+        path, data, root = self.frozen_source_fixture()
+        with driver.closing(driver.FrozenSourceRead(path, hashlib.sha256(data).hexdigest())) as source:
+            boundary = driver.SafetyBoundary(root, root / "h", root / "b", driver_source=source)
+            boundary.check("open", (str(path), "r", 32896))
+            path.write_bytes(b"# changed frozen QA source!!\n")
+            with self.assertRaisesRegex(driver.ProofError, "Frozen source bytes changed"):
+                boundary.check("open", (str(path), "r", 32896))
+            self.assertEqual(boundary.attempts, ["open"])
+            self.assertEqual(boundary.refused_details[0]["path"]["basename"], "driver.py")
+
+    def test_frozen_source_reparse_guard_precedes_allowance(self):
+        path, data, root = self.frozen_source_fixture()
+        with driver.closing(driver.FrozenSourceRead(path, hashlib.sha256(data).hexdigest())) as source:
+            boundary = driver.SafetyBoundary(root, root / "h", root / "b", driver_source=source)
+            # Unit injection represents a reparse discovered by the existing
+            # path check; it creates no actual Windows symlink or junction.
+            with mock.patch.object(driver.Path, "is_symlink", return_value=True):
+                with self.assertRaisesRegex(driver.ProofError, "Reparse paths"):
+                    boundary.check("open", (str(path), "r", 32896))
+            boundary.check("open", (str(path), "r", 32896))
 
     def test_full_inventory_refuses_changed_extra_and_escaping_files(self):
         (self.root / "public.bin").write_bytes(b"original")
