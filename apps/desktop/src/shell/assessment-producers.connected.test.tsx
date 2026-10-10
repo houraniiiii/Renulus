@@ -13,8 +13,10 @@ import { fixturePython, fixtureReady, stopFixture } from '../testBackend';
 import type { Attempt } from '../modules/attempts/types';
 import { App } from './App';
 
-const baseline = '1b6895eeccd934b57d27179cbe312a68e1f5989f';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
+// Pin each run to its actual committed source, rather than making the original
+// evidence snapshot an obstacle to rechecking later prerequisite repairs.
+const baseline = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
 const lane = 'C:/Renulus/scratch/design-c/dc-review-data';
 const token = 'synthetic-mounted-assessment';
 const realFetch = globalThis.fetch;
@@ -125,9 +127,16 @@ beforeAll(async () => {
 }, 75000);
 afterEach(() => { cleanup(); localStorage.clear(); window.history.replaceState(null, '', '#/newchat'); });
 afterAll(async () => {
-  cleanup(); vi.unstubAllGlobals(); configure({ asyncUtilTimeout: 1000 }); await stopFixture(backend);
-  if (fixture) writeFileSync(join(fixture, 'receipt.json'), JSON.stringify({ baseline,
-    qualification: 'Source-mounted jsdom + real loopback backend; not installed/native acceptance', sourceHashes, outcomes, exchanges }, null, 2));
+  cleanup(); vi.unstubAllGlobals(); configure({ asyncUtilTimeout: 1000 });
+  let cleanupError: string | undefined;
+  try { await stopFixture(backend); }
+  catch (error) { cleanupError = error instanceof Error ? error.message : 'Fixture cleanup failed'; throw error; }
+  finally {
+    if (fixture) writeFileSync(join(fixture, 'receipt.json'), JSON.stringify({ baseline,
+      qualification: 'Source-mounted jsdom + real loopback backend; not installed/native acceptance',
+      cleanup: { error: cleanupError ?? null, exitCode: backend?.exitCode, signalCode: backend?.signalCode },
+      sourceHashes, outcomes, exchanges }, null, 2));
+  }
 }, 20000);
 
 const starts = () => exchanges.filter(entry => entry.path === '/api/v1/assessment/test-attempts' && entry.method === 'POST');
