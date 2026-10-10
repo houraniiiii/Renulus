@@ -779,3 +779,64 @@ tests/knowledge/test_attachment_producer.py and this report.
 These are lane edits only. Shared merges preserve the parent's schema, recovery,
 contracts, shell/server and other owners' changes. No source schema/migration,
 root dependency manifest/lock or shared UI file was edited by this lane.
+
+### DC17 trusted saved extraction adapter
+
+The backend-only seam is services.registry["readers"].import_original(conn,
+revision_id, *, expected_fingerprint=None, expected_policy_revision=None,
+expected_context_epoch=None). KnowledgeRepository.saved_extraction_in exposes
+the same authority; Reader delegates to it. recheck_import_original(conn, pin)
+requires complete fingerprint/policy/context pins and resolves the real source
+again. The caller must own a transaction, including the final import/version
+publication transaction. No independent policy or extraction authority exists.
+
+The saved-extraction/1 result contains text, fingerprint, original_sha256,
+reference, terms, rights, segments, diagnostics, document_id, revision_id,
+source_id, title, content_sha256, extraction_sha256, effective metadata,
+policy_revision and context_epoch. Terms is an object containing licence,
+permission_reference and attribution. Segments map half-open start/end offsets
+in text to canonical passage_id, extraction locators, headings and a shared
+ContentReference. Text preserves canonical passage order separated by two
+newlines, including chunked table headers. Docling IDs/geometry remain raw
+provenance; they are not fabricated inert-reader text offsets.
+
+The private original object is kind=library-original, document_id, revision_id,
+relative_path, media_type, bytes and sha256. This object stays backend-only; it
+does not grant renderer path or archive authority. The adapter bounds and
+rehashes the private canonical original, and rejects links/junction redirects.
+An original is never copied for import. Existence, current active revision,
+saved Library scope, reserved status, all parent tombstone aliases, effective
+source restrictions and display/cache/model_input/derivation rights are checked
+against the caller connection. Index/embedding rights do not govern test import.
+Whole-source imports containing excluded pages are rejected, preventing an
+unlabelled partial question set. Maximum text is 4 MiB/12,000 passages, original
+64 MiB and serialized extraction 16 MiB.
+
+Failures use saved_extraction_not_found, pending, failed, unsupported,
+unavailable, denied, stale, context_changed, limit, snapshot_required or
+invalid_pin (each with the saved_extraction_ prefix), original_missing and
+the shared assistance_restricted/assistance_changed codes. Ready preview,
+ready status without canonical successful Docling extraction, and empty OCR
+passages cannot satisfy this contract. Current helper availability controls
+regeneration; reading persisted successful extraction needs no helper load.
+
+Fifty checks passed in saved-extraction-run2-results.xml, including 27 new
+tests with actual pinned Docling/HybridChunker, FastEmbed/LanceDB and ordinary
+saved text/CSV ingestion, actual migrated tables, reopen, caller-visible
+uncommitted source restrictions, rights, all tombstone aliases, byte tampering,
+context/policy changes and a guard forbidding new connections/conversion/index/
+helper calls during resolution. Public embedding artifacts were hash-validated
+against the committed manifest and copied explicitly into the synthetic lane
+profile. No providers or external network were used. An earlier 24-check run
+is retained in saved-extraction-run1-results.xml. This proves the saved text/CSV
+adapter and reader regressions; saved PDF/image OCR import acceptance remains
+separate. DC17 owns Assessment005, import persistence, provider normalization,
+edit/retry/cancel and final saved_tests publication/consumer rechecks.
+
+Exact paths added/changed in this follow-up:
+
+- runtime/renulus/knowledge/saved_extraction.py
+- runtime/renulus/knowledge/repository.py
+- runtime/renulus/knowledge/reader.py
+- tests/knowledge/test_saved_extraction.py
+- docs/implementation/design-c-review-readers.md

@@ -50,6 +50,23 @@ class ReaderRepository:
         self._require_assistance = require_assistance
         self._context_epoch_in = context_epoch_in
 
+    def import_original(self, conn, revision_id, *, expected_fingerprint=None,
+                        expected_policy_revision=None, expected_context_epoch=None):
+        """Backend-only DC17 adapter; preview readiness grants no import authority."""
+        return self.services.get("knowledge").saved_extraction_in(conn, revision_id,
+            expected_fingerprint=expected_fingerprint, expected_policy_revision=expected_policy_revision,
+            expected_context_epoch=expected_context_epoch)
+
+    def recheck_import_original(self, conn, pin):
+        """Repin the actual source in the caller's final publication transaction."""
+        if (not isinstance(pin, dict) or not isinstance(pin.get("revision_id"), str)
+                or not isinstance(pin.get("fingerprint"), str)
+                or type(pin.get("policy_revision")) is not int or pin["policy_revision"] < 1
+                or type(pin.get("context_epoch")) is not int or pin["context_epoch"] < 0):
+            raise ApiError("saved_extraction_invalid_pin", "Use a trusted saved extraction pin", 422)
+        return self.import_original(conn, pin["revision_id"], expected_fingerprint=pin["fingerprint"],
+            expected_policy_revision=pin["policy_revision"], expected_context_epoch=pin["context_epoch"])
+
     def _policy(self, request, operation):
         if self._policy_snapshot is None:
             if operation == "passage":
