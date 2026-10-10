@@ -33,10 +33,13 @@ Recovery run `r-4246ec46` stopped because its driver incorrectly required bytes
 for a records-only old revision; the preserved genuine original was unchanged.
 Correction `bcbd005e` freezes expected availability from the old snapshot and
 archive inventories; fourteen guards pass. Fresh installed run `r-c2bbe529`
-now passes identity/seed and legacy upgrade/reopen, with current producers and
-all-format restore/rebuild still running. Core run `c-a2284830` passed hidden
+passes identity/seed and legacy upgrade/reopen, but current text extraction
+failed on an audited open refusal. Diagnostic-only `5f1f3b80` keeps all denials
+and records the path/mode/caller in a fresh actual public-import run. Core run `c-a2284830` passed hidden
 startup, saved conversations and project membership before a Playwright response
-capture failure on the first attachment; no reader pass is claimed. Aquinas' report-only
+capture failure on the first attachment. Eager capture `25f175f9` passed 54 guards
+but actual `c-ec37f563` repeats the precise upload-body eviction; its screenshot
+timed out without a PNG. Both processes closed. No reader pass is claimed. Aquinas' report-only
 `bc149c91` adds bounded DC10 hidden restriction/keyboard evidence; that controller
 closed normally and freed the helper slot. No production bytes changed after
 the freeze. Completed review workers are closed; Zeno/Pauli remain available
@@ -71,8 +74,8 @@ acceptance reservations. The lead retains all other shared and release paths:
 | Owner | Exact current reservation | Required result |
 | --- | --- | --- |
 | Lead | Shared release records, spec and eventual default pointer | Serial installed checks against unchanged product `4c289868`; preserve failed receipts and old default. |
-| Zeno | `apps/desktop/scripts/verify-installed-product.mjs` and `test-verify-installed-product.mjs` only | QA freeze `76cfdff2` passes 49 guards; current amendment captures real response bodies promptly and records the failure stage. Parent owns app/helper execution. |
-| Pauli | `apps/desktop/scripts/verify-installed-recovery.py` and `test_verify_installed_recovery.py` only | QA correction `bcbd005e` passes 14 guards; standby for actual fresh installed recovery findings. |
+| Zeno | `apps/desktop/scripts/verify-installed-product.mjs` and `test-verify-installed-product.mjs` only | Current amendment observes one saved synthetic upload response without replay and uses existing hidden Electron capture. Parent owns app/helper execution. |
+| Pauli | `apps/desktop/scripts/verify-installed-recovery.py` and `test_verify_installed_recovery.py` only | Diagnostic `5f1f3b80` passes 17 guards; actual public-import diagnosis is parent-owned, with every refusal retained. |
 | Aquinas, Russell, Poincare, Kant | Completed; no active source reservation | Their integrated source/review evidence remains indexed above and below. Resume only for a concrete new finding with an exact reservation. |
 
 Manufacture of `75c05797` passed the full-factory NSIS preflight, then was

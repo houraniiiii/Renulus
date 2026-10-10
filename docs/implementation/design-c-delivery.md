@@ -125,12 +125,15 @@ checks. It requires the product commit as ancestor and permits only the exact
 two verifier/test paths and Markdown documentation between freezes. Committed
 text/EOL attributes transform expected bytes only; unrelated transformations or
 inherited attribute overrides are refused. The second core run records both
-revisions; all artifact and recovery-driver checks still use `4c289868`.
+revisions; all artifact checks still use `4c289868`. The later bounded QA
+extension freezes the exact two recovery Python driver/test paths separately
+as well; copied recovery-driver bytes must match that acceptance revision.
 The failed first receipt is not promoted to a pass. The second core run
 `c-390cbeaf` passes installed identity, then stops before Electron on a bundled
 interpreter guard. Its diagnostic confirms isolated CPython/Pillow and nine
 bundled paths; the guard incorrectly excludes the exact backend root admitted
-by the frozen `python314._pth`. A bounded guard correction is pending.
+by the frozen `python314._pth`. Correction `d33e3dcb` admits that exact root
+only for bundled `sys.path`; prefix and Pillow checks remain strict descendants.
 
 Installed recovery run `r-4246ec46` admitted the full installed inventory and
 genuine schema-1 seed, preserved the closed original snapshot at `b`, and copied
@@ -146,15 +149,28 @@ checks. No recovery pass or owner-profile operation is inferred from admission.
 Correction `bcbd005e` passes fourteen guard checks. Its copied QA driver is
 53,059 bytes with SHA256
 `3d44dc173b8d2235b5ce3a96f7a79ba2893c301f5eac28c8affac95ce0071996`.
-Fresh actual run `r-c2bbe529` has passed installed identity/seed and legacy
-upgrade/reopen. Its current producer, restore and rebuild gates remain pending.
+Fresh actual run `r-c2bbe529` passed installed identity/seed and legacy
+upgrade/reopen, then failed current text extraction with an audited `open`
+refusal. Its current producer, restore and rebuild gates have not passed.
+The failure receipt and profile remain unchanged. Diagnostic-only driver
+`5f1f3b80` retains every denial and records bounded path/mode/caller details;
+a fresh actual public-import diagnostic is running. A separate cold semchunk
+import passed without a refused open, so the suspected NUL import is not yet
+the demonstrated cause.
 Core QA `76cfdff2` passes 49 guard checks; actual run `c-a2284830` passes installed
 identity, isolated hidden C startup, saved Learn/Case conversations and project
 membership, then fails on Playwright response-body capture during the first PDF
 upload. The original was committed intact; Workspace had not opened. Cleanup
 closed the owned app/backend. Neither this failure nor the earlier preflights
 establish reader acceptance. Response capture is being repaired within the
-bounded verifier lease.
+bounded verifier lease. Eager response consumption `25f175f9` passes 54 unit
+checks but the next installed run `c-ec37f563` repeats the exact first PDF
+`POST /attachments` response-body eviction. Its same five admission/chat/project
+gates passed. This receipt identifies stage `attachment-upload`; the attempted
+Playwright screenshot timed out after fonts loaded and produced no PNG.
+The next bounded repair observes one actual saved synthetic attachment fetch
+response without replay, and uses the existing hidden Electron capture API.
+Reader acceptance is still open; product bytes remain unchanged.
 
 Manufacture and installation use fresh `matching-<revision>` and
 `installed-<revision>` destinations. A matching receipt must compare backend,
