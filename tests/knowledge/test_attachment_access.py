@@ -15,8 +15,12 @@ import pytest
 from renulus.cases.models import StartCase
 from renulus.cases.originals import accepted_original
 from renulus.design_c_contracts import Identity
+from renulus.knowledge.attachment_models import AttachmentUpload
+from renulus.knowledge.models import own_text_rights
+from renulus.learn.conversation_models import NewConversation
 from renulus.server import create_app
-from renulus.storage.assessment_policy import advance_policy
+from renulus.storage.assessment_policy import advance_policy, policy_snapshot
+from renulus.storage.invalidation import context_epoch_in
 
 
 @pytest.fixture
@@ -200,3 +204,63 @@ def test_contended_case_lock_fails_closed_without_waiting_in_caller_transaction(
         finally:
             release.set()
         future.result(timeout=3)
+
+
+@pytest.mark.parametrize("kind", ["learning", "case"])
+def test_saved_metadata_authority_keeps_all_guards_without_chat_or_case_lock(services, monkeypatch, kind):
+    conversations = services.get("conversations")
+    chat = conversations.create(NewConversation(kind=kind, title="SYNTHETIC canonical attachment"))
+    with services.db.transaction() as conn:
+        request = AttachmentUpload(conversation=chat["identity"], expected_conversation_revision=chat["revision"],
+            expected_policy_revision=policy_snapshot(conn)["revision"], expected_context_epoch=context_epoch_in(conn),
+            idempotency_key="SYNTHETIC_canonical_lock_upload", filename="SYNTHETIC.md",
+            title="SYNTHETIC retained source", rights=own_text_rights(), metadata={})
+    access = services.get("knowledge_attachments")
+    receipt = access.upload(request, b"SYNTHETIC retained source")
+    context = Identity.model_validate(chat["identity"])
+    held, release = Event(), Event()
+    def hold_both_owners():
+        with conversations._lock, services.get("cases")._lock:
+            held.set()
+            assert release.wait(20), "Canonical authorization waited for a volatile owner"
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(hold_both_owners)
+        try:
+            assert held.wait(5)
+            with services.db.transaction() as conn:
+                with metadata_only(conn, services, monkeypatch):
+                    assert access.authorize_in(conn, receipt["id"], context=context) == {"allowed": True}
+                    assert access.authorize_in(conn, receipt["id"], context=context.model_copy(update={
+                        "id": "SYNTHETIC_wrong_owner"})) == {"allowed": False, "reason": "access_denied"}
+                # In the same caller transaction, each independent canonical
+                # revocation must still win while both volatile owners are busy.
+                cases = [
+                    ("UPDATE knowledge_attachment_metadata SET rights_json=? WHERE attachment_id=?",
+                        (own_text_rights().model_copy(update={"display": False}).model_dump_json(), receipt["id"]), "access_denied"),
+                    ("DELETE FROM knowledge_attachment_metadata WHERE attachment_id=?", (receipt["id"],), "unavailable"),
+                    ("UPDATE knowledge_attachment_originals SET bytes=bytes+1 WHERE attachment_id=?", (receipt["id"],), "unavailable"),
+                ]
+                for sql, params, reason in cases:
+                    conn.execute("SAVEPOINT refusal")
+                    try:
+                        conn.execute(sql, params)
+                        with metadata_only(conn, services, monkeypatch):
+                            assert access.authorize_in(conn, receipt["id"], context=context) == {
+                                "allowed": False, "reason": reason}
+                    finally:
+                        conn.execute("ROLLBACK TO refusal")
+                        conn.execute("RELEASE refusal")
+                for entity_type, identifier in (("attachment", receipt["id"]),
+                        ("attachment_original", receipt["original"]["id"]), (context.type, context.id)):
+                    conn.execute("SAVEPOINT tombstone")
+                    try:
+                        services.db.mark_deleted(entity_type, identifier, conn)
+                        with metadata_only(conn, services, monkeypatch):
+                            assert access.authorize_in(conn, receipt["id"], context=context) == {
+                                "allowed": False, "reason": "not_found"}
+                    finally:
+                        conn.execute("ROLLBACK TO tombstone")
+                        conn.execute("RELEASE tombstone")
+        finally:
+            release.set()
+            future.result(timeout=5)

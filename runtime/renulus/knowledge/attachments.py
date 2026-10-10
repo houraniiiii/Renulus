@@ -291,6 +291,11 @@ class KnowledgeAttachments(KnowledgeAttachmentAccess):
                 raise
 
     def _volatile_snapshot(self, conn, attachment_id, context, *, data=False):
+        # The committed row decides retention, including the brief interval
+        # before promotion drops its volatile copy. Never acquire an owner lock
+        # (or return stale volatile bytes) for an ordinary saved attachment.
+        if self._saved_row(conn, attachment_id) is not None:
+            return None
         owner = self.services.registry.get("conversations")
         if owner is None:
             return None

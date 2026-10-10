@@ -1,17 +1,18 @@
 # SPDX-License-Identifier: MIT
 """Actual conversation retention, Knowledge003 persistence and reader calls."""
-from contextlib import closing
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing, contextmanager
 from io import BytesIO
 import json
 from pathlib import Path
 import sqlite3
+from threading import Event
 
 from fastapi.testclient import TestClient
 import pytest
 
 from renulus.contracts import ApiError
 from renulus.design_c_contracts import Identity
-from renulus.knowledge.attachment_api import create_router
 from renulus.knowledge.attachment_models import AttachmentRemoval, AttachmentUpload
 from renulus.knowledge.models import own_text_rights
 from renulus.learn.conversation_models import NewConversation
@@ -31,7 +32,6 @@ def app(tmp_path, monkeypatch):
         raise AssertionError("Attachment tests must not use an external network or provider")
     monkeypatch.setattr(socket.socket, "connect", forbidden)
     result = create_app(tmp_path / "synthetic-ordinary-attachments")
-    result.include_router(create_router(result.state.services), prefix="/api/v1")
     try:
         yield result
     finally:
@@ -52,6 +52,226 @@ def upload_request(app, chat, *, key="SYNTHETIC_upload_001", filename="SYNTHETIC
 
 def read_body(receipt):
     return {"reference": receipt["reference"], "conversation": receipt["conversation"]}
+
+
+@contextmanager
+def busy_conversations(services):
+    """A different thread owns the lock throughout real reader HTTP requests."""
+    held, release = Event(), Event()
+    def hold():
+        with services.get("conversations")._lock:
+            held.set()
+            assert release.wait(30), "Reader waited for the volatile owner lock"
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(hold)
+        try:
+            assert held.wait(5)
+            yield
+        finally:
+            release.set()
+            future.result(timeout=5)
+
+
+@pytest.mark.parametrize("kind", ["learning", "case"])
+@pytest.mark.parametrize("operation", ["resolve", "asset", "original"])
+def test_saved_reader_ignores_unrelated_volatile_owner_contention(app, kind, operation):
+    from PIL import Image
+    stream = BytesIO()
+    Image.new("RGB", (20, 12), "white").save(stream, format="PNG")
+    data = stream.getvalue()
+    services, client = app.state.services, TestClient(app)
+    chat = conversation(app, kind=kind)
+    request = upload_request(app, chat, filename="SYNTHETIC.png")
+    uploaded = client.post("/api/v1/attachments", content=data,
+        headers={"x-renulus-attachment-options": request.model_dump_json()})
+    assert uploaded.status_code == 201, uploaded.text
+    receipt = uploaded.json()
+    body = read_body(receipt)
+    if operation == "asset":
+        body = {**body, "asset_id": "image:1", "original_sha256": receipt["original"]["sha256"]}
+    with busy_conversations(services):
+        response = client.post("/api/v1/readers/" + operation, json=body)
+        assert response.status_code == 200, response.text
+    assert response.headers["cache-control"] == "no-store"
+    if operation == "resolve":
+        result = response.json()
+        assert result["preview_state"] == "ready" and result["payload"]["asset_id"] == "image:1"
+        assert result["original"]["sha256"] == receipt["original"]["sha256"]
+    elif operation == "asset":
+        with Image.open(BytesIO(response.content)) as raster:
+            assert raster.size == (20, 12)
+    else:
+        assert response.content == data
+
+
+@pytest.mark.parametrize("kind", ["learning", "case"])
+def test_temporary_reader_still_fails_closed_during_volatile_owner_contention(app, kind):
+    services, client = app.state.services, TestClient(app)
+    chat = conversation(app, kind=kind, temporary=True)
+    receipt = services.get("knowledge_attachments").upload(upload_request(app, chat), b"SYNTHETIC volatile original")
+    with busy_conversations(services):
+        for operation in ("resolve", "original"):
+            response = client.post("/api/v1/readers/" + operation, json=read_body(receipt))
+            assert response.status_code == 409, response.text
+            assert response.json()["error"]["code"] == "reader_original_unavailable"
+            assert response.json()["error"]["retryable"] is True
+    assert client.post("/api/v1/readers/original", json=read_body(receipt)).content == b"SYNTHETIC volatile original"
+
+
+@pytest.mark.parametrize("kind", ["learning", "case"])
+def test_saved_pdf_text_raster_and_original_work_with_busy_conversations(app, kind):
+    from test_reader_formats import synthetic_pdf
+    services, client = app.state.services, TestClient(app)
+    chat = conversation(app, kind=kind)
+    data = synthetic_pdf("SYNTHETIC retained PDF under unrelated contention")
+    request = upload_request(app, chat, filename="SYNTHETIC.pdf")
+    uploaded = client.post("/api/v1/attachments", content=data,
+        headers={"x-renulus-attachment-options": request.model_dump_json()})
+    assert uploaded.status_code == 201, uploaded.text
+    receipt = uploaded.json()
+    with busy_conversations(services):
+        resolved = client.post("/api/v1/readers/resolve", json=read_body(receipt))
+        assert resolved.status_code == 200, resolved.text
+        reader = resolved.json()
+        assert reader["preview_state"] == "ready"
+        assert reader["payload"]["blocks"][0]["text"] == "SYNTHETIC retained PDF under unrelated contention"
+        raster = client.post("/api/v1/readers/asset", json={**read_body(receipt),
+            "asset_id": reader["payload"]["asset_id"], "original_sha256": reader["original"]["sha256"]})
+        assert raster.status_code == 200 and raster.content.startswith(b"\x89PNG\r\n\x1a\n"), raster.text[:200]
+        original = client.post("/api/v1/readers/original", json=read_body(receipt))
+        assert original.status_code == 200 and original.content == data
+
+
+@pytest.mark.parametrize("kind", ["learning", "case"])
+def test_saved_reader_keeps_context_integrity_and_real_test_policy_guards_under_contention(app, kind):
+    services, client = app.state.services, TestClient(app)
+    chat = conversation(app, kind=kind)
+    data = b"SYNTHETIC immutable original"
+    receipt = services.get("knowledge_attachments").upload(upload_request(app, chat), data)
+    body = read_body(receipt)
+    path = services.paths.library / "attachments" / receipt["id"] / "original.md"
+    with busy_conversations(services):
+        mismatch = client.post("/api/v1/readers/original", json={**body,
+            "conversation": {**chat["identity"], "id": "SYNTHETIC_different_chat"}})
+        assert mismatch.status_code == 403 and mismatch.json()["error"]["code"] == "reader_context_mismatch"
+        try:
+            path.write_bytes(b"X" * len(data))  # Same-size bytes must still fail SHA verification.
+            damaged = client.post("/api/v1/readers/original", json=body)
+            assert damaged.status_code == 409 and damaged.json()["error"]["code"] == "reader_original_integrity"
+        finally:
+            path.write_bytes(data)
+        created = client.post("/api/v1/assessment/tests/reviewed", json={
+            "idempotency_key": "SYNTHETIC_reader_policy_test", "count": 1})
+        assert created.status_code == 200, created.text
+        started = client.post("/api/v1/assessment/test-attempts", json={
+            "version": {"type": "saved_test_version", "id": created.json()["version_id"]}, "mode": "test"},
+            headers={"Idempotency-Key": "SYNTHETIC_reader_policy_start"})
+        assert started.status_code == 201, started.text
+        for operation in ("resolve", "original"):
+            restricted = client.post("/api/v1/readers/" + operation, json=body)
+            assert restricted.status_code == 409 and restricted.json()["error"]["code"] == "assistance_restricted"
+        with services.db.transaction() as conn:
+            assert services.get("knowledge_attachments").authorize_in(conn, receipt["id"],
+                context=Identity.model_validate(chat["identity"])) == {"allowed": False, "reason": "restricted"}
+
+
+@pytest.mark.parametrize("kind", ["learning", "case"])
+def test_promotion_committed_authority_precedes_volatile_cleanup(app, monkeypatch, kind):
+    from renulus.knowledge.attachments import AttachmentPromotion
+    services, client = app.state.services, TestClient(app)
+    chat = conversation(app, kind=kind, temporary=True)
+    attachment_owner = services.get("knowledge_attachments")
+    data = b"SYNTHETIC promoted original"
+    receipt = attachment_owner.upload(upload_request(app, chat), data)
+    real_commit = AttachmentPromotion.commit
+    observed = []
+    def verify_committed(lease):
+        # The real promotion holds Chat+Case locks after SQLite committed, but
+        # before it drops either volatile attachment bytes or the temporary chat.
+        assert receipt["id"] in attachment_owner._volatile
+        def read_in_other_thread():
+            with services.db.transaction() as conn:
+                authorization = attachment_owner.authorize_in(conn, receipt["id"],
+                    context=Identity.model_validate(chat["identity"]))
+            volatile = attachment_owner.volatile_original(receipt["id"], context=Identity.model_validate(chat["identity"]))
+            return authorization, volatile
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            observed.append(executor.submit(read_in_other_thread).result(timeout=5))
+        real_commit(lease)
+    monkeypatch.setattr(AttachmentPromotion, "commit", verify_committed)
+    saved = client.post(f"/api/v1/conversations/{kind}/{chat['identity']['id']}/save",
+        json={"expected_revision": receipt["conversation_revision"]},
+        headers={"Idempotency-Key": "SYNTHETIC_promote_lock_boundary"})
+    assert saved.status_code == 200 and saved.json()["retention"] == "saved", saved.text
+    assert observed == [({"allowed": True}, None)]
+    assert receipt["id"] not in attachment_owner._volatile
+    assert client.post("/api/v1/readers/original", json=read_body(receipt)).content == data
+
+
+@pytest.mark.parametrize("kind", ["learning", "case"])
+def test_uncommitted_promotion_is_not_saved_authority_and_rollback_keeps_original(app, monkeypatch, kind):
+    from renulus.learn.conversation_models import Mutation
+    services = app.state.services
+    chat = conversation(app, kind=kind, temporary=True)
+    owner = services.get("conversations")
+    access = services.get("knowledge_attachments")
+    data = b"SYNTHETIC uncommitted attachment"
+    receipt = access.upload(upload_request(app, chat), data)
+    original_insert = owner._insert_sidecar
+    def fail_after_real_insert(conn, *args):
+        original_insert(conn, *args)
+        assert conn.execute("SELECT id FROM knowledge_attachments WHERE id=?", (receipt["id"],)).fetchone()
+        def check_other_snapshot():
+            with closing(services.db.connect()) as observer:
+                observer.execute("BEGIN")
+                assert not observer.execute("SELECT id FROM knowledge_attachments WHERE id=?", (receipt["id"],)).fetchone()
+                return access.authorize_in(observer, receipt["id"], context=Identity.model_validate(chat["identity"]))
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            assert executor.submit(check_other_snapshot).result(timeout=5) == {"allowed": False, "reason": "unavailable"}
+        raise sqlite3.OperationalError("SYNTHETIC promotion rollback")
+    with monkeypatch.context() as patch:
+        patch.setattr(owner, "_insert_sidecar", fail_after_real_insert)
+        with pytest.raises(sqlite3.OperationalError, match="SYNTHETIC promotion rollback"):
+            owner.promote(kind, chat["identity"]["id"], Mutation(expected_revision=receipt["conversation_revision"]),
+                "SYNTHETIC_promotion_rollback")
+    assert not services.db.fetch_one("SELECT id FROM knowledge_attachments WHERE id=?", (receipt["id"],))
+    assert receipt["id"] in access._volatile
+    assert not (services.paths.library / "attachments" / receipt["id"]).exists()
+    assert TestClient(app).post("/api/v1/readers/original", json=read_body(receipt)).content == data
+
+
+@pytest.mark.parametrize("change,code", [("rights", "reader_context_mismatch"),
+    ("delete", "reader_content_missing"), ("epoch", "reader_revision_conflict"),
+    ("policy", "assistance_changed")])
+def test_reader_rechecks_canonical_boundary_after_real_parse(app, monkeypatch, change, code):
+    services, client = app.state.services, TestClient(app)
+    chat = conversation(app)
+    upload = upload_request(app, chat)
+    receipt = services.get("knowledge_attachments").upload(upload, b"SYNTHETIC do not return after change")
+    reader = services.get("readers")
+    real_payload = reader.payload
+    def change_after_parse(original, request):
+        payload = real_payload(original, request)
+        if change == "delete":
+            services.get("knowledge_attachments").remove(receipt["id"], AttachmentRemoval(
+                conversation=chat["identity"], expected_conversation_revision=receipt["conversation_revision"],
+                expected_attachment_revision=1, expected_policy_revision=upload.expected_policy_revision,
+                expected_context_epoch=upload.expected_context_epoch, idempotency_key="SYNTHETIC_delete_during_parse"))
+        else:
+            with services.db.transaction() as conn:
+                if change == "rights":
+                    rights = own_text_rights().model_copy(update={"display": False})
+                    conn.execute("UPDATE knowledge_attachment_metadata SET rights_json=? WHERE attachment_id=?",
+                        (rights.model_dump_json(), receipt["id"]))
+                elif change == "epoch":
+                    bump_context_epoch(conn)
+                else:
+                    advance_policy(conn)
+        return payload
+    monkeypatch.setattr(reader, "payload", change_after_parse)
+    result = client.post("/api/v1/readers/resolve", json=read_body(receipt))
+    assert result.status_code in {403, 404, 409} and result.json()["error"]["code"] == code, result.text
+    assert "SYNTHETIC do not return" not in result.text
 
 
 def test_inventory_supplies_actual_upload_pins_and_stale_restore_pin_fails(app):

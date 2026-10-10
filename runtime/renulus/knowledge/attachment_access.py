@@ -25,6 +25,14 @@ class KnowledgeAttachmentAccess:
         return None
 
     @staticmethod
+    def _saved_row(conn, attachment_id):
+        columns = {row["name"] for row in conn.execute("PRAGMA table_info(knowledge_attachments)")}
+        if not {"id", "chat_kind", "chat_id"} <= columns:
+            return None
+        return conn.execute("SELECT id,chat_kind,chat_id FROM knowledge_attachments WHERE id=?",
+            (attachment_id,)).fetchone()
+
+    @staticmethod
     def _deleted(conn, identifier, *types):
         placeholders = ",".join("?" for _ in types)
         return conn.execute("SELECT 1 FROM deletion_ledger WHERE entity_id=? AND entity_type IN ("
@@ -67,6 +75,13 @@ class KnowledgeAttachmentAccess:
             return denied("access_denied")
         if self._deleted(conn, attachment_id, "attachment", "case_attachment"):
             return denied("not_found")
+
+        # Ordinary saved attachments have canonical authority in this snapshot.
+        # Unrelated volatile Chat/Case locks must not deny their retained bytes.
+        # This also covers promotion after commit but before volatile cleanup.
+        saved = self._saved_row(conn, attachment_id)
+        if saved is not None:
+            return self._saved_authorization(conn, attachment_id, context, saved)
 
         ordinary = self._volatile_snapshot(conn, attachment_id, context)
         if ordinary is not None:
@@ -111,10 +126,9 @@ class KnowledgeAttachmentAccess:
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(knowledge_attachments)")}
         if not {"id", "chat_kind", "chat_id"} <= columns:
             return denied("unavailable")
-        row = conn.execute("SELECT id,chat_kind,chat_id FROM knowledge_attachments WHERE id=?",
-            (attachment_id,)).fetchone()
-        if row is None:
-            return denied("not_found")
+        return denied("not_found")
+
+    def _saved_authorization(self, conn, attachment_id, context, row):
         if row["chat_kind"] not in {"learning", "case"}:
             return denied("unavailable")
         target_type = "case" if row["chat_kind"] == "case" else "learn_thread"
