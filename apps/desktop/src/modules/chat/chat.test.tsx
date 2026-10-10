@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ConversationSummary, PassageDraft, StudyHelpContext } from '../../platform/designC';
 import { WorkspaceProvider } from '../workspace';
 import { NavigationProvider } from '../../shell/navigation';
+import { ApiError } from '../../platform/api';
 import Chat from './index';
 
 const chat:ConversationSummary={identity:{type:'learn_thread',id:'saved-chat'},kind:'learning',retention:'saved',lifecycle:'active',revision:1,title:'CKD learning',project_id:null,created_at:'2026-10-10T00:00:00Z',updated_at:'2026-10-10T00:00:00Z'};
@@ -18,6 +19,155 @@ const frame=(element:React.ReactNode)=><NavigationProvider><WorkspaceProvider po
 afterEach(()=>cleanup());
 
 describe('Chat volatile handoffs',()=>{
+  it('retries a failed rename without sending the unrelated composer draft',async()=>{
+    setup();let renames=0;
+    const original=calls.api.getMockImplementation();
+    calls.api.mockImplementation(async(path:string,options?:{method?:string;body?:{title?:string}})=>{
+      if(options?.method==='PATCH'){
+        if(++renames===1)throw new ApiError('Synthetic rename unavailable',503,'unavailable',true);
+        return {...chat,title:options.body?.title,revision:2};
+      }
+      return original?.(path,options);
+    });
+    render(frame(<Chat identity={chat.identity}/>));
+    fireEvent.change(await screen.findByLabelText('Message Renulus'),{target:{value:'Unrelated unsent draft'}});
+    fireEvent.change(screen.getByLabelText('Conversation title'),{target:{value:'Renamed learning'}});
+    fireEvent.click(screen.getByRole('button',{name:'Rename'}));
+    expect(await screen.findByText('Synthetic rename unavailable')).toBeTruthy();
+    await act(async()=>fireEvent.click(screen.getByRole('button',{name:'Try again'})));
+    expect(calls.send).not.toHaveBeenCalled();
+    await waitFor(()=>expect(renames).toBe(2));
+    expect(await screen.findByRole('heading',{name:'Renamed learning'})).toBeTruthy();
+    expect((screen.getByLabelText('Message Renulus') as HTMLTextAreaElement).value).toBe('Unrelated unsent draft');
+    expect(calls.send).not.toHaveBeenCalled();
+    expect(calls.api.mock.calls.some(([path,options])=>path==='/conversations'&&options?.method==='POST')).toBe(false);
+  });
+
+  it('reloads an existing conversation after a history read fails without creating or sending',async()=>{
+    setup();let historyReads=0;
+    const context:StudyHelpContext={attempt_id:'retry-study',item_id:'retry-item',version_id:'retry-version',draft_revision:2,policy_revision:3,kind:'chat'};
+    const reference={target:{type:'library_revision' as const,id:'retained-source'}};
+    const original=calls.api.getMockImplementation(),navigated=vi.fn();
+    calls.api.mockImplementation(async(path:string,...args)=>{
+      if(path.endsWith('/messages')){
+        if(++historyReads===1)throw new ApiError('Synthetic history unavailable',503,'unavailable',true);
+        return {items:[{id:'retained-message',run_id:'past-run',role:'assistant',content:'Retained conversation history',content_refs:[]}],next_cursor:null};
+      }
+      if(path.endsWith('/draft'))return {text:'Retained draft',content_refs:[reference],revision:2,conversation_revision:3};
+      return original?.(path,...args);
+    });
+    render(frame(<Chat identity={chat.identity} onConversation={navigated} studyHelpContext={context}/>));
+    expect(await screen.findByRole('heading',{name:'Conversation could not be opened'})).toBeTruthy();
+    expect(screen.queryByRole('button',{name:'Start saved chat'})).toBeNull();
+    expect(screen.queryByRole('button',{name:'Start temporary chat'})).toBeNull();
+    fireEvent.click(screen.getByRole('button',{name:'Try again'}));
+    expect(await screen.findByText('Retained conversation history')).toBeTruthy();
+    expect((screen.getByLabelText('Message Renulus') as HTMLTextAreaElement).value).toBe('Retained draft');
+    expect(screen.getByRole('button',{name:'Remove source 1'})).toBeTruthy();
+    expect(historyReads).toBe(2);
+    expect(calls.send).not.toHaveBeenCalled();expect(navigated).not.toHaveBeenCalled();
+    expect(calls.api.mock.calls.every(([,options])=>!options?.method||options.method==='GET')).toBe(true);
+    for(const [path,options] of calls.api.mock.calls){
+      if(!path.endsWith('/runs'))expect(options?.headers?.['X-Renulus-Study-Context']).toBe(JSON.stringify(context));
+    }
+  });
+
+  it('keeps an unsaved draft and source through a failed same-identity refresh and reload',async()=>{
+    setup();let summaryReads=0;
+    const original=calls.api.getMockImplementation();
+    const reference={target:{type:'library_revision' as const,id:'retained-source'}};
+    calls.api.mockImplementation(async(path:string,...args)=>{
+      if(path==='/conversations/learning/saved-chat'){
+        if(++summaryReads===2)throw new ApiError('Synthetic conversation unavailable',404,'conversation_missing');
+        return chat;
+      }
+      if(path.endsWith('/draft'))return {text:'Earlier saved draft',content_refs:[reference],revision:1,conversation_revision:1};
+      return original?.(path,...args);
+    });
+    const view=render(frame(<Chat identity={chat.identity} navigationRevision={1}/>));
+    fireEvent.change(await screen.findByLabelText('Message Renulus'),{target:{value:'Keep my latest unsaved draft'}});
+    view.rerender(frame(<Chat identity={chat.identity} navigationRevision={2}/>));
+    expect(await screen.findByRole('heading',{name:'Conversation could not be opened'})).toBeTruthy();
+    fireEvent.click(screen.getByRole('button',{name:'Try again'}));
+    const composer=await screen.findByLabelText('Message Renulus');
+    expect((composer as HTMLTextAreaElement).value).toBe('Keep my latest unsaved draft');
+    expect(screen.getByRole('button',{name:'Remove source 1'})).toBeTruthy();
+    expect(calls.send).not.toHaveBeenCalled();
+  });
+
+  it('retries failed history pagination without submitting the retained draft',async()=>{
+    setup();let pageReads=0;
+    const original=calls.api.getMockImplementation();
+    calls.api.mockImplementation(async(path:string,...args)=>{
+      if(path.endsWith('/messages'))return {items:[],next_cursor:'older'};
+      if(path.endsWith('/messages?cursor=older')){
+        if(++pageReads===1)throw new ApiError('Synthetic older history unavailable',503,'unavailable',true);
+        return {items:[{id:'older-message',run_id:'past-run',role:'assistant',content:'Older retained answer',content_refs:[]}],next_cursor:null};
+      }
+      return original?.(path,...args);
+    });
+    render(frame(<Chat identity={chat.identity}/>));
+    fireEvent.click(await screen.findByRole('button',{name:'Load more history'}));
+    expect(await screen.findByText('Synthetic older history unavailable')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button',{name:'Try again'}));
+    expect(await screen.findByText('Older retained answer')).toBeTruthy();
+    expect(screen.queryByText('Synthetic older history unavailable')).toBeNull();
+    expect((screen.getByLabelText('Message Renulus') as HTMLTextAreaElement).value).toBe('Existing draft');
+    expect(calls.send).not.toHaveBeenCalled();
+  });
+
+  it('keeps a pending passage through repeated Case load failures and consumes it once after reload',async()=>{
+    setup();let reads=0;
+    const original=calls.api.getMockImplementation(),consumed=vi.fn();
+    const caseChat={...chat,kind:'case' as const,identity:{type:'case' as const,id:'retry-case'}};
+    const passage:PassageDraft & {id:string}={id:'retry-passage',text:'Selected fictional passage',title:'A source',reference:{target:{type:'library_revision',id:'saved-revision'}}};
+    calls.api.mockImplementation(async(path:string,...args)=>{
+      if(path==='/conversations/case/retry-case'){
+        if(++reads<=2)throw new ApiError('Synthetic Case unavailable',503,'unavailable',true);
+        return caseChat;
+      }
+      if(path.endsWith('/context'))return {id:'retry-case',kind:'daily',text:'Synthetic context',revision:1,attachments:[],scope:{kind:'saved-case',entity_id:'retry-case'}};
+      if(path==='/cases/capabilities')return {extraction:{supported:false}};
+      if(path==='/cases/teaching')return {cases:[]};
+      return original?.(path,...args);
+    });
+    const view=render(frame(<Chat identity={caseChat.identity} passageIntent={passage} onPassageIntentConsumed={consumed}/>));
+    expect(await screen.findByRole('heading',{name:'Conversation could not be opened'})).toBeTruthy();
+    expect(consumed).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button',{name:'Try again'}));
+    expect(await screen.findByRole('heading',{name:'Conversation could not be opened'})).toBeTruthy();
+    expect(consumed).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button',{name:'Try again'}));
+    const composer=await screen.findByLabelText('Your case question');
+    await waitFor(()=>expect((composer as HTMLTextAreaElement).value).toBe('Existing draft\n\nSelected fictional passage'));
+    view.rerender(frame(<Chat identity={caseChat.identity} passageIntent={{...passage}} onPassageIntentConsumed={consumed}/>));
+    expect(consumed).toHaveBeenCalledTimes(1);expect(calls.send).not.toHaveBeenCalled();
+    expect(calls.api.mock.calls.some(([path,options])=>path==='/conversations'&&options?.method==='POST')).toBe(false);
+  });
+
+  it('does not replay a consumed send intent after a failed reload of the same identity',async()=>{
+    setup();let refuse=false;
+    const original=calls.api.getMockImplementation(),consumed=vi.fn();
+    const intent={text:'Explicit fictional question',request_id:'consumed-before-reload'};
+    const context:StudyHelpContext={attempt_id:'reload-study',item_id:'reload-item',version_id:'reload-version',draft_revision:1,policy_revision:2,kind:'chat'};
+    calls.api.mockImplementation(async(path:string,...args)=>{
+      if(path==='/conversations/learning/saved-chat'&&refuse){refuse=false;throw new ApiError('Synthetic reload unavailable',503,'unavailable',true);}
+      return original?.(path,...args);
+    });
+    calls.send.mockImplementation(async(_chat,_body,onEvent)=>onEvent({run_id:'explicit-run',sequence:1,type:'error',payload:{message:'Synthetic send failed',code:'unavailable',retryable:true}}));
+    const view=render(frame(<Chat identity={chat.identity} sendIntent={intent} onSendIntentConsumed={consumed}/>));
+    expect(await screen.findByText('Synthetic send failed')).toBeTruthy();
+    expect(screen.queryByRole('button',{name:'Try again'})).toBeNull();
+    refuse=true;
+    view.rerender(frame(<Chat identity={chat.identity} sendIntent={{...intent}} onSendIntentConsumed={consumed} studyHelpContext={context}/>));
+    expect(await screen.findByRole('heading',{name:'Conversation could not be opened'})).toBeTruthy();
+    fireEvent.click(screen.getByRole('button',{name:'Try again'}));
+    expect(await screen.findByLabelText('Message Renulus')).toBeTruthy();
+    expect(consumed).toHaveBeenCalledTimes(1);expect(calls.send).toHaveBeenCalledTimes(1);
+    expect(calls.send.mock.calls[0][1].request_id).toBe(intent.request_id);
+    expect(calls.api.mock.calls.some(([path,options])=>path==='/conversations'&&options?.method==='POST')).toBe(false);
+  });
+
   it('refreshes the same chat membership on explicit navigation without replacing its draft',async()=>{
     setup();let current={...chat,project_id:'project-a'};
     const original=calls.api.getMockImplementation();
@@ -97,7 +247,7 @@ describe('Chat volatile handoffs',()=>{
     await waitFor(()=>expect(attempts).toBe(1));
     const first=calls.api.mock.calls.find(([path])=>path.endsWith('/save'))!;
     expect(first[1].body.expected_revision).toBe(2);
-    fireEvent.click(screen.getByRole('button',{name:'Save conversation'}));
+    fireEvent.click(screen.getByRole('button',{name:'Try again'}));
     await waitFor(()=>expect(attempts).toBe(2));
     const requests=calls.api.mock.calls.filter(([path])=>path.endsWith('/save'));
     expect(requests[1][1]).toEqual(requests[0][1]);

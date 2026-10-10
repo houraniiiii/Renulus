@@ -43,8 +43,12 @@ export default function ChatPage(props: ChatPageProps) {
   const [style,setStyle] = useState<'direct'|'guided'>('direct');
   const [partial,setPartial] = useState('');
   const [status,setStatus] = useState('');
-  const [error,setError] = useState<unknown>();
+  const [failure,setFailure] = useState<{error:unknown;retry?:()=>void}>();
+  const error=failure?.error;
+  // Recovery belongs to the failed operation. Sending always requires Send.
+  function setError(error:unknown,retry?:()=>void) {setFailure(error===undefined?undefined:{error,retry});}
   const [loading,setLoading] = useState(true);
+  const [loadRevision,setLoadRevision] = useState(0);
   const [busy,setBusy] = useState(false);
   const [recovering,setRecovering] = useState(false);
   const [title,setTitle] = useState('');
@@ -55,11 +59,11 @@ export default function ChatPage(props: ChatPageProps) {
   const chatRef = useRef<ConversationSummary|undefined>(undefined);
   const textRef = useRef('');
   const refsRef = useRef<ContentReference[]>([]);
+  const reopenDraft = useRef<{identity:string;helpKey:string|undefined;text:string;content_refs:ContentReference[]}|undefined>(undefined);
   const epoch = useRef(0);
   const streamAbort = useRef<AbortController|null>(null);
   const activeRun = useRef<string|undefined>(undefined);
   const visibleRun = useRef<string|undefined>(undefined);
-  const lastSendImage = useRef(false);
   const draftWrite = useRef<Promise<void>>(Promise.resolve());
   const persisted = useRef('');
   const consumed = useRef(new Set<string>());
@@ -74,6 +78,7 @@ export default function ChatPage(props: ChatPageProps) {
 
   useEffect(() => {
     const version=++epoch.current, controller=new AbortController();
+    if(reopenDraft.current?.identity!==incomingKey||reopenDraft.current.helpKey!==helpKey)reopenDraft.current=undefined;
     setLoading(true);setError(undefined);setMessages([]);setPartial('');setBusy(false);setRecovering(false);setStatus('');
     activeRun.current=undefined;visibleRun.current=undefined;
     chatRef.current=undefined;setChat(undefined);setRefs([]);setText('');persisted.current='';
@@ -90,7 +95,9 @@ export default function ChatPage(props: ChatPageProps) {
         if (epoch.current!==version) return;
         accept({...value,revision:draft.conversation_revision});setMessages(page.items);setCursor(page.next_cursor);
         persisted.current=signature(draft.text,draft.content_refs);
-        setText(draft.text || callback.current.prefill || '');setRefs(draft.content_refs);setLoading(false);
+        const retained=reopenDraft.current;
+        setText(retained?retained.text:draft.text || callback.current.prefill || '');setRefs(retained?.content_refs??draft.content_refs);setLoading(false);
+        reopenDraft.current=undefined;
         const running=runs.items?.find(run=>run.state==='running');
         if(running){activeRun.current=running.run_id;visibleRun.current=running.run_id;setBusy(true);setRecovering(true);setStatus('Response is running');}
         else if(runs.items?.[0]&&runs.items[0].state!=='completed'){
@@ -111,7 +118,7 @@ export default function ChatPage(props: ChatPageProps) {
       if(current?.retention==='temporary'&&run) void api(conversationPath(current)+'/runs/'+encodeURIComponent(run)+'/cancel',{method:'POST'}).catch(()=>{});
       streamAbort.current?.abort();activeRun.current=undefined;
     };
-  },[incomingKey,helpKey]);
+  },[incomingKey,helpKey,loadRevision]);
 
   useEffect(()=>{
     // Re-selecting this chat must resolve current membership without remounting
@@ -127,7 +134,10 @@ export default function ChatPage(props: ChatPageProps) {
     }).catch(caught=>{
       if(controller.signal.aborted||epoch.current!==version||isCancelled(caught))return;
       setError(caught);
-      if(caught instanceof ApiError&&caught.status===404){chatRef.current=undefined;setChat(undefined);setMessages([]);setPartial('');}
+      if(caught instanceof ApiError&&caught.status===404){
+        if(signature(textRef.current,refsRef.current)!==persisted.current)reopenDraft.current={identity:incomingKey,helpKey,text:textRef.current,content_refs:refsRef.current};
+        chatRef.current=undefined;setChat(undefined);setMessages([]);setPartial('');
+      }
     });
     return()=>controller.abort();
   },[incomingKey,helpKey,props.navigationRevision]);
@@ -217,7 +227,6 @@ export default function ChatPage(props: ChatPageProps) {
   async function send(value=textRef.current,requestId:string=crypto.randomUUID(),imageIntent?:CaseImageIntent) {
     if(!value.trim()||busy||!chatRef.current)return;
     const version=epoch.current,controller=new AbortController();streamAbort.current=controller;
-    lastSendImage.current=!!imageIntent;
     setBusy(true);setError(undefined);setPartial('');setStatus('Sending');
     await draftWrite.current;
     const current=chatRef.current;
@@ -271,7 +280,7 @@ export default function ChatPage(props: ChatPageProps) {
       if(result.retention==='saved')changed();
       if(version!==epoch.current)return;
       accept(result);callback.current.onConversation?.(result);setError(undefined);
-    }catch(caught){if(version===epoch.current)setError(caught);}
+    }catch(caught){if(version===epoch.current)setError(caught,()=>void mutate(action,body));}
   }
   async function remove() {
     const current=chatRef.current;if(!current)return;
@@ -284,10 +293,11 @@ export default function ChatPage(props: ChatPageProps) {
   async function more() {
     if(!cursor||!chat)return;
     const version=epoch.current;
-    try{const page=await api<PageResult<Message>>(conversationPath(chat)+'/messages?cursor='+encodeURIComponent(cursor),{headers:helpHeaders});if(version!==epoch.current)return;setMessages(previous=>[...previous,...page.items.filter(item=>!previous.some(old=>old.id===item.id))]);setCursor(page.next_cursor);}catch(caught){if(version===epoch.current)setError(caught);}
+    try{const page=await api<PageResult<Message>>(conversationPath(chat)+'/messages?cursor='+encodeURIComponent(cursor),{headers:helpHeaders});if(version!==epoch.current)return;setMessages(previous=>[...previous,...page.items.filter(item=>!previous.some(old=>old.id===item.id))]);setCursor(page.next_cursor);setError(undefined);}catch(caught){if(version===epoch.current)setError(caught,()=>void more());}
   }
 
   if(loading)return <LoadingState label="Opening conversation"/>;
+  if(!chat&&incoming&&error)return <section className="chat-page"><ErrorState error={error} title="Conversation could not be opened" onRetry={()=>setLoadRevision(value=>value+1)}/></section>;
   if(!chat)return <section className="chat-page"><h1>Start a conversation</h1><p>Saved chats keep your discussion and draft for next time.</p><div className="actions"><Button onClick={()=>void fresh(false)}>Start saved chat</Button><Button variant="secondary" onClick={()=>void fresh(true)}>Start temporary chat</Button></div>{Boolean(error)&&<ErrorState error={error}/>}</section>;
   const disabled=busy||chat.lifecycle==='archived';
   return <section className="chat-page" aria-label="Conversation">
@@ -296,7 +306,7 @@ export default function ChatPage(props: ChatPageProps) {
     {chat.lifecycle==='archived'&&<Notice>Archived conversations keep their history and draft. Restore to continue.</Notice>}
     {chat.kind==='case'&&<CaseContext studyHelpContext={props.studyHelpContext} conversation={chat} disabled={disabled} beforeChange={flushDraft} onDiscussImage={async(image_preview_id,case_revision,model,question)=>{try{const latest=await flushDraft();if(latest)await send(question,crypto.randomUUID(),{image_preview_id,case_revision,model});}catch(caught){setError(caught);}}} onChanged={value=>{accept(value);callback.current.onConversation?.(value);if(value.retention==='saved')changed();}} onStartTeaching={async teaching_case_id=>{const value=await createConversation({kind:'case',teaching_case_id,temporary:chat.retention==='temporary',project_id:chat.project_id},undefined,undefined,props.studyHelpContext);callback.current.onConversation?.(value);if(value.retention==='saved')changed();}}/>}
     <div className="chat-transcript" aria-label="Message history">{messages.map(message=><article className={'chat-message chat-message-'+message.role} key={message.id}><p className="chat-role">{message.role==='user'?'You':'Renulus'}</p><div className="chat-message-text">{message.content}</div>{message.content_refs?.length>0&&<div className="chat-references">{message.content_refs.map((reference,index)=><Button key={index} variant="ghost" onClick={()=>workspace.open(reference)}>Open source {index+1}</Button>)}</div>}</article>)}{cursor&&<Button variant="secondary" onClick={()=>void more()}>Load more history</Button>}{partial&&!messages.some(message=>message.run_id===visibleRun.current&&message.role==='assistant')&&<article className="chat-message chat-message-assistant"><p className="chat-role">Renulus {busy?'Â· responding':''}</p><div className="chat-message-text">{partial}</div></article>}{messages.length===0&&!partial&&<div className="chat-empty"><h2>What would you like to understand?</h2><p>{chat.kind==='case'?'Discuss a case, ask for missing information, or work through a teaching case.':'Ask a nephrology question. Choose guided teaching when you would like to work through it step by step.'}</p></div>}</div>
-    {Boolean(error)&&<ErrorState error={error} title="Your draft is kept" onRetry={lastSendImage.current?undefined:()=>{setError(undefined);void send();}}/>}
+    {Boolean(error)&&<ErrorState error={error} title="Conversation needs attention" onRetry={failure?.retry}/>}
     <form className="chat-composer" onSubmit={(event:FormEvent)=>{event.preventDefault();void send();}}><Textarea label={chat.kind==='case'?'Your case question':'Message Renulus'} value={text} onChange={event=>setText(event.target.value)} rows={3} maxLength={16000} disabled={disabled}/>{refs.length>0&&<div className="chat-reference-chips">{refs.map((reference,index)=><span key={index}><Button variant="ghost" onClick={()=>workspace.open(reference)}>Source {index+1}</Button><IconButton label={'Remove source '+(index+1)} disabled={busy} onClick={()=>setRefs(previous=>previous.filter((_,i)=>i!==index))}><X size={14}/></IconButton></span>)}</div>}<div className="chat-composer-footer"><div className="chat-composer-options"><IconButton label="Attach file" disabled={disabled} onClick={()=>setAttachmentsOpen(value=>!value)}><Paperclip size={18}/></IconButton><Select label="Teaching" value={style} onChange={event=>setStyle(event.target.value as 'direct'|'guided')} disabled={disabled}><option value="direct">Direct</option><option value="guided">Guided</option></Select></div><span className="chat-status" role="status">{status}</span>{busy?<Button variant="secondary" onClick={()=>void stop()}><Square size={16}/>Stop</Button>:<Button type="submit" disabled={disabled||!text.trim()}><ArrowUp size={17}/>Send</Button>}</div></form>
     <ChatAttachments studyHelpContext={props.studyHelpContext} key={incomingKey} conversation={chat} open={attachmentsOpen} onOpenChange={setAttachmentsOpen} disabled={disabled} intent={props.attachmentIntent} onConsumed={props.onAttachmentIntentConsumed} beforeAttach={flushDraft} onChanged={value=>{accept(value);if(value.retention==='saved')changed();}}/>
     <CreateChatTest studyHelpContext={props.studyHelpContext} key={'test:'+incomingKey} conversation={chat} disabled={disabled} prepare={flushDraft}/>
