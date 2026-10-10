@@ -93,6 +93,24 @@ class ReaderRepository:
     def _attachment(self, request):
         target, conversation = request.reference.target, request.conversation
         legacy = self.db.fetch_one("SELECT * FROM case_attachments WHERE id=?", (target.id,))
+        access = self.services.registry.get("knowledge_attachments")
+        if access is None:
+            raise ApiError("reader_access_unavailable", "Attachment access is not connected", 503, True)
+        with closing(self.db.connect()) as conn:
+            conn.execute("BEGIN")
+            authorization = access.authorize_in(conn, target.id, context=conversation)
+            if not authorization["allowed"]:
+                reason = authorization["reason"]
+                if reason == "restricted":
+                    self._require_assistance(conn)
+                if reason == "access_denied":
+                    raise ApiError("reader_context_mismatch", "This attachment is not available in this context", 403)
+                if reason == "not_found":
+                    raise ApiError("reader_content_missing", "This attachment is unavailable", 404)
+                columns = {row["name"] for row in conn.execute("PRAGMA table_info(knowledge_attachments)")}
+                if not legacy and conversation is None and "rights_json" not in columns:
+                    raise ApiError("reader_schema_unavailable", "The attachment storage update is not installed", 503, True)
+                raise ApiError("reader_original_unavailable", "The attachment original is currently unavailable", 409, True)
         if legacy:
             if conversation and (conversation.type != "case" or conversation.id != legacy["case_id"]):
                 raise ApiError("reader_context_mismatch", "This original belongs to another conversation", 403)

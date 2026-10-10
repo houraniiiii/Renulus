@@ -157,3 +157,25 @@ def test_legacy_case_original_keeps_exact_bytes_and_case_authority(reader_app):
     assert cases.original(case["id"], original["id"])[1] == original_bytes
     body["conversation"] = {"type": "learn_thread", "id": "SYNTHETIC_other"}
     assert client.post("/api/v1/readers/resolve", json=body).status_code == 403
+
+
+def test_pending_case_attachment_removal_revokes_reader_before_save(reader_app):
+    from io import BytesIO
+    from PIL import Image
+    from renulus.cases.models import StartCase
+    from renulus.cases.originals import accepted_original
+    cases = reader_app.state.services.get("cases")
+    stream = BytesIO(); Image.new("RGB", (20, 20), "white").save(stream, format="PNG")
+    original = accepted_original("SYNTHETIC.png", "SYNTHETIC removed original", "image/png", stream.getvalue())
+    case = cases.start(StartCase(text="SYNTHETIC Case removal"))
+    case = cases.attach(case["id"], case["revision"], original)
+    case = cases.save(case["id"], case["revision"])
+    client = TestClient(reader_app)
+    body = {"reference": {"target": {"type": "attachment", "id": original["id"]}},
+            "conversation": {"type": "case", "id": case["id"]}}
+    assert client.post("/api/v1/readers/original", json=body).status_code == 200
+    cases.remove_attachment(case["id"], original["id"], case["revision"])
+    # Canonical parts still exist until Save, but the current owner revoked use.
+    assert reader_app.state.services.db.fetch_one("SELECT id FROM case_attachments WHERE id=?", (original["id"],))
+    assert client.post("/api/v1/readers/resolve", json=body).status_code == 404
+    assert client.post("/api/v1/readers/original", json=body).status_code == 404

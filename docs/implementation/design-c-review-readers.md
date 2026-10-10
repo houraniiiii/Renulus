@@ -540,3 +540,62 @@ is default `modules/reader/index.tsx`, consuming shared `ReaderProps` and
 imported directly; no extra policy binding or reader-owned policy store is needed.
 Knowledge003 and ordinary saved/volatile attachment persistence remain pending;
 the reader reports `reader_schema_unavailable` until the published columns exist.
+
+### Frozen proposal constraints and authority
+
+Required added text columns have no default. All three nullable JSON
+columns default to NULL; both original-row additions default to NULL. Required
+metadata/rights JSON and present optional JSON must satisfy
+`json_valid(value) AND json_type(value)='object'`. Preview and extraction
+generations are nonnegative integers. Existing `role` is constrained to
+`original|preview`. A partial unique index on attachment ID for original roles
+allows only one original. Original rows have NULL source/generation; preview
+rows require a source original and nonnegative preview generation. The nullable
+`source_original_id` references `knowledge_attachment_originals(id)`; the repository
+checks that source is an original of the same attachment. No additive helper
+tables or independent policy authority are required.
+
+Knowledge owns new uploads' original, rights, preview and extraction records.
+The rights are per-operation `Rights` and never inferred from preview readiness.
+The original remains available independently of extraction/index state; NULL
+paths report records-only unavailability. Case keeps its legacy byte authority.
+Library/project sources and notes retain their existing Knowledge revision IDs.
+
+### Caller-transaction attachment authorization slice
+
+`knowledge.api.create_router(services)` registers
+`services.registry["knowledge_attachments"] = KnowledgeAttachmentAccess(services)`.
+The exact public seam is
+`authorize_in(conn, attachment_id, *, context: Identity | None = None)`,
+returning only `{"allowed": True}` or `{"allowed": False, "reason": ...}` with
+`restricted|unavailable|not_found|access_denied`. It uses shared policy and the
+caller's connection, writes nothing and opens no nested transaction/connection.
+It inspects saved Case ownership/part availability, current volatile ownership,
+conversation/attachment tombstones and new Knowledge display rights/path
+availability. It never returns metadata or reads stored original payloads.
+
+The temporary Case adapter takes its existing lock without waiting. Contention
+returns `unavailable` to avoid inversion against Case Save's lock-then-SQLite
+order. It snapshots only the named session's attachment metadata and byte length,
+without copying original bytes or loading a saved Case into volatile state.
+Request the Case owner to publish an equivalent metadata-only accessor; ordinary
+volatile Learn uploads remain a producer prerequisite. Saved Knowledge upload
+authorization/persistence awaits the parent's actual Knowledge003 migration.
+
+Reader resolution/download now consult the same registered authorization seam.
+The connected regression test first reproduced a saved attachment being readable
+after current-session removal, before Save deleted canonical parts (HTTP 200
+where HTTP 404 was required). Authorization now revokes that pending removal.
+The failed receipt is `attachment-removal-red-results.xml` under this lane's
+synthetic root. The first authorization run also rejected a TXT saved Case
+fixture against the actual legacy PDF/PNG/JPEG constraint; the fixture now uses
+a real PNG, with no Case schema change.
+
+Fifteen actual SQLite/Case/shared-policy and reader-router checks passed in
+`attachment-access-run-2-results.xml`. SQLite's authorizer rejects original
+payload/private Case text reads, writes and transaction control during access;
+a patched connection factory rejects nested connections. Real lock contention,
+records-only parts removal, tombstones, stale saved revision and pending removal
+are covered. Synthetic state/evidence is exclusively under
+`C:/Renulus/scratch/design-c/dc-review-readers/`. This does not close DC08/DC10 or
+establish ordinary uploads, packaged reader behavior or Electron isolation.
