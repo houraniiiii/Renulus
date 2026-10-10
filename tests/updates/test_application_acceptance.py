@@ -60,7 +60,8 @@ class Publisher:
 
 
 def application(profile, monkeypatch, publisher):
-    monkeypatch.setattr("renulus.server.MODULE_ORDER", ("content", "knowledge", "updates"))
+    monkeypatch.setattr("renulus.server.MODULE_ORDER",
+                        ("content", "knowledge", "updates", "learn", "cases", "assessment"))
     monkeypatch.setattr("renulus.knowledge.api.KnowledgeRepository", lambda services:
         KnowledgeRepository(services, extractor=SyntheticExtractor(), embedder=SyntheticEmbedder()))
     app = create_app(profile)
@@ -144,6 +145,12 @@ def test_detect_review_exact_copy_invalidate_and_restart_preserve_other_topics(t
                     "publication_status": "final", "publication_date": "2020-03-01",
                     "latest_final_verified": True, "content_reviewed": True,
                     "correction": "Synthetic independent corrigendum record"})
+            # Correction notices revoke currency for all copies. Review each
+            # exact corrected file after all notices for its publication.
+            for copy in range(2 if topic == "T08" else 1):
+                review(api, notice["id"], copies[(topic, copy)]["target"], {
+                    "publication_status": "final", "latest_final_verified": True,
+                    "content_reviewed": True})
         eligible = {copy["document"]["document_id"] for copy in copies.values()}
         assert current_documents(api) == eligible
         target = copies[("T08", 0)]["target"]

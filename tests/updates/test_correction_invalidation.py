@@ -6,6 +6,7 @@ import pytest
 
 from renulus.contracts import ApiError, ContextScope, Scope
 from renulus.knowledge.models import SourceMetadata
+import renulus.server as server
 from renulus.server import create_app
 from renulus.storage import utc_now
 from test_acquired_version_currency import ARTICLE, library
@@ -139,9 +140,21 @@ def test_metadata_detection_revokes_same_article_review_without_claiming_retract
 
 
 def test_correction_refreshes_real_feedback_without_rewriting_committed_answers_keys_or_scores(tmp_path, monkeypatch):
-    monkeypatch.setattr("renulus.server.MODULE_ORDER", ("content", "assessment", "updates"))
+    monkeypatch.setattr("renulus.server.MODULE_ORDER",
+                        ("content", "updates", "learn", "cases", "assessment"))
     root = Path(__file__).resolve().parents[2]
-    app = create_app(tmp_path, source_root=root)
+    original_services = server.Services
+
+    def selected_services(*args, **kwargs):
+        services = original_services(*args, **kwargs)
+        services.registry.update(content_pack_root=root / "content/packs",
+            content_pack_selection={"id": "renulus-foundations", "version": "1.1.2"})
+        return services
+
+    # Select this test's historical release before automatic content bootstrap.
+    with monkeypatch.context() as selection:
+        selection.setattr(server, "Services", selected_services)
+        app = create_app(tmp_path, source_root=root)
     content = app.state.services.registry["content"]
     content.install_pack(root / "content/packs/renulus-foundations/1.1.2")
     with TestClient(app) as client:

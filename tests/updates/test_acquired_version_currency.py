@@ -101,7 +101,8 @@ def test_trimmed_edition_and_absent_binding_preserve_legacy_review(tmp_path):
 
 
 def test_library_version_choices_round_trip_through_actual_review_api(tmp_path, monkeypatch):
-    monkeypatch.setattr("renulus.server.MODULE_ORDER", ("content", "knowledge", "updates"))
+    monkeypatch.setattr("renulus.server.MODULE_ORDER",
+                        ("content", "knowledge", "updates", "learn", "cases", "assessment"))
     app = create_app(tmp_path)
     service = app.state.services.registry["updates"]
     repository = library(service)
