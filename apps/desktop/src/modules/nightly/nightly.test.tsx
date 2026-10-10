@@ -31,6 +31,7 @@ it('loads actual Off defaults and exposes local time and exact five/ten/twenty c
   await screen.findByRole('heading', { name: 'Nightly generation' });
   expect(screen.getByText('Off')).toBeTruthy();
   expect(timeField().value).toBe('22:00');
+  expect(screen.getByText('Local time')).toBeTruthy();
   for (const count of [5, 10, 20]) expect(screen.getByRole('button', { name: count + ' questions' }).getAttribute('aria-pressed')).toBe(String(count === 5));
   expect(screen.getByText(/Reopening or restoring waits/)).toBeTruthy();
   expect(screen.queryByRole('button', { name: 'Generate now' })).toBeNull();

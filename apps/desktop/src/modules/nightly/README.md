@@ -37,6 +37,8 @@ short-work review and read-only polling. Backend scheduler integration evidence
 is in `tests/study/test_design_c_nightly.py` using real migrations, owners and
 ProviderManager with synthetic adapters only.
 
-Integrated Settings/Tests pixels and combined export/restore acceptance remain
-open until the parent's mounts and storage/policy baseline are consumed. These
-component checks do not close DC19 or establish live model/content quality.
+Integrated Settings/Tests preferences, reopen pixels and actual JSON restore
+checks are indexed in [EVIDENCE.md](EVIDENCE.md). The shared mounts and storage/
+policy baseline were consumed through `837ea3d0`. These checks do not close DC19
+or establish live model/content quality; the full saved-result/attempt consumer
+journey remains a separate integration gate.

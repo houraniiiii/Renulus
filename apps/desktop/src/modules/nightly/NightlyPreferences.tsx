@@ -76,7 +76,7 @@ function PreferencesForm({ initial, assistanceAllowed, onSaved }: NightlyPrefere
         </div>
       </header>
       <div className="nightly-fields">
-        <Input label="Preferred time" type="time" step={60} value={localTime} error={timeError} hint="Local time"
+        <Input label="Preferred time" type="time" step={60} value={localTime} error={timeError || undefined} hint="Local time"
           disabled={busy} onChange={event => { setLocalTime(event.target.value); setTimeError(''); setMessage(''); }} />
         <fieldset className="nightly-counts" disabled={busy}><legend>Questions</legend>
           <div>{([5, 10, 20] as const).map(value => <Button key={value} variant="secondary"

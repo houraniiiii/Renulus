@@ -1,4 +1,4 @@
-.nightly-preferences { display: grid; gap: var(--space-16); }
+.nightly-preferences { display: grid; gap: var(--space-16); margin-block-start: var(--space-24); }
 .nightly-preferences-panel, .nightly-status {
   border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--surface);
   padding: calc(var(--space-16) + var(--space-4)); min-width: 0;
