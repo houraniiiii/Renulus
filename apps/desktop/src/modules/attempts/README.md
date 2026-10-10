@@ -121,3 +121,86 @@ under the same owned scratch root. The synthetic HTTP server was stopped after
 verification. Home/Memory still omit `assessment-test-answer`, and the shell
 still needs help/reference consumers. These passes do not close DC13/DC14/DC15
 or establish assembled hidden-app, native, producer or export/restore acceptance.
+
+## Frozen Home consumer seam
+
+Home's sole `_context` adapter may obtain the new kind through
+`services.get('whole_attempts').committed_evidence_in(conn, evidence_id)`. The
+caller holds the canonical transaction. It returns `None` for an unavailable
+or inconsistent source, or `{id,kind,entity_id,topic_id,payload,revision}` with
+only the scalar payload listed above. It raises the shared assistance refusal
+during active Test. It returns no question text, choices, feedback, answer keys,
+sources, provenance envelope, report text, conversation text or private snapshot.
+`key_version` is a version identifier, never the correct option.
+
+Scalar types are strings for the identifiers and `committed_at` (aware ISO time);
+`key_version` permits null. `mode` is `study|test`; `origin` is
+`reviewed_bank|generated|imported|nightly`; eligible `review_quality` is
+`reviewed|personal`. `reviewed`, `bank_cohort_eligible`, `assisted`,
+`repeat` and `correct` are strict booleans. `score_bucket` is
+`fresh|assisted|repeat|personal`; eligible `outcome` is `correct|incorrect`.
+The new kind has no legacy `scope` object and never uses `mode='reviewed'`.
+
+All valid answered commitments may inform labelled learning activity. Home may forward
+only `topic_id,mode,origin,review_quality,reviewed,bank_cohort_eligible,assisted,
+repeat,score_bucket,outcome,correct` to suggestion context. Keep identifier/time
+fields for canonical authority, not model context. Personal entries cannot enter
+reviewed performance; assisted/repeat entries cannot enter fresh performance.
+Fresh reviewed requires `bank_cohort_eligible && !assisted && !repeat`. A Test
+blank remains stored as `unanswered` and is excluded from this resolver. Study drafts,
+presentation/help alone, needs-review versions and excluded items are ineligible. No cohort establishes
+mastery from an individual answer. Keep Home's existing budget and topic bounds.
+
+The source is `assessment_test_attempts`, with a matching immutable commitment
+and evidence ID; Test commitments additionally require a submitted immutable
+result. The attempt's independent version/item snapshot must match every scalar
+claim. Missing evidence/attempt rows, `learning_evidence` or `test_attempt`
+tombstones, malformed/extra payload fields and inconsistent identities/cohorts
+are refused. The live collection/version must exist without a matching tombstone,
+and the pinned item must still be current. Missing/deleted live sources or a
+nullable `live_version_id` exclude derived context without erasing historical
+commitments/results/reports. Eligibility and results stay frozen at commit; do
+not regrade an old answer using a later bank revision. The revision is
+`canonical_digest(dict(canonical_learning_evidence_row))`, not draft revision,
+clock high-water or attempt `updated_at`. Pin an EligibleInput of kind
+`committed_evidence`, target `{type:'learning_evidence',id:metadata.id}`, with
+`expected_revision=metadata.revision`. Apply the existing `memory_suppression`
+check for `evidence:<id>` in Home and recompute context before late publication.
+The helper deliberately leaves suppression to each consumer's publication adapter.
+
+## Quickpractice start seam
+
+`startStudyAttempt(versionId, idempotencyKey)` is exported from `./start`. It is
+an async HTTP helper returning `Promise<Attempt>` through the normal app API.
+The backend endpoint is `POST /api/v1/assessment/test-attempts`, with
+`Idempotency-Key` and body
+`{version:{type:'saved_test_version',id:versionId},mode:'study',timing:{kind:'untimed'}}`.
+Only call it after the actual generation job is `published`, its result is
+available, and both `accepted_count` and `result.item_count` are exactly five.
+Use that exact `result.version_id`; `effective_count`, progress, latest-version
+lookup and partial candidates are not publication authority.
+
+For the backend-minted generation job ID, freeze the command key as
+`home-study:<job.id>` (below the endpoint's 128-character limit). Preserve the
+same version/body/key after timeout, reload or repeated completion callbacks.
+The first start creates/presents one Study; replay returns its current saved
+state without creating another attempt. A changed body with that key conflicts.
+After success navigate to `attempts` with `{attempt_id:response.id}`. Mounting
+an existing attempt must read it, never start again from only `version_id`.
+Errors retain the completed version and stable command for deliberate retry.
+
+The producer proof fixture is `home_quickpractice_version` in
+`tests/assessment/test_whole_attempts.py`: actual trusted publication of five
+original synthetic personal questions. `test_home_quickpractice_exact_five_study_start_replays_once_and_returns_current_attempt`
+proves exact pin/count, untimed Study, one start, current-state replay, explicit
+commit-only evidence and personal eligibility. Two `test_home_metadata_*` cases
+prove scalar/source authority, retained history versus consumer deletion/refusal,
+repeat/assistance and exclusion of Test blanks. These are consumer proofs, not
+live generation or Home acceptance.
+
+The final answered-only resolver passed the three focused actual producer/source
+checks in `backend-home-18.txt`. The async start helper also passed its actual
+HTTP retry/mount journey in `frontend-home-08.txt`; desktop typecheck passed
+(`typescript-desktop-07.txt`). These receipts use the owned attempts scratch root.
+The earlier full 27-case `backend-pytest-17.txt` preceded the final consumer filter;
+do not cite it as a full run of that filter. The synthetic HTTP server was stopped.

@@ -10,8 +10,10 @@ import json
 import time
 from threading import RLock
 
+from pydantic import ValidationError
+
 from renulus.contracts import ApiError, durable_id
-from renulus.design_c_contracts import SavedTestVersion
+from renulus.design_c_contracts import SavedTestVersion, canonical_digest
 from renulus.storage.assessment_policy import advance_policy, policy_snapshot, require_assistance
 
 from .attempt_models import DraftState
@@ -19,6 +21,9 @@ from .content import ContentGateway
 
 TERMINAL = {"submitted", "ended"}
 HELP_KINDS = {"hint", "sources", "notes", "chat"}
+EVIDENCE_ENTRY_FIELDS = ("commit_id", "item_id", "question_id", "question_version", "key_version",
+                         "family_id", "family_version", "assisted", "repeat", "score_bucket",
+                         "correct", "outcome", "committed_at")
 
 
 def encode(value):
@@ -85,6 +90,91 @@ class WholeAttemptRepository:
         row = self._row(conn, attempt_id)
         snapshot = json.loads(row["version_snapshot_json"])
         return {"version": self._version(row), "pinned_provenance": snapshot.get("pinned_provenance", {})}
+
+    @staticmethod
+    def _evidence_payload(row, version, item, entry):
+        payload = {field: entry[field] for field in EVIDENCE_ENTRY_FIELDS}
+        payload.update({"attempt_id": row["id"], "version_id": version.id, "origin": version.origin,
+                        "review_quality": version.review_quality, "mode": row["mode"],
+                        "reviewed": version.bank_cohort_eligible,
+                        "bank_cohort_eligible": version.bank_cohort_eligible, "topic_id": item.topic_id})
+        return payload
+
+    def _evidence_metadata_in(self, conn, evidence_id):
+        """Private key-free historical commitment validation.
+
+        A live collection pointer is deliberately unnecessary. The evidence row
+        and independent commitment remain authoritative after collection removal.
+        Suppression and Home's bounded material allowlist belong to its adapter.
+        """
+        require_assistance(conn)
+        evidence = conn.execute("SELECT * FROM learning_evidence WHERE id=?", (evidence_id,)).fetchone()
+        if evidence is None or evidence["kind"] != "assessment-test-answer" or conn.execute(
+                "SELECT 1 FROM deletion_ledger WHERE entity_type='learning_evidence' AND entity_id=?",
+                (evidence_id,)).fetchone():
+            return None
+        try:
+            row = self._row(conn, evidence["entity_id"])
+            version = self._version(row)
+            entries = json.loads(row["committed_json"])
+            matches = [entry for entry in entries if entry.get("evidence_id") == evidence_id]
+            if len(matches) != 1 or row["version_id"] != version.id or row["mode"] not in {"study", "test"}:
+                return None
+            entry = matches[0]
+            items = [item for item in version.items if item.item_id == entry["item_id"]]
+            if len(items) != 1 or any(type(entry[field]) is not bool for field in ("assisted", "repeat", "correct")):
+                return None
+            item = items[0]
+            if any(entry[field] != getattr(item, field) for field in ("question_id", "question_version",
+                    "key_version", "family_id", "family_version")):
+                return None
+            bucket = ("personal" if not version.bank_cohort_eligible else "repeat" if entry["repeat"]
+                      else "assisted" if entry["assisted"] else "fresh")
+            if (entry["score_bucket"] != bucket or entry["outcome"] not in {"correct", "incorrect", "unanswered"}
+                    or entry["correct"] != (entry["outcome"] == "correct")
+                    or (row["mode"] == "study" and entry["outcome"] == "unanswered")):
+                return None
+            if row["mode"] == "test":
+                result = json.loads(row["result_json"]) if row["result_json"] else {}
+                if row["status"] != "submitted" or entry not in result.get("items", []):
+                    return None
+            payload = self._evidence_payload(row, version, item, entry)
+            if (evidence["topic_id"] != item.topic_id or evidence["created_at"] != entry["committed_at"]
+                    or encode(json.loads(evidence["payload_json"])) != encode(payload)):
+                return None
+            return {"id": evidence["id"], "kind": evidence["kind"], "entity_id": row["id"],
+                    "topic_id": item.topic_id, "payload": payload, "revision": canonical_digest(dict(evidence))}
+        except ApiError as error:
+            if error.code == "not_found":
+                return None
+            raise
+        except (ValueError, TypeError, KeyError, AttributeError, ValidationError):
+            return None
+
+    def committed_evidence_in(self, conn, evidence_id):
+        """Home/Memory's answered-only scalar resolver in the caller's transaction.
+
+        Ineligibility for derived context never deletes historical evidence/results.
+        Suppression stays authoritative in each consumer's publication transaction.
+        """
+        metadata = self._evidence_metadata_in(conn, evidence_id)
+        if metadata is None or metadata["payload"]["outcome"] not in {"correct", "incorrect"}:
+            return None
+        row = self._row(conn, metadata["entity_id"])
+        version = self._version(row)
+        if version.status != "ready" or version.review_quality == "needs_review":
+            return None
+        live = conn.execute(
+            "SELECT 1 FROM assessment_test_versions v JOIN assessment_tests t ON t.id=v.test_id "
+            "WHERE v.id=? AND t.lifecycle!='deleted' AND NOT EXISTS(SELECT 1 FROM deletion_ledger "
+            "WHERE (entity_type='saved_test_version' AND entity_id=v.id) OR "
+            "(entity_type IN ('saved_test','test') AND entity_id=t.id))", (row["live_version_id"],)).fetchone()
+        if not live:
+            return None
+        item = next(item for item in version.items if item.item_id == metadata["payload"]["item_id"])
+        if self._availability_in(conn, row, item) != "current":
+            return None
+        return metadata
 
     @staticmethod
     def _draft(conn, row):
@@ -464,11 +554,7 @@ class WholeAttemptRepository:
                  "evidence_id": None}
         if not excluded:
             evidence_id = durable_id("evidence")
-            payload = {field: entry[field] for field in ("commit_id", "item_id", "question_id", "question_version", "key_version",
-                                                       "family_id", "family_version", "assisted", "repeat", "score_bucket", "correct", "outcome", "committed_at")}
-            payload.update({"attempt_id": row["id"], "version_id": version.id, "origin": version.origin,
-                            "review_quality": version.review_quality, "mode": row["mode"], "reviewed": bank,
-                            "bank_cohort_eligible": bank, "topic_id": item.topic_id})
+            payload = self._evidence_payload(row, version, item, entry)
             conn.execute("INSERT INTO learning_evidence VALUES(?,?,?,?,?,?)",
                          (evidence_id, "assessment-test-answer", item.topic_id, row["id"], encode(payload), timestamp(now)))
             entry["evidence_id"] = evidence_id

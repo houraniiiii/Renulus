@@ -6,6 +6,7 @@ import AttemptsPage, { AttemptPage } from './index';
 import TestsPage from '../tests';
 import { NavigationProvider, useNavigation } from '../../shell/navigation';
 import type { Attempt } from './types';
+import { startStudyAttempt } from './start';
 import { env } from 'node:process';
 
 const origin = env.RENULUS_ATTEMPT_TEST_ORIGIN;
@@ -36,6 +37,18 @@ function ConnectedVersionRoute() {
 }
 
 connected('actual attempt page → router → collection/SQLite', () => {
+  it('starts Study through the Home helper once and mounts the returned attempt without a second start', async () => {
+    const key = 'home-study:' + crypto.randomUUID();
+    const first = await startStudyAttempt(versionId, key);
+    const retried = await startStudyAttempt(versionId, key);
+    expect(retried.id).toBe(first.id); expect(first.version_id).toBe(versionId);
+    expect(first.mode).toBe('study'); expect(first.timing.kind).toBe('untimed');
+    render(<AttemptPage attemptId={first.id} />);
+    await screen.findByRole('radio', { name: 'Token a' });
+    expect(screen.queryByRole('button', { name: 'Start Study' })).toBeNull();
+    const attempts = await remote<{ items: { id: string; version_id: string }[] }>('/assessment/test-attempts');
+    expect(attempts.items.filter(item => item.version_id === versionId).map(item => item.id)).toEqual([first.id]);
+  });
   it('consumes the Tests pinned-version handoff through the default page with exact mode and timing', async () => {
     window.history.replaceState(null, '', '#/tests/' + versionId);
     render(<NavigationProvider><ConnectedVersionRoute /></NavigationProvider>);

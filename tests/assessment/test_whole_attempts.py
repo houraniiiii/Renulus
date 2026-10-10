@@ -13,7 +13,7 @@ from renulus.assessment.attempt_api import create_router
 from renulus.assessment.attempt_models import StartAttempt, SubmitAttempt
 from renulus.assessment.attempt_repository import WholeAttemptRepository
 from renulus.contracts import ApiError
-from renulus.design_c_contracts import SavedTestVersion
+from renulus.design_c_contracts import SavedTestVersion, canonical_digest
 from renulus.assessment.test_api import create_router as collection_router
 from renulus.services import Services
 from renulus.storage import Database
@@ -98,6 +98,125 @@ def commit(client, attempt, option="a", key="commit-answer-1"):
 
 def finish(client, attempt, latest=None, key="final-submit-1"):
     return post(client, attempt, "submit", {"expected_draft_revision": attempt["draft_revision"], "latest_draft": latest}, key)
+
+
+@pytest.fixture
+def home_quickpractice_version(whole):
+    """Actual trusted collection publication of five original synthetic personal items.
+
+    This is the Home/attempt consumer proof input, not a generation/provider substitute.
+    """
+    _, services, _, source_id = whole
+    repository = services.get("saved_tests")
+    with services.db.transaction() as conn:
+        raw = repository.pinned_version(conn, source_id).model_dump(mode="json")
+        template = raw["items"][0]
+        raw.update(id="home_quickpractice_version", test_id="home_quickpractice_test", origin="generated",
+                   review_quality="personal", source_refs=[], provenance={"method": "generation"},
+                   items=[{**template, "item_id": "home_item_" + str(index),
+                           "question_id": "home_question_" + str(index), "family_id": "home_family_" + str(index),
+                           "stem": "Original synthetic Home consumer question " + str(index),
+                           "explanation": "Original synthetic consumer explanation"} for index in range(5)])
+        version = SavedTestVersion.model_validate(raw)
+        repository.publish_version(conn, version, title="Original synthetic Home five",
+            provenance={"schema": "saved-test-provenance/1", "consumer_fixture": "home-five"},
+            idempotency_key="publish-home-consumer-five")
+    return version
+
+
+def test_home_quickpractice_exact_five_study_start_replays_once_and_returns_current_attempt(whole, home_quickpractice_version):
+    client, services, _, _ = whole
+    version = home_quickpractice_version
+    key = "home-study:synthetic-published-job"
+    body = {"version": {"type": "saved_test_version", "id": version.id},
+            "mode": "study", "timing": {"kind": "untimed"}}
+    first = client.post(BASE, json=body, headers={"Idempotency-Key": key})
+    assert first.status_code == 201, first.text
+    attempt = first.json()
+    retried = client.post(BASE, json=body, headers={"Idempotency-Key": key})
+    assert retried.status_code == 201 and retried.json()["id"] == attempt["id"]
+    assert attempt["version_id"] == version.id and attempt["mode"] == "study" and attempt["item_count"] == 5
+    assert attempt["timing"]["kind"] == "untimed" and attempt["timing"]["deadline_at"] is None
+    assert len(services.db.fetch_all("SELECT id FROM assessment_test_attempts")) == 1
+    assert services.db.fetch_all("SELECT * FROM learning_evidence") == []
+    committed = commit(client, attempt, key="home-consumer-explicit-answer").json()
+    resumed = client.post(BASE, json=body, headers={"Idempotency-Key": key}).json()
+    assert resumed["id"] == attempt["id"] and resumed["draft_revision"] == committed["draft_revision"]
+    assert len(resumed["committed"]) == 1
+    evidence = services.db.fetch_one("SELECT id FROM learning_evidence")
+    with services.db.transaction() as conn:
+        metadata = services.get("whole_attempts").committed_evidence_in(conn, evidence["id"])
+    assert metadata["payload"]["score_bucket"] == "personal"
+    assert not metadata["payload"]["reviewed"] and not metadata["payload"]["bank_cohort_eligible"]
+    assert client.post(BASE, json={**body, "mode": "test"}, headers={"Idempotency-Key": key}).status_code == 409
+
+
+def test_home_metadata_is_scalar_commit_authority_and_filters_removed_sources_without_deleting_history(whole):
+    client, services, clock, version_id = whole
+    attempt = start(whole)
+    committed = commit(client, attempt).json()
+    evidence_id = committed["committed"][0]["evidence_id"]
+    repository = services.get("whole_attempts")
+    with services.db.transaction() as conn:
+        first = repository.committed_evidence_in(conn, evidence_id)
+        source = conn.execute("SELECT * FROM learning_evidence WHERE id=?", (evidence_id,)).fetchone()
+        assert first["revision"] == canonical_digest(dict(source))
+    payload = first["payload"]
+    assert all(value is None or type(value) in (str, bool) for value in payload.values())
+    assert set(payload) == {"attempt_id", "version_id", "commit_id", "item_id", "question_id", "question_version",
+        "key_version", "family_id", "family_version", "topic_id", "mode", "origin", "review_quality",
+        "reviewed", "bank_cohort_eligible", "assisted", "repeat", "score_bucket", "outcome", "correct", "committed_at"}
+    assert "PRIVATE_" not in json.dumps(first) and "feedback" not in json.dumps(first)
+    assert payload["score_bucket"] == "fresh" and payload["reviewed"] and not payload["assisted"] and not payload["repeat"]
+    clock.advance(20)
+    assert save(client, committed, draft(committed, position=1), "home-next-draft").status_code == 200
+    with services.db.transaction() as conn:
+        assert repository.committed_evidence_in(conn, evidence_id) == first
+        conn.execute("UPDATE learning_evidence SET payload_json=? WHERE id=?",
+                     (json.dumps({**payload, "explanation": "PRIVATE_REVIEWED_KEY_SENTINEL"}), evidence_id))
+        assert repository.committed_evidence_in(conn, evidence_id) is None
+        conn.execute("UPDATE learning_evidence SET payload_json=? WHERE id=?", (source["payload_json"], evidence_id))
+        conn.execute("INSERT INTO deletion_ledger VALUES('learning_evidence',?,?)", (evidence_id, clock().isoformat()))
+        assert repository.committed_evidence_in(conn, evidence_id) is None
+        conn.execute("DELETE FROM deletion_ledger WHERE entity_type='learning_evidence' AND entity_id=?", (evidence_id,))
+        conn.execute("INSERT INTO deletion_ledger VALUES('test_attempt',?,?)", (attempt["id"], clock().isoformat()))
+        assert repository.committed_evidence_in(conn, evidence_id) is None
+        conn.execute("DELETE FROM deletion_ledger WHERE entity_type='test_attempt' AND entity_id=?", (attempt["id"],))
+        assert repository.committed_evidence_in(conn, evidence_id) == first
+        conn.execute("DELETE FROM assessment_test_versions WHERE id=?", (version_id,))
+        reconcile_unavailable_references(conn)
+        assert repository.committed_evidence_in(conn, evidence_id) is None
+        assert conn.execute("SELECT 1 FROM learning_evidence WHERE id=?", (evidence_id,)).fetchone()
+        retained = conn.execute("SELECT committed_json FROM assessment_test_attempts WHERE id=?", (attempt["id"],)).fetchone()
+        assert json.loads(retained[0])[0]["commit_id"] == payload["commit_id"]
+        conn.execute("DELETE FROM assessment_test_attempts WHERE id=?", (attempt["id"],))
+        assert repository.committed_evidence_in(conn, evidence_id) is None
+
+
+def test_home_metadata_preserves_assisted_repeat_filters_test_blanks_and_gates_active_test(whole):
+    client, services, _, _ = whole
+    start(whole)
+    repeated = start(whole, key="home-repeated-study")
+    body = {"expected_revision": 0, "expected_policy_revision": repeated["policy"]["revision"],
+            "item_id": repeated["current_item"]["item_id"], "kind": "sources"}
+    assert post(client, repeated, "help", body, "home-repeat-help").status_code == 200
+    committed = commit(client, repeated, key="home-repeat-answer").json()
+    evidence_id = committed["committed"][0]["evidence_id"]
+    repository = services.get("whole_attempts")
+    with services.db.transaction() as conn:
+        payload = repository.committed_evidence_in(conn, evidence_id)["payload"]
+        assert payload["reviewed"] and payload["assisted"] and payload["repeat"] and payload["score_bucket"] == "repeat"
+    active = start(whole, "test", key="home-blank-test")
+    with services.db.transaction() as conn:
+        with pytest.raises(ApiError) as restricted:
+            repository.committed_evidence_in(conn, evidence_id)
+        assert restricted.value.code == "assistance_restricted"
+    final = finish(client, active, key="home-submit-blanks").json()
+    with services.db.transaction() as conn:
+        for entry in final["committed"]:
+            assert entry["outcome"] == "unanswered" and entry["correct"] is False
+            assert repository.committed_evidence_in(conn, entry["evidence_id"]) is None
+            assert conn.execute("SELECT 1 FROM learning_evidence WHERE id=?", (entry["evidence_id"],)).fetchone()
 
 
 def test_study_draft_explicit_commit_reopen_locks_and_idempotency(whole):
