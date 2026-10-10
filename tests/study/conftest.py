@@ -6,7 +6,7 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def bounded_study_services(monkeypatch):
-    monkeypatch.setattr("renulus.server.MODULE_ORDER", ("content", "learn", "assessment", "study"))
+    monkeypatch.setattr("renulus.server.MODULE_ORDER", ("content", "learn", "cases", "assessment", "study", "updates"))
     # No provider, acquisition, OCR, embedding or native workload belongs here.
     original_connect = socket.socket.connect
     original_create = socket.create_connection

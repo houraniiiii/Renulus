@@ -4,6 +4,7 @@ import json
 
 from renulus.contracts import ApiError
 from renulus.storage import utc_now
+from renulus.storage.assessment_policy import require_assistance
 
 TRACK_IDS = {"general": "general_nephrology", "eseneph": "esen_eph"}
 
@@ -80,14 +81,41 @@ class StudyService:
             row["payload"] = json.loads(row.pop("payload_json"))
         return rows
 
+    def _reviewed_evidence_in(self, conn):
+        """Use the attempt owner's scalar commitment authority, never its keys.
+
+        Legacy evidence keeps its original meanings. Personal versions and Test
+        drafts cannot become reviewed-question progress or mistake scheduling.
+        """
+        require_assistance(conn)
+        owner = self.services.registry.get("whole_attempts")
+        result = []
+        for stored in conn.execute("SELECT * FROM learning_evidence WHERE kind IN "
+                "('assessment-answer','assessment-test-answer') ORDER BY created_at DESC,rowid DESC LIMIT 2000"):
+            row = dict(stored)
+            if row["kind"] == "assessment-test-answer":
+                value = owner.committed_evidence_in(conn, row["id"]) if owner else None
+                if value is None or value["payload"]["bank_cohort_eligible"] is not True:
+                    continue
+                result.append({**value, "created_at": row["created_at"]})
+            else:
+                row["payload"] = json.loads(row.pop("payload_json"))
+                result.append(row)
+        return result
+
+    @staticmethod
+    def _family(row):
+        payload = row["payload"]
+        return payload.get("family_id", payload.get("question_id", row["id"]))
+
     def progress(self):
         groups = {"fresh": {"answered": 0, "correct": 0},
                   "assisted": {"answered": 0, "correct": 0},
                   "repeat": {"answered": 0, "correct": 0}}
         topics = {}
-        for row in self.evidence():
-            if row["kind"] != "assessment-answer":
-                continue
+        with self.db.transaction() as conn:
+            evidence = self._reviewed_evidence_in(conn)
+        for row in evidence:
             payload = row["payload"]
             bucket = payload.get("score_bucket")
             if bucket not in groups:
@@ -114,6 +142,17 @@ class StudyService:
         for row in rows:
             row["reason"] = json.loads(row.pop("reason_json"))
             row["manual_override"] = bool(row["manual_override"])
+        if any(row["reason"].get("evidence_kind") == "assessment-test-answer" for row in rows):
+            with self.db.transaction() as conn:
+                current = self._reviewed_evidence_in(conn)
+            latest = {}
+            for evidence in current:
+                latest.setdefault(self._family(evidence), evidence)
+            eligible = {row["id"] for row in latest.values() if not row["payload"].get("correct")}
+            # Preserve explicit/manual and completed history. A vanished source
+            # or later correct commitment removes only an automatic suggestion.
+            rows = [row for row in rows if row["reason"].get("evidence_kind") != "assessment-test-answer"
+                    or row["manual_override"] or row["state"] != "planned" or row["evidence_id"] in eligible]
         if selection is not None:
             track = next((t for t in (self.tracks() if tracks is None else tracks)
                           if t["id"] == selection["track"]), {})
@@ -141,7 +180,9 @@ class StudyService:
 
     def propose(self, today=None):
         today = today or date.today()
-        goals, topics, evidence = self.goals(), self.topics(), self.evidence()
+        goals, topics = self.goals(), self.topics()
+        with self.db.transaction() as conn:
+            evidence = self._reviewed_evidence_in(conn)
         names = {topic["id"]: topic.get("title", topic.get("name", topic["id"])) for topic in topics}
         tracks = self.tracks()
         selection = self.selection(goals, topics, tracks)
@@ -154,10 +195,10 @@ class StudyService:
         available = max(1, min(14, round(goals["hours_per_week"] * 60 / 20)))
         candidates, seen_questions, seen_topics = [], set(), set()
         for row in evidence:
-            if row["kind"] != "assessment-answer" or row["topic_id"] not in selected:
+            if row["topic_id"] not in selected:
                 continue
             payload = row["payload"]
-            family = payload.get("family_id", payload.get("question_id", row["id"]))
+            family = self._family(row)
             if family in seen_questions:
                 continue
             seen_questions.add(family)
@@ -167,7 +208,16 @@ class StudyService:
             objective_id = payload.get("objective_id")
             if selection["track"] == "esen_eph":
                 linked = selection["objective_ids"][row["topic_id"]]
-                objective_id = next((o for o in payload.get("objective_ids", [objective_id]) if o in linked), None)
+                objectives = payload.get("objective_ids", [objective_id])
+                if row["kind"] == "assessment-test-answer":
+                    # The track producer owns objective mappings; the answered
+                    # scalar payload intentionally contains no content snapshot.
+                    objectives = [objective for domain in track.get("domains", [])
+                        for alignment in domain.get("alignments", [])
+                        if any(pin["id"] == payload["question_id"] and str(pin["version"]) == str(payload["question_version"])
+                                for pin in alignment.get("questions", []))
+                        for objective in alignment.get("objective_ids", [])]
+                objective_id = next((o for o in objectives if o in linked), None)
                 if (payload.get("question_id"), str(payload.get("question_version"))) not in pins or objective_id is None:
                     continue
             candidates.append({"topic_id": row["topic_id"], "objective_id": objective_id,
@@ -175,7 +225,11 @@ class StudyService:
                 "evidence_id": row["id"], "reason": {"kind": "committed-mistake",
                 "evidence_id": row["id"], "question_id": payload.get("question_id"),
                 "question_version": payload.get("question_version"),
-                "description": "Your latest recorded answer in this question family was incorrect."}})
+                "description": "Your latest recorded answer in this question family was incorrect.",
+                **({"evidence_kind": row["kind"], "evidence_revision": row["revision"],
+                    "attempt_id": row["entity_id"], "mode": payload["mode"], "origin": payload["origin"],
+                    "assisted": payload["assisted"], "repeat": payload["repeat"], "score_bucket": payload["score_bucket"]}
+                   if row["kind"] == "assessment-test-answer" else {})}})
             seen_topics.add(row["topic_id"])
         for topic_id in selected:
             if topic_id not in seen_topics:
@@ -187,7 +241,12 @@ class StudyService:
                         if selection["track"] == "esen_eph" else "Explore an objective from your selected topics."}})
         now = utc_now()
         with self.db.transaction() as conn:
+            current = {row["id"]: row for row in self._reviewed_evidence_in(conn)}
             for i, candidate in enumerate(candidates[:available]):
+                if candidate["reason"].get("evidence_kind") == "assessment-test-answer":
+                    valid = current.get(candidate["evidence_id"])
+                    if valid is None or valid["revision"] != candidate["reason"]["evidence_revision"]:
+                        continue
                 candidate["reason"].update(track=selection["track"])
                 if selection["track"] == "esen_eph":
                     candidate["reason"].update(mapping_version=selection["mapping_version"],
