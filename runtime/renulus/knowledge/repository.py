@@ -10,6 +10,7 @@ from threading import RLock
 
 from ..contracts import ApiError, ContextScope, Scope, durable_id
 from ..storage.database import utc_now
+from ..storage.assessment_policy import require_assistance
 from .engines import DoclingExtractor, FastEmbedEngine, LanceIndex, MAX_BYTES, MAX_PAGES, OfflineAssets
 from .models import Rights, SourceMetadata, own_text_rights
 from .office import OFFICE_MEDIA, validate_office
@@ -189,13 +190,16 @@ class KnowledgeRepository:
         return scope
 
     def import_text(self, text: str, *, title="Personal study note", metadata=None, rights=None,
-                    scope=None, idempotency_key=None, document_id=None, reserved=False, process=True):
+                    scope=None, idempotency_key=None, document_id=None, reserved=False, process=True,
+                    expected_revision_id=None, note_save=False, note_project_id=None):
         scope = self._import_scope(scope or ContextScope(kind=Scope.LIBRARY))
         if not text.strip():
             raise ApiError("empty_document", "Add some text before importing", 422)
         data = text.encode("utf-8")
         return self._import(data, ".txt", title, metadata, rights or own_text_rights(), scope,
-                            idempotency_key, document_id, reserved, process)
+                            idempotency_key, document_id, reserved, process,
+                            expected_revision_id=expected_revision_id, note_save=note_save,
+                            note_project_id=note_project_id)
 
     def import_file(self, path: str | Path, *, title=None, metadata=None, rights=None, scope=None,
                     idempotency_key=None, document_id=None, reserved=False, expected_sha256=None, process=True):
@@ -218,7 +222,8 @@ class KnowledgeRepository:
         return self._import(data, suffix, title or path.stem, metadata, rights or Rights(), scope,
                             idempotency_key, document_id, reserved, process)
 
-    def _import(self, data, suffix, title, metadata, rights, scope, key, document_id, reserved, process):
+    def _import(self, data, suffix, title, metadata, rights, scope, key, document_id, reserved, process,
+                *, expected_revision_id=None, note_save=False, note_project_id=None):
         if len(data) > MAX_BYTES:
             raise ApiError("document_limit", "The maximum file size is 64 MiB", 413)
         metadata = metadata if isinstance(metadata, SourceMetadata) else SourceMetadata.model_validate(metadata or {})
@@ -234,8 +239,22 @@ class KnowledgeRepository:
         if request_metadata.get("original_sha256") is None:
             # The additive provenance field must not change a pre-field replay.
             request_metadata.pop("original_sha256", None)
-        request_hash = hashlib.sha256(dumps([digest, title, request_metadata, rights.model_dump(),
-                                             scope.model_dump(), document_id, reserved]).encode()).hexdigest()
+        request_values = [digest, title, request_metadata, rights.model_dump(), scope.model_dump(), document_id, reserved]
+        if expected_revision_id is not None or note_save:
+            request_values.append({"expected_revision_id": expected_revision_id,
+                "note_save": note_save, "project_id": note_project_id})
+        request_hash = hashlib.sha256(dumps(request_values).encode()).hexdigest()
+        note_saved_in = None
+        if note_save:
+            projects = self.services.registry.get("projects")
+            note_saved_in = getattr(projects, "note_saved_in", None)
+            if not callable(note_saved_in):
+                raise ApiError("notes_owner_unavailable", "Saved note project links are not connected", 503, True)
+            if (suffix != ".txt" or reserved or scope.entity_id is not None or
+                    "study-note" not in metadata.asset_role or bool(document_id) != bool(expected_revision_id)):
+                raise ApiError("note_request_invalid", "Use the saved personal note owner and current revision", 422)
+            with self.db.transaction() as conn:
+                require_assistance(conn)
         key = key or durable_id("import")
         with self._lock:
             old_job = self.db.fetch_one("SELECT * FROM knowledge_jobs WHERE idempotency_key=?", (key,))
@@ -262,6 +281,14 @@ class KnowledgeRepository:
                         row = conn.execute("SELECT * FROM knowledge_documents WHERE id=? AND deleted_at IS NULL", (document_id,)).fetchone()
                         if row is None:
                             raise ApiError("document_deleted", "The document was deleted", 409)
+                        if expected_revision_id is not None and row["latest_revision"] != expected_revision_id:
+                            raise ApiError("note_revision_conflict", "Reload the note before saving", 409, True)
+                        if note_save:
+                            current = self._note_row_in(conn, document_id, expected_revision_id)
+                            allowed = self.require_original_display_in(conn, {"document_id": document_id,
+                                "revision_id": current["id"], "original_sha256": current["sha256"]})
+                            if allowed["rights"] != rights.model_dump():
+                                raise ApiError("note_rights_changed", "Note permissions changed; reload before saving", 409, True)
                         ordinal = conn.execute("SELECT COALESCE(MAX(ordinal),0)+1 FROM knowledge_revisions WHERE document_id=?", (document_id,)).fetchone()[0]
                         pending = conn.execute("SELECT j.id,j.revision_id FROM knowledge_jobs j JOIN knowledge_revisions r ON r.id=j.revision_id WHERE r.document_id=? AND j.state IN ('queued','processing')", (document_id,)).fetchall()
                         for item in pending:
@@ -272,6 +299,9 @@ class KnowledgeRepository:
                         conn.execute("INSERT INTO knowledge_documents(id,title,source_id,scope_kind,scope_entity,reserved,latest_revision,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)", (document_id, title, metadata.source_id, scope.kind.value, scope.entity_id, int(reserved), revision_id, now, now))
                     conn.execute("INSERT INTO knowledge_revisions(id,document_id,ordinal,status,sha256,media_type,bytes,original_path,metadata_json,rights_json,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)", (revision_id, document_id, ordinal, "queued", digest, MEDIA[suffix], len(data), str(original), metadata.model_dump_json(), rights.model_dump_json(), now))
                     conn.execute("INSERT INTO knowledge_jobs(id,revision_id,idempotency_key,request_hash,state,phase,created_at) VALUES(?,?,?,?,?,?,?)", (job_id, revision_id, key, request_hash, "queued", "queued", now))
+                    if note_save:
+                        require_assistance(conn)
+                        note_saved_in(conn, document_id, revision_id, note_project_id)
             except BaseException:
                 shutil.rmtree(folder)
                 raise
@@ -745,11 +775,45 @@ class KnowledgeRepository:
             raise ApiError("original_missing", "The stored original is unavailable", 404)
         return path, row["media_type"]
 
-    def delete_document(self, document_id):
+    def _note_row_in(self, conn, document_id, revision_id=None):
+        """Canonical saved-note classification; caller owns the transaction."""
+        row = conn.execute("SELECT r.*,d.title,d.source_id,d.latest_revision FROM knowledge_revisions r "
+            "JOIN knowledge_documents d ON d.id=r.document_id WHERE d.id=? AND r.id=COALESCE(?,d.latest_revision) "
+            "AND d.deleted_at IS NULL AND r.status!='deleted' AND d.scope_kind='personal-library' "
+            "AND d.scope_entity IS NULL AND d.reserved=0 AND NOT EXISTS(SELECT 1 FROM deletion_ledger WHERE "
+            "(entity_type IN ('knowledge-document','document') AND entity_id=d.id) OR "
+            "(entity_type IN ('knowledge-revision','revision') AND entity_id=r.id))", (document_id, revision_id)).fetchone()
+        if row is None:
+            raise ApiError("note_missing", "The saved note is unavailable", 404)
+        try:
+            metadata = SourceMetadata.model_validate_json(row["metadata_json"])
+        except ValueError:
+            raise ApiError("notes_unavailable", "Saved note metadata needs repair", 503) from None
+        if ("study-note" not in metadata.asset_role or metadata.source_id != row["source_id"]
+                or row["media_type"] != "text/plain"):
+            raise ApiError("note_missing", "The saved note is unavailable", 404)
+        return dict(row)
+
+    def delete_document(self, document_id, *, expected_revision_id=None, idempotency_key=None, note_delete=False):
         with self._lock, self.db.transaction() as conn:
-            row = conn.execute("SELECT id FROM knowledge_documents WHERE id=?", (document_id,)).fetchone()
+            delete_hash = None
+            if note_delete:
+                require_assistance(conn)
+                if not expected_revision_id or not idempotency_key:
+                    raise ApiError("note_request_invalid", "Use a current note revision and deletion key", 422)
+                delete_hash = hashlib.sha256(dumps(["note-delete/1", document_id, expected_revision_id]).encode()).hexdigest()
+                previous = conn.execute("SELECT request_hash FROM knowledge_jobs WHERE idempotency_key=?", (idempotency_key,)).fetchone()
+                if previous:
+                    if previous["request_hash"] != delete_hash:
+                        raise ApiError("idempotency_conflict", "That key belongs to a different note request", 409)
+                    return {"document_id": document_id, "status": "deleted"}
+            row = conn.execute("SELECT id,latest_revision FROM knowledge_documents WHERE id=?", (document_id,)).fetchone()
             if row is None:
                 raise ApiError("document_missing", "Document was not found", 404)
+            if expected_revision_id is not None and row["latest_revision"] != expected_revision_id:
+                raise ApiError("note_revision_conflict", "Reload the note before deleting", 409, True)
+            if note_delete:
+                self._note_row_in(conn, document_id, expected_revision_id)
             now = utc_now()
             conn.execute("UPDATE knowledge_documents SET deleted_at=?,active_revision=NULL,title='Deleted document',updated_at=? WHERE id=?", (now, now, document_id))
             conn.execute("INSERT OR REPLACE INTO deletion_ledger VALUES('knowledge-document',?,?)", (document_id, now))
@@ -759,5 +823,10 @@ class KnowledgeRepository:
                 conn.execute("DELETE FROM knowledge_passages WHERE revision_id=?", (revision["id"],))
                 conn.execute("UPDATE knowledge_revisions SET status='deleted',metadata_json='{}',rights_json='{}',extraction_json=NULL WHERE id=?", (revision["id"],))
                 self._schedule_cleanup(conn, revision["id"], True)
+            if note_delete:
+                conn.execute("INSERT INTO knowledge_jobs(id,revision_id,idempotency_key,request_hash,state,phase,created_at,finished_at) "
+                    "VALUES(?,?,?,?,?,?,?,?)", (durable_id("ingest"), expected_revision_id,
+                    idempotency_key, delete_hash, "cancelled", "note-deleted", now, now))
+                require_assistance(conn)
         pending = self.cleanup()
         return {"document_id": document_id, "status": "deleted", "cleanup_pending": bool(pending)}
