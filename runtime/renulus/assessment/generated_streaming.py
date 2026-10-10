@@ -4,6 +4,7 @@ from contextlib import aclosing, suppress
 import inspect
 import json
 import sqlite3
+from collections.abc import Callable
 
 from renulus.contracts import ApiError, Event, Scope
 
@@ -86,21 +87,27 @@ def citation(passage):
     return result
 
 
-async def retrieve(repo, run):
-    repo.guard_run(run)
+async def retrieve(repo, run, *, guard: Callable[[], None]):
+    """Retrieve under the caller's current execution authority, without holding it across I/O."""
+    guard()
     knowledge = repo.services.registry.get("knowledge")
     if knowledge is None or run.scope.kind != Scope.GENERATED_PRACTICE:
         # A case query must not enter embedding/retrieval caches or derived indexes.
         return [], "not-requested"
-    result = await asyncio.to_thread(knowledge.retrieve, run.prompt, topic_id=run.topic_id, scope=run.scope)
-    if inspect.isawaitable(result):
-        result = await result
-    repo.guard_run(run)
+    async def query(**kwargs):
+        guard()
+        try:
+            result = await asyncio.to_thread(knowledge.retrieve, run.prompt, scope=run.scope, **kwargs)
+            if inspect.isawaitable(result):
+                result = await result
+            return result
+        finally:
+            # Includes failed retrieval: a stale caller must not advance on its error path.
+            guard()
+
+    result = await query(topic_id=run.topic_id)
     if run.topic_id and isinstance(result, dict) and not result.get("passages"):
-        result = await asyncio.to_thread(knowledge.retrieve, run.prompt, scope=run.scope)
-        if inspect.isawaitable(result):
-            result = await result
-        repo.guard_run(run)
+        result = await query()
     passages = result.get("passages", []) if isinstance(result, dict) else result
     eligible = []
     for passage in passages or []:
@@ -210,7 +217,7 @@ async def generate(repo, run, replay=None):
             raise ApiError("capability_unavailable", "Approved generation is unavailable", 503, True)
         passages = []
         try:
-            passages, verification = await retrieve(repo, run)
+            passages, verification = await retrieve(repo, run, guard=lambda: repo.guard_run(run))
         except Exception:
             verification = "retrieval-failed"
         repo.guard_run(run)
@@ -248,7 +255,7 @@ async def generate(repo, run, replay=None):
             raise ApiError("practice_invalid_output", "Generated practice is invalid", 502, True) from error
         if passages:
             try:
-                current, _ = await retrieve(repo, run)
+                current, _ = await retrieve(repo, run, guard=lambda: repo.guard_run(run))
                 old_ids = {(p["id"], p.get("document_revision")) for p in passages}
                 current_ids = {(p["id"], p.get("document_revision")) for p in current}
                 if not old_ids.issubset(current_ids):

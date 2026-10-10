@@ -91,6 +91,70 @@ async def finish(service, identifier):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("phase", ["before", "after", "error"])
+@pytest.mark.parametrize("change", ["policy", "epoch", "cancel", "execution"])
+async def test_saved_retrieval_uses_current_job_authority_before_and_after_io(generation, monkeypatch, phase, change):
+    """H00: the real saved owner, including superseded tasks, fences the shared retrieval call."""
+    from renulus.assessment import generation_service
+    app, service, transport = generation
+    knowledge = app.state.services.get("knowledge")
+    original_query = knowledge.retrieve
+    original_shared = generation_service.retrieve
+    calls = []
+    mutated = []
+
+    def change_boundary():
+        if mutated:
+            return
+        with service.db.transaction() as conn:
+            row = conn.execute("SELECT * FROM assessment_test_jobs").fetchone()
+            assert row["state"] == "running"
+            if change == "policy":
+                advance_policy(conn)
+            elif change == "epoch":
+                bump_context_epoch(conn)
+            elif change == "cancel":
+                conn.execute("UPDATE assessment_test_jobs SET state='cancelled' WHERE id=?", (row["id"],))
+            else:
+                checkpoint = service._checkpoint(row)
+                checkpoint["execution"] = "superseding-synthetic-execution"
+                conn.execute("UPDATE assessment_test_jobs SET checkpoint_json=? WHERE id=?",
+                             (service._encode_checkpoint(checkpoint), row["id"]))
+        mutated.append(True)
+
+    def query(*args, **kwargs):
+        calls.append(True)
+        result = original_query(*args, **kwargs)
+        if phase != "before":
+            change_boundary()
+        if phase == "error":
+            raise RuntimeError("PRIVATE_RETRIEVAL_ERROR")
+        return result
+
+    async def shared(*args, **kwargs):
+        if phase == "before":
+            change_boundary()
+        return await original_shared(*args, **kwargs)
+
+    monkeypatch.setattr(knowledge, "retrieve", query)
+    monkeypatch.setattr(generation_service, "retrieve", shared)
+    created = await service.create(request())
+    await finish(service, created["id"])
+    assert mutated and len(calls) == int(phase != "before")
+    assert transport.calls == []
+    assert service.db.fetch_all("SELECT id FROM assessment_test_versions") == []
+    row = service.db.fetch_one("SELECT * FROM assessment_test_jobs WHERE id=?", (created["id"],))
+    assert service._checkpoint(row)["calls"] == 0
+    if change in {"policy", "epoch"}:
+        assert row["state"] == "failed"
+        assert row["error_code"] == ("assistance_changed" if change == "policy" else "generation_context_changed")
+    elif change == "cancel":
+        assert row["state"] == "cancelled"
+    else:
+        assert service._checkpoint(row)["execution"] == "superseding-synthetic-execution"
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("count", [5, 10, 20])
 async def test_real_selected_route_batches_publish_once_and_keep_keys_private(generation, count):
     app, service, transport = generation
@@ -514,8 +578,11 @@ async def test_trusted_nightly_boundary_batches_publish_actual_personal_versions
 
 
 @pytest.mark.asyncio
-async def test_nightly_missing_or_denied_owner_rolls_back_and_published_replay_remains_safe(generation):
+async def test_nightly_missing_or_denied_owner_rolls_back_and_published_replay_remains_safe(generation, monkeypatch):
     app, service, transport = generation
+    # The assembled app now registers Nightly. Explicitly remove that capability
+    # for this missing-owner test instead of passing a fake checkpoint to it.
+    monkeypatch.delitem(app.state.services.registry, "nightly")
     with pytest.raises(ApiError) as error:
         await service.create_nightly(nightly_request(), schedule=nightly_schedule())
     assert error.value.code == "nightly_unavailable"

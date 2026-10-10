@@ -381,7 +381,15 @@ class SavedGenerationService:
         run_id = durable_id("generation")
         self.run_ids[execution] = run_id
         prompt = "Generate original nephrology learning practice" + (" about " + context["topic"]["label"] if context["topic"] else " across varied nephrology domains")
-        passages, verification = await retrieve(self, SimpleNamespace(scope=ContextScope(kind=Scope.GENERATED_PRACTICE), prompt=prompt, topic_id=request.topic_id))
+        def guard_retrieval():
+            # This saved job owns a different execution token from legacy PracticeRun.
+            # Re-resolve all policy, source, route and nightly predicates at each boundary.
+            with self.db.transaction() as conn:
+                self._check(conn, self._row(conn, identifier), execution=execution)
+
+        passages, verification = await retrieve(self,
+            SimpleNamespace(scope=ContextScope(kind=Scope.GENERATED_PRACTICE), prompt=prompt, topic_id=request.topic_id),
+            guard=guard_retrieval)
         if request.source_refs:
             selected = {reference.target.id for reference in request.source_refs}
             passages = [entry for entry in passages if entry.get("document_revision") in selected]
