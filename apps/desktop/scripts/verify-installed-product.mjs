@@ -9,7 +9,7 @@ import { createNativeEvidence, assertSyntheticEvidenceDirectory, nativeEvidenceR
 
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repository = path.resolve(desktop, '../..');
-const prerequisiteCommits = ['793eddb4', 'a6b5d597', '16ad199d', 'c9d145af', 'eb821aa3', '8c6c4b18', '5e0c3837', '6145fc70', '728555e2'];
+const prerequisiteCommits = ['793eddb4', 'a6b5d597', '16ad199d', 'c9d145af', 'eb821aa3', '8c6c4b18', '5e0c3837', '6145fc70', '728555e2', 'f4fc986f', 'f5d36ac9'];
 const sha = value => createHash('sha256').update(value).digest('hex');
 const check = (condition, message) => { if (!condition) throw new Error(message); };
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -31,7 +31,7 @@ export const deferredGates = Object.freeze({
 export const coreGates = Object.freeze([
   'installed-identity', 'isolated-runtime', 'c-readiness', 'saved-conversations',
   'project-membership', 'saved-reviewed-test', 'whole-study', 'active-test-policy',
-  'test-draft-reopen', 'whole-test', 'temporary-retention', 'normal-reopen',
+  'test-draft-reopen', 'whole-test', 'pdf-selection-reopen', 'temporary-retention', 'normal-reopen',
   'project-delete-preserves-chats', 'final-close',
 ]);
 export const requiredGates = Object.freeze([...coreGates, ...readerGates, ...Object.keys(deferredGates)]);
@@ -924,7 +924,7 @@ async function readerFixtureJourney(current, chat, fixtures, fixture, evidence) 
       inert.xmlEntityDenied = fixture.expect.error === 'reader_xml_invalid';
     }
     await screenshot(current, evidence, 'reader-' + fixture.filename.replaceAll('.', '-'));
-    return { filename: fixture.filename, mediaType: fixture.media_type, attachmentId: attachment.id,
+    return { filename: fixture.filename, mediaType: fixture.media_type, attachmentId: attachment.id, attachment,
       original, previewState: document.preview_state, positions, selection, assets: await Promise.all(assets), inert,
       scope: 'Actual saved attachment, Workspace reader, guarded selection/draft and prepared original. No native Save dialog, model, OCR or ingestion claim.' };
   } finally {
@@ -950,6 +950,70 @@ async function readerJourneys(current, chat, fixtures, evidence, report, pass) {
       throw error;
     }
   }
+}
+
+export function validateReopenedPdf(fixture, checkpoint, document, position, raster) {
+  validateReaderDocument(fixture, document, checkpoint.attachment);
+  const selected = checkpoint.selection, locator = selected?.reference?.locator;
+  check(locator?.kind === 'text' && locator.item_ref === 'reader-v1:pdf:2'
+    && selected.reference.target.type === 'attachment' && selected.reference.target.id === checkpoint.attachment.id
+    && document.payload.page === 2 && Number.isInteger(locator.start) && Number.isInteger(locator.end)
+    && locator.start >= 0 && locator.end > locator.start,
+  'The reopened PDF did not retain its selected page-2 text source.');
+  check(Object.entries(locator).every(([key, value]) => position?.[key] === value),
+    'The saved PDF selection offsets were overwritten on reopen.');
+  const block = document.payload.blocks.find(item => item.item_ref === locator.item_ref);
+  check(block && Array.from(block.text).slice(locator.start, locator.end).join('') === selected.text,
+    'The reopened PDF locator no longer selects the original text.');
+  const previous = checkpoint.assets.find(item => item.assetId === 'pdf:2');
+  check(previous && raster.sha256 === previous.sha256 && raster.width === previous.width && raster.height === previous.height,
+    'The reopened PDF raster differs from the original page-2 render.');
+}
+
+async function reopenSelectedPdfJourney(current, chat, fixtures, report, evidence) {
+  const { page } = current;
+  const fixture = fixtures.manifest.files.find(item => item.gate === 'reader-pdf');
+  const checkpoint = report.readerJourneys.find(item => item.gate === 'reader-pdf');
+  check(checkpoint?.selection && fixture, 'A real prior PDF selection receipt is required for reopen.');
+  const attachment = checkpoint.attachment;
+  // Closing the pane unmounts any warm reader without deleting its saved tab/locator.
+  const closeWorkspace = page.getByRole('button', { name: 'Close workspace', exact: true });
+  if (await closeWorkspace.isVisible()) await closeWorkspace.click();
+  const pendingAsset = page.waitForResponse(response => {
+    if (new URL(response.url()).pathname !== '/api/v1/readers/asset' || response.request().method() !== 'POST') return false;
+    const body = response.request().postDataJSON();
+    return body?.reference?.target?.id === attachment.id && body.asset_id === 'pdf:2';
+  }, { timeout: 30_000 });
+  const [document, asset] = await Promise.all([readerResponse(page, attachment, async () => {
+    await navigate(page, chatHash(chat));
+    if (!await page.getByLabel('Attach files to chat', { exact: true }).isVisible())
+      await page.getByRole('button', { name: 'Attach file', exact: true }).click();
+    // Opening the existing attachment preserves its stored locator. No preferences are injected.
+    await page.locator('.chat-attached-file').filter({ hasText: fixture.filename })
+      .getByRole('button', { name: 'Open file', exact: true }).click();
+  }), pendingAsset]);
+  check(asset.status() === 200 && asset.headers()['content-type'] === 'image/png'
+    && asset.request().postDataJSON().original_sha256 === fixture.sha256, 'Reopened PDF asset lost its immutable original pin.');
+  const raster = validateReaderRaster(await asset.body());
+  const tab = page.locator('[role="tab"][id="dc-tab-' + encodeURIComponent('attachment:' + attachment.id) + '"]');
+  // Identity chooses the tab. The current authorized title supplies its visible/close labels;
+  // no generic Attachment label or duplicate-title ordering is used as identity.
+  await poll(() => tab.textContent(), title => title === attachment.title, 'Authorized restored PDF tab title', 30_000);
+  check(await tab.getAttribute('aria-selected') === 'true', 'Reopened PDF tab is not selected.');
+  await page.getByRole('button', { name: 'Close ' + attachment.title + ' tab', exact: true }).waitFor();
+  const reader = page.getByRole('region', { name: 'Document reader', exact: true });
+  await reader.getByRole('heading', { name: attachment.title, exact: true }).waitFor();
+  check(await reader.getByLabel('Physical page', { exact: true }).inputValue() === '2', 'The reopened Reader control returned to page 1.');
+  await poll(() => reader.getByAltText('Source page', { exact: true }).evaluate(image => image.complete && image.naturalWidth > 0),
+    Boolean, 'Decoded reopened PDF page', 30_000);
+  const position = await savedReaderPosition(page, chat, attachment, checkpoint.selection.reference.locator);
+  validateReopenedPdf(fixture, checkpoint, document, position, raster);
+  const passage = await selectReaderPassage(page, reader, fixture, attachment, document, chat);
+  check(JSON.stringify(passage.reference) === JSON.stringify(checkpoint.selection.reference)
+    && passage.text === checkpoint.selection.text, 'The actual reopened passage changed its selected original text.');
+  await screenshot(current, evidence, 'pdf-page2-selection-reopened');
+  return { attachmentId: attachment.id, title: await tab.textContent(), position, original: document.original,
+    page: document.payload.page, raster, passage, normalShutdownsBeforeCheck: report.shutdowns.length };
 }
 
 export async function runInstalledProduct() {
@@ -990,6 +1054,7 @@ export async function runInstalledProduct() {
     pass('test-draft-reopen', { id: test.draft.id, draftRevision: test.draft.draft_revision, answers: test.draft.answers });
     pass('whole-test', { attempt: final });
     await reopenSavedWork(current.page, work);
+    pass('pdf-selection-reopen', await reopenSelectedPdfJourney(current, work.conversations[0], fixtures, report, evidence));
     check(JSON.stringify((await api(current.page, '/assessment/test-attempts/' + reviewed.study.id)).result) === JSON.stringify(reviewed.study.result),
       'Reopen rewrote the immutable Study result.');
     const collection = await api(current.page, '/assessment/tests?limit=100');

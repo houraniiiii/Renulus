@@ -9,7 +9,7 @@ import { installedAcceptancePlan, validateInstalledRequest, validateInstallation
   coreGates, readerGates, deferredGates, completeCoreReceipt, designCEvidenceRoot, ownedArtifact, validateHiddenWindows, waitForDesignCWindow,
   validateConversation, validateSavedTest, validateActiveTest, validateFinalAttempt, safeFailure,
   validateReaderManifest, validateReaderOriginal, validateReaderDocument, validateReaderPassage, validateReaderRaster, validateBundledInterpreter,
-  validateIsolatedDirectories } from './verify-installed-product.mjs';
+  validateIsolatedDirectories, validateReopenedPdf } from './verify-installed-product.mjs';
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
 const desktop = path.resolve(directory, '..');
@@ -404,4 +404,24 @@ test('asset receipt requires bounded raster PNG bytes rather than active origina
   assert.throws(() => validateReaderRaster(Buffer.from('<html>not a PNG</html>')));
   data.writeUInt32BE(0, 16); assert.throws(() => validateReaderRaster(data));
   data.writeUInt32BE(12000000, 16); assert.throws(() => validateReaderRaster(data));
+});
+
+test('PDF reopen requires the same page-2 text locator, original owner and rendered raster', () => {
+  const { fixture, document, attachment } = readerFixture();
+  const position = { kind: 'text', item_ref: 'reader-v1:pdf:2', start: 10, end: 16 };
+  Object.assign(document.payload, { page: 2, blocks: [{ item_ref: position.item_ref, text: 'Synthetic SECOND page.' }] });
+  const raster = { sha256: digest, width: 540, height: 360 };
+  const checkpoint = { attachment, assets: [{ assetId: 'pdf:2', ...raster }],
+    selection: { text: 'SECOND', reference: { target: document.reference.target, locator: position } } };
+  validateReopenedPdf(fixture, checkpoint, document, position, raster);
+  for (const mutate of [value => { value.document.payload.page = 1; }, value => { value.position = { kind: 'pdf', physical_page: 1 }; },
+    value => { value.position.start = 0; }, value => { value.document.payload.blocks[0].text = 'Synthetic CHANGED page.'; },
+    value => { value.document.original.sha256 = 'c'.repeat(64); }, value => { value.raster.sha256 = 'c'.repeat(64); },
+    value => { value.raster.width = 1; }, value => { value.checkpoint.selection.reference.target.id = 'other-owner'; }]) {
+    const value = structuredClone({ document, position, raster, checkpoint }); mutate(value);
+    assert.throws(() => validateReopenedPdf(fixture, value.checkpoint, value.document, value.position, value.raster));
+  }
+  assert.ok(coreGates.includes('pdf-selection-reopen'));
+  const plan = installedAcceptancePlan();
+  for (const commit of ['f4fc986f', 'f5d36ac9']) assert.ok(plan.prerequisiteCommits.includes(commit));
 });
