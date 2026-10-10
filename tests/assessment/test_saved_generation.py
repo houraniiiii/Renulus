@@ -397,3 +397,28 @@ async def test_active_test_policy_precedes_create_replay_retry_and_publication(g
     stored = service.db.fetch_one("SELECT state,error_code FROM assessment_test_jobs WHERE id=?", (row["id"],))
     assert stored == {"state": "failed", "error_code": "assistance_restricted"}
     assert service.db.fetch_all("SELECT id FROM assessment_test_versions") == []
+
+
+@pytest.mark.asyncio
+async def test_active_test_neutral_cancel_stops_real_provider_and_replay_never_discloses(generation):
+    app, service, transport = generation
+    transport.release = asyncio.Event()
+    row = await service.create(request(title="PRIVATE_GENERATION_TITLE"))
+    await transport.started.wait()
+    stamp = utc_now()
+    service.db.execute("INSERT INTO assessment_test_attempts(id,version_id,version_snapshot_json,mode,clock_high_water_at,created_at,updated_at) "
+        "VALUES('synthetic-active-test','synthetic-version','{}','test',?,?,?)", (stamp, stamp, stamp))
+    action = GenerationAction(idempotency_key="synthetic-test-cancel")
+    result = await service.action(row["id"], "cancel", action)
+    assert result == {"id": row["id"], "state": "cancelled"}
+    assert await service.action(row["id"], "cancel", action) == result
+    assert app.state.services.get("provider").status()["active_runs"] == []
+    assert service.db.fetch_all("SELECT id FROM assessment_test_versions") == []
+    for operation in (service.create(request()), service.action(row["id"], "retry", GenerationAction(idempotency_key="synthetic-blocked-retry")),
+                      service.action(row["id"], "accept_shorter", AcceptShorterRequest(idempotency_key="synthetic-blocked-accept", accepted_count=1))):
+        with pytest.raises(ApiError) as error:
+            await operation
+        assert error.value.code == "assistance_restricted"
+    with pytest.raises(ApiError) as error:
+        service.read(row["id"])
+    assert error.value.code == "assistance_restricted"

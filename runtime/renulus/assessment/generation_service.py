@@ -14,7 +14,7 @@ from renulus.design_c_contracts import (
     ContentReference, Job, QuestionSnapshot, SavedTestVersion, canonical_digest,
 )
 from renulus.storage import utc_now
-from renulus.storage.assessment_policy import require_assistance
+from renulus.storage.assessment_policy import policy_snapshot, require_assistance
 from renulus.storage.invalidation import context_epoch_in
 from renulus.storage.relations import TOMBSTONES
 from .generated_contracts import GeneratedBatch
@@ -437,9 +437,37 @@ class SavedGenerationService:
         conn.execute("UPDATE assessment_test_jobs SET state='published',accepted_count=?,published_version_id=?,live_published_version_id=?,"
             "error_code=NULL,updated_at=? WHERE id=?", (accepted_count, version.id, version.id, utc_now(), row["id"]))
 
-    async def action(self, identifier, operation, request):
-        stop = False
+    async def _cancel(self, identifier, request):
+        # Always return the same neutral shape. A Test may start while awaiting
+        # provider shutdown, so no earlier assistance snapshot authorises content.
         old_task = self.tasks.get(identifier)
+        with self.db.transaction() as conn:
+            policy_snapshot(conn)  # Observe current policy before receipt replay.
+            row = self._row(conn, identifier)
+            checkpoint = self._checkpoint(row)
+            digest = canonical_digest({"operation": "cancel", "request": {}})
+            previous = next((receipt for receipt in checkpoint["receipts"] if receipt["key"] == request.idempotency_key), None)
+            if previous:
+                if previous["hash"] != digest:
+                    raise ApiError("idempotency_conflict", "This action key was used for different work", 409)
+                return {"id": identifier, "state": row["state"]}
+            if row["state"] != "published":
+                conn.execute("UPDATE assessment_test_jobs SET state='cancelled',error_code='generation_cancelled',updated_at=? WHERE id=?", (utc_now(), identifier))
+            # Even an exhausted receipt journal must permit neutral Stop.
+            if len(checkpoint["receipts"]) < MAX_RECEIPTS:
+                checkpoint["receipts"].append({"key": request.idempotency_key, "hash": digest})
+                conn.execute("UPDATE assessment_test_jobs SET checkpoint_json=? WHERE id=?", (self._encode_checkpoint(checkpoint), identifier))
+        if old_task:
+            old_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await old_task
+        with self.db.transaction() as conn:
+            policy_snapshot(conn)
+            return {"id": identifier, "state": self._row(conn, identifier)["state"]}
+
+    async def action(self, identifier, operation, request):
+        if operation == "cancel":
+            return await self._cancel(identifier, request)
         with self.db.transaction() as conn:
             require_assistance(conn)
             row = self._row(conn, identifier)
@@ -456,10 +484,7 @@ class SavedGenerationService:
                 checkpoint["receipts"].append({"key": request.idempotency_key, "hash": digest})
                 conn.execute("UPDATE assessment_test_jobs SET checkpoint_json=? WHERE id=?", (self._encode_checkpoint(checkpoint), identifier))
                 return self._view(conn, row)  # Publication won cancellation; return the durable winner.
-            if operation == "cancel":
-                conn.execute("UPDATE assessment_test_jobs SET state='cancelled',error_code='generation_cancelled',updated_at=? WHERE id=?", (utc_now(), identifier))
-                stop = True
-            elif operation == "retry":
+            if operation == "retry":
                 if row["state"] not in ("failed", "needs_review", "cancelled") or checkpoint["calls"] >= MAX_CALLS:
                     raise ApiError("generation_retry_unavailable", "The job cannot start another provider call", 409)
                 self._check(conn, row, states=("failed", "needs_review", "cancelled"))
@@ -475,13 +500,7 @@ class SavedGenerationService:
             checkpoint["receipts"].append({"key": request.idempotency_key, "hash": digest})
             conn.execute("UPDATE assessment_test_jobs SET checkpoint_json=?,updated_at=? WHERE id=?", (self._encode_checkpoint(checkpoint), utc_now(), identifier))
             result = self._view(conn, self._row(conn, identifier))
-        if stop:
-            task = old_task
-            if task:
-                task.cancel()
-                with suppress(asyncio.CancelledError):
-                    await task
-        elif operation == "retry":
+        if operation == "retry":
             self._schedule(identifier, checkpoint["execution"])
         return result
 
