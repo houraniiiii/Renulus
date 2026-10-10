@@ -185,6 +185,14 @@ explicit Back to chat, then an offline Home handoff kept its saved message and
 draft with a truthful connection-required failure. Screenshot captures 3/4 and
 the owned receipt remain outside Git. This is bounded source evidence.
 
+After the Home evidence checkpoint, Kant additionally owns new
+`runtime/renulus/study/nightly_service.py`, `nightly_models.py`,
+`nightly_api.py`, new `apps/desktop/src/modules/nightly/` and
+`tests/study/test_design_c_nightly.py` for DC19. The lead retains all DDL,
+server/preferences export wiring, shared Settings and generation producer files.
+This lane reuses published saved generation and canonical eligible inputs;
+no provider or source fallback, duplicated scheduler or renderer attestation.
+
 The entries below preserve earlier implementation evidence. Their Flow selection,
 branches, paths, issue status, time windows and heartbeat instructions describe
 those dated runs; they are not assignments or scheduling instructions for C.
