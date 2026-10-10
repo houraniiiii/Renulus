@@ -17,6 +17,8 @@ interface Draft {text: string; content_refs: ContentReference[]; revision: numbe
 export interface ChatPageProps {
   identity?: ConversationIdentity;
   conversation?: ConversationSummary;
+  /** Explicit navigation can revisit the same identity after an external move. */
+  navigationRevision?: number;
   prefill?: string;
   sendIntent?: SendIntent;
   onSendIntentConsumed?: (requestId: string) => void;
@@ -110,6 +112,25 @@ export default function ChatPage(props: ChatPageProps) {
       streamAbort.current?.abort();activeRun.current=undefined;
     };
   },[incomingKey,helpKey]);
+
+  useEffect(()=>{
+    // Re-selecting this chat must resolve current membership without remounting
+    // the composer, replaying an intent, or disconnecting its running response.
+    const current=chatRef.current;
+    if(props.navigationRevision===undefined||!incoming||!current
+      ||current.identity.type!==incoming.type||current.identity.id!==incoming.id)return;
+    const controller=new AbortController(),version=epoch.current;
+    void api<ConversationSummary>(conversationPath(current),{signal:controller.signal,headers:helpHeaders}).then(value=>{
+      const latest=chatRef.current;
+      if(controller.signal.aborted||epoch.current!==version||!latest)return;
+      if(value.revision>=latest.revision)accept(value);
+    }).catch(caught=>{
+      if(controller.signal.aborted||epoch.current!==version||isCancelled(caught))return;
+      setError(caught);
+      if(caught instanceof ApiError&&caught.status===404){chatRef.current=undefined;setChat(undefined);setMessages([]);setPartial('');}
+    });
+    return()=>controller.abort();
+  },[incomingKey,helpKey,props.navigationRevision]);
 
   useEffect(()=>{
     if(!recovering||!chat||chat.retention!=='saved')return;

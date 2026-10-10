@@ -18,6 +18,42 @@ const frame=(element:React.ReactNode)=><NavigationProvider><WorkspaceProvider po
 afterEach(()=>cleanup());
 
 describe('Chat volatile handoffs',()=>{
+  it('refreshes the same chat membership on explicit navigation without replacing its draft',async()=>{
+    setup();let current={...chat,project_id:'project-a'};
+    const original=calls.api.getMockImplementation();
+    calls.api.mockImplementation(async(path:string,options?:{method?:string})=>{
+      if(path.includes('/study/projects'))return {items:[{id:'project-a',title:'Project A'},{id:'project-b',title:'Project B'}],next_cursor:null};
+      if(path==='/conversations/learning/saved-chat')return current;
+      return original?.(path,options);
+    });
+    const view=render(frame(<Chat identity={chat.identity} navigationRevision={1}/>));
+    fireEvent.change(await screen.findByLabelText('Message Renulus'),{target:{value:'Keep my unsaved draft'}});
+    await waitFor(()=>expect((screen.getByLabelText('Project') as HTMLSelectElement).value).toBe('project-a'));
+    current={...current,revision:3,project_id:'project-b'};
+    view.rerender(frame(<Chat identity={chat.identity} navigationRevision={2}/>));
+    await waitFor(()=>expect((screen.getByLabelText('Project') as HTMLSelectElement).value).toBe('project-b'));
+    expect((screen.getByLabelText('Message Renulus') as HTMLTextAreaElement).value).toBe('Keep my unsaved draft');
+    expect(calls.api.mock.calls.filter(([path,options])=>path.endsWith('/draft')&&options?.method!=='PUT')).toHaveLength(1);
+    expect(calls.api.mock.calls.filter(([path])=>path.endsWith('/messages'))).toHaveLength(1);
+    expect(calls.send).not.toHaveBeenCalled();
+  });
+
+  it('keeps the same response subscription when navigation refreshes its chat',async()=>{
+    setup();let streamSignal:AbortSignal|undefined;
+    calls.send.mockImplementation(async(_chat,_body,onEvent,signal)=>{
+      streamSignal=signal;onEvent({run_id:'retained-run',sequence:1,type:'started',payload:{}});
+      await new Promise<void>(resolve=>signal.addEventListener('abort',()=>resolve(),{once:true}));
+    });
+    const view=render(frame(<Chat identity={chat.identity} navigationRevision={1} sendIntent={{text:'Keep this request',request_id:'retained-request'}}/>));
+    await waitFor(()=>expect(calls.send).toHaveBeenCalledTimes(1));
+    view.rerender(frame(<Chat identity={chat.identity} navigationRevision={2}/>));
+    await waitFor(()=>expect(calls.api.mock.calls.filter(([path])=>path==='/conversations/learning/saved-chat')).toHaveLength(2));
+    expect(streamSignal?.aborted).toBe(false);
+    expect(screen.getByRole('button',{name:'Stop'})).toBeTruthy();
+    expect(calls.send).toHaveBeenCalledTimes(1);
+    expect((screen.getByLabelText('Message Renulus') as HTMLTextAreaElement).value).toBe('Keep this request');
+  });
+
   it('sends a reviewed Case image through the conversation stream while retaining the separate composer draft',async()=>{
     setup();const context:StudyHelpContext={attempt_id:'image-study',item_id:'item',version_id:'version',draft_revision:1,policy_revision:1,kind:'chat'};
     const caseChat={...chat,kind:'case' as const,identity:{type:'case' as const,id:'image-case'}};

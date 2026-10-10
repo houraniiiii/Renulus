@@ -71,6 +71,7 @@ export function ModuleOutlet({ assistanceAllowed, homeDraft }: { assistanceAllow
   if (route === 'newchat') props.volatileDraft = homeDraft;
   if (route === 'chat') {
     props.onConversation = selectConversation;
+    props.navigationRevision = revision;
     if (handoff?.studyHelpContext) props.studyHelpContext = studyHelp.context;
     const identity = handoff?.conversation as ConversationIdentity | undefined;
     if (identity && ['learn_thread', 'case'].includes(identity.type) && typeof identity.id === 'string') props.identity = identity;
