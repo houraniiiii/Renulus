@@ -486,3 +486,57 @@ reader/draft/source journey proves that product flow. DC08 also requires all
 eight categories in the matching packaged app. DC07/DC09/DC10/DC11 remain open
 until their actual producers and consumers are connected and those receipts
 exist. This report completes only the assigned independent pass-1 review.
+
+## Knowledge003 seam for the integration owner
+
+Implementation follow-up on October 10, against the frozen `design-c/1`
+10-column attachment and 7-column original inventory. The parent owns the DDL,
+contract inventory and media recovery changes. Keep all frozen names/meanings and
+append the following exact columns; do not widen the legacy Case schema.
+
+| Table | Additional columns |
+| --- | --- |
+| `knowledge_attachments` | `filename TEXT NOT NULL`, `source_id TEXT NOT NULL`, `metadata_json TEXT NOT NULL`, `rights_json TEXT NOT NULL`, `preview_state TEXT NOT NULL DEFAULT 'not_requested'`, `preview_revision INTEGER NOT NULL DEFAULT 0`, `preview_json TEXT`, `extraction_revision INTEGER NOT NULL DEFAULT 0`, `extraction_json TEXT`, `processing_json TEXT` |
+| `knowledge_attachment_originals` | `filename TEXT NOT NULL`, `media_type TEXT NOT NULL`, `source_original_id TEXT`, `preview_revision INTEGER` |
+
+The resulting exact inventories contain 20 and 11 columns respectively. Existing
+`original_path` must permit NULL for records-only restore. JSON columns contain
+valid objects when present; generations are nonnegative. Original roles are
+`original|preview`, with exactly one original per attachment. Original ID/hash/bytes
+are immutable; replacing bytes creates a new attachment ID. A preview pins the
+same attachment's original through `source_original_id` and a preview generation;
+those two fields are NULL on original rows. A source original cannot be a preview.
+
+Ordinary chat uploads own their originals under
+`paths.library / "attachments" / attachment_id`. Library/project documents and
+notes reference existing `knowledge_revisions` directly and do not create another
+attachment authority. Legacy Case originals retain their Case IDs, storage and
+retrieval authority; no Case bytes are copied into Knowledge records. The table
+owner supplies authority, so no competing `authority` enum or duplicated
+`project_id` is needed. Project scope derives from canonical memberships.
+
+Reuse `knowledge.models.Rights` with deny-by-default operations and
+`SourceMetadata`; `source_id` agrees with `metadata_json.source_id`. Display,
+model input, derivation, indexing and embedding remain independent permissions.
+Preview readiness never grants model use. `preview_json` holds an inert
+`reader/1` payload with opaque asset IDs, not raw HTML, paths or resource URLs.
+`extraction_json` holds the existing Docling extraction representation.
+`processing_json` holds payload/parser versions, input original ID/hash and
+separate preview/extraction diagnostics. Runtime guards compare input identity,
+attachment/preview/extraction revisions and shared policy/context before publishing.
+
+Recovery admits PDF, TXT, MD, CSV, HTML, XML, PNG/JPEG/TIFF and DOCX/XLSX, retaining
+the existing PPTX recovery path. MIME is validated text rather than a restrictive
+reader-capability enum; retained bytes do not prove a reader works. Derived image
+assets are PNG. Normalised original media types are those in
+`knowledge.reader.MEDIA_SUFFIX` (including both `application/xml` and `text/xml`);
+no arbitrary HTML resource authority is introduced.
+
+The connected reader seam is `knowledge.reader_api.create_router(services)`,
+mounted under `/api/v1`, registering `services.registry["readers"]`. It exposes
+`/readers/resolve`, `/asset`, `/original` and `/passage`. The renderer public entry
+is default `modules/reader/index.tsx`, consuming shared `ReaderProps` and
+`ContentReference {target, locator}`. Shared assessment policy/context helpers are
+imported directly; no extra policy binding or reader-owned policy store is needed.
+Knowledge003 and ordinary saved/volatile attachment persistence remain pending;
+the reader reports `reader_schema_unavailable` until the published columns exist.
