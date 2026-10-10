@@ -8,11 +8,13 @@ It uses the selected existing models through Codex and/or OpenCode Go
 subscriptions, without retraining.
 The project owner will not host a service or model inference.
 
-This repository contains the Windows app, current Flow interface, original
-teaching packs and dated evidence. The accepted integration is merged into `main`.
-On October 10 the owner selected Design C as its replacement; the
+This repository contains the Windows app, Design C integration, original
+teaching packs and dated evidence. The active `codex/design-c-integration` branch
+implements saved chats/projects, contextual readers, Notes and whole Study/Test
+attempts on the existing Hermes foundation. The
 [Design C implementation spec](docs/planning/DESIGN_C_IMPLEMENTATION_SPEC.md)
-contains the consolidated build tickets and acceptance plan.
+records each ticket's evidence and remaining acceptance gates. Matching Windows
+packaging and default cutover are still in progress.
 The canonical checkout is `C:/Renulus/dev/repo`; the normal shortcut selects the
 unchanged validated **f1c49444** app at `C:/Renulus/app`. The learning/account
 profile is preserved at `C:/Renulus/data/learning`; normal startup/reopen and

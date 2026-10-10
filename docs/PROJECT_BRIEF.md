@@ -109,8 +109,12 @@ acceptance; an external review panel is not a prerequisite for starting work.
 
 ## Current status
 
-The working integration build now has the Flow renderer, managed local API,
-attributed Hermes routes and canonical SQLite records. Learn, Library, Cases,
+The working integration build now has Design C: saved chats/projects, contextual
+readers, Notes and whole Study/Test attempts, with a managed local API,
+attributed Hermes routes and canonical SQLite records. Connected source and
+populated migration evidence is tracked in the C spec; matching Windows delivery
+and default cutover remain in progress. The following paragraph records the
+unchanged installed Flow baseline. Learn, Library, Cases,
 reviewed Test/generated practice, Memory, Today/study planning and Updates have
 real service implementations. The matching Windows app is installed and selected
 by the normal shortcut, with bounded local installation, recovery, originals,

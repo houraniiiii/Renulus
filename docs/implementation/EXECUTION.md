@@ -15,7 +15,7 @@ Use [parallel-work rules](../planning/PARALLEL_WORK.md) and record prerequisite
 commits, integrated evidence and remaining limits in the ticket handoff or its
 linked issue. Update this current section when execution starts.
 
-### Current integration checkpoint — 3c1d3f58
+### Current integration checkpoint — 2bc84d61
 
 The earlier reservations below are historical. Active work remains against the
 same DC01–DC21 backlog. Canonical root/branch and baseline 528025ff ancestry were
@@ -23,13 +23,13 @@ rechecked; the 18 pre-existing normalization-only flags remain unstaged.
 
 | Owner | Current exact lease / prerequisite | Current evidence and next gate |
 | --- | --- | --- |
-| Lead | Shared shell/platform/server, migration/release paths; new modules/notes; study/service.py + study conftest/whole progress test; R9 CandidateEditor/types/owned renderer test | Study `77e139d9` 20 actual checks. Notes mounted/editor `a4439597`, actual loopback lost-ACK/conflict journey and hidden revision/draft reopen pass; backend six checks. R9 `f1228182` and shell policy release `d14b0997` pass. Public release roots `6145fc70`: 11 Python checks plus seven subtests and three Node boundary checks. |
-| Aquinas / dc01-design | TestSetupPane.tsx; attempts/session.ts + session.test.ts and AttemptRun/connected test only if needed; existing integration review report | R4 preview stylesheet and R6 durable action errors; independent recheck after source checkpoint. |
-| Zeno / dc02-contracts | Two-file installed verifier lease completed: verify-installed-product.mjs + test-verify-installed-product.mjs | `3c1d3f58` integrates C-aware hidden core journeys; 17 boundary checks pass in canonical checkout. Actual package execution and separate reader/upgrade/native gates remain open. No packaging/profile/default mutations delegated. |
-| Pauli / dc-review-data | tests/integration/test_design_c_populated_upgrade.py + docs/implementation/design-c-review-data.md only | C4 `a2a5f2d4` 35 actual checks, C1 `1b12c19f` independent report native pins; hidden import normal close, two personal results and original hashes retained. Current full populated upgrade/restore harness uses real producers. |
-| Russell / dc-review-assessment | memory/repository.py + memory/service.py + focused Memory tests; report-only independent C1/C4 recheck after commit | C3 fresh canonical fingerprint after boundary cancellation; terminal explicit cancellation/suppression/source invalidity must not retry. |
-| Poincare / dc-review-readers | Notes owner note_api/models/service and Knowledge CAS/retention; existing Reader source/test lease for R7 | Backend notes published; original prerequisite e0e51784 integrated separately as820d1906. R7 typed page/sheet/row position rehydrate/report remains active. |
-| Kant / dc-home | tests/study/test_design_c_nightly.py only after completed C2 lease | C2 `a14e06a9` integrated: 131 actual Home/Nightly checks pass, including the actual Home renderer. New bounded nightly publication → saved setup → whole Study/Test and lost-ACK journey passes focused; full owned suite running. |
+| Lead | Shared integration/release paths and current guides/spec | R4/R6 `6b56c66a`, R7 `728555e2` integrated; canonical 51 renderer checks and exact build pass. C2/C3 cross-consumer batch passes eight actual checks. Public payload inventory verified: 39,287 files / 2,176,578,295 bytes; exact-root guards and installer child isolation pass. No C installer manufactured yet. |
+| Aquinas / dc01-design | docs/implementation/design-c-review-integration.md only | R4/R6 independent hidden recheck integrated as `a47a3f03`; current R3–R10 integrated review remains active. |
+| Zeno / dc02-contracts | verify-installed-product.mjs + test-verify-installed-product.mjs; new design-c-reader-fixtures.py + test_design_c_reader_fixtures.py | Core driver `3c1d3f58` is integrated. Eight-format installed journey and compact isolated profile are being added; package execution remains parent-owned. |
+| Pauli / dc-review-data | docs/implementation/design-c-review-data.md only, after completed populated test lease | `1744e2cb` integrates the final eight-pass populated old/current JSON/ZIP1/ZIP2 suite. New pass-3 migration/delivery source preflight; no repeated unchanged full suite or package mutation. |
+| Russell / dc-review-assessment | docs/implementation/design-c-review-attempt-consumers.md only pending bounded finding | C3 `51f208b4` integrated (76 Memory checks); C1/C4 independent actual rechecks `2bc84d61` pass. Audit whether restore-interrupted ordinary inference can wake after recovery; no provider work may be implicitly resumed. |
+| Poincare / dc-review-readers | tests/knowledge/test_design_c_notes.py + docs/implementation/design-c-review-readers.md only | Notes actual Study-help/rights/deletion and narrow two-revision restore proof. After checkpoint, reproduce selected PDF page-2 text locator reopen concern; no new source lease yet. |
+| Kant / dc-home | docs/implementation/USING_RENULUS.md only | `16420819` integrates actual nightly → saved setup → whole Study/Test/lost ACK consumer; full 44 pass. Current guide must distinguish C source from still-selected Flow installation. |
 
 The hidden c3 controller closed normally after real Study pause/reopen/finish and
 Test normal restart/deadline results; evidence is indexed in
@@ -37,8 +37,12 @@ Test normal restart/deadline results; evidence is indexed in
 [the note report](design-c-hidden-notes.md) records two immutable originals, a
 revision-1 chat draft/citation, revision-2 editor and restart/narrow/200% checks.
 No live provider/account or owner profile was used. DC20 populated upgrade uses
-real old/runtime producers and the now-mounted Notes service. DC21 public input
-inventory is being verified; no matching C package/default cutover is claimed.
+real old/runtime producers and the now-mounted Notes service. Its eight checks
+pass at source `4316fde0`, including post-delete fresh-profile filtering across
+all three formats. Receipts preserve initial harness errors and exact limits;
+queued extraction/rebuild and packaged old-runtime execution are not implied.
+DC21 public inputs and guarded staging plan pass; no matching C package/default
+cutover is claimed. Exact paths/hashes are in delivery preparation receipts.
 
 ### Active reservations — initial prerequisite wave
 

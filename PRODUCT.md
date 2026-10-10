@@ -6,8 +6,9 @@ Confirmed product direction updated October 10, 2026. The
 [project brief](docs/PROJECT_BRIEF.md) and [decisions](docs/DECISIONS.md) record
 the product authority. The [Design C spec](docs/planning/DESIGN_C_IMPLEMENTATION_SPEC.md)
 defines the replacement UI, connected behaviour and acceptance. Its labelled
-planning defaults remain adaptable. The installed app still uses Flow; selected
-target behaviour below is not a claim that the migration is implemented.
+planning defaults remain adaptable. Design C is connected in the integration
+source; the normal installed app still uses Flow until matching Windows acceptance
+and cutover pass. The spec records feature evidence and remaining gates.
 
 ## Platform
 
@@ -49,7 +50,8 @@ Chats and context, including case discussions, save by default. Archive and
 optional temporary conversations remain distinct actions. Explicit temporary
 content follows the spec's retention rules. Study and Test have distinct help,
 submission and timing behaviour; reviewed-bank scores remain separate from
-generated/imported practice. These changes require the C implementation tickets.
+generated/imported practice. Their implementation and delivery evidence is tracked
+under the C tickets.
 
 ## Capabilities and Constraints
 
@@ -69,11 +71,12 @@ semantic teal tokens and suitable existing components as its coherent foundation
 ## Evidence on Hand
 
 The editable C Figma page and screen/state links are indexed in the C spec.
-Current Flow code, selected brand exports, attributed Hermes source and dated
-[desktop evidence](docs/implementation/desktop-evidence.md) establish the
-implemented baseline. The spec's source audit identifies reuse and missing
-capabilities. Prototype data is not production content, learner progress or
-source verification.
+Selected brand exports, attributed Hermes source and dated
+[desktop evidence](docs/implementation/desktop-evidence.md) establish the original
+baseline. The C spec and [execution record](docs/implementation/EXECUTION.md)
+link actual connected source, recovery and hidden UI checks. Matching installed
+acceptance is separate. Prototype data is not production content, learner progress
+or source verification.
 
 ## Product Principles
 

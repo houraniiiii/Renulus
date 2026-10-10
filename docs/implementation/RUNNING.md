@@ -1,5 +1,12 @@
 # Running Renulus
 
+Design C is connected in `codex/design-c-integration`; its matching Windows
+package and default cutover are being validated. The normal launcher still
+selects the Flow installation described below. Source-app checks use separate
+hidden synthetic profiles and do not migrate the owner's profile. Consult the
+[C ticket record](../planning/DESIGN_C_IMPLEMENTATION_SPEC.md#10-implementation-execution--october-10-2026)
+for current acceptance status.
+
 Current delivery: matching **installed-f1c49444**, source
 `f1c49444ba77f03fe0f35f4657e564c1b26724dc` and content **1.4.2**. Final matching installation,
 new T18 teaching/ESENeph assessment, retained history, ready corrected-record

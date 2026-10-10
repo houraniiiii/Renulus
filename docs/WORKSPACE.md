@@ -42,7 +42,7 @@ See [the relocation and deletion report](implementation/storage-cleanup-20261008
 | `docs/research/` | Bounded, dated investigations supporting those decisions |
 | `assets/brand/` | The selected Renulus logo and icon exports, with provenance |
 | `references/` | A small, dated reference shelf, including inherited taxonomy labels |
-| `apps/desktop/` | React renderer (currently Flow; Design C migration target), Electron lifecycle and Windows packaging |
+| `apps/desktop/` | Design C React integration renderer, Electron lifecycle and Windows packaging; installed Flow remains selected until cutover |
 | `runtime/renulus/` | Controlled product backend, canonical services and engine adapters |
 | `upstream/hermes/` | Pinned attributed runtime foundation and patch provenance |
 | `content/` | Versioned original learning packs and scoped content licence |
