@@ -372,3 +372,18 @@ class ConversationRepository:
         for row in conn.execute("SELECT id FROM study_project_chats WHERE chat_kind=? AND chat_id=?", (kind, identifier)):
             self.db.mark_deleted("project_chat", row["id"], conn)
         conn.execute("DELETE FROM study_project_chats WHERE chat_kind=? AND chat_id=?", (kind, identifier))
+
+    def move(self, kind, identifier, request, key=None):
+        with self._lock, self.cases._lock, self.db.transaction() as conn:
+            require_assistance(conn)
+            self._owner(kind)
+            if (kind,identifier) in self._temporary:
+                raise ApiError('temporary_membership_unavailable', 'Save this chat before adding it to a project', 409)
+            def move():
+                summary, _ = self._saved(conn,kind,identifier)
+                self._expected(summary,request.expected_revision)
+                self.services.get('projects').move_chat_in(conn,kind,identifier,request.project_id)
+                _, sidecar, column, _ = self._owner(kind)
+                conn.execute(f'UPDATE {sidecar} SET revision=revision+1,updated_at=? WHERE {column}=?', (utc_now(),identifier))
+                return self._saved(conn,kind,identifier)[0]
+            return command(conn,'conversation_commands',key,'move',self._owner(kind)[3],identifier,request,move)

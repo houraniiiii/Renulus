@@ -5,7 +5,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, Header, Query, Response
 
 from renulus.design_c_contracts import ConversationDraft
-from .conversation_models import Mutation, NewConversation, Rename
+from .conversation_models import Mutation, NewConversation, Rename, ProjectMove
 from .conversation_repository import ConversationRepository
 
 
@@ -46,6 +46,10 @@ def create_router(services):
     @router.patch("/{kind}/{identifier}")
     def rename(kind: Literal["learning", "case"], identifier: str, body: Rename, idempotency_key: str | None = Header(default=None)):
         return repository.change(kind, identifier, body, "rename", idempotency_key)
+
+    @router.put('/{kind}/{identifier}/project')
+    def move(kind: Literal['learning','case'], identifier: str, body: ProjectMove, idempotency_key: str | None = Header(default=None)):
+        return repository.move(kind,identifier,body,idempotency_key)
 
     @router.post("/{kind}/{identifier}/archive")
     def archive(kind: Literal["learning", "case"], identifier: str, body: Mutation, idempotency_key: str | None = Header(default=None)):
