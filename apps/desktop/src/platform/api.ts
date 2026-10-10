@@ -16,6 +16,8 @@ export function isCancelled(error: unknown): boolean {
 export interface ApiOptions extends Omit<RequestInit, 'body' | 'credentials' | 'cache' | 'redirect'> {
   body?: unknown;
   timeoutMs?: number;
+  /** Metadata-only POST reads can opt out of mutation notifications. */
+  notifyRecordsChanged?: boolean;
 }
 
 export function apiPath(path: string): string {
@@ -63,7 +65,7 @@ async function responseError(response: Response): Promise<ApiError> {
 
 export async function apiResponse(path: string, options: ApiOptions = {}): Promise<Response> {
   const url = apiPath(path);
-  const { body, timeoutMs = 30_000, signal, headers: inputHeaders, ...init } = options;
+  const { body, timeoutMs = 30_000, signal, headers: inputHeaders, notifyRecordsChanged = true, ...init } = options;
   const controller = new AbortController();
   const abort = () => controller.abort(new DOMException('Request cancelled.', 'AbortError'));
   signal?.addEventListener('abort', abort, { once: true });
@@ -92,7 +94,7 @@ export async function apiResponse(path: string, options: ApiOptions = {}): Promi
       if (failure.code === 'assistance_restricted' || failure.code === 'assistance_changed') window.dispatchEvent(new Event('renulus:assessment-policy'));
       throw failure;
     }
-    if (init.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(init.method.toUpperCase())) {
+    if (notifyRecordsChanged && init.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(init.method.toUpperCase())) {
       window.dispatchEvent(new Event('renulus:records-changed'));
       if (url.startsWith('/api/v1/assessment/test-attempts')) window.dispatchEvent(new Event('renulus:assessment-policy'));
     }

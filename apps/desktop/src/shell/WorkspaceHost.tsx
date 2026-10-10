@@ -11,6 +11,7 @@ import { Button, ErrorState, LoadingState, Notice } from '../ui';
 import { useAssessmentPolicy } from './AssessmentPolicy';
 import { useNavigation } from './navigation';
 import { useStudyHelp } from './StudyHelp';
+import { useWorkspaceTitles } from './workspaceTitles';
 
 const readerImports = import.meta.glob<{ default: ComponentType<WorkspaceReaderProps> }>('../modules/reader/index.tsx');
 const readerLoader = readerImports['../modules/reader/index.tsx'];
@@ -155,6 +156,7 @@ function TestPreview({ reference }: import('../modules/workspace').SavedTestPrev
 
 export function WorkspaceHost({ contentRef }: { contentRef: React.RefObject<HTMLDivElement | null> }) {
   const workspace = useWorkspace();
+  const getTitle = useWorkspaceTitles();
   const navigation = useNavigation();
   const studyHelp = useStudyHelp();
   const passageCreateKey = useRef(crypto.randomUUID());
@@ -193,7 +195,7 @@ export function WorkspaceHost({ contentRef }: { contentRef: React.RefObject<HTML
   }
   return <>{error && <Notice><p>{error instanceof Error ? error.message : 'The selected passage could not be added.'}</p></Notice>}
     <Suspense fallback={<LoadingState label="Opening the reader" />}><WorkspacePanel availableWidth={width} Reader={Reader ? StudyReader : undefined}
-      SavedTestPreview={TestPreview} adapters={{ Files, Sources, Notes, Goals }} onPassage={passage => { void passageToDraft(passage); }}
+      SavedTestPreview={TestPreview} getTitle={getTitle} adapters={{ Files, Sources, Notes, Goals }} onPassage={passage => { void passageToDraft(passage); }}
       onReturnToChat={() => document.getElementById('learning-content')?.focus({ preventScroll: true })}
       onResumeTest={attemptId => navigation.navigate('attempts', { payload: { attempt_id: attemptId } })} /></Suspense>
   </>;

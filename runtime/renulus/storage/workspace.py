@@ -78,7 +78,10 @@ class WorkspaceRepository:
         denied = {"allowed": False, "reason": "not_found"}
         if target.type in ("library_revision", "note_revision"):
             row = conn.execute("SELECT r.rights_json,d.deleted_at,d.scope_kind,d.scope_entity "
-                "FROM knowledge_revisions r JOIN knowledge_documents d ON d.id=r.document_id WHERE r.id=?",
+                "FROM knowledge_revisions r JOIN knowledge_documents d ON d.id=r.document_id WHERE r.id=? "
+                "AND r.status!='deleted' AND NOT EXISTS (SELECT 1 FROM deletion_ledger WHERE "
+                "(entity_type IN ('knowledge-document','document') AND entity_id=d.id) OR "
+                "(entity_type IN ('knowledge-revision','revision') AND entity_id=r.id))",
                 (target.id,)).fetchone()
             if not row or row["deleted_at"]:
                 return denied
@@ -113,6 +116,32 @@ class WorkspaceRepository:
             if request.kind == "section":
                 return {"allowed": True}
             return self._content(conn, request.reference, context)
+
+    def titles(self, request):
+        """Volatile display metadata, resolved under the same access/policy gate."""
+        with self.db.transaction() as conn:
+            require_assistance(conn, expected_revision=request.policy.revision)
+            context = request.context.identity if request.context else None
+            if request.context and request.context.retention == "saved" and not context_exists(conn, context):
+                return {"items": []}
+            items = []
+            for reference in request.references:
+                if not self._content(conn, reference, context)["allowed"]:
+                    continue
+                target = reference.target
+                if target.type in ("library_revision", "note_revision"):
+                    row = conn.execute("SELECT d.title FROM knowledge_revisions r JOIN knowledge_documents d "
+                        "ON d.id=r.document_id WHERE r.id=?", (target.id,)).fetchone()
+                elif target.type == "saved_test_version":
+                    row = conn.execute("SELECT t.title FROM assessment_test_versions v JOIN assessment_tests t "
+                        "ON t.id=v.test_id WHERE v.id=?", (target.id,)).fetchone()
+                else:
+                    row = conn.execute("SELECT title FROM knowledge_attachments WHERE id=?", (target.id,)).fetchone()
+                    if row is None:
+                        row = conn.execute("SELECT filename AS title FROM case_attachments WHERE id=?", (target.id,)).fetchone()
+                if row and isinstance(row["title"], str) and row["title"].strip():
+                    items.append({"target": target.model_dump(mode="json"), "title": row["title"][:240]})
+            return {"items": items}
 
     def entries(self, section, context=None):
         with self.db.transaction() as conn:

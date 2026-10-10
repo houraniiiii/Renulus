@@ -43,6 +43,13 @@ class AccessRequest(BaseModel):
         return self
 
 
+class TitleRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    context: WorkspaceContext | None = None
+    policy: PolicyReference
+    references: list[ContentReference] = Field(max_length=100)
+
+
 def create_router(services):
     repository = WorkspaceRepository(services)
     services.registry["workspace"] = repository
@@ -59,6 +66,10 @@ def create_router(services):
     @router.post("/authorize")
     def authorize(body: AccessRequest):
         return repository.authorize(body)
+
+    @router.post("/titles")
+    def titles(body: TitleRequest):
+        return repository.titles(body)
 
     @router.get("/entries")
     def entries(section: Literal["Files", "Sources", "Notes", "Goals"] = "Files",

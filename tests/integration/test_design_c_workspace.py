@@ -32,6 +32,27 @@ def test_saved_tabs_reopen_and_temporary_contexts_never_persist(tmp_path, kind):
     assert "design_c.workspace" not in {row["key"] for row in export_records(app.state.services)["records"]["preferences"]}
 
 
+def test_tab_titles_are_current_authorized_metadata_and_never_preferences(tmp_path):
+    app = create_app(tmp_path / "tab-titles"); client = TestClient(app)
+    services = app.state.services
+    chat = client.post("/api/v1/conversations", json={}).json()
+    source = services.registry["knowledge"].import_text("Synthetic source body", title="Dialysis source", process=False)
+    reference = {"target": {"type": "library_revision", "id": source["revision_id"]}}
+    request = {"context": {"identity": chat["identity"], "retention": "saved"},
+        "policy": client.get("/api/v1/assessment/policy").json(), "references": [reference]}
+    response = client.post("/api/v1/workspace/titles", json=request)
+    assert response.status_code == 200 and response.json() == {"items": [{"target": reference["target"], "title": "Dialysis source"}]}
+    assert client.get("/api/v1/workspace/preferences").json()["tabs"] == []
+    services.db.execute("UPDATE knowledge_revisions SET rights_json=? WHERE id=?", ('{"display":false}', source["revision_id"]))
+    assert client.post("/api/v1/workspace/titles", json=request).json() == {"items": []}
+    services.db.execute("UPDATE knowledge_revisions SET rights_json=? WHERE id=?", ('{"display":true}', source["revision_id"]))
+    services.db.mark_deleted("knowledge-revision", source["revision_id"])
+    assert client.post("/api/v1/workspace/titles", json=request).json() == {"items": []}
+    with services.db.transaction() as conn:
+        advance_policy(conn)
+    assert client.post("/api/v1/workspace/titles", json=request).status_code == 409
+
+
 def test_display_is_separate_from_extraction_and_late_policy(tmp_path):
     app = create_app(tmp_path / "access")
     services = app.state.services

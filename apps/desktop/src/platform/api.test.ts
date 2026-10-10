@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { api, ApiError, apiPath } from './api';
 import { stream } from './stream';
@@ -5,6 +6,17 @@ import { stream } from './stream';
 afterEach(() => vi.unstubAllGlobals());
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 describe('local API transport', () => {
+  it('does not emit mutation events for a metadata POST read', async () => {
+    const changed = vi.fn(); window.addEventListener('renulus:records-changed', changed);
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => json({ items: [] })); vi.stubGlobal('fetch', fetch);
+    try {
+      await api('/workspace/titles', { method: 'POST', body: {}, notifyRecordsChanged: false });
+      expect(changed).not.toHaveBeenCalled();
+      expect(fetch.mock.calls[0][1]).not.toHaveProperty('notifyRecordsChanged');
+      await api('/learn/threads', { method: 'POST', body: {} });
+      expect(changed).toHaveBeenCalledTimes(1);
+    } finally { window.removeEventListener('renulus:records-changed', changed); }
+  });
   it('uses v1, JSON and no-store without exposing renderer-supplied credentials', async () => {
     const fetch = vi.fn().mockResolvedValue(json({ id: 'synthetic-record' })); vi.stubGlobal('fetch', fetch);
     expect(await api('/learn/threads', { method: 'POST', body: { title: 'Synthetic' }, headers: { Authorization: 'not-a-real-secret', 'x-renulus-token': 'renderer-value' } })).toEqual({ id: 'synthetic-record' });
