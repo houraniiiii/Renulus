@@ -1,8 +1,8 @@
 # Design C Windows delivery record
 
-October 10, 2026. Delivery is in preparation. The normal launcher still selects
-the accepted Flow `f1c49444` installation. No Design C installer, installed pass or
-default promotion is claimed by this checkpoint.
+October 10, 2026. Candidate `4c289868` manufacture passed. The normal launcher
+still selects the accepted Flow `f1c49444` installation. Actual fresh installed
+acceptance is in progress; no installed pass or default promotion is claimed.
 
 The [Design C spec](../planning/DESIGN_C_IMPLEMENTATION_SPEC.md) remains the single
 implementation backlog. This file records release evidence and the cutover
@@ -93,6 +93,22 @@ flow must verify the original, indexed passages and real local retrieval before
 that gate can pass. Four unrelated deferred gates remain explicit.
 
 ## Installation and acceptance boundary
+
+The manufactured candidate is exact source
+`4c2898682d65b36d0281f890298ac38697e224b7`. Its frozen renderer/typecheck and
+native build passed; packaged backend inventory contains 39,353 files and
+2,177,262,408 bytes. The source/runtime/hash receipt is
+`C:/Renulus/scratch/design-c/delivery/matching-4c289868/delivery-provenance.json`.
+Installer size is 1,011,460,914 bytes; SHA256 is
+`360889a6aa21e9323a48764c3d443ca00f59ee4583a7f489caeb573c9c4c4a6c`.
+Manufacture exited zero. The subsequent `bc149c91` change is report-only; product
+source remains byte-identical to this frozen candidate.
+
+Native backup-download, preload, backend/profile launch and DataManagement
+source match the dated Flow revision, recorded in
+`preparation/native-retained-parity-4c289868.json`. This is parity evidence,
+not a fresh physical Save/cancel or live-provider pass. Main navigation/API
+isolation changes belong to the new installed checks.
 
 Manufacture and installation use fresh `matching-<revision>` and
 `installed-<revision>` destinations. A matching receipt must compare backend,

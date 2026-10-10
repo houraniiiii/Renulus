@@ -15,11 +15,20 @@ Use [parallel-work rules](../planning/PARALLEL_WORK.md) and record prerequisite
 commits, integrated evidence and remaining limits in the ticket handoff or its
 linked issue. Update this current section when execution starts.
 
-### Current integration checkpoint — final policy and search repairs integrated
+### Current integration checkpoint — 4c289868 manufactured; installed acceptance
 
 The earlier reservations below are historical. Active work remains against the
 same DC01–DC21 backlog. Canonical root/branch and baseline 528025ff ancestry were
 rechecked; the 18 pre-existing normalization-only flags remain unstaged.
+
+Manufacture of exact `4c2898682d65b36d0281f890298ac38697e224b7` exited zero:
+typecheck/renderer/native build, public toolchain and full packaged inventory
+pass; matching installer/provenance are in `delivery/matching-4c289868`. Fresh
+`installed-4c289868` acceptance is now the lead's serial work. Aquinas' report-only
+`bc149c91` adds bounded DC10 hidden restriction/keyboard evidence; that controller
+closed normally and freed the helper slot. No production bytes changed after
+the freeze. Completed review workers are closed; Zeno/Pauli remain available
+for findings within their exact delivery-driver leases.
 
 | Owner | Current exact lease / prerequisite | Current evidence and next gate |
 | --- | --- | --- |
