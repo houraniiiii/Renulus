@@ -2,6 +2,7 @@
 """Owned synthetic Home checks; no live inference, credentials or owner profile."""
 import json
 import asyncio
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -41,7 +42,7 @@ class SyntheticTransport:
 
 @pytest.fixture
 def home(tmp_path, monkeypatch):
-    monkeypatch.setattr("renulus.server.MODULE_ORDER", ("runtime", "content", "knowledge", "learn", "cases", "assessment", "memory", "study"))
+    monkeypatch.setattr("renulus.server.MODULE_ORDER", ("runtime", "content", "knowledge", "learn", "cases", "assessment", "memory", "study", "updates"))
     app = create_app(tmp_path / "synthetic-profile")
     service = app.state.services.registry["home"]
     provider = app.state.services.registry["provider"]
@@ -355,3 +356,171 @@ async def test_restart_and_cancellation_do_not_resume_provider_work(home):
     await restarted.refresh()
     assert len(transport.calls) == 1
     assert restarted._task is None
+
+
+class SyntheticHomeReviewedContent:
+    """Original contract adapter; the real collection/attempt owners produce evidence."""
+    def __init__(self):
+        self.question = {
+            "id": "home_renal_question", "version": 1, "key_version": 1,
+            "family_id": "home_renal_family", "family_version": 1, "topic_id": "T01",
+            "stem": "PRIVATE_HOME_REVIEWED_STEM", "kind": "single_best_answer",
+            "usage": "assessment_reserved", "objective_ids": ["T01-objective"],
+            "options": [{"id": "a", "text": "Original synthetic option A"},
+                        {"id": "b", "text": "Original synthetic option B"}],
+            "correct_option_ids": ["a"], "explanation": "PRIVATE_HOME_REVIEWED_KEY",
+            "sources": [{"source_id": "home-original", "locator": "Synthetic section"}],
+            "difficulty": "foundation", "withdrawn": False, "current_version": 1,
+            "review": {"status": "assistant_reviewed", "source_key_checked": True},
+        }
+
+    def list_question_summaries(self, **_):
+        fields = ("id", "version", "key_version", "family_id", "family_version",
+                  "topic_id", "objective_ids", "difficulty", "usage", "review")
+        return [{field: deepcopy(self.question[field]) for field in fields}]
+
+    def get_question_version(self, identifier, version):
+        assert (identifier, version) == (self.question["id"], 1)
+        return deepcopy(self.question)
+
+
+@pytest.fixture
+def home_whole(home):
+    from renulus.assessment.test_models import CreateReviewedTestRequest
+    from renulus.assessment.attempt_models import StartAttempt
+
+    app, service, transport = home
+    services = app.state.services
+    services.registry["content"] = SyntheticHomeReviewedContent()
+    saved = services.get("saved_tests").create_reviewed(CreateReviewedTestRequest(
+        idempotency_key="home-whole-reviewed", title="Original synthetic renal learning", count=1))
+    owner = services.get("whole_attempts")
+    attempt = owner.start(StartAttempt(version={"type": "saved_test_version", "id": saved["version_id"]},
+                                      mode="study", timing={"kind": "untimed"}), "home-whole-start")
+    return service, transport, owner, attempt, saved
+
+
+def home_whole_commit(owner, attempt, *, key="home-whole-commit", option="a"):
+    from renulus.assessment.attempt_models import CommitAnswer
+
+    return owner.commit_answer(attempt["id"], CommitAnswer(
+        expected_revision=attempt["draft_revision"], item_id=attempt["current_item"]["item_id"],
+        option_ids=[option]), key)
+
+
+@pytest.mark.asyncio
+async def test_whole_attempt_reviewed_commit_enters_home_only_as_safe_scalar_activity(home_whole):
+    service, transport, owner, attempt, _ = home_whole
+    home_whole_commit(owner, attempt)
+    with service.db.transaction() as conn:
+        context = service._context(conn)
+    assert len(context.material["learning_activity"]) == 1
+    activity = context.material["learning_activity"][0]
+    assert activity["topic_id"] == "T01" and activity["correct"] is True
+    assert activity["reviewed"] is True and activity["bank_cohort_eligible"] is True
+    assert activity["assisted"] is False and activity["repeat"] is False
+    assert activity["mode"] == "study" and activity["score_bucket"] == "fresh"
+    evidence = service.db.fetch_one("SELECT id FROM learning_evidence WHERE kind='assessment-test-answer'")
+    assert any(pin.dependency.target.id == evidence["id"] for pin in context.inputs)
+    await service.refresh()
+    assert (await finish(service))["suggestions"]
+    sent = json.dumps(transport.calls)
+    assert "PRIVATE_HOME_REVIEWED" not in sent and "correct_option_ids" not in sent
+    assert "home_renal_question" not in sent and attempt["id"] not in sent
+
+
+def test_whole_attempt_pending_draft_and_reserved_bank_content_are_not_home_activity(home_whole):
+    from renulus.assessment.attempt_models import SaveDraft
+
+    service, _, owner, attempt, _ = home_whole
+    owner.save(attempt["id"], SaveDraft(expected_revision=0, position=0, answers=[{
+        "item_id": attempt["current_item"]["item_id"], "option_ids": ["a"], "marked": False,
+    }]), "home-pending-draft")
+    assert not service.db.fetch_all("SELECT id FROM learning_evidence")
+    with service.db.transaction() as conn:
+        context = service._context(conn)
+    assert context.material["learning_activity"] == []
+    assert "PRIVATE_HOME_REVIEWED" not in json.dumps(context.material)
+
+
+def test_whole_attempt_unanswered_test_result_does_not_become_home_mistake(home_whole):
+    from renulus.assessment.attempt_models import StartAttempt, SubmitAttempt
+
+    service, _, owner, _, saved = home_whole
+    attempt = owner.start(StartAttempt(version={"type": "saved_test_version", "id": saved["version_id"]},
+                                      mode="test"), "home-blank-test")
+    result = owner.submit(attempt["id"], SubmitAttempt(expected_draft_revision=0), "home-submit-blank")
+    assert result["result"]["unanswered"] == 1
+    payload = json.loads(service.db.fetch_one("SELECT payload_json FROM learning_evidence")["payload_json"])
+    assert payload["outcome"] == "unanswered"
+    with service.db.transaction() as conn:
+        assert service._context(conn).material["learning_activity"] == []
+
+
+def test_whole_attempt_personal_edit_of_reviewed_origin_keeps_personal_cohort(home_whole):
+    from renulus.assessment.test_models import EditTestVersionRequest
+    from renulus.assessment.attempt_models import StartAttempt
+
+    service, _, owner, _, saved = home_whole
+    repository = service.services.get("saved_tests")
+    items = repository.preview_version(saved["test_id"], saved["version_id"])["items"]
+    # Explicit original synthetic personal keys, not a read of reviewed private keys.
+    items[0].update(correct_option_ids=["b"], explanation="Original synthetic personal explanation")
+    personal = repository.edit_version(saved["test_id"], EditTestVersionRequest(
+        expected_revision=1, base_version_id=saved["version_id"], items=items, idempotency_key="home-personal-edit"))
+    attempt = owner.start(StartAttempt(version={"type": "saved_test_version", "id": personal["version_id"]}),
+                          "home-personal-study")
+    home_whole_commit(owner, attempt, option="b")
+    with service.db.transaction() as conn:
+        activities = service._context(conn).material["learning_activity"]
+    assert len(activities) == 1
+    activity = activities[0]
+    assert activity["origin"] == "reviewed_bank" and activity["review_quality"] == "personal"
+    assert activity["score_bucket"] == "personal"
+    assert activity["reviewed"] is False and activity["bank_cohort_eligible"] is False
+
+
+def test_whole_attempt_assisted_repeat_keeps_both_flags_in_home_activity(home_whole):
+    from renulus.assessment.attempt_models import HelpRequest, StartAttempt
+
+    service, _, owner, _, saved = home_whole
+    repeat = owner.start(StartAttempt(version={"type": "saved_test_version", "id": saved["version_id"]}),
+                         "home-repeat-study")
+    assert repeat["current_item"]["repeat"] is True
+    owner.help(repeat["id"], HelpRequest(expected_revision=0, expected_policy_revision=repeat["policy"]["revision"],
+               item_id=repeat["current_item"]["item_id"], kind="sources"), "home-repeat-sources")
+    home_whole_commit(owner, repeat)
+    with service.db.transaction() as conn:
+        activity = service._context(conn).material["learning_activity"][0]
+    assert activity["score_bucket"] == "repeat"
+    assert activity["assisted"] is True and activity["repeat"] is True
+
+
+@pytest.mark.parametrize("change", ["forged_commit", "extra_private_field", "cohort_flip",
+                                    "evidence_copy", "attempt_deleted", "suppressed"])
+def test_whole_attempt_home_rejects_untrusted_or_unavailable_evidence(home_whole, change):
+    service, _, owner, attempt, _ = home_whole
+    home_whole_commit(owner, attempt)
+    evidence = service.db.fetch_one("SELECT * FROM learning_evidence WHERE kind='assessment-test-answer'")
+    value = json.loads(evidence["payload_json"])
+    if change == "forged_commit":
+        value["commit_id"] = "not-a-canonical-commit"
+    elif change == "extra_private_field":
+        value["raw_test_key"] = "PRIVATE_HOME_FORGED_KEY"
+    elif change == "cohort_flip":
+        value["bank_cohort_eligible"] = False
+    elif change == "evidence_copy":
+        service.db.execute("INSERT INTO learning_evidence VALUES(?,?,?,?,?,?)",
+            ("unmatched-evidence-copy", evidence["kind"], evidence["topic_id"], evidence["entity_id"],
+             evidence["payload_json"], utc_now()))
+        service.db.execute("DELETE FROM learning_evidence WHERE id=?", (evidence["id"],))
+    elif change == "attempt_deleted":
+        service.db.mark_deleted("test_attempt", attempt["id"])
+    else:
+        service.db.execute("INSERT INTO memory_suppression VALUES(?,?)", ("evidence:" + evidence["id"], utc_now()))
+    if change in ("forged_commit", "extra_private_field", "cohort_flip"):
+        service.db.execute("UPDATE learning_evidence SET payload_json=? WHERE id=?", (json.dumps(value), evidence["id"]))
+    with service.db.transaction() as conn:
+        context = service._context(conn)
+    assert context.material["learning_activity"] == []
+    assert not context.inputs
