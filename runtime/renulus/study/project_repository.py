@@ -172,6 +172,61 @@ class ProjectRepository:
                     revisions.append(source['id'])
         return {'project_id': row['project_id'] if row else None, 'revision_ids': revisions, 'context_epoch': context_epoch_in(conn)}
 
+    def note_saved_in(self, conn, document_id, revision_id, project_id=None):
+        """Carry a saved note's memberships within its owner's save transaction.
+
+        Queued notes may be linked; context_in still requires ready, active,
+        permitted sources. Existing archived associations survive edits. This
+        never changes a document, revision or immutable content reference.
+        """
+        from renulus.knowledge.models import SourceMetadata
+        if not conn.in_transaction:
+            raise ValueError('Note membership requires the caller transaction')
+        require_assistance(conn)
+        note = conn.execute('SELECT r.metadata_json FROM knowledge_documents d JOIN knowledge_revisions r '
+            'ON r.document_id=d.id AND r.id=d.latest_revision WHERE d.id=? AND r.id=? '
+            "AND d.scope_kind='personal-library' AND d.scope_entity IS NULL AND d.reserved=0 AND d.deleted_at IS NULL "
+            "AND NOT EXISTS(SELECT 1 FROM deletion_ledger WHERE entity_type IN ('knowledge-document','document') AND entity_id=d.id) "
+            "AND NOT EXISTS(SELECT 1 FROM deletion_ledger WHERE entity_type IN ('knowledge-revision','revision') AND entity_id=r.id)",
+            (document_id, revision_id)).fetchone()
+        try:
+            valid = note and 'study-note' in SourceMetadata.model_validate_json(note['metadata_json']).asset_role
+        except ValueError:
+            valid = False
+        if not valid:
+            raise ApiError('note_unavailable', 'Save a current Library study note before linking it', 409)
+        if project_id is not None and self._get(conn, project_id)['lifecycle'] != 'active':
+            raise ApiError('project_archived', 'Restore the project before adding work', 409)
+        rows = conn.execute('SELECT m.* FROM study_project_documents m JOIN knowledge_revisions r ON r.id=m.revision_id '
+            'JOIN study_projects p ON p.id=m.project_id WHERE r.document_id=? '
+            "AND p.lifecycle!='deleted' AND NOT EXISTS(SELECT 1 FROM deletion_ledger WHERE entity_type='project' AND entity_id=p.id) "
+            "AND NOT EXISTS(SELECT 1 FROM deletion_ledger WHERE entity_type='project_document' AND entity_id=m.id) "
+            'ORDER BY m.position,m.id', (document_id,)).fetchall()
+        associations = {}
+        for row in rows:
+            associations.setdefault(row['project_id'], []).append(row)
+        if project_id is not None:
+            associations.setdefault(project_id, [])
+        changed = False
+        for owner, memberships in associations.items():
+            current = any(row['revision_id'] == revision_id for row in memberships)
+            superseded = [row for row in memberships if row['revision_id'] != revision_id]
+            if current and not superseded:
+                continue
+            position = min((row['position'] for row in memberships), default=None)
+            if position is None:
+                position = conn.execute('SELECT COALESCE(MAX(position)+1,0) FROM study_project_documents WHERE project_id=?', (owner,)).fetchone()[0]
+            for row in superseded:
+                self.db.mark_deleted('project_document', row['id'], conn)
+                conn.execute('DELETE FROM study_project_documents WHERE id=?', (row['id'],))
+            if not current:
+                conn.execute('INSERT INTO study_project_documents VALUES(?,?,?,?,1,?)',
+                    (durable_id('project_document'), owner, revision_id, position, utc_now()))
+            self._touch(conn, owner)
+            changed = True
+        if changed:
+            bump_context_epoch(conn)
+
     def goal(self, identifier, request, operation, goal_id=None, key=None):
         with self.db.transaction() as conn:
             def mutate():

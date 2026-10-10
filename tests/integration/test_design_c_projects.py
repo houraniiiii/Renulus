@@ -127,3 +127,94 @@ def test_project_goal_keeps_manual_and_real_evidence_progress_with_retry_and_res
         restore_records(app.state.services,older,confirm_older=True)
         assert client.get(path).json()['goals']==[]
         assert client.get('/api/v1/conversations/learning/'+chat['identity']['id']).status_code==200
+
+
+def save_note_revision(conn, document_id, revision_id, ordinal):
+    """Synthetic Notes caller writes its canonical rows before the Project seam."""
+    from renulus.storage.database import utc_now
+    now = utc_now()
+    if ordinal == 1:
+        conn.execute('INSERT INTO knowledge_documents VALUES(?,?,?,?,?,0,NULL,?,NULL,?,?)',
+            (document_id, 'Fictional study note', 'original', 'personal-library', None, revision_id, now, now))
+    else:
+        conn.execute('UPDATE knowledge_documents SET latest_revision=? WHERE id=?', (revision_id, document_id))
+    conn.execute('INSERT INTO knowledge_revisions VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        (revision_id, document_id, ordinal, 'queued', '0'*64, 'text/plain', 0, None,
+         json.dumps({'asset_role':['study-note']}), '{}', None, None, None, now, None))
+
+
+def test_note_save_transfers_active_and_archived_memberships_without_retrieval_or_pin_rewrite(tmp_path):
+    from renulus.storage.invalidation import context_epoch_in
+    app = project_app(tmp_path / 'project-note-save')
+    services = app.state.services
+    with TestClient(app) as client:
+        first, second = [client.post('/api/v1/study/projects', json={'title': title}).json()
+                         for title in ('Fictional active notes', 'Fictional archived notes')]
+        projects = services.get('projects')
+        chat = client.post('/api/v1/conversations', json={'project_id': first['id']}).json()
+        with services.db.transaction() as conn:
+            save_note_revision(conn, 'note-doc', 'note-one', 1)
+            projects.note_saved_in(conn, 'note-doc', 'note-one', first['id'])
+            projects.note_saved_in(conn, 'note-doc', 'note-one', second['id'])
+        old = [client.get('/api/v1/study/projects/'+p['id']).json() for p in (first, second)]
+        client.post('/api/v1/study/projects/'+second['id']+'/archive', json={'expected_revision':old[1]['revision']})
+        with services.db.transaction() as conn:
+            pinned = dict(conn.execute('SELECT * FROM knowledge_revisions WHERE id=?', ('note-one',)).fetchone())
+            save_note_revision(conn, 'note-doc', 'note-two', 2)
+            epoch = context_epoch_in(conn)
+            projects.note_saved_in(conn, 'note-doc', 'note-two')
+            assert context_epoch_in(conn) == epoch+1
+            projects.note_saved_in(conn, 'note-doc', 'note-two')
+            assert context_epoch_in(conn) == epoch+1
+            assert dict(conn.execute('SELECT * FROM knowledge_revisions WHERE id=?', ('note-one',)).fetchone()) == pinned
+            assert projects.context_in(conn, 'learning', chat['identity']['id'])['revision_ids'] == []
+        for previous in old:
+            current = client.get('/api/v1/study/projects/'+previous['id']).json()
+            assert [d['revision_id'] for d in current['documents']] == ['note-two']
+            assert services.db.is_deleted('project_document', previous['documents'][0]['id'])
+            assert current['revision'] > previous['revision']
+
+
+@pytest.mark.parametrize('refusal', ['classification', 'latest', 'document_deleted', 'revision_deleted', 'project_deleted', 'archived', 'rollback'])
+def test_note_membership_refusal_rolls_back_callers_saved_revision(tmp_path, refusal):
+    from renulus.contracts import ApiError
+    app = project_app(tmp_path / 'note-refusal')
+    services = app.state.services
+    with TestClient(app) as client:
+        project = client.post('/api/v1/study/projects', json={'title':'Fictional note rollback'}).json()
+        with pytest.raises((ApiError, RuntimeError)):
+            with services.db.transaction() as conn:
+                save_note_revision(conn, 'refused-note', 'refused-revision', 1)
+                if refusal == 'classification':
+                    conn.execute("UPDATE knowledge_revisions SET metadata_json='{}' WHERE id='refused-revision'")
+                elif refusal == 'latest':
+                    conn.execute("UPDATE knowledge_documents SET latest_revision=NULL WHERE id='refused-note'")
+                elif refusal in ('document_deleted', 'revision_deleted', 'project_deleted'):
+                    entity, identifier = {'document_deleted':('knowledge-document','refused-note'),
+                        'revision_deleted':('knowledge-revision','refused-revision'), 'project_deleted':('project',project['id'])}[refusal]
+                    services.db.mark_deleted(entity, identifier, conn)
+                elif refusal == 'archived':
+                    conn.execute("UPDATE study_projects SET lifecycle='archived' WHERE id=?", (project['id'],))
+                services.get('projects').note_saved_in(conn, 'refused-note', 'refused-revision', project['id'])
+                if refusal == 'rollback':
+                    raise RuntimeError('Synthetic owner transaction failure')
+        assert client.get('/api/v1/study/projects/'+project['id']).json()['documents'] == []
+        assert not services.db.fetch_all('SELECT * FROM knowledge_documents')
+        assert not services.db.fetch_all('SELECT * FROM knowledge_revisions')
+
+
+def test_note_edit_does_not_recreate_explicitly_unlinked_project_membership(tmp_path):
+    app = project_app(tmp_path / 'note-unlinked')
+    services = app.state.services
+    with TestClient(app) as client:
+        project = client.post('/api/v1/study/projects', json={'title':'Fictional removed note link'}).json()
+        route = '/api/v1/study/projects/'+project['id']
+        with services.db.transaction() as conn:
+            save_note_revision(conn, 'unlinked-note', 'unlinked-one', 1)
+            services.get('projects').note_saved_in(conn, 'unlinked-note', 'unlinked-one', project['id'])
+        current = client.get(route).json()
+        assert client.delete(route+'/documents/unlinked-one', params={'expected_revision':current['revision']}).status_code == 200
+        with services.db.transaction() as conn:
+            save_note_revision(conn, 'unlinked-note', 'unlinked-two', 2)
+            services.get('projects').note_saved_in(conn, 'unlinked-note', 'unlinked-two')
+        assert client.get(route).json()['documents'] == []
