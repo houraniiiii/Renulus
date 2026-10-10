@@ -29,3 +29,26 @@ it('preserves the actual Home draft through policy-only unmount and clears it on
   fireEvent.click(screen.getByRole('link', { name: 'New chat' }));
   await waitFor(() => expect((screen.getByRole('textbox', { name: 'How can I help you today' }) as HTMLTextAreaElement).value).toBe(''));
 });
+
+it('recovers saved navigation after a Test ends following a restricted reopen', async () => {
+  let restricted = true, revision = 3;
+  window.history.replaceState(null, '', '#/newchat');
+  const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } });
+  vi.stubGlobal('fetch', vi.fn(async (path: string) => {
+    if (path.endsWith('/assessment/policy')) return json({ revision, active_test_id: restricted ? 'synthetic_test' : null, assistance_allowed: !restricted });
+    if (path.endsWith('/health')) return json({ status: 'ready' });
+    if (path.includes('/home')) return json({ preferences: { doctor_name: null, revision: 1 }, suggestions: null, job: null, assistance_allowed: true });
+    if (path.includes('/workspace/preferences')) return json({ width: 480, tabs: [] });
+    if (path.includes('/study/projects')) return restricted ? json({ error: { code: 'assistance_restricted', message: 'Submit the Test first' } }, 409)
+      : json({ items: [{ id: 'synthetic_project', title: 'Synthetic restored project', lifecycle: 'active', revision: 1 }] });
+    if (path.includes('/conversations')) return restricted ? json({ error: { code: 'assistance_restricted', message: 'Submit the Test first' } }, 409)
+      : json({ items: [{ identity: { type: 'learn_thread', id: 'synthetic_chat' }, title: 'Synthetic restored chat', lifecycle: 'active', retention: 'saved', revision: 1 }] });
+    return json({ items: [] });
+  }));
+  render(<App />);
+  await screen.findByText('Retry chats'); // History stays hidden during Test.
+  restricted = false; revision++; fireEvent(window, new Event('renulus:assessment-policy'));
+  await screen.findByRole('link', { name: 'Synthetic restored chat' });
+  await screen.findByRole('link', { name: 'Synthetic restored project' });
+  expect(screen.queryByRole('button', { name: 'Retry chats' })).toBeNull();
+});

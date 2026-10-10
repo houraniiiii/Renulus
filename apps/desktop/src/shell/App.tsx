@@ -82,6 +82,11 @@ function Shell() {
     return () => window.removeEventListener('renulus:records-changed', refresh);
   }, [projects.retry, conversations.retry]);
   useEffect(() => {
+    // A timed Test can finish without a record-mutation event in this renderer.
+    // Recover navigation reads that were correctly refused at initial reopen.
+    if (policy?.assistance_allowed) { projects.retry(); conversations.retry(); }
+  }, [policy?.assistance_allowed, projects.retry, conversations.retry]);
+  useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       if (event.ctrlKey && event.key.toLowerCase() === 'k') { event.preventDefault(); openSearch(); }
       if (event.altKey && /^[1-5]$/.test(event.key) && !document.querySelector('dialog[open]')) { event.preventDefault(); open(primary[Number(event.key) - 1].id); }
