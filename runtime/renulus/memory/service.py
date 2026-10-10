@@ -452,6 +452,8 @@ class MemoryService:
         Another close call observes the same drain; it does not restart work.
         """
         self.begin_shutdown()
+        if self._close_task.done():
+            return self._close_task.result()
         done, _ = await asyncio.wait({self._close_task}, timeout=timeout)
         if not done:
             raise ApiError('memory_close_timeout',

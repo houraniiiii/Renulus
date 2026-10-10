@@ -102,6 +102,16 @@ def recovery_is_busy(memory):
     assert caught.value.code == 'recovery_busy'
 
 
+def test_settled_close_is_idempotent_after_the_original_event_loop_has_closed(services):
+    create_router(services)
+    memory = services.get('memory')
+    asyncio.run(memory.close(timeout=1))
+    asyncio.run(memory.close(timeout=1))
+    with pytest.raises(ApiError) as caught:
+        memory.reindex()
+    assert caught.value.code == 'memory_stopping'
+
+
 @pytest.mark.asyncio
 async def test_provider_dispatch_rechecks_cancellation_on_the_reply_loop(settling_memory, services):
     from renulus.memory.providers import ApprovedLLM, generation_binding

@@ -5,7 +5,7 @@ Design C baseline `c2bd896420fb88f76d63ca576414dbbba182f4c2`. The current user
 instruction authorizes this implementation and the existing public test seams;
 the earlier research-only wording in the planning snapshots is historical.
 
-The user expanded this lane from memory to the connected shutdown path. Owned
+The integration task expanded this lane from memory to the connected shutdown path. Owned
 files are `runtime/renulus/memory/{service,api,providers}.py`,
 `runtime/renulus/{server,services}.py`, `runtime/renulus/runtime/api.py`,
 `apps/desktop/electron/backend{,.test}.ts`, `tests/memory/test_settlement.py`,
@@ -130,6 +130,7 @@ Each numbered cycle added one behavioral scenario before its implementation:
 | 20 | Shutdown acknowledged while an accepted Library original writer was held | Connected and cancelled-client requests retain real writer ownership through settlement |
 | 21 | An unbounded library join left existing memory provider admission open | Signal admission closure immediately, then join producers before releasing dependencies |
 | 22 | Replacing a consumer provider adapter made shutdown fail on its capability-only status | Cancellation and final release retain the same registered provider instance |
+| 23 | Repeating completed close from a new loop scheduled a callback on the closed original loop | Read an already-settled drain result directly; pending ownership is unchanged |
 
 Receipts are `receipts/red-01b.txt`, `red-02.txt` through `red-11.txt`, and the
 corresponding `green-01.txt` through `green-11.txt`. The initial `red-01.txt`
@@ -154,6 +155,14 @@ Only that verified synthetic pytest process was stopped to replace its loaded
 runtime; this run has no full-suite totals (`full-final.txt`).
 The correction passes all ten shutdown integration cases and the actual retained
 practice journey that exposed it: **11 passed** (`green-22b.txt`).
+The broad shard later exposed a second H24 regression in the real Qdrant privacy
+scanner's teardown: it calls `asyncio.run(memory.close())` after the TestClient
+loop already completed that same drain. `red-23.txt` reproduces the closed-loop
+error through public close; the two-line completion check passes `green-23.txt`.
+`green-23b.txt` / `green-23b.xml` record **33 passed** across all memory settlement,
+application shutdown and privacy-scanner cases. No task is reset, transferred or
+restarted: pending drains retain their original loop and worker ownership. This
+adds one test beyond the original 2,437-case coverage inventory.
 The earlier combined affected run collected at `36777c27` finished with
 **219 passed, 7 skipped, 1 failed** (`regression-final.txt`). Its single failure
 is the parent-owned route inventory fixture treating the authenticated neutral
@@ -182,6 +191,43 @@ feature-router construction needs learn/cases. Executing the original baseline
 server from `c2bd8964` with that same fixture module inventory reproduces
 `capability_unavailable: Learn is not ready` before startup.
 Receipts: `full-first-failure.txt` and `baseline-assessment-fixture.txt`.
+`baseline-fixture-matrix.txt` additionally runs the original baseline server
+source and current server with the same six reduced module inventories:
+assessment, Updates, Updates/Library, Knowledge only, Content only and
+Content/assessment. Every pair fails before lifespan with the same
+`capability_unavailable: Learn is not ready`. These are fixture assembly failures;
+no unrelated feature or fixture changes are included in this lane.
+
+The final full run uses `run_full_final.py` from the synthetic lane directory,
+managed Python, cleared `RENULUS_*` inputs, disabled plugin autoload and an
+external-socket guard. Its H24 source checkpoint is
+`29d147869056c14b80b1cdfe0026e0b705454990`; other foundation lanes remain shared
+working changes. Per-test events and the current node are retained alongside
+the complete output, so errors do not end the run and a stall is identifiable.
+Parent updated the authenticated neutral route inventory after collection. The
+complete latest inventory file passed **41 tests** (`inventory-final.txt` and
+`inventory-final.xml`). Parent reports the integrated production checkpoint
+`9a10562a`, including H01 `b5101da0` and main/inventory `1a228c29`; the full run
+started before those commits, with H24 runtime bytes unchanged since `29d14786`.
+
+The integration task subsequently authorized two isolated shards for untouched
+directories. The original process continues untouched. Coverage ownership is
+447 assessment/backup cases from that process, 1,076 cases/content/knowledge/
+learn/retrieval cases in shard A, and 914 integration/memory/regression/runtime/
+study/Updates cases in shard B. Each has its own basetemp and no-external-socket
+runner. `backend-coverage-plan.json` records the exact disjoint inventory. Four
+auto-generated ZIP-byte parameter IDs differ only in embedded ZIP timestamps;
+explicit one-to-one aliases were verified by comparing every other byte.
+`unique-coverage.json` counts only the assigned owner of each node, so subsequent
+duplicate work in the original process cannot inflate the total. These runs
+loaded memory before cycle 23; the 33-case focused receipt records the correction.
+
+`baseline-extra-failures.txt` reruns the saved-case generated-practice cancellation
+and both legacy-backup current-version failures with all six H24 Python modules
+loaded from `c2bd8964` in memory. All three failures reproduce unchanged; no
+repository files were replaced. `baseline-table-proposal.txt` proves the stale
+table inventory test, fixture and runtime registry are each byte-identical to
+the same baseline. These failures remain distinct from the fixed H24 close bug.
 
 Python syntax checks pass. This checkout has no configured Python typechecker,
 and neither mypy nor pyright is installed in the managed interpreter.
