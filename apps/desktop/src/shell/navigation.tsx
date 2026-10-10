@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { ContextScope } from '../platform/contracts';
+import type { ConversationSummary } from '../platform/designC';
 
 export const routes = [
   { id: 'newchat', label: 'New chat', module: 'home' },
@@ -27,6 +28,7 @@ export interface Navigation {
   revision: number;
   navigate: (route: RouteId, options?: NavigationOptions) => void;
   consumeIntent: (kind: 'sendIntent' | 'passageIntent', id: string) => void;
+  selectConversation: (conversation: ConversationSummary | null) => void;
   startFreshStudy: () => void;
 }
 const NavigationContext = createContext<Navigation | null>(null);
@@ -60,6 +62,13 @@ export function destinationHash(route: RouteId, payload?: Record<string, unknown
 }
 export function nextScope(current: ContextScope, route: RouteId, options: NavigationOptions = {}): ContextScope {
   if (options.freshStudy) return { kind: 'study' };
+  if (route === 'chat' && options.payload?.retention === 'saved') {
+    const identity = options.payload.conversation as { type?: unknown; id?: unknown } | undefined;
+    if (identity && typeof identity.id === 'string' && savedId.test(identity.id)) {
+      if (identity.type === 'case') return { kind: 'saved-case', entity_id: identity.id };
+      if (identity.type === 'learn_thread') return { kind: 'study' };
+    }
+  }
   if (current.kind === 'temporary-case') return options.scope?.kind === 'temporary-case' ? options.scope : current;
   if (current.kind === 'unclassified') return current;
   if (route === 'cases' && !options.scope) return { kind: 'temporary-case' };
@@ -67,7 +76,7 @@ export function nextScope(current: ContextScope, route: RouteId, options: Naviga
 }
 export function NavigationProvider({ children }: { children: ReactNode }) {
   const [route, setRoute] = useState(() => routeFromHash(window.location.hash));
-  const [scope, setScope] = useState<ContextScope>(() => ({ kind: route === 'cases' ? 'temporary-case' : 'study' }));
+  const [scope, setScope] = useState<ContextScope>(() => nextScope({ kind: 'study' }, route, { payload: savedHandoffFromHash(window.location.hash) }));
   const [handoff, setHandoff] = useState<Record<string, unknown> | undefined>(() => savedHandoffFromHash(window.location.hash));
   const [revision, setRevision] = useState(0);
   const ownHash = useRef<string | undefined>(undefined);
@@ -85,8 +94,9 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       if (ownHash.current === window.location.hash) { ownHash.current = undefined; return; }
       const next = routeFromHash(window.location.hash);
       setRoute(next);
-      setScope(current => nextScope(current, next));
-      setHandoff(savedHandoffFromHash(window.location.hash));
+      const payload = savedHandoffFromHash(window.location.hash);
+      setScope(current => nextScope(current, next, { payload }));
+      setHandoff(payload);
       setRevision(value => value + 1);
     };
     window.addEventListener('hashchange', onHash);
@@ -101,7 +111,19 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       const next = { ...current }; delete next[kind]; return next;
     });
   }
-  return <NavigationContext.Provider value={{ route, scope, handoff, revision, navigate, consumeIntent, startFreshStudy: () => navigate('study', { freshStudy: true }) }}>{children}</NavigationContext.Provider>;
+  function selectConversation(conversation: ConversationSummary | null) {
+    if (route !== 'chat') return;
+    const payload = conversation ? { conversation: conversation.identity, retention: conversation.retention } : undefined;
+    setHandoff(current => {
+      const previous = current?.conversation as { type?: unknown; id?: unknown } | undefined;
+      const same = conversation && previous?.type === conversation.identity.type && previous.id === conversation.identity.id;
+      return same ? { ...current, ...payload } : payload;
+    });
+    setScope(current => conversation ? nextScope(current, 'chat', { payload }) : { kind: 'study' });
+    const hash = destinationHash('chat', payload);
+    if (window.location.hash !== hash) { ownHash.current = hash; window.location.hash = hash; }
+  }
+  return <NavigationContext.Provider value={{ route, scope, handoff, revision, navigate, consumeIntent, selectConversation, startFreshStudy: () => navigate('study', { freshStudy: true }) }}>{children}</NavigationContext.Provider>;
 }
 export function useNavigation(): Navigation {
   const context = useContext(NavigationContext);

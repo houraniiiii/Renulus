@@ -160,6 +160,21 @@ root `C:/Renulus/scratch/dcctl/u04`. Reader and attachment adapters still requir
 their producer integration before connected acceptance. Historical profile,
 originals, credentials and installed Flow selection remain untouched.
 
+The connected Chat page is integrated at `c19d1493`. The lead corrected modern
+saved-chat selection to use its typed retention/context rather than inherited
+legacy Case snapshot state, wires directly created/deleted chats into Workspace
+context without remounting the route, and keeps one content heading per screen.
+Typed run cancellation remains reachable during Test while run/text disclosures
+stay blocked. Fourteen affected shell checks, three policy checks, typecheck and
+build passed. Hidden source pixels cover wide/narrow Home and drawer reachability;
+the latest connected build restarted in the same owned `dcctl/c01` profile.
+These checks do not yet establish full Chat/reader/attempt or delivery acceptance.
+
+The owner requested a current twenty-minute progress follow-up. The app heartbeat
+`renulus-design-c-progress` is active on this task and continues unfinished
+authorised work without duplicating active lanes or repeating unchanged tests.
+The historical paused delivery heartbeat remains paused.
+
 The entries below preserve earlier implementation evidence. Their Flow selection,
 branches, paths, issue status, time windows and heartbeat instructions describe
 those dated runs; they are not assignments or scheduling instructions for C.

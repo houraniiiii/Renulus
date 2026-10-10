@@ -41,3 +41,17 @@ def test_late_read_cannot_publish_help_after_policy_changes(tmp_path):
     response = TestClient(app).get("/api/v1/synthetic-late-help")
     assert response.status_code == 409
     assert "SYNTHETIC_PRIVATE_KEY_SENTINEL" not in response.text
+
+
+def test_active_test_permits_typed_chat_cancellation_but_no_run_disclosure(tmp_path):
+    app = create_app(tmp_path / "cancel")
+    start_test(app.state.services.db)
+    client = TestClient(app)
+    response = client.post("/api/v1/conversations/learning/synthetic_chat/runs/synthetic_run/cancel")
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "conversation_run_missing"
+    for path in ("/api/v1/conversations/learning/synthetic_chat/runs",
+                 "/api/v1/conversations/learning/synthetic_chat/runs/synthetic_run",
+                 "/api/v1/conversations/learning/synthetic_chat/messages"):
+        assert client.get(path).json()["error"]["code"] == "assistance_restricted"
+    assert client.post("/api/v1/conversations/other/chat/runs/run/cancel").status_code == 409

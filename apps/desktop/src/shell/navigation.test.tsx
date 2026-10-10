@@ -24,6 +24,12 @@ describe('navigation and retention boundary', () => {
     for (const route of ['learn', 'assessment', 'library'] as const) expect(nextScope({ kind: 'temporary-case', entity_id: 'volatile-case' }, route, { scope: { kind: 'study' } })).toEqual({ kind: 'temporary-case', entity_id: 'volatile-case' });
     expect(nextScope({ kind: 'temporary-case' }, 'study', { freshStudy: true })).toEqual({ kind: 'study' });
   });
+  it('selects a saved C chat without inheriting a legacy temporary context', () => {
+    const current = { kind: 'temporary-case' as const, entity_id: 'legacy_case' };
+    expect(nextScope(current, 'chat', { payload: { conversation: { type: 'case', id: 'saved_case' }, retention: 'saved' } })).toEqual({ kind: 'saved-case', entity_id: 'saved_case' });
+    expect(nextScope(current, 'chat', { payload: { conversation: { type: 'learn_thread', id: 'saved_learning' }, retention: 'saved' } })).toEqual({ kind: 'study' });
+    expect(nextScope(current, 'chat', { payload: { conversation: { type: 'case', id: '../invalid' }, retention: 'saved' } })).toEqual(current);
+  });
   it('keeps handoffs volatile and clears them on explicit end', async () => {
     window.location.hash = '#/study'; window.localStorage.clear(); window.sessionStorage.clear();
     render(<NavigationProvider><Probe /></NavigationProvider>);

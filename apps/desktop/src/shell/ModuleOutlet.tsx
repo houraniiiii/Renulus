@@ -55,11 +55,12 @@ function MorePage() {
 }
 
 export function ModuleOutlet() {
-  const { route, handoff, navigate, consumeIntent } = useNavigation();
+  const { route, handoff, navigate, consumeIntent, selectConversation } = useNavigation();
   const module = routes.find(item => item.id === route)!.module;
   const Page = pages['../modules/' + module + '/index.tsx'];
   const props: Record<string, unknown> = {};
   if (route === 'chat') {
+    props.onConversation = selectConversation;
     const identity = handoff?.conversation as ConversationIdentity | undefined;
     if (identity && ['learn_thread', 'case'].includes(identity.type) && typeof identity.id === 'string') props.identity = identity;
     const send = handoff?.sendIntent as { text?: unknown; request_id?: unknown } | undefined;

@@ -45,7 +45,7 @@ export function ShellWorkspaceProvider({ children }: { children: ReactNode }) {
       : navigation.route === 'chat' && payload?.conversation
         ? { identity: payload.conversation, retention: payload.retention } : undefined;
     if (validContext(next)) setContext(next);
-    else if (navigation.route === 'newchat') setContext(null);
+    else if (navigation.route === 'newchat' || navigation.route === 'chat') setContext(null);
   }, [navigation.route, navigation.handoff]);
   const persist = useCallback(async () => {
     if (saving.current) return;

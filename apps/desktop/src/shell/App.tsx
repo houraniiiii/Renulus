@@ -34,7 +34,7 @@ function Shell() {
   const projects = useResource(signal => api<{ items: ProjectSummary[] }>('/study/projects?limit=30', { signal }));
   const conversations = useResource(signal => api<{ items: ConversationSummary[] }>('/conversations?limit=30', { signal }));
   const label = routes.find(item => item.id === route)!.label;
-  const scopeLabel = scope.kind === 'saved-case'
+  const scopeLabel = route === 'chat' ? null : scope.kind === 'saved-case'
     ? 'Saved case snapshot · New changes stay temporary until you Save again.'
     : scope.kind === 'temporary-case'
       ? 'Temporary case context · Only explicitly saved snapshots are kept. New changes require Save.'
@@ -104,7 +104,7 @@ function Shell() {
       <div className="rail-footer"><a href="#/connections" aria-label="Settings & connections" title="Settings & connections" onClick={event => { event.preventDefault(); open('connections'); }}><Settings size={20} aria-hidden="true" /><span>Settings & connections</span><span className={'status-dot status-' + resource.status} aria-label={resource.status === 'ready' ? 'Local runtime ready' : 'Local runtime unavailable'} /></a></div>
     </aside>
     <div className="workspace">
-      <header className="workspace-header"><h1 className="workspace-destination">{label}</h1><div className="workspace-header-actions"><Button variant="ghost" disabled={!policy?.assistance_allowed} onClick={() => window.dispatchEvent(new Event('renulus:workspace-toggle'))}><PanelLeft size={20} aria-hidden="true" />Workspace</Button></div></header>
+      <header className="workspace-header"><p className="workspace-destination">{label}</p><div className="workspace-header-actions"><Button variant="ghost" disabled={!policy?.assistance_allowed} onClick={() => window.dispatchEvent(new Event('renulus:workspace-toggle'))}><PanelLeft size={20} aria-hidden="true" />Workspace</Button></div></header>
       {scopeLabel && <div className="scope-banner" role="status"><Shield size={17} aria-hidden="true" /><p>{scopeLabel}</p><Button variant="ghost" onClick={startFreshStudy}>End temporary context</Button></div>}
       <div className="shell-content" ref={contentRegion}><main className="workspace-main" id="learning-content" aria-label={label} tabIndex={-1} ref={content}>
         {route === 'connections' || route === 'attempts' ? <ModuleOutlet /> : !policy ? policyError

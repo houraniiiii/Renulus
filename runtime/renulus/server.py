@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 import inspect
 import asyncio
 import json
+import re
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -71,6 +72,9 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
                             "/api/v1/assessment/test-attempts")):
             return False  # Attempt owner gates every help/replay operation.
         if request.method == "DELETE" and path.startswith(("/api/v1/runtime/runs/", "/api/v1/data/backup/preview/")):
+            return False
+        if request.method == "POST" and re.fullmatch(
+                r"/api/v1/conversations/(?:learning|case)/[A-Za-z0-9_-]{1,128}/runs/[A-Za-z0-9_-]{1,128}/cancel", path):
             return False
         return path.startswith("/api/v1/")
 
