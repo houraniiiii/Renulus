@@ -154,9 +154,12 @@ upgrade/reopen, then failed current text extraction with an audited `open`
 refusal. Its current producer, restore and rebuild gates have not passed.
 The failure receipt and profile remain unchanged. Diagnostic-only driver
 `5f1f3b80` retains every denial and records bounded path/mode/caller details;
-a fresh actual public-import diagnostic is running. A separate cold semchunk
-import passed without a refused open, so the suspected NUL import is not yet
-the demonstrated cause.
+a fresh actual public-import diagnostic `r-0695ff87` reproduced the refusal.
+It names the executing frozen QA driver, read by PyTorch's stack formatter;
+there was no NUL or owner-file read. Correction `c60da29d` grants read-only
+access to that exact admitted script, rechecking identity/hash through a retained
+handle, with 20 passing guards. The next fresh import diagnostic is running;
+neither diagnostic counts as recovery acceptance.
 Core QA `76cfdff2` passes 49 guard checks; actual run `c-a2284830` passes installed
 identity, isolated hidden C startup, saved Learn/Case conversations and project
 membership, then fails on Playwright response-body capture during the first PDF
@@ -170,7 +173,13 @@ gates passed. This receipt identifies stage `attachment-upload`; the attempted
 Playwright screenshot timed out after fonts loaded and produced no PNG.
 The next bounded repair observes one actual saved synthetic attachment fetch
 response without replay, and uses the existing hidden Electron capture API.
-Reader acceptance is still open; product bytes remain unchanged.
+Repair `6e34f0c2` passes 62 guards; actual `c-6e809042` advances through upload
+and Reader resolution. Its hidden `failure.png` visibly shows the first PDF
+page and retained draft. It stops at the first captured asset's PNG signature
+check. The actual renderer has decoded the page, but the inspector's byte
+capture has not passed. A bounded actual-response clone with byte diagnostics
+is being implemented; no encoding cause or complete reader pass is inferred.
+Both app/backend processes closed. Product bytes remain unchanged.
 
 Manufacture and installation use fresh `matching-<revision>` and
 `installed-<revision>` destinations. A matching receipt must compare backend,
