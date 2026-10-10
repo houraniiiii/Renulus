@@ -320,3 +320,102 @@ The initial report limits still apply except that this follow-up did exercise
 actual Library text extraction and Library-backed import. C1/C2 repairs are now
 assigned by the parent. C3 has a separate subsequent Memory source lease; no
 source changes are part of this report checkpoint.
+
+## Repair checkpoints and independent C1/C4 recheck at 51f208b4
+
+The parent integrated C1 as `1b12c19f`, C4 as `a2a5f2d4`, and assigned C2
+to Home (`a14e06a9`). C3 received a separate explicit Memory source lease
+after the clean report checkpoint. The sole source fix checkpoint from this
+lane is `e4a7b0ed38b27969a681a824c1f3cdde902ccc0c`, integrated by the parent
+as `51f208b4`. Its four explicitly staged paths are:
+
+- `runtime/renulus/memory/repository.py`
+- `runtime/renulus/memory/service.py`
+- `tests/memory/test_repository.py`
+- `tests/memory/test_whole_attempt_evidence.py`
+
+The source checkpoint adds no DDL, shared policy/storage, attempt, Home, spec
+or renderer edits. It uses the existing `memory_jobs` state/error/hash fields.
+New job fingerprints carry only canonical source SHA-256, policy revision and
+context epoch: `memory/2:<source_sha256>:<policy_revision>:<context_epoch>`.
+Boundary cancellation codes `boundary_policy_changed`,
+`boundary_context_changed` and `restore_interrupted` permit one fresh fingerprint
+after current owner/source/policy validation. Completed, failed, pending,
+explicitly cancelled, suppressed, invalid and changed-source work block automatic
+replacement; permanently invalid recovery records become terminal. Structured
+whole-attempt capture continues to resolve safe scalars and performs no inference.
+
+`cancel_stale(job)` retains the distinct cause; user Stop writes
+`explicit_cancelled`, including when it wins after a restore interruption.
+Suppression/correction/deletion remain authoritative. The `attempts` counter
+of the captured execution is checked before commit or cancellation so old output
+cannot affect a restarted execution. Shutdown leaves current interrupted work
+recoverable; late outputs remain fenced.
+
+Compatibility is conservative: an earlier whole-attempt SHA fingerprint is
+accepted only if exact current source/policy/epoch reproduces it. Ambiguous
+old NULL cancellations and crossed unversioned fingerprints remain terminal,
+requiring explicit re-enqueue; no historical boundary is invented. A distinctly
+recorded restore interruption can re-resolve into a fresh current fingerprint.
+
+**C3 verification:** the final five-module Memory regression passed **76 tests**
+in 221.91 seconds (`c3/full02.xml`), the restart repository check passed 14
+(`c3/repository02.xml`), and earlier-fingerprint compatibility passed one
+separately (`c3/compat01.xml`). These are overlapping runs, not 91 unique tests.
+The focused actual producer/recovery checks passed 13 (`c3/green02.xml`),
+including active Test, exactly one fresh capture, actual production restore,
+queued worker interruption, explicit cancellation after restore, invalid/forged
+source, source changes, suppression and deletion.
+
+Preserve the red and harness-failure receipts in
+`C:/Renulus/scratch/design-c/dc-review-assessment/c3/`: the original checks
+reproduced five failures; an initial restore fixture used the lower-level
+`restore_records` merge, which does not call context invalidation. That fixture
+was corrected to actual `data_recovery.restore_json` before the green checks.
+The final warnings concern installed Starlette/httpx deprecation and local
+Qdrant payload indexes. No live provider acceptance is implied.
+
+### Independent report-only recheck of C1 and C4
+
+After the source checkpoint was clean, normally merged `6145fc70` as
+`822c8c3e`, then `51f208b4` as
+`062625970b794ff146cc1a5309d63483e3dcf470`. The main recheck began at
+`822c8c3e`; its production runtime and relevant producer fixtures are byte
+identical to `51f208b4`. `git diff 822c8c3e 51f208b4 -- runtime` is empty.
+The later narrow source-deletion check ran after the `51f208b4` merge. No
+source changes were made during these independent rechecks.
+
+Actual real-producer observations, with external connections denied:
+
+| Check | Result |
+| --- | --- |
+| R33 permitted/denied Save replay | The unchanged permitted replay equals its original response. Revoke display, then cache: import read, original read and identical Save replay all return 403 `saved_extraction_denied`, with no candidates. |
+| R34 imported report | Actual Library extraction → explicit key resolution → Save → whole Test latest-draft submit → report. Private report provenance equals the complete pinned native producer envelope except other items; original SHA/source pin retained, origin imported/quality personal. Public acknowledgement contains exactly id/status/created_at. |
+| R35 original loss | Remove only the actual owned synthetic original. Import read, original read and identical Save replay all return 404 `original_missing`, with no candidates. |
+| R36 retention | Delete the actual saved collection, private import and Library source; invoke actual production `data_recovery.restore_json` on the older records. Result digest unchanged; unavailable provenance explicit. A new report from the retained attempt still preserves the same import envelope. Deleted-import Save replay remains 404. |
+| R37 fictional report | Actual trusted transform and separate privacy review through ProviderManager with two synthetic transport calls, exact five saved, whole Study commitment and report. Complete fictionalisation/privacy envelope retained before and after collection deletion plus actual restore; immutable result digest unchanged; original private source absent from all profile files and export. Public acknowledgement remains id/status/created_at. |
+| R38 source deletion independently | Reopen the owned synthetic profile; create another actual Library import and Save; delete only the Library document. The private import and published version still exist. Import read, original read and Save replay all return 404 `saved_extraction_not_found`, with no candidates. |
+
+Scripts and exit-zero receipts remain outside the repository:
+
+- `C:/Renulus/scratch/design-c/dc-review-assessment/pass2/recheck-fixed.py`
+- `C:/Renulus/scratch/design-c/dc-review-assessment/pass2/recheck-fixed01.txt`
+- `C:/Renulus/scratch/design-c/dc-review-assessment/pass2/recheck-fixed-results.json`
+- `C:/Renulus/scratch/design-c/dc-review-assessment/pass2/recheck-source-delete.py`
+- `C:/Renulus/scratch/design-c/dc-review-assessment/pass2/recheck-source-delete01.txt`
+- `C:/Renulus/scratch/design-c/dc-review-assessment/pass2/recheck-source-delete-results.json`
+
+Both checks use `profile-recheck-fixed01` under the same owned pass2 scratch
+root, actual production SQLite/migrations/services/HTTP and SHA-validated
+public offline embedding assets. The second check deliberately reopens that
+verified synthetic profile; no owner state is read.
+
+**Disposition:** the original C1/C4 failures no longer reproduce in the exercised
+paths at `51f208b4`; no new material failure arose in this bounded recheck.
+The connected canonical/worker C3 tests pass and its source is integrated. The
+C2 repair is parent-reported and was not independently rechecked here. Existing
+historical findings remain in this report; discarded pre-fix provenance is not
+reconstructed. The parent owns combined Home/Memory/attempt/renderer acceptance
+and ticket disposition. Hidden UI, installed/native acceptance, all legacy
+routes and live subscriptions remain outside this checkpoint. No ticket is
+marked complete. This final recheck changes only this reserved report path.
