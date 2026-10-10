@@ -111,10 +111,14 @@ def ordinary_capture(whole_memory, monkeypatch):
     calls = []
 
     class SyntheticTransport:
+        fail_inference = False
+
         async def stream(self, selected, model, token, messages):
             assert token == 'synthetic-c5-transport'
             inference = 'SYNTHETIC_C5_STUDY_REPLY' in json.dumps(messages)
             calls.append({'inference': inference, 'messages': messages})
+            if inference and self.fail_inference:
+                raise ApiError('synthetic_c5_provider_failure', 'Synthetic transport failure', 503, True)
             text = (json.dumps({'memory': [{'text': 'SYNTHETIC C5: compare albuminuria and eGFR.'}]})
                     if inference else 'SYNTHETIC_C5_STUDY_REPLY: Albuminuria and eGFR complement each other.')
             yield {'type': 'delta', 'text': text}
@@ -236,6 +240,51 @@ async def test_policy_only_interruption_still_recaptures_ordinary_inferred_mater
         assert (await memory.process_pending())['processed'] >= 1
         assert len([call for call in calls if call['inference']]) == 1
         assert len([row for row in repository.jobs() if row['evidence_id'] == evidence_id]) == 2
+    finally:
+        await memory.close()
+        await services.get('conversations').streaming.close()
+        await services.get('provider').close()
+
+
+@pytest.mark.asyncio
+async def test_actual_failed_foreign_job_global_retry_refuses_inference_until_explicit_post(ordinary_capture):
+    whole, calls = ordinary_capture
+    client, services, repository, _ = whole
+    memory = services.get('memory')
+    transport = services.get('provider')._transport
+    try:
+        evidence_id, scope = await ordinary_answer(services, 'c5-real-failed-retry')
+        queued = repository.enqueue(evidence_id, scope)
+        transport.fail_inference = True
+        assert (await memory.process_pending())['processed'] >= 0
+        assert repository.job(queued['id'])['state'] == 'failed'
+        before = len([call for call in calls if call['inference']])
+        assert before == 1
+        # Simulate an imported failed execution with the destination's next
+        # integer epoch, then run the actual restore and global Retry endpoint.
+        with services.db.transaction() as conn:
+            parts = queued['evidence_hash'].split(':')
+            parts[-1] = str(context_epoch_in(conn) + 1)
+            conn.execute('UPDATE memory_jobs SET evidence_hash=? WHERE id=?', (':'.join(parts), queued['id']))
+        services.get('data_recovery').restore_json(export_records(services), confirm_backup_date=True)
+        assert repository.job(queued['id'])['evidence_hash'] == repository.material(evidence_id, scope)['fingerprint']
+        transport.fail_inference = False
+        response = client.post('/api/v1/memory/retry')
+        assert response.status_code == 200 and response.json()['processed'] == 0, response.text
+        assert len([call for call in calls if call['inference']]) == before
+        assert repository.job(queued['id'])['error_code'] == 'restore_interrupted'
+        assert not [fact for fact in repository.list() if fact['source_id'] == evidence_id]
+        key = MEMORY_RESTORE_CAPTURE_PREFIX + evidence_id
+        assert services.db.fetch_one('SELECT value FROM preferences WHERE key=?', (key,)) is not None
+        explicit = client.post('/api/v1/memory/captures', json={
+            'evidence_id': evidence_id, 'scope': scope.model_dump(mode='json')})
+        assert explicit.status_code == 202 and explicit.json()['state'] == 'queued', explicit.text
+        assert explicit.json()['id'] == queued['id']
+        await memory.process_pending()
+        assert repository.job(queued['id'])['state'] == 'completed'
+        assert len([call for call in calls if call['inference']]) == before + 1
+        assert services.db.fetch_one('SELECT value FROM preferences WHERE key=?', (key,)) is None
+        assert len([fact for fact in repository.list() if fact['source_id'] == evidence_id]) == 1
     finally:
         await memory.close()
         await services.get('conversations').streaming.close()
