@@ -22,9 +22,8 @@ DoctorName = Annotated[str, Field(strict=True, max_length=80)]
 Prompt = Annotated[str, Field(strict=True, min_length=1, max_length=400)]
 
 
-class HomePreferences(HomeModel):
+class _Named(HomeModel):
     doctor_name: DoctorName | None = None
-    revision: int = Field(default=1, strict=True, ge=1)
 
     @field_validator("doctor_name")
     @classmethod
@@ -34,7 +33,11 @@ class HomePreferences(HomeModel):
         return plain_text(value) or None
 
 
-class NameUpdate(HomePreferences):
+class HomePreferences(_Named):
+    revision: int = Field(default=1, strict=True, ge=1)
+
+
+class NameUpdate(_Named):
     expected_revision: int = Field(strict=True, ge=1)
 
 

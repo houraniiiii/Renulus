@@ -1,9 +1,8 @@
-.home-view { min-width: 0; width: 100%; padding: clamp(32px, 14vh, 160px) var(--space-32) var(--space-32); }
+.home-view { --home-composer-surface: #f3f4f0; min-width: 0; width: 100%; padding: clamp(32px, 18vh, 160px) var(--space-32) var(--space-32); }
 .home-opening { max-width: 720px; min-width: 0; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-24); }
 .home-greeting { color: var(--ink); font-size: 36px; line-height: 52px; font-weight: 600; letter-spacing: 0; text-align: center; overflow-wrap: anywhere; }
-.home-composer { min-height: 132px; border: 1px solid var(--line); border-radius: 20px; padding: var(--space-16); background: var(--rail); display: grid; gap: var(--space-16); }
-.home-composer .field-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
-.home-composer .home-message { background: transparent; border: 0; padding: 0; min-height: 46px; max-height: 40vh; line-height: 23px; resize: vertical; }
+.home-composer { min-height: 132px; border: 1px solid var(--line); border-radius: 20px; padding: var(--space-16); background: var(--home-composer-surface); display: grid; gap: var(--space-16); }
+.home-composer .home-message { width: 100%; min-width: 0; background: transparent; border: 0; padding: 0; min-height: 46px; max-height: 40vh; line-height: 23px; resize: vertical; }
 .home-toolbar { display: flex; justify-content: space-between; align-items: center; gap: var(--space-12); }
 .home-toolbar .button, .home-action { gap: var(--space-8); font-size: 14px; line-height: 20px; padding: 10px var(--space-12); }
 .home-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-8); }

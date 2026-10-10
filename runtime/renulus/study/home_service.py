@@ -19,6 +19,8 @@ from .home_models import DailyCache, HomePreferences, NameUpdate, SuggestionBund
 
 PREFERENCES = "home.preferences"
 CACHE = "home.suggestions"
+NAME_COMMANDS = "home.preference_commands"
+MAX_NAME_RECEIPTS = 128
 MAX_OUTPUT = 16000
 SYSTEM = (
     "You are Renulus, a nephrology learning assistant for doctors in the EU. "
@@ -78,7 +80,11 @@ class HomeService:
         if not row:
             return HomePreferences()
         value = _json(row[0])
-        return HomePreferences.model_validate({key: value[key] for key in ("doctor_name", "revision") if key in value})
+        try:
+            return HomePreferences.model_validate({key: value[key] for key in ("doctor_name", "revision") if key in value})
+        except ValidationError:
+            # A malformed imported preference must not disable first-run composition.
+            return HomePreferences()
 
     def preferences(self):
         with self.db.transaction() as conn:
@@ -87,20 +93,25 @@ class HomeService:
     def save_name(self, body: NameUpdate, key: str):
         digest = canonical_digest(body.model_dump())
         with self.db.transaction() as conn:
-            row = conn.execute("SELECT value FROM preferences WHERE key=?", (PREFERENCES,)).fetchone()
-            previous = _json(row[0]) if row else {}
+            row = conn.execute("SELECT value FROM preferences WHERE key=?", (NAME_COMMANDS,)).fetchone()
+            receipts = _json(row[0]).get("receipts", []) if row else []
             current = self._preferences(conn)
-            receipt = previous.get("last_command", {})
-            if receipt.get("key") == key:
+            receipt = next((item for item in receipts if item["key"] == key), None)
+            if receipt is not None:
                 if receipt.get("hash") != digest:
                     raise ApiError("idempotency_conflict", "This name request key has already been used.", 409)
-                return current.model_dump()
+                return HomePreferences.model_validate(receipt["result"]).model_dump()
             if body.expected_revision != current.revision:
                 raise ApiError("revision_conflict", "The name preference changed. Reload it before saving.", 409)
             result = HomePreferences(doctor_name=body.doctor_name, revision=current.revision + 1)
-            value = {**result.model_dump(), "last_command": {"key": key, "hash": digest}}
             conn.execute("INSERT INTO preferences VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET "
-                "value=excluded.value,updated_at=excluded.updated_at", (PREFERENCES, json.dumps(value), utc_now()))
+                "value=excluded.value,updated_at=excluded.updated_at", (PREFERENCES, result.model_dump_json(), utc_now()))
+            # Retain 128 exact outcomes locally. An evicted old command cannot reapply:
+            # its expected revision is older and is refused above. Receipts do not export.
+            receipts.append({"key": key, "hash": digest, "result": result.model_dump()})
+            conn.execute("INSERT INTO preferences VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET "
+                "value=excluded.value,updated_at=excluded.updated_at",
+                (NAME_COMMANDS, json.dumps({"receipts": receipts[-MAX_NAME_RECEIPTS:]}), utc_now()))
             bump_context_epoch(conn)
             return result.model_dump()
 
@@ -111,9 +122,10 @@ class HomeService:
         route = provider._route(None)  # Existing allowlist, subscription and saved model authority.
         inputs, memories, interests, goals = [], [], [], []
 
-        def pin(kind, identity_type, identifier, value):
+        def pin(kind, identity_type, identifier, value, revision=None):
             inputs.append(EligibleInput(kind=kind, dependency=Dependency(
-                target=Identity(type=identity_type, id=identifier), expected_revision=canonical_digest(value))))
+                target=Identity(type=identity_type, id=identifier),
+                expected_revision=revision or canonical_digest(value))))
 
         # Only scalar learning metadata from existing canonical committed producers.
         # Never SELECT transcript content, case payloads, originals, reviewed stems/keys.
@@ -158,14 +170,38 @@ class HomeService:
             for row in rows:
                 if _deleted(conn, "memory_fact", row["id"]) or not 0 < len(row["text"]) <= 2000:
                     continue
+                if not conn.execute("SELECT 1 FROM memory_history WHERE record_id=? AND revision=?",
+                                    (row["id"], row["revision"])).fetchone():
+                    continue
                 if budget + len(row["text"]) > 4000:
                     continue
                 if row["source_kind"] != "manual":
                     # Canonical captures retain an evidence source; an absent source cannot attest eligibility.
-                    source = conn.execute("SELECT id FROM learning_evidence WHERE id=?", (row["source_id"],)).fetchone()
+                    source = conn.execute("SELECT id,kind,entity_id,payload_json FROM learning_evidence WHERE id=?",
+                                          (row["source_id"],)).fetchone()
                     if not source or _deleted(conn, "learning_evidence", row["source_id"]):
                         continue
-                pin("memory", "memory_revision", row["id"], dict(row))
+                    source_payload = _json(source["payload_json"])
+                    source_scope = source_payload.get("scope", {})
+                    if (not isinstance(source_scope, dict) or source_scope.get("kind") != row["scope"] or
+                            source["kind"] not in ("study-interest", "study-answer", "assessment-answer", "learning-point")):
+                        continue
+                    if source["kind"] in ("study-interest", "study-answer"):
+                        if (not conn.execute("SELECT 1 FROM learn_threads WHERE id=?", (source["entity_id"],)).fetchone() or
+                                _deleted(conn, "learn_thread", source["entity_id"])):
+                            continue
+                    elif source["kind"] == "assessment-answer":
+                        if (source_payload.get("mode") != "reviewed" or
+                                not conn.execute("SELECT 1 FROM assessment_attempts WHERE id=?", (source["entity_id"],)).fetchone() or
+                                _deleted(conn, "assessment_attempt", source["entity_id"])):
+                            continue
+                    elif source_payload.get("general_learning") is not True:
+                        continue
+                    if conn.execute("SELECT 1 FROM memory_suppression WHERE source_key=?",
+                                    ("evidence:" + source["id"],)).fetchone():
+                        continue
+                    pin("learning_summary", "learning_evidence", source["id"], dict(source))
+                pin("memory", "memory_revision", row["id"] + ":" + str(row["revision"]), dict(row), str(row["revision"]))
                 memories.append({"text": row["text"], "kind": row["kind"], "topic_id": row["topic_id"]})
                 budget += len(row["text"])
 
@@ -184,7 +220,7 @@ class HomeService:
                 "WHERE p.lifecycle='active' AND g.status='active' ORDER BY g.updated_at DESC,g.id LIMIT 12"):
             if (_deleted(conn, "project", row["project_id"]) or _deleted(conn, "goal", row["id"])):
                 continue
-            pin("goal", "goal", row["id"], dict(row))
+            pin("goal", "goal", row["id"], dict(row), str(row["revision"]))
             goals.append({key: row[key] for key in ("title", "topic_id", "target_date")})
 
         settings = {"route": route, "preferences": self._preferences(conn).model_dump(),
@@ -229,7 +265,7 @@ class HomeService:
             cache = self._cache(conn, context)
             job = conn.execute("SELECT id,state,error_code FROM assessment_test_jobs WHERE "
                 "operation='daily_suggestions' ORDER BY created_at DESC,id DESC LIMIT 1").fetchone()
-        return {"preferences": preferences, "suggestions": cache.bundle.model_dump() if cache else None,
+        return {"preferences": preferences, "suggestions": cache.bundle.model_dump(mode="json") if cache else None,
             "suggestions_date": cache.day.isoformat() if cache else None,
             "stale": bool(cache and cache.day != now.date()), "job": dict(job) if job else None,
             "error_code": error, "assistance_allowed": policy["assistance_allowed"]}
@@ -256,7 +292,7 @@ class HomeService:
                 conn.execute("INSERT INTO assessment_test_jobs (id,operation,state,idempotency_key,request_hash,"
                     "inputs_json,checkpoint_json,settings_revision,policy_revision,context_epoch,requested_count,"
                     "validated_count,accepted_count,published_version_id,live_published_version_id,error_code,created_at,updated_at) "
-                    "VALUES(?,?,?,?,?,?,NULL,?,?,?,NULL,0,NULL,NULL,NULL,NULL,?,?)",
+                    "VALUES(?,?,?,?,?,?,'{}',?,?,?,NULL,0,NULL,NULL,NULL,NULL,?,?)",
                     (identifier, job.operation, job.state, key, job.request_hash,
                      json.dumps([item.model_dump(mode="json") for item in context.inputs]),
                      context.settings_revision, context.policy_revision, context.epoch, stamp, stamp))
@@ -293,7 +329,15 @@ class HomeService:
                     output.append(event.payload["text"])
         if not completed:
             raise ValueError("Incomplete suggestion stream")
-        return SuggestionBundle.model_validate_json("".join(output))
+        def unique_keys(pairs):
+            result = {}
+            for key, value in pairs:
+                if key in result:
+                    raise ValueError("Duplicate suggestion JSON keys")
+                result[key] = value
+            return result
+        parsed = json.loads("".join(output), object_pairs_hook=unique_keys)
+        return SuggestionBundle.model_validate(parsed)
 
     async def _produce(self, identifier, context, day, zone):
         try:

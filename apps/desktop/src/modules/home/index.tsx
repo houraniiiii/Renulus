@@ -113,7 +113,7 @@ export default function Home({ adapters = {} }: { adapters?: HomeAdapters }) {
         {categories.map(({ id, label, Icon }) => <Button key={id} variant="secondary"
           className={expanded === id ? 'home-action home-action-selected' : 'home-action'}
           aria-expanded={expanded === id} aria-controls="home-suggestions" disabled={!allowed}
-          onClick={() => setExpanded(current => current === id ? undefined : id)}>
+          onClick={() => { setExpanded(current => current === id ? undefined : id); if (!text.trim()) setIntent(id); }}>
           <Icon size={20} aria-hidden="true" />{label}</Button>)}
       </div>
       {expanded && <div id="home-suggestions" className="home-suggestions" role="region"
