@@ -292,7 +292,7 @@ def test_context_change_prevents_save_until_explicit_review(imports):
 @pytest.mark.asyncio
 async def test_actual_mounted_router_create_private_original_and_save(imports):
     app, service, _ = imports
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://synthetic") as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1") as client:
         response = await client.post("/api/v1/assessment/imports", json=request().model_dump(mode="json"))
         assert response.status_code == 201, response.text
         row = response.json()
@@ -317,7 +317,7 @@ def test_actual_json_restore_interrupts_foreign_epoch_collision_and_keeps_edits(
     if "saved_imports" not in services.registry:
         destination.include_router(create_router(services), prefix="/api/v1")
     services.db.execute("INSERT INTO preferences VALUES('design_c.context_epoch','4',?)", (utc_now(),))
-    restore_records(services, bundle, confirm_older=True)
+    services.get("data_recovery").restore_json(bundle, confirm_backup_date=True, confirmed_exported_at=bundle["exported_at"])
     stored = services.db.fetch_one("SELECT * FROM assessment_test_imports WHERE id=?", (row["id"],))
     assert stored["state"] == "failed" and stored["error_code"] == "interrupted"
     assert stored["original_text"] == TEXT and json.loads(stored["candidates_json"]) == row["candidates"]
