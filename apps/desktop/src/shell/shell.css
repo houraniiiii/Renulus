@@ -110,6 +110,14 @@ kbd { display: inline-block; padding: 1px 5px; background: var(--rail); border: 
 .destination-results { display: grid; gap: 4px; margin-top: 16px; }
 .destination-results button { display: flex; justify-content: space-between; align-items: center; padding: 12px; text-align: left; border-radius: var(--radius-control); min-height: 44px; }
 .destination-results button:hover { background: var(--renal-teal-soft); color: var(--renal-teal); }
+.local-search { display: grid; gap: 16px; margin-top: 24px; border-top: 1px solid var(--line-subtle); padding-top: 16px; }
+.search-options { display: flex; align-items: end; flex-wrap: wrap; gap: 16px; }
+.search-options > label { display: flex; gap: 8px; align-items: center; min-height: 44px; }
+.search-records { display: grid; gap: 4px; }
+.search-records button { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 12px; text-align: left; min-height: 44px; border-radius: var(--radius-control); }
+.search-records button:hover { background: var(--renal-teal-soft); }
+.search-records button > span:last-child { color: var(--ink-muted); font-size: 14px; flex-basis: 100%; overflow-wrap: anywhere; }
+.search-record-state { color: var(--ink-muted); font-size: 13px; }
 .connection-columns { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(220px, 1fr); gap: 40px; }
 .connection-settings { margin-bottom: var(--space-32); }
 .connection-list { display: grid; gap: 32px; }

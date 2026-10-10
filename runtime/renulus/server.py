@@ -76,6 +76,9 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
         if request.method == "POST" and re.fullmatch(
                 r"/api/v1/conversations/(?:learning|case)/[A-Za-z0-9_-]{1,128}/runs/[A-Za-z0-9_-]{1,128}/cancel", path):
             return False
+        if request.method == "POST" and re.fullmatch(
+                r"/api/v1/assessment/generation/jobs/[A-Za-z0-9_-]{1,128}/cancel", path):
+            return False  # Owner always returns only {id, state}, even on replay.
         return path.startswith("/api/v1/")
 
     def captured_policy(expected=None):
@@ -186,7 +189,7 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
     # Separate feature routers preserve the existing module/legacy APIs. Their
     # schemas have already been checked and applied before any startup backfill.
     for name in ("learn.conversation_api", "study.project_api", "study.home_api",
-                 "assessment.test_api", "assessment.attempt_api", "assessment.generation_api", "storage.workspace_api"):
+                 "assessment.test_api", "assessment.attempt_api", "assessment.generation_api", "storage.workspace_api", "storage.search_api"):
         path = Path(__file__).parent.joinpath(*name.split(".")).with_suffix(".py")
         if path.exists():
             feature = importlib.import_module("renulus." + name)

@@ -9,6 +9,8 @@ import { useResource } from '../platform/useResource';
 import { ModuleOutlet } from './ModuleOutlet';
 import { NavigationProvider, destinationHash, routes, useNavigation, type RouteId } from './navigation';
 import { ShellWorkspaceProvider, WorkspaceHost } from './WorkspaceHost';
+import { useWorkspace } from '../modules/workspace';
+import { LocalSearchResults, type SearchResult } from './LocalSearchResults';
 
 const primary = [
   { id: 'newchat', Icon: Plus }, { id: 'library', Icon: Library },
@@ -17,6 +19,7 @@ const primary = [
 function Shell() {
   const { route, revision, scope, navigate, startFreshStudy } = useNavigation();
   const { policy, error: policyError, refresh: refreshPolicy } = useAssessmentPolicy();
+  const reading = useWorkspace();
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('renulus.navigation.collapsed') === 'true');
   const [narrow, setNarrow] = useState(() => window.innerWidth <= 900);
   const [drawer, setDrawer] = useState(false);
@@ -52,6 +55,12 @@ function Shell() {
   function open(next: RouteId, payload?: Record<string, unknown>) {
     setDrawer(false);
     navigate(next, { payload, freshStudy: next === 'newchat' });
+  }
+  function chooseResult(result: SearchResult) {
+    searchNavigating.current = true; searchDialog.current?.close();
+    if (result.identity) open('chat', { conversation: result.identity, retention: 'saved' });
+    else if (result.group === 'projects') open('projects', { project_id: result.project_id });
+    else if (result.reference) { reading.open(result.reference); setDrawer(false); }
   }
   useEffect(() => {
     const resize = () => { setNarrow(window.innerWidth <= 900); setDrawer(false); };
@@ -117,7 +126,9 @@ function Shell() {
       if (searchNavigating.current) content.current?.focus({ preventScroll: true });
       else (searchReturn.current?.isConnected ? searchReturn.current : searchTrigger.current)?.focus();
       searchNavigating.current = false;
-    }}><div className="dialog-heading"><h2 id="search-title">Find a destination</h2><IconButton label="Close destination search" onClick={() => searchDialog.current?.close()}><X size={19} /></IconButton></div><label className="sr-only" htmlFor="destination-search">Search destinations</label><input ref={searchInput} className="input" id="destination-search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Chats, projects, Library…" /><div className="destination-results">{matches.map(item => <button key={item.id} onClick={() => { searchNavigating.current = true; searchDialog.current?.close(); open(item.id); }}><strong>{item.label}</strong><ArrowRight size={16} aria-hidden="true" /></button>)}{!matches.length && <p role="status">No destinations match.</p>}</div></dialog>
+    }}><div className="dialog-heading"><h2 id="search-title">Find in Renulus</h2><IconButton label="Close destination search" onClick={() => searchDialog.current?.close()}><X size={19} /></IconButton></div><label className="sr-only" htmlFor="destination-search">Search destinations</label><input ref={searchInput} className="input" id="destination-search" value={query} maxLength={200} onChange={event => setQuery(event.target.value)} placeholder="Chats, projects, files…" /><div className="destination-results">{matches.map(item => <button key={item.id} onClick={() => { searchNavigating.current = true; searchDialog.current?.close(); open(item.id); }}><strong>{item.label}</strong><ArrowRight size={16} aria-hidden="true" /></button>)}{!matches.length && <p role="status">No destinations match.</p>}</div>
+      <LocalSearchResults query={query} permitted={policy?.assistance_allowed === true} policyRevision={policy?.revision ?? 0} projects={projectItems} onSelect={chooseResult} />
+    </dialog>
   </div>;
 }
 export function App() { return <NavigationProvider><AssessmentPolicyProvider><ShellWorkspaceProvider><Shell /></ShellWorkspaceProvider></AssessmentPolicyProvider></NavigationProvider>; }

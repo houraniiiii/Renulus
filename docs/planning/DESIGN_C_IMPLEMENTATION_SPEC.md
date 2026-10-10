@@ -879,6 +879,17 @@ installation and release acceptance were not performed by this planning pass.
 
 ## 10. Implementation execution — October 10, 2026
 
+DC11 engineering clarification: the local finder searches canonical saved chat
+titles/messages, project titles and existing Knowledge passage/metadata rows.
+It provides literal text matching, explicit project scope and archived inclusion,
+typed pinned destinations, bounded keyset pages and restore-generation refusal.
+This works offline without starting an embedding/model job and preserves file
+title discovery when indexing fails. It does not imply semantic retrieval for
+unindexed files; existing Knowledge model retrieval keeps its separate eligibility
+authority. Two real assembled-router search checks and twelve affected renderer
+checks passed, including query races and immediate active-Test snippet removal.
+Reader navigation still requires its actual source adapter integration.
+
 Pass 1 reviewed contract validators (`527677f3`) and the three independent
 reports. Accepted additive implementation clarifications: versions retain a
 versioned provenance JSON; collection mutation commands have their own request

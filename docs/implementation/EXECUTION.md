@@ -175,6 +175,16 @@ The owner requested a current twenty-minute progress follow-up. The app heartbea
 authorised work without duplicating active lanes or repeating unchanged tests.
 The historical paused delivery heartbeat remains paused.
 
+DC11 lead-owned paths are new storage `search.py`/search_api.py and shell
+`LocalSearchResults.tsx` with their integration/component tests. They use the
+saved-only canonical query and shared policy contract recorded in the existing
+spec; no new search table, temporary cache, provider work or duplicate ownership
+is introduced. Actual search receipt is `integration/search01.xml`. The hidden
+source `dcctl/c01` check also verified the narrow Workspace focused pane and
+explicit Back to chat, then an offline Home handoff kept its saved message and
+draft with a truthful connection-required failure. Screenshot captures 3/4 and
+the owned receipt remain outside Git. This is bounded source evidence.
+
 The entries below preserve earlier implementation evidence. Their Flow selection,
 branches, paths, issue status, time windows and heartbeat instructions describe
 those dated runs; they are not assignments or scheduling instructions for C.
