@@ -9,6 +9,7 @@ from pydantic import ValidationError
 import pytest
 
 from renulus.contracts import ApiError
+from renulus.assessment.generation_models import CreateGenerationRequest
 from renulus.design_c_contracts import canonical_digest
 from renulus.server import create_app
 from renulus.storage import utc_now
@@ -234,3 +235,168 @@ def test_actual_router_offline_preference_save_and_invalid_import_fail_closed(ni
         assert client.put("/api/v1/nightly/preferences", json={**body, "prompt": "RAW_PROMPT"}, headers=headers).status_code == 422
     service.db.execute("UPDATE preferences SET value=? WHERE key=?", (json.dumps({"enabled": "true", "revision": 2}), PREFERENCES))
     assert service.preferences()["enabled"] is False and not transport.calls
+
+
+async def finish_job(service, identifier):
+    owner = service.services.get("saved_generation")
+    task = owner.tasks.get(identifier)
+    if task:
+        await asyncio.wait_for(asyncio.shield(task), timeout=5)
+    return service.read()["last_job"]
+
+
+async def due_job(service, clock, **preferences):
+    await enable(service, **preferences)
+    clock.now = clock.now.replace(hour=22)
+    return (await service.tick())["last_job"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("count", [5, 10, 20])
+async def test_scheduler_publishes_exact_saved_count_through_selected_route(nightly, count):
+    _, service, clock, transport = nightly
+    add_memory(service)
+    job = await due_job(service, clock, question_count=count)
+    final = await finish_job(service, job["id"])
+    assert final["state"] == "published"
+    assert final["validated_count"] == final["requested_count"] == count
+    assert final["result"]["available"] is True
+    assert len(transport.calls) == count // 5
+    assert all((provider, model) == ("codex", "gpt-6.1-sol") for provider, model, _ in transport.calls)
+    assert "Synthetic transplantation learning" in json.dumps(transport.calls)
+    row = service.db.fetch_one("SELECT * FROM assessment_test_jobs WHERE id=?", (job["id"],))
+    checkpoint = json.loads(row["checkpoint_json"])
+    assert row["operation"] == "nightly_test" and row["idempotency_key"] == "nightly:2026-10-10"
+    assert set(checkpoint["nightly"]) == {"day", "timezone", "preferences_revision", "home_settings_revision", "eligibility_token"}
+    version = service.db.fetch_one("SELECT * FROM assessment_test_versions WHERE id=?", (row["published_version_id"],))
+    assert version["origin"] == "nightly"
+    assert len(json.loads(version["items_json"])) == count
+    assert json.loads(version["provenance_json"])["producer"]["method"] == "nightly"
+    assert "PRIVATE_GENERATED_NIGHTLY_EXPLANATION" not in json.dumps(service.read())
+    # An original published receipt stays immutable after Off and token rotation.
+    await service.update_preferences(PreferencesUpdate(enabled=False, expected_revision=2), "synthetic-published-off")
+    replay = await service.services.get("saved_generation").create_nightly(
+        CreateGenerationRequest.model_validate(checkpoint["request"]), schedule=checkpoint["nightly"])
+    assert replay["result"]["version_id"] == row["published_version_id"]
+    assert len(transport.calls) == count // 5
+
+
+@pytest.mark.asyncio
+async def test_concurrent_sleep_catchup_claims_only_latest_due_day(nightly):
+    _, service, clock, transport = nightly
+    await enable(service)
+    clock.now += timedelta(days=9, hours=3)
+    results = await asyncio.gather(*(service.tick() for _ in range(8)))
+    identifier = next(result["last_job"]["id"] for result in results if result["last_job"])
+    assert (await finish_job(service, identifier))["state"] == "published"
+    rows = service.db.fetch_all("SELECT idempotency_key FROM assessment_test_jobs WHERE operation='nightly_test'")
+    assert [row["idempotency_key"] for row in rows] == ["nightly:2026-10-19"]
+    for _ in range(3):
+        await service.tick()
+    clock.now -= timedelta(days=4)
+    await service.tick()
+    clock.now += timedelta(days=4)
+    await service.tick()
+    assert len(transport.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_offline_day_consumed_without_retry_then_next_day_can_run(nightly):
+    _, service, clock, transport = nightly
+    provider = service.services.get("provider")
+    provider._settings["selected_provider"] = None
+    await enable(service)
+    clock.now = clock.now.replace(hour=22)
+    failed = await service.tick()
+    assert failed["error_code"] and failed["last_job"] is None
+    provider._settings["selected_provider"] = "codex"
+    for _ in range(3):
+        await service.tick()
+    assert not transport.calls
+    clock.now += timedelta(days=1)
+    job = (await service.tick())["last_job"]
+    assert (await finish_job(service, job["id"]))["state"] == "published"
+    assert len(transport.calls) == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("output,expected", [("invalid-json", "failed"), (batch(count=3), "needs_review")])
+async def test_failed_or_short_generation_never_auto_retries_or_publishes(nightly, output, expected):
+    _, service, clock, transport = nightly
+    transport.responses = [output]
+    job = await due_job(service, clock)
+    final = await finish_job(service, job["id"])
+    assert final["state"] == expected and final["result"] is None
+    for _ in range(3):
+        await service.tick()
+    assert len(transport.calls) == 1
+    assert not service.db.fetch_one("SELECT id FROM assessment_test_versions WHERE origin='nightly'")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("change", ["off", "cancel", "memory-correction", "memory-delete", "epoch", "policy", "timezone"])
+async def test_running_scheduler_job_cannot_publish_changed_eligibility(nightly, change):
+    _, service, clock, transport = nightly
+    add_memory(service)
+    transport.release = asyncio.Event()
+    job = await due_job(service, clock)
+    await asyncio.wait_for(transport.started.wait(), timeout=3)
+    if change == "off":
+        await service.update_preferences(PreferencesUpdate(enabled=False, expected_revision=2), "synthetic-off-during-run")
+    elif change == "cancel":
+        cancelled = await service.cancel(job["id"], "synthetic-stop-during-run")
+        assert cancelled == {"id": job["id"], "state": "cancelled"}
+    else:
+        with service.db.transaction() as conn:
+            if change == "memory-correction":
+                conn.execute("UPDATE memory_facts SET text='Corrected synthetic learning',revision=2 WHERE id='nightly_memory'")
+                conn.execute("INSERT INTO memory_history VALUES('nightly_memory',2,'Corrected synthetic learning','edited',?)", (utc_now(),))
+            elif change == "memory-delete":
+                conn.execute("DELETE FROM memory_facts WHERE id='nightly_memory'")
+            elif change == "epoch":
+                bump_context_epoch(conn)
+            elif change == "policy":
+                advance_policy(conn)
+        if change == "timezone":
+            clock.now = clock.now.astimezone(timezone(timedelta(hours=3), "Synthetic-East"))
+    transport.release.set()
+    final = await finish_job(service, job["id"])
+    assert final["state"] in ("failed", "cancelled") and final["result"] is None
+    assert not service.db.fetch_one("SELECT id FROM assessment_test_versions WHERE origin='nightly'")
+    await service.tick()
+    assert len(transport.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_final_publication_transaction_rechecks_context(nightly, monkeypatch):
+    _, service, clock, transport = nightly
+    owner = service.services.get("saved_generation")
+    publish = owner._publish
+    def invalidate_at_publication(conn, row, checkpoint, **kwargs):
+        bump_context_epoch(conn)
+        publish(conn, row, checkpoint, **kwargs)
+    monkeypatch.setattr(owner, "_publish", invalidate_at_publication)
+    job = await due_job(service, clock)
+    final = await finish_job(service, job["id"])
+    assert final["state"] == "failed" and final["validated_count"] == 5
+    assert final["error_code"] == "nightly_invalidated"
+    assert len(transport.calls) == 1
+    assert not service.db.fetch_one("SELECT id FROM assessment_test_versions WHERE origin='nightly'")
+
+
+@pytest.mark.asyncio
+async def test_enabled_restart_after_due_waits_for_next_future_night(nightly):
+    app, service, clock, transport = nightly
+    await enable(service)
+    clock.now += timedelta(days=5, hours=3)
+    await service.close()
+    reopened = create_app(app.state.services.paths.root)
+    if "nightly" not in reopened.state.services.registry:
+        reopened.include_router(create_router(reopened.state.services), prefix="/api/v1")
+    next_service = reopened.state.services.get("nightly")
+    next_service.local_now = clock
+    next_service.recover()
+    assert next_service.read()["preferences"]["enabled"] is True
+    assert next_service.read()["next_eligible_at"] == "2026-10-16T22:00:00+00:00"
+    await next_service.tick()
+    assert next_service.read()["last_job"] is None and not transport.calls
