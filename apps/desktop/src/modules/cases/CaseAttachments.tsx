@@ -18,8 +18,9 @@ function pause(signal: AbortSignal) {
   });
 }
 
-export function CaseAttachments({ session, capabilities, disabled, apply, keepImage, discussImage }: {
+export function CaseAttachments({ session, capabilities, disabled, apply, keepImage, discussImage, retention }: {
   session: CaseSession; capabilities?: CaseCapabilities; disabled: boolean;
+  retention?: 'saved' | 'temporary';
   apply: (id: string, text: string) => Promise<CaseSession | null | undefined> | undefined;
   keepImage?: (id: string) => Promise<CaseSession | null | undefined> | undefined;
   discussImage?: (id: string, model: string, question: string) => Promise<void>;
@@ -40,6 +41,9 @@ export function CaseAttachments({ session, capabilities, disabled, apply, keepIm
     mode === 'image' ? imageCapability?.supported : capabilities?.extraction?.supported;
   const current = useRef<Work | null>(null);
   const alive = useRef(false);
+  const retainHint = retention==='saved' ? 'Adding it retains the original in this saved conversation.' :
+    retention==='temporary' ? 'It stays temporary until you choose Save conversation.' :
+    'Choose Save case or Save changes to retain it after closing.';
 
   useEffect(() => {
     alive.current = true;
@@ -144,7 +148,7 @@ export function CaseAttachments({ session, capabilities, disabled, apply, keepIm
 
   return <section className="case-attachments section" aria-label="Temporary attachments">
     <h2><FileText size={20} aria-hidden="true" />Bring a file into your case</h2>
-    <p className="muted">Review extracted text or select an image. Save keeps the case text, completed discussion and PDF, PNG or JPEG originals you explicitly add. A case can keep up to 16 originals totalling 32 MiB.</p>
+    <p className="muted">Review extracted text or select an image. {retention==='saved'?'This saved conversation keeps the originals you explicitly add.':retention==='temporary'?'Case text and originals stay temporary until you save this conversation.':'Save keeps the case text, completed discussion and PDF, PNG or JPEG originals you explicitly add.'} A case can keep up to 16 originals totalling 32 MiB.</p>
     <Select label="Use this file for" value={mode} disabled={disabled || processing || !!preview} onChange={event => setMode(event.target.value as 'text' | 'image' | 'original')}>
       <option value="text">Local text extraction</option><option value="original" disabled={!originalCapability?.supported || !keepImage}>Keep original image</option>
       <option value="image" disabled={!imageCapability?.supported || !discussImage}>Image discussion with selected subscription</option></Select>
@@ -155,11 +159,11 @@ export function CaseAttachments({ session, capabilities, disabled, apply, keepIm
           capabilities?.extraction?.image_pixels && mode === 'text' ? 'Images up to ' + (capabilities.extraction.image_pixels / 1_000_000) + ' MP' : undefined,
           'Temporary processing'].filter(Boolean).join(' · ')} onChange={event => void select(event)} />}
     {!!error && <ErrorState error={error} title="The attachment could not be read" />}
-    {processing && <Notice><p>{mode === 'original' ? 'Validating the image locally. Its original stays temporary until you add it and choose Save.' : mode === 'image' ? 'Validating the image locally. Review it before sending to your selected subscription.' : 'Reading attachment text locally. The preview remains temporary.'}</p>
+    {processing && <Notice><p>{mode === 'original' ? 'Validating the image locally. Its original stays temporary until you add it.' : mode === 'image' ? 'Validating the image locally. Review it before sending to your selected subscription.' : 'Reading attachment text locally. The preview remains temporary.'}</p>
       <Button variant="secondary" onClick={() => void discard()}><Square size={15} aria-hidden="true" />{imageMode ? 'Stop image preparation' : 'Stop extraction'}</Button></Notice>}
     {(preview?.mode === 'image' || preview?.mode === 'original') && preview.image && <div className="case-extraction-preview">
       <img src={'data:' + preview.image.media_type + ';base64,' + preview.image.data} alt={mode === 'original' ? 'Selected image original' : 'Selected image for temporary case discussion'} style={{ maxWidth: '100%', maxHeight: 360, objectFit: 'contain' }} />
-      <Notice><p>{mode === 'original' ? 'This preview is temporary. Keep image in case adds its original without text extraction or a model call. Choose Save case or Save changes to retain it after closing.' : 'This preview is temporary. Keep image in case or send it for discussion to add its original. Choose Save case or Save changes to retain it after closing. Keeping an image does not send it to a model. Clinical accuracy and live image interpretation are unverified.'}</p></Notice>
+      <Notice><p>{mode === 'original' ? 'This preview is temporary. Keep image in case adds its original without text extraction or a model call. '+retainHint : 'This preview is temporary. Keep image in case or send it for discussion to add its original. '+retainHint+' Keeping an image does not send it to a model. Clinical accuracy and live image interpretation are unverified.'}</p></Notice>
       <div className="actions">{keepImage && <Button variant="secondary" busy={applying} disabled={disabled} onClick={() => void keep()}>Keep image in case</Button>}
         <Button variant="ghost" disabled={disabled || applying} onClick={() => void discard()}>Discard image</Button></div>
       {mode === 'image' && <><Select label="Selected account image model" value={model} disabled={disabled || applying} onChange={event => setModel(event.target.value)}>{imageCapability?.models?.map(value => <option key={value}>{value}</option>)}</Select>
@@ -174,7 +178,7 @@ export function CaseAttachments({ session, capabilities, disabled, apply, keepIm
         onChange={event => setText(event.target.value)} />
       <div className="actions"><Button variant="secondary" busy={applying} disabled={disabled || !text.trim()} onClick={() => void useText()}>Use extracted text</Button>
         <Button variant="ghost" disabled={applying} onClick={() => void discard()}><X size={16} aria-hidden="true" />Discard preview</Button></div>
-      <p className="muted">Using this text adds the reviewed text and its original to this case. Choose Save case or Save changes to keep both after closing.</p>
+      <p className="muted">Using this text adds the reviewed text and its original to this case. {retainHint}</p>
     </div>}
     {capabilities?.image_interpretation && !capabilities.image_interpretation.supported &&
       <p className="muted">Image discussion is unavailable: {capabilities.image_interpretation.reason} Text extraction reads labels and words; it does not interpret clinical images.</p>}

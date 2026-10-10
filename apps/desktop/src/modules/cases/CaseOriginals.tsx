@@ -68,15 +68,16 @@ function CaseOriginal({ caseId, attachment, disabled, remove }: {
   </li>;
 }
 
-export function CaseOriginals({ session, disabled, remove }: {
+export function CaseOriginals({ session, disabled, remove, retention }: {
   session: CaseSession; disabled: boolean;
+  retention?: 'saved' | 'temporary';
   remove: (id: string) => Promise<CaseSession | null | undefined> | undefined;
 }) {
   const attachments = session.attachments ?? [];
   if (!attachments.length) return null;
   return <section className="case-originals section" aria-label="Case originals">
     <h2><FileText size={20} aria-hidden="true" />Case originals</h2>
-    <p className="muted">Adding or removing a file changes this open case. Choose Save case or Save changes to keep the changes after closing.</p>
+    <p className="muted">{retention==='saved'?'Adding or removing a file is saved with this conversation.':retention==='temporary'?'These originals stay temporary until you choose Save conversation.':'Adding or removing a file changes this open case. Choose Save case or Save changes to keep the changes after closing.'}</p>
     <ul className="case-original-list">{attachments.map(attachment => <CaseOriginal
       key={session.id + ':' + attachment.id + ':' + attachment.sha256 + ':' + attachment.original_available}
       caseId={session.id} attachment={attachment} disabled={disabled} remove={remove} />)}</ul>

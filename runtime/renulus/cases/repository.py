@@ -6,7 +6,7 @@ lock. An async caller receives a pinned context and must commit via its guard.
 """
 
 import asyncio
-from contextlib import nullcontext, closing
+from contextlib import nullcontext, closing, contextmanager
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -107,6 +107,7 @@ class CaseRepository:
         self._handoffs: dict[str, Handoff] = {}
         self._deleted: set[str] = set()
         self._attachment_invalidator = None
+        self._deferred_context = None
 
     def _is_deleted(self, case_id: str, conn=None) -> bool:
         if case_id in self._deleted:
@@ -150,12 +151,7 @@ class CaseRepository:
     def _changed(self, session: Session):
         session.revision += 1
         session.updated_at = utc_now()
-        if self._attachment_invalidator:
-            self._attachment_invalidator(session.id)
-        for ticket_id, ticket in list(self._handoffs.items()):
-            if ticket.case_id == session.id:
-                ticket.cancel.set()
-                del self._handoffs[ticket_id]
+        self._changed_scope(session)
 
     def _teaching_view(self, session: Session, *, annotate: bool = True) -> dict | None:
         item = session.teaching
@@ -367,12 +363,41 @@ class CaseRepository:
 
     def _changed_scope(self, session: Session):
         # Context handles acquired before promotion cannot commit afterwards.
+        if self._deferred_context is not None:
+            self._deferred_context.add(session.id)
+            return
         if self._attachment_invalidator:
             self._attachment_invalidator(session.id)
         for ticket_id, ticket in list(self._handoffs.items()):
             if ticket.case_id == session.id:
                 ticket.cancel.set()
                 del self._handoffs[ticket_id]
+
+    @contextmanager
+    def defer_context_invalidation(self):
+        """Caller holds the lock and commits its transaction inside this scope.
+
+        Failed wrapper saves can restore the same Session and still usable
+        previews. Legacy mutations retain their immediate invalidation behavior.
+        """
+        with self._lock:
+            parent, pending = self._deferred_context, set()
+            self._deferred_context = pending
+            try:
+                yield
+            except BaseException:
+                raise
+            else:
+                self._deferred_context = parent
+                if parent is not None:
+                    parent.update(pending)
+                else:
+                    for identifier in pending:
+                        session = self._sessions.get(identifier)
+                        if session is not None:
+                            self._changed_scope(session)
+            finally:
+                self._deferred_context = parent
 
     def delete(self, case_id: str, revision: int | None = None) -> dict:
         with self._lock:

@@ -102,6 +102,31 @@ are rejected. A deleted/temporary identity cannot be restored by a stale cursor.
 Unstable offset pagination and unbounded transcript reads are not the C contract.
 Cursor implementation and transport encoding belong to the producer.
 
+Connected Case wrapper actions stay under /api/v1/conversations/case/{id}.
+GET /context returns the original Case view without messages; chat history uses
+the paginated message endpoint. PATCH /context accepts text; POST
+/context/reveal exposes the next pinned teaching stage or final debrief. DELETE
+/attachments/{attachment_id} accepts both revision fields as query parameters.
+POST /previews/{preview_id}/apply accepts reviewed text; /keep accepts a prepared
+image original. Upload and extraction preparation reuse the original Cases API
+and remain volatile until this explicit apply/keep action.
+
+Every Case action requires expected_revision (conversation sidecar) and
+case_revision (original Case owner) plus its idempotency key. The committed
+receipt is only {conversation,case_revision}; it contains no Case payload or
+original bytes. Saved wrapper actions call the original Case Save inside their
+command transaction, including case_attachment tombstones for removals.
+Temporary actions and outcomes remain volatile. Failed Save restores the same
+cached owner object and its usable preview; legacy Cases routes keep their
+explicit Save meaning. Installed teaching content changes never repin a saved
+teaching Case or reveal an unrevealed stage.
+
+GET /runs returns {items:[{run_id,state}],next_cursor}. GET /runs/{run_id} with
+neutral=true always returns exactly {run_id,state}; rich detail remains subject
+to assistance policy before HTTP publication. Saved producers can drain without
+a renderer subscription. Temporary subscriptions cancel on view closure;
+process restart marks running saved receipts interrupted without provider work.
+
 Reuse the existing `{error:{code,message,retryable}}` envelope and no-store
 responses. Codes include `invalid_request` (422), `not_found` (404),
 `revision_conflict`, `idempotency_conflict`, `attempt_restricted`,

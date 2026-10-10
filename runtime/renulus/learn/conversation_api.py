@@ -6,7 +6,9 @@ from fastapi import APIRouter, Depends, Header, Query, Response
 from fastapi.responses import StreamingResponse
 
 from renulus.design_c_contracts import ConversationDraft
-from .conversation_models import Mutation, NewConversation, Rename, ProjectMove, Send
+from .conversation_models import (Mutation, NewConversation, Rename, ProjectMove, Send,
+    CaseMutation, CaseContextEdit, CaseAttachmentRemove, CasePreviewApply, CasePreviewKeep, CasePreviewText)
+from .conversation_case import ConversationCases
 from .conversation_repository import ConversationRepository
 from .conversation_stream import ConversationStreams
 
@@ -16,6 +18,7 @@ def create_router(services):
     services.registry["conversations"] = repository
     streaming = ConversationStreams(repository)
     repository.streaming = streaming
+    cases = ConversationCases(repository)
     def no_store(response: Response):
         response.headers["Cache-Control"] = "no-store"
     router = APIRouter(prefix="/conversations", tags=["conversations"], dependencies=[Depends(no_store)])
@@ -37,6 +40,34 @@ def create_router(services):
     def messages(kind: Literal["learning", "case"], identifier: str, limit: int = Query(default=50, ge=1, le=100),
                  cursor: str | None = Query(default=None, max_length=2048)):
         return repository.messages(kind, identifier, limit, cursor)
+
+    @router.get('/case/{identifier}/context')
+    def case_context(identifier: str):
+        return cases.context(identifier)
+
+    @router.patch('/case/{identifier}/context')
+    def case_edit(identifier: str, body: CaseContextEdit, idempotency_key: str | None = Header(default=None)):
+        return cases.change(identifier, body, 'context-edit', idempotency_key)
+
+    @router.post('/case/{identifier}/context/reveal')
+    def case_reveal(identifier: str, body: CaseMutation, idempotency_key: str | None = Header(default=None)):
+        return cases.change(identifier, body, 'teaching-reveal', idempotency_key)
+
+    @router.delete('/case/{identifier}/attachments/{attachment_id}')
+    def case_remove(identifier: str, attachment_id: str, expected_revision: int = Query(ge=1),
+                    case_revision: int = Query(ge=1), idempotency_key: str | None = Header(default=None)):
+        return cases.change(identifier, CaseAttachmentRemove(expected_revision=expected_revision,
+            case_revision=case_revision, attachment_id=attachment_id), 'attachment-remove', idempotency_key)
+
+    @router.post('/case/{identifier}/previews/{preview_id}/apply')
+    def case_apply(identifier: str, preview_id: str, body: CasePreviewApply,
+                   idempotency_key: str | None = Header(default=None)):
+        return cases.change(identifier, CasePreviewText(**body.model_dump(), preview_id=preview_id), 'preview-apply', idempotency_key)
+
+    @router.post('/case/{identifier}/previews/{preview_id}/keep')
+    def case_keep(identifier: str, preview_id: str, body: CaseMutation,
+                  idempotency_key: str | None = Header(default=None)):
+        return cases.change(identifier, CasePreviewKeep(**body.model_dump(), preview_id=preview_id), 'preview-keep', idempotency_key)
 
     @router.post('/{kind}/{identifier}/messages')
     async def send(kind: Literal['learning','case'], identifier: str, body: Send, idempotency_key: str | None = Header(default=None)):

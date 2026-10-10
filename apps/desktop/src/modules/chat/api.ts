@@ -16,7 +16,7 @@ export const conversationPath = (chat: Pick<ConversationSummary, 'kind' | 'ident
   '/conversations/' + chat.kind + '/' + encodeURIComponent(chat.identity.id);
 
 export function createConversation(
-  input: {kind?: 'learning' | 'case'; title?: string; temporary?: boolean; project_id?: string | null},
+  input: {kind?: 'learning' | 'case'; title?: string; temporary?: boolean; project_id?: string | null; teaching_case_id?: string},
   signal?: AbortSignal,
 ): Promise<ConversationSummary> {
   return api('/conversations', {method: 'POST', body: input, signal,

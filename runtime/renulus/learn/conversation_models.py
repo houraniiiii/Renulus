@@ -35,6 +35,30 @@ class ProjectMove(Mutation):
     project_id: Identifier | None = None
 
 
+class CaseMutation(Mutation):
+    case_revision: Revision
+
+
+class CaseContextEdit(CaseMutation):
+    text: str = Field(min_length=1, max_length=50000)
+
+
+class CasePreviewApply(CaseMutation):
+    text: str = Field(min_length=1, max_length=50000)
+
+
+class CaseAttachmentRemove(CaseMutation):
+    attachment_id: Identifier
+
+
+class CasePreviewKeep(CaseMutation):
+    preview_id: Identifier
+
+
+class CasePreviewText(CasePreviewApply):
+    preview_id: Identifier
+
+
 class Send(Mutation):
     text: str = Field(min_length=1, max_length=16000)
     request_id: str = Field(min_length=1, max_length=120, pattern=r"^[A-Za-z0-9._-]+$")
