@@ -14,6 +14,7 @@ import zlib
 from ..contracts import ApiError
 from .backup import (DELETION_NOTICE, portable_records, snapshot_omissions, validate_records)
 from .database import SUPPORTED_SCHEMA, utc_now
+from .compatibility import convert_legacy_row
 from .recovery_archive import (BLOCK, FULL_FORMAT, _read_member, canonical_json,
                                descriptor_for, original_path, owned_path,
                                strict_json, validate_archive, verify_file)
@@ -414,12 +415,26 @@ def _stage_segments(archive, infos, manifest, stage, definitions, limits, direct
             info = infos.get(entry["path"])
             if not info or info.file_size != entry["bytes"]:
                 raise ApiError("backup_integrity", "A canonical segment is missing or has a different exact size")
+            # Verify original compressed-member bytes before any schema
+            # conversion. A second bounded stream preserves the disk-based
+            # format-2 memory budget without trusting a rewritten hash.
+            verified_digest, verified_size = hashlib.sha256(), 0
+            with archive.open(info) as source:
+                while block := source.read(BLOCK):
+                    verified_size += len(block)
+                    if verified_size > entry["bytes"]:
+                        raise ApiError("backup_integrity", "A canonical segment exceeds its declared size")
+                    verified_digest.update(block)
+            if verified_size != entry["bytes"] or verified_digest.hexdigest() != entry["sha256"]:
+                raise ApiError("backup_integrity", "A canonical segment's original hash or size differs")
             with archive.open(info) as source:
                 while line := source.readline(limits.row_bytes + 1):
                     size += len(line)
                     if not line.endswith(b"\n") or len(line) > limits.row_bytes or size > entry["bytes"] or records >= entry["records"]:
                         raise ApiError("backup_limit", "A canonical segment exceeds its bounded row/record/byte declaration", 413)
                     row = strict_json(line)
+                    row = convert_legacy_row(entry["table"], row, definitions[entry["table"]].info,
+                                             manifest["schema_version"])
                     validate_stream_row(entry["table"], row, definitions[entry["table"]], limits, portable=True)
                     insert_row(stage, entry["table"], row, definitions[entry["table"]])
                     digest.update(line)

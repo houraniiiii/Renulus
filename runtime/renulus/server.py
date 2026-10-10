@@ -15,6 +15,7 @@ from . import __version__
 from .contracts import API_VERSION, ApiError
 from .services import Services
 from .storage import AppPaths, Database
+from .storage.database import SUPPORTED_SCHEMA
 
 MODULE_ORDER = ("runtime", "content", "knowledge", "retrieval", "learn", "cases",
                 "assessment", "memory", "study", "updates")
@@ -22,7 +23,19 @@ MODULE_ORDER = ("runtime", "content", "knowledge", "retrieval", "learn", "cases"
 
 def create_app(profile: str | Path, token: str | None = None, source_root=None) -> FastAPI:
     paths = AppPaths.create(profile, source_root)
-    services = Services(paths, Database(paths.database))
+    # Check the complete installed migration inventory before repositories or
+    # startup hooks can write feature records. The ledger is also a compatibility
+    # boundary within schema 2, not merely an idempotency mechanism.
+    inventory = {"storage-recovery-001": (Path(__file__).parent / "storage" /
+        "recovery_schema.sql").read_text(encoding="utf-8")}
+    for name in MODULE_ORDER:
+        module_path = Path(__file__).parent / name
+        schema = module_path / "schema.sql"
+        if schema.exists():
+            inventory[f"{name}-001"] = schema.read_text(encoding="utf-8")
+        for migration in sorted((module_path / "migrations").glob("*.sql")):
+            inventory[f"{name}-{migration.stem}"] = migration.read_text(encoding="utf-8")
+    services = Services(paths, Database(paths.database, migration_inventory=inventory))
     @asynccontextmanager
     async def lifespan(app):
         for callback in services.on_startup:
@@ -76,7 +89,7 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
     @app.get("/api/v1/health")
     def health():
         return {"status": "ready", "version": __version__, "api_version": API_VERSION,
-                "schema_version": 1, "modules": services.capabilities}
+                "schema_version": SUPPORTED_SCHEMA, "modules": services.capabilities}
 
     @app.get("/api/v1/meta")
     def meta():

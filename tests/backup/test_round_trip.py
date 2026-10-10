@@ -285,6 +285,7 @@ def test_real_http_download_raw_preview_restore_and_honest_missing_rebuild_seam(
 
 def test_catalogue_at_183891_rows_is_explicitly_omitted_without_reading_bulk_metadata(source, monkeypatch):
     services, _ = source
+    baseline_record_bytes = len(json.dumps(export_records(services)))
     services.db.execute("""WITH RECURSIVE numbers(n) AS (
         SELECT 1 UNION ALL SELECT n+1 FROM numbers WHERE n<183891)
         INSERT INTO knowledge_catalogue(id,collection_path,source_id,title,bytes,reserved,eligibility,metadata_json,rights_json,checked_at)
@@ -305,7 +306,9 @@ def test_catalogue_at_183891_rows_is_explicitly_omitted_without_reading_bulk_met
     records = export_records(services)
     assert "knowledge_catalogue" not in records["records"]
     assert records["omissions"]["knowledge_catalogue"]["records"] == 183891
-    assert len(json.dumps(records)) < 1024 * 1024
+    # The reviewed content pack grows independently of the external catalogue.
+    # Its omission may add a bounded count, never 183,891 metadata payloads.
+    assert len(json.dumps(records)) <= baseline_record_bytes + 32
     data = zip_bytes(services)
     assert len(data) < 1024 * 1024
     with zipfile.ZipFile(io.BytesIO(data)) as archive:

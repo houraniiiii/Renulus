@@ -14,6 +14,7 @@ from ..contracts import ApiError
 from .backup import (SAFE_PREFERENCES, eligible_table, portable_records,
                      validate_record_row)
 from .recovery_archive import canonical_json, owned_path
+from .relations import PARENTS, TOMBSTONES, reconcile_unavailable_references
 
 
 def quoted(value):
@@ -25,6 +26,7 @@ def quoted(value):
 class Table:
     sql: str
     info: list
+    name: str = ""
 
     @property
     def columns(self):
@@ -36,14 +38,15 @@ class Table:
 
     @property
     def references(self):
-        return [name for name in self.columns if name == "id" or name.endswith("_id")]
+        return list(dict.fromkeys([*self.keys, *(column for binding in PARENTS.get(self.name, ())
+            for column in binding.columns if column in self.columns)]))
 
 
 def installed_schema(conn, limits):
     result = {}
     for row in conn.execute("SELECT name,sql FROM sqlite_master WHERE type='table' ORDER BY name"):
         if eligible_table(row["name"]):
-            definition = Table(row["sql"], [dict(column) for column in conn.execute(f'PRAGMA table_info({quoted(row["name"])})')])
+            definition = Table(row["sql"], [dict(column) for column in conn.execute(f'PRAGMA table_info({quoted(row["name"])})')], row["name"])
             if not definition.keys:
                 raise ApiError("backup_schema", "A canonical table has no bounded recovery identity")
             result[row["name"]] = definition
@@ -176,13 +179,15 @@ def copy_snapshot(source, destination, definitions, limits, *, paths=None):
 
 def blocked_condition(table, alias=""):
     prefix = alias + "." if alias else ""
-    return "(" + " OR ".join(f"(typeof({prefix}{quoted(column)})='text' AND {prefix}{quoted(column)} IN (SELECT id FROM temp.recovery_blocked))"
-                              for column in table.references) + ")" if table.references else "0"
+    key = "json_array(" + ",".join(prefix + quoted(column) for column in table.keys) + ")"
+    # The table name originates in the installed schema, not an archive.
+    name = table.name.replace("'", "''")
+    return f"EXISTS(SELECT 1 FROM temp.recovery_blocked b WHERE b.table_name='{name}' AND b.identity={key})"
 
 
 def build_blocked(conn, definitions, limits, *, incoming=False):
-    conn.execute("CREATE TEMP TABLE recovery_edges(source TEXT NOT NULL,destination TEXT NOT NULL,PRIMARY KEY(source,destination)) WITHOUT ROWID")
-    conn.execute("CREATE TEMP TABLE recovery_blocked(id TEXT PRIMARY KEY) WITHOUT ROWID")
+    conn.execute("CREATE TEMP TABLE recovery_edges(source_table TEXT NOT NULL,source_identity TEXT NOT NULL,destination_table TEXT NOT NULL,destination_identity TEXT NOT NULL,PRIMARY KEY(source_table,source_identity,destination_table,destination_identity)) WITHOUT ROWID")
+    conn.execute("CREATE TEMP TABLE recovery_blocked(table_name TEXT NOT NULL,identity TEXT NOT NULL,PRIMARY KEY(table_name,identity)) WITHOUT ROWID")
     conn.execute("PRAGMA temp.cache_size=-2048")
     conn.execute(f"PRAGMA temp.max_page_count={limits.scratch_database_bytes // conn.execute('PRAGMA temp.page_size').fetchone()[0]}")
     edges = 0
@@ -190,19 +195,34 @@ def build_blocked(conn, definitions, limits, *, incoming=False):
         for name, table in definitions.items():
             if name == "deletion_ledger":
                 continue
-            for reference in table.references:
-                for key in table.keys:
-                    if reference == key:
-                        continue  # Self edges add no descendants.
-                    before = conn.total_changes
-                    conn.execute(f'INSERT OR IGNORE INTO temp.recovery_edges SELECT {quoted(reference)},{quoted(key)} FROM {database}.{quoted(name)} '
-                                 f'WHERE typeof({quoted(reference)})=\'text\' AND typeof({quoted(key)})=\'text\'')
-                    edges += conn.total_changes - before
-                    if edges > limits.graph_edges:
-                        raise ApiError("backup_limit", "Deletion reconciliation exceeds the format-2 graph budget", 413)
-    conn.execute("WITH RECURSIVE descendants(id) AS (SELECT entity_id FROM main.deletion_ledger UNION "
-                 "SELECT e.destination FROM temp.recovery_edges e JOIN descendants d ON e.source=d.id) "
-                 "INSERT INTO temp.recovery_blocked SELECT id FROM descendants")
+            destination = "json_array(" + ",".join(map(quoted, table.keys)) + ")"
+            for binding in PARENTS.get(name, ()):
+                if any(column not in table.columns for column in binding.columns):
+                    continue
+                source_columns = list(map(quoted, binding.columns))
+                where, parameters = [column + " IS NOT NULL" for column in source_columns], [binding.parent, name]
+                if binding.discriminator:
+                    column, value = binding.discriminator
+                    if column not in table.columns:
+                        continue
+                    where.append(quoted(column) + "=?")
+                    parameters.append(value)
+                if binding.prefix:
+                    where.append(f"substr({source_columns[0]},1,{len(binding.prefix)})=?")
+                    parameters.append(binding.prefix)
+                    source_columns[0] = f"substr({source_columns[0]},{len(binding.prefix) + 1})"
+                source = "json_array(" + ",".join(source_columns) + ")"
+                before = conn.total_changes
+                conn.execute(f'INSERT OR IGNORE INTO temp.recovery_edges SELECT ?,{source},?,{destination} FROM {database}.{quoted(name)} WHERE ' + " AND ".join(where), parameters)
+                edges += conn.total_changes - before
+                if edges > limits.graph_edges:
+                    raise ApiError("backup_limit", "Deletion reconciliation exceeds the format-2 graph budget", 413)
+    conn.execute("CREATE TEMP TABLE recovery_roots(table_name TEXT NOT NULL,identity TEXT NOT NULL,PRIMARY KEY(table_name,identity)) WITHOUT ROWID")
+    for alias, table in TOMBSTONES.items():
+        conn.execute("INSERT OR IGNORE INTO temp.recovery_roots SELECT ?,json_array(entity_id) FROM main.deletion_ledger WHERE entity_type=?", (table, alias))
+    conn.execute("WITH RECURSIVE descendants(table_name,identity) AS (SELECT table_name,identity FROM temp.recovery_roots UNION "
+                 "SELECT e.destination_table,e.destination_identity FROM temp.recovery_edges e JOIN descendants d ON e.source_table=d.table_name AND e.source_identity=d.identity) "
+                 "INSERT INTO temp.recovery_blocked SELECT table_name,identity FROM descendants")
 
 
 def prune_deleted(conn, definitions, limits):
@@ -210,6 +230,7 @@ def prune_deleted(conn, definitions, limits):
     for name, table in definitions.items():
         if name != "deletion_ledger":
             conn.execute(f'DELETE FROM {quoted(name)} WHERE {blocked_condition(table)}')
+    reconcile_unavailable_references(conn)
     conn.commit()
 
 
@@ -267,6 +288,7 @@ def apply_staged(conn, stage, definitions, limits, exported_at):
         # INSERT OR IGNORE would conceal CHECK/NOT NULL/secondary-key corruption.
         inserted += conn.execute(f'INSERT INTO main.{quoted(name)}({columns}) SELECT {selected} FROM recovery_incoming.{quoted(name)} AS source '
                                  f'WHERE {allowed} AND NOT EXISTS(SELECT 1 FROM main.{quoted(name)} AS target WHERE {match}) ORDER BY source.rowid').rowcount
+    reconcile_unavailable_references(conn)
     if conn.execute("PRAGMA main.foreign_key_check").fetchone():
         raise ApiError("backup_references", "The backup has incomplete linked canonical records")
     # A union larger than the finite profile budget is refused while writes are

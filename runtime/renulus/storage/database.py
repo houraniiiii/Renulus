@@ -6,7 +6,7 @@ from pathlib import Path
 import sqlite3
 from typing import Iterable
 
-SUPPORTED_SCHEMA = 1
+SUPPORTED_SCHEMA = 2
 
 
 def utc_now() -> str:
@@ -14,14 +14,16 @@ def utc_now() -> str:
 
 
 class Database:
-    def __init__(self, path: str | Path):
+    def __init__(self, path: str | Path, *, migration_inventory: dict[str, str] | None = None):
         self.path = Path(path).resolve()
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with closing(self.connect()) as conn:
-            conn.execute("PRAGMA journal_mode=WAL")
             version = conn.execute("PRAGMA user_version").fetchone()[0]
             if version > SUPPORTED_SCHEMA:
                 raise RuntimeError("This profile needs a newer Renulus version; downgrade refused")
+            if migration_inventory is not None and conn.execute("SELECT 1 FROM sqlite_master WHERE name='migration_ledger' AND type='table'").fetchone():
+                self.check_migration_inventory(migration_inventory)
+            conn.execute("PRAGMA journal_mode=WAL")
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS migration_ledger(
                     name TEXT PRIMARY KEY, checksum TEXT NOT NULL, applied_at TEXT NOT NULL);
@@ -98,6 +100,15 @@ class Database:
             if remainder.strip():
                 raise RuntimeError(f"Incomplete migration: {name}")
             conn.execute("INSERT INTO migration_ledger VALUES(?,?,?)", (name, checksum, utc_now()))
+
+    def check_migration_inventory(self, inventory: dict[str, str]):
+        """Refuse unknown or changed applied migrations before module writes."""
+        for row in self.fetch_all("SELECT name,checksum FROM migration_ledger"):
+            script = inventory.get(row["name"])
+            if script is None:
+                raise RuntimeError("This profile has migrations unknown to this app; downgrade refused")
+            if hashlib.sha256(script.encode()).hexdigest() != row["checksum"]:
+                raise RuntimeError(f"Applied migration changed: {row['name']}; add a new migration")
 
     def mark_deleted(self, entity_type: str, entity_id: str, conn=None):
         sql = "INSERT OR REPLACE INTO deletion_ledger VALUES(?,?,?)"

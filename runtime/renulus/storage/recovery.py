@@ -12,6 +12,8 @@ from ..contracts import ApiError
 from .backup import (apply_records, portable_records, record_references, records_only_bundle,
                      snapshot_omissions)
 from .database import utc_now
+from .relations import original_blocked
+from .invalidation import invalidate_restored_context
 from .recovery_archive import (DEFAULT_LIMITS, backup_to, descriptor_for, original_path,
                                owned_path, strict_json, verify_file)
 from .recovery_files import OriginalTransaction, recover_file_journals, remove_owned_tree
@@ -237,12 +239,15 @@ class Recovery:
                         conn.execute("PRAGMA cache_size=-2048")
                         result, removed_revisions = apply_staged(conn, staged.stage, installed_schema(conn, limits), limits, bundle["exported_at"])
                         current = {"knowledge_revisions": removed_revisions}
-                        def is_blocked(*identifiers):
-                            return bool(conn.execute("SELECT 1 FROM temp.recovery_blocked WHERE id IN (" + ",".join("?" for _ in identifiers) + ") LIMIT 1", identifiers).fetchone())
+                        def is_blocked(revision_id, document_id):
+                            return bool(conn.execute("SELECT 1 FROM temp.recovery_blocked WHERE "
+                                "(table_name='knowledge_revisions' AND identity=json_array(?)) OR "
+                                "(table_name='knowledge_documents' AND identity=json_array(?)) LIMIT 1",
+                                (revision_id, document_id)).fetchone())
                     else:
                         result, blocked, current = apply_records(conn, rebased)
-                        def is_blocked(*identifiers):
-                            return bool(blocked.intersection(identifiers))
+                        def is_blocked(revision_id, document_id):
+                            return original_blocked(revision_id, document_id, blocked)
                     promotions, removals, restored = [], [], 0
                     for entry in originals:
                         # The union of newer target and imported markers is already applied.
@@ -268,7 +273,7 @@ class Recovery:
                         conn.execute("UPDATE knowledge_revisions SET original_path=? WHERE id=?", (str(target), entry["revision_id"]))
                         restored += 1
                     for row in current.get("knowledge_revisions", []):
-                        if not row["original_path"] or not is_blocked(*record_references(row)):
+                        if not row["original_path"] or not is_blocked(row["id"], row["document_id"]):
                             continue
                         try:
                             relative = Path(row["original_path"]).relative_to(self.services.paths.root).as_posix()
@@ -287,6 +292,7 @@ class Recovery:
                                    "data_kind": bundle.get("data_kind", "records-only"),
                                    "format_version": getattr(staged, "archive_version", 2) if staged else 1,
                                    "omissions": bundle.get("omissions", {}), "cleanup_pending": False})
+                    invalidate_restored_context(conn)
                     rebuild = {"status": "required", "modules": {}, "updated_at": utc_now()}
                     conn.execute("INSERT INTO storage_recovery_runs VALUES(?,?,?,?)", (
                         identifier, utc_now(), json.dumps(result), json.dumps(rebuild)))

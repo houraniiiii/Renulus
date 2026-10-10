@@ -371,7 +371,8 @@ integrator; do not mandate a new state library, event bus or service.
 
 ## 6. Tickets
 
-Every ticket is initially **Not started**. Dependencies are completion/integration
+At the documentation baseline every ticket was **Not started**. Current execution
+status is recorded below and in the linked execution record. Dependencies are completion/integration
 gates; work against a frozen producer contract may begin earlier. Every ticket
 includes necessary loading/empty/error and keyboard states without repeating them
 below. “Prove” describes acceptance evidence, not a mandate to write trivial tests.
@@ -875,3 +876,46 @@ result: all DC tickets remain Not started. Figma and product code were inspected
 this pass changed documentation only. App tests, model calls, implementation,
 installation and release acceptance were not performed by this planning pass.
 `git diff --check` and the repository's workspace/local-link check passed.
+
+## 10. Implementation execution — October 10, 2026
+
+The owner authorised implementation, local commits and matching Windows delivery
+after the documentation baseline `528025ff`. The clean canonical checkout started
+there; `codex/design-c-integration` is the integration branch. Initial lane
+reservations and shared baseline `1b30a896` are in
+[the execution record](../implementation/EXECUTION.md#active-reservations--initial-prerequisite-wave).
+This table records outcomes against the existing tickets, not a replacement plan.
+
+| Ticket | Current status / owner | Prerequisite and evidence / remaining gate |
+| --- | --- | --- |
+| DC01 | In progress — design worker + lead | Editable C reconciliation and screen/state evidence underway; code acceptance remains with feature owners. |
+| DC02 | In progress — lead + contract worker | `08435018` / `efcc7824` proposals; schema 2, exact schema-1 recovery adapters and typed graph under test. Independent 20-assertion recheck resolves shared-original, namespace and retained-memory reproductions. Foundation acceptance still open. |
+| DC03–DC11 | Not started — dependency wave pending | Shared contract publication, DC01 reconciliation and reserved producer/consumer paths required. |
+| DC12–DC19 | Not started — dependency wave pending | Saved-test/version, attempts, generation and import paths will have separate writers. |
+| DC20 | Not started — lead + independent reviewers | Requires all producer/consumer integrations and populated-profile coverage. |
+| DC21 | Not started — release lead | Current installed Flow app remains selected until DC20 and matching delivery evidence pass. |
+
+Pass 1 has reproduced material recovery failures and is reviewing assessment and
+reader seams. Fixes use one typed whole-row identity (table plus full PK tuple),
+declared owned/drop-link edges and exact historical tombstone aliases. Unknown
+types remain in the ledger without deleting another namespace. History links
+with unavailable-source semantics are not drop-link edges: new attempts/reports/
+job outcomes must retain independently pinned immutable provenance or referenced
+versions when collection entries disappear.
+
+Engineering clarification: new domain records use additive sidecars rather than
+adding fields to original Learn/Cases/assessment rows. This preserves their
+column meanings and makes schema-1 conversion explicit. Any necessary added
+legacy field requires an exact reviewed default in the compatibility adapter;
+unknown shapes are refused. JSON and both supported ZIP formats verify source
+bytes before conversion. A schema and known-migration inventory gate prevents
+older/unrecognised runtimes from writing newer profiles.
+
+Restore also invalidates Memory and Library derived readiness in the canonical
+transaction and advances a local, non-exported context generation. DC06/DC19
+publishers must check that generation, as well as input revisions, so a restore
+cannot publish stale personalisation. Recovery does not start provider work.
+DC04 additionally requires a real `case_attachment` tombstone when an attachment
+is removed from a saved case; merely removing its current row allows an older
+backup to restore the bytes. These are implementation prerequisites, not passes
+for feature tickets.

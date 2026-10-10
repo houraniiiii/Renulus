@@ -34,6 +34,30 @@ their real producers/consumers and required evidence are integrated. No live
 provider request, personal-profile migration or launcher promotion is part of
 this prerequisite wave.
 
+### DC02 foundation slice — validated before dependent feature writes
+
+The lead added a schema-2/known-migration compatibility gate, exact schema-1
+column inventory and conversion adapters, typed full-row recovery identities
+shared by JSON/ZIP1/ZIP2, nullable live-reference reconciliation and transactional
+restore invalidation. Original legacy record columns/IDs/assessment meanings
+are unchanged. History snapshots and original pins stay separate from optional
+live pointers; preserve-unavailable references never enter the drop-row graph.
+
+Validation: seven focused migration/recovery tests passed. The existing
+foundation/backup selection passed 39 checks and exposed one stale absolute
+export-size assertion: the current reviewed pack itself exceeds that old 1 MiB
+threshold. The check now compares catalogue omission with the actual baseline
+size while its SQLite authoriser still forbids reading bulk catalogue columns;
+that regression and seven foundation checks passed together (eight checks).
+Independent source rechecks passed 20 typed-recovery assertions and eight
+restore-invalidation assertions, with exact external receipts in the review
+report. Unknown column changes are refused until an exact conversion is added.
+
+DC02 is still open for final shared contract/fixture integration and reviewed
+handoff. DC04 must add the actual saved-case attachment tombstone producer;
+new record owners must register their deletion aliases/relations and prove
+export/restore. DC06/DC19 must compare the local context epoch before publication.
+
 The entries below preserve earlier implementation evidence. Their Flow selection,
 branches, paths, issue status, time windows and heartbeat instructions describe
 those dated runs; they are not assignments or scheduling instructions for C.

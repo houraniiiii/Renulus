@@ -18,6 +18,8 @@ from ..contracts import ApiError
 from .backup import (DELETION_NOTICE, FORMAT_VERSION, MAX_JSON_BYTES, blocked_ids, portable_records,
                      record_references, snapshot_in, validate_merge, validate_records)
 from .database import SUPPORTED_SCHEMA
+from .compatibility import readable_schema
+from .relations import allow_row
 
 MIB = 1024 * 1024
 BLOCK = MIB
@@ -141,12 +143,14 @@ def backup_to(services, output, limits=DEFAULT_LIMITS):
         bundle = snapshot_in(conn)
         validate_records(conn, bundle)
         records = portable_records(bundle["records"], originals=True)
-        deleted = {row["entity_id"] for row in records.get("deletion_ledger", [])}
+        deleted = records.get("deletion_ledger", [])
         blocked = blocked_ids(conn, {}, records, deleted)
         # Deleted/indirect records must not carry source contents in a new backup.
         for name, rows in records.items():
             if name != "deletion_ledger":
-                records[name] = [row for row in rows if not blocked.intersection(record_references(row))]
+                from .backup import primary_keys
+                keys = primary_keys(conn, name)
+                records[name] = [row for row in rows if allow_row(name, row, keys, blocked)]
         documents = {row["id"]: row for row in records.get("knowledge_documents", [])}
         originals, total = [], 0
         for row in records.get("knowledge_revisions", []):
@@ -341,7 +345,7 @@ def validate_archive(services, directory, limits=DEFAULT_LIMITS, *, merge_valida
             if not isinstance(manifest, dict) or set(manifest) != {
                     "format", "format_version", "schema_version", "exported_at", "records", "originals"} or \
                     manifest["format"] != FULL_FORMAT or type(manifest["format_version"]) is not int or manifest["format_version"] != FORMAT_VERSION or \
-                    type(manifest["schema_version"]) is not int or manifest["schema_version"] != SUPPORTED_SCHEMA:
+                    not readable_schema(manifest["schema_version"]):
                 raise ApiError("backup_format", "This is not a supported full Renulus backup")
             record_entry = manifest["records"]
             if not isinstance(record_entry, dict) or set(record_entry) != {"path", "bytes", "sha256"} or \

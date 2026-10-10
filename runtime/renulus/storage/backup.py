@@ -12,6 +12,8 @@ import sqlite3
 
 from renulus.contracts import ApiError
 from .database import SUPPORTED_SCHEMA, utc_now
+from .compatibility import readable_schema, convert_legacy_records
+from .relations import row_identity, row_parents, tombstone_identity, allow_row, reconcile_unavailable_references
 
 FORMAT_VERSION = 1
 MAX_RECORDS = 100_000
@@ -200,7 +202,7 @@ def validate_records(conn, bundle):
     if not isinstance(bundle, dict) or bundle.get("format") != "renulus-canonical-export" or \
             type(bundle.get("format_version")) is not int or bundle["format_version"] != FORMAT_VERSION:
         raise ApiError("backup_format", "This is not a supported Renulus export")
-    if type(bundle.get("schema_version")) is not int or bundle["schema_version"] != SUPPORTED_SCHEMA:
+    if not readable_schema(bundle.get("schema_version")):
         raise ApiError("backup_schema", "Install a compatible app version before restoring this export")
     validate_date(bundle.get("exported_at"))
     if set(bundle) - {"format", "format_version", "schema_version", "exported_at", "data_kind",
@@ -209,6 +211,7 @@ def validate_records(conn, bundle):
     records = bundle.get("records")
     if not isinstance(records, dict):
         raise ApiError("backup_records", "The export has invalid canonical records")
+    records = convert_legacy_records(conn, records, bundle["schema_version"])
     if bundle.get("data_kind", "records-only") not in ("records-only", "full-backup"):
         raise ApiError("backup_format", "The canonical export has an unsupported data kind")
     omissions = bundle.get("omissions", {})
@@ -241,17 +244,18 @@ def validate_records(conn, bundle):
 
 
 def blocked_ids(conn, current, incoming, deleted_ids):
-    """Traverse descendants once, including indirect revisions, jobs and history."""
+    """Traverse typed row identities; a composite link never owns its endpoints."""
     edges = defaultdict(set)
     for name in set(current) | set(incoming):
         if name == "deletion_ledger":
             continue
         keys = primary_keys(conn, name)
         for row in [*current.get(name, []), *incoming.get(name, [])]:
-            identifiers = {row[key] for key in keys if isinstance(row.get(key), str)}
-            for reference in record_references(row):
-                edges[reference].update(identifiers)
-    blocked, pending = set(deleted_ids), deque(deleted_ids)
+            identifier = row_identity(name, row, keys)
+            for reference in row_parents(name, row):
+                edges[reference].add(identifier)
+    roots = {value for marker in deleted_ids if (value := tombstone_identity(marker)) is not None}
+    blocked, pending = set(roots), deque(roots)
     while pending:
         for identifier in edges[pending.popleft()] - blocked:
             blocked.add(identifier)
@@ -268,7 +272,7 @@ def apply_records(conn, bundle):
         conn.execute("INSERT INTO deletion_ledger VALUES(?,?,?) ON CONFLICT(entity_type,entity_id) "
                      "DO UPDATE SET deleted_at=MAX(deletion_ledger.deleted_at,excluded.deleted_at)",
                      (row["entity_type"], row["entity_id"], row["deleted_at"]))
-    deleted = {row[0] for row in conn.execute("SELECT entity_id FROM deletion_ledger")}
+    deleted = [dict(row) for row in conn.execute("SELECT entity_type,entity_id FROM deletion_ledger")]
     blocked = blocked_ids(conn, current, records, deleted)
     removed = 0
     for name, rows in current.items():
@@ -276,7 +280,7 @@ def apply_records(conn, bundle):
             continue
         keys = primary_keys(conn, name)
         for row in rows:
-            if keys and blocked.intersection(record_references(row)):
+            if keys and not allow_row(name, row, keys, blocked):
                 where = " AND ".join(f'"{key}"=?' for key in keys)
                 removed += conn.execute(f'DELETE FROM "{name}" WHERE {where}',
                                         tuple(row[key] for key in keys)).rowcount
@@ -287,7 +291,7 @@ def apply_records(conn, bundle):
         keys = primary_keys(conn, name)
         where = " AND ".join(f'"{key}"=?' for key in keys)
         for row in rows:
-            if blocked.intersection(record_references(row)):
+            if not allow_row(name, row, keys, blocked):
                 excluded += 1
                 continue
             existing = conn.execute(f'SELECT * FROM "{name}" WHERE {where}',
@@ -309,6 +313,7 @@ def apply_records(conn, bundle):
             # OR IGNORE would silently discard invalid CHECK/NOT NULL rows.
             inserted += conn.execute(f'INSERT INTO "{name}" ({columns_sql}) VALUES({placeholders})',
                                      tuple(row[column] for column in names)).rowcount
+    reconcile_unavailable_references(conn)
     if conn.execute("PRAGMA foreign_key_check").fetchall():
         raise ApiError("backup_references", "The export has incomplete linked records; no records were restored")
     return {"restored_records": inserted, "excluded_by_deletion": excluded,
@@ -353,7 +358,7 @@ def restore_records(services, bundle, *, confirm_older=False):
     bundle = records_only_bundle(bundle)
     with services.db.transaction() as conn:
         records = validate_records(conn, bundle)
-        safe = {**bundle, "records": portable_records(records)}
+        safe = {**bundle, "schema_version": SUPPORTED_SCHEMA, "records": portable_records(records)}
         try:
             result, _, _ = apply_records(conn, safe)
         except sqlite3.DatabaseError:

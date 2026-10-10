@@ -133,6 +133,7 @@ class KnowledgeRepository:
                 candidate.validate_passages(identities)
                 with self.db.transaction() as conn:
                     conn.execute("INSERT INTO preferences VALUES('knowledge.index_generation',?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at", (json.dumps(generation), utc_now()))
+                    conn.execute("DELETE FROM preferences WHERE key='knowledge.restore_dirty'")
                 self.index = candidate
                 activated = True
                 previous.close()
@@ -529,6 +530,8 @@ class KnowledgeRepository:
         return True
 
     def retrieve(self, query, topic_id=None, scope=None, *, limit=8, current_only=False):
+        if self.db.fetch_one("SELECT 1 FROM preferences WHERE key='knowledge.restore_dirty' AND value='true'"):
+            raise ApiError("knowledge_rebuild_required", "The restored Library needs its local search rebuild. Open data recovery and retry the rebuild.", 503, True)
         if scope is None:
             raise ApiError("scope_required", "Retrieval requires an app-owned context scope", 422)
         scope = self._scope(scope)
