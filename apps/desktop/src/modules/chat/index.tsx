@@ -6,6 +6,8 @@ import { Badge, Button, ErrorState, IconButton, Input, LoadingState, Notice, Sel
 import { useWorkspace } from '../workspace';
 import { CaseContext } from './CaseContext';
 import { CaseHandoffActions } from './CaseHandoffActions';
+import { ChatAttachments } from './ChatAttachments';
+import type { AttachmentIntent } from './attachments';
 import { conversationPath, createConversation, sendConversation, type ConversationRun, type SendIntent } from './api';
 import './chat.css';
 
@@ -19,6 +21,8 @@ export interface ChatPageProps {
   onSendIntentConsumed?: (requestId: string) => void;
   passageIntent?: PassageDraft & {id: string};
   onPassageIntentConsumed?: (id: string) => void;
+  attachmentIntent?: AttachmentIntent;
+  onAttachmentIntentConsumed?: (requestId: string) => void;
   onConversation?: (value: ConversationSummary|null) => void;
 }
 const changed = () => window.dispatchEvent(new Event('renulus:records-changed'));
@@ -42,6 +46,7 @@ export default function ChatPage(props: ChatPageProps) {
   const [title,setTitle] = useState('');
   const [projects,setProjects] = useState<ProjectSummary[]>([]);
   const [confirmDelete,setConfirmDelete] = useState(false);
+  const [attachmentsOpen,setAttachmentsOpen] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const chatRef = useRef<ConversationSummary|undefined>(undefined);
   const textRef = useRef('');
@@ -258,7 +263,8 @@ export default function ChatPage(props: ChatPageProps) {
     {chat.kind==='case'&&<CaseContext conversation={chat} disabled={disabled} beforeChange={flushDraft} onChanged={value=>{accept(value);callback.current.onConversation?.(value);if(value.retention==='saved')changed();}} onStartTeaching={async teaching_case_id=>{const value=await createConversation({kind:'case',teaching_case_id,temporary:chat.retention==='temporary',project_id:chat.project_id});callback.current.onConversation?.(value);if(value.retention==='saved')changed();}}/>}
     <div className="chat-transcript" aria-label="Message history">{messages.map(message=><article className={'chat-message chat-message-'+message.role} key={message.id}><p className="chat-role">{message.role==='user'?'You':'Renulus'}</p><div className="chat-message-text">{message.content}</div>{message.content_refs?.length>0&&<div className="chat-references">{message.content_refs.map((reference,index)=><Button key={index} variant="ghost" onClick={()=>workspace.open(reference)}>Open source {index+1}</Button>)}</div>}</article>)}{cursor&&<Button variant="secondary" onClick={()=>void more()}>Load more history</Button>}{partial&&!messages.some(message=>message.run_id===visibleRun.current&&message.role==='assistant')&&<article className="chat-message chat-message-assistant"><p className="chat-role">Renulus {busy?'Â· responding':''}</p><div className="chat-message-text">{partial}</div></article>}{messages.length===0&&!partial&&<div className="chat-empty"><h2>What would you like to understand?</h2><p>{chat.kind==='case'?'Discuss a case, ask for missing information, or work through a teaching case.':'Ask a nephrology question. Choose guided teaching when you would like to work through it step by step.'}</p></div>}</div>
     {Boolean(error)&&<ErrorState error={error} title="Your draft is kept" onRetry={()=>{setError(undefined);void send();}}/>}
-    <form className="chat-composer" onSubmit={(event:FormEvent)=>{event.preventDefault();void send();}}><Textarea label={chat.kind==='case'?'Your case question':'Message Renulus'} value={text} onChange={event=>setText(event.target.value)} rows={3} maxLength={16000} disabled={disabled}/>{refs.length>0&&<div className="chat-reference-chips">{refs.map((reference,index)=><span key={index}><Button variant="ghost" onClick={()=>workspace.open(reference)}>Source {index+1}</Button><IconButton label={'Remove source '+(index+1)} disabled={busy} onClick={()=>setRefs(previous=>previous.filter((_,i)=>i!==index))}><X size={14}/></IconButton></span>)}</div>}<div className="chat-composer-footer"><div className="chat-composer-options"><IconButton label="Open files workspace" onClick={()=>workspace.showSection('Files')}><Paperclip size={18}/></IconButton><Select label="Teaching" value={style} onChange={event=>setStyle(event.target.value as 'direct'|'guided')} disabled={disabled}><option value="direct">Direct</option><option value="guided">Guided</option></Select></div><span className="chat-status" role="status">{status}</span>{busy?<Button variant="secondary" onClick={()=>void stop()}><Square size={16}/>Stop</Button>:<Button type="submit" disabled={disabled||!text.trim()}><ArrowUp size={17}/>Send</Button>}</div></form>
+    <form className="chat-composer" onSubmit={(event:FormEvent)=>{event.preventDefault();void send();}}><Textarea label={chat.kind==='case'?'Your case question':'Message Renulus'} value={text} onChange={event=>setText(event.target.value)} rows={3} maxLength={16000} disabled={disabled}/>{refs.length>0&&<div className="chat-reference-chips">{refs.map((reference,index)=><span key={index}><Button variant="ghost" onClick={()=>workspace.open(reference)}>Source {index+1}</Button><IconButton label={'Remove source '+(index+1)} disabled={busy} onClick={()=>setRefs(previous=>previous.filter((_,i)=>i!==index))}><X size={14}/></IconButton></span>)}</div>}<div className="chat-composer-footer"><div className="chat-composer-options"><IconButton label="Attach file" disabled={disabled} onClick={()=>setAttachmentsOpen(value=>!value)}><Paperclip size={18}/></IconButton><Select label="Teaching" value={style} onChange={event=>setStyle(event.target.value as 'direct'|'guided')} disabled={disabled}><option value="direct">Direct</option><option value="guided">Guided</option></Select></div><span className="chat-status" role="status">{status}</span>{busy?<Button variant="secondary" onClick={()=>void stop()}><Square size={16}/>Stop</Button>:<Button type="submit" disabled={disabled||!text.trim()}><ArrowUp size={17}/>Send</Button>}</div></form>
+    <ChatAttachments key={incomingKey} conversation={chat} open={attachmentsOpen} onOpenChange={setAttachmentsOpen} disabled={disabled} intent={props.attachmentIntent} onConsumed={props.onAttachmentIntentConsumed} beforeAttach={flushDraft} onChanged={value=>{accept(value);if(value.retention==='saved')changed();}}/>
     {chat.kind==='case'&&<CaseHandoffActions conversation={chat} question={text} disabled={disabled} prepare={flushDraft}/>}
     <dialog ref={dialog} onCancel={()=>setConfirmDelete(false)} className="chat-delete-dialog"><h2>Delete this conversation?</h2><p>Its messages and owned originals will be removed. Separately retained learning memory remains inspectable.</p><div className="actions"><Button variant="secondary" onClick={()=>{setConfirmDelete(false);dialog.current?.close();}}>Keep conversation</Button><Button variant="danger" onClick={()=>void remove()}>Delete conversation</Button></div></dialog>
   </section>;
