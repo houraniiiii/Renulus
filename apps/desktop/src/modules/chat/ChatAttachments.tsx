@@ -75,7 +75,7 @@ export function ChatAttachments(props:Props){
   return <section className="chat-attachment-review" aria-label="Attachments">
     <div className="chat-review-heading"><div><h2>Conversation files</h2><p>Review the selected original and its permissions before attaching.</p></div><Button variant="ghost" disabled={busy} onClick={()=>props.onOpenChange(false)}>Close files</Button></div>
     {!workspace.permitted?<Notice>Files are unavailable during an active Test.</Notice>:<>
-      <Input label="Attach file" type="file" accept=".pdf,.txt,.md,.csv,.html,.htm,.xml,.png,.jpg,.jpeg,.tif,.tiff,.docx,.pptx,.xlsx" disabled={blocked||frozen} onChange={event=>{const value=event.target.files?.[0];if(value)select(value);event.target.value='';}}/>
+      <Input label="Attach files to chat" type="file" accept=".pdf,.txt,.md,.csv,.html,.htm,.xml,.png,.jpg,.jpeg,.tif,.tiff,.docx,.pptx,.xlsx" disabled={blocked||frozen} onChange={event=>{const value=event.target.files?.[0];if(value)select(value);event.target.value='';}}/>
       {file&&<div className="chat-attachment-fields">
         <p className="chat-selected-file">{file.name} <span>{(file.size/1024).toFixed(1)} KiB · {props.conversation.retention==='temporary'?'temporary original':'saved original'}</span></p>
         {problem&&<Notice tone="warning">{problem}</Notice>}
