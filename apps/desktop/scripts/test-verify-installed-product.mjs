@@ -10,6 +10,7 @@ import { installedAcceptancePlan, validateInstalledRequest, validateInstallation
   validateCompleteReport, validateFrozenScript, validateFrozenExport, validateAcceptanceChanges, captureResponse, captureFailureScreenshot,
   installAttachmentCapture, freshHiddenFrame, captureHiddenWindow, hiddenScreenshotBytes,
   installReaderBinaryCapture, observedBinaryBytes, observeReaderCdp,
+  ReaderResolveFailure, recoverableReaderRefusal, readerResponse, withReaderUiRecovery, readerBinaryAction,
   requiredGates, remainingOwnedIdentities, inside,
   coreGates, readerGates, deferredGates, completeCoreReceipt, designCEvidenceRoot, ownedArtifact, validateHiddenWindows, waitForDesignCWindow,
   validateConversation, validateSavedTest, validateActiveTest, validateFinalAttempt, validateAssistanceRefusal, safeFailure,
@@ -427,6 +428,134 @@ test('CDP binary diagnostics retain only bounded metadata for the bound response
   const evicted = observeReaderCdp(page, () => true);
   listener({ ...bound, body: async () => { throw new Error('synthetic inspector eviction'); } });
   assert.deepEqual(await evicted.result, { status: 'unavailable' }); assert.equal(listener, undefined);
+});
+
+const readerRefusalFixture = () => {
+  const attachment = { id: 'attachment_' + 'b'.repeat(32), conversation: { type: 'learn_thread', id: 'thread_' + 'a'.repeat(32) } };
+  const request = { reference: { target: { type: 'attachment', id: attachment.id }, locator: null },
+    conversation: attachment.conversation, page: 1, first_row: 1, row_limit: 100 };
+  const response = { method: 'POST', route: '/readers/resolve', status: 409, request,
+    headers: { 'cache-control': 'no-store', 'content-type': 'application/json' },
+    body: { error: { code: 'reader_original_unavailable', message: 'The attachment original is currently unavailable', retryable: true } } };
+  return { attachment, request, response, error: new ReaderResolveFailure(response) };
+};
+
+test('only the exact no-store retryable Reader original-unavailable 409 envelope permits UI recovery', () => {
+  const f = readerRefusalFixture(); assert.equal(recoverableReaderRefusal(f.error, f.attachment), true);
+  for (const mutate of [r => { r.route = '/readers/original'; }, r => { r.method = 'GET'; },
+    ...[200, 403, 404, 500, 503].map(status => r => { r.status = status; }),
+    r => { r.headers['cache-control'] = 'public'; }, r => { r.headers['content-type'] = 'text/html'; },
+    ...['assistance_restricted', 'assistance_changed', 'reader_revision_conflict', 'original_missing', 'reader_context_mismatch']
+      .map(code => r => { r.body.error.code = code; }),
+    r => { r.body.error.retryable = false; }, r => { r.body.error.retryable = 'true'; },
+    r => { r.body.error.message = 'Other'; }, r => { r.body.detail = 'not the frozen envelope'; },
+    r => { r.request.reference.target.id = 'other'; }, r => { r.request.conversation.id = 'tmp_other'; }]) {
+    const response = structuredClone(f.response); mutate(response);
+    assert.equal(recoverableReaderRefusal(new ReaderResolveFailure(response), f.attachment), false);
+  }
+  const untyped = new Error('not an observed Reader refusal'); untyped.response = f.response;
+  assert.equal(recoverableReaderRefusal(untyped, f.attachment), false);
+});
+
+const readerRecoveryPage = (outcomes = [409, 200]) => {
+  const f = readerRefusalFixture(), events = [], listeners = new Set();
+  const origin = 'http://127.0.0.1:12345'; let waiting, count = 0, captureResolve;
+  const reply = async () => {
+    const outcome = outcomes[count++], status = typeof outcome === 'number' ? outcome : outcome.status;
+    const body = status === 200 ? { schema_version: 'reader/1', original: { sha256: digest } }
+      : typeof outcome === 'number' ? f.response.body : outcome.body;
+    const request = typeof outcome === 'object' && outcome.request ? outcome.request : f.request;
+    const response = { url: () => origin + '/api/v1/readers/resolve', status: () => status,
+      headers: () => f.response.headers, request: () => ({ method: () => 'POST', postDataJSON: () => request }),
+      json: async () => { events.push('read-envelope-' + status); return body; } };
+    assert.equal(waiting.matches(response), true); waiting.resolve(response);
+    if (status === 200 && captureResolve) {
+      const bytes = hiddenCaptureFixture().png;
+      captureResolve({ status: 200, headers: { 'content-type': 'image/png' }, bytes: [...bytes] });
+      const asset = { url: () => origin + '/api/v1/readers/asset', status: () => 200,
+        headers: () => ({ 'content-type': 'image/png' }), body: async () => bytes,
+        request: () => ({ method: () => 'POST', postDataJSON: () => ({ ...f.request, asset_id: 'pdf:1', original_sha256: digest }) }) };
+      for (const listener of [...listeners]) listener(asset);
+    }
+    await Promise.resolve(); events.push('action-complete-' + status);
+  };
+  const button = { waitFor: async value => { assert.deepEqual(value, { state: 'visible' }); events.push('visible-retry'); },
+    count: async () => 1, isEnabled: async () => true,
+    click: async () => { events.push('click-Try-again'); await reply(); } };
+  const alert = { filter: () => alert,
+    getByText: (value, options) => { assert.equal(value, f.response.body.error.message); assert.deepEqual(options, { exact: true });
+      return { waitFor: async value => { assert.deepEqual(value, { state: 'visible' }); events.push('visible-refusal'); } }; },
+    getByRole: (role, options) => { assert.equal(role, 'button'); assert.deepEqual(options, { name: 'Try again', exact: true }); return button; } };
+  const page = { url: () => origin + '/#/chat/learn_thread/' + f.attachment.conversation.id,
+    waitForResponse: (matches, options) => { assert.equal(options.timeout, 120_000);
+      return new Promise(resolve => { waiting = { matches, resolve }; }); },
+    locator: selector => { assert.equal(selector, '[role="tabpanel"][id="dc-tabpanel-' + encodeURIComponent('attachment:' + f.attachment.id) + '"]');
+      return { getByRole: role => { assert.equal(role, 'alert'); return alert; } }; },
+    getByRole: (role, options) => { assert.equal(role, 'heading'); assert.deepEqual(options, { name: 'The source could not be opened', exact: true }); return {}; },
+    on: (name, fn) => { assert.equal(name, 'response'); listeners.add(fn); }, off: (_name, fn) => { listeners.delete(fn); },
+    evaluateHandle: async (install, spec) => {
+      assert.equal(install, installReaderBinaryCapture); events.push('arm-' + spec.assetId);
+      let reject;
+      const state = { result: new Promise((resolve, no) => { captureResolve = resolve; reject = no; }),
+        dispose: () => { events.push('dispose-binary'); reject(new Error('unit observer disposed')); } };
+      return { evaluate: async fn => fn(state), dispose: async () => { events.push('dispose-handle'); } };
+    } };
+  return { ...f, page, reply, button, events, listeners };
+};
+
+test('actual Reader response classification captures the exact error envelope eagerly and binds any retry request', async () => {
+  const f = readerRecoveryPage([409]);
+  await assert.rejects(readerResponse(f.page, f.attachment, f.reply), error => {
+    assert.ok(error instanceof ReaderResolveFailure); assert.deepEqual(error.response, f.response); return true;
+  });
+  assert.ok(f.events.indexOf('read-envelope-409') < f.events.indexOf('action-complete-409'));
+  const changed = readerRecoveryPage([{ status: 200, request: { ...f.request, page: 2 } }]);
+  await assert.rejects(readerResponse(changed.page, changed.attachment, changed.reply, f.request), /changed the original resolve request/);
+});
+
+test('one real UI retry follows pending binary disposal, rearms the identical asset and retains refusal evidence', async () => {
+  const f = readerRecoveryPage(), progress = { stage: 'reader-open' };
+  const fixture = { filename: 'synthetic-reading.pdf', bytes: 100, sha256: digest, media_type: 'application/pdf' };
+  Object.assign(f.attachment, { retention: 'saved', reference: f.request.reference, media_type: fixture.media_type,
+    original: { ...fixture, available: true } });
+  const chat = { identity: f.attachment.conversation, retention: 'saved' };
+  const result = await withReaderUiRecovery(f.page, f.attachment, progress, f.reply,
+    (action, expected) => readerBinaryAction(f.page, chat, f.attachment, fixture, { assetId: 'pdf:1', page: 1 },
+      () => readerResponse(f.page, f.attachment, action, expected), progress));
+  assert.equal(result.actionResult.schema_version, 'reader/1');
+  const receipt = progress.resolveRecovery;
+  assert.deepEqual(receipt.initialResponse, f.response);
+  assert.equal(receipt.initialBinaryObservation.clone.status, 'disposed'); assert.equal(receipt.initialBinaryObservation.disposed, true);
+  assert.deepEqual(receipt.retry, { label: 'Try again', requested: true, clickCompleted: true, status: 'resolved', responseStatus: 200 });
+  assert.equal(f.events.filter(value => value === 'click-Try-again').length, 1);
+  assert.equal(f.events.filter(value => value === 'arm-pdf:1').length, 2);
+  assert.ok(f.events.indexOf('dispose-handle') < f.events.indexOf('visible-refusal'));
+  assert.ok(f.events.indexOf('visible-retry') < f.events.lastIndexOf('arm-pdf:1'));
+  assert.equal(f.listeners.size, 0); assert.equal(progress.binaryObservation.disposed, true);
+});
+
+test('second resolve refusal or changed request is terminal and keeps both response/action receipts', async () => {
+  for (const second of [409, { status: 200, request: { ...readerRefusalFixture().request, page: 2 } }]) {
+    const f = readerRecoveryPage([409, second]), progress = { stage: 'reader-open' };
+    await assert.rejects(withReaderUiRecovery(f.page, f.attachment, progress, f.reply));
+    assert.equal(f.events.filter(value => value === 'click-Try-again').length, 1);
+    assert.equal(progress.resolveRecovery.retry.status, 'failed');
+    if (second === 409) assert.deepEqual(progress.resolveRecovery.retry.response, f.response);
+    else assert.match(progress.resolveRecovery.retry.error.message, /changed the original/);
+  }
+});
+
+test('recovery never clicks for other errors, an exhausted retry, missing visible control or undisposed binary capture', async () => {
+  for (const setup of ['other-error', 'exhausted', 'undisposed', 'not-visible']) {
+    const f = readerRecoveryPage([409]), progress = { stage: 'reader-open' };
+    if (setup === 'exhausted') progress.resolveRecovery = { alreadyUsed: true };
+    if (setup === 'undisposed') progress.binaryObservation = { clone: { status: 'pending' } };
+    if (setup === 'not-visible') f.button.waitFor = async () => { throw new Error('not visible'); };
+    const action = setup === 'other-error' ? async () => { throw new Error('hash or policy failure'); } : f.reply;
+    const run = setup === 'other-error' ? async trigger => trigger() : undefined;
+    await assert.rejects(withReaderUiRecovery(f.page, f.attachment, progress, action, run));
+    assert.equal(f.events.filter(value => value === 'click-Try-again').length, 0);
+  }
 });
 
 const ingestionFixture = () => {

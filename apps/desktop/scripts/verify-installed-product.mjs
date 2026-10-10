@@ -576,7 +576,7 @@ export function observeReaderCdp(page, matches) {
   return { result, dispose: () => finish({ status: 'unavailable' }) };
 }
 
-async function readerBinaryAction(page, chat, attachment, fixture, view, action, progress) {
+export async function readerBinaryAction(page, chat, attachment, fixture, view, action, progress) {
   validateReaderOriginal(fixture, attachment.original, attachment.media_type);
   check(attachment.retention === 'saved' && attachment.conversation?.type === chat.identity.type
     && attachment.conversation.id === chat.identity.id, 'Binary capture requires the actual saved original owner.');
@@ -610,6 +610,8 @@ async function readerBinaryAction(page, chat, attachment, fixture, view, action,
   } finally {
     cdp.dispose();
     try { await capture.evaluate(value => value.dispose()); } finally { await capture.dispose(); }
+    if (observation.clone.status === 'pending') observation.clone = { status: 'disposed' };
+    observation.disposed = true;
   }
 }
 
@@ -1157,13 +1159,78 @@ export function validateReaderRaster(bytes) {
   return { sha256: sha(bytes), bytes: bytes.length, width, height };
 }
 
-async function readerResponse(page, attachment, action) {
-  const pending = captureResponse(page, response => {
-    if (new URL(response.url()).pathname !== '/api/v1/readers/resolve' || response.request().method() !== 'POST') return false;
-    return response.request().postDataJSON()?.reference?.target?.id === attachment.id;
-  }, { label: 'POST /readers/resolve' });
-  const [captured] = await Promise.all([pending, action()]);
-  return captured.body;
+export class ReaderResolveFailure extends Error {
+  constructor(response) {
+    super('The actual Reader resolve failed (' + response.status + ').');
+    this.response = response;
+  }
+}
+
+export function recoverableReaderRefusal(error, attachment) {
+  const response = error instanceof ReaderResolveFailure ? error.response : null;
+  return response?.method === 'POST' && response.route === '/readers/resolve' && response.status === 409
+    && response.headers?.['cache-control'] === 'no-store' && response.headers?.['content-type'] === 'application/json'
+    && response.request?.reference?.target?.type === 'attachment' && response.request.reference.target.id === attachment.id
+    && isDeepStrictEqual(response.request.conversation, attachment.conversation)
+    && isDeepStrictEqual(response.body, { error: { code: 'reader_original_unavailable',
+      message: 'The attachment original is currently unavailable', retryable: true } });
+}
+
+export async function readerResponse(page, attachment, action, expectedRequest) {
+  const endpoint = new URL(page.url()).origin + '/api/v1/readers/resolve';
+  const pending = page.waitForResponse(response => {
+    if (response.url() !== endpoint || response.request().method() !== 'POST') return false;
+    const body = response.request().postDataJSON();
+    return body?.reference?.target?.type === 'attachment' && body.reference.target.id === attachment.id
+      && isDeepStrictEqual(body.conversation, attachment.conversation);
+  }, { timeout: 120_000 }).then(async response => {
+    const status = response.status(), allHeaders = response.headers();
+    check(allHeaders['content-type'] === 'application/json', 'The actual Reader resolve returned a non-JSON response (' + status + ').');
+    // Capture the actual envelope before classifying a refusal. A failed body read is terminal.
+    const body = await response.json(), request = response.request().postDataJSON();
+    check(!expectedRequest || isDeepStrictEqual(request, expectedRequest), 'Reader Try again changed the original resolve request.');
+    if (status !== 200) {
+      check(JSON.stringify(body).length <= 16_000, 'The actual Reader error envelope exceeded its bound.');
+      throw new ReaderResolveFailure({ method: 'POST', route: '/readers/resolve', status, request,
+        headers: { 'content-type': allHeaders['content-type'], 'cache-control': allHeaders['cache-control'] }, body });
+    }
+    return body;
+  });
+  const [document] = await Promise.all([pending, action()]);
+  return document;
+}
+
+export async function withReaderUiRecovery(page, attachment, progress, firstAction,
+  run = (action, expectedRequest) => readerResponse(page, attachment, action, expectedRequest)) {
+  let initial;
+  try { return await run(firstAction); } catch (error) { initial = error; }
+  if (progress.resolveRecovery || !recoverableReaderRefusal(initial, attachment)) throw initial;
+  // The awaited run includes readerBinaryAction's finally: its old observer must be
+  // disposed before the same fixture/view is armed around the actual retry click.
+  check(!progress.binaryObservation || progress.binaryObservation.disposed === true,
+    'The refused Reader binary observer must be disposed before UI recovery.');
+  const receipt = progress.resolveRecovery = { stage: progress.stage, initialResponse: initial.response,
+    initialBinaryObservation: progress.binaryObservation ? structuredClone(progress.binaryObservation) : undefined,
+    retry: { label: 'Try again', requested: false, clickCompleted: false, status: 'waiting-for-visible-control' } };
+  try {
+    const panel = page.locator('[role="tabpanel"][id="dc-tabpanel-' + encodeURIComponent('attachment:' + attachment.id) + '"]');
+    const alert = panel.getByRole('alert').filter({ has: page.getByRole('heading', { name: 'The source could not be opened', exact: true }) });
+    await alert.getByText('The attachment original is currently unavailable', { exact: true }).waitFor({ state: 'visible' });
+    const retry = alert.getByRole('button', { name: 'Try again', exact: true });
+    await retry.waitFor({ state: 'visible' });
+    check(await retry.count() === 1 && await retry.isEnabled(), 'The exact Reader Try again control is not available.');
+    receipt.retry.status = 'running';
+    const result = await run(async () => {
+      receipt.retry.requested = true;
+      await retry.click(); receipt.retry.clickCompleted = true;
+    }, initial.response.request);
+    receipt.retry.status = 'resolved'; receipt.retry.responseStatus = 200;
+    return result;
+  } catch (error) {
+    receipt.retry.status = 'failed'; receipt.retry.error = safeFailure(error);
+    if (error instanceof ReaderResolveFailure) receipt.retry.response = error.response;
+    throw error; // One UI retry per fixture/reopen journey; a second failure is terminal.
+  }
 }
 
 async function uploadReaderOriginal(page, chat, fixtures, fixture) {
@@ -1273,11 +1340,13 @@ async function readerFixtureJourney(current, chat, fixtures, fixture, evidence, 
   await page.context().route(fixtures.manifest.external_origin + '/**', deny);
   try {
     progress.stage = 'reader-open';
-    const open = () => readerResponse(page, attachment, () => page.locator('.chat-attached-file')
-      .filter({ hasText: fixture.filename }).getByRole('button', { name: 'Open file', exact: true }).click());
+    const open = () => page.locator('.chat-attached-file')
+      .filter({ hasText: fixture.filename }).getByRole('button', { name: 'Open file', exact: true }).click();
     const firstAsset = fixture.gate === 'reader-pdf' ? 'pdf:1' : fixture.gate === 'reader-images' ? 'image:1'
       : fixture.gate === 'reader-docx' ? 'docx:rId1' : null;
-    let document = await (firstAsset ? assetAction(firstAsset, 1, open) : open());
+    let document = await withReaderUiRecovery(page, attachment, progress, open,
+      (action, expected) => firstAsset ? assetAction(firstAsset, 1, () => readerResponse(page, attachment, action, expected))
+        : readerResponse(page, attachment, action, expected));
     validateReaderDocument(fixture, document, attachment);
     progress.stage = 'reader-render';
     const reader = page.getByRole('region', { name: 'Document reader', exact: true });
@@ -1299,8 +1368,9 @@ async function readerFixtureJourney(current, chat, fixtures, fixture, evidence, 
       const kind = fixture.expect.kind === 'pdf' ? 'pdf' : 'image';
       positions.push(await savedReaderPosition(page, chat, attachment, kind === 'pdf' ? { kind, physical_page: 1 } : { kind, frame: 1 }));
       progress.stage = 'second-page-or-frame';
-      document = await assetAction(kind + ':2', 2,
-        () => readerResponse(page, attachment, () => reader.getByRole('button', { name: 'Next', exact: true }).click()));
+      document = await withReaderUiRecovery(page, attachment, progress,
+        () => reader.getByRole('button', { name: 'Next', exact: true }).click(),
+        (action, expected) => assetAction(kind + ':2', 2, () => readerResponse(page, attachment, action, expected)));
       validateReaderDocument(fixture, document, attachment);
       check(document.payload.page === 2, 'Next did not open the second physical page/frame.');
       const nextRaster = await raster(document.payload.asset_id);
@@ -1311,7 +1381,7 @@ async function readerFixtureJourney(current, chat, fixtures, fixture, evidence, 
     if (fixture.gate === 'reader-csv') {
       progress.stage = 'csv-next-rows';
       check(document.payload.table.total_rows === fixture.expect.rows && document.payload.table.first_row === 1, 'CSV dimensions changed.');
-      document = await readerResponse(page, attachment, () => reader.getByRole('button', { name: 'Next rows', exact: true }).click());
+      document = await withReaderUiRecovery(page, attachment, progress, () => reader.getByRole('button', { name: 'Next rows', exact: true }).click());
       validateReaderDocument(fixture, document, attachment);
       check(document.payload.table.first_row === 101 && document.payload.table.rows.length === 6, 'CSV row window did not advance exactly.');
     }
@@ -1322,7 +1392,7 @@ async function readerFixtureJourney(current, chat, fixtures, fixture, evidence, 
         && table.rows[1][1].display === '24' && table.rows[1][1].formula === '=A2*2' && table.rows[1][1].cached === true,
       'The actual XLSX reader lost sheet names or its cached formula result.');
       await reader.getByRole('button', { name: '24', exact: true }).waitFor();
-      document = await readerResponse(page, attachment, () => reader.getByLabel('Sheet', { exact: true }).selectOption('Dialysis'));
+      document = await withReaderUiRecovery(page, attachment, progress, () => reader.getByLabel('Sheet', { exact: true }).selectOption('Dialysis'));
       validateReaderDocument(fixture, document, attachment);
       check(document.payload.table.sheet_name === 'Dialysis' && document.payload.table.first_row === 1
         && document.payload.table.rows[1][1].cached === false && document.payload.table.rows[1][1].display === 'Cached value unavailable',
@@ -1369,6 +1439,7 @@ async function readerFixtureJourney(current, chat, fixtures, fixture, evidence, 
     await screenshot(current, evidence, 'reader-' + fixture.filename.replaceAll('.', '-'));
     return { filename: fixture.filename, mediaType: fixture.media_type, attachmentId: attachment.id, attachment,
       original, previewState: document.preview_state, positions, selection,
+      ...(progress.resolveRecovery ? { resolveRecovery: progress.resolveRecovery } : {}),
       assets: assets.map(item => ({ assetId: item.assetId, ...validateReaderRaster(item.body), observation: item.observation })), inert,
       scope: 'Actual saved attachment, Workspace reader, guarded selection/draft and prepared original. No native Save dialog, model, OCR or ingestion claim.' };
   } finally {
@@ -1428,14 +1499,14 @@ async function reopenSelectedPdfJourney(current, chat, fixtures, report, evidenc
   await navigate(page, chatHash(chat));
   const progress = { filename: fixture.filename, stage: 'reopened-pdf-page2' };
   report.pdfReopenObservation = progress;
-  const { actionResult: document, record: asset } = await readerBinaryAction(page, chat, attachment, fixture,
-    { assetId: 'pdf:2', page: 2 }, () => readerResponse(page, attachment, async () => {
+  const { actionResult: document, record: asset } = await withReaderUiRecovery(page, attachment, progress, async () => {
     if (!await page.getByLabel('Attach files to chat', { exact: true }).isVisible())
       await page.getByRole('button', { name: 'Attach file', exact: true }).click();
     // Opening the existing attachment preserves its stored locator. No preferences are injected.
     await page.locator('.chat-attached-file').filter({ hasText: fixture.filename })
       .getByRole('button', { name: 'Open file', exact: true }).click();
-  }), progress);
+  }, (action, expected) => readerBinaryAction(page, chat, attachment, fixture, { assetId: 'pdf:2', page: 2 },
+    () => readerResponse(page, attachment, action, expected), progress));
   check(asset.headers['content-type'] === 'image/png', 'Reopened PDF asset is not its expected PNG raster.');
   const raster = validateReaderRaster(asset.body);
   const tab = page.locator('[role="tab"][id="dc-tab-' + encodeURIComponent('attachment:' + attachment.id) + '"]');
