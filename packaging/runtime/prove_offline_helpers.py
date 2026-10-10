@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import UTC, datetime
 import hashlib
 import ipaddress
 import json
@@ -90,7 +91,9 @@ def prove(profile: Path) -> dict:
         network_attempts.append("blocked")
         raise RuntimeError("Offline helper proof refuses network connections")
 
-    result = {"verified_on": "2026-10-04", "python": sys.version.split()[0],
+    verified_at = datetime.now(UTC)
+    result = {"verified_on": verified_at.date().isoformat(),
+              "verified_at_utc": verified_at.isoformat(), "python": sys.version.split()[0],
               "platform": "Windows x64", "embedding_fingerprint": embedding["fingerprint"],
               "docling_fingerprint": document["fingerprint"], "cpu_threads": 2}
     try:
