@@ -60,6 +60,7 @@ export default function ChatPage(props: ChatPageProps) {
   const draftWrite = useRef<Promise<void>>(Promise.resolve());
   const persisted = useRef('');
   const consumed = useRef(new Set<string>());
+  const saveCommand = useRef<{identity:string;key:string;body:{expected_revision:number}}|undefined>(undefined);
   const callback = useRef(props); callback.current=props;
   textRef.current=text; refsRef.current=refs;
   function accept(value: ConversationSummary) {chatRef.current=value;setChat(value);setTitle(value.title);}
@@ -233,11 +234,16 @@ export default function ChatPage(props: ChatPageProps) {
   async function mutate(action:'rename'|'archive'|'restore'|'save'|'project',body:Record<string,unknown>={}) {
     const current=chatRef.current;if(!current||busy)return;
     const version=epoch.current;
-    await draftWrite.current;
-    const latest=chatRef.current??current;
     try {
+      await draftWrite.current;
+      const latest=action==='save'&&!saveCommand.current?await flushDraft():chatRef.current;
+      if(!latest||version!==epoch.current)return;
+      const identity=latest.kind+':'+latest.identity.id;
+      if(saveCommand.current?.identity!==identity)saveCommand.current=undefined;
+      if(action==='save')saveCommand.current??={identity,key:crypto.randomUUID(),body:{expected_revision:latest.revision}};
       const path=conversationPath(latest)+(action==='rename'?'':'/'+action);
-      const result=await api<ConversationSummary>(path,{method:action==='rename'?'PATCH':action==='project'?'PUT':'POST',body:{expected_revision:latest.revision,...body},headers:{'Idempotency-Key':crypto.randomUUID(),...helpHeaders}});
+      const result=await api<ConversationSummary>(path,{method:action==='rename'?'PATCH':action==='project'?'PUT':'POST',body:action==='save'?saveCommand.current!.body:{expected_revision:latest.revision,...body},headers:{'Idempotency-Key':action==='save'?saveCommand.current!.key:crypto.randomUUID(),...helpHeaders}});
+      if(action==='save')saveCommand.current=undefined;
       if(result.retention==='saved')changed();
       if(version!==epoch.current)return;
       accept(result);callback.current.onConversation?.(result);setError(undefined);

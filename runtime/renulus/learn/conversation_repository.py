@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Typed chat metadata adapts Learn and Cases; it never duplicates transcripts."""
 import base64
+from contextlib import nullcontext
 from copy import deepcopy
 import hmac
 import json
@@ -403,19 +404,23 @@ class ConversationRepository:
 
     def promote(self, kind, identifier, request, key=None):
         before = None
-        with self._lock, self.cases._lock:
+        lease = None
+        attachments = self.services.registry.get('chat_attachments')
+        with (attachments.promotion_guard() if attachments else nullcontext()), self._lock, self.cases._lock:
             try:
                 with self.db.transaction() as conn:
                     require_assistance(conn)
                     target_type = self._owner(kind)[3]
                     temporary = self._temporary.get((kind,identifier))
                     def save():
-                        nonlocal before
+                        nonlocal before, lease
                         if not temporary:
                             raise ApiError('conversation_already_saved','This conversation is already saved',409)
                         self._expected(temporary['summary'],request.expected_revision)
                         if any(e['kind']==kind and e['id']==identifier for e in self.streaming.active.values()):
                             raise ApiError('conversation_busy','Finish the response before saving this chat',409,True)
+                        if attachments:
+                            lease = attachments.prepare_promotion_in(conn, kind, identifier)
                         draft_refs = [ContentReference.model_validate(ref) for ref in json.loads(temporary['draft_refs_json'])]
                         self.validate_refs(conn,draft_refs)
                         if kind=='case':
@@ -443,8 +448,12 @@ class ConversationRepository:
                         return self._saved(conn,kind,identifier)[0]
                     result=command(conn,'conversation_commands',key,'save',target_type,identifier,request,save)
             except BaseException:
+                if lease is not None:
+                    lease.rollback()
                 if before is not None:
                     self.cases._sessions[identifier]=before
                 raise
+            if lease is not None:
+                lease.commit()
             self._temporary.pop((kind,identifier),None)
             return result

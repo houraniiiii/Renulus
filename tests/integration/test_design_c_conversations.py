@@ -41,7 +41,7 @@ def app_at(profile):
     return app
 
 
-def upload_chat_file(client, app, chat, *, key='fictional-upload-command'):
+def upload_chat_file(client, app, chat, *, key='fictional-upload-command', rights=None):
     from renulus.knowledge.models import own_text_rights
     from renulus.storage.assessment_policy import policy_snapshot
     from renulus.storage.invalidation import context_epoch_in
@@ -49,7 +49,7 @@ def upload_chat_file(client, app, chat, *, key='fictional-upload-command'):
         options = {'conversation': chat['identity'], 'expected_conversation_revision': chat['revision'],
             'expected_policy_revision': policy_snapshot(conn)['revision'], 'expected_context_epoch': context_epoch_in(conn),
             'idempotency_key': key, 'filename': 'fictional.md', 'title': 'Fictional owned original',
-            'rights': own_text_rights().model_dump(mode='json'), 'metadata': {}}
+            'rights': (rights or own_text_rights()).model_dump(mode='json'), 'metadata': {}}
     response = client.post('/api/v1/attachments', content=b'# FICTIONAL OWNED CHAT FILE' + bytes([10]) + b'Educational text only.',
         headers={'x-renulus-attachment-options': json.dumps(options)})
     assert response.status_code == 201, response.text
@@ -388,7 +388,7 @@ def test_context_change_during_reply_blocks_late_assistant_publication(tmp_path,
 def test_explicit_save_promotes_temporary_owner_once_and_preserves_history(tmp_path,kind):
     profile=tmp_path/'explicit-promotion'
     app=app_at(profile)
-    app.state.services.registry.update(provider=ConversationProvider(),knowledge=None,retrieval=None,memory=None)
+    app.state.services.registry.update(provider=ConversationProvider(),retrieval=None,memory=None)
     with TestClient(app) as client:
         chat=client.post('/api/v1/conversations',json={'kind':kind,'temporary':True}).json()
         path=f"/api/v1/conversations/{kind}/{chat['identity']['id']}"
@@ -404,6 +404,82 @@ def test_explicit_save_promotes_temporary_owner_once_and_preserves_history(tmp_p
     with TestClient(app_at(profile)) as client:
         assert client.get(path).json()['retention']=='saved'
         assert [row['role'] for row in client.get(path+'/messages').json()['items']]==['user','assistant']
+
+
+@pytest.mark.parametrize('kind', ['learning','case'])
+def test_chat_save_promotes_actual_ordinary_original_and_draft_reference_once(tmp_path, kind):
+    profile = tmp_path / 'save-ordinary-original'
+    app = app_at(profile)
+    with TestClient(app) as client:
+        chat = client.post('/api/v1/conversations', json={'kind':kind,'temporary':True}).json()
+        attachment = upload_chat_file(client, app, chat)
+        path = f"/api/v1/conversations/{kind}/{chat['identity']['id']}"
+        current = client.get(path).json()
+        reference = attachment['reference']
+        draft = client.put(path+'/draft', json={'expected_revision':current['revision'], 'text':'Fictional retained draft', 'content_refs':[reference]})
+        assert draft.status_code == 200, draft.text
+        body = {'expected_revision':draft.json()['conversation_revision']}
+        headers = {'Idempotency-Key':'save-ordinary-original'}
+        saved = client.post(path+'/save', json=body, headers=headers)
+        assert saved.status_code == 200, saved.text
+        assert saved.json()['retention'] == 'saved' and saved.json()['identity'] == chat['identity']
+        assert client.post(path+'/save', json=body, headers=headers).json() == saved.json()
+        assert attachment['id'] not in app.state.services.get('chat_attachments')._volatile
+    with TestClient(app_at(profile)) as client:
+        assert client.get(path+'/draft').json()['content_refs'] == [reference]
+        original = client.post('/api/v1/readers/original', json={'reference':reference, 'conversation':chat['identity']})
+        assert original.status_code == 200, original.text
+        assert original.content == b'# FICTIONAL OWNED CHAT FILE\nEducational text only.'
+
+
+@pytest.mark.parametrize('kind', ['learning','case'])
+def test_chat_attachment_save_rollback_keeps_volatile_original_then_retry_commits(tmp_path, monkeypatch, kind):
+    import sqlite3
+    from renulus.learn.conversation_models import Mutation
+    app = app_at(tmp_path / 'attachment-save-rollback')
+    services = app.state.services
+    with TestClient(app) as client:
+        chat = client.post('/api/v1/conversations', json={'kind':kind,'temporary':True}).json()
+        attachment = upload_chat_file(client, app, chat)
+        owner = services.get('conversations')
+        request = Mutation(expected_revision=owner.get(kind, chat['identity']['id'])['revision'])
+        insert = owner._insert_sidecar
+        def fail_after_insert(*args):
+            insert(*args)
+            raise sqlite3.OperationalError('Synthetic failed owner commit')
+        monkeypatch.setattr(owner, '_insert_sidecar', fail_after_insert)
+        with pytest.raises(sqlite3.OperationalError):
+            owner.promote(kind, chat['identity']['id'], request, 'retry-attachment-save')
+        assert owner.get(kind, chat['identity']['id'])['retention'] == 'temporary'
+        assert not services.db.fetch_all('SELECT * FROM knowledge_attachments')
+        assert not list((services.paths.library / 'attachments').glob('*/original.*'))
+        body = {'reference':attachment['reference'], 'conversation':chat['identity']}
+        assert client.post('/api/v1/readers/original', json=body).content == b'# FICTIONAL OWNED CHAT FILE\nEducational text only.'
+        monkeypatch.setattr(owner, '_insert_sidecar', insert)
+        assert owner.promote(kind, chat['identity']['id'], request, 'retry-attachment-save')['retention'] == 'saved'
+        assert client.post('/api/v1/readers/original', json=body).status_code == 200
+
+
+@pytest.mark.parametrize('refusal', ['cache', 'epoch'])
+def test_chat_attachment_save_refuses_ungranted_cache_or_changed_context_without_writing(tmp_path, refusal):
+    from renulus.knowledge.models import own_text_rights
+    from renulus.storage.invalidation import bump_context_epoch
+    app = app_at(tmp_path / 'attachment-save-refusal')
+    services = app.state.services
+    with TestClient(app) as client:
+        chat = client.post('/api/v1/conversations', json={'temporary':True}).json()
+        rights = own_text_rights().model_copy(update={'cache':refusal != 'cache'})
+        upload_chat_file(client, app, chat, rights=rights)
+        path = '/api/v1/conversations/learning/'+chat['identity']['id']
+        current = client.get(path).json()
+        if refusal == 'epoch':
+            with services.db.transaction() as conn:
+                bump_context_epoch(conn)
+        saved = client.post(path+'/save', json={'expected_revision':current['revision']}, headers={'Idempotency-Key':'refused-save-command'})
+        assert saved.json()['error']['code'] == ('attachment_cache_denied' if refusal == 'cache' else 'attachment_context_changed')
+        assert client.get(path).json()['retention'] == 'temporary'
+        assert not services.db.fetch_all('SELECT * FROM knowledge_attachments')
+        assert not list((services.paths.library / 'attachments').glob('*/original.*'))
 
 
 class PausedProvider(ConversationProvider):
