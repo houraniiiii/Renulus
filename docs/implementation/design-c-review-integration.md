@@ -1,19 +1,180 @@
 # Design C independent integration review — October 10, 2026
 
-Pass 2 now includes actual Study/Test lifecycle and multi-page reader evidence
-on committed shared baseline `873bad79`. Three additional findings are confirmed:
-an unavailable-hint error disappears on polling (R6), reader page/row positions
-are lost on restart (R7), and new committed answers never enter the legacy Study
-progress consumer (R8, P1). The earlier unsent Home draft/focus loss (R3) and
-preview stylesheet dependency (R4) remain open at their last recorded rechecks;
-they were not rerun in this continuation. Ambiguous reader tabs (R5) reproduce.
-The earlier Learn publication race (R1) and blank narrow composition (R2) passed
-bounded rechecks. Figma Test timing copy is reconciled across ten existing C
-specimens and verified in screenshots. The actual Untimed Test draft, review
-mark, restriction, restart and final submission work at the recorded scope.
-Timed lifecycle, arriving StudyHelp/File handoffs and installed delivery still
-need connected acceptance. The latest `efada051` announcement does not identify
-the renderer used for the observations below. This report closes no ticket.
+The latest bounded pass reviews committed `84be584e` plus the actual Tests Import
+mount `0d10e5df` and Home Attach label fix `319ff190`, built in this lane at
+`f69f6792`. Actual Import review/publication, Study-to-Chat preparation, saved
+Chat attachment/CSV preview and Untimed Test final submission work at their
+recorded scope. Ten production learning-route probes refuse access during the
+UI-started Test, and eight focused Study-help guard tests pass. Material open
+findings are reviewed progress omission (R8, P1), Home draft loss on a policy
+change without navigation (R3, P2), reader row-position loss on restart (R7,
+P2), and saved Chat attachments missing from Workspace Files (R10, P2).
+R9 records misleading edited-key copy. Notes creation and receipt propagation
+into Reader remain specific consumer gates. R4/R5/R6 retain their earlier
+qualification; the resolved R1/R2 probes were not redundantly repeated.
+Figma Test timing copy is reconciled across ten existing C specimens with
+verified screenshots. Timed lifecycle, other media/extraction paths and Windows
+delivery remain outside this pass's acceptance. This report closes no ticket.
+
+## Latest bounded pass — 84 baseline and connected Import mount
+
+The exact-root check returned `C:/Renulus/dev/worktrees/dc01-design` and the
+branch remained `codex/dc01-design`. A clean normal merge of `84be584e` produced
+`30e683cca1176bfe32c933f601f2c7d005399f6a`. The subsequent clean merge of the two
+published mount/label commits produced
+`f69f6792247dc871d96e42b413d6622883f5b1fa`. There were no conflicts, resets,
+checkouts or unowned flag changes. Canonical was read only. This pass authors
+only this reserved report; `fc732598` already commits the Figma timing report,
+and `8b7944e7` remains the separate six-path Workspace follow-up listed below.
+
+The installed interface-design-review and Impeccable audit skills were applied
+to the calm medical Operate surface, actual pixels, keyboard behavior and
+truthful states. No UI repair or shared source edit was performed. Desktop
+TypeScript, Vite with the runner config loader and native build all passed.
+The source/build/controller/screenshot manifest is
+`C:/Renulus/scratch/dcctl/rev1/probes/pass2-evidence-84-f69f6792.json`.
+Renderer `index-D14ovzRE.js` SHA-256 is
+`4ef38a5511eff31deb5e816640a718029b7dcd870a269a8b576ac1e3069183ed`;
+native main SHA-256 is
+`c4b3e337fa58ee3e2754ffbf2d485cc74d0421db6a7d339ed36f3a5cc223d615`.
+
+The fresh fixed CLI controller used only
+`C:/Renulus/scratch/dcctl/rev1/c/s-60e257ce/p`. Its synthetic fixture manifest
+declares original Markdown and CSV bytes under `rev1/fixtures-pass2-84`.
+Three launches ended with three normal closes, including one controller
+operation-failure cleanup, one requested restart and final requested close at
+06:47:05.372 UTC on October 10, 2026. Every forced/remaining PID list is empty;
+fault is null. Nineteen PNGs remain under `c/s-60e257ce/out` and are hashed in
+the manifest. No owner profile, credential, foreground input or live provider
+was used. The delayed provider in the guard tests is synthetic.
+
+### Connected journeys and visual evidence
+
+| Actual flow | Result and representative evidence |
+| --- | --- |
+| Tests → Import a test → Save private original | Original synthetic two-question text and retained terms saved through the mounted panel; two source-mapped candidates, zero normalization requests. `capture-0001.png` shows original alongside the editor. |
+| Edit and review → explicit publication | Saving a personal explanation clears answer/review confirmation. Re-selecting the key and confirming both questions enables Save. Open saved test selects the exact `import_version_import_1aadb1f0a6c0fc24b8fdb13269859a88`, Version 1, Imported/Personal/Ready. This is an actual UI flow, not a seeded or mocked page. |
+| Narrow/zoom Import editor | At 1000×900 outer, 984×861 content and native 200% zoom, the editor stacks into a single column. Tab from question text reaches the answer checkbox with visible focus (`0002`). The immutable original moves below the editor; no horizontal clipping was observed in this bounded composition. |
+| Study → Notes | Assistance is recorded and the real shell opens Notes. The pane contains no note creation path, only its empty state and Open Library (`0003`). See G1. |
+| Study → Ask in chat | A saved learning conversation is created, with only the public question/options prefilled and its draft saved (`0004`). No key/explanation is inserted. Send was not exercised; provider response acceptance is not claimed. |
+| Chat Attach → permissions → Open file | Actual controller upload of the declared 5,947-byte CSV, Display/Keep-local confirmation and attachment publication succeed. The retained original SHA-256 matches `a563865763fcaf67c584cb12b053ca24ee68667755e2438da6f1e8ff13a9110f`. Its real reader renders rows 1–100 of 206 (`0005`). Model-input/derivation permissions stayed false; passage discussion is truthfully unavailable. |
+| CSV at native 200% zoom | Next rows opens 101–200. A focused single Workspace pane, Back to chat and visible table focus remain usable (`0006`). Normal restart restores the safe saved tab but resets rows to 1–100 (`0007`). See R7. |
+| Imported Untimed Test | The actual saved version starts Test, retains a selected wrong choice, restricts Home (`0008`/`0009`), and exposes no Pause action. At native 200% zoom, Shift+Tab from Keep working reaches Submit test with visible focus (`0011`); Enter commits the final result. Results correctly show personal 0/2 and one unanswered (`0012`). |
+| Reviewed-bank Study | A separate one-question reviewed set is created through Tests, its answer committed through Study and its summary shows fresh 1/1 (`0013`). The commitment resolver validates this new answer, while progress still omits it. See R8. |
+| Home policy transition without navigation | The same Home route holds an unsent draft (`0017`). Real attempt-start HTTP activates restriction (`0018`); real final-submit HTTP releases it, with no navigation or restart. Home returns with an empty composer (`0019`). See R3. |
+
+The narrow tests establish rendered composition and the named keyboard actions,
+not pointer drag, physical Windows scaling/high contrast or a general focus
+audit. Files/Notes inventories and original integrity were independently read
+through production HTTP/SQLite. UI-established data was not replaced by fixture
+rows. The separate Home policy probe uses production attempt start/submit on the
+same UI-published version; it is not another UI-start acceptance claim.
+
+### Current material findings
+
+**R8 — P1, current progress omits a valid reviewed commitment.** Reproduction:
+create `DC01 84 reviewed progress check` with one reviewed question, Continue to
+Study, Start Study, select an answer, Submit answer, then Finish study. The
+actual summary is fresh 1/1. Fresh `GET /study/progress` returns all-zero groups
+and no topics. `progress-84-existing-ui-c90b2853.json` contains the current
+production route response and commitment-owner validation of this bank-eligible
+answer; the personal Imported Test answer is separately ineligible for bank
+scoring. `runtime/renulus/study/service.py:89` and `:157` still filter only
+`assessment-answer`. The Study owner should consume the validated whole-attempt
+metadata for progress/mistake scheduling while preserving origin, cohort,
+assistance, repeat and deletion eligibility. This pass narrows the earlier
+finding: the current Memory material adapter successfully resolves the answered
+personal and reviewed commitments, with the correct distinct scopes. No enqueue
+or memory inference was performed. Home's new consumer has source/parent test
+evidence, not new model-powered acceptance here. The older broad Memory impact
+statement below is historical and superseded at this adapter scope.
+
+**R3 — P2, current policy-only transition loses the Home draft.** The isolated
+repro keeps the renderer on New chat throughout: type the `0017` draft, use
+`start-84-home-test.py start` to start the actual saved Imported version, wait
+for Resume Test, then use `start-84-home-test.py submit` to finalize it. Request
+receipts are `start-84-home-test-0a547d96.json` (201, policy 6) and
+`start-84-home-test-25c0d452.json` (200, policy 7). `0019` and the fresh ARIA
+snapshot show an empty composer and disabled Send. No navigation occurred in
+this isolating reproduction. Keep volatile Home draft ownership above the
+revoked surface and restore it after policy release. This rechecks actual draft
+loss; the earlier component observation about DOM focus remains qualified.
+Native activeElement/recovery-focus behavior was not measured here. The first
+`0014`–`0016` sequence also navigated to the attempt; it is not the isolating
+proof and should not be used to attribute loss solely to policy.
+
+**R7 — P2, current attachment reader ignores persisted position.** Open the
+actual saved Chat CSV, Next rows to 101–200, restart normally, reopen Study
+question, Workspace and the restored Attachment tab. The reader returns to
+rows 1–100 (`0006` → `0007`). Fresh preferences contain the correct saved
+attachment/context reference but `position: null`. The receipt is
+`read-84-before-restart-e5a986e4.json`. ReaderSession at
+`apps/desktop/src/modules/reader/Reader.tsx:59` still omits `position` and
+`onPositionChange` from its props. The reader owner must hydrate/report safe
+table/page locators through the existing Workspace seam. This current recheck
+is CSV-specific; the three-page PDF reset remains the earlier 873 observation.
+
+**R10 — P2, Workspace Files omits a saved Chat attachment.** In the same saved
+Chat, Attach file → upload CSV → confirm rights → Open file works. Switch the
+Workspace to Files: it says “No files in this context yet” and offers Open
+Library. Fresh `/workspace/entries?section=Files&context_type=learn_thread&context_id=…`
+returns `items: []`, while the production attachment inventory contains
+`attachment_fccfdb9384314d57840e8595186836ae` with the matching original hash.
+Both responses are in `read-84-before-restart-e5a986e4.json` and
+`read-84-final-test-7b19620f.json`. `storage/workspace.py` enumerates Knowledge
+revisions but does not consume the saved conversation attachment inventory.
+The parent inventory adapter should merge the authorized saved attachment
+references for this exact Chat, without exposing temporary or another owner's
+files. Open file in Chat is the available workaround. Successful Chat inventory
+and reader delivery do not resolve this separate Files consumer gap.
+
+**R9 — P2, an edit is described as uncertainty in the original.** After saving
+only a personal explanation on question 1, the panel clears the key/review and
+says “The original supplies no clear answer,” alongside the unchanged original
+`Answer: A`. Actual before/after-restart snapshots confirmed the contradictory
+copy before re-resolution. Clearing review after an edit is appropriate; the
+message should say the edit requires the answer to be selected and confirmed
+again. `CandidateEditor.tsx` already receives the `edited` flag and retained
+original supplied keys, so this is a consumer copy correction rather than a
+schema change. Evidence is the actual tool snapshots, not a dedicated error
+screenshot. An early attempted Confirm without re-selecting the cleared key
+timed out and triggered normal controller cleanup; that is an operator mistake,
+not an application crash. The saved explanation/original survived restart.
+
+R4's route-dependent Test preview styling, R5's ambiguous reader-tab names and
+R6's disappearing unavailable-hint error were not independently rerun in this
+bounded pass. Their previously recorded reproductions remain open. This pass's
+single generic Attachment tab does not establish a new duplicate-name repro.
+No stale graph/invalidation finding is being reopened by those qualifications.
+
+### Guard evidence and exact consumer gates
+
+`policy-84-732113e4.json` probes the actual UI-started Imported Test using the
+production API/SQLite without lifespan. Conversations, Workspace preferences,
+entries, saved search, import inventory/draft/original, attachment inventory,
+Workspace authorization and reader resolution all return 409
+`assistance_restricted`. There is no direct synthetic active-policy row fixture.
+Existing `tests/integration/test_design_c_study_help.py` passes 8/8 in 30.18
+seconds under the owned scratch test root. These cover current/forged receipts,
+stale draft revision, same-transaction rollback, detached late publication and
+actual Chat HTTP with a delayed synthetic provider. The actual Chat refuses
+the stale assistant, records neutral interruption and retains its draft. This
+is focused backend contract evidence, separate from live subscription use.
+
+| Gate | Exact remaining producer/consumer work |
+| --- | --- |
+| G1 — Notes creation, open | Study produces a recorded Notes receipt and shell opens Notes, but the current adapter is an inventory with no editor/create action. Connect question-scoped note creation using the canonical receipt, safe provenance and current revision/policy validation; prove retained note reopening without counting mere pane opening as completion. |
+| G2 — Reader Study receipt, source-inspected gate | Shell StudyReader injects `studyHelpContext`. ReaderSession ignores it, external `signal` and injected policy, and its resolve/passage/original/asset calls do not send `studyHelpHeaders`. Wire the existing receipt/abort seam and prove that item/draft/policy change suppresses late source/passage handoff. The backend guard works when the header is present. This source gap is not a demonstrated global Test bypass; all ten Test probes refuse access. |
+| Import media/normalization, open | This pass proves pasted deterministic candidates and saved CSV preview. Library extraction eligibility, PDF/DOCX/XLSX/HTML/XML/OCR imports, incomplete extraction, normalization retry/cancel, deletion/restore and native chooser behavior need their own connected checks. No provider normalization was dispatched. |
+| Timed lifecycle, open | Untimed final submission passed. Timed Test close/sleep/expiry, timed Study pause/continue, ambiguous acknowledgement and concurrent preference writes remain unaccepted by this pass. |
+| Delivery and full surface coverage, open | This build is the lane's committed source app. Windows installation/dialogs, physical scaling/high contrast, remaining project/settings journeys and matching default Windows delivery remain separate gates. |
+
+Earlier broader design reconciliation remains in `design-c-reconciliation.md`.
+The Test setup correction at Figma `81:5381` was re-inspected from its saved
+native final PNG during this pass; it explicitly says Test cannot be paused.
+No further Figma change or full-page metadata request was necessary.
+This report recommends exact owner actions and records evidence; it does not
+implement shared paths or change feature-ticket disposition.
 
 ## Reservation, commits and source identity
 
