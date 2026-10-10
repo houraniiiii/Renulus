@@ -28,6 +28,7 @@ class SyntheticTransport:
         self.error = None
         self.started = asyncio.Event()
         self.release = None
+        self.on_close = None
 
     async def stream(self, provider, model, token, messages):
         assert token == "synthetic-home-token"
@@ -37,8 +38,12 @@ class SyntheticTransport:
             await self.release.wait()
         if self.error:
             raise self.error
-        yield {"type": "delta", "text": self.response}
-        yield {"type": "completed", "response_model": model}
+        try:
+            yield {"type": "delta", "text": self.response}
+            yield {"type": "completed", "response_model": model}
+        finally:
+            if self.on_close is not None:
+                self.on_close()
 
 
 @pytest.fixture
@@ -407,6 +412,267 @@ def home_whole_commit(owner, attempt, *, key="home-whole-commit", option="a"):
     return owner.commit_answer(attempt["id"], CommitAnswer(
         expected_revision=attempt["draft_revision"], item_id=attempt["current_item"]["item_id"],
         option_ids=[option]), key)
+
+
+def home_personal_attempt(home_whole):
+    from renulus.assessment.test_models import EditTestVersionRequest
+    from renulus.assessment.attempt_models import StartAttempt
+
+    service, _, owner, _, saved = home_whole
+    repository = service.services.get("saved_tests")
+    items = repository.preview_version(saved["test_id"], saved["version_id"])["items"]
+    items[0].update(correct_option_ids=["b"], explanation="Original synthetic personal explanation")
+    personal = repository.edit_version(saved["test_id"], EditTestVersionRequest(
+        expected_revision=1, base_version_id=saved["version_id"], items=items, idempotency_key="home-memory-personal"))
+    return owner.start(StartAttempt(version={"type": "saved_test_version", "id": personal["version_id"]}),
+                       "home-memory-personal-study")
+
+
+def home_capture_whole_memory(service):
+    from renulus.contracts import ContextScope
+
+    repository = service.services.get("memory").repository
+    repository.scan()
+    queued = repository.jobs()
+    assert len(queued) == 1
+    job = repository.claim(queued[0]["id"])
+    assert job is not None
+    scope = ContextScope.model_validate_json(job["scope"])
+    material = repository.material(job["evidence_id"], scope)
+    assert material["infer"] is False
+    identifiers = repository.commit_capture(job, material, ["PRIVATE_HOME_FORGED_CAPTURE"])
+    assert len(identifiers) == 1
+    fact = repository.get(identifiers[0])
+    assert fact["text"] == material["text"]
+    return repository, fact, job["evidence_id"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("personal", [False, True])
+async def test_whole_memory_capture_correction_and_delete_change_actual_home_prompt(home_whole, personal):
+    from renulus.design_c_contracts import canonical_digest
+
+    service, transport, owner, attempt, _ = home_whole
+    if personal:
+        attempt = home_personal_attempt(home_whole)
+    home_whole_commit(owner, attempt, option="a")
+    repository, fact, evidence_id = home_capture_whole_memory(service)
+    scope = "generated-practice" if personal else "reviewed-assessment"
+    assert fact["scope"] == scope
+    assert "PRIVATE_HOME" not in fact["text"]
+    with service.db.transaction() as conn:
+        context = service._context(conn)
+        assert context.material["memory"] == [{
+            "text": fact["text"], "kind": "study-interest", "topic_id": "T01",
+            "scope": scope, "authority": "captured",
+            "assessment": context.material["learning_activity"][0],
+        }]
+        evidence = dict(conn.execute("SELECT * FROM learning_evidence WHERE id=?", (evidence_id,)).fetchone())
+        assert any(pin.dependency.target.id == evidence_id and
+                   pin.dependency.expected_revision == canonical_digest(evidence) for pin in context.inputs)
+        assert any(pin.dependency.target.type == "memory_revision" and
+                   pin.dependency.target.id == fact["id"] + ":1" and
+                   pin.dependency.expected_revision == "1" for pin in context.inputs)
+    await service.refresh()
+    assert (await finish(service))["suggestions"] == bundle()
+    sent = json.loads(transport.calls[-1][2][-1]["content"])
+    assert sent["memory"] == context.material["memory"]
+
+    corrected = repository.edit(fact["id"], "I want to revisit original synthetic transplant immunology.", 1)
+    assert corrected["revision"] == 2
+    assert service.read()["suggestions"] is None
+    assert service.db.fetch_one("SELECT 1 FROM memory_suppression WHERE source_key=?",
+                                ("evidence:" + evidence_id,))
+    with service.db.transaction() as conn:
+        updated = service._context(conn)
+    assert updated.material["learning_activity"] == []
+    assert len(updated.material["memory"]) == 1
+    correction = updated.material["memory"][0]
+    assert correction["text"] == corrected["text"] and correction["kind"] == "learning-point"
+    assert correction["authority"] == "personal-correction" and correction["scope"] == scope
+    assert correction["assessment"]["bank_cohort_eligible"] is (not personal)
+    assert any(pin.dependency.target.id == fact["id"] + ":2" for pin in updated.inputs)
+    assert any(pin.dependency.target.id == evidence_id for pin in updated.inputs)
+    service.local_now = lambda: datetime(2026, 10, 11, 12, tzinfo=timezone.utc)
+    await service.refresh()
+    assert (await finish(service))["suggestions"] == bundle()
+    sent = json.loads(transport.calls[-1][2][-1]["content"])
+    assert sent["memory"] == [correction] and sent["learning_activity"] == []
+    assert fact["text"] not in json.dumps(sent)
+    assert all(marker not in json.dumps(transport.calls) for marker in
+               ("PRIVATE_HOME", "correct_option_ids", attempt["id"], "home_renal_question"))
+
+    assert repository.delete(fact["id"], 2)["deleted"]
+    assert service.read()["suggestions"] is None
+    with service.db.transaction() as conn:
+        deleted = service._context(conn)
+    assert deleted.material["memory"] == deleted.material["learning_activity"] == []
+    assert deleted.inputs == ()
+    repository.scan()
+    assert repository.list() == [] and len(repository.jobs()) == 1
+
+
+@pytest.mark.parametrize("personal,change", [
+    (False, "scope"), (True, "scope"), (False, "history_text"),
+    (False, "history_missing"), (False, "provenance"), (False, "forged_scope"),
+    (False, "suppressed"), (False, "topic"), (False, "kind"),
+])
+def test_whole_memory_requires_exact_canonical_scope_cohort_and_current_revision(home_whole, personal, change):
+    service, _, owner, attempt, _ = home_whole
+    if personal:
+        attempt = home_personal_attempt(home_whole)
+    home_whole_commit(owner, attempt)
+    _, fact, evidence_id = home_capture_whole_memory(service)
+    with service.db.transaction() as conn:
+        if change == "scope":
+            conn.execute("UPDATE memory_facts SET scope=? WHERE id=?",
+                         ("reviewed-assessment" if personal else "generated-practice", fact["id"]))
+        elif change == "history_text":
+            conn.execute("UPDATE memory_history SET text='PRIVATE_HOME_FORGED_HISTORY' WHERE record_id=?", (fact["id"],))
+        elif change == "history_missing":
+            conn.execute("DELETE FROM memory_history WHERE record_id=?", (fact["id"],))
+        elif change == "provenance":
+            conn.execute("DELETE FROM memory_sources WHERE record_id=?", (fact["id"],))
+        elif change == "forged_scope":
+            value = json.loads(conn.execute("SELECT payload_json FROM learning_evidence WHERE id=?", (evidence_id,)).fetchone()[0])
+            value["scope"] = {"kind": fact["scope"]}
+            conn.execute("UPDATE learning_evidence SET payload_json=? WHERE id=?", (json.dumps(value), evidence_id))
+        elif change == "suppressed":
+            conn.execute("INSERT INTO memory_suppression VALUES(?,?)", ("evidence:" + evidence_id, utc_now()))
+        elif change == "topic":
+            conn.execute("UPDATE memory_facts SET topic_id='T99' WHERE id=?", (fact["id"],))
+        elif change == "kind":
+            conn.execute("UPDATE memory_facts SET kind='mistake' WHERE id=?", (fact["id"],))
+        context = service._context(conn)
+    assert context.material["memory"] == []
+    assert not any(pin.dependency.target.type == "memory_revision" for pin in context.inputs)
+    assert "PRIVATE_HOME" not in json.dumps(context.material)
+    if change in ("forged_scope", "suppressed"):
+        assert context.material["learning_activity"] == []
+
+
+def test_whole_memory_retains_assisted_and_repeat_flags_independently(home_whole):
+    from renulus.assessment.attempt_models import HelpRequest, StartAttempt
+
+    service, _, owner, _, saved = home_whole
+    repeated = owner.start(StartAttempt(version={"type": "saved_test_version", "id": saved["version_id"]}),
+                           "home-memory-repeat")
+    owner.help(repeated["id"], HelpRequest(expected_revision=0, expected_policy_revision=repeated["policy"]["revision"],
+               item_id=repeated["current_item"]["item_id"], kind="sources"), "home-memory-assistance")
+    home_whole_commit(owner, repeated, option="b")
+    _, fact, _ = home_capture_whole_memory(service)
+    with service.db.transaction() as conn:
+        context = service._context(conn)
+    assert context.material["memory"][0]["text"] == fact["text"]
+    assert context.material["memory"][0]["kind"] == "mistake"
+    assessment = context.material["memory"][0]["assessment"]
+    assert assessment["bank_cohort_eligible"] and assessment["reviewed"]
+    assert assessment["assisted"] and assessment["repeat"]
+    assert assessment["score_bucket"] == "repeat" and assessment["correct"] is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("change", ["edit", "delete", "suppression", "source_withdrawn",
+                                    "evidence_revision", "epoch", "policy_cycle", "active_test"])
+async def test_whole_memory_late_publication_rechecks_correction_source_suppression_and_boundaries(home_whole, change):
+    from renulus.assessment.attempt_models import StartAttempt, SubmitAttempt
+
+    service, transport, owner, attempt, saved = home_whole
+    home_whole_commit(owner, attempt)
+    repository, fact, evidence_id = home_capture_whole_memory(service)
+    if change != "suppression":
+        fact = repository.edit(fact["id"], "Current synthetic corrected dialysis learning note.", 1)
+    transport.release = asyncio.Event()
+    await service.refresh()
+    await asyncio.wait_for(transport.started.wait(), timeout=20)
+    if change == "edit":
+        repository.edit(fact["id"], "New synthetic corrected kidney physiology learning note.", fact["revision"])
+    elif change == "delete":
+        repository.delete(fact["id"], fact["revision"])
+    elif change == "suppression":
+        service.db.execute("INSERT INTO memory_suppression VALUES(?,?)", ("evidence:" + evidence_id, utc_now()))
+    elif change == "source_withdrawn":
+        service.services.get("content").question["withdrawn"] = True
+    elif change == "evidence_revision":
+        service.db.execute("UPDATE learning_evidence SET created_at=? WHERE id=?",
+                           ("2026-10-10T20:00:00Z", evidence_id))
+    elif change == "epoch":
+        with service.db.transaction() as conn:
+            bump_context_epoch(conn)
+    else:
+        active = owner.start(StartAttempt(version={"type": "saved_test_version", "id": saved["version_id"]},
+                                          mode="test"), "home-memory-policy-test")
+        if change == "policy_cycle":
+            owner.submit(active["id"], SubmitAttempt(expected_draft_revision=0), "home-memory-policy-submit")
+    transport.release.set()
+    result = await finish(service)
+    assert result["suggestions"] is None and result["job"]["state"] == "failed"
+    assert result["job"]["error_code"] == ({"active_test": "assistance_restricted",
+                                                "policy_cycle": "assistance_changed"}.get(change, "dependency_changed"))
+    assert service.db.fetch_one("SELECT 1 FROM preferences WHERE key='home.suggestions'") is None
+    sent = json.loads(transport.calls[-1][2][-1]["content"])
+    assert sent["memory"][0]["text"] == fact["text"]
+    assert "PRIVATE_HOME" not in json.dumps(transport.calls)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("change", ["source_withdrawn", "source_deleted", "history_purge", "memory_off"])
+async def test_whole_memory_correction_cache_keeps_source_and_current_history_requirements(home_whole, change):
+    from renulus.assessment.test_models import TestLifecycleRequest
+
+    service, _, owner, attempt, saved = home_whole
+    home_whole_commit(owner, attempt)
+    repository, fact, _ = home_capture_whole_memory(service)
+    corrected = repository.edit(fact["id"], "Current original synthetic CKD learning correction.", 1)
+    await service.refresh()
+    assert (await finish(service))["suggestions"] == bundle()
+    if change == "source_withdrawn":
+        service.services.get("content").question["withdrawn"] = True
+    elif change == "source_deleted":
+        service.services.get("saved_tests").lifecycle(saved["test_id"],
+            TestLifecycleRequest(expected_revision=1, idempotency_key="home-memory-source-delete"), "delete")
+    elif change == "history_purge":
+        repository.purge_history(fact["id"])
+    else:
+        service.db.execute("INSERT INTO preferences VALUES('memory.enabled','false',?)", (utc_now(),))
+    assert repository.get(fact["id"])["text"] == corrected["text"]
+    assert service.read()["suggestions"] is None
+    with service.db.transaction() as conn:
+        context = service._context(conn)
+    assert context.material["memory"] == context.material["learning_activity"] == []
+    assert context.inputs == ()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("change", ["correction", "source_withdrawn"])
+async def test_whole_memory_final_transaction_refuses_change_after_completed_provider_event(home_whole, change):
+    service, transport, owner, attempt, _ = home_whole
+    home_whole_commit(owner, attempt)
+    repository, fact, _ = home_capture_whole_memory(service)
+    corrected = repository.edit(fact["id"], "Current synthetic transplant learning correction.", 1)
+    closed = []
+
+    def change_after_completion():
+        # ProviderManager closes the real synthetic transport after Home has
+        # checked the completed event, before Home's final publication txn.
+        closed.append(True)
+        if change == "correction":
+            repository.edit(fact["id"], "New original synthetic glomerular learning correction.", 2)
+        else:
+            service.services.get("content").question["withdrawn"] = True
+
+    transport.on_close = change_after_completion
+    await service.refresh()
+    result = await finish(service)
+    assert closed == [True]
+    assert result["job"]["state"] == "failed" and result["job"]["error_code"] == "dependency_changed"
+    assert result["suggestions"] is None
+    assert service.db.fetch_one("SELECT 1 FROM preferences WHERE key='home.suggestions'") is None
+    sent = json.loads(transport.calls[-1][2][-1]["content"])
+    assert sent["memory"][0]["text"] == corrected["text"]
+    completions = service.services.get("provider")._completion_history
+    assert any(item["run_id"] == result["job"]["id"] and item["model"] == "gpt-6.1-sol"
+               for item in completions)
 
 
 @pytest.mark.asyncio
