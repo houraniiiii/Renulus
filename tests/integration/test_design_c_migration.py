@@ -191,3 +191,22 @@ def test_restore_invalidates_derived_state_atomically_without_provider_work(tmp_
     assert target.db.fetch_one("SELECT value FROM preferences WHERE key='knowledge.restore_dirty'")["value"] == "true"
     assert 'design_c.context_epoch' not in str(export_records(target))
     assert target.db.fetch_all("SELECT * FROM memory_jobs") == []
+
+
+def test_restore_interrupts_foreign_producers_even_when_local_epoch_coincides(tmp_path):
+    source = create_app(tmp_path / "source").state.services
+    target = create_app(tmp_path / "target").state.services
+    for operation in ("generate_test", "nightly_test", "daily_suggestions"):
+        source.db.execute("INSERT INTO assessment_test_jobs(id,operation,state,idempotency_key,request_hash,"
+            "checkpoint_json,settings_revision,policy_revision,context_epoch,requested_count,validated_count,created_at,updated_at) "
+            "VALUES(?,?,'running',?,?,?,1,1,1,5,2,'now','now')",
+            (operation, operation, operation + "-command", "synthetic", '{"validated":"SYNTHETIC retained checkpoint"}'))
+    source.db.execute("INSERT INTO memory_jobs(id,evidence_id,evidence_hash,scope,state,created_at,updated_at) "
+        "VALUES('capture','synthetic','hash',?,'queued','now','now')", ('{"kind":"study"}',))
+    target.get("data_recovery").restore_json(export_records(source), confirm_backup_date=True, confirmed_exported_at=None)
+    assert context_epoch(target.db) == 1  # Equal to the source checkpoint's integer.
+    jobs = target.db.fetch_all("SELECT state,error_code,validated_count,checkpoint_json FROM assessment_test_jobs")
+    assert len(jobs) == 3
+    assert all(row["state"] == "failed" and row["error_code"] == "interrupted" and row["validated_count"] == 2 for row in jobs)
+    assert all("SYNTHETIC retained checkpoint" in row["checkpoint_json"] for row in jobs)
+    assert target.db.fetch_one("SELECT state,error_code FROM memory_jobs WHERE id='capture'") == {"state": "cancelled", "error_code": "restore_interrupted"}
