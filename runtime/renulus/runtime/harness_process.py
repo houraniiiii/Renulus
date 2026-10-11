@@ -41,7 +41,16 @@ def _observe_exception(future: asyncio.Future) -> None:
 
 
 class HarnessProcessError(RuntimeError):
-    """The owned host could not become ready; close still owns any live child."""
+    """The owned host is unavailable; close still owns any live child."""
+
+
+@dataclass(frozen=True)
+class NativeProcessIdentity:
+    """Live child observation; no FILETIME, job or admission authority."""
+    pid: int
+    profile_id: str
+    store_id: str
+    generation: str
 
 
 @dataclass(frozen=True)
@@ -131,6 +140,29 @@ class ManagedHarnessProcess:
         self._started = False
         self._spawn: asyncio.Task | None = None
         self._observation_release_pending = False
+
+    def native_identity(self) -> NativeProcessIdentity:
+        """Observe an authenticated live child without IO or changing ownership.
+
+        The caller independently verifies creation FILETIME and job membership.
+        Closing, disconnected and unready generations grant no observation.
+        Only ready/policy_blocked startup states describe a live native owner.
+        """
+        process, ready = self._process, self._ready
+        if (not self._started or self._closing or self._disconnected
+                or process is None or process.returncode is not None
+                or type(process.pid) is not int or process.pid <= 0
+                or ready is None or not ready.done() or ready.cancelled()
+                or ready.exception() is not None):
+            raise HarnessProcessError("Native child identity is unavailable.") from None
+        authenticated = ready.result()
+        if (type(authenticated) is not dict
+                or any(authenticated.get(key) != self._identity.get(key)
+                    for key in ("protocol", "profile_id", "store_id", "generation"))
+                or authenticated.get("state") not in ("ready", "policy_blocked")):
+            raise HarnessProcessError("Native child identity is unavailable.") from None
+        return NativeProcessIdentity(process.pid, self._identity["profile_id"],
+            self._identity["store_id"], self._identity["generation"])
 
     async def start(self, config: HarnessProcessConfig) -> dict:
         if self._started:
