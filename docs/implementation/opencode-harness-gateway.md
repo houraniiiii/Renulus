@@ -536,9 +536,11 @@ pause: **52 passed, zero skipped or cancelled**, 53.50 s, in
 `final-harness.xml`. Source/test files were preserved unchanged across that
 pause; no profile or broad test run was repeated after space recovery. The
 handoff/source/receipt hash manifest is `final-node-source.json` in the same
-receipt directory. Standards and spec review covered the dedicated module
-against the published contract and lane ownership; no remaining blocking
-finding was recorded.
+receipt directory. The implementation worker performed a local source check
+against the contract and lane ownership; this was not an independent review.
+The parent's later specification review found the P2 error-category defect
+documented below. Independent review and parent integration remain separate
+from the module test receipts.
 
 From `packages/harness`, the exact focused test command template was:
 
@@ -565,3 +567,129 @@ registration/preparation map, final body token accounting, pre-filter capability
 injection, ConfigurationAuthority lifecycle, strict terminal/publication checks
 and saved host composition. No live provider call, installation, credential
 profile copy or account/package acceptance occurred. H03 and H02-H08 remain open.
+
+## P2 safe error-channel repair — 2026-10-11
+
+The parent reviewed `ccfd4de61e4347b6cadd89535e0c37113abbe320` and found that
+`bufferedHttp` refused Python's safe authentication failure, then `ownedIO`
+replaced the native typed error with generic `InvalidRequest`. This focused
+repair changes only `src/gateway-adapter.ts`, its dedicated public tests and
+this note. The public factory, preparation, client and receipt signatures are
+unchanged. Successful HTTP/SSE reconstruction still requires the exact bounded
+200 result described above.
+
+Only a bounded authenticated terminal `rejected_before_admission` outcome with
+no result and an exact safe code/status pair gets a fixed native error. That
+Domain label does not establish whether Python's durable permit was sent; the
+parent owns that state. Cancelled, uncertain, contradictory or unknown outcomes
+and mismatched statuses remain generic denials.
+
+| Python safe code | Status | Native reason |
+| --- | --- | --- |
+| `authentication_required` | 401 | `Authentication` |
+| `subscription_limit` | 429 | `RateLimit` |
+| `model_unavailable`, `model_not_found`, `model_access_denied`, `account_model_unsupported` | 409 | `InvalidRequest` with fixed model/input refresh guidance |
+| `unsupported_image_input`, `image_input_not_supported`, `unsupported_input_modality`, `unsupported_modality` | 409 | Same fixed `InvalidRequest` guidance |
+| `provider_stream_failed`, `provider_unavailable` | 503 | `ProviderInternal` |
+| `transport_unavailable` | 503 | `Transport` (`http`, `request`) |
+
+These codes/statuses come from Python `policy.py` and `HarnessGateway` public
+failure handling. The pinned SDK has no dedicated model-unavailable reason.
+Native typed `QuotaExceeded` remains `QuotaExceeded`; Python's unified
+subscription limit remains `RateLimit`. Preparation and owned Promise failures
+rebuild the same allowlisted native categories and fixed messages as the
+existing provider adapter. A bound entry retains only the reconstructed safe
+failure so native sanitization cannot erase known model/input guidance. No
+provider body, prose, headers, URL, cause, retry delay or recovery instruction
+is retained. Reason-shaped plain objects cannot grant a category.
+
+Effect interruptions remain interruptions. Failed requests have no receipt,
+cannot replay, do not retry even when the Domain error carries `retryable: true`,
+and retain the original callback/native finalizer ownership. Authentication
+errors do not become reconstructed HTTP responses.
+
+Each focused cycle executed one public behavior: **one failing red then one
+passing green**, zero skipped or cancelled cases. Receipts are under the same
+`C:/Renulus/scratch/oc-h02-h08/providers/node-gateway/receipts` directory.
+
+| Cycle | Behavior | Receipts |
+| --- | --- | --- |
+| n17 | Safe 401 retains `Authentication` through native generate/stream, no receipt/replay | `n17-red.xml`, `n17-green.xml` |
+| n18 | Safe subscription 429 retains `RateLimit`, no retry | `n18-red.xml`, `n18-green.xml` |
+| n19 | Trusted typed preparation errors retain categories and strip canaries | `n19-red.xml`, `n19-green.xml` |
+| n20 | Known model/input rejection retains safe guidance after native sanitization | `n20-red.xml`, `n20-green.xml` |
+| n21 | Safe provider/transport errors retain categories and omit retry instructions | `n21-red.xml`, `n21-green.xml` |
+
+Two additional controls were already green: exact code/status/outcome checking
+and typed owned-IO canary stripping, including a reason-shaped plain object.
+`p2-dedicated.xml` records **26 passed, zero failures/skips/cancels, 10.55 s**.
+Consumer typecheck exited zero (`p2-typecheck.txt`). No broad Harness rerun or
+new SDK profile was used. The earlier 52-case receipt belongs to the original
+module bytes. Exact commands, from `packages/harness`:
+
+```powershell
+& 'C:/Renulus/scratch/ocf/tools/node-v26.4.0-win-x64/node.exe' --test --test-reporter=junit --test-reporter-destination=C:/Renulus/scratch/oc-h02-h08/providers/node-gateway/receipts/p2-dedicated.xml test/gateway-adapter.test.mjs
+& 'C:/Renulus/scratch/ocf/tools/node-v26.4.0-win-x64/node.exe' node_modules/typescript/bin/tsc --noEmit > C:/Renulus/scratch/oc-h02-h08/providers/node-gateway/receipts/p2-typecheck.txt
+```
+
+## Read-only host proposal; not implemented by this repair
+
+The parent owns the host and its primary-policy tracer. The proposed optional
+member matches that tracer; `currentResolved` is context, never route authority:
+
+```typescript
+readonly preparePrimary?: (
+  binding: NativeInputBinding,
+  currentResolved: SessionRunnerModel.Resolved,
+) => Effect.Effect<{
+  readonly resolved: SessionRunnerModel.Resolved;
+  readonly prepare: (request: LLMRequest, settings: StreamOptions) => Effect.Effect<LLMRequest, AIError>;
+}, AIError>;
+```
+
+It must return one trusted dispatch preparation before native `service.primary`
+filters media; the returned closure reuses it after native hooks and parent
+`selectContext`. Close the `AIError` channel with `Effect.orDie` at native
+service overrides, preserving interrupts. Preserve `executeTool` and native
+terminal handling; deny retries and auxiliary title/generate/compaction without
+explicit policy. Binding/phase/held checks and unused-plan retirement belong to
+the parent. Consumed IO stays owned through the actual gateway finalizer.
+
+The current gateway selects inside late `prepare`. A future proposed
+`begin(binding: DomainBinding): Effect.Effect<GatewayPreparationLease, AIError>`
+would expose `{ model: LanguageModel, preparation: Readonly<TrustedGatewayPreparation>,
+prepare(request, settings?), discard() }`. `begin` would call `beforePrepare`
+once and create one native adapter. Parent `preparePrimary` projects `Resolved`
+from the lease's model and trusted catalogue/capabilities/limits, then returns
+its late preparation closure. Do not call top-level `gateway.prepare` again:
+that currently obtains another plan. Existing preparation can become
+convenience over `begin`; no second selector, admission or token estimate is
+needed. This lease API is **unimplemented** and absent from the P2 commit.
+
+Pinned source-built 2.0.26 at `4b6fea2875e4f2e3e8a8fee181803e54f7056845`
+provides declaration/source proof in `dist/types/session/model-request.d.ts`,
+`dist/types/session/runner/model.d.ts`, `dist/types/session/context.d.ts` and
+chunks `agent-j1chax0k.js`, `agent-g5v8b9tv.js`, `agent-7p3yjfky.js` and
+`agent-xasq558m.js`. `SessionRunnerModel.resolved` is pure; its limits are
+`{ input, output, context }`. Project the trusted catalogue `ref` explicitly
+when native wire model ID differs from catalogue ID. The runner passes `loaded.model`
+to transcript construction and `steps.attempt` separately from prepared input;
+that step model supplies saved assistant identity and cost. Therefore the
+primary-only seam leaves a saved-model identity gap. Complete composition
+should allocate the same preparation at runner resolution and consume it in
+primary, with auxiliary resolution guarded against primary allocation.
+
+An in-memory TypeScript check of this interface and graph-preserving
+runner/model-request/context `node.mapLayer` overrides completed with **zero
+diagnostics, no source emitted**. Closed callbacks have `R = never`; original
+Layer dependencies remain intact. This proves declaration feasibility only.
+No private context access or new Layer dependency is required.
+
+A future bounded SDK fixture should use one saved primary, one actual tool
+continuation and a synthetic PNG with conflicting initial model/capabilities:
+two trusted selections/two dispatch IDs, preserved final image bytes, paired
+tool result and correct saved catalogue identity. Auxiliary attempts should
+have zero selections/IO. No such fixture was run in this read-only task. Parent
+Python `model.dispatch` must measure/hash the actual serialized body after all
+lowering/transforms and bind that proof to its single durable permit; native
+`Input.inputTokens`, pre-hook messages and model args cannot supply it.

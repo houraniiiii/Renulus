@@ -1,6 +1,7 @@
-import { Cause, Effect, Stream } from "effect";
+import { Cause, Effect, Option, Stream } from "effect";
 import { HttpClientResponse, type HttpClientRequest } from "effect/http";
-import { AIError, InvalidRequestError, GenerationOptions, LLMRequest, type LLMClientShape } from "@opencode/ai";
+import { AIError, AuthenticationError, RateLimitError, QuotaExceededError, ProviderInternalError, TransportError,
+  InvalidRequestError, GenerationOptions, LLMRequest, type LLMClientShape } from "@opencode/ai";
 import type { Model } from "@opencode/schema/model";
 import type { StreamOptions } from "@opencode/ai/route/client";
 import { DomainClient, type DomainBinding, type DomainOutcome } from "./domain-ipc.ts";
@@ -38,6 +39,20 @@ export interface GatewayAdapter {
   close(): Promise<void>;
 }
 const denied = () => new AIError({ reason: new InvalidRequestError({ message: "Trusted model gateway refused the request." }) });
+const modelUnavailable = "The selected model or input is unavailable. Refresh its capabilities.";
+function safeFailure(error: unknown): AIError {
+  if (!(error instanceof AIError)) return denied();
+  switch (error.reason._tag) {
+    case "Authentication": return new AIError({ reason: new AuthenticationError({ message: "Reconnect the selected subscription." }) });
+    case "RateLimit": return new AIError({ reason: new RateLimitError({ message: "The selected subscription reached a usage limit." }) });
+    case "QuotaExceeded": return new AIError({ reason: new QuotaExceededError({ message: "The selected subscription reached its quota." }) });
+    case "ProviderInternal": return new AIError({ reason: new ProviderInternalError({ message: "The selected subscription could not finish the request." }) });
+    case "Transport": return new AIError({ reason: new TransportError({ message: "The selected subscription transport was interrupted.", transport: "http", operation: "request" }) });
+    case "InvalidRequest": return error.reason.message === modelUnavailable
+      ? new AIError({ reason: new InvalidRequestError({ message: modelUnavailable }) }) : denied();
+    default: return denied();
+  }
+}
 const bindingKeys = ["operation_id", "attempt_id", "session_id", "input_id", "cancellation_id"] as const;
 const identifier = (value: unknown): value is string => typeof value === "string" &&
   /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/.test(value);
@@ -68,7 +83,7 @@ function trustedPreparation(value: TrustedGatewayPreparation, binding: DomainBin
 }
 type NativeAdapter = Awaited<ReturnType<typeof createSubscriptionAdapter>>;
 type Entry = { adapter: NativeAdapter; plan: TrustedGatewayPreparation; used: boolean;
-  release?: () => void; receipt?: Readonly<GatewayReceipt> };
+  release?: () => void; receipt?: Readonly<GatewayReceipt>; failure?: AIError };
 function requireInputs(request: LLMRequest, plan: TrustedGatewayPreparation) {
   if (!plan.native_capabilities.tools && (request.tools.length || request.messages.some(message =>
     message.content.some(part => part.type === "tool-call" || part.type === "tool-result")))) throw denied();
@@ -76,9 +91,26 @@ function requireInputs(request: LLMRequest, plan: TrustedGatewayPreparation) {
     message.content.some(part => part.type === "media"))) throw denied();
 }
 function bufferedHttp(http: HttpClientRequest.HttpClientRequest, outcome: DomainOutcome, plan: TrustedGatewayPreparation) {
+  if (Buffer.byteLength(JSON.stringify(outcome) + "\n") > plan.bounds.max_frame_bytes) throw denied();
+  if (outcome.outcome === "rejected_before_admission" && outcome.result === undefined
+      && outcome.error?.code === "authentication_required" && outcome.error.status === 401)
+    throw new AIError({ reason: new AuthenticationError({ message: "Reconnect the selected subscription." }) });
+  if (outcome.outcome === "rejected_before_admission" && outcome.result === undefined
+      && outcome.error?.code === "subscription_limit" && outcome.error.status === 429)
+    throw new AIError({ reason: new RateLimitError({ message: "The selected subscription reached a usage limit." }) });
+  if (outcome.outcome === "rejected_before_admission" && outcome.result === undefined
+      && outcome.error?.status === 409 && ["model_unavailable", "model_not_found", "model_access_denied",
+        "account_model_unsupported", "unsupported_image_input", "image_input_not_supported",
+        "unsupported_input_modality", "unsupported_modality"].includes(outcome.error.code))
+    throw new AIError({ reason: new InvalidRequestError({ message: modelUnavailable }) });
+  if (outcome.outcome === "rejected_before_admission" && outcome.result === undefined && outcome.error?.status === 503) {
+    if (["provider_stream_failed", "provider_unavailable"].includes(outcome.error.code))
+      throw new AIError({ reason: new ProviderInternalError({ message: "The selected subscription could not finish the request." }) });
+    if (outcome.error.code === "transport_unavailable")
+      throw new AIError({ reason: new TransportError({ message: "The selected subscription transport was interrupted.", transport: "http", operation: "request" }) });
+  }
   const result = outcome.result;
   if (outcome.outcome !== "committed_reference" || outcome.error !== undefined || !result
-      || Buffer.byteLength(JSON.stringify(outcome) + "\n") > plan.bounds.max_frame_bytes
       || Object.keys(result).sort().join(",") !== "body_base64,headers,permit_id,status"
       || result.status !== 200 || !identifier(result.permit_id)
       || !result.headers || typeof result.headers !== "object" || Array.isArray(result.headers)
@@ -117,7 +149,7 @@ export async function createGatewayAdapter(options: GatewayAdapterOptions): Prom
       const controller = new AbortController();
       controllers.add(controller);
       const pending = work(controller.signal);
-      return restore(Effect.tryPromise({ try: () => pending, catch: () => denied() })).pipe(
+      return restore(Effect.tryPromise({ try: () => pending, catch: safeFailure })).pipe(
         Effect.onInterrupt(() => Effect.promise(async () => { controller.abort(); await pending.catch(() => {}); })),
         Effect.ensuring(Effect.sync(() => { controllers.delete(controller); })),
       );
@@ -149,7 +181,9 @@ export async function createGatewayAdapter(options: GatewayAdapterOptions): Prom
               const payload = { dispatch_id: preparation.dispatch_id, serialized_request: serialized };
               if (Buffer.byteLength(JSON.stringify(payload) + "\n") > preparation.bounds.max_frame_bytes) throw denied();
               const outcome = await options.domain.request(binding, "model.dispatch", payload, { signal });
-              const buffered = bufferedHttp(http, outcome, preparation);
+              let buffered: ReturnType<typeof bufferedHttp>;
+              try { buffered = bufferedHttp(http, outcome, preparation); }
+              catch (error) { entry.failure = safeFailure(error); throw entry.failure; }
               entry.receipt = buffered.receipt;
               return buffered.response;
           }),
@@ -162,7 +196,8 @@ export async function createGatewayAdapter(options: GatewayAdapterOptions): Prom
         entries.set(prepared, entry);
         return prepared;
     })), Effect.ensuring(Effect.sync(release)));
-  }).pipe(Effect.catchCause(cause => Cause.hasInterruptsOnly(cause) ? Effect.failCause(cause) : Effect.fail(denied())));
+  }).pipe(Effect.catchCause(cause => Cause.hasInterruptsOnly(cause) ? Effect.failCause(cause)
+    : Effect.fail(safeFailure(Option.getOrUndefined(Cause.findErrorOption(cause))))));
   const claim = (request: LLMRequest) => {
     const entry = entries.get(request);
     if (closing || !entry || entry.used) throw denied();
@@ -177,10 +212,14 @@ export async function createGatewayAdapter(options: GatewayAdapterOptions): Prom
   const client: LLMClientShape = {
     generate: (request, settings) => Effect.suspend(() => {
       return Effect.try({ try: () => claim(request), catch: () => denied() }).pipe(
-        Effect.flatMap(entry => entry.adapter.client.generate(request, settings).pipe(Effect.ensuring(finish(entry)))));
+        Effect.flatMap(entry => entry.adapter.client.generate(request, settings).pipe(Effect.ensuring(finish(entry)),
+          Effect.catchCause(cause => Cause.hasInterruptsOnly(cause) ? Effect.failCause(cause)
+            : Effect.fail(entry.failure ?? safeFailure(Option.getOrUndefined(Cause.findErrorOption(cause))))))));
     }),
     stream: (request, settings) => Stream.unwrap(Effect.try({ try: () => claim(request), catch: () => denied() }).pipe(
-      Effect.map(entry => entry.adapter.client.stream(request, settings).pipe(Stream.ensuring(finish(entry)))))),
+      Effect.map(entry => entry.adapter.client.stream(request, settings).pipe(Stream.ensuring(finish(entry)),
+        Stream.catchCause(cause => Cause.hasInterruptsOnly(cause) ? Stream.failCause(cause)
+          : Stream.fail(entry.failure ?? safeFailure(Option.getOrUndefined(Cause.findErrorOption(cause))))))))),
     compact: () => Effect.fail(denied()),
   };
   return { client, prepare, receipt: request => entries.get(request)?.receipt,

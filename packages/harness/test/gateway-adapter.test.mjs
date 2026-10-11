@@ -5,6 +5,206 @@ import { Effect, Stream, Fiber } from "effect";
 import { createGatewayAdapter } from "../src/gateway-adapter.ts";
 import { binding, plan, request, channel, result, sse, png, toolSse } from "./fixtures/gateway-environment.mjs";
 
+test("authenticated safe gateway 401 reaches the native caller as Authentication without a receipt or replay", async () => {
+  for (const mode of ["generate", "stream"]) {
+    const wire = channel(null);
+    const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.succeed(plan()), validateImages: () => Effect.void });
+    try {
+      const prepared = await Effect.runPromise(adapter.prepare(binding, request()));
+      const operation = mode === "generate" ? adapter.client.generate(prepared)
+        : adapter.client.stream(prepared).pipe(Stream.runCollect);
+      const running = Effect.runPromise(operation.pipe(Effect.result));
+      await until(() => wire.frames.length === 1);
+      wire.settle(wire.frames[0], { outcome: "rejected_before_admission",
+        error: { code: "authentication_required", status: 401, retryable: false } });
+      const failed = await running;
+      assert.equal(failed._tag, "Failure");
+      assert.equal(failed.failure.reason._tag, "Authentication");
+      assert.equal(failed.failure.reason.message, "Reconnect the selected subscription.");
+      assert.equal(adapter.receipt(prepared), undefined);
+      assert.equal(wire.domain.state().active, 0);
+      await assert.rejects(Effect.runPromise(adapter.client.generate(prepared)));
+      assert.equal(wire.frames.length, 1);
+    } finally { wire.domain.disconnect(); await adapter.close(); }
+  }
+});
+
+test("authenticated safe gateway subscription limit reaches native generate and stream as RateLimit without replay", async () => {
+  for (const mode of ["generate", "stream"]) {
+    const wire = channel(null);
+    const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.succeed(plan()), validateImages: () => Effect.void });
+    try {
+      const prepared = await Effect.runPromise(adapter.prepare(binding, request()));
+      const operation = mode === "generate" ? adapter.client.generate(prepared)
+        : adapter.client.stream(prepared).pipe(Stream.runCollect);
+      const running = Effect.runPromise(operation.pipe(Effect.result));
+      await until(() => wire.frames.length === 1);
+      wire.settle(wire.frames[0], { outcome: "rejected_before_admission",
+        error: { code: "subscription_limit", status: 429, retryable: true } });
+      const failed = await running;
+      assert.equal(failed._tag, "Failure");
+      assert.equal(failed.failure.reason._tag, "RateLimit");
+      assert.equal(failed.failure.reason.message, "The selected subscription reached a usage limit.");
+      assert.equal(adapter.receipt(prepared), undefined);
+      assert.equal(wire.domain.state().active, 0);
+      await assert.rejects(Effect.runPromise(adapter.client.generate(prepared)));
+      assert.equal(wire.frames.length, 1);
+    } finally { wire.domain.disconnect(); await adapter.close(); }
+  }
+});
+
+test("trusted typed preparation failures retain allowlisted native categories while removing diagnostic canaries", async () => {
+  const { AIError, AuthenticationError, RateLimitError, QuotaExceededError, ProviderInternalError, TransportError, InvalidRequestError, HttpContext } = await import("@opencode/ai");
+  const canary = crypto.randomUUID();
+  for (const [ErrorType, patch, category, message] of [
+    [AuthenticationError, {}, "Authentication", "Reconnect the selected subscription."],
+    [RateLimitError, { retryAfterMs: 123 }, "RateLimit", "The selected subscription reached a usage limit."],
+    [QuotaExceededError, {}, "QuotaExceeded", "The selected subscription reached its quota."],
+    [ProviderInternalError, { retryAfterMs: 123 }, "ProviderInternal", "The selected subscription could not finish the request."],
+    [TransportError, { transport: "websocket", operation: "read", url: canary, code: canary, recovery: "retry-full" },
+      "Transport", "The selected subscription transport was interrupted."],
+    [InvalidRequestError, { parameter: canary }, "InvalidRequest", "Trusted model gateway refused the request."],
+  ]) {
+    const wire = channel();
+    const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.fail(new AIError({
+      reason: new ErrorType({ message: canary, body: canary, cause: new Error(canary),
+        http: new HttpContext({ url: canary, status: 401, headers: { authorization: canary } }), ...patch }) })),
+      validateImages: () => Effect.void });
+    try {
+      const failed = await Effect.runPromise(adapter.prepare(binding, request()).pipe(Effect.result));
+      assert.equal(failed._tag, "Failure");
+      assert.equal(failed.failure.reason._tag, category);
+      assert.equal(failed.failure.reason.message, message);
+      assert.ok(!JSON.stringify(failed).includes(canary), "A credential canary survived safe failure mapping");
+      assert.ok(!String(failed.failure).includes(canary), "A credential canary survived error text mapping");
+      for (const key of ["body", "http", "cause", "retryAfterMs", "rateLimit", "url", "code", "recovery", "parameter"])
+        assert.equal(failed.failure.reason[key], undefined);
+      assert.equal(wire.frames.length, 0);
+    } finally { await adapter.close(); }
+  }
+});
+
+test("authenticated model and input rejection keeps fixed InvalidRequest guidance through native error sanitization", async () => {
+  for (const code of ["model_unavailable", "model_not_found", "model_access_denied", "account_model_unsupported",
+    "unsupported_image_input", "image_input_not_supported", "unsupported_input_modality", "unsupported_modality"]) {
+    const wire = channel(null);
+    const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.succeed(plan()), validateImages: () => Effect.void });
+    try {
+      const prepared = await Effect.runPromise(adapter.prepare(binding, request()));
+      const operation = code === "model_unavailable" ? adapter.client.generate(prepared)
+        : adapter.client.stream(prepared).pipe(Stream.runCollect);
+      const running = Effect.runPromise(operation.pipe(Effect.result));
+      await until(() => wire.frames.length === 1);
+      wire.settle(wire.frames[0], { outcome: "rejected_before_admission", error: { code, status: 409, retryable: false } });
+      const failed = await running;
+      assert.equal(failed._tag, "Failure");
+      assert.equal(failed.failure.reason._tag, "InvalidRequest");
+      assert.equal(failed.failure.reason.message, "The selected model or input is unavailable. Refresh its capabilities.");
+      assert.equal(adapter.receipt(prepared), undefined);
+      assert.equal(wire.domain.state().active, 0);
+      await assert.rejects(Effect.runPromise(adapter.client.generate(prepared)));
+      assert.equal(wire.frames.length, 1);
+    } finally { wire.domain.disconnect(); await adapter.close(); }
+  }
+});
+
+test("authenticated safe gateway provider and transport failures retain sanitized native categories without retry", async () => {
+  for (const [code, category, message] of [
+    ["provider_stream_failed", "ProviderInternal", "The selected subscription could not finish the request."],
+    ["provider_unavailable", "ProviderInternal", "The selected subscription could not finish the request."],
+    ["transport_unavailable", "Transport", "The selected subscription transport was interrupted."],
+  ]) {
+    const wire = channel(null);
+    const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.succeed(plan()), validateImages: () => Effect.void });
+    try {
+      const prepared = await Effect.runPromise(adapter.prepare(binding, request()));
+      const running = Effect.runPromise(adapter.client.generate(prepared).pipe(Effect.result));
+      await until(() => wire.frames.length === 1);
+      wire.settle(wire.frames[0], { outcome: "rejected_before_admission", error: { code, status: 503, retryable: true } });
+      const failed = await running;
+      assert.equal(failed._tag, "Failure");
+      assert.equal(failed.failure.reason._tag, category);
+      assert.equal(failed.failure.reason.message, message);
+      assert.equal(failed.failure.reason.recovery, undefined);
+      assert.equal(failed.failure.reason.retryAfterMs, undefined);
+      assert.equal(adapter.receipt(prepared), undefined);
+      await assert.rejects(Effect.runPromise(adapter.client.generate(prepared)));
+      assert.equal(wire.frames.length, 1);
+    } finally { wire.domain.disconnect(); await adapter.close(); }
+  }
+});
+
+test("gateway error categories require exact safe codes statuses and terminal outcomes", async () => {
+  const canary = crypto.randomUUID();
+  const errors = [
+    { code: "authentication_required", status: 429 }, { code: "subscription_limit", status: 401 },
+    { code: "model_unavailable", status: 401 }, { code: "provider_stream_failed", status: 401 },
+    { code: "transport_unavailable", status: 429 }, { code: canary, status: 401 },
+  ].map(error => ({ outcome: "rejected_before_admission", error }));
+  for (const outcome of ["committed_reference", "cancelled_settled", "uncertain_after_disconnect"])
+    errors.push({ outcome, error: { code: "authentication_required", status: 401 } });
+  errors.push({ outcome: "committed_reference", result: result(canary, { status: 401 }) });
+  for (const reply of errors) {
+    const wire = channel(null);
+    const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.succeed(plan()), validateImages: () => Effect.void });
+    try {
+      const prepared = await Effect.runPromise(adapter.prepare(binding, request()));
+      const running = Effect.runPromise(adapter.client.generate(prepared).pipe(Effect.result));
+      await until(() => wire.frames.length === 1);
+      wire.settle(wire.frames[0], reply);
+      const failed = await running;
+      assert.equal(failed._tag, "Failure");
+      assert.equal(failed.failure.reason._tag, "InvalidRequest");
+      assert.equal(failed.failure.reason.message, "Trusted model gateway refused the request.");
+      assert.ok(!JSON.stringify(failed).includes(canary), "An unknown error diagnostic canary surfaced");
+      assert.equal(adapter.receipt(prepared), undefined);
+      await assert.rejects(Effect.runPromise(adapter.client.generate(prepared)));
+      assert.equal(wire.frames.length, 1);
+    } finally { wire.domain.disconnect(); await adapter.close(); }
+  }
+});
+
+test("owned IO preserves typed native categories but rebuilds every diagnostic field and rejects reason-shaped objects", async () => {
+  const { AIError, AuthenticationError, RateLimitError, QuotaExceededError, ProviderInternalError, TransportError } = await import("@opencode/ai");
+  const { DomainClient } = await import("../src/domain-ipc.ts");
+  const canary = crypto.randomUUID();
+  for (const [ErrorType, patch, category] of [
+    [AuthenticationError, {}, "Authentication"], [RateLimitError, { retryAfterMs: 123 }, "RateLimit"],
+    [QuotaExceededError, {}, "QuotaExceeded"], [ProviderInternalError, {}, "ProviderInternal"],
+    [TransportError, { transport: "websocket", operation: "read", url: canary, recovery: "retry-full" }, "Transport"],
+    [null, {}, "InvalidRequest"],
+  ]) {
+    let calls = 0;
+    const error = ErrorType ? new AIError({ reason: new ErrorType({ message: canary, body: canary, cause: new Error(canary), ...patch }) })
+      : { reason: { _tag: "Authentication", message: canary } };
+    class RejectingDomainClient extends DomainClient {
+      request(bound, command, payload) {
+        assert.deepEqual(bound, binding);
+        assert.equal(command, "model.dispatch");
+        assert.deepEqual(Object.keys(payload).sort(), ["dispatch_id", "serialized_request"]);
+        calls++;
+        return Promise.reject(error);
+      }
+    }
+    const domain = new RejectingDomainClient({ protocol: "renulus-harness/1", profile_id: "synthetic-profile",
+      store_id: "synthetic-store", generation: "synthetic-generation", token: "synthetic-channel-token" }, async () => {});
+    const adapter = await createGatewayAdapter({ domain, beforePrepare: () => Effect.succeed(plan()), validateImages: () => Effect.void });
+    try {
+      const prepared = await Effect.runPromise(adapter.prepare(binding, request()));
+      const failed = await Effect.runPromise(adapter.client.generate(prepared).pipe(Effect.result));
+      assert.equal(failed._tag, "Failure");
+      assert.equal(failed.failure.reason._tag, category);
+      assert.ok(!JSON.stringify(failed).includes(canary), "An IO diagnostic canary surfaced");
+      assert.ok(!String(failed.failure).includes(canary), "An IO diagnostic canary survived error text");
+      for (const key of ["body", "http", "cause", "retryAfterMs", "url", "recovery"])
+        assert.equal(failed.failure.reason[key], undefined);
+      assert.equal(adapter.receipt(prepared), undefined);
+      await assert.rejects(Effect.runPromise(adapter.client.generate(prepared)));
+      assert.equal(calls, 1);
+    } finally { await adapter.close(); }
+  }
+});
+
 test("trusted preparation reaches native serialized HTTP through two-key model.dispatch and yields its permit receipt", async () => {
   const wire = channel();
   let preparations = 0;
