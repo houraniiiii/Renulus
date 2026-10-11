@@ -25,7 +25,7 @@ lower in the historical ledger.
 | Ticket | Verified preparation/connected scope | Required next closure |
 | --- | --- | --- |
 | H02 | Actual saved native Library retrieval, canonical cited M5 publication, native mapping/reconciliation and store activation | Connected desktop retrieval/citation opening and remaining exposure/failure acceptance |
-| H03 | Actual production-main text/tool/image loopback dispatch, strict final deployment proof, canonical permits and selected provider identity | Full production admission coverage and required evidence; matching-account tool/image gate remains separate before cutover |
+| H03 | Actual production-main text/tool/image loopback dispatch, strict final deployment proof, canonical permits and selected provider identity | Qualified production tokenizer/framing bundle and revision-bound account limits/capabilities are not registered; matching-account tool/image gate remains separate before cutover |
 | H04 | Canonical authority/API, actual candidate/live lifecycle, managed initial/reopen, hidden Settings stage/activate/reopen, actual interrupted activation reconciliation and ordinary settlement | Criterion/readiness closure with H03 dependency; other crash phases and account/package scope remain distinct |
 | H05 | Persistent lineage, legacy real hooks, four recapture regressions, reviewed actual Mem0/Qdrant/FastEmbed native extraction and held-source-revocation/reopen proof | Remaining capture acceptance and H04 dependency; automatic migrated capture remains OFF in integration |
 | H06 | Actual supported SDK import/export/remove capability with zero inference | Existing conversation migration, one transcript owner, native purge and canonical deletion/replay integration after H05 |
@@ -179,6 +179,28 @@ integration checkout. Recorder, interruption and explicit native extraction
 scopes have independent Spec and Standards closure. The parent owns
 shared integration and durable evidence. No H06/H07 implementation is released
 before real H05 acceptance, and H08 still requires accepted H04/H06.
+
+The source-only [counter-evidence audit](../research/2026-10-11-h03-counter-evidence-readiness.md),
+worker989dd0d3 integrated as090f145d, found no adopted production generative
+tokenizer/accounting bundle or normal route-to-counter registration. The BGE
+tokenizer belongs to embeddings; the adopted rough estimators do not satisfy
+the existing inclusive DeploymentEvidence contract. No replacement model,
+character estimate or fabricated limit is selected. Unknown accounting remains
+denied. Immutable route-qualified accounting and separately verified current
+account limits/capabilities are concrete H03 prerequisites.
+
+Isolated automatic-capture preparationa6c5fe4c removes only the native
+automatic enqueue refusal and adds two actual-engine tests. Its final XML has
+2 passes/39.834s, with duplicate/incomplete/corrected/suppressed-source guards.
+Independent Spec and Standards reviews each have zero material findings in
+that exact preparation scope. It remains outside integration pending the
+dependency cutover decision. The existing OFF expectation is preserved here.
+
+The upcoming H02 hidden journey has one declared original synthetic PDF,
+G:/rh02-inputs/synthetic-ckd-study.pdf,935 bytes, SHA-256
+64d90e51e3a5aa9c1b8decae3606344e588ddb2abeda75102425c21b8d089bc0.
+The public controller catalogue/hash/MIME preflight passed; no upload, Docling
+processing, retrieval or citation-opening result is claimed by this preparation.
 
 ### Managed startup assembly and retained coordinator review
 
