@@ -10,6 +10,7 @@ from dataclasses import dataclass
 import hashlib
 import json
 import re
+import sqlite3
 from pathlib import Path
 from typing import Callable, Literal
 from uuid import uuid4
@@ -257,7 +258,12 @@ class ConfigurationAuthority:
 
     def resolve_role(self, version: str, purpose: str, *, catalogue: tuple[str, ...] = (),
                      operation_model: str | None = None, parent_model: str | None = None) -> RoleBinding:
-        spec = self.configuration(version)
+        return self._resolve_role(self.configuration(version), version, purpose, catalogue=catalogue,
+                                  operation_model=operation_model, parent_model=parent_model)
+
+    def _resolve_role(self, spec: ConfigurationSpec, version: str, purpose: str, *,
+                      catalogue: tuple[str, ...] = (), operation_model: str | None = None,
+                      parent_model: str | None = None) -> RoleBinding:
         if purpose not in PURPOSES:
             _deny("purpose_not_allowed")
         role = next((value for value in spec.roles if value.purpose == purpose),
@@ -282,25 +288,55 @@ class ConfigurationAuthority:
         _identifier(run_id)
         with self.db.transaction() as conn:
             pointer = conn.execute("SELECT * FROM harness_configuration_pointer WHERE id=1").fetchone()
-            if not pointer["admission_open"] or not pointer["effective"]:
-                _deny("configuration_not_active")
-            version = pointer["effective"]
-            spec = self.configuration(version)
-            if not set(capability_scope).issubset(spec.capabilities):
-                _deny("scope_widening")
-            binding = self.resolve_role(version, purpose, catalogue=catalogue, operation_model=operation_model)
-            route = {"provider": binding.connection.provider,
-                     "credential_reference": binding.connection.credential_reference,
-                     "credential_revision": binding.connection.credential_revision,
-                     "model_id": binding.model_id, "output_tokens": binding.output_tokens,
-                     "endpoint": BASE_URLS[binding.connection.provider],
-                     "protocol": "responses" if binding.connection.provider == "codex" else "chat-completions"}
-            if conn.execute("SELECT 1 FROM harness_configuration_runs WHERE run_id=?", (run_id,)).fetchone():
-                _deny("run_already_exists")
-            conn.execute("INSERT INTO harness_configuration_runs VALUES(?,?,?,?,?,?,?,?,?,'active',?)",
-                (run_id, version, run_id, None, purpose, 0, binding.dispatch_limit,
-                 _json(sorted(capability_scope)), _json(route), utc_now()))
-        return self.run(run_id)
+            return self.begin_run_in(conn, run_id, purpose, expected_version=pointer["effective"],
+                capability_scope=capability_scope, catalogue=catalogue, operation_model=operation_model)
+
+    def begin_run_in(self, conn, run_id: str, purpose: str, *, expected_version: str,
+                     capability_scope: tuple[str, ...] = (), catalogue: tuple[str, ...] = (),
+                     operation_model: str | None = None) -> dict:
+        """Pin trusted purpose/scope without opening a connection or transaction.
+
+        The caller owns commit/rollback on this database's active transaction.
+        A stale expected effective version denies with activation_conflict; closed
+        or unhealthy admission denies with configuration_not_active. The returned
+        projection observes the inserted run through this same connection.
+        """
+        try:
+            active = conn.in_transaction
+        except sqlite3.ProgrammingError:
+            active = False
+        if not active:
+            _deny("configuration_transaction_required")
+        canonical = next((row[2] for row in conn.execute("PRAGMA database_list")
+                          if row[1] == "main"), None)
+        if not canonical or Path(canonical).resolve() != self.db.path:
+            _deny("configuration_connection_mismatch")
+        _identifier(run_id)
+        pointer = conn.execute("SELECT p.*,h.state AS health_state FROM harness_configuration_pointer p "
+            "LEFT JOIN harness_configuration_health h ON h.version=p.effective WHERE p.id=1").fetchone()
+        if (not pointer or not pointer["admission_open"] or not pointer["effective"]
+                or pointer["health_state"] != "ready"):
+            _deny("configuration_not_active")
+        version = pointer["effective"]
+        if expected_version != version:
+            _deny("activation_conflict")
+        spec = self._configuration(conn, version)
+        if not set(capability_scope).issubset(spec.capabilities):
+            _deny("scope_widening")
+        binding = self._resolve_role(spec, version, purpose, catalogue=catalogue,
+                                     operation_model=operation_model)
+        route = {"provider": binding.connection.provider,
+                 "credential_reference": binding.connection.credential_reference,
+                 "credential_revision": binding.connection.credential_revision,
+                 "model_id": binding.model_id, "output_tokens": binding.output_tokens,
+                 "endpoint": BASE_URLS[binding.connection.provider],
+                 "protocol": "responses" if binding.connection.provider == "codex" else "chat-completions"}
+        if conn.execute("SELECT 1 FROM harness_configuration_runs WHERE run_id=?", (run_id,)).fetchone():
+            _deny("run_already_exists")
+        conn.execute("INSERT INTO harness_configuration_runs VALUES(?,?,?,?,?,?,?,?,?,'active',?)",
+            (run_id, version, run_id, None, purpose, 0, binding.dispatch_limit,
+             _json(sorted(capability_scope)), _json(route), utc_now()))
+        return self._run_in(conn, run_id)
 
     def begin_child(self, run_id: str, parent_id: str, purpose: str, *,
                     capability_scope: tuple[str, ...] = (), operation_model: str | None = None) -> dict:
@@ -330,14 +366,17 @@ class ConfigurationAuthority:
 
     def run(self, run_id: str) -> dict:
         with self.db.transaction() as conn:
-            row = conn.execute("SELECT * FROM harness_configuration_runs WHERE run_id=?", (run_id,)).fetchone()
-            if not row:
-                _deny("run_missing")
-            return {"run_id": row["run_id"], "version": row["version"], "root_id": row["root_id"],
-                    "parent_id": row["parent_id"], "purpose": row["purpose"], "state": row["state"],
-                    "dispatch_limit": row["dispatch_limit"], "route": json.loads(row["route_json"]),
-                    "effective_capabilities": sorted(self._capabilities(conn, row)),
-                    "spent_dispatches": conn.execute("SELECT COUNT(*) FROM harness_configuration_attempts WHERE root_id=?", (row["root_id"],)).fetchone()[0]}
+            return self._run_in(conn, run_id)
+
+    def _run_in(self, conn, run_id: str) -> dict:
+        row = conn.execute("SELECT * FROM harness_configuration_runs WHERE run_id=?", (run_id,)).fetchone()
+        if not row:
+            _deny("run_missing")
+        return {"run_id": row["run_id"], "version": row["version"], "root_id": row["root_id"],
+                "parent_id": row["parent_id"], "purpose": row["purpose"], "state": row["state"],
+                "dispatch_limit": row["dispatch_limit"], "route": json.loads(row["route_json"]),
+                "effective_capabilities": sorted(self._capabilities(conn, row)),
+                "spent_dispatches": conn.execute("SELECT COUNT(*) FROM harness_configuration_attempts WHERE root_id=?", (row["root_id"],)).fetchone()[0]}
 
     def _capabilities(self, conn, row) -> set[str]:
         revoked = {value[0] for value in conn.execute("SELECT capability FROM harness_configuration_revocations")}

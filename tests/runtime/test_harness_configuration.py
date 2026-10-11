@@ -5,6 +5,7 @@ from renulus.contracts import ApiError
 import json
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from threading import Barrier
 import subprocess
 import sys
@@ -1137,3 +1138,218 @@ def test_activation_snapshot_stays_coherent_during_staging_and_revocation(config
         assert snapshot["configuration"] == spec
         assert snapshot["grant_epoch"] == len(snapshot["revoked"])
     assert authority.activation_snapshot()["grant_epoch"] == 8
+
+
+def test_begin_run_in_commits_the_pinned_run_with_the_callers_transaction(configured):
+    authority, spec, version, connection, limits = configured
+    with authority.db.transaction() as conn:
+        run = authority.begin_run_in(conn, "atomic-admission", "explain",
+            expected_version=version, capability_scope=("library-read",),
+            catalogue=("deepseek-v4.1-flash", "mimo-v2.6-pro"))
+        assert conn.in_transaction
+        assert run == {
+            "run_id": "atomic-admission", "version": version, "root_id": "atomic-admission",
+            "parent_id": None, "purpose": "explain", "state": "active",
+            "dispatch_limit": 12, "spent_dispatches": 0,
+            "effective_capabilities": ["library-read"],
+            "route": {"provider": "opencode-go", "credential_reference": "connection-go",
+                "credential_revision": 1, "model_id": "mimo-v2.6-pro",
+                "output_tokens": 4096, "endpoint": "https://opencode.ai/zen/go/v1",
+                "protocol": "chat-completions"},
+        }
+    assert authority.run("atomic-admission") == run
+    assert authority.activation_snapshot()["pinned_runs"] == [
+        {"run_id": "atomic-admission", "purpose": "explain", "version": version}]
+
+
+def test_begin_run_in_rejects_a_requested_version_that_is_not_effective(configured):
+    authority, spec, version, connection, limits = configured
+    requested = authority.stage(spec.model_copy(update={"registry_hash": "b" * 64}))
+    before = authority.activation_snapshot()
+    with pytest.raises(ApiError) as error:
+        with authority.db.transaction() as conn:
+            authority.begin_run_in(conn, "stale-admission", "explain", expected_version=requested)
+    assert error.value.code == "activation_conflict"
+    assert authority.activation_snapshot() == before
+    with pytest.raises(ApiError) as missing:
+        authority.run("stale-admission")
+    assert missing.value.code == "run_missing"
+
+
+def test_begin_run_in_requires_an_active_caller_transaction(configured):
+    authority, spec, version, connection, limits = configured
+    before = authority.activation_snapshot()
+    with closing(authority.db.connect()) as conn:
+        with pytest.raises(ApiError) as error:
+            authority.begin_run_in(conn, "unowned-admission", "explain", expected_version=version)
+        assert error.value.code == "configuration_transaction_required"
+        assert not conn.in_transaction
+    assert authority.activation_snapshot() == before
+
+
+def test_begin_run_in_rejects_a_foreign_database_with_identical_configuration(configured, tmp_path):
+    authority, spec, version, connection, limits = configured
+    foreign = ConfigurationAuthority(Database(tmp_path / "foreign.sqlite"))
+    assert activate(foreign, spec) == version
+    before = authority.activation_snapshot()
+    foreign_before = foreign.activation_snapshot()
+    with pytest.raises(ApiError) as error:
+        with foreign.db.transaction() as conn:
+            authority.begin_run_in(conn, "foreign-admission", "explain", expected_version=version)
+    assert error.value.code == "configuration_connection_mismatch"
+    assert authority.activation_snapshot() == before
+    assert foreign.activation_snapshot() == foreign_before
+
+
+def test_begin_run_in_rolls_back_with_rejected_outer_publication(configured):
+    authority, spec, version, connection, limits = configured
+    before = authority.activation_snapshot()
+    with pytest.raises(RuntimeError, match="publication rejected"):
+        with authority.db.transaction() as conn:
+            run = authority.begin_run_in(conn, "rolled-back-owner", "explain",
+                expected_version=version, capability_scope=("library-read",))
+            assert run["state"] == "active"
+            raise RuntimeError("publication rejected")
+    assert authority.activation_snapshot() == before
+    with pytest.raises(ApiError) as error:
+        authority.run("rolled-back-owner")
+    assert error.value.code == "run_missing"
+
+
+def test_begin_run_in_duplicate_rolls_back_other_admissions_without_replacing_owner(configured):
+    authority, spec, version, connection, limits = configured
+    retained = authority.begin_run("retained-owner", "explain", capability_scope=("library-read",))
+    before = authority.activation_snapshot()
+    with pytest.raises(ApiError) as error:
+        with authority.db.transaction() as conn:
+            authority.begin_run_in(conn, "partial-owner", "summary", expected_version=version)
+            authority.begin_run_in(conn, "retained-owner", "explain", expected_version=version,
+                                   operation_model="deepseek-v4.1-flash")
+    assert error.value.code == "run_already_exists"
+    assert authority.run("retained-owner") == retained
+    assert authority.activation_snapshot() == before
+    with pytest.raises(ApiError) as missing:
+        authority.run("partial-owner")
+    assert missing.value.code == "run_missing"
+
+
+def test_begin_run_in_uses_only_the_supplied_connection(configured, monkeypatch):
+    authority, spec, version, connection, limits = configured
+    def unavailable_connection():
+        pytest.fail("Admission must use the caller's canonical connection")
+
+    with authority.db.transaction() as conn:
+        with monkeypatch.context() as guard:
+            guard.setattr(authority.db, "connect", unavailable_connection)
+            run = authority.begin_run_in(conn, "single-connection", "explain", expected_version=version)
+            assert conn.in_transaction
+    assert authority.run("single-connection") == run
+
+
+@pytest.mark.parametrize("closed_by", ["seal", "unhealthy", "restart"])
+def test_begin_run_in_requires_healthy_open_admission(configured, closed_by):
+    authority, spec, version, connection, limits = configured
+    if closed_by == "seal":
+        authority.close_admission(expected_effective=version, requested_version=version, grant_epoch=0)
+    elif closed_by == "unhealthy":
+        assert not authority.validate(version, lambda candidate: CandidateHealth(
+            configuration_version=version, grant_epoch=candidate.grant_epoch,
+            registry_hash=spec.registry_hash, healthy=False))
+    else:
+        authority.reconcile_restart(RestartBoundary(
+            admission_closed=True, runtime_stopped=True, domain_settled=True))
+    before = authority.activation_snapshot()
+    with pytest.raises(ApiError) as error:
+        with authority.db.transaction() as conn:
+            authority.begin_run_in(conn, "closed-admission", "explain", expected_version=version)
+    assert error.value.code == "configuration_not_active"
+    assert authority.activation_snapshot() == before
+
+
+@pytest.mark.parametrize("change,error_code", [
+    ("scope", "scope_widening"), ("disabled", "role_disabled"),
+    ("purpose", "purpose_not_allowed"), ("model", "model_not_allowed")])
+def test_begin_run_in_preserves_scope_and_role_rejections(configured, change, error_code):
+    authority, spec, version, connection, limits = configured
+    scope, purpose, model = (), "explain", None
+    if change == "scope":
+        scope = ("foreign-capability",)
+    elif change == "disabled":
+        purpose = "title"
+    elif change == "purpose":
+        purpose = "invented-role"
+    else:
+        model = "gpt-6.1-sol"
+    before = authority.activation_snapshot()
+    with pytest.raises(ApiError) as error:
+        with authority.db.transaction() as conn:
+            authority.begin_run_in(conn, "invalid-admission", purpose, expected_version=version,
+                                   capability_scope=scope, operation_model=model)
+    assert error.value.code == error_code
+    assert authority.activation_snapshot() == before
+
+
+@pytest.mark.parametrize("catalogue,expected", [
+    (("deepseek-v4.1-flash", "mimo-v2.6-pro"), "mimo-v2.6-pro"),
+    (("unapproved", "deepseek-v4.1-flash"), "deepseek-v4.1-flash"),
+    ((), "mimo-v2.6-pro"), (("gpt-6.1-sol",), "mimo-v2.6-pro")])
+def test_begin_run_in_preserves_automatic_allowlist_order(configured, catalogue, expected):
+    authority, spec, version, connection, limits = configured
+    with authority.db.transaction() as conn:
+        run = authority.begin_run_in(conn, "automatic-owner", "explain", expected_version=version,
+                                   catalogue=catalogue)
+    assert run["route"]["model_id"] == expected
+    assert authority.configuration(version).connection.selected_model is None
+    assert authority.run("automatic-owner") == run
+
+
+def test_begin_run_in_rejects_an_ended_caller_transaction(configured):
+    authority, spec, version, connection, limits = configured
+    with authority.db.transaction() as conn:
+        pass
+    before = authority.activation_snapshot()
+    with pytest.raises(ApiError) as error:
+        authority.begin_run_in(conn, "ended-admission", "explain", expected_version=version)
+    assert error.value.code == "configuration_transaction_required"
+    assert authority.activation_snapshot() == before
+
+
+def test_begin_run_in_accepts_an_independent_connection_to_the_same_canonical_database(configured):
+    authority, spec, version, connection, limits = configured
+    canonical = Database(authority.db.path)
+    with canonical.transaction() as conn:
+        run = authority.begin_run_in(conn, "same-database", "explain", expected_version=version)
+    assert authority.run("same-database") == run
+
+
+def test_begin_run_in_rejects_the_former_effective_version_after_activation(configured):
+    authority, spec, version, connection, limits = configured
+    current = activate(authority, spec.model_copy(update={"registry_hash": "b" * 64}), expected=version)
+    before = authority.activation_snapshot()
+    with pytest.raises(ApiError) as error:
+        with authority.db.transaction() as conn:
+            authority.begin_run_in(conn, "former-version", "explain", expected_version=version)
+    assert error.value.code == "activation_conflict"
+    assert authority.activation_snapshot() == before
+    with authority.db.transaction() as conn:
+        admitted = authority.begin_run_in(conn, "current-version", "explain", expected_version=current)
+    assert authority.run("current-version") == admitted
+    assert admitted["version"] == current
+
+
+@pytest.mark.parametrize("operation_model,expected", [
+    (None, "deepseek-v4.1-flash"), ("mimo-v2.6-pro", "mimo-v2.6-pro")])
+def test_begin_run_in_preserves_explicit_role_budget_output_and_override(configured, operation_model, expected):
+    authority, spec, version, connection, limits = configured
+    current = activate(authority, spec.model_copy(update={"roles": (RolePolicy(
+        purpose="explain", model_id="deepseek-v4.1-flash", dispatch_limit=2, output_tokens=1536),)}),
+        expected=version)
+    with authority.db.transaction() as conn:
+        run = authority.begin_run_in(conn, "explicit-role", "explain", expected_version=current,
+                                   operation_model=operation_model)
+    assert run["dispatch_limit"] == 2
+    assert run["route"]["output_tokens"] == 1536
+    assert run["route"]["model_id"] == expected
+    assert run["route"]["credential_reference"] == "connection-go"
+    assert run["route"]["credential_revision"] == 1
+    assert authority.run("explicit-role") == run
