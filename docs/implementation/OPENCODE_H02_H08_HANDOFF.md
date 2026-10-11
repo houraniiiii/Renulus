@@ -94,7 +94,9 @@ dictionary mutation could promote an authenticated unknown state. The assigned
 worker reproduced it in mutation-red01.xml (1 failed, 1.956 seconds) and supplied
 `054abaef`: start returns a separate public snapshot. Its mutation-green01 has
 1 pass in 1.332 seconds; mutation-focused01 has 11 dedicated passes in 3.498
-seconds. Repair integration and independent closure are recorded separately.
+seconds. The repair is integrated as `09f5c2c9`. Focused independent Spec and
+Standards re-reviews both close the reported P2 with zero residual material
+findings. No broad process suite was repeated for that disposition.
 
 Parent opted-in Owner/lifecycle registration now checks the actual issuer-bound
 lease and live scope, then registers every authenticated child before native
@@ -111,6 +113,67 @@ registration paths. Initial registration red.xml is missing scratch-parent
 setup; red02/red03 are synthetic-environment home-directory failures, superseded
 by red04. This is actual OS/SDK ownership with synthetic policy; it is not
 startup coordinator, provider or ticket acceptance.
+
+### Settings Stop/retry and initial gated startup
+
+The actual production-main Settings HTTP fixture `3079b661` is integrated
+as `0d237173`. Its saved-cancel-retry case reproduced a definite failure:
+a run stopped before native scheduling had settled its configuration pin, but
+the untouched saved answer reservation still blocked activation. Parent
+`7e5da2b5` retires only a reserved answer with no admitted input, command
+receipt or process generation, before the synchronous native-start marker.
+The marker is set before any native create wait; a lost acknowledgement cannot
+be retired merely because its runtime identity is missing. The root gate is
+unchanged and uncertain work remains owned.
+
+Parent receipts in
+`G:/Renulus-agent-scratch/oc-h02-h08/model-owner/receipts/`:
+
+| Receipt | Exact result | Scope |
+| --- | --- | --- |
+| settings-cancel-red.xml | 1 failed, 13.417s | Saved Stop then activation remained incorrectly busy |
+| settings-cancel-green.xml | 2 passed, 37.058s | Idle and saved Stop/retry Settings HTTP activation, actual old/new SDK generations, zero inference |
+| gated-start-compatibility.xml | 1 passed, 20.66s | Ordinary idle startup/Settings compatibility after the new gated port |
+
+Independent Standards and Spec reviews of `0d237173..7e5da2b5` both report
+zero material findings. The account/catalogue and policy fixtures are
+synthetic; process replacement, isolated registry inspection and canonical
+owners are actual. The initial test bootstrap is deliberately test-owned and
+does not establish normal startup. Lost-create Stop preservation is a separate
+test-only lane, not a claimed runtime observation from those two cases.
+
+Parent `803b472b` adds public `Owner.start_gated(Candidate)->RegistryHealth`.
+It requires exact canonical effective version/specification/current grant epoch,
+empty pins and closed admission before launch and after awaits. The retained
+initial task authenticates/registers the child, activates the paired stores,
+inspects the actual live final registry while blocked, checks its hash/writer/
+four closed gates, then arms that same version under still-closed canonical
+admission. Ordinary `start()` shares the retained task and native generation.
+Timed-out commands retain their process owner; `close()` drains that owner.
+
+The worker's meaningful missing-port red is
+`G:/Renulus/scratch/oc-learning-bootstrap/receipts/red02.xml`: 1 failure in
+8.518s, after actual isolated candidate settlement and before live startup.
+Its separate positive01.xml has 1 pass in 12.04s, observing exact
+`stores.activate -> host.inspect -> host.activate` order, blocked final
+inspection, closed canonical Send and same-generation ordinary start. Test-only
+`36c33ad4` is integrated as `878e4138`; final01.xml independently has exactly
+2 passes, zero failures/errors/skips, 18.044s, including prelaunch stale epoch
+refusal. Red01 is a scratch-parent setup failure, not behavior evidence.
+
+Independent Standards reports zero material findings. Spec identified a P2:
+epoch change during authenticated process startup was checked only after
+paired-store activation. The actual public regression startup-epoch-red01.xml
+has 1 failure in 12.362s: activation was active where prepared was required.
+Parent `64ecb42f` rechecks canonical authority immediately after authenticated
+registration and before any store activation. startup-epoch-green01.xml has
+1 pass in 13.020s; the separate affected final02.xml has exactly 3 passes,
+zero failures/errors/skips, 25.765s. Test-only `a2ecb113` is integrated as
+`b9454f04`. The authenticated native child remains blocked and owned until actual
+close, with no store/inspect/arm commands after revocation. Focused independent
+Spec and Standards closure verifies the repair; no unrelated suite was repeated.
+No inference, account, model-registry, complete profile coordinator or default
+startup acceptance is inferred.
 
 ### Continued configuration integration
 
@@ -155,15 +218,16 @@ failure. Synthetic lifecycle ports qualify these as policy/race evidence;
 independent Standards and Spec reviews report zero material findings in the bounded
 CAS change. Connected activation remains open.
 
-Current dynamic lanes supersede the historical ownership table below: Sartre
-delivered the Windows fence and now proposes the bounded startup coordinator;
-Arendt owns the additive public native-process identity prerequisite in
-harness_process.py and its new dedicated test. Turing delivered the actual-main
-saved-image positive/revocation test-only commit. Ohm delivered the connected
-Library/M5 journey. Russell and Nietzsche are available for independent Spec/
-Standards review of the next startup integration. Parent owns shared Owner/
-lifecycle registration and opt-in bootstrap/reopen assembly. No worker may edit
-another lane.
+Current dynamic lanes supersede the historical ownership table below. Sartre
+owns only new harness_bootstrap.py and its dedicated tests for the bounded
+startup coordinator. Arendt completed the scalar identity repair and now reads
+the exact production bootstrap-runtime adapter assembly. Turing owns only the
+new initial gated-start test after delivering saved-image evidence. Ohm owns a
+separate lost-create Stop preservation test after delivering actual Settings
+activation. Russell and Nietzsche independently review Spec and Standards for
+the committed gated Owner port. Parent owns shared Owner/lifecycle registration,
+runtime-factory/CLI assembly and opt-in bootstrap/reopen integration. No worker
+may edit another lane. All H02–H08 acceptance remains open.
 
 New parent model-owner receipts under
 `G:/Renulus-agent-scratch/oc-h02-h08/model-owner/receipts/` are separate runs:
