@@ -497,6 +497,15 @@ class HarnessLearningBridge:
         entry = self.repo.streaming.active.get(run_id)
         if entry is not None and self.cancel_run is not None:
             self.cancel_run(entry)
+        if entry is not None and not entry.get('harness_native_started'):
+            # This producer has not crossed the synchronous marker before
+            # native session creation. Retire only its untouched reservation;
+            # a lost create acknowledgement may lack a runtime, but has already
+            # crossed that marker and must keep its uncertain ownership.
+            with self.db.transaction() as conn:
+                conn.execute("UPDATE learn_harness_answers SET state='cancelled' WHERE run_id=? "
+                    "AND state='reserved' AND input_id IS NULL AND command_request_id IS NULL "
+                    "AND process_generation IS NULL", (run_id,))
         if entry is None or 'harness_runtime' not in entry:
             return {'state': 'not-submitted'}
         if 'harness_cancel_task' not in entry:
