@@ -168,10 +168,14 @@ report zero material findings in this exact test scope; the final source and
 receipt fingerprints match the reviewed bytes. No H05 acceptance or automatic
 capture is granted.
 
-Current directed lanes: Sartre's distinct H02 desktop fixture backend is ready
-at697d4bb1 in two dedicated new files; Russell and Nietzsche independently
-review its Spec and Standards axes before parent integration. Ohm's fixed
-learning launch is integrated. Arendt's H03/H04 criterion map is integrated
+Current directed lanes: Sartre's H02 desktop fixture backend697d4bb1 is
+integrated as56681890; deadline05561395 and home-variable7fe6761a repairs
+have independent closure on both axes. Explicit Library collection-root
+prerequisite5c45a80d is independently clear. The first actual hidden PDF import
+is Available, but saved Explain fails at the Library callback with
+library_tool_unavailable; Sartre owns bounded diagnosis. Ohm adjudicates H02
+criteria, Russell H05, and Arendt H04 from existing evidence without new suites.
+Nietzsche is free for the next independent Standards slice. The H03/H04 map is integrated
 as727f358b and updated with the already integrated non-crash failure tracer.
 The production-counter audit is integrated; no qualified accounting bundle is
 registered. Turing preserves the clean isolated automatic-capture branch at
@@ -196,13 +200,22 @@ worker runs passed7 Node,5 ordinary-controller and63 Electron cases. Parent
 desktop typecheck and native-entry build each exited0; built main SHA-256 is
 3eaa7db00ee21ffee89ed1aef0c91e29143280f05fad09db161d72ea82c36fa8.
 Receipts are inG:/Renulus-agent-scratch/oc-h02-h08/learning-desktop/parent-build01/.
-The fixed Python learning backend697d4bb1 has13 affected passes/84.044s and a
-prompt-derived retrieval red1→green1 (green70.171s), read independently by the
-parent. Frozen independent review reports one Spec P2 (cleanup after the45s
-deadline may still publish success) and one Standards P2 (constructor rebases
-process-wide USERPROFILE against the parallel rules). The same owned two-file
-lane prepares public regressions and narrow repairs; integration and the actual
-hidden journey wait for independent closure. No desktop pass is claimed.
+The fixed Python backend has13 affected passes/84.044s and prompt-derived
+retrieval red1→green1 (green70.171s). Deadline red1→affectedgreen2 and home-state
+red1→green1 plus12 selected guards close both priorP2s. Final reviewed backend
+hash88a886a3c5124178d009d2a30affbed12a3a930a8f42c18387e7c182ad3885d0
+matches7fe6761a. The hidden journeyG:/rh02/c/s-e104d9ae/ started in36.125s,
+kept two windows hidden, and imported the declared935-byte synthetic CKD PDF
+through real rights/Docling/FastEmbed/LanceDB processing to Available R02.
+
+One saved Explain Send persisted its user input/draft, then failed with
+harness_execution_failed; no completed answer/publication. Owned native
+diagnostics show first tool library_tool_unavailable and secondary model
+refusal. One primary permit confirmed, no continuation permit. Screenshot
+capture-0002.png and original profile are retained; no second Send. Explicit
+close was normal in0.899s, no forced/remaining PIDs, faultnull.
+[Exact journey](OPENCODE_H02_HIDDEN_LEARNING.md) retains the failure and next
+required citation/original-reader/reopen check. H02 remains open.
 
 The source-only [counter-evidence audit](../research/2026-10-11-h03-counter-evidence-readiness.md),
 worker989dd0d3 integrated as090f145d, found no adopted production generative
