@@ -6,6 +6,7 @@ from collections import deque
 from contextlib import aclosing, suppress
 from contextvars import ContextVar
 from dataclasses import dataclass, field, replace
+import math
 import time
 from typing import TYPE_CHECKING, AsyncIterator
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
@@ -15,6 +16,7 @@ import httpx
 from renulus.contracts import ApiError, ContextScope, Event, durable_id
 from .context import CONTEXT_BUDGET, OUTPUT_RESERVATION, SUMMARY_MAX_CHARS, HermesContextAdapter
 from .hermes import HermesSubscriptionTransport
+from .harness_configuration import ConnectionReference
 from .inputs import has_images
 from .policy import ALLOWED_MODELS, BASE_URLS, CODEX_IMAGE_MODELS, learning_usage, rejection_kind, require_learning_route, require_provider, require_run_id, response_model_identity, safe_error, stream_failure, validate_messages
 from .protected import ConnectionStore
@@ -289,6 +291,7 @@ class ProviderManager:
     async def refresh(self, provider: str) -> dict:
         require_provider(provider)
         version = self._connection_versions[provider]
+        epoch = None
         try:
             token = await self._access_token(provider)
             epoch = self._credential_epochs[provider]
@@ -300,7 +303,7 @@ class ProviderManager:
             self._catalog_errors.pop(provider, None)
             self._save()
         except Exception as error:
-            self._require_connection_version(provider, version)
+            self._require_connection_version(provider, version, credential_epoch=epoch)
             public = safe_error(error)
             if provider in self._settings["connections"]:
                 self._record_access_error(provider, public)
@@ -401,6 +404,38 @@ class ProviderManager:
             self._save()
         return subscription_route(provider, chosen, credential_ref=self._credential_refs[provider],
             credential_epoch=self._credential_epochs[provider], catalogue=self._catalogs.get(provider))
+
+    def configuration_connection(self) -> ConnectionReference | None:
+        """Trusted local bootstrap binding; preserve Automatic without any IO."""
+        provider = self._settings["selected_provider"]
+        if provider is None or not self._settings["connections"].get(provider):
+            return None
+        self._route(None)
+        if provider not in self._settings.get("credential_metadata", {}):
+            raise ApiError("connection_changed", "Prepare the selected protected connection before binding configuration.", 409, True)
+        connection = ConnectionReference(provider=provider, credential_reference=self._credential_refs[provider],
+            credential_revision=self._credential_epochs[provider], selected_model=self._selected_model(provider))
+        self.require_configuration_connection(connection)
+        return connection
+
+    def require_configuration_connection(self, connection: ConnectionReference) -> None:
+        """Synchronous trusted configuration guard; no refresh or protected IO."""
+        if (not isinstance(connection, ConnectionReference)
+                or self._settings["selected_provider"] != connection.provider
+                or connection.provider not in self._settings.get("credential_metadata", {})
+                or self._selected_model(connection.provider) != connection.selected_model):
+            raise ApiError("connection_changed", "Prepare the current selected connection before binding configuration.", 409, True)
+        chosen = connection.selected_model or self._route(None)[1]
+        self.require_harness_route(subscription_route(connection.provider, chosen,
+            credential_ref=connection.credential_reference, credential_epoch=connection.credential_revision,
+            catalogue=None))
+        record = self._settings["connections"].get(connection.provider)
+        token = record.get("access_token") if isinstance(record, dict) else None
+        expiry = record.get("expires_at") if isinstance(record, dict) else None
+        if (not isinstance(token, str) or not token.strip()
+                or connection.provider == "codex" and (type(expiry) not in (int, float)
+                    or not math.isfinite(expiry) or expiry <= time.time() + 60)):
+            raise ApiError("authentication_required", "Reconnect or explicitly refresh the selected subscription.", 401, True)
 
     def _harness_route_current(self, route: SubscriptionRoute) -> bool:
         if not isinstance(route, SubscriptionRoute) or route.provider_id not in ALLOWED_MODELS:

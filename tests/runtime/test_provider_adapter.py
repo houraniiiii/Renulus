@@ -10,6 +10,8 @@ import pytest
 from renulus.runtime.manager import ProviderManager
 from renulus.contracts import ApiError, ContextScope, Scope
 from renulus.runtime.protected import ConnectionStore
+from renulus.runtime.protected import WindowsDPAPI
+from renulus.runtime.harness_configuration import ConnectionReference
 
 
 def legacy_selected_go_profile(app_paths):
@@ -33,6 +35,292 @@ def legacy_selected_codex_profile(app_paths, *, expires_at, refresh_token=None):
 
 def forbid_provider_usage(request):
     pytest.fail('Preparation unexpectedly called a provider', pytrace=False)
+
+
+@pytest.mark.asyncio
+async def test_configuration_connection_reconnect_and_auth_revocation_survive_reopen_without_port_io(app_paths):
+    legacy_selected_go_profile(app_paths)
+    calls = []
+
+    def catalogue(request):
+        calls.append(request.url.path)
+        return httpx.Response(200, json={'data': [{'id': 'deepseek-v4.1-flash'}]})
+
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(catalogue))
+    try:
+        await manager.prepare_harness_route()
+        original = manager.configuration_connection()
+        await manager.connect_go(uuid4().hex, select=True)
+        current = manager.configuration_connection()
+        assert current.credential_reference == original.credential_reference
+        assert current.credential_revision > original.credential_revision
+        assert calls == ['/zen/go/v1/models']
+        with pytest.raises(ApiError) as stale:
+            manager.require_configuration_connection(original)
+        assert stale.value.code == 'connection_changed'
+        assert manager.require_configuration_connection(current) is None
+        route = await manager.prepare_harness_route()
+        manager.observe_harness_result(route, code='authentication_required')
+        protected_before = manager.store.path.read_bytes()
+        with pytest.raises(ApiError) as invalid:
+            manager.configuration_connection()
+        assert invalid.value.code == 'authentication_required'
+        with pytest.raises(ApiError) as stale:
+            manager.require_configuration_connection(current)
+        assert stale.value.code == 'connection_changed'
+        assert calls == ['/zen/go/v1/models']
+        assert manager.store.path.read_bytes() == protected_before
+    finally:
+        await manager.close()
+    reopened = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        with pytest.raises(ApiError) as invalid:
+            reopened.configuration_connection()
+        assert invalid.value.code == 'authentication_required'
+        for old in [original, current]:
+            with pytest.raises(ApiError) as stale:
+                reopened.require_configuration_connection(old)
+            assert stale.value.code == 'connection_changed'
+        await reopened.disconnect('opencode-go')
+        assert reopened.configuration_connection() is None
+    finally:
+        await reopened.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('selected,connections', [
+    (None, {}),
+    (None, {'opencode-go': {'access_token': 'synthetic-unselected'}}),
+    ('codex', {'opencode-go': {'access_token': 'synthetic-other-provider'}}),
+])
+async def test_configuration_connection_none_means_no_actual_selected_connection(app_paths, selected, connections):
+    store = ConnectionStore(app_paths.root, app_paths.state)
+    store.save({'version': 1, 'host_id': uuid4().urn, 'selected_provider': selected, 'connections': connections})
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        protected_before = store.path.read_bytes()
+        assert manager.configuration_connection() is None
+        guessed = ConnectionReference(provider='opencode-go', credential_reference=str(uuid4()),
+            credential_revision=0, selected_model=None)
+        with pytest.raises(ApiError) as stale:
+            manager.require_configuration_connection(guessed)
+        assert stale.value.code == 'connection_changed'
+        assert store.path.read_bytes() == protected_before
+    finally:
+        await manager.close()
+
+
+@pytest.mark.asyncio
+async def test_configuration_connection_ports_do_not_read_or_write_protected_storage(app_paths):
+    legacy_selected_go_profile(app_paths)
+
+    class CountedProtection:
+        def __init__(self):
+            self.calls = []
+            self.actual = WindowsDPAPI()
+
+        def protect(self, data, entropy):
+            self.calls.append('protect')
+            return self.actual.protect(data, entropy)
+
+        def unprotect(self, data, entropy):
+            self.calls.append('unprotect')
+            return self.actual.unprotect(data, entropy)
+
+    protection = CountedProtection()
+    manager = ProviderManager(app_paths, protector=protection,
+        http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        await manager.prepare_harness_route()
+        before = tuple(protection.calls)
+        assert before == ('unprotect', 'protect')
+        connection = manager.configuration_connection()
+        assert manager.require_configuration_connection(connection) is None
+        assert tuple(protection.calls) == before
+    finally:
+        await manager.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('stale_status', [401, 503])
+async def test_stale_refresh_error_cannot_revoke_or_discard_newer_success(app_paths, stale_status):
+    legacy_selected_go_profile(app_paths)
+    entered, release = asyncio.Event(), asyncio.Event()
+    calls = 0
+
+    async def catalogue(request):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            entered.set()
+            await release.wait()
+            return httpx.Response(stale_status)
+        return httpx.Response(200, json={'data': [{'id': 'deepseek-v4.1-flash'}]})
+
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(catalogue))
+    pending = None
+    try:
+        await manager.prepare_harness_route()
+        pending = asyncio.create_task(manager.refresh('opencode-go'))
+        await asyncio.wait_for(entered.wait(), 3)
+        await manager.refresh('opencode-go')
+        current = await manager.prepare_harness_route()
+        before = manager.harness_capabilities(current)
+        protected_before = manager.store.path.read_bytes()
+        release.set()
+        with pytest.raises(ApiError) as stale:
+            await asyncio.wait_for(pending, 3)
+        assert stale.value.code == 'connection_changed'
+        assert manager.require_harness_route(current) is None
+        assert manager.harness_capabilities(current) == before
+        assert manager.store.path.read_bytes() == protected_before
+    finally:
+        release.set()
+        if pending is not None:
+            await asyncio.gather(pending, return_exceptions=True)
+        await manager.close()
+
+
+@pytest.mark.asyncio
+async def test_configuration_connection_model_changes_preserve_exact_none_and_reopen_binding(app_paths):
+    legacy_selected_go_profile(app_paths)
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        await manager.prepare_harness_route()
+        explicit = manager.configuration_connection()
+        manager.select('opencode-go', None)
+        automatic = manager.configuration_connection()
+        assert automatic.selected_model is None
+        assert automatic.credential_reference == explicit.credential_reference
+        assert automatic.credential_revision == explicit.credential_revision
+        with pytest.raises(ApiError) as stale:
+            manager.require_configuration_connection(explicit)
+        assert stale.value.code == 'connection_changed'
+        assert manager.require_configuration_connection(automatic) is None
+        manager.select('opencode-go', 'mimo-v2.6-pro')
+        current = manager.configuration_connection()
+        with pytest.raises(ApiError) as stale:
+            manager.require_configuration_connection(automatic)
+        assert stale.value.code == 'connection_changed'
+    finally:
+        await manager.close()
+    reopened = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        assert reopened.configuration_connection() == current
+        assert reopened.require_configuration_connection(current) is None
+        for old in [explicit, automatic]:
+            with pytest.raises(ApiError) as stale:
+                reopened.require_configuration_connection(old)
+            assert stale.value.code == 'connection_changed'
+    finally:
+        await reopened.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('provider,record,model', [
+    ('opencode-go', {'access_token': ''}, 'deepseek-v4.1-flash'),
+    ('opencode-go', {'access_token': None}, 'deepseek-v4.1-flash'),
+    ('codex', {'access_token': 'synthetic-expired', 'expires_at': 1}, 'gpt-6-astra'),
+    ('codex', {'access_token': 'synthetic-invalid-expiry', 'expires_at': float('nan')}, 'gpt-6-astra'),
+])
+async def test_configuration_connection_denies_invalid_local_account_without_refresh_or_io(app_paths, provider, record, model):
+    reference = str(uuid4())
+    store = ConnectionStore(app_paths.root, app_paths.state)
+    store.save({'version': 1, 'host_id': uuid4().urn, 'selected_provider': provider,
+        'selected_models': {provider: model}, 'connections': {provider: record},
+        'credential_metadata': {provider: {'reference': reference, 'epoch': 0, 'authentication_required': False}}})
+    connection = ConnectionReference(provider=provider, credential_reference=reference,
+        credential_revision=0, selected_model=model)
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        protected_before = store.path.read_bytes()
+        with pytest.raises(ApiError) as invalid:
+            manager.configuration_connection()
+        assert invalid.value.code == 'authentication_required'
+        with pytest.raises(ApiError) as invalid:
+            manager.require_configuration_connection(connection)
+        assert invalid.value.code == 'authentication_required'
+        assert store.path.read_bytes() == protected_before
+    finally:
+        await manager.close()
+
+
+@pytest.mark.asyncio
+async def test_configuration_connection_guard_requires_exact_automatic_identity_without_io(app_paths):
+    legacy_selected_go_profile(app_paths)
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        manager.select('opencode-go', None)
+        automatic = manager.configuration_connection()
+        assert automatic.selected_model is None
+        protected_before = manager.store.path.read_bytes()
+        assert manager.require_configuration_connection(automatic) is None
+        for changed in [
+            {'provider': 'codex'},
+            {'credential_reference': str(uuid4())},
+            {'credential_revision': automatic.credential_revision + 1},
+            {'selected_model': 'deepseek-v4.1-flash'},
+        ]:
+            candidate = ConnectionReference(**{**automatic.model_dump(), **changed})
+            with pytest.raises(ApiError) as stale:
+                manager.require_configuration_connection(candidate)
+            assert stale.value.code == 'connection_changed'
+        for candidate in [None, automatic.model_dump()]:
+            with pytest.raises(ApiError) as invalid:
+                manager.require_configuration_connection(candidate)
+            assert invalid.value.code == 'connection_changed'
+        assert manager.store.path.read_bytes() == protected_before
+    finally:
+        await manager.close()
+    reopened = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        assert reopened.configuration_connection() == automatic
+        assert reopened.require_configuration_connection(automatic) is None
+    finally:
+        await reopened.close()
+
+
+@pytest.mark.asyncio
+async def test_configuration_connection_bootstrap_is_exact_durable_and_private_without_provider_io(app_paths):
+    legacy_selected_go_profile(app_paths)
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        route = await manager.prepare_harness_route()
+        protected_before = manager.store.path.read_bytes()
+        before = manager.configuration_connection()
+        assert isinstance(before, ConnectionReference)
+        assert before.provider == 'opencode-go'
+        assert before.selected_model == 'deepseek-v4.1-flash'
+        assert (before.credential_reference, before.credential_revision) == (route.credential_ref, route.credential_epoch)
+        assert manager.store.path.read_bytes() == protected_before
+        if before.credential_reference in json.dumps(manager.connections()) + json.dumps(manager.status()):
+            pytest.fail('Protected connection reference leaked into public status', pytrace=False)
+    finally:
+        await manager.close()
+    reopened = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        assert reopened.configuration_connection() == before
+    finally:
+        await reopened.close()
+
+
+@pytest.mark.asyncio
+async def test_configuration_connection_legacy_identity_requires_trusted_preparation_without_port_io(app_paths):
+    legacy_selected_go_profile(app_paths)
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        protected_before = manager.store.path.read_bytes()
+        with pytest.raises(ApiError) as unanchored:
+            manager.configuration_connection()
+        assert unanchored.value.code == 'connection_changed'
+        assert manager.store.path.read_bytes() == protected_before
+        route = await manager.prepare_harness_route()
+        current = manager.configuration_connection()
+        assert current.credential_reference == route.credential_ref
+        assert current.credential_revision == route.credential_epoch
+        assert manager.require_configuration_connection(current) is None
+    finally:
+        await manager.close()
 
 
 @pytest.mark.parametrize('metadata', [
