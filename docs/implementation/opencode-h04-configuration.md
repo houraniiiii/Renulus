@@ -289,3 +289,103 @@ budget logic consolidated into one private guard. Spec self-review: configured
 purpose and root limits, inherited identity, revocations, no refunds and legacy
 fail-closed behavior verified. No remaining material finding in this fix; actual
 connected H03/H04 acceptance and parent integration dependencies remain open.
+
+## Canonical activation snapshot and admission seal
+
+2026-10-11. This bounded extension changes only the authority, its dedicated
+tests and this document, from lane baseline
+`c0705f19a26f41ece831cb51119a8f95ca967130`. Existing UI/API work and applied
+002/004 migrations are preserved. No new database, schema or relations are needed.
+
+Exact added public authority signatures:
+
+```python
+ConfigurationAuthority.activation_snapshot(self) -> dict
+
+ConfigurationAuthority.close_admission(
+    self, *, expected_effective: str | None, requested_version: str,
+    grant_epoch: int,
+) -> dict
+```
+
+activation_snapshot returns one coherent canonical transaction's requested,
+effective, previous, activating, failed and failure_code pointers, admission_open,
+grant_epoch, sorted revoked identities, configuration, requested_configuration
+and pinned_runs. Both configurations are hash-verified frozen ConfigurationSpec
+objects, or None for an absent pointer. This is a trusted assembly interface;
+full specifications contain protected connection references and internal inputs.
+The Settings API's existing projection remains the public renderer contract.
+Pins are sorted by run_id and contain exactly run_id, purpose and version.
+
+Pins include every root/child not explicitly settled, across all versions.
+Confirmed, failed, uncertain and cancelled_before_send permit outcomes do not
+release a still-active owning run: its policy ownership remains until the parent
+observes actual native/domain finalizers and calls settle_run. Reserved/dispatched
+attempts also pin their owning run and root independently of the run-state test.
+The query conservatively pins null/unknown run states and attempt states outside
+the existing terminal allowlist. Current schema constraints prohibit unknown
+states; no private table mutation is used to fabricate them in tests. An uncertain
+permit on an explicitly settled run is a retained receipt, not permission to replay.
+
+close_admission requires the exact expected effective and requested version,
+the current integer grant epoch and no activation already in progress. Missing
+or mismatched requested/effective identity yields activation_conflict; malformed
+or stale epochs yield candidate_authority_stale. requested_version must be a
+64-character lowercase hexadecimal hash; boolean/float epochs are rejected.
+After these checks, any pin returns harness_configuration_busy, HTTP409,
+retryable true, with requested/effective/failed/admission and all other canonical
+state unchanged. Success changes only admission_open to false and returns the
+coherent sealed snapshot. Repeating the same seal is safe while its CAS inputs
+remain current; no candidate health or pointer activation is granted.
+
+Both reads and the seal use existing Database transactions. The CAS, pin check
+and single-field update serialize with another authority's root admission,
+staging and revocation on the same canonical database. No canonical transaction
+crosses IPC. The parent still owns the root-only ingress lease, actual native
+and domain settlement, isolated candidate/final registry health and managed
+replacement. reconcile_restart, lifecycle/Services/controller/server and
+migrations were not changed. A policy snapshot or successful seal does not
+prove a stopped engine or completed H03/H04 activation.
+
+Five sequential public red/minimal-green cycles are retained under
+`C:/Renulus/scratch/oc-h02-h08/configuration`:
+
+| Receipt pair | Public behavior | Red | Green |
+| --- | --- | --- | --- |
+| admission-red02 / green02 | Coherent policy/spec/root/child snapshot | 1 failed: missing method | 1 passed |
+| admission-red03 / green03 | Durable seal preserving failed/requested pointers | 1 failed: missing method | 1 passed |
+| admission-red04 / green04 | Busy ownership survives reserved and confirmed receipts | 1 failed: seal accepted busy owner | 1 passed |
+| admission-red05 / green05 | Effective/requested/epoch/in-progress CAS | 4 failed: stale seal accepted | 4 passed |
+| admission-red06 / green06 | Exact epoch type and explicit staged request | 3 failed: invalid CAS accepted | 3 passed |
+
+admission-red01 is a retained environment error: the G: basetemp parent directory
+was missing. It is not behavioral red evidence. After creating that owned
+synthetic directory, red02 reproduced the missing public method.
+admission-contract07 records 28 passing new cases: bootstrap/pending reopen,
+all six permit states for both root and child owners, prior-version pins after
+the current owner settles, independent-authority races and coherent concurrent
+staging/revocation. Tests use public authority methods and real canonical SQLite.
+Existing role fixtures remain synthetic and imply no model-quality ranking.
+
+Final dedicated verification command (assigned lane checkout):
+
+```powershell
+& 'C:/Renulus/dev/python/Scripts/python.exe' -B -m pytest tests/runtime/test_harness_configuration.py -q -p no:cacheprovider --basetemp='G:/Renulus-agent-scratch/oc-h02-h08/configuration/admission-final08-tmp' --junitxml='C:/Renulus/scratch/oc-h02-h08/configuration/admission-final08.xml'
+```
+
+Result: **150 passed, zero failed/errors/skipped, 16.72 seconds**. This includes
+the 122 existing role/permit cases and 28 added activation/seal cases. Matching
+XML/log receipts are admission-final08.xml and admission-final08.log. Python
+syntax checks for both leased Python files and git diff --check pass.
+Self-review strengthened the confirmed-owner busy assertion to compare with
+the pre-seal status. The changed case passed on final test bytes in
+admission-review09.xml/log: one pass, 1.53 seconds. Its count overlaps the
+150-case run and is not added to it.
+No broader suite, providers, native/UI flows or descendants were run.
+admission-receipt.json records owned hashes, unchanged migrations, exact commands
+and retained red/green outcomes; overlapping selections are not added together.
+Standards self-review: dedicated ownership, canonical Database and public seam
+assertions preserved; configuration decoding and coherent inspection are shared.
+Spec self-review: CAS, busy preservation, durable pins and conservative state
+handling implemented. No remaining material finding in this bounded slice.
+Parent independent review and connected activation acceptance remain open.

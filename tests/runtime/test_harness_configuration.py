@@ -5,6 +5,7 @@ from renulus.contracts import ApiError
 import json
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 import subprocess
 import sys
 import types
@@ -580,6 +581,40 @@ def test_rejected_active_health_closes_admission_until_healthy_restart(configure
     assert authority.begin_run("run", "explain")["version"] == version
 
 
+def test_close_admission_busy_preserves_pointers_until_owner_settles(configured):
+    authority, spec, version, connection, limits = configured
+    authority.begin_run("root", "explain")
+    permit = authority.admit("root", "primary", payload_hash="1" * 64,
+        request_kind="primary", connection=connection, limits=limits, input_tokens=100)
+    failed = authority.stage(spec.model_copy(update={"registry_hash": "b" * 64}))
+    assert not authority.validate(failed, lambda candidate: healthy(
+        candidate, registry_hash="c" * 64))
+    requested = authority.stage(spec.model_copy(update={"registry_hash": "d" * 64}))
+    reopened = ConfigurationAuthority(Database(authority.db.path))
+    before = reopened.activation_snapshot()
+    before_status = reopened.status()
+
+    with pytest.raises(ApiError) as error:
+        reopened.close_admission(expected_effective=version,
+            requested_version=requested, grant_epoch=0)
+
+    assert (error.value.code, error.value.status, error.value.retryable) == (
+        "harness_configuration_busy", 409, True)
+    assert reopened.activation_snapshot() == before
+    assert reopened.permit(permit["permit_id"])["state"] == "reserved"
+    reopened.mark_dispatched(permit["permit_id"], connection=connection, limits=limits,
+        input_tokens=100, payload_hash="1" * 64)
+    reopened.complete(permit["permit_id"], "confirmed", result_reference="answer")
+    with pytest.raises(ApiError) as finalizing:
+        reopened.close_admission(expected_effective=version,
+            requested_version=requested, grant_epoch=0)
+    assert finalizing.value.code == "harness_configuration_busy"
+    assert reopened.status() == before_status
+    reopened.settle_run("root")
+    assert reopened.close_admission(expected_effective=version,
+        requested_version=requested, grant_epoch=0)["pinned_runs"] == []
+
+
 def test_exact_model_revocation_blocks_parent_and_child_dispatch(configured):
     authority, spec, version, connection, limits = configured
     authority.begin_run("parent", "explain")
@@ -844,3 +879,261 @@ def test_failed_candidate_keeps_healthy_effective_version_after_reopen(tmp_path)
     assert reopened.status() == {"requested": replacement, "effective": original,
                                  "failed": replacement, "failure_code": "registry_mismatch",
                                  "admission_open": True}
+
+
+def test_activation_snapshot_pins_root_and_child_with_coherent_policy(configured):
+    authority, spec, version, _, _ = configured
+    authority.begin_run("root", "explain")
+    authority.begin_child("child", "root", "summary")
+    requested_spec = spec.model_copy(update={"roles": (
+        RolePolicy(purpose="explain", output_tokens=1024),)})
+    requested = authority.stage(requested_spec)
+    authority.revoke("library-read")
+
+    snapshot = authority.activation_snapshot()
+
+    assert snapshot == {"requested": requested, "effective": version,
+        "previous": None, "activating": None, "failed": None, "failure_code": None,
+        "admission_open": True, "grant_epoch": 1, "revoked": ["library-read"],
+        "configuration": spec, "requested_configuration": requested_spec,
+        "pinned_runs": [
+            {"run_id": "child", "purpose": "summary", "version": version},
+            {"run_id": "root", "purpose": "explain", "version": version}]}
+
+
+def test_close_admission_closes_only_gate_and_survives_reopen(configured):
+    authority, spec, version, _, _ = configured
+    failed = authority.stage(spec.model_copy(update={"registry_hash": "b" * 64}))
+    assert not authority.validate(failed, lambda candidate: healthy(
+        candidate, registry_hash="c" * 64))
+    requested = authority.stage(spec.model_copy(update={"registry_hash": "d" * 64}))
+    before = authority.activation_snapshot()
+
+    closed = authority.close_admission(expected_effective=version,
+        requested_version=requested, grant_epoch=0)
+
+    assert closed == {**before, "admission_open": False}
+    assert closed["failed"] == failed
+    reopened = ConfigurationAuthority(Database(authority.db.path))
+    assert reopened.activation_snapshot() == closed
+    assert reopened.close_admission(expected_effective=version,
+        requested_version=requested, grant_epoch=0) == closed
+    with pytest.raises(ApiError) as error:
+        reopened.begin_run("after-seal", "explain")
+    assert error.value.code == "configuration_not_active"
+
+
+@pytest.mark.parametrize("changed", ["effective", "requested", "grant_epoch", "activating"])
+def test_close_admission_rejects_changed_activation_authority(configured, changed):
+    authority, spec, version, _, _ = configured
+    expected = {"expected_effective": version, "requested_version": version, "grant_epoch": 0}
+    replacement_spec = spec.model_copy(update={"registry_hash": "b" * 64})
+    if changed == "effective":
+        replacement = activate(authority, replacement_spec, expected=version)
+        expected["requested_version"] = replacement
+    elif changed == "requested":
+        authority.stage(replacement_spec)
+    elif changed == "grant_epoch":
+        authority.revoke("library-read")
+    else:
+        replacement = authority.stage(replacement_spec)
+        assert authority.validate(replacement, healthy)
+        authority.activate(replacement, RestartBoundary(admission_closed=True,
+            runtime_stopped=True, domain_settled=True), expected_effective=version)
+        expected.update(expected_effective=replacement, requested_version=replacement)
+    before = authority.activation_snapshot()
+    reopened = ConfigurationAuthority(Database(authority.db.path))
+
+    with pytest.raises(ApiError) as error:
+        reopened.close_admission(**expected)
+
+    assert error.value.code == ("candidate_authority_stale"
+        if changed == "grant_epoch" else "activation_conflict")
+    assert reopened.activation_snapshot() == before
+
+
+@pytest.mark.parametrize("grant_epoch", [False, 0.0])
+def test_close_admission_rejects_noninteger_epoch(configured, grant_epoch):
+    authority, _, version, _, _ = configured
+    before = authority.activation_snapshot()
+    with pytest.raises(ApiError) as error:
+        authority.close_admission(expected_effective=version,
+            requested_version=version, grant_epoch=grant_epoch)
+    assert error.value.code == "candidate_authority_stale"
+    assert authority.activation_snapshot() == before
+
+
+def test_close_admission_requires_staged_request(tmp_path):
+    authority = ConfigurationAuthority(Database(tmp_path / "canonical.sqlite"))
+    before = authority.activation_snapshot()
+    with pytest.raises(ApiError) as error:
+        authority.close_admission(expected_effective=None, requested_version=None, grant_epoch=0)
+    assert error.value.code == "activation_conflict"
+    assert authority.activation_snapshot() == before
+
+
+def test_activation_snapshot_unconfigured_and_pending_selection_after_reopen(tmp_path):
+    authority = ConfigurationAuthority(Database(tmp_path / "canonical.sqlite"))
+    assert authority.activation_snapshot() == {"requested": None, "effective": None,
+        "previous": None, "activating": None, "failed": None, "failure_code": None,
+        "admission_open": False, "grant_epoch": 0, "revoked": [],
+        "configuration": None, "requested_configuration": None, "pinned_runs": []}
+    spec = ConfigurationSpec(connection=ConnectionReference(provider="opencode-go",
+        credential_reference="connection-go", credential_revision=1), registry_hash="a" * 64)
+    version = authority.stage(spec)
+    authority.revoke("library-read")
+    closed = authority.close_admission(expected_effective=None,
+        requested_version=version, grant_epoch=1)
+    assert closed["configuration"] is None
+    assert closed["requested_configuration"] == spec
+    assert closed["admission_open"] is False
+    assert authority.validate(version, healthy)
+    authority.activate(version, RestartBoundary(admission_closed=True,
+        runtime_stopped=True, domain_settled=True), expected_effective=None)
+    reopened = ConfigurationAuthority(Database(authority.db.path))
+    assert reopened.activation_snapshot() == {**closed, "effective": version,
+        "activating": version, "configuration": spec}
+
+
+@pytest.mark.parametrize("owner", ["root", "child"])
+@pytest.mark.parametrize("attempt_state", [
+    "reserved", "dispatched", "confirmed", "failed", "uncertain", "cancelled_before_send"])
+def test_close_admission_pins_attempt_owner_until_explicit_settlement(
+        configured, owner, attempt_state):
+    authority, spec, version, connection, limits = configured
+    authority.begin_run("root", "explain")
+    if owner == "child":
+        authority.begin_child("child", "root", "summary")
+    permit = authority.admit(owner, "step", payload_hash="1" * 64, request_kind="primary",
+        connection=connection, limits=limits, input_tokens=100)
+    if attempt_state not in {"reserved", "cancelled_before_send"}:
+        authority.mark_dispatched(permit["permit_id"], connection=connection, limits=limits,
+            input_tokens=100, payload_hash="1" * 64)
+    if attempt_state not in {"reserved", "dispatched"}:
+        authority.complete(permit["permit_id"], attempt_state)
+    requested = authority.stage(spec.model_copy(update={"registry_hash": "b" * 64}))
+    reopened = ConfigurationAuthority(Database(authority.db.path))
+    before = reopened.activation_snapshot()
+    assert [pin["run_id"] for pin in before["pinned_runs"]] == (
+        ["child", "root"] if owner == "child" else ["root"])
+
+    with pytest.raises(ApiError) as busy:
+        reopened.close_admission(expected_effective=version,
+            requested_version=requested, grant_epoch=0)
+    assert (busy.value.code, busy.value.status, busy.value.retryable) == (
+        "harness_configuration_busy", 409, True)
+    assert reopened.activation_snapshot() == before
+    assert reopened.permit(permit["permit_id"])["state"] == attempt_state
+    if attempt_state in {"reserved", "dispatched"}:
+        with pytest.raises(ApiError) as unsettled:
+            reopened.settle_run(owner)
+        assert unsettled.value.code == "run_not_settled"
+    else:
+        reopened.settle_run(owner)
+        if owner == "child":
+            assert reopened.activation_snapshot()["pinned_runs"] == [
+                {"run_id": "root", "purpose": "explain", "version": version}]
+            reopened.settle_run("root")
+        assert reopened.close_admission(expected_effective=version,
+            requested_version=requested, grant_epoch=0)["pinned_runs"] == []
+
+
+def test_close_admission_includes_old_pins_after_current_owner_settles(configured):
+    authority, spec, original, _, _ = configured
+    authority.begin_run("old-root", "explain")
+    authority.begin_child("old-child", "old-root", "summary")
+    current = activate(authority, spec.model_copy(update={"registry_hash": "b" * 64}),
+        expected=original)
+    authority.begin_run("current-root", "explain")
+    authority.settle_run("current-root")
+    reopened = ConfigurationAuthority(Database(authority.db.path))
+    before = reopened.activation_snapshot()
+    assert before["effective"] == current
+    assert before["pinned_runs"] == [
+        {"run_id": "old-child", "purpose": "summary", "version": original},
+        {"run_id": "old-root", "purpose": "explain", "version": original}]
+    with pytest.raises(ApiError) as error:
+        reopened.close_admission(expected_effective=current,
+            requested_version=current, grant_epoch=0)
+    assert error.value.code == "harness_configuration_busy"
+    assert reopened.activation_snapshot() == before
+
+
+@pytest.mark.parametrize("contender", ["run", "requested", "grant_epoch"])
+def test_close_admission_serializes_with_independent_current_authority(configured, contender):
+    authority, spec, version, _, _ = configured
+    independent = ConfigurationAuthority(Database(authority.db.path))
+    barrier = Barrier(2)
+
+    def compete():
+        barrier.wait(timeout=5)
+        try:
+            if contender == "run":
+                return independent.begin_run("racing-root", "explain")
+            if contender == "requested":
+                return independent.stage(spec.model_copy(update={"registry_hash": "b" * 64}))
+            return independent.revoke("library-read")
+        except ApiError as error:
+            return error.code
+
+    def seal():
+        barrier.wait(timeout=5)
+        try:
+            return authority.close_admission(expected_effective=version,
+                requested_version=version, grant_epoch=0)
+        except ApiError as error:
+            return error.code
+
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        competing = workers.submit(compete)
+        sealing = workers.submit(seal)
+        result, closed = competing.result(timeout=10), sealing.result(timeout=10)
+    snapshot = independent.activation_snapshot()
+    assert snapshot["effective"] == version
+    if isinstance(closed, dict):
+        assert closed["requested"] == version and closed["grant_epoch"] == 0
+        assert closed["pinned_runs"] == [] and closed["admission_open"] is False
+        assert snapshot["admission_open"] is False
+        if contender == "run":
+            assert result == "configuration_not_active"
+    else:
+        assert closed == {"run": "harness_configuration_busy",
+            "requested": "activation_conflict",
+            "grant_epoch": "candidate_authority_stale"}[contender]
+        assert snapshot["admission_open"] is True
+        if contender == "run":
+            assert result["version"] == version
+            assert snapshot["pinned_runs"] == [
+                {"run_id": "racing-root", "purpose": "explain", "version": version}]
+    if contender == "requested":
+        assert snapshot["requested"] == result
+    elif contender == "grant_epoch":
+        assert snapshot["grant_epoch"] == result == 1
+
+
+def test_activation_snapshot_stays_coherent_during_staging_and_revocation(configured):
+    authority, spec, _, _, _ = configured
+    independent = ConfigurationAuthority(Database(authority.db.path))
+    alternate = spec.model_copy(update={"registry_hash": "b" * 64})
+    versions = {authority.stage(spec): spec, authority.stage(alternate): alternate}
+    barrier = Barrier(2)
+
+    def change():
+        barrier.wait(timeout=5)
+        for index in range(8):
+            independent.stage(spec if index % 2 else alternate)
+            independent.revoke("capability-" + str(index))
+
+    def observe():
+        barrier.wait(timeout=5)
+        return [authority.activation_snapshot() for _ in range(8)]
+
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        changing, observing = workers.submit(change), workers.submit(observe)
+        changing.result(timeout=10)
+        snapshots = observing.result(timeout=10)
+    for snapshot in snapshots:
+        assert snapshot["requested_configuration"] == versions[snapshot["requested"]]
+        assert snapshot["configuration"] == spec
+        assert snapshot["grant_epoch"] == len(snapshot["revoked"])
+    assert authority.activation_snapshot()["grant_epoch"] == 8

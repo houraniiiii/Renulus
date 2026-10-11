@@ -184,12 +184,62 @@ class ConfigurationAuthority:
                 for key in ("requested", "effective", "failed", "failure_code", "admission_open")}
 
     def configuration(self, version: str) -> ConfigurationSpec:
-        row = self.db.fetch_one("SELECT * FROM harness_configuration_versions WHERE version=?", (version,))
+        with closing(self.db.connect()) as conn:
+            return self._configuration(conn, version)
+
+    def _configuration(self, conn, version: str) -> ConfigurationSpec:
+        row = conn.execute("SELECT * FROM harness_configuration_versions WHERE version=?", (version,)).fetchone()
         if not row:
             _deny("configuration_missing")
         if hashlib.sha256(row["payload_json"].encode()).hexdigest() != version:
             _deny("configuration_hash_mismatch")
         return ConfigurationSpec.model_validate_json(_json(json.loads(row["payload_json"])["spec"]))
+
+    def activation_snapshot(self) -> dict:
+        """Trusted controller observation; policy pins are not native settlement proof."""
+        with self.db.transaction() as conn:
+            return self._activation_snapshot(conn)
+
+    def _activation_snapshot(self, conn) -> dict:
+        pointer = conn.execute("SELECT * FROM harness_configuration_pointer WHERE id=1").fetchone()
+        overlay = self.revocation_overlay(conn=conn)
+        return {
+            **{key: bool(pointer[key]) if key == "admission_open" else pointer[key]
+               for key in ("requested", "effective", "previous", "activating",
+                           "failed", "failure_code", "admission_open")},
+            "grant_epoch": overlay["epoch"], "revoked": overlay["revoked"],
+            "configuration": self._configuration(conn, pointer["effective"])
+                if pointer["effective"] else None,
+            "requested_configuration": self._configuration(conn, pointer["requested"])
+                if pointer["requested"] else None,
+            "pinned_runs": [dict(row) for row in conn.execute(
+                "SELECT r.run_id,r.purpose,r.version FROM harness_configuration_runs r "
+                "WHERE r.state IS NULL OR r.state != 'settled' OR EXISTS ("
+                "SELECT 1 FROM harness_configuration_attempts a "
+                "WHERE (a.run_id=r.run_id OR a.root_id=r.run_id) AND (a.state IS NULL OR "
+                "a.state NOT IN ('confirmed','failed','uncertain','cancelled_before_send'))) "
+                "ORDER BY r.run_id")],
+        }
+
+    def close_admission(self, *, expected_effective: str | None, requested_version: str,
+                        grant_epoch: int) -> dict:
+        """Seal canonical admission only; parent owns ingress and actual settlement."""
+        if not isinstance(requested_version, str) or not re.fullmatch(r"[0-9a-f]{64}", requested_version):
+            _deny("activation_conflict")
+        if type(grant_epoch) is not int or grant_epoch < 0:
+            _deny("candidate_authority_stale")
+        with self.db.transaction() as conn:
+            snapshot = self._activation_snapshot(conn)
+            if (snapshot["effective"] != expected_effective
+                    or snapshot["requested"] != requested_version or snapshot["activating"]):
+                _deny("activation_conflict")
+            if snapshot["grant_epoch"] != grant_epoch:
+                _deny("candidate_authority_stale")
+            if snapshot["pinned_runs"]:
+                raise ApiError("harness_configuration_busy",
+                    "Finish or stop the pinned runs before activating configuration.", 409, True)
+            conn.execute("UPDATE harness_configuration_pointer SET admission_open=0 WHERE id=1")
+            return {**snapshot, "admission_open": False}
 
     def stage(self, spec: ConfigurationSpec) -> str:
         if not isinstance(spec, ConfigurationSpec):
