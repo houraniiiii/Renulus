@@ -57,7 +57,8 @@ class CompletedAnswer:
 class HarnessLearningBridge:
     def __init__(self, repository, transport, *, active_manifest, configuration_id,
                  publish_answer_in=None, check_dependencies_in=None, check_run_dependencies_in=None,
-                 eligible_history_in=None, context_filtering=False, check_new_run_in=None, poll_interval=0.05):
+                 eligible_history_in=None, context_filtering=False, check_new_run_in=None,
+                 admit_run_in=None, poll_interval=0.05):
         self.repo, self.db, self.transport = repository, repository.db, transport
         self.active_manifest, self.configuration_id = active_manifest, configuration_id
         self.publish_answer_in = publish_answer_in
@@ -65,6 +66,7 @@ class HarnessLearningBridge:
         self.check_run_dependencies_in = check_run_dependencies_in
         self.eligible_history_in = eligible_history_in
         self.check_new_run_in = check_new_run_in
+        self.admit_run_in = admit_run_in
         # Trusted assembly asserts that the native per-model hook is installed.
         self.context_filtering = context_filtering
         self.poll_interval = poll_interval
@@ -101,6 +103,10 @@ class HarnessLearningBridge:
             (run.id, identifier, 'conversation:' + key, 'running', None, now, now))
         conn.execute('INSERT INTO learn_harness_answers(run_id,thread_id,request_digest,state) VALUES(?,?,?,?)',
             (run.id, identifier, canonical_digest(request.model_dump(mode='json')), 'reserved'))
+        # Trusted local hook shares this owner transaction; no native IO or
+        # in-memory run registration occurs until configuration admission passes.
+        if self.admit_run_in is not None:
+            self.admit_run_in(conn, run, request)
         self.repo.learn.active[run.id] = run
         self._consumed[run.id] = ((), (), '[]')
         return run

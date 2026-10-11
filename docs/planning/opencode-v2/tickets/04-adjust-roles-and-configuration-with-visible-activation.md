@@ -1,6 +1,6 @@
 # H04 — Adjust roles and configuration with visible activation
 
-**Status:** draft — review pending; implementation not authorised by this research request.
+**Status:** authorised implementation in progress. Authority, API, Settings and bounded lifecycle evidence is recorded in the [H02–H08 ledger](../../../implementation/OPENCODE_H02_H08_HANDOFF.md); bootstrap/reopen and connected activation acceptance remain open.
 
 **Spec:** [S1](../specs/01-harness-control.md)
 

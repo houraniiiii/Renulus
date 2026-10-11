@@ -29,12 +29,64 @@ All H02–H08 acceptance remains open. Newer committed integration work is:
 | `100ada7e` | `59e19e6e` | Controller mutation shutdown and acquisition-error fence |
 | `fd81bd17` | Parent | Actual bounded lifecycle and explicit existing server assembly |
 | `1c56e133` | `bbce6182` | Atomic supplied-connection configuration run admission |
+| `bc463b19` | Parent | Production learning gateway and admitted in-memory image decoder |
+| `d5691c85` | `88354aa2` | Immutable credential-free launch artifacts |
+| `9b3b666d` | `7db37220` | Bounded trusted root model registry |
+| `c008232f` | `5a4d4c69` | Operation-scoped actual callback/pipe publication ownership |
+| `a33ba325` | `c38cedca` | Atomic configuration pointer/epoch checks before stage and reopen |
 
 The supplied-connection `begin_run_in` validates canonical active transaction,
 healthy/open exact expected configuration and role/capability scope before its
 single ledger insert. Worker `library/admission-port/final07.xml` has 173 passes
 in 22.56s (150 existing plus 23 new); source hashes match integration. This port
-does not independently prove saved admission assembly.
+does not independently prove saved admission assembly. Parent integration
+`G:/Renulus-agent-scratch/oc-h02-h08/admission/authority-integration.xml` has
+23 passes and 150 deselected in 4.02s. Independent Standards and Spec reviews
+of the bounded admission port have zero material findings.
+
+Saved admission now calls this port within its original owner transaction, before
+in-memory registration; rollback leaves neither a saved run nor a configuration
+pin. The trusted native-input resolver retains the canonical version/model/caps,
+stable cancellation token and generation-specific local current closure. Its
+supplied-connection check performs no IPC or second writer. Required capabilities
+are checked in current callbacks and publication. Every consumed permit remains
+the registry assembly gate; this admission slice grants no model dispatch itself.
+
+Separate parent receipts under `G:/Renulus-agent-scratch/oc-h02-h08/`:
+
+| Receipt | Exact result | Scope |
+| --- | --- | --- |
+| admission/green02.xml | 2 passed, 10.46s | Public saved pin, rollback and retry |
+| admission/owner-green01.xml | 3 passed, 11.72s | Canonical owner pin integration |
+| admission/affected01.xml | 11 passed, 43.10s | Pin/current/image/saved reference regressions |
+| model-owner/receipts/red01.xml | 1 failed, 7.53s | Missing public native model-authority resolver |
+| model-owner/receipts/capability-correct-red.xml | 1 failed, 4.50s | Isolated pre-repair omitted-capability guard countercheck |
+| model-owner/receipts/admission-green02.xml | 5 passed, 19.44s | Saved pin, native binding, stable token and current capability revocation |
+| model-owner/receipts/ports-integration.xml | 10 passed, 8.62s | Primary/two continuations/same-connection publication plus operation-scoped callback observation |
+
+The first capability-red used an incorrect revocation identity (`capability:tools`);
+it and admission-green01 (4 passes/1 failure) are fixture errors, not evidence of
+the correct `tools` revocation. Countercheck setup attempts against an older
+committed constructor and a missing test-import path likewise prove no behavior.
+The final countercheck restores only the two pre-repair omitted-capability guards
+in an isolated module; production source was not rolled back. Counts are separate
+runs, not a combined green suite.
+
+Registry worker final02 has 52 passes, zero skips, in 12.14s. Independent Spec
+and Standards reviews have zero material findings in its two committed paths.
+Its account/capability/limits/counter/HTTP evidence is synthetic; production
+counting and account acceptance remain open. Unknown evidence denies before
+OAuth/network. Operation-status worker final01 has 81 affected passes in 20.31s,
+including seven new contracts and actual nested Node pump coverage. Filtered
+active tasks include finalizers and queued/draining publication; retained terminal
+records alone never permit release. Launch worker final11 has 68 passes, zero
+skips; artifact roles are hashed. Role edits must save a new artifact. Its old
+doc/test retained-hash claim is a confirmed bounded Spec P2 assigned for repair.
+CAS worker final affected file has 197 passes in 22.84s (24 focused CAS contracts
+also have passing evidence). Independent CAS Standards has zero findings; Spec
+review is pending. Independent Standards and focused Spec re-review of the four
+saved-admission/model-owner paths have zero residual material findings; all held
+hashes matched. The required-capability finding is closed in this bounded slice.
 
 Production Node composition now uses `openLearningHarness`, the existing
 gateway and authenticated Domain commands for prepare, manifest registration,

@@ -1,6 +1,6 @@
 # H08 — Apply versioned instructions and skills to a learning task
 
-**Status:** draft — review pending; implementation not authorised by this research request.
+**Status:** implementation authorised; work remains gated on H04 and H06 acceptance. See the [H02–H08 ledger](../../../implementation/OPENCODE_H02_H08_HANDOFF.md) for current dependencies and evidence.
 
 **Spec:** [S1](../specs/01-harness-control.md), [S2](../specs/02-memory-context.md)
 

@@ -10,8 +10,9 @@ from renulus.learn.memory_context import MemoryContext
 from renulus.memory.lineage import INELIGIBLE_LINEAGE_CODES
 from renulus.storage import utc_now
 from .harness_activation import HarnessProfileActivation
-from .harness_domain import DomainGrant
+from .harness_domain import DomainCancellation, DomainCancelled, DomainGrant
 from .harness_library import HarnessLibrary, LibraryAuthority
+from .harness_model_registry import ModelRunAuthority
 from .harness_process import ManagedHarnessProcess
 from .harness_profile import load_harness_profile
 
@@ -33,20 +34,27 @@ class _LearningRootSeal:
 
 
 class HarnessLearningOwner:
-    def __init__(self, services, config, *, configuration_id, memory=None, context_filtering=False):
+    def __init__(self, services, config, *, configuration_id, memory=None, context_filtering=False,
+                 configuration_authority=None):
         self.services, self.db, self.config = services, services.db, config
         self.configuration_id, self.memory = configuration_id, memory
+        if configuration_authority is not None and configuration_authority.db is not self.db:
+            raise ApiError('harness_owner_conflict', 'Configuration belongs to another profile.', 409)
+        self.configuration_authority = configuration_authority
+        self.configuration_spec = (configuration_authority.configuration(configuration_id)
+            if configuration_authority is not None else None)
         self._root_seal = None
         self.repo = services.get('conversations')
         self.library = services.registry.get('harness_library') or HarnessLibrary(services.get('knowledge'))
         self.process = ManagedHarnessProcess(domain_authority=self.authorize)
         self.activation = HarnessProfileActivation(self.db, self.process, config)
         self.bindings = {}
+        self.model_bindings = {}
         self.bridge = HarnessLearningBridge(self.repo, self.process,
             active_manifest=self.manifest, configuration_id=configuration_id,
             publish_answer_in=self.publish_answer_in, check_run_dependencies_in=self.check_run_dependencies_in,
             eligible_history_in=self.eligible_history_in, context_filtering=context_filtering,
-            check_new_run_in=self.check_new_run_in)
+            check_new_run_in=self.check_new_run_in, admit_run_in=self.admit_run_in)
         self._starting = None
 
     def manifest(self):
@@ -92,6 +100,16 @@ class HarnessLearningOwner:
             raise ApiError('harness_configuration_busy',
                 'Configuration is changing. New learning runs are sealed.', 409, True)
 
+    def admit_run_in(self, conn, run, request):
+        if self.configuration_authority is None:
+            return
+        pinned = self.configuration_authority.begin_run_in(conn, run.id, 'explain',
+            expected_version=self.configuration_id,
+            capability_scope=self.configuration_spec.capabilities, operation_model=request.model)
+        run.harness_configuration_version = pinned['version']
+        run.harness_model_id = pinned['route']['model_id']
+        run.harness_capabilities = tuple(pinned['effective_capabilities'])
+
     def seal_new_runs(self, *, expected_effective):
         """Failure-atomic root gate sharing the canonical admission transaction."""
         seal = _LearningRootSeal(self)
@@ -121,13 +139,20 @@ class HarnessLearningOwner:
         self.require_root_seal(seal)
         self.process = process
         self.configuration_id = self.bridge.configuration_id = configuration_id
+        if self.configuration_authority is not None:
+            self.configuration_spec = self.configuration_authority.configuration(configuration_id)
         self.bridge.transport = process
         self.bindings.clear()
+        self.model_bindings.clear()
         self.activation = HarnessProfileActivation(self.db, process, self.config)
         self._starting = None
 
     def _entry(self, binding, *, admitting=False, conn=None):
         self.bridge.check(binding.operation_id, conn=conn)
+        if self.configuration_authority is not None:
+            run = self.repo.streaming.active[binding.operation_id]['run']
+            self.configuration_authority.require_current(binding.operation_id,
+                required_capabilities=run.harness_capabilities, conn=conn)
         entry = self.repo.streaming.active[binding.operation_id]
         runtime = entry.get('harness_runtime')
         if (binding.attempt_id != '1' or binding.cancellation_id != binding.operation_id
@@ -135,6 +160,30 @@ class HarnessLearningOwner:
                 or not admitting and self.bindings.get(binding.operation_id) != binding):
             raise ApiError('harness_callback_identity', 'The callback is outside its admitted learning input.', 409)
         return entry
+
+    def resolve_model_run(self, binding):
+        """Trusted local pins exist only after native input admission."""
+        if self.configuration_authority is None or self.bindings.get(binding.operation_id) != binding:
+            return None
+        entry = self._entry(binding)
+        retained = self.model_bindings.get(binding.operation_id)
+        if retained is not None:
+            return retained if retained.binding == binding else None
+        run, process = entry['run'], self.process
+        cancellation = DomainCancellation()
+
+        def current(*, conn=None):
+            if run.cancelled.is_set():
+                cancellation.cancel()
+                raise DomainCancelled('domain_cancelled')
+            if self.process is not process:
+                raise ApiError('harness_callback_identity', 'The native generation changed.', 409)
+            self._entry(binding, conn=conn)
+
+        retained = ModelRunAuthority(binding, run.harness_configuration_version, 'explain',
+            run.harness_model_id, run.harness_capabilities, cancellation, current)
+        self.model_bindings[binding.operation_id] = retained
+        return retained
 
     def _current(self, binding, *, admitting=False):
         try:
@@ -336,6 +385,9 @@ class HarnessLearningOwner:
 
     def publish_answer_in(self, conn, answer, entry):
         self.bridge.check(answer.run_id, conn=conn)
+        if self.configuration_authority is not None:
+            self.configuration_authority.require_current(answer.run_id,
+                required_capabilities=entry['run'].harness_capabilities, conn=conn)
         passages = [{'id': citation['passage_id'], 'document_id': citation['document_id'],
             'document_revision': citation['revision_id']} for citation in answer.citations]
         self.library.validate_publication(passages, self.authority(entry), conn=conn)

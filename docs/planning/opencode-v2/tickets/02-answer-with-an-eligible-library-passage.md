@@ -1,6 +1,6 @@
 # H02 — Answer with an eligible Library passage
 
-**Status:** planned next — H01's local foundation prerequisite is satisfied. H02 is not implemented in the first foundation batch.
+**Status:** authorised implementation in progress. Local SDK/Library/publication evidence is recorded in the [H02–H08 ledger](../../../implementation/OPENCODE_H02_H08_HANDOFF.md); connected desktop acceptance remains open.
 
 **Spec:** [S1](../specs/01-harness-control.md), [S2](../specs/02-memory-context.md)
 

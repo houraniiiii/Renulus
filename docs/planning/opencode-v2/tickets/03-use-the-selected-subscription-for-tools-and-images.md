@@ -1,6 +1,6 @@
 # H03 — Use the selected subscription for tools and images
 
-**Status:** draft — review pending; implementation not authorised by this research request.
+**Status:** authorised implementation in progress. Routing, image and deployment preparation have bounded evidence in the [H02–H08 ledger](../../../implementation/OPENCODE_H02_H08_HANDOFF.md); connected production assembly and matching account gates remain open.
 
 **Spec:** [S1](../specs/01-harness-control.md)
 

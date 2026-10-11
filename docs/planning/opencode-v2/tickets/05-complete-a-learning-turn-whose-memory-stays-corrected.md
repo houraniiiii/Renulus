@@ -1,6 +1,6 @@
 # H05 — Complete a learning turn whose memory stays corrected
 
-**Status:** draft — review pending; implementation not authorised by this research request.
+**Status:** authorised implementation in progress. Owner/lineage and actual-engine preparation evidence is recorded in the [H02–H08 ledger](../../../implementation/OPENCODE_H02_H08_HANDOFF.md); full connected acceptance remains open and migrated automatic capture stays disabled.
 
 **Spec:** [S2](../specs/02-memory-context.md)
 

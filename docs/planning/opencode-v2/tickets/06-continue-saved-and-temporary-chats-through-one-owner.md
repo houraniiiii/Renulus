@@ -1,6 +1,6 @@
 # H06 — Migrate and delete one saved conversation through a single owner
 
-**Status:** draft — review pending; implementation not authorised by this research request.
+**Status:** implementation authorised; source-grounded migration preparation is recorded in the [H02–H08 ledger](../../../implementation/OPENCODE_H02_H08_HANDOFF.md). Connected implementation and acceptance remain gated on H05.
 
 **Spec:** [S2](../specs/02-memory-context.md), [S3](../specs/03-workflows-migration.md)
 
