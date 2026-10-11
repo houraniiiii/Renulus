@@ -4,6 +4,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
@@ -221,3 +222,164 @@ asyncio.run(run())
         str(profile), str(assets)], env=environment, capture_output=True, text=True, timeout=20)
     assert completed.returncode == 0, completed.stderr
     assert json.loads(completed.stdout)['denied']
+
+
+@pytest.mark.parametrize('phase', ['held-release', 'return-expiry'])
+def test_committed_inspection_deadline_enters_real_drain_with_release_publisher_retained(tmp_path, phase):
+    """Actual native inspect/issuer; synthetic helpers and elapsed clock, held OS drain."""
+    import renulus
+    assets, fixture_source = helper_bundle(tmp_path)
+    native = fixture_source / 'packages/harness'
+    published_native = Path(renulus.__file__).parents[2] / 'packages/harness'
+    shutil.copytree(published_native / 'src', native / 'src')
+    shutil.copyfile(published_native / 'package.json', native / 'package.json')
+    for link, dependency in ((native / 'node_modules', SOURCE / 'packages/harness/node_modules'),
+                             (fixture_source / 'upstream/hermes', SOURCE / 'upstream/hermes')):
+        link.parent.mkdir(parents=True, exist_ok=True)
+        dependency_path = str(dependency.resolve()).replace("'", "''")
+        link_path = str(link).replace("'", "''")
+        linked = subprocess.run(['C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe',
+            '-NoProfile', '-NonInteractive', '-Command',
+            f"New-Item -ItemType Junction -Path '{link_path}' -Target '{dependency_path}' | Out-Null"],
+            capture_output=True, text=True, timeout=10)
+        assert linked.returncode == 0, linked.stderr
+    entry = fixture_source / 'tools/renulus-control/harness-settings-backend.py'
+    entry.parent.mkdir(parents=True)
+    shutil.copyfile(ENTRY, entry)
+    profile, file, _, data = document(tmp_path / 'launch')
+    data['process']['host_entry'] = str(native / 'src/main.mjs')
+    digest = write_document(file, data)
+    code = '''
+import asyncio, importlib.util, json, sys
+from pathlib import Path
+from renulus.contracts import ApiError
+from renulus.runtime import harness_process
+from renulus.runtime.harness_launch import LaunchArtifactStore
+spec = importlib.util.spec_from_file_location('fixed_settings_fixture', sys.argv[1])
+fixture = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(fixture)
+
+async def run():
+    phase = sys.argv[6]
+    loop = asyncio.get_running_loop()
+    clock, elapsed = loop.time, 0
+    # The immutable production document still requests 45s. Advancing only the
+    # public clock makes the remaining-budget test deterministic and fast.
+    loop.time = lambda: clock() + elapsed
+    publisher_entered, release_gate, close_entered = (asyncio.Event() for _ in range(3))
+    observer_cancelled, publisher_completed = asyncio.Event(), asyncio.Event()
+    publisher_cancelled = False
+    held_writer, process, inspection = None, None, None
+    original_write, original_drain = asyncio.StreamWriter.write, asyncio.StreamWriter.drain
+
+    def write(writer, data):
+        nonlocal held_writer
+        if json.loads(data)['kind'] == 'observation_release':
+            held_writer = writer
+        return original_write(writer, data)
+
+    async def drain(writer):
+        nonlocal elapsed, publisher_cancelled
+        if phase == 'held-release' and writer is held_writer and not release_gate.is_set():
+            elapsed = 46
+            publisher_entered.set()
+            try:
+                await release_gate.wait()
+            except asyncio.CancelledError:
+                publisher_cancelled = True
+                raise
+            await original_drain(writer)
+            publisher_completed.set()
+            return
+        await original_drain(writer)
+
+    class ObservedProcess(harness_process.ManagedHarnessProcess):
+        async def request(self, command, *args, **kwargs):
+            nonlocal elapsed, process, inspection
+            result = await super().request(command, *args, **kwargs)
+            if command == 'host.inspect':
+                assert result['outcome'] == 'committed_reference', result
+                assert {row['name'] for row in result['result']['registry']} == {
+                    'renulus_library_retrieve', 'renulus_library_citation'}
+                assert self.native_identity().pid > 0
+                process, inspection = self, result
+                elapsed = 40
+            return result
+
+        async def release_observation(self, request_id):
+            nonlocal elapsed
+            try:
+                result = await super().release_observation(request_id)
+                if phase == 'return-expiry':
+                    assert result is True
+                    elapsed = 46
+                    publisher_completed.set()
+                    publisher_entered.set()
+                return result
+            except asyncio.CancelledError:
+                observer_cancelled.set()
+                raise
+
+        async def close(self, timeout):
+            close_entered.set()
+            return await super().close(timeout)
+
+    # Public process observers delegate all behavior. Only the OS drain is held.
+    harness_process.ManagedHarnessProcess = ObservedProcess
+    asyncio.StreamWriter.write, asyncio.StreamWriter.drain = write, drain
+    def refuse_expired_publication(self, frozen):
+        raise AssertionError('Expired inspection reached launch artifact publication')
+    LaunchArtifactStore.save = refuse_expired_publication
+    app = fixture.create_fixture_app(Path(sys.argv[2]), sys.argv[3], profile=Path(sys.argv[4]),
+        helper_assets=Path(sys.argv[5]), token='synthetic-only-session')
+    async def start():
+        async with app.router.lifespan_context(app):
+            raise AssertionError('Expired inspection admitted startup')
+    starting = asyncio.create_task(start())
+    try:
+        await asyncio.wait_for(publisher_entered.wait(), 60)
+        await asyncio.wait_for(close_entered.wait(), .3)
+        if phase == 'held-release':
+            assert observer_cancelled.is_set()
+            assert not publisher_cancelled and not publisher_completed.is_set()
+            assert not starting.done()
+            assert await process.query_result(inspection['request_id']) == inspection
+            assert (await process.settlement(0))['state'] == 'pending'
+        else:
+            assert not observer_cancelled.is_set() and publisher_completed.is_set()
+            assert await process.query_result(inspection['request_id']) is None
+        release_gate.set()
+        try:
+            await asyncio.wait_for(starting, 15)
+        except ApiError as error:
+            assert error.code == 'harness_settings_fixture_invalid', error.code
+        else:
+            raise AssertionError('Expired inspection returned a registry hash')
+        assert publisher_completed.is_set() and not publisher_cancelled
+        assert (await process.settlement(0))['state'] == 'settled'
+        assert process.domain_status()['active'] == 0
+        assert await process.query_result(inspection['request_id']) is None
+        status = app.state.harness_configuration_authority.status()
+        assert status['requested'] is None and status['effective'] is None
+        assert not status['admission_open']
+        print(json.dumps({'committed_inspection': True, 'retained_publisher': phase == 'held-release', 'settled': True}))
+    finally:
+        release_gate.set()
+        try:
+            await asyncio.wait_for(starting, 15)
+        except Exception as cleanup_error:
+            print('cleanup outcome: ' + type(cleanup_error).__name__, file=sys.stderr)
+        asyncio.StreamWriter.write, asyncio.StreamWriter.drain = original_write, original_drain
+        loop.time = clock
+
+asyncio.run(run())
+'''
+    environment = {key: os.environ[key] for key in ('SYSTEMROOT', 'SystemRoot', 'WINDIR') if key in os.environ}
+    environment['PYTHONPATH'] = os.pathsep.join((str(Path(renulus.__file__).parents[1]), str(SOURCE / 'upstream/hermes')))
+    completed = subprocess.run([sys.executable, '-c', code, str(entry), str(file), digest,
+        str(profile), str(assets), phase], env=environment, capture_output=True, text=True, timeout=85)
+    (tmp_path / 'observation.stdout.txt').write_text(completed.stdout, encoding='utf-8')
+    (tmp_path / 'observation.stderr.txt').write_text(completed.stderr, encoding='utf-8')
+    assert completed.returncode == 0, completed.stderr
+    assert json.loads(completed.stdout) == {'committed_inspection': True,
+        'retained_publisher': phase == 'held-release', 'settled': True}

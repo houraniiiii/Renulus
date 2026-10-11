@@ -273,15 +273,17 @@ async def _inspect_initial_registry(services, lease, options):
         identity = process.native_identity()
         lease.register_native(identity.pid, generation=identity.generation)
         deadline = asyncio.get_running_loop().time() + options.attempt_timeout
-        result = await process.request('host.inspect', {}, 'settings-metadata-' + suffix, '1', options.attempt_timeout)
-        while result['outcome'] == 'accepted_pending':
-            if asyncio.get_running_loop().time() >= deadline:
-                raise _invalid()
-            await asyncio.sleep(.02)
-            result = await process.query_result(result['request_id'])
-        if result['outcome'] != 'committed_reference':
-            raise _invalid()
-        await process.release_observation(result['request_id'])
+        try:
+            async with asyncio.timeout_at(deadline):
+                result = await process.request('host.inspect', {}, 'settings-metadata-' + suffix, '1', options.attempt_timeout)
+                while result['outcome'] == 'accepted_pending':
+                    await asyncio.sleep(.02)
+                    result = await process.query_result(result['request_id'])
+                if result['outcome'] != 'committed_reference':
+                    raise _invalid()
+                await process.release_observation(result['request_id'])
+        except TimeoutError:
+            raise _invalid() from None
         observed = result['result']
         if (type(observed.get('registry_hash')) is not str
                 or not re.fullmatch(r'[a-f0-9]{64}', observed['registry_hash'])
@@ -289,6 +291,8 @@ async def _inspect_initial_registry(services, lease, options):
                     'package_acquisition_open', 'mcp_startup_open', 'live_store_writer'))):
             raise _invalid()
         lease.require_predecessor(lease.predecessor)
+        if asyncio.get_running_loop().time() >= deadline:
+            raise _invalid()
         return observed['registry_hash']
     finally:
         await drain()
