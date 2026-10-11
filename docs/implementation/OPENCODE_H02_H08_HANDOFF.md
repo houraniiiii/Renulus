@@ -306,6 +306,14 @@ failure, and unconditional remote Stop can block reconciliation after proven
 process exit. Both require public reproductions before repair. Owner/test remain
 frozen pending the independent Spec hash recheck; no positive or Stop pass is claimed.
 
+Independent Owner Spec review now corroborates the same two cleanup P2s, with
+both frozen hashes unchanged and no additional finding. Neither finding has a
+dynamic red yet. After the retained positive09 tool-result diagnosis, the Owner
+lane may propose minimal public reproductions and repair them within its existing
+two-file lease. A broken pipe alone must not prove settlement, and a busy release
+slot must retain/retry the exact read receipt without another Stop. No helper,
+process or Children module changes or broad cohorts are released by this step.
+
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
 expectation-disposition reviews clear. H06–H08 remain open. Required unmet
