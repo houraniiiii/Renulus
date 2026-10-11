@@ -94,6 +94,16 @@ seed is retained as a separate regression and is not counted as a completed
 migration. Its script is `saved-migration/seed-hidden-archive-followup.py`
 under the G: evidence root. No original retired command key was reused.
 
+The minimal legacy validation repair `4d9a2b24` is integrated as `1221f7a9`,
+with independent Standards0/Spec0 and the retained seven-case affected pass.
+A second, fresh-key seed then completed through the original public facade in
+this same owned profile. `hidden-archive-repaired-seed.json` records
+`thread_fcb7b9bdd22f484389d85c4b501e5f56`, its actual retained Library citation,
+one synthetic generation, saved `My retained CKD follow-up.` draft and settled
+Services shutdown; the Python process exited0. The first failed seed remains
+unchanged. This is backend repair verification and a prepared desktop follow-up
+conversation, not an immediate-Archive UI pass.
+
 C: reached zero free bytes while an independent Bridge prerequisite merge
 was pending. An attempted directory relocation followed a closed fixture
 junction and moved reviewed helper assets into the G: archive. The following
@@ -105,6 +115,15 @@ the committed size/SHA manifest. A subsequent plain-file-only relocation
 preserved1274 closed scratch files (442342734bytes), recreated48 junctions
 without traversing them, and retained old receipt paths. Its manifest lives
 under G:/Renulus-agent-scratch/space-recovery-20261011/. Reopen then succeeded.
+
+Later C: exhaustion stopped the reviewed legacy cherry-pick before Git ran.
+Recovery relocated the closed `oc-h02-h08/conversations` scratch directory:
+541 files/995215222bytes, every SHA256 checked before/after, no reparse points
+in the enumerated source, and the old directory replaced by a junction. The
+manifest is `space-recovery-20261011/conversations-relocation.json` on G:.
+Observed free space after recovery was9.4GB; the relocated bytes alone do not
+explain that total change. No original/private profile or helper asset moved.
+Only then was the reviewed patch integrated and the new seed executed.
 
 The wrong initial fixture option learning-v1 was rejected before startup; a
 non-TTY client exited on EOF. A citation CSS locator matching zero elements,

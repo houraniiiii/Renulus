@@ -19,7 +19,7 @@ below, without upgrading unrelated old receipts or closing H06 prematurely.
 | C2 | Actual migrated Archive/restore/project/draft, Stop with retained settlement, saved observer disconnect and exact neutral status under a real active Test | Hidden desktop flow through the existing facade |
 | C3 | Original legacy IDs/text/citations remain public; imported aliases are unknown/ineligible and absent from the next manifest | Frozen assembly review and desktop history/reader observation |
 | C4 | Genuinely migrated populated owner deletion, project survives, native replies forgotten and no new inference; earlier command/export deletion evidence retained | Final criterion review, retaining independently owned originals/learning boundaries |
-| C5 | Retired original create denied after native reopen; lost-purge-ACK independent closure already complete | Real pre-producer legacy crash/orphan proof in assigned test-only lane |
+| C5 | Retired original create denied after native reopen; lost-purge-ACK and real pre-producer legacy crash/orphan proof have independent closure | Closed in this bounded local scope; full paired restore remains H18 |
 | C6 | Saved-only routing preserves the existing temporary owner | H21 remains separate; no new temporary runtime is claimed |
 
 Native child assembly969ac780 is not integrated during these checks. Its
@@ -40,9 +40,24 @@ revealed a debounce defect; both reviewed repairs are integrated and the
 renderer rebuilt, but the actual immediate-Archive follow-up is blocked by
 automatic approval review of the retained controller restart under policy
 Never. A separate fresh legacy seed exposed local persistent-source validation
-without an active transaction; its dedicated repair is assigned. These remain
-explicit C2/regression closure gates. No H06 checkbox or H08 dependency is
+without an active transaction. Repair `4d9a2b24`, integrated as `1221f7a9`, has
+zero independent Standards/Spec findings and seven passing affected cases.
+The original owned profile then produced a new-key completed cited seed with
+one synthetic generation, exact saved draft and settled Services/process exit;
+`saved-migration/hidden-archive-repaired-seed.json` records that observation.
+The original failed seed remains intact. The immediate-Archive check remains
+an explicit C2 closure gate. No H06 checkbox or H08 dependency is
 promoted on the strength of component tests alone.
+
+The explicit independent orphan Spec disposition is now recovered: `51f8fbee`
+against `b9fda107` (integrated as `07aa0f3d`) has zero material findings; the
+separate Standards disposition is also zero. The owned child actually exits86
+after public admission and before any producer, and its exit is joined before
+reopen. Interrupted replay, retained draft/history and unknown lineage survive
+the subsequent native migration. Existing receipts are one native pass/20.324s
+and one canonical pass/12.359s; they overlap and were not rerun. The test SHA256
+is `30b36b3152515ddedcc4e127cf0bc7c92027e25d54e23526ea5c1414f01b9fbe`;
+exact evidence is in `G:/Renulus-agent-scratch/oc-h06/orphan/HANDOFF.md`.
 
 The authoritative requirements are [H06](../planning/opencode-v2/tickets/06-continue-saved-and-temporary-chats-through-one-owner.md),
 [S2](../planning/opencode-v2/specs/02-memory-context.md) and

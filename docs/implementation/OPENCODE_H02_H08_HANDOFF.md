@@ -17,11 +17,29 @@ installation, push or downstream-ticket expansion is authorized.
 
 ### Dependency readiness
 
-Current continuation: parent `93f652ea`. The reviewed child-learning routing
+Current continuation: parent `1221f7a9`. The reviewed child-learning routing
 helper `abdad45b` is integrated as `f0e433d6`; supplied-transaction policy
 settlement `dd75d5eb` is integrated as `294b8218`. Both independent axes are
 clear, with original62-case helper and12-case settlement evidence retained;
-no unchanged suite was repeated. These ports do not enable native children.
+no unchanged suite was repeated. Bridge `ce918d33` is integrated as `075b2def`
+after both independent review axes reported zero findings. Its supplied-conn
+`record_consumed_in` keeps the pending SQL reference authoritative, preserves
+rollback and checks the final publication closure; the original46-case receipt
+is retained. These ports do not enable native children.
+
+A new actual cited native/Library/M5 composition check is not yet green.
+`memory/h07-consumed-transaction/receipts/cited-integrated02.xml` records one
+failure/40.85s with `harness_execution_failed`. Diagnostic03 repeats the failure
+with ample free space and G: temp paths (one failure/22.61s): actual input
+admission succeeds, then `learning.context` returns `domain_handler_error`.
+Diagnostic04 (one failure/17.99s) captures `PermissionError` from Memory's
+reindex cleanup after engine construction fails; the initiating exception is
+still being isolated. No assistant or answer publication is committed. This
+does not establish a Bridge defect. Russell owns the narrow Memory diagnosis.
+The transparent test observer/source snapshot and original states are retained.
+`cited-integrated01` failed before construction because the helper-assets
+environment was absent; that receipt is a setup qualification. Do not repeat
+the46-case local suite or upgrade the failed native checks to passes.
 
 The hidden H06 journey completed migration, cited continuation, reader,
 Archive/Restore, explicit saved-draft reopen and populated conversation
@@ -49,9 +67,18 @@ A fresh synthetic legacy seed for the Archive follow-up failed before its
 synthetic generation: recalled Library-backed memory reached the persistent
 source resolver without an active canonical transaction. The original public
 failure is `harness_publication_transaction_required`; no failed seed is
-claimed as completed migration evidence. Sartre owns only Learn service and
-a dedicated regression for this local source-check path. Russell retains the
-separate Bridge `record_consumed_in` lease. All new profiles/receipts use G:;
+claimed as completed migration evidence. Sartre's two-path repair `4d9a2b24`
+is integrated as `1221f7a9` after both independent axes reported zero findings.
+The meaningful public red, unchanged green, revocation denial and seven-case
+affected receipt are retained under G:/Renulus-agent-scratch/oc-h07/legacy-library-context/.
+One fresh-key public seed in the owned H06 profile then completed with its real
+retained Library source, one synthetic generation, saved draft and settled
+Services shutdown; the process exited0. The JSON receipt is
+saved-migration/hidden-archive-repaired-seed.json and the new conversation is
+thread_fcb7b9bdd22f484389d85c4b501e5f56. The earlier failed seed is unchanged.
+Russell is isolating the cited failure through a focused public Memory
+construction tracer; no further native or broad engine suite is authorized.
+All new profiles/receipts use G:;
 pause writes if C: falls below200MiB. H06 acceptance and H08 implementation
 remain gated; native assembly `969ac780` stays frozen and unintegrated.
 
@@ -68,9 +95,11 @@ The Owner now prepares legacy conversion before ordinary saved Send and
 retains the public history/draft/project/Archive facade through native
 continuation, Stop, disconnect, reopen and populated-owner deletion.
 Receipts are saved-migration/receipts/owner-final01.xml and local-affected01.xml
-under G:/Renulus-agent-scratch/oc-h02-h08/. The assembly awaits frozen
-independent review, orphan-crash evidence, transfer-capacity disposition and
-hidden desktop verification; H06 acceptance is still open. Lost-purge-ACK
+under G:/Renulus-agent-scratch/oc-h02-h08/. The recovered orphan review closes
+both axes; its existing native1/20.324s and canonical1/12.359s receipts were not
+rerun. Transfer-capacity review and the added capstone are recorded above.
+Final H06 criterion disposition and immediate-Archive desktop verification
+remain open. Lost-purge-ACK
 reconciliation already has independent closure and is not an open defect.
 
 Transfer residual a3768b33 is integrated as4c7e81dc after those runs exited.
