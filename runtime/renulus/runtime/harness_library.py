@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 
 from renulus.contracts import ApiError, ContextScope, Scope
 from renulus.design_c_contracts import Identity, canonical_digest
+from renulus.knowledge.saved_extraction import _reference as _reader_reference
 from renulus.storage.assessment_policy import require_assistance
 from renulus.storage.invalidation import context_epoch_in
 
@@ -41,6 +42,38 @@ class _CitationArguments(BaseModel):
         if value is None:
             raise ValueError("Omit page when the passage has no page locator")
         return value
+
+
+class _ConsumedReference(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    document_id: str = Field(pattern=r"^doc_[0-9a-f]{32}$")
+    document_revision: str = Field(pattern=r"^rev_[0-9a-f]{32}$")
+    passage_id: str = Field(pattern=r"^passage_[0-9a-f]{32}$")
+    locators: list[dict] = Field(max_length=12000)
+
+
+# Only source coordinates and reference labels may cross saved provenance.
+# Mapping validity (ordered ranges, physical pages) remains with the reader.
+_GEOMETRY = {"l": (int, float), "t": (int, float), "r": (int, float), "b": (int, float), "coord_origin": str}
+_SIZE = {"width": (int, float), "height": (int, float)}
+_CONTENT_LOCATION = {"kind": str, "item_ref": str, "section": str, "start": int, "end": int,
+    "format": str, "sheet_name": str, "first_row": int, "last_row": int,
+    "first_column": int, "last_column": int, "physical_page": int, "printed_label": str,
+    "frame": int, "bounds": [(int, float)]}
+_SOURCE_LOCATION = {"item_ref": str, "table_ref": str, "page": int, "char_span": [int],
+    "bbox": _GEOMETRY, "page_size": _SIZE, "format": str, "slide": int, "slide_size": _SIZE,
+    "sheet": int, "sheet_name": str, "cell_bbox": _GEOMETRY, "content_locator": _CONTENT_LOCATION}
+
+
+def _reference_shape(value, shape):
+    if value is None:
+        return True
+    if isinstance(shape, dict):
+        return (isinstance(value, dict) and not set(value) - shape.keys()
+            and all(_reference_shape(item, shape[key]) for key, item in value.items()))
+    if isinstance(shape, list):
+        return isinstance(value, list) and all(_reference_shape(item, shape[0]) for item in value)
+    return type(value) in shape if isinstance(shape, tuple) else type(value) is shape
 
 
 def _arguments(model, value):
@@ -154,6 +187,36 @@ class HarnessLibrary:
         self._check(authority, conn)
         self._require_evidence(passages, authority, conn=conn)
         self._check(authority, conn)
+
+    def project_content_reference(self, conn, reference, *, authority: LibraryAuthority) -> dict:
+        """Project exact consumed provenance in the caller's canonical transaction.
+
+        Reader offsets come only from the saved-extraction mapping. Raw Docling
+        locators remain separate provenance; no passage body or original is read.
+        The supplied reference must match canonical locators, not model claims.
+        """
+        reference = _arguments(_ConsumedReference, reference)
+        if not conn.in_transaction:
+            raise ApiError("harness_publication_transaction_required", "Project references in the publication transaction", 409)
+        self._check(authority, conn)
+        self._require_evidence([reference], authority, conn=conn)
+        row = conn.execute("SELECT p.locators_json,r.media_type FROM knowledge_passages p "
+            "JOIN knowledge_revisions r ON r.id=p.revision_id WHERE p.id=? AND r.id=? AND r.document_id=?",
+            (reference["passage_id"], reference["document_revision"], reference["document_id"])).fetchone()
+        locators = json.loads(row["locators_json"])
+        if (not isinstance(locators, list) or any(not isinstance(location, dict)
+                or not _reference_shape(location, _SOURCE_LOCATION) for location in locators)):
+            raise ApiError("harness_source_locators_invalid", "Canonical source provenance needs repair", 503)
+        if locators != reference["locators"]:
+            raise ApiError("harness_sources_changed", "Consumed source locators no longer match the canonical passage", 409, True)
+        projected = {"content_ref": _reader_reference(reference["document_revision"], locators, row["media_type"]),
+            "document_id": reference["document_id"], "revision_id": reference["document_revision"],
+            "passage_id": reference["passage_id"], "locators": locators}
+        self._check(authority, conn)
+        self._require_evidence([reference], authority, conn=conn)
+        if authority.cancelled():
+            raise ApiError("harness_tool_cancelled", "This Library operation was cancelled", 409)
+        return projected
 
     def resolve_dependency(self, conn, identity: Identity, *, authority: LibraryAuthority,
                            for_support: bool = False) -> str | None:

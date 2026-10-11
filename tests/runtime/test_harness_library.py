@@ -555,3 +555,210 @@ def test_persistent_library_support_keeps_source_rights_scope_and_local_only_che
     repo.update_source_status(status_event("10.1234/h02-persistent-support", retracted=True))
     with services.db.transaction() as conn:
         assert adapter.resolve_dependency(conn, identity, authority=trusted, for_support=True) is None
+
+
+def test_content_reference_preserves_raw_provenance_without_inventing_reader_offsets(library, monkeypatch):
+    import sqlite3
+    repo, adapter = library
+    source = note(repo, "Synthetic CKD source.")
+    consumed = []
+    trusted = authority(source["revision_id"], record_dependencies=consumed.extend)
+    adapter.retrieve({"query": "CKD"}, trusted)
+    assert len(consumed) == 1
+    reference = consumed[0]
+    reads = []
+    def reference_only(action, table, column, *_):
+        if action == sqlite3.SQLITE_READ:
+            reads.append((table, column))
+            if column in {"text", "context_text", "extraction_json", "original_path"}:
+                return sqlite3.SQLITE_DENY
+        return sqlite3.SQLITE_OK
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Projection must use the caller snapshot without engine, body or nested connection work")
+    with repo.db.transaction() as conn:
+        conn.set_authorizer(reference_only)
+        monkeypatch.setattr(repo.db, "connect", forbidden)
+        projected = adapter.project_content_reference(conn, reference, authority=trusted)
+    assert projected == {"content_ref": {"target": {"type": "library_revision", "id": source["revision_id"]},
+            "locator": None}, "document_id": source["document_id"], "revision_id": source["revision_id"],
+        "passage_id": reference["passage_id"],
+        "locators": [{"item_ref": "#/texts/0", "page": None, "char_span": [0, 21]}]}
+    assert projected["locators"] is not reference["locators"]
+    assert ("knowledge_passages", "locators_json") in reads
+    assert consumed == [reference]
+
+
+def test_content_reference_rejects_body_fields_even_in_canonical_locator_data(library):
+    import json
+    repo, adapter = library
+    source = note(repo, "Synthetic poisoned locator source.")
+    consumed = []
+    trusted = authority(source["revision_id"], record_dependencies=consumed.extend)
+    adapter.retrieve({"query": "poisoned locator"}, trusted)
+    reference = consumed[0]
+    reference["locators"][0]["body"] = "Synthetic body must never enter saved provenance"
+    # Fixture-only canonical corruption; there is no public locator editor.
+    with repo.db.transaction() as conn:
+        conn.execute("UPDATE knowledge_passages SET locators_json=? WHERE id=?",
+            (json.dumps(reference["locators"]), reference["passage_id"]))
+        with pytest.raises(ApiError) as caught:
+            adapter.project_content_reference(conn, reference, authority=trusted)
+        assert caught.value.code == "harness_source_locators_invalid"
+
+
+@pytest.mark.parametrize("poison", [
+    {"bbox": {"l": 1, "t": 2, "r": 3, "b": 4, "text": "Synthetic body"}},
+    {"content_locator": {"kind": "text", "item_ref": "reader:0", "start": 0, "end": 5,
+        "body": "Synthetic body"}},
+    {"char_span": ["Synthetic body", 5]},
+    {"page_size": {"width": 100, "height": 100, "body": "Synthetic body"}},
+    {"item_ref": {"text": "Synthetic body"}},
+])
+def test_content_reference_denies_nested_body_in_reference_fields(library, poison):
+    import json
+    repo, adapter = library
+    source = note(repo, "Synthetic nested locator source.")
+    consumed = []
+    trusted = authority(source["revision_id"], record_dependencies=consumed.extend)
+    adapter.retrieve({"query": "nested locator"}, trusted)
+    reference = consumed[0]
+    reference["locators"][0].update(poison)
+    with repo.db.transaction() as conn:
+        conn.execute("UPDATE knowledge_passages SET locators_json=? WHERE id=?",
+            (json.dumps(reference["locators"]), reference["passage_id"]))
+        with pytest.raises(ApiError) as caught:
+            adapter.project_content_reference(conn, reference, authority=trusted)
+        assert caught.value.code == "harness_source_locators_invalid"
+
+
+def test_content_reference_cancellation_during_final_evidence_read_denies_return(library):
+    repo, adapter = library
+    source = note(repo, "Synthetic final reference cancellation.")
+    consumed, reads, cancelled = [], [], Event()
+    trusted = authority(source["revision_id"], record_dependencies=consumed.extend, cancelled=cancelled)
+    adapter.retrieve({"query": "final reference cancellation"}, trusted)
+    def cancel_on_final_read(sql):
+        if sql.startswith("SELECT locators_json FROM knowledge_passages"):
+            reads.append(sql)
+            if len(reads) == 2:
+                cancelled.set()
+    with repo.db.transaction() as conn:
+        conn.set_trace_callback(cancel_on_final_read)
+        with pytest.raises(ApiError) as caught:
+            adapter.project_content_reference(conn, consumed[0], authority=trusted)
+        assert caught.value.code == "harness_tool_cancelled"
+    assert len(reads) == 2
+
+
+@pytest.mark.parametrize("suffix,data,expected", [
+    (".csv", "Parameter,Value\nSodium,140\n", {"kind": "table", "format": "csv", "sheet_name": None,
+        "first_row": 1, "last_row": 1, "first_column": 1, "last_column": 2}),
+    (".html", "<html><body><p>Synthetic CKD source.</p></body></html>",
+        {"kind": "text", "item_ref": "reader-v1:item:0", "section": None, "start": 0, "end": 21}),
+])
+def test_content_reference_maps_actual_markup_imports_and_opens_exact_passage(library, tmp_path, suffix, data, expected):
+    from renulus.knowledge.models import own_text_rights
+    repo, adapter = library
+    path = tmp_path / ("synthetic" + suffix)
+    path.write_text(data, encoding="utf-8")
+    source = repo.import_file(path, rights=own_text_rights(), scope=ContextScope(kind=Scope.LIBRARY))
+    assert source["status"] == "ready", source
+    consumed = []
+    trusted = authority(source["revision_id"], record_dependencies=consumed.extend)
+    adapter.retrieve({"query": "Sodium CKD"}, trusted)
+    reference = consumed[0]
+    with repo.db.transaction() as conn:
+        projected = adapter.project_content_reference(conn, reference, authority=trusted)
+    assert projected["content_ref"] == {"target": {"type": "library_revision", "id": source["revision_id"]},
+        "locator": expected}
+    assert projected["locators"] == reference["locators"]
+    citation = adapter.open_citation({key: reference[key] for key in
+        ("document_id", "document_revision", "passage_id")}, trusted)
+    assert citation["passage_id"] == projected["passage_id"]
+    assert citation["locators"] == projected["locators"]
+
+
+@pytest.mark.parametrize("media,locators,expected", [
+    ("application/pdf", [{"item_ref": "#/texts/0", "page": 7, "char_span": [0, 21],
+        "bbox": {"l": 1, "t": 20, "r": 30, "b": 2, "coord_origin": "BOTTOMLEFT"},
+        "page_size": {"width": 200, "height": 300}}],
+        {"kind": "pdf", "physical_page": 7, "printed_label": None}),
+    ("image/tiff", [{"item_ref": "#/texts/0", "page": 2, "char_span": [0, 21]}],
+        {"kind": "image", "frame": 2, "bounds": None}),
+    ("image/png", [{"content_locator": {"kind": "image", "frame": 1, "bounds": [0.1, 0.2, 0.8, 0.9]}}],
+        {"kind": "image", "frame": 1, "bounds": [0.1, 0.2, 0.8, 0.9]}),
+    ("application/pdf", [{"content_locator": {"kind": "pdf", "physical_page": 0}}, {"page": 8}],
+        {"kind": "pdf", "physical_page": 8, "printed_label": None}),
+    ("application/pdf", [{"page": 301}, {"page": 0}], None),
+    ("text/plain", [{"item_ref": "#/texts/0", "char_span": [0, 21], "page": 3}], None),
+    ("text/html", [{"content_locator": {"kind": "text", "item_ref": "reader-v1:item:0", "start": 9, "end": 2}}], None),
+    ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        [{"item_ref": "#/tables/0", "table_ref": "#/tables/0", "format": "xlsx", "page": None,
+            "sheet": 2, "sheet_name": "Synthetic sheet", "cell_bbox": {"l": 1, "t": 2, "r": 4, "b": 5}}], None),
+])
+def test_content_reference_preserves_format_provenance_without_guessing_reader_coordinates(library, media, locators, expected):
+    import json
+    repo, adapter = library
+    source = note(repo, "Synthetic reference coordinate mapping.")
+    consumed = []
+    trusted = authority(source["revision_id"], record_dependencies=consumed.extend)
+    adapter.retrieve({"query": "reference coordinate"}, trusted)
+    reference = {**consumed[0], "locators": locators}
+    # Fixture coordinates isolate projection; these do not claim PDF/image extraction.
+    with repo.db.transaction() as conn:
+        conn.execute("UPDATE knowledge_revisions SET media_type=? WHERE id=?", (media, source["revision_id"]))
+        conn.execute("UPDATE knowledge_passages SET locators_json=? WHERE id=?",
+            (json.dumps(locators), reference["passage_id"]))
+        projected = adapter.project_content_reference(conn, reference, authority=trusted)
+    assert projected["content_ref"] == {"target": {"type": "library_revision", "id": source["revision_id"]}, "locator": expected}
+    assert projected["locators"] == locators
+
+
+@pytest.mark.parametrize("change,code", [
+    ("locator", "harness_sources_changed"), ("revision_pin", "harness_sources_changed"),
+    ("revoked", "harness_sources_changed"), ("cancel_before", "harness_tool_cancelled"),
+    ("cancel_return", "harness_tool_cancelled"), ("stale_epoch", "dependency_changed"),
+    ("body_argument", "invalid_library_arguments"),
+])
+def test_content_reference_keeps_exact_sources_and_run_authority(library, change, code):
+    from dataclasses import replace
+    repo, adapter = library
+    source = note(repo, "Synthetic exact source projection eligibility.")
+    consumed, cancelled = [], Event()
+    trusted = authority(source["revision_id"], record_dependencies=consumed.extend, cancelled=cancelled)
+    adapter.retrieve({"query": "projection eligibility"}, trusted)
+    reference, checks = consumed[0], []
+    def guard(conn):
+        checks.append(True)
+        if change == "cancel_return" and len(checks) == 2:
+            cancelled.set()
+        if change == "revoked" and len(checks) == 2:
+            conn.execute("UPDATE knowledge_revisions SET rights_json=json_set(rights_json,'$.model_input',json('false')) WHERE id=?",
+                (source["revision_id"],))
+    trusted = replace(trusted, guard=guard)
+    if change == "locator":
+        reference = {**reference, "locators": [{"page": 2}]}
+    elif change == "revision_pin":
+        trusted = replace(trusted, revision_ids=())
+    elif change == "stale_epoch":
+        trusted = replace(trusted, context_epoch=99)
+    elif change == "cancel_before":
+        cancelled.set()
+    elif change == "body_argument":
+        reference = {**reference, "text": "Synthetic model body is not provenance"}
+    with repo.db.transaction() as conn:
+        with pytest.raises(ApiError) as caught:
+            adapter.project_content_reference(conn, reference, authority=trusted)
+        assert caught.value.code == code
+
+
+def test_content_reference_disclosure_is_still_denied_during_active_test(persistent_library_support):
+    services, adapter, source = persistent_library_support
+    consumed = []
+    trusted = authority(source["revision_id"], record_dependencies=consumed.extend)
+    adapter.retrieve({"query": "retained CKD"}, trusted)
+    start_assessment(services, "test")
+    with services.db.transaction() as conn:
+        with pytest.raises(ApiError) as caught:
+            adapter.project_content_reference(conn, consumed[0], authority=trusted)
+        assert caught.value.code == "assistance_restricted"
