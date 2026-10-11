@@ -135,9 +135,10 @@ class HarnessBootstrap:
         except Exception as error:
             raise _safe_failure(error) from None
 
-    def _require_binding(self, authority, provider):
+    def _require_binding(self, authority, provider, *, after_cleanup=False):
         self._require_owner()
-        self._require_startable()
+        if not after_cleanup or self._draining is not None:
+            self._require_startable()
         if (self._app is None or self._app.state.services is not self._services
                 or authority.db is not self._services.db
                 or provider.paths is not self._services.paths
@@ -202,8 +203,8 @@ class HarnessBootstrap:
             raise ApiError("harness_launch_invalid", "The immutable launch does not match.", 409)
         return inputs
 
-    def _current(self, authority, provider, store, candidate, expected):
-        self._require_binding(authority, provider)
+    def _current(self, authority, provider, store, candidate, expected, *, after_cleanup=False):
+        self._require_binding(authority, provider, after_cleanup=after_cleanup)
         provider.require_configuration_connection(candidate.spec.connection)
         self._launch(store, candidate.spec)
         snapshot = authority.activation_snapshot()
@@ -258,7 +259,9 @@ class HarnessBootstrap:
                     raise _safe_failure(cleanup_error, cleanup=True) from None
                 try:
                     if self._observation is not None:
-                        self._current(*self._observation)
+                        # Cleanup seals Services itself; compare evidence without
+                        # replacing its initiating failure with that seal.
+                        self._current(*self._observation, after_cleanup=True)
                 except Exception as changed:
                     error = changed
             raise _safe_failure(error) from None

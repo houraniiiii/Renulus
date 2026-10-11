@@ -124,6 +124,51 @@ def test_unexpected_fault_is_sanitized_only_after_runtime_cleanup(tmp_path):
     assert result["events"] == ["candidate", "closing", "closed"]
 
 
+def test_candidate_failure_survives_actual_services_finalizer_settlement(tmp_path):
+    result = run_owned("initial-finalizer-candidate", tmp_path / "profile")
+    assert result["code"] == "candidate_unhealthy", result
+    assert result["observer_pending"] and not result["early_admission"]
+    assert not result["admission_open"] and result["shutdown_state"] == "settled"
+    assert result["repeat_start_code"] == "runtime_stopping"
+    assert result["events"] == ["candidate", "candidate-settled", "closing",
+        "dependencies-closed", "closed"]
+
+
+@pytest.mark.parametrize("phase, expected", [("live", "registry_mismatch"),
+    ("fault", "harness_bootstrap_failed")])
+def test_live_or_fault_failure_survives_actual_services_finalizer_settlement(tmp_path, phase, expected):
+    result = run_owned("initial-finalizer-" + phase, tmp_path / "profile")
+    assert result["code"] == expected, result
+    assert result["observer_pending"] and not result["early_admission"]
+    assert not result["admission_open"] and result["shutdown_state"] == "settled"
+    assert result["repeat_start_code"] == "runtime_stopping"
+    assert "SYNTHETIC-SECRET" not in result["error_text"]
+    assert result["events"][-3:] == ["closing", "dependencies-closed", "closed"]
+
+
+@pytest.mark.parametrize("change, expected", [("scope", "harness_bootstrap_conflict"),
+    ("connection", "connection_changed"), ("requested", "activation_conflict"),
+    ("epoch", "activation_conflict"), ("artifact", "harness_launch_invalid")])
+def test_current_evidence_after_services_finalizer_takes_precedence(tmp_path, change, expected):
+    result = run_owned("initial-finalizer-change-" + change, tmp_path / "profile")
+    assert result["code"] == expected, result
+    assert result["observer_pending"] and not result["early_admission"]
+    assert not result["admission_open"] and result["shutdown_state"] == "settled"
+    assert result["repeat_start_code"] == "runtime_stopping"
+    assert result["events"] == ["candidate", "candidate-settled", "closing",
+        "dependencies-closed", "closed"]
+
+
+def test_public_close_during_failure_finalizer_preserves_explicit_stop_precedence(tmp_path):
+    result = run_owned("initial-finalizer-close", tmp_path / "profile")
+    assert result["code"] == result["start_during_close_code"] == "runtime_stopping"
+    assert result["observer_pending"] and result["drain_pending"]
+    assert not result["early_admission"] and not result["admission_open"]
+    assert result["shutdown_state"] == "settled"
+    assert result["events"] == ["candidate", "candidate-settled", "closing",
+        "dependencies-closed", "closed"]
+
+
 def test_application_cannot_be_recreated_under_the_same_coordinator(tmp_path):
     result = run_owned("recreate-app", tmp_path / "profile")
     assert result == {"code": "harness_bootstrap_conflict"}
@@ -533,6 +578,9 @@ async def scenario(case, root, metadata=None):
             mode = "close-held-live"
         elif case == "initial-close-failed":
             mode = "native-held-cleanup-pending"
+        elif case.startswith("initial-finalizer-"):
+            mode = {"live": "live-deny-hash", "fault": "fault"}.get(
+                case.removeprefix("initial-finalizer-"), "candidate-deny-generation_open")
         async def interleave(phase):
             if not case.startswith("initial-race-"):
                 return
@@ -549,9 +597,15 @@ async def scenario(case, root, metadata=None):
             elif change == "artifact":
                 (root.parent / "artifacts" / (inputs.sha256 + ".json")).write_bytes(b"synthetic tampering")
         runtime = SyntheticRuntime(authority, mode=mode, hook=interleave,
-            shutdown=services.finish_shutdown if case == "initial-close-success" or case.startswith("initial-services-stop-") else None)
+            shutdown=services.finish_shutdown if case == "initial-close-success" or case.startswith(("initial-services-stop-", "initial-finalizer-")) else None)
         if case == "initial-close-success" or case.startswith("initial-services-stop-"):
             services.on_shutdown_dependencies.append(lambda: runtime.events.append("dependencies-closed"))
+        if case.startswith("initial-finalizer-"):
+            async def held_dependency():
+                runtime.close_entered.set()
+                await runtime.close_release.wait()
+                runtime.events.append("dependencies-closed")
+            services.on_shutdown_dependencies.append(held_dependency)
         if case == "reopen-no-account":
             await provider.disconnect("opencode-go")
         if case.startswith("initial-pre-deny-"):
@@ -568,6 +622,60 @@ async def scenario(case, root, metadata=None):
         arguments = dict(authority=authority, provider=provider, launch_store=store,
             assemble_runtime=assemble, initial_spec=None if case in {"reopen-existing",
                 "reopen-pins", "reopen-no-account", "reopen-current-pins"} else spec)
+        if case.startswith("initial-finalizer-"):
+            observer = asyncio.create_task(bootstrap.start(**arguments))
+            try:
+                await asyncio.wait_for(runtime.close_entered.wait(), timeout=5)
+                pending = not observer.done()
+                early = authority.status()["admission_open"]
+                if case.startswith("initial-finalizer-change-"):
+                    change = case.removeprefix("initial-finalizer-change-")
+                    if change == "scope":
+                        bootstrap.scope = ProfileOwnerScope(root, "foreign-profile",
+                            "synthetic-domain", "synthetic-runtime")
+                    elif change == "connection":
+                        provider.select("opencode-go", "deepseek-v4.1-flash")
+                    elif change == "requested":
+                        from renulus.runtime.harness_configuration import RolePolicy
+                        authority.stage(spec.model_copy(update={"roles": (
+                            RolePolicy(purpose="explain", output_tokens=64),)}))
+                    elif change == "epoch":
+                        authority.revoke("text")
+                    elif change == "artifact":
+                        (root.parent / "artifacts" / (inputs.sha256 + ".json")).write_bytes(b"synthetic tampering")
+                drain_pending, start_during_close = None, None
+                if case == "initial-finalizer-close":
+                    draining = asyncio.create_task(bootstrap.close())
+                    await asyncio.sleep(0)
+                    drain_pending = not draining.done()
+                    try:
+                        await bootstrap.start(**arguments)
+                    except Exception as error:
+                        start_during_close = getattr(error, "code", type(error).__name__)
+                runtime.close_release.set()
+                error_text = ""
+                try:
+                    await observer
+                    code = None
+                except Exception as error:
+                    import traceback
+                    code = getattr(error, "code", type(error).__name__)
+                    error_text = "".join(traceback.format_exception(error))
+                bootstrap.scope = scope
+                try:
+                    await bootstrap.start(**arguments)
+                    repeat_code = None
+                except Exception as error:
+                    repeat_code = getattr(error, "code", type(error).__name__)
+                await bootstrap.close()
+                return {"code": code, "observer_pending": pending, "early_admission": early,
+                    "admission_open": authority.status()["admission_open"],
+                    "shutdown_state": services.shutdown_status()["state"],
+                    "repeat_start_code": repeat_code, "events": runtime.events,
+                    "error_text": error_text, "drain_pending": drain_pending,
+                    "start_during_close_code": start_during_close}
+            finally:
+                runtime.close_release.set()
         if case in {"initial-close-held", "initial-close-live", "initial-close-observer", "initial-close-pending"}:
             observer = asyncio.create_task(bootstrap.start(**arguments))
             await runtime.entered.wait()
