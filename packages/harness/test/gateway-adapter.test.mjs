@@ -58,6 +58,148 @@ test("prepareStateless generates through public LLM with one text extraction pla
   } finally { await adapter.close(); }
 });
 
+test("stateless failure preserves authenticated dispatch status and retryability after native finalization", async () => {
+  for (const [outcome, error, category] of [
+    ["rejected_before_admission", { code: "transport_unavailable", status: 503, retryable: true }, "Transport"],
+    ["uncertain_after_disconnect", { code: "memory_support_budget", status: 409, retryable: false }, "InvalidRequest"],
+  ]) {
+    const wire = channel(null);
+    let prepared, running;
+    const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.succeed(extractionPlan()),
+      registerManifest: () => Effect.void, validateImages: () => Effect.void });
+    try {
+      running = Effect.runPromise(Effect.scoped(Effect.gen(function* () {
+        prepared = yield* adapter.prepareStateless(binding, { system: "Synthetic facts", user: "Synthetic CKD" });
+        assert.equal(prepared.failure(), undefined);
+        const failed = yield* LLM.generate(prepared.request).pipe(Effect.provideService(LLMClient.Service, adapter.client), Effect.result);
+        assert.equal(failed._tag, "Failure");
+        assert.equal(failed.failure.reason._tag, category);
+        assert.deepEqual(prepared.failure(), error);
+        assert.ok(Object.isFrozen(prepared.failure()));
+        assert.deepEqual(Object.keys(prepared.failure()).sort(), ["code", "retryable", "status"]);
+        assert.equal(prepared.receipt(), undefined);
+        const replay = yield* LLM.generate(prepared.request).pipe(Effect.provideService(LLMClient.Service, adapter.client), Effect.result);
+        assert.equal(replay._tag, "Failure");
+      })));
+      await until(() => wire.frames.length === 1);
+      assert.equal(prepared.receipt(), undefined);
+      assert.equal(prepared.failure(), undefined);
+      wire.settle(wire.frames[0], { outcome, error });
+      await running;
+      assert.equal(wire.frames.length, 1); assert.equal(wire.domain.state().active, 0);
+      assert.deepEqual(prepared.failure(), error);
+    } finally { wire.domain.disconnect(); await running?.catch(() => {}); await adapter.close(); }
+  }
+});
+
+test("stateless failure defaults only omitted dispatch fields and stays absent for success or unused preparation", async () => {
+  for (const [error, expected] of [
+    [{ code: "memory_support_budget" }, { code: "memory_support_budget", status: 503, retryable: false }],
+    [{ code: "memory_support_budget", status: 409 }, { code: "memory_support_budget", status: 409, retryable: false }],
+    [{ code: "transport_unavailable", retryable: true }, { code: "transport_unavailable", status: 503, retryable: true }],
+  ]) {
+    const wire = channel(null);
+    let prepared, running;
+    const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.succeed(extractionPlan()),
+      registerManifest: () => Effect.void, validateImages: () => Effect.void });
+    try {
+      running = Effect.runPromise(Effect.scoped(Effect.gen(function* () {
+        prepared = yield* adapter.prepareStateless(binding, { system: "Synthetic facts", user: "Synthetic CKD" });
+        const failed = yield* LLM.generate(prepared.request).pipe(Effect.provideService(LLMClient.Service, adapter.client), Effect.result);
+        assert.equal(failed._tag, "Failure");
+        assert.deepEqual(prepared.failure(), expected);
+        assert.equal(prepared.receipt(), undefined);
+      })));
+      await until(() => wire.frames.length === 1);
+      wire.settle(wire.frames[0], { outcome: "rejected_before_admission", error });
+      await running;
+    } finally { wire.domain.disconnect(); await running?.catch(() => {}); await adapter.close(); }
+  }
+  for (const generate of [false, true]) {
+    const wire = channel();
+    let prepared;
+    const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.succeed(extractionPlan()),
+      registerManifest: () => Effect.void, validateImages: () => Effect.void });
+    try {
+      await Effect.runPromise(Effect.scoped(Effect.gen(function* () {
+        prepared = yield* adapter.prepareStateless(binding, { system: "Synthetic facts", user: "Synthetic CKD" });
+        assert.equal(prepared.failure(), undefined);
+        if (generate) yield* LLM.generate(prepared.request).pipe(Effect.provideService(LLMClient.Service, adapter.client));
+        assert.equal(prepared.failure(), undefined);
+      })));
+      assert.equal(prepared.failure(), undefined);
+      assert.equal(wire.frames.length, generate ? 1 : 0);
+    } finally { await adapter.close(); }
+  }
+});
+
+test("stateless failure rejects unsafe unauthenticated or malformed dispatch diagnostics without projection", async () => {
+  const canary = crypto.randomUUID();
+  const wire = channel(null);
+  let prepared, running, settled = false;
+  const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.succeed(extractionPlan()),
+    registerManifest: () => Effect.void, validateImages: () => Effect.void });
+  try {
+    running = Effect.runPromise(Effect.scoped(Effect.gen(function* () {
+      prepared = yield* adapter.prepareStateless(binding, { system: "Synthetic facts", user: "Synthetic CKD" });
+      const failed = yield* LLM.generate(prepared.request).pipe(Effect.provideService(LLMClient.Service, adapter.client), Effect.result);
+      assert.equal(failed._tag, "Failure");
+      assert.ok(!JSON.stringify(failed).includes(canary), "An unsafe diagnostic escaped native sanitization");
+      assert.deepEqual(prepared.failure(), { code: "memory_support_budget", status: 409, retryable: false });
+      assert.ok(!JSON.stringify(prepared.failure()).includes(canary), "An unsafe diagnostic escaped projection");
+      assert.equal(prepared.receipt(), undefined);
+    }))).then(() => { settled = true; });
+    await until(() => wire.frames.length === 1);
+    for (const error of [
+      { code: "memory_support_budget", status: 409, retryable: false, message: canary },
+      { code: "memory_support_budget", status: 409, body: canary, credential: canary },
+      { code: `unsafe ${canary}`, status: 409 },
+      { code: "memory_support_budget", status: "409" },
+      { code: "memory_support_budget", status: 200 },
+      { code: "memory_support_budget", status: 409, retryable: "true" },
+    ]) wire.settle(wire.frames[0], { outcome: "rejected_before_admission", error });
+    wire.settle({ ...wire.frames[0], generation: "stale-generation", token: canary }, { outcome: "rejected_before_admission",
+      error: { code: "transport_unavailable", status: 503, retryable: true } });
+    wire.settle({ ...wire.frames[0], attempt_id: "other-attempt" }, { outcome: "rejected_before_admission",
+      error: { code: "transport_unavailable", status: 503, retryable: true } });
+    await new Promise(resolve => setTimeout(resolve, 20));
+    assert.equal(settled, false); assert.equal(wire.domain.state().active, 1);
+    assert.equal(prepared.failure(), undefined); assert.equal(prepared.receipt(), undefined);
+    wire.settle(wire.frames[0], { outcome: "rejected_before_admission", error: { code: "memory_support_budget", status: 409, retryable: false } });
+    await running;
+    assert.equal(wire.frames.length, 1);
+  } finally { wire.domain.disconnect(); await running?.catch(() => {}); await adapter.close(); }
+});
+
+test("stateless failure never invents dispatch fields from native exceptions or invalid success bodies", async () => {
+  const { AIError, ProviderInternalError } = await import("@opencode/ai");
+  const { DomainClient } = await import("../src/domain-ipc.ts");
+  const canary = crypto.randomUUID();
+  class FailingDomainClient extends DomainClient {
+    request() {
+      return Promise.reject(new AIError({ reason: new ProviderInternalError({ message: canary, code: "transport_unavailable", body: canary }) }));
+    }
+  }
+  const direct = new FailingDomainClient({ protocol: "renulus-harness/1", profile_id: "synthetic-profile",
+    store_id: "synthetic-store", generation: "synthetic-generation", token: canary }, async () => {});
+  const wire = channel(() => { const response = result(); delete response.permit_id; return response; });
+  for (const domain of [direct, wire.domain]) {
+    let prepared;
+    const adapter = await createGatewayAdapter({ domain, beforePrepare: () => Effect.succeed(extractionPlan()),
+      registerManifest: () => Effect.void, validateImages: () => Effect.void });
+    try {
+      await Effect.runPromise(Effect.scoped(Effect.gen(function* () {
+        prepared = yield* adapter.prepareStateless(binding, { system: "Synthetic facts", user: "Synthetic CKD" });
+        const failed = yield* LLM.generate(prepared.request).pipe(Effect.provideService(LLMClient.Service, adapter.client), Effect.result);
+        assert.equal(failed._tag, "Failure");
+        assert.ok(!JSON.stringify(failed).includes(canary), "Native diagnostic fields escaped sanitization");
+        assert.equal(prepared.failure(), undefined); assert.equal(prepared.receipt(), undefined);
+      })));
+      assert.equal(prepared.failure(), undefined);
+    } finally { await adapter.close(); }
+  }
+});
+
 test("prepareStateless refuses noncanonical extraction policy before manifest or IO", async () => {
   for (const trusted of [
     extractionPlan(undefined, { role: { ...extractionPlan().role, purpose: "explain" } }),

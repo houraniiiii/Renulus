@@ -29,6 +29,7 @@ export interface TrustedGatewayPreparation {
   readonly bounds: { readonly max_request_bytes: number; readonly max_response_bytes: number; readonly max_frame_bytes: number };
 }
 export interface GatewayReceipt { readonly dispatch_id: string; readonly permit_id: string }
+export interface GatewayDispatchFailure { readonly code: string; readonly status: number; readonly retryable: boolean }
 export interface GatewayPrimaryPreparation {
   readonly resolved: SessionRunnerModel.Resolved;
   readonly prepare: (request: LLMRequest, settings: StreamOptions, unfiltered: LLMRequest) => Effect.Effect<LLMRequest, AIError>;
@@ -41,6 +42,8 @@ export interface StatelessModelPreparation {
   readonly request: LLMRequest;
   /** Available only after native client cleanup; publication also requires a successful generation. */
   readonly receipt: () => Readonly<GatewayReceipt> | undefined;
+  /** Authenticated dispatch error fields only, available after native client cleanup. */
+  readonly failure: () => Readonly<GatewayDispatchFailure> | undefined;
 }
 export interface GatewayAdapterOptions {
   readonly domain: DomainClient;
@@ -104,7 +107,8 @@ function trustedPreparation(value: TrustedGatewayPreparation, binding: DomainBin
 type NativeAdapter = Awaited<ReturnType<typeof createSubscriptionAdapter>>;
 type Entry = { adapter: NativeAdapter; plan: TrustedGatewayPreparation; bound: boolean; used: boolean;
   sealed?: boolean; consumption?: Promise<void>; controller?: AbortController;
-  finalizer?: Promise<void>; finalized?: boolean; release?: () => void; receipt?: Readonly<GatewayReceipt>; failure?: AIError };
+  finalizer?: Promise<void>; finalized?: boolean; release?: () => void; receipt?: Readonly<GatewayReceipt>;
+  dispatchFailure?: Readonly<GatewayDispatchFailure>; failure?: AIError };
 function requireInputs(request: LLMRequest, plan: TrustedGatewayPreparation) {
   if (!plan.native_capabilities.tools && (request.tools.length || request.messages.some(message =>
     message.content.some(part => part.type === "tool-call" || part.type === "tool-result")))) throw denied();
@@ -150,6 +154,17 @@ function bufferedHttp(http: HttpClientRequest.HttpClientRequest, outcome: Domain
   return { response: HttpClientResponse.fromWeb(http, new Response(bytes,
     { status: 200, headers: { "content-type": "text/event-stream" } })),
     receipt: Object.freeze({ dispatch_id: plan.dispatch_id, permit_id: result.permit_id }) };
+}
+function dispatchFailure(outcome: DomainOutcome, plan: TrustedGatewayPreparation): Readonly<GatewayDispatchFailure> | undefined {
+  const error = outcome.error;
+  if (Buffer.byteLength(JSON.stringify(outcome) + "\n") > plan.bounds.max_frame_bytes
+      || !bindingKeys.every(key => outcome[key] === plan.binding[key])
+      || !["rejected_before_admission", "cancelled_settled", "uncertain_after_disconnect"].includes(outcome.outcome)
+      || outcome.result !== undefined || !error || typeof error !== "object" || Array.isArray(error)
+      || Object.keys(error).some(key => !["code", "status", "retryable"].includes(key)) || !identifier(error.code)
+      || error.status !== undefined && (!Number.isSafeInteger(error.status) || error.status < 400 || error.status > 599)
+      || error.retryable !== undefined && typeof error.retryable !== "boolean") return undefined;
+  return Object.freeze({ code: error.code, status: error.status ?? 503, retryable: error.retryable ?? false });
 }
 
 /** Native serialization only. Python owns current routing, final accounting and the single durable permit. */
@@ -212,7 +227,10 @@ export async function createGatewayAdapter(options: GatewayAdapterOptions): Prom
               const outcome = await options.domain.request(binding, "model.dispatch", payload, { signal });
               let buffered: ReturnType<typeof bufferedHttp>;
               try { buffered = bufferedHttp(http, outcome, preparation); }
-              catch (error) { entry.failure = safeFailure(error); throw entry.failure; }
+              catch (error) {
+                entry.dispatchFailure = dispatchFailure(outcome, preparation);
+                entry.failure = safeFailure(error); throw entry.failure;
+              }
               entry.receipt = buffered.receipt;
               return buffered.response;
           }, entry),
@@ -302,7 +320,10 @@ export async function createGatewayAdapter(options: GatewayAdapterOptions): Prom
         yield* Effect.uninterruptible(Effect.suspend(() => options.registerManifest!(entry.plan, request)));
         checkPrimary(entry, request, {});
         return bind(entry, request);
-      })).pipe(Effect.map(request => Object.freeze({ request, receipt: () => entry.finalized ? entry.receipt : undefined }))),
+      })).pipe(Effect.map(request => Object.freeze({ request,
+        receipt: () => entry.finalized ? entry.receipt : undefined,
+        failure: () => entry.finalized ? entry.dispatchFailure : undefined,
+      }))),
     ));
   });
   const claim = (request: LLMRequest) => {
