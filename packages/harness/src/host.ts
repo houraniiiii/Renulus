@@ -28,6 +28,15 @@ export interface ModelAdapter {
 export interface HarnessOptions extends ProfileSelection {
   readonly model?: ModelAdapter;
   readonly library?: LibraryToolBridge;
+  readonly admitInput?: (binding: NativeInputBinding) => Promise<void>;
+}
+
+export interface NativeInputBinding {
+  readonly operation_id: string;
+  readonly attempt_id: string;
+  readonly session_id: string;
+  readonly input_id: string;
+  readonly cancellation_id: string;
 }
 
 /** A persistent execution owner. Domain records continue to belong to Python. */
@@ -46,6 +55,7 @@ export async function openHarness(options: HarnessOptions) {
   let execution!: SessionExecution.Interface;
   let jobs!: Job.Interface;
   const held = new Set<string>();
+  const bindings = new Map<string, NativeInputBinding>();
   let recoveryStarted = false;
   let releaseRecovery!: () => void;
   let recovered!: () => void;
@@ -158,6 +168,11 @@ export async function openHarness(options: HarnessOptions) {
     finally { admittedWrites.delete(lease); settled(); }
   };
   return {
+    binding(sessionId: string): NativeInputBinding {
+      const binding = bindings.get(sessionId);
+      if (!binding || !["ready", "recovering"].includes(phase)) throw new Error("native_input_not_admitted");
+      return binding;
+    },
     async activateStores() {
       if (!["policy_blocked", "ready"].includes(phase)) throw new Error("harness_policy_blocked");
       const prior = phase;
@@ -207,10 +222,19 @@ export async function openHarness(options: HarnessOptions) {
     async submit(input: { sessionId: string; operationId: string; attemptId: string; text: string }) {
       return mutate(async () => {
         if (held.has(input.sessionId)) throw new Error("recovery_required");
+        const inputId = SessionMessage.ID.create();
+        const binding = Object.freeze({ operation_id: input.operationId, attempt_id: input.attemptId,
+          session_id: input.sessionId, input_id: inputId, cancellation_id: input.operationId });
+        // Parent authority is pinned before native admission can schedule work.
+        // A lost acknowledgement stays uncertain and must never mint a new input.
+        await options.admitInput?.(binding);
+        requireReady();
+        bindings.set(input.sessionId, binding);
         const item = await run(sdk.sessions.prompt({
-          sessionID: Session.ID.make(input.sessionId), text: input.text,
+          sessionID: Session.ID.make(input.sessionId), id: inputId, text: input.text,
           metadata: { operationId: input.operationId, attemptId: input.attemptId, configurationId },
         }));
+        if (item.id !== inputId) throw new Error("native_input_identity_conflict");
         return { operationId: input.operationId, attemptId: input.attemptId, sessionId: input.sessionId, inputId: item.id };
       });
     },
@@ -220,6 +244,7 @@ export async function openHarness(options: HarnessOptions) {
       const id = Session.ID.make(sessionId);
       await run(sdk.sessions.get({ sessionID: id }));
       const interrupted = await run(execution.interrupt(id, { resume: false, reason: "user", awaitSettlement: true }));
+      bindings.delete(sessionId);
       return { interrupted, outcome: "cancelled_settled" };
     },
     async wait(sessionId: string) { await run(sdk.sessions.wait({ sessionID: Session.ID.make(sessionId) })); },

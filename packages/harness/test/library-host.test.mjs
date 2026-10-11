@@ -17,12 +17,17 @@ test("native Library registration executes only the admitted internal tools", as
   const model = await scriptedModel("Synthetic cited CKD explanation [1].", false,
     { name: "renulus_library_retrieve", input: { query: "CKD", limit: 1 } });
   const calls = [];
+  let admitted;
   const passage = { id: "passage_" + "1".repeat(32), document_id: "doc_" + "2".repeat(32),
     document_revision: "rev_" + "3".repeat(32), text: "Synthetic educational CKD passage.", locators: [{ page: 1 }] };
   // Scripted domain callback, actual native SDK tool/continuation. Python
   // engine and authenticated IPC integration have separate acceptance.
   const library = {
-    async resolve(context) { return { sessionId: context.sessionID, operationId: "learning", attemptId: "1",
+    async resolve(context) {
+      assert.ok(admitted, "The canonical parent pins the user input before a tool can run");
+      assert.equal(context.sessionID, admitted.session_id);
+      assert.notEqual(context.messageID, admitted.input_id, "Tool context names the assistant message");
+      return { sessionId: context.sessionID, operationId: "learning", attemptId: "1",
       scope: { kind: "study" }, revisionIds: [passage.document_revision], policyRevision: 0, contextEpoch: 0, cancellationEpoch: 0 }; },
     async check() {},
     async execute(command, args) { calls.push({ command, args }); return { status: "ready", passages: [passage] }; },
@@ -31,12 +36,19 @@ test("native Library registration executes only the admitted internal tools", as
   let host;
   try {
     host = await openHarness({ root, profileId: manifest.profile_id, storeId: manifest.runtime_store.store_id,
-      domainStoreId: manifest.domain_store.store_id, domainPath: manifest.domain_store.path, model, library });
+      domainStoreId: manifest.domain_store.store_id, domainPath: manifest.domain_store.path, model, library,
+      async admitInput(binding) {
+        assert.equal(await model.count(), 0);
+        admitted = binding;
+      } });
     await host.activate("synthetic-configuration");
     const session = await host.createSession({ operationId: "learning", title: "Synthetic CKD" });
-    await host.submit({ sessionId: session.id, operationId: "learning", attemptId: "1", text: "Explain CKD with a passage." });
+    const input = await host.submit({ sessionId: session.id, operationId: "learning", attemptId: "1", text: "Explain CKD with a passage." });
     await host.wait(session.id);
     assert.deepEqual(calls, [{ command: "library.retrieve", args: { query: "CKD", limit: 1 } }]);
+    assert.deepEqual(admitted, { operation_id: "learning", attempt_id: "1", session_id: session.id,
+      input_id: input.inputId, cancellation_id: "learning" });
+    assert.deepEqual(host.binding(session.id), admitted);
     const requests = await model.requests();
     assert.equal(requests.length, 2, "Tool continuation is a second dispatch");
     assert.deepEqual(requests[0].tools.map(tool => tool.name).sort(), ["renulus_library_citation", "renulus_library_retrieve"]);
