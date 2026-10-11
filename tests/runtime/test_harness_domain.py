@@ -1,6 +1,7 @@
 """Reverse callbacks at the public owned Harness subprocess boundary."""
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+import json
 from pathlib import Path
 import sys
 import threading
@@ -365,6 +366,257 @@ async def test_domain_errors_preserve_api_code_without_python_message_or_data(tm
                                                          "status": 409, "retryable": True}
     finally:
         await process.close(2)
+
+
+@pytest.mark.parametrize("code,status,retryable", [
+    ("memory_support_budget", 409, False), ("library_source_not_ready", 503, True),
+    ("domain_cancelled", 409, False),
+])
+async def test_internal_current_check_error_survives_before_work_and_pipe_publication(tmp_path, code, status, retryable):
+    from renulus.contracts import ApiError
+    from renulus.runtime.harness_domain import DomainBinding, DomainGrant
+
+    binding = DomainBinding("learning-1", "attempt-1", "native-session",
+                            "native-input", "parent-cancel-1")
+    effects = []
+    canary = "SYNTHETIC_PRIVATE_CHECK_ERROR_7194"
+    def current():
+        raise ApiError(code, canary, status, retryable)
+    async def handler(request, cancellation):
+        effects.append(request.callback_id)
+        return {"private": canary}
+    async def authority(request):
+        return DomainGrant(binding, handler, current)
+
+    process = ManagedHarnessProcess(domain_authority=authority)
+    await process.start(config(tmp_path))
+    try:
+        response = await process.request("session.get", {}, "observe", "1", 2)
+        peer = response["result"]["domain"]
+        snapshot = process.domain_result("callback-1")
+        expected = {"code": code, "status": status, "retryable": retryable}
+        assert peer["outcome"] == "uncertain_after_disconnect"
+        assert peer["error"] == expected
+        assert snapshot == peer
+        assert "result" not in snapshot and canary not in json.dumps(response)
+        assert effects == []
+        assert process.domain_status()["active"] == 0
+        assert (await process.request("host.status", {}, "still-live", "1", 2))["outcome"] == "committed_reference"
+    finally:
+        assert (await process.close(2))["state"] == "closed"
+
+
+async def test_queued_error_and_replay_replace_payload_and_release_retained_capacity():
+    from renulus.contracts import ApiError
+    from renulus.runtime.harness_domain import DomainBinding, DomainCallbacks, DomainGrant
+
+    identity = {"protocol": "renulus-harness/1", "profile_id": "profile",
+                "store_id": "runtime", "generation": "generation", "token": "token"}
+    binding = DomainBinding("learning-1", "attempt-1", "native-session",
+                            "native-input", "parent-cancel-1")
+    frame = {**identity, "kind": "domain_request", "callback_id": "callback-1",
+             "operation_id": binding.operation_id, "attempt_id": binding.attempt_id,
+             "session_id": binding.session_id, "input_id": binding.input_id,
+             "cancellation_id": binding.cancellation_id,
+             "command": "synthetic.extract", "payload": {"topic": "CKD"}}
+    canary = "SYNTHETIC_PRIVATE_QUEUED_CHECK_ERROR_7194"
+    failure = None
+    entered = asyncio.Event()
+    capacity = asyncio.Event()
+    sent = []
+    effects = []
+
+    def current():
+        if failure:
+            raise failure
+        return True
+
+    async def handler(request, cancellation):
+        effects.append(request.callback_id)
+        return {"private": canary + "x" * 2000}
+
+    async def authority(request):
+        return DomainGrant(binding, handler, current)
+
+    async def send(wire, callback_id):
+        entered.set()
+        await capacity.wait()
+        if callback_id:
+            wire = callbacks.publication_wire(callback_id)
+        sent.append({key: value for key, value in json.loads(wire).items() if key != "token"})
+
+    callbacks = DomainCallbacks(identity, authority, send, max_inflight=1, max_records=3,
+                                max_bytes=12000, max_frame=4096)
+    try:
+        callbacks.accept(frame)
+        await asyncio.wait_for(entered.wait(), 2)
+        assert callbacks.result("callback-1")["outcome"] == "committed_reference"
+        assert callbacks.status()["bytes"] > 4000
+        assert callbacks.status()["active"] == 1
+        failure = ApiError("library_source_not_ready", canary, 503, True)
+        capacity.set()
+        await asyncio.wait_for(callbacks.settled(), 2)
+        assert sent[-1]["error"] == {"code": "library_source_not_ready",
+                                     "status": 503, "retryable": True}
+        assert callbacks.result("callback-1") == sent[-1]
+        assert "result" not in sent[-1] and canary not in json.dumps(sent[-1])
+
+        failure = ApiError("memory_support_budget", canary, 409, False)
+        callbacks.accept(frame)
+        await asyncio.wait_for(callbacks.settled(), 2)
+        assert sent[-1]["outcome"] == "uncertain_after_disconnect"
+        assert sent[-1]["error"] == {"code": "memory_support_budget",
+                                     "status": 409, "retryable": False}
+        assert callbacks.result("callback-1") == sent[-1]
+        assert "result" not in sent[-1] and canary not in json.dumps(sent[-1])
+        assert effects == ["callback-1"]
+        retained_bytes = callbacks.status()["bytes"]
+        assert retained_bytes < 2000
+
+        # Restored eligibility cannot replay the previously withheld payload.
+        failure = None
+        callbacks.accept(frame)
+        await asyncio.wait_for(callbacks.settled(), 2)
+        assert callbacks.result("callback-1") == sent[-1]
+        assert sent[-1]["error"]["code"] == "memory_support_budget"
+        assert callbacks.status()["bytes"] == retained_bytes
+        callbacks.accept({**frame, "callback_id": "next-callback"})
+        await asyncio.wait_for(callbacks.settled(), 2)
+        assert effects == ["callback-1", "next-callback"]
+        assert callbacks.result("next-callback")["outcome"] == "committed_reference"
+        assert callbacks.status()["retained"] == 2
+        assert callbacks.status()["bytes"] <= 12000
+    finally:
+        capacity.set()
+        callbacks.seal()
+        await asyncio.wait_for(callbacks.settled(), 2)
+
+
+async def test_pipe_backpressure_preserves_internal_check_error_on_publication_and_replay(tmp_path):
+    from renulus.contracts import ApiError
+    from renulus.runtime.harness_domain import DomainBinding, DomainGrant
+
+    binding = DomainBinding("learning-1", "attempt-1", "native-session",
+                            "native-input", "parent-cancel-1")
+    entered = asyncio.Event()
+    release = asyncio.Event()
+    failure = None
+    canary = "SYNTHETIC_PRIVATE_PIPE_CHECK_ERROR_7194"
+    effects = []
+
+    def current():
+        if failure:
+            raise failure
+        return True
+
+    async def handler(request, cancellation):
+        effects.append(request.callback_id)
+        entered.set()
+        await release.wait()
+        return {"private": canary + "x" * 2000}
+
+    async def authority(request):
+        return DomainGrant(binding, handler, current)
+
+    process = ManagedHarnessProcess(domain_authority=authority)
+    await process.start(config(tmp_path, boot_settings={"test": {"read_pause": 0.4}}))
+    try:
+        await process.request("session.get", {"emit_only": True}, "observe", "1", 0.01)
+        await asyncio.wait_for(entered.wait(), 2)
+        # The peer pauses reads while this request occupies the data pipe.
+        await process.request("session.prompt", {"text": "x" * 200000}, "extraction", "1", 0.01)
+        release.set()
+        initial = await wait_domain(process, "callback-1")
+        assert initial["outcome"] == "committed_reference"
+        retained_bytes = process.domain_status()["bytes"]
+        failure = ApiError("memory_support_budget", canary, 409, False)
+        async with asyncio.timeout(2):
+            while True:
+                status = await process.request("host.status", {}, "status", "1", 2)
+                results = status["result"]["domain_results"]
+                if results:
+                    break
+                await asyncio.sleep(0.01)
+        peer = results[-1]
+        assert peer["outcome"] == "uncertain_after_disconnect"
+        assert peer["error"] == {"code": "memory_support_budget",
+                                 "status": 409, "retryable": False}
+        assert process.domain_result("callback-1") == peer
+        assert "result" not in peer and canary not in json.dumps(status)
+        assert process.domain_status()["bytes"] < retained_bytes
+
+        failure = ApiError("library_source_not_ready", canary, 503, True)
+        replay = await process.request("session.get", {}, "replay", "1", 2)
+        peer = replay["result"]["domain"]
+        assert peer["outcome"] == "uncertain_after_disconnect"
+        assert peer["error"] == {"code": "library_source_not_ready",
+                                 "status": 503, "retryable": True}
+        assert process.domain_result("callback-1") == peer
+        assert "result" not in peer and canary not in json.dumps(replay)
+        assert effects == ["callback-1"]
+        assert process.domain_status()["active"] == 0
+    finally:
+        release.set()
+        assert (await process.close(2))["state"] == "closed"
+
+
+@pytest.mark.parametrize("stage", ["before_work", "publication", "replay"])
+async def test_unexpected_guard_coroutine_cancellation_is_a_sanitized_internal_failure(stage):
+    from renulus.runtime.harness_domain import DomainBinding, DomainCallbacks, DomainGrant
+
+    identity = {"protocol": "renulus-harness/1", "profile_id": "profile",
+                "store_id": "runtime", "generation": "generation", "token": "token"}
+    binding = DomainBinding("learning-1", "attempt-1", "native-session",
+                            "native-input", "parent-cancel-1")
+    frame = {**identity, "kind": "domain_request", "callback_id": "callback-1",
+             "operation_id": binding.operation_id, "attempt_id": binding.attempt_id,
+             "session_id": binding.session_id, "input_id": binding.input_id,
+             "cancellation_id": binding.cancellation_id,
+             "command": "synthetic.extract", "payload": {"topic": "CKD"}}
+    canary = "SYNTHETIC_PRIVATE_COROUTINE_CANCELLATION_7194"
+    fail = stage == "before_work"
+    sent = []
+    effects = []
+
+    def current():
+        if fail:
+            raise asyncio.CancelledError(canary)
+        return True
+
+    async def handler(request, cancellation):
+        effects.append(request.callback_id)
+        return {"private": canary}
+
+    async def authority(request):
+        return DomainGrant(binding, handler, current)
+
+    async def send(wire, callback_id):
+        sent.append(json.loads(wire))
+
+    callbacks = DomainCallbacks(identity, authority, send, max_inflight=1, max_records=2,
+                                max_bytes=12000, max_frame=4096)
+    callbacks.accept(frame)
+    await asyncio.wait_for(callbacks.settled(), 2)
+    if stage == "before_work":
+        assert callbacks.result("callback-1")["outcome"] == "uncertain_after_disconnect"
+        assert callbacks.result("callback-1")["error"] == {"code": "domain_handler_error"}
+    fail = True
+    if stage == "replay":
+        callbacks.accept(frame)
+        await asyncio.wait_for(callbacks.settled(), 2)
+    else:
+        sent.append(json.loads(callbacks.publication_wire("callback-1")))
+    peer = {key: value for key, value in sent[-1].items() if key != "token"}
+    assert peer["outcome"] == "uncertain_after_disconnect"
+    assert peer["error"] == {"code": "domain_handler_error"}
+    assert callbacks.result("callback-1") == peer
+    assert "result" not in peer and canary not in json.dumps(peer)
+    assert effects == ([] if stage == "before_work" else ["callback-1"])
+    assert callbacks.status()["active"] == 0
+    callbacks.seal()
+    cancelled = json.loads(callbacks.publication_wire("callback-1"))
+    assert cancelled["outcome"] == "cancelled_settled"
+    assert cancelled["error"] == {"code": "domain_cancelled"}
 
 
 async def test_native_session_recovery_lookup_uses_authenticated_operation_only(tmp_path):

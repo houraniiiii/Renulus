@@ -107,14 +107,7 @@ class DomainCallbacks:
                                        "outcome": "rejected_before_admission",
                                        "error": {"code": "callback_id_conflict"}})
             elif callback_id in self.records:
-                token = self.tokens[callback_id][1]
-                try:
-                    token.check_current()
-                    self._auxiliary_reply(self.records[callback_id], callback_id)
-                except Exception:
-                    self._auxiliary_reply({**self._envelope(frame),
-                                           "outcome": "rejected_before_admission",
-                                           "error": {"code": "domain_cancelled"}})
+                self._auxiliary_reply(self.publication_wire(callback_id), callback_id)
             return
         if self.closed or len(self.tasks) >= self.max_inflight:
             self._reject(frame, "domain_closing" if self.closed else "domain_overloaded")
@@ -172,19 +165,29 @@ class DomainCallbacks:
                 value = await grant.handler(request, token)
                 token.check_current()
                 result = {**envelope, "outcome": "committed_reference", "result": value}
-        except (DomainCancelled, asyncio.CancelledError):
-            result = {**envelope, "outcome": "cancelled_settled",
-                      "error": {"code": "domain_cancelled"}}
-        except ApiError as error:
-            result = {**envelope, "outcome": "uncertain_after_disconnect", "error": {
-                "code": error.code if _identifier(error.code) else "domain_handler_error",
-                "status": error.status, "retryable": error.retryable}}
-        except Exception:
-            result = {**envelope, "outcome": "uncertain_after_disconnect",
-                      "error": {"code": "domain_handler_error"}}
+        except (Exception, asyncio.CancelledError) as error:
+            result = self._failure_result(request.callback_id, error)
         if token.cancelled:
             result = {**envelope, "outcome": "cancelled_settled",
                       "error": {"code": "domain_cancelled"}}
+        wire = self._record_result(request.callback_id, result)
+        try:
+            await self.send(wire, request.callback_id)
+        except (ConnectionError, OSError):
+            pass
+
+    def _failure_result(self, callback_id: str, error: BaseException) -> dict:
+        if isinstance(error, DomainCancelled):
+            outcome, details = "cancelled_settled", {"code": "domain_cancelled"}
+        else:
+            outcome, details = "uncertain_after_disconnect", {"code": "domain_handler_error"}
+            if isinstance(error, ApiError):
+                details = {"code": error.code if _identifier(error.code) else "domain_handler_error",
+                           "status": error.status, "retryable": error.retryable}
+        return {**self.envelopes[callback_id], "outcome": outcome, "error": details}
+
+    def _record_result(self, callback_id: str, result: dict) -> bytes:
+        envelope = self.envelopes[callback_id]
         try:
             if "result" in result and not isinstance(result["result"], dict):
                 raise ValueError("domain_invalid_result")
@@ -200,12 +203,9 @@ class DomainCallbacks:
         except (ValueError, TypeError, RecursionError, UnicodeError):
             wire = _encode({**envelope, "outcome": "uncertain_after_disconnect",
                             "error": {"code": "domain_invalid_result"}})
-        self.records[request.callback_id] = wire
-        self.sizes[request.callback_id] = len(_encode(envelope)) + len(wire) * 2
-        try:
-            await self.send(wire, request.callback_id)
-        except (ConnectionError, OSError):
-            pass
+        self.records[callback_id] = wire
+        self.sizes[callback_id] = len(_encode(envelope)) + len(wire) * 2
+        return wire
 
     def cancel(self, cancellation_id: str | None = None) -> int:
         count = 0
@@ -219,12 +219,10 @@ class DomainCallbacks:
         """Recheck locally at pipe-write admission, including replay/queue delay."""
         try:
             self.tokens[callback_id][1].check_current()
-        except Exception:
-            wire = _encode({**self.envelopes[callback_id], "outcome": "cancelled_settled",
-                            "error": {"code": "domain_cancelled"}})
-            self.records[callback_id] = wire
-            self.sizes[callback_id] = len(_encode(self.envelopes[callback_id])) + len(wire) * 2
-        return self.records[callback_id]
+        except (Exception, asyncio.CancelledError) as error:
+            return self._record_result(callback_id, self._failure_result(callback_id, error))
+        else:
+            return self.records[callback_id]
 
     def seal(self) -> None:
         self.closed = True
