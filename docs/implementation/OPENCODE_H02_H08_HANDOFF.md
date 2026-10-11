@@ -314,6 +314,24 @@ two-file lease. A broken pipe alone must not prove settlement, and a busy releas
 slot must retain/retry the exact read receipt without another Stop. No helper,
 process or Children module changes or broad cohorts are released by this step.
 
+The positive09 public native diagnostic confirms `renulus_library_retrieve`
+failed with `state.status=error`, `executed=false` and `tool.execution`; it is
+not a successful result wrapper. The underlying Python refusal remains unknown.
+`G:/rh07a/e/positive09-native-read01.json` (SHA2567f7348a3...) records exactly
+one get and one messages read, both released; the policy-blocked diagnostic
+process closed/cancelled_settled, exited0 and left Domain active/retained0.
+A transient worker-tool error interrupted preparation before that diagnostic;
+resumption confirmed no orphan process and does not count as a product red.
+
+The approved cleanup repros use one real root dispatch with actual child.prepare
+held before construction, then public Owner settlement and process observation
+ports. They must retain the same read/Stop IDs across busy release, observer
+cancellation and uncertain Stop, and use real exit plus separate Domain/Registry
+proof before releasing canonical pins. The same test may add transparent public
+callback diagnostics (safe API code/status/retryability or exception type only,
+same original cancellation token) to locate the Library refusal. Original positive
+assertions remain intact; another connected rerun is not yet released.
+
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
 expectation-disposition reviews clear. H06–H08 remain open. Required unmet
