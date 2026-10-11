@@ -17,7 +17,7 @@ installation, push or downstream-ticket expansion is authorized.
 
 ### Dependency readiness
 
-Current continuation: parent `8a2f549f`. The reviewed child-learning routing
+Current continuation: parent `6e28a81c`. The reviewed child-learning routing
 helper `abdad45b` is integrated as `f0e433d6`; supplied-transaction policy
 settlement `dd75d5eb` is integrated as `294b8218`. Both independent axes are
 clear, with original62-case helper and12-case settlement evidence retained;
@@ -285,8 +285,13 @@ overlap. The production comment was added after testing; executable code and
 tests did not change, so no comment-only rerun was done. Exact source hashes,
 commands, receipts and source-derived serializer qualification are in
 model-owner/deployment-empty-reasoning/HANDOFF.md under the G: scratch root.
-The Owner lane may align this published prerequisite but remains paused until
-both reviews clear; parent integration and the connected rerun are still pending.
+Both independent axes now report zero findings; the patch is integrated as
+`6e28a81c`, with both reviewed hashes exact and no unchanged suite repeated.
+The Owner lane is released for one unchanged connected rerun on local0b4f0c85.
+Arendt Spec and Turing Standards separately review the frozen two-file Owner
+assembly against that local baseline while execution proceeds; no edits are
+allowed before their hash rechecks. Connected publication/settlement and the
+later Stop-negative proof remain open until actual results are observed.
 
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
