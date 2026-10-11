@@ -422,6 +422,23 @@ budget, tests a cancelled settlement observer, and must produce one cancelled
 terminal without publication or replay. Owner production bytes and the passing
 positive stay frozen; first focused outcome precedes any proposed source repair.
 
+That test-only follow-on is ready as `f12c637530e17e8ed241fcac1ec675b9ef9e2269`,
+directly atop aebb5ef2. `G:/rh07a/e/children-held-finalizer01.xml` passes on its
+first run: one case/17.152s, zero failures/errors/skips. This is added coverage,
+not a production red/repair. While the child HTTP finalizer is held, root native
+execution has settled but the child remains active; Domain active1 and Registry
+owned1 retain both canonical pins. One public Stop and a cancelled settlement
+observer cannot release them. After finalizer release, native/Domain/Registry
+settlement precedes child-then-root canonical settlement and Registry release.
+Exactly two sends stay charged, the sent child permit becomes uncertain, and
+one cancelled terminal appears without answer publication or Memory jobs.
+Owner561d7a6c and the original positive remain unchanged; final test hash is
+bcdf6444. The exact proof and command are in HANDOFF-f12c6375-held-finalizer.json
+under G:/rh07a. Parent read the diff/XML without rerunning; independent Spec and
+Standards review of this one-file delta is pending. Source-only planning may
+identify the next restart/no-replay and active-Test/Study exposure cases; no
+new execution or production change is released by that planning.
+
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
 expectation-disposition reviews clear. H06–H08 remain open. Required unmet
@@ -435,8 +452,8 @@ lower in the historical ledger.
 | H03 | Local acceptance verified: production-main text/tool/image/stateless loopback dispatch, strict final proof, canonical permits/selected identity and denial across unadmitted paths | Production accounting/account evidence before real-route enablement and matching-account cutover |
 | H04 | Local acceptance verified: authority/API/budgets, candidate/live lifecycle, managed initial/reopen, hidden Settings and actual failure/crash reconciliation; named repair-budgetB3 reviewed clear | Account/package scope and later native auxiliary enablement remain distinct |
 | H05 | Local acceptance verified: persistent lineage, four public recapture regressions, actual Mem0/Qdrant/FastEmbed native extraction/held-source-revocation/reopen; reviewed automatic cutover3026e3ca/67321f02 | No intrinsic local criterion remains; actual child producers and full paired restore retain H07/H18 ownership |
-| H06 | Actual supported SDK import/export/remove capability with zero inference | Existing conversation migration, one transcript owner, native purge and canonical deletion/replay integration after H05 |
-| H07 | Actual native child/permission snapshot and narrowed-epoch seam preparation | Bounded delegated evidence review, inherited authority and actual family cancellation/settlement after H05 |
+| H06 | Saved migration/continuation/reopen/delete and purge reconciliation through actual production main; repaired hidden journey and reviewed Archive debounce fix | Immediate-Archive hidden verification remains execution-blocked; final criterion disposition stays open |
+| H07 | Isolated actual root/child Library/M5 publication, canonical budgets/source identity and admitted-child Stop/finalizer settlement; native permission/detached preparation | Independent final test review, connected restart/exposure/remaining detached criteria and coordinated parent integration |
 | H08 | Existing instructions/skills and pinned native hooks are source inputs | Versioned instruction/skill activation and connected task use after accepted H04/H06 |
 
 The fixed hidden Settings fixture is integrated at `2e166120`; observation
