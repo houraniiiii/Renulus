@@ -49,10 +49,12 @@ class ControlledProcess:
         self.terminals = {}
         self.pending_command = None
         self.queried = asyncio.Event()
+        self.query_gate = None
         self.hold_command = None
         self.request_gate = asyncio.Event()
         self.request_entered = asyncio.Event()
         self.release_gate = None
+        self.release_result = True
         self.release_entered = asyncio.Event()
         self.cancelled = []
         self.transform = None
@@ -115,6 +117,12 @@ class ControlledProcess:
     async def query_result(self, request_id):
         self.queries.append(request_id)
         self.queried.set()
+        if self.query_gate is not None:
+            try:
+                await self.query_gate.wait()
+            except asyncio.CancelledError:
+                self.cancelled.append("query")
+                raise
         result = self.replies.get(request_id)
         return self.query_transform(result) if self.query_transform else result
 
@@ -130,7 +138,7 @@ class ControlledProcess:
             except asyncio.CancelledError:
                 self.cancelled.append("release")
                 raise
-        return True
+        return self.release_result
 
 
 @pytest.mark.asyncio
@@ -543,3 +551,184 @@ async def test_held_observation_release_expires_without_inventing_settlement():
         process.release_gate.set()
         await asyncio.wait_for(closing, 1)
     assert process.cancelled == []
+
+
+@pytest.mark.asyncio
+async def test_status_counts_actual_request_owner_through_repeated_observer_cancellation():
+    process = ControlledProcess()
+    source = document()
+    request = request_for(source)
+    adapter = HarnessSavedTransfer(process, observation_timeout=0.2)
+    await adapter.stage(request, document=source)
+    process.hold_command = "session.import"
+    try:
+        for _ in range(2):
+            observer = asyncio.create_task(adapter.commit(request))
+            await asyncio.wait_for(process.request_entered.wait(), 1)
+            await asyncio.sleep(0)
+            observer.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await observer
+        assert adapter.status() == {"accepting": True, "active": 1}
+        for _ in range(2):
+            drain = asyncio.create_task(adapter.close())
+            await asyncio.sleep(0)
+            assert adapter.status() == {"accepting": False, "active": 1}
+            drain.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await drain
+        assert process.cancelled == []
+        assert [item["command"] for item in process.requests].count("session.import") == 1
+    finally:
+        process.request_gate.set()
+        await asyncio.wait_for(adapter.close(), 1)
+    assert adapter.status() == {"accepting": False, "active": 0}
+    assert process.cancelled == []
+
+
+@pytest.mark.asyncio
+async def test_busy_release_retains_same_inspection_owner_until_exact_release_ack():
+    process = ControlledProcess()
+    source = document()
+    request = request_for(source)
+    adapter = HarnessSavedTransfer(process, observation_timeout=0.03)
+    await adapter.stage(request, document=source)
+    await adapter.commit(request)
+    process.release_result = False
+    try:
+        with pytest.raises(ApiError) as expired:
+            await adapter.inspect(request)
+        assert expired.value.code == "harness_migration_observation_timeout"
+        assert adapter.status() == {"accepting": True, "active": 1}
+        inspection_id = process.requests[-1]["request_id"]
+        assert set(process.releases) == {inspection_id}
+        process.release_result = True
+        assert await adapter.inspect(request) == NativeReadback(request, ALIASES, 2, 1, 1, "settled")
+        assert [item["command"] for item in process.requests].count("session.import.inspect") == 1
+        assert len(process.releases) >= 2 and set(process.releases) == {inspection_id}
+        assert adapter.status() == {"accepting": True, "active": 0}
+    finally:
+        process.release_result = True
+        await asyncio.wait_for(adapter.close(), 1)
+    assert process.cancelled == []
+
+
+@pytest.mark.asyncio
+async def test_concurrent_retirement_observers_share_ack_and_cleanup_idempotently():
+    process = ControlledProcess()
+    source = document()
+    request = request_for(source)
+    adapter = HarnessSavedTransfer(process, observation_timeout=0.2)
+    await adapter.stage(request, document=source)
+    await adapter.commit(request)
+    process.hold_command = "operation.retire"
+    first = asyncio.create_task(adapter.retire(request))
+    second = None
+    try:
+        await asyncio.wait_for(process.request_entered.wait(), 1)
+        second = asyncio.create_task(adapter.retire(request))
+        await asyncio.sleep(0)
+        assert adapter.status() == {"accepting": True, "active": 1}
+        process.request_gate.set()
+        assert await asyncio.wait_for(asyncio.gather(first, second), 1) == ["retired", "retired"]
+        assert await adapter.retire(request) == "retired"
+        assert [item["command"] for item in process.requests].count("operation.retire") == 1
+        with pytest.raises(ApiError) as refused:
+            await adapter.stage(request, document=source)
+        assert refused.value.code == "transfer_retired"
+        assert adapter.status() == {"accepting": True, "active": 0}
+    finally:
+        process.request_gate.set()
+        await asyncio.gather(first, *([second] if second is not None else []), return_exceptions=True)
+        await asyncio.wait_for(adapter.close(), 1)
+
+
+@pytest.mark.asyncio
+async def test_status_retains_query_owner_through_cancelled_observers_and_drain():
+    process = ControlledProcess()
+    source = document()
+    request = request_for(source)
+    adapter = HarnessSavedTransfer(process, observation_timeout=0.2)
+    await adapter.stage(request, document=source)
+    process.pending_command = "session.import"
+    process.query_gate = asyncio.Event()
+    try:
+        for _ in range(2):
+            observer = asyncio.create_task(adapter.commit(request))
+            await asyncio.wait_for(process.queried.wait(), 1)
+            await asyncio.sleep(0)
+            observer.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await observer
+            assert adapter.status() == {"accepting": True, "active": 1}
+        drain = asyncio.create_task(adapter.close())
+        await asyncio.sleep(0)
+        assert adapter.status() == {"accepting": False, "active": 1}
+        drain.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await drain
+        assert adapter.status() == {"accepting": False, "active": 1}
+        assert process.cancelled == []
+    finally:
+        process.publish_terminal(process.requests[-1]["request_id"])
+        process.query_gate.set()
+        await asyncio.wait_for(adapter.close(), 1)
+    assert adapter.status() == {"accepting": False, "active": 0}
+    assert [item["command"] for item in process.requests].count("session.import") == 1
+    assert process.cancelled == []
+
+
+@pytest.mark.asyncio
+async def test_status_retains_release_owner_after_retirement_record_cleanup():
+    process = ControlledProcess()
+    source = document()
+    request = request_for(source)
+    adapter = HarnessSavedTransfer(process, observation_timeout=0.2)
+    await adapter.stage(request, document=source)
+    await adapter.commit(request)
+    process.release_gate = asyncio.Event()
+    observer = asyncio.create_task(adapter.inspect(request))
+    try:
+        await asyncio.wait_for(process.release_entered.wait(), 1)
+        assert await adapter.retire(request) == "retired"
+        assert adapter.status() == {"accepting": True, "active": 1}
+        observer.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await observer
+        for _ in range(2):
+            drain = asyncio.create_task(adapter.close())
+            await asyncio.sleep(0)
+            assert adapter.status() == {"accepting": False, "active": 1}
+            drain.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await drain
+        assert process.cancelled == []
+    finally:
+        process.release_gate.set()
+        await asyncio.gather(observer, return_exceptions=True)
+        await asyncio.wait_for(adapter.close(), 1)
+    assert adapter.status() == {"accepting": False, "active": 0}
+    assert len(process.releases) == 1 and process.cancelled == []
+
+
+@pytest.mark.asyncio
+async def test_status_does_not_count_completed_uncertain_receipts_as_active_tasks():
+    process = ControlledProcess()
+    source = document()
+    request = request_for(source)
+    adapter = HarnessSavedTransfer(process, observation_timeout=0.2)
+    await adapter.stage(request, document=source)
+    def uncertain(command, reply):
+        if command == "session.import":
+            return {**reply, "outcome": "uncertain_after_disconnect",
+                    "error": {"code": "transfer_native_failed", "message": "Synthetic uncertain import."}}
+        return reply
+    process.transform = uncertain
+    for _ in range(2):
+        with pytest.raises(ApiError) as failure:
+            await adapter.commit(request)
+        assert failure.value.code == "transfer_native_failed"
+        assert adapter.status() == {"accepting": True, "active": 0}
+    assert [item["command"] for item in process.requests].count("session.import") == 1
+    await adapter.close()
+    assert adapter.status() == {"accepting": False, "active": 0}

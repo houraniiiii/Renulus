@@ -251,9 +251,15 @@ class HarnessSavedTransfer:
             self._identity(request, expected=identity)
         if command == "session.import.inspect" and checked.outcome in (
                 "committed_reference", "rejected_before_admission", "cancelled_settled"):
-            self._identity(request, expected=identity)
-            await self.transport.release_observation(expected.request_id)
-            self._identity(request, expected=identity)
+            while True:
+                self._identity(request, expected=identity)
+                released = await self.transport.release_observation(expected.request_id)
+                self._identity(request, expected=identity)
+                if released is True:
+                    break
+                if released is not False:
+                    raise ApiError("harness_migration_response", "Native release acknowledgement is invalid.", 409)
+                await asyncio.sleep(0.01)
         if checked.outcome != "committed_reference" or checked.error:
             raise ApiError(checked.error.code if checked.error else "harness_migration_uncertain",
                 "Native transfer could not be confirmed; no write is retried.", 409)
@@ -365,10 +371,16 @@ class HarnessSavedTransfer:
         if type(result) is not dict or set(result) != {"state"} or result["state"] not in ("pending", "retired"):
             raise ApiError("harness_migration_retirement", "Native operation retirement is unavailable.", 409)
         if result["state"] == "retired":
-            del self._bundles[request.migration_id]
+            if self._bundles.get(request.migration_id) is bundle:
+                self._bundles.pop(request.migration_id, None)
             self._retired.add(request.migration_id)
             self._calls = {key: call for key, call in self._calls.items() if key[0] != request.migration_id}
         return result["state"]
+
+    def status(self) -> dict:
+        """Report admission and unfinished local request/query/release owners."""
+        return {"accepting": not self._sealed,
+                "active": sum(not task.done() for task in self._owned)}
 
     def seal(self) -> None:
         """Refuse new commands while existing request/query/release owners drain."""
