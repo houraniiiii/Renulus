@@ -171,6 +171,7 @@ class ManagedConfigurationLifecycle:
         return await self._own(self._inspect_candidate(candidate))
 
     async def _inspect_candidate(self, candidate):
+        self.owner.require_profile_owner()
         inputs = self._verified_launch(candidate.spec)
         suffix = uuid4().hex
         root = self.candidate_root / suffix
@@ -183,6 +184,7 @@ class ManagedConfigurationLifecycle:
         self._owned_processes.add(process)
         try:
             await process.start(config)
+            self.owner.register_process(process, config)
             result = await self._request(process, 'host.inspect', {})
             return CandidateHealth(configuration_version=candidate.version, grant_epoch=candidate.grant_epoch,
                 registry_hash=result['registry_hash'], generation_open=result['generation_open'],
@@ -213,6 +215,7 @@ class ManagedConfigurationLifecycle:
         return await self._own(self._start_gated(candidate, seal))
 
     async def _start_gated(self, candidate, seal):
+        self.owner.require_profile_owner()
         inputs = self._verified_launch(candidate.spec)
         self._require_seal(seal)
         if inputs is not None:
@@ -223,6 +226,7 @@ class ManagedConfigurationLifecycle:
         # Rebinding first retains a partially started fresh owner for idempotent
         # stop_and_settle if launch, activation or registry inspection fails.
         await process.start(self.owner.config)
+        self.owner.register_process(process, self.owner.config)
         await self.owner.activation.activate()
         registry = await self._request(process, 'host.inspect', {})
         if (not registry['live_store_writer'] or registry['registry_hash'] != candidate.spec.registry_hash

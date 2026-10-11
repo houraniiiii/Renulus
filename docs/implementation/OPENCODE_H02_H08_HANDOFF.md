@@ -17,6 +17,20 @@ installation, push or downstream-ticket expansion is authorized.
 
 ### Saved inline image port and ready connected lanes
 
+The image port is committed as `46276c95`. Its independent Spec and Standards
+reviews both report zero material findings. The connected worker test-only
+`121f3bd8` is integrated as `fd3c7792`: actual production main/SDK/private IPC
+accepts the saved PNG, runs the existing Pillow decoder, pins native User.files
+and the exact raw manifest/body, and publishes one confirmed answer. The separate
+manifest-time public image revocation denies before counting, send or debit and
+settles without an answer. `G:/Renulus/scratch/oc-learning-image-models/receipts/
+final01.xml` has exactly 2 passed, zero failures/errors/skips, 24.022 seconds;
+positive01 is a separate 1-pass run in 16.43 seconds. Revoked01 is a retained
+fixture-order failure: manifest refusal occurs before decoding. Account, limits,
+count and HTTP answer are synthetic; native runtime, decoder, canonical owners
+and owned loopback HTTP are actual. This does not close startup, desktop or
+matching-account acceptance.
+
 The saved-learning Send now accepts frozen inline images with exactly type,
 media_type and canonical base64 data. The bounds match native ingress: four
 images, 8 MiB each and 16 MiB combined. Empty images remain omitted from the
@@ -49,14 +63,54 @@ is a collection syntax error; image-bytes-red.xml has 4 behavior failures plus
 the explicitly named parameter run. Synthetic transport/policy observations do
 not establish actual model image dispatch; Turing owns that connected follow-up.
 
-Ready worker commits, independently inspected receipt XML but not yet ticket
-acceptance: observation-release queue repair 591650d7 (15 affected passes in
-5.891 seconds); process-lifetime Windows profile fence 42e356be (31 passes in
-22.324 seconds); production-main Library/M5 model journey e22866a8 (1 pass in
-33.107 seconds). The latter uses actual FastEmbed/LanceDB and M5 with two
-confirmed model permits; account, limits, count and HTTP inference remain
-synthetic. The fence still needs opt-in startup binding. All H02–H08 acceptance
-and migrated automatic capture remain as recorded below.
+The production-main Library/M5 model journey `e22866a8` is integrated as
+`65c46b40`. The worker receipt has 1 pass in 33.107 seconds; the separate parent
+`model-owner/receipts/library-models-integrated.xml` has 1 pass in 29.15 seconds.
+It uses actual FastEmbed/LanceDB, native registered retrieval and cited M5
+publication with two confirmed permits. Account, limits, count and HTTP
+inference are synthetic.
+
+Observation-release queue repair `591650d7` is integrated as `c8fc2560`. One
+dedicated release allowance protects reserved control slots from release bursts;
+same-record observers share retained publication ownership. Worker affected01 has
+15 passes in 5.891 seconds; separate parent release-capacity-integrated.xml has
+2 passes in 9.81 seconds. The deadline test uses synthetic release latency,
+while the burst test holds an actual child stdin pipe. Spec and Standards reviews
+close the bounded queue defect with zero material findings.
+
+Process-lifetime Windows profile fence `42e356be` is integrated as `2af44cf8`.
+The independently read worker final-green18.xml has 31 passes, zero failures/
+errors/skips, 22.324 seconds; it was not repeated in the parent. Independent Spec
+and Standards reviews report zero material findings. Its issuer-bound predecessor
+proof requires recorded Python/native identities and the whole prior no-breakaway
+job to settle. Main-thread acquisition precedes any app/database/engine mutation.
+Opt-in startup binding remains open; this module alone is not application startup
+or crash-reconciliation acceptance. All H02–H08 acceptance and migrated automatic
+capture remain open as recorded below.
+
+The public native scalar identity prerequisite `9e75a0a5` is integrated as
+`227c5f35`. Independent Standards review is clean; Spec found public readiness
+dictionary mutation could promote an authenticated unknown state. The assigned
+worker reproduced it in mutation-red01.xml (1 failed, 1.956 seconds) and supplied
+`054abaef`: start returns a separate public snapshot. Its mutation-green01 has
+1 pass in 1.332 seconds; mutation-focused01 has 11 dedicated passes in 3.498
+seconds. Repair integration and independent closure are recorded separately.
+
+Parent opted-in Owner/lifecycle registration now checks the actual issuer-bound
+lease and live scope, then registers every authenticated child before native
+activation/inspection at the initial, candidate and replacement start sites.
+Dedicated synthetic Python children acquire the real job fence before create_app;
+pytest/Codex/user processes are never assigned. Parent profile-registration-red04
+has 1 meaningful missing-Owner-port failure; green01 has 1 pass in 29.71 seconds.
+The lifecycle red has 1 failure because the journal retains only the initial
+generation; restart-green has 1 pass in 20.59 seconds with 3 distinct registered
+generations. profile-registration-final.xml has exactly 4 passes, zero failures/
+errors/skips, 50.168 seconds (2 registration cases plus 2 saved-image cases).
+Spec and Standards independently report zero material findings in the 3 held
+registration paths. Initial registration red.xml is missing scratch-parent
+setup; red02/red03 are synthetic-environment home-directory failures, superseded
+by red04. This is actual OS/SDK ownership with synthetic policy; it is not
+startup coordinator, provider or ticket acceptance.
 
 ### Continued configuration integration
 
@@ -101,13 +155,15 @@ failure. Synthetic lifecycle ports qualify these as policy/race evidence;
 independent Standards and Spec reviews report zero material findings in the bounded
 CAS change. Connected activation remains open.
 
-Current dynamic lanes supersede the historical ownership table below: Sartre owns
-the dedicated Windows profile-predecessor fence; Ohm has released the read-receipt
-transport lease and prepares a test-only production Library/M5/model journey;
-Turing has delivered the actual-main positive/Stop test-only commit; Arendt reviews
-the transport release on Standards. Russell/Nietzsche independently review the
-parent's four read-release callsite paths on Spec/Standards. Parent owns polling
-integration and opt-in bootstrap/reopen assembly. No worker may edit another lane.
+Current dynamic lanes supersede the historical ownership table below: Sartre
+delivered the Windows fence and now proposes the bounded startup coordinator;
+Arendt owns the additive public native-process identity prerequisite in
+harness_process.py and its new dedicated test. Turing delivered the actual-main
+saved-image positive/revocation test-only commit. Ohm delivered the connected
+Library/M5 journey. Russell and Nietzsche are available for independent Spec/
+Standards review of the next startup integration. Parent owns shared Owner/
+lifecycle registration and opt-in bootstrap/reopen assembly. No worker may edit
+another lane.
 
 New parent model-owner receipts under
 `G:/Renulus-agent-scratch/oc-h02-h08/model-owner/receipts/` are separate runs:

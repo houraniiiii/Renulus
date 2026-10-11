@@ -14,8 +14,9 @@ from .harness_activation import HarnessProfileActivation
 from .harness_domain import DomainCancellation, DomainCancelled, DomainGrant
 from .harness_library import HarnessLibrary, LibraryAuthority
 from .harness_model_registry import HarnessModelRegistry, ModelRunAuthority
-from .harness_process import ManagedHarnessProcess
+from .harness_process import ManagedHarnessProcess, NativeProcessIdentity
 from .harness_profile import load_harness_profile
+from .harness_profile_owner import ProfileOwnerLease, ProfileOwnerScope
 
 
 _STALE_LEARNING_AUTHORITY_CODES = INELIGIBLE_LINEAGE_CODES | frozenset({
@@ -36,9 +37,11 @@ class _LearningRootSeal:
 
 class HarnessLearningOwner:
     def __init__(self, services, config, *, configuration_id, memory=None, context_filtering=False,
-                 configuration_authority=None, model_registry_factory=None):
+                 configuration_authority=None, model_registry_factory=None, profile_owner=None):
         self.services, self.db, self.config = services, services.db, config
         self.configuration_id, self.memory = configuration_id, memory
+        self.profile_owner = profile_owner
+        self.require_profile_owner()
         if configuration_authority is not None and configuration_authority.db is not self.db:
             raise ApiError('harness_owner_conflict', 'Configuration belongs to another profile.', 409)
         self.configuration_authority = configuration_authority
@@ -106,7 +109,9 @@ class HarnessLearningOwner:
     async def _start(self):
         if self._closing:
             raise ApiError('runtime_stopping', 'The learning runtime is closing.', 503, True)
+        self.require_profile_owner()
         await self.process.start(self.config)
+        self.register_process(self.process, self.config)
         if self._closing:
             raise ApiError('runtime_stopping', 'The learning runtime is closing.', 503, True)
         await self.activation.activate()
@@ -116,6 +121,29 @@ class HarnessLearningOwner:
             {'configuration_id': self.configuration_id}, 'configuration-activation', '1', 5)
         if outcome['outcome'] != 'committed_reference':
             raise ApiError('harness_configuration_unavailable', 'The learning runtime did not activate.', 409)
+
+    def require_profile_owner(self):
+        """Opt-in assembly requires the actual current process's issuer-bound lease."""
+        lease = self.profile_owner
+        if lease is None:
+            return
+        expected = ProfileOwnerScope(self.config.profile_root, self.config.profile_id,
+            self.config.domain_store_id, self.config.store_id)
+        if (type(lease) is not ProfileOwnerLease or lease.scope != expected
+                or self.services.paths.root != expected.root):
+            raise ApiError('harness_owner_conflict', 'The profile process owner does not match.', 409)
+        lease.require_predecessor(lease.predecessor)
+
+    def register_process(self, process, config):
+        """Register live or isolated native identity before activation or commands."""
+        self.require_profile_owner()
+        if self.profile_owner is None:
+            return
+        identity = process.native_identity()
+        if (type(identity) is not NativeProcessIdentity
+                or identity.profile_id != config.profile_id or identity.store_id != config.store_id):
+            raise ApiError('harness_owner_conflict', 'The native process identity does not match.', 409)
+        self.profile_owner.register_native(identity.pid, generation=identity.generation)
 
     async def close(self):
         self._closing = True
