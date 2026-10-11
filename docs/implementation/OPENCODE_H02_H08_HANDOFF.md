@@ -15,6 +15,27 @@ installation, push or downstream-ticket expansion is authorized.
 
 ## Current checkpoint — October 11, native composition
 
+### Dependency readiness
+
+No ticket in this batch is accepted. Positive source/runtime proofs and required
+unmet acceptance remain distinct; matching-account and installed/package gates
+retain their downstream scope. This table supersedes older critical-path notes
+lower in the historical ledger.
+
+| Ticket | Verified preparation/connected scope | Required next closure |
+| --- | --- | --- |
+| H02 | Actual saved native Library retrieval, canonical cited M5 publication, native mapping/reconciliation and store activation | Connected desktop retrieval/citation opening and remaining exposure/failure acceptance |
+| H03 | Actual production-main text/tool/image loopback dispatch, strict final deployment proof, canonical permits and selected provider identity | Full production admission coverage and required evidence; matching-account tool/image gate remains separate before cutover |
+| H04 | Canonical authority/API, actual candidate/live lifecycle, managed initial/reopen and ordinary settlement; focused startup repair reviewed | Hidden Settings stage/activate/reopen and required failure/crash reconciliation |
+| H05 | Persistent lineage, legacy real hooks, four recapture regressions and actual Mem0/Qdrant/FastEmbed correction/reopen preparation | Separately admitted native memory-extraction inference and integrated capture/settlement acceptance after H04; automatic migrated capture remains OFF |
+| H06 | Actual supported SDK import/export/remove capability with zero inference | Existing conversation migration, one transcript owner, native purge and canonical deletion/replay integration after H05 |
+| H07 | Actual native child/permission snapshot and narrowed-epoch seam preparation | Bounded delegated evidence review, inherited authority and actual family cancellation/settlement after H05 |
+| H08 | Existing instructions/skills and pinned native hooks are source inputs | Versioned instruction/skill activation and connected task use after accepted H04/H06 |
+
+The current independent lanes are the fixed hidden Settings fixture, focused
+startup review, and complementary source-only native/Python memory-extraction
+port proposals. Parent retains shared integration/commit authority.
+
 ### Managed startup assembly and retained coordinator review
 
 Coordinator worker `a30efc5ac1dc38971eed07dbd596645172004e66` is integrated
@@ -38,9 +59,20 @@ use actual dedicated Windows issuers/Authority/Services and synthetic native
 ports. Independent focused Standards and Spec reviews close that original
 drain P2. Spec found a separate error-classification P2: production runtime
 cleanup signals Services stopping, and the post-cleanup freshness check can
-replace the initiating startup failure with runtime_stopping. Sartre owns a
-bounded public red/repair in the same coordinator/test paths. Startup failure
-acceptance is held for this closure; the unchanged44-case cohort was not repeated.
+replace the initiating startup failure with runtime_stopping. Sartre's coherent
+worker repair `e7e6ed0c` is integrated as `9efb34d5`. After successful runtime
+cleanup, its local freshness comparison permits cleanup's own Services seal
+while retaining issuer/scope, owner binding, connection, launch, canonical
+configuration/pointers, grant epoch and pins. Changed evidence still takes
+precedence. Explicit public close and new/repeated starts retain runtime_stopping;
+no admission or publication follows the post-cleanup comparison. Independently
+read `library/bootstrap-error/red01.xml` has1 failure in5.960s, green01 has1
+pass in6.674s, and affected-green02 has21 passes,41 deselected, zero failures/
+errors/skips,119.235s. Nine new cases and twelve affected failure/close cases
+use actual issuer/Authority/Services with synthetic runtime cleanup delegating
+to real Services.finish_shutdown. Focused independent Standards and Spec reviews
+each report zero material residuals and close the cleanup-classification P2; the
+unchanged44-case cohort was not repeated.
 The independent positive initial/reopen journey below covers the unaffected
 no-factory happy path.
 
@@ -128,9 +160,11 @@ or pinned runs. The original connection API observes the same manager.
 
 The sole synthetic external boundary is account catalogue HTTP:1 initial GET,
 0 on reopen. No model registry factory, deployment evidence, counter, prompt,
-inference, engine instance, uvicorn socket or desktop is exercised. This positive
-path does not close the independently open startup-failure classification P2 or
-any H02–H08 ticket acceptance. The exact source point includes published entry
+inference, engine instance, uvicorn socket or desktop is exercised. Independent
+Standards and Spec test-only reviews each report zero material findings. This
+positive path establishes no startup failure-path or H02–H08 ticket acceptance;
+the separate bounded classification repair is recorded above. The exact source
+point includes published entry
 `75128590`, adapter `1e154ad2`, close `00fa2b4b`, join `9139b86e` and manager
 guard `68ae161c`; the subsequent failure repair was not used.
 
