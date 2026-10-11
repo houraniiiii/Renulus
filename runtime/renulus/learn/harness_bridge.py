@@ -58,7 +58,7 @@ class HarnessLearningBridge:
     def __init__(self, repository, transport, *, active_manifest, configuration_id,
                  publish_answer_in=None, check_dependencies_in=None, check_run_dependencies_in=None,
                  eligible_history_in=None, context_filtering=False, check_new_run_in=None,
-                 admit_run_in=None, poll_interval=0.05):
+                 admit_run_in=None, settle_run=None, cancel_run=None, poll_interval=0.05):
         self.repo, self.db, self.transport = repository, repository.db, transport
         self.active_manifest, self.configuration_id = active_manifest, configuration_id
         self.publish_answer_in = publish_answer_in
@@ -67,6 +67,8 @@ class HarnessLearningBridge:
         self.eligible_history_in = eligible_history_in
         self.check_new_run_in = check_new_run_in
         self.admit_run_in = admit_run_in
+        self.settle_run = settle_run
+        self.cancel_run = cancel_run
         # Trusted assembly asserts that the native per-model hook is installed.
         self.context_filtering = context_filtering
         self.poll_interval = poll_interval
@@ -352,6 +354,7 @@ class HarnessLearningBridge:
             self.check(run_id)
             self._checkpoint(entry)
             yield event('started', {'thread_id': entry['id'], 'scope': 'study'})
+            entry['harness_native_started'] = True
             runtime = await self._session(entry)
             entry['harness_runtime'] = runtime
             with self.db.transaction() as conn:
@@ -435,6 +438,7 @@ class HarnessLearningBridge:
             await self.cancel(run_id)
             raise
         except Exception as error:
+            cancelled = entry['run'].cancelled.is_set()
             if isinstance(error, ApiError) and error.code in {'harness_execution_failed', 'harness_execution_interrupted'}:
                 with self.db.transaction() as conn:
                     self.check(run_id, conn=conn)
@@ -442,12 +446,14 @@ class HarnessLearningBridge:
                         ('cancelled' if error.code == 'harness_execution_interrupted' else 'failed', run_id))
             elif not isinstance(error, ApiError) or error.code != 'harness_command_uncertain':
                 await self.cancel(run_id)
-            if entry['run'].cancelled.is_set():
+            if cancelled:
                 yield event('cancelled')
             else:
                 yield event('error', {'code': error.code if isinstance(error, ApiError) else 'harness_answer_failed',
                     'message': error.message if isinstance(error, ApiError) else 'The native explanation could not finish.', 'retryable': True})
         finally:
+            if self.settle_run is not None:
+                await self.settle_run(entry)
             self.repo.learn.active.pop(run_id, None)
             self._consumed.pop(run_id, None)
 
@@ -482,6 +488,8 @@ class HarnessLearningBridge:
 
     async def cancel(self, run_id):
         entry = self.repo.streaming.active.get(run_id)
+        if entry is not None and self.cancel_run is not None:
+            self.cancel_run(entry)
         if entry is None or 'harness_runtime' not in entry:
             return {'state': 'not-submitted'}
         if 'harness_cancel_task' not in entry:

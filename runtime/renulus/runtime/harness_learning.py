@@ -2,6 +2,7 @@
 """Canonical learning authority composed with the owned native transcript."""
 import asyncio
 import json
+import math
 
 from renulus.contracts import ApiError, ContextScope, Scope
 from renulus.design_c_contracts import Dependency, EligibleInput, Identity, canonical_digest
@@ -12,7 +13,7 @@ from renulus.storage import utc_now
 from .harness_activation import HarnessProfileActivation
 from .harness_domain import DomainCancellation, DomainCancelled, DomainGrant
 from .harness_library import HarnessLibrary, LibraryAuthority
-from .harness_model_registry import ModelRunAuthority
+from .harness_model_registry import HarnessModelRegistry, ModelRunAuthority
 from .harness_process import ManagedHarnessProcess
 from .harness_profile import load_harness_profile
 
@@ -35,7 +36,7 @@ class _LearningRootSeal:
 
 class HarnessLearningOwner:
     def __init__(self, services, config, *, configuration_id, memory=None, context_filtering=False,
-                 configuration_authority=None):
+                 configuration_authority=None, model_registry_factory=None):
         self.services, self.db, self.config = services, services.db, config
         self.configuration_id, self.memory = configuration_id, memory
         if configuration_authority is not None and configuration_authority.db is not self.db:
@@ -44,18 +45,39 @@ class HarnessLearningOwner:
         self.configuration_spec = (configuration_authority.configuration(configuration_id)
             if configuration_authority is not None else None)
         self._root_seal = None
+        self._closing = False
         self.repo = services.get('conversations')
         self.library = services.registry.get('harness_library') or HarnessLibrary(services.get('knowledge'))
         self.process = ManagedHarnessProcess(domain_authority=self.authorize)
         self.activation = HarnessProfileActivation(self.db, self.process, config)
         self.bindings = {}
         self.model_bindings = {}
+        self._settlements = {}
+        self.model_registry_factory = model_registry_factory
+        self.model_registry = self._make_model_registry()
         self.bridge = HarnessLearningBridge(self.repo, self.process,
             active_manifest=self.manifest, configuration_id=configuration_id,
             publish_answer_in=self.publish_answer_in, check_run_dependencies_in=self.check_run_dependencies_in,
             eligible_history_in=self.eligible_history_in, context_filtering=context_filtering,
-            check_new_run_in=self.check_new_run_in, admit_run_in=self.admit_run_in)
+            check_new_run_in=self.check_new_run_in, admit_run_in=self.admit_run_in,
+            settle_run=self.settle_run if configuration_authority is not None else None,
+            cancel_run=self.cancel_run)
         self._starting = None
+        self._close_task = None
+
+    def _make_model_registry(self, *, previous=None):
+        if self.model_registry_factory is None:
+            return None
+        if self.configuration_authority is None or not callable(self.model_registry_factory):
+            raise ApiError('harness_owner_conflict', 'A model registry requires the canonical authority.', 409)
+        registry = self.model_registry_factory(self.resolve_model_run)
+        if (not isinstance(registry, HarnessModelRegistry)
+                or registry.authority is not self.configuration_authority or registry is previous):
+            raise ApiError('harness_owner_conflict', 'The model registry belongs to another authority.', 409)
+        status = registry.status()
+        if status.state != 'open' or status.runs or status.owned or status.retained_bytes:
+            raise ApiError('harness_owner_conflict', 'Each generation requires a fresh model registry.', 409)
+        return registry
 
     def manifest(self):
         return load_harness_profile(self.config.profile_root, profile_id=self.config.profile_id,
@@ -75,27 +97,128 @@ class HarnessLearningOwner:
         self.services.on_shutdown_dependencies.append(self.close)
 
     async def start(self):
+        if self._closing:
+            raise ApiError('runtime_stopping', 'The learning runtime is closing.', 503, True)
         if self._starting is None:
             self._starting = asyncio.create_task(self._start(), name='renulus-learning-harness-start')
         return await asyncio.shield(self._starting)
 
     async def _start(self):
+        if self._closing:
+            raise ApiError('runtime_stopping', 'The learning runtime is closing.', 503, True)
         await self.process.start(self.config)
+        if self._closing:
+            raise ApiError('runtime_stopping', 'The learning runtime is closing.', 503, True)
         await self.activation.activate()
+        if self._closing:
+            raise ApiError('runtime_stopping', 'The learning runtime is closing.', 503, True)
         outcome = await self.process.request('host.activate',
             {'configuration_id': self.configuration_id}, 'configuration-activation', '1', 5)
         if outcome['outcome'] != 'committed_reference':
             raise ApiError('harness_configuration_unavailable', 'The learning runtime did not activate.', 409)
 
     async def close(self):
+        self._closing = True
+        if self._close_task is None:
+            self._close_task = asyncio.create_task(self._close(), name='renulus-learning-harness-close')
+        await asyncio.shield(self._close_task)
+
+    async def _close(self):
+        if self._starting is not None:
+            await asyncio.gather(asyncio.shield(self._starting), return_exceptions=True)
         for entry in tuple(self.repo.streaming.active.values()):
             if entry.get('harness_revisions') is not None:
                 entry['run'].cancelled.set()
+                self.cancel_run(entry)
+                await self.settle_run(entry, timeout=0)
+        if self.model_registry is not None:
+            await self.model_registry.close(0)
         while (await self.process.close(1))['state'] != 'closed':
             if (await self.process.settlement(1))['state'] == 'settled':
                 break
+        if self._settlements:
+            await asyncio.gather(*(asyncio.shield(task) for task in tuple(self._settlements.values())))
+        if self.model_registry is not None:
+            while (await self.model_registry.settlement(1)).owned:
+                pass
+
+    async def settle_run(self, entry, *, timeout=5):
+        """Bounded observation; retained cleanup owns the canonical pin until proof."""
+        if type(timeout) not in (int, float) or not math.isfinite(timeout) or not 0 <= timeout <= 300:
+            raise ApiError('harness_settlement_timeout', 'Use a bounded settlement observation.', 422)
+        if self.configuration_authority is None:
+            return {'state': 'settled'}
+        run_id = entry['run'].id
+        if entry.get('harness_settled'):
+            return {'state': 'settled'}
+        task = self._settlements.get(run_id)
+        if task is None:
+            task = asyncio.create_task(self._settle_run(entry, self.process, self.model_registry),
+                name='renulus-learning-settlement-' + run_id)
+            self._settlements[run_id] = task
+            task.add_done_callback(lambda finished: self._settlement_finished(run_id, finished))
+        done, _ = await asyncio.wait({task}, timeout=timeout)
+        if not done:
+            return {'state': 'pending'}
+        if task.cancelled():
+            return {'state': 'blocked', 'code': 'harness_settlement_cancelled'}
+        error = task.exception()
+        if error is not None:
+            return {'state': 'blocked', 'code': error.code if isinstance(error, ApiError)
+                else 'harness_settlement_failed'}
+        return {'state': 'settled'}
+
+    def _settlement_finished(self, run_id, task):
+        if not task.cancelled():
+            error = task.exception()
+            if error is None and self._settlements.get(run_id) is task:
+                self._settlements.pop(run_id)
+            # Failed cleanup remains owned; retrieving its cause avoids losing it.
+
+    async def _settle_run(self, entry, process, registry):
+        run_id = entry['run'].id
+        runtime = entry.get('harness_runtime')
+        binding = self.bindings.get(run_id)
+        while True:
+            native_settled = not entry.get('harness_native_started')
+            if not native_settled and (await process.settlement(0))['state'] == 'settled':
+                native_settled = True
+            if not native_settled and runtime is not None:
+                response = await process.request('session.get', {'session_id': runtime.session_id},
+                    run_id, '1', 1)
+                observed = response.get('result', {})
+                native_settled = (response.get('outcome') == 'committed_reference'
+                    and observed.get('session', {}).get('id') == runtime.session_id
+                    and observed.get('execution') == 'settled')
+            registry_status = registry.status(binding) if registry is not None and binding is not None else None
+            if (native_settled and process.domain_status(operation_id=run_id)['active'] == 0
+                    and (registry_status is None or registry_status.owned == 0)):
+                self.configuration_authority.settle_run(run_id)
+                if registry_status is not None and registry_status.runs:
+                    registry.release(binding)
+                self.bindings.pop(run_id, None)
+                self.model_bindings.pop(run_id, None)
+                entry['harness_settled'] = True
+                return
+            await asyncio.sleep(.02)
+
+    def cancel_run(self, entry):
+        """Seal publication immediately without cancelling owned workers."""
+        entry['run'].cancelled.set()
+        run_id = entry['run'].id
+        model = self.model_bindings.get(run_id)
+        if model is not None:
+            model.cancellation.cancel()
+        binding = self.bindings.get(run_id)
+        if self.model_registry is not None and binding is not None and self.model_registry.status(binding).runs:
+            self.model_registry.cancel(binding)
+        cancel_domain = getattr(self.process, 'cancel_domain', None)
+        if cancel_domain is not None:
+            cancel_domain(run_id)
 
     def check_new_run_in(self, conn):
+        if self._closing:
+            raise ApiError('runtime_stopping', 'The learning runtime is closing.', 503, True)
         if self._root_seal is not None:
             raise ApiError('harness_configuration_busy',
                 'Configuration is changing. New learning runs are sealed.', 409, True)
@@ -137,6 +260,12 @@ class HarnessLearningOwner:
     def replace_process(self, process, *, configuration_id, seal):
         """Lifecycle owner calls only after observing actual old settlement."""
         self.require_root_seal(seal)
+        if self._closing:
+            raise ApiError('runtime_stopping', 'The learning runtime is closing.', 503, True)
+        if self._settlements or (self.model_registry is not None and (
+                self.model_registry.status().owned or self.model_registry.status().runs)):
+            raise ApiError('harness_settlement_pending', 'The previous model owner is still retained.', 409, True)
+        registry = self._make_model_registry(previous=self.model_registry)
         self.process = process
         self.configuration_id = self.bridge.configuration_id = configuration_id
         if self.configuration_authority is not None:
@@ -144,6 +273,7 @@ class HarnessLearningOwner:
         self.bridge.transport = process
         self.bindings.clear()
         self.model_bindings.clear()
+        self.model_registry = registry
         self.activation = HarnessProfileActivation(self.db, process, self.config)
         self._starting = None
 
@@ -195,6 +325,10 @@ class HarnessLearningOwner:
             raise
 
     async def authorize(self, request):
+        if request.command in {'model.prepare', 'model.manifest', 'model.dispatch'}:
+            if self.model_registry is None:
+                return None
+            return await self.model_registry.authorize(request)
         if request.command not in {'learning.admit_input', 'learning.authority',
                 'learning.check', 'learning.context', 'learning.validate_images', 'library.retrieve', 'library.citation'}:
             return None
@@ -388,6 +522,11 @@ class HarnessLearningOwner:
         if self.configuration_authority is not None:
             self.configuration_authority.require_current(answer.run_id,
                 required_capabilities=entry['run'].harness_capabilities, conn=conn)
+        if self.model_registry is not None:
+            binding = self.bindings.get(answer.run_id)
+            if binding is None:
+                raise ApiError('harness_callback_identity', 'The publication has no admitted native input.', 409)
+            self.model_registry.require_publication(binding, conn=conn)
         passages = [{'id': citation['passage_id'], 'document_id': citation['document_id'],
             'document_revision': citation['revision_id']} for citation in answer.citations]
         self.library.validate_publication(passages, self.authority(entry), conn=conn)

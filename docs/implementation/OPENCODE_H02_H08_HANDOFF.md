@@ -34,6 +34,78 @@ All H02–H08 acceptance remains open. Newer committed integration work is:
 | `9b3b666d` | `7db37220` | Bounded trusted root model registry |
 | `c008232f` | `5a4d4c69` | Operation-scoped actual callback/pipe publication ownership |
 | `a33ba325` | `c38cedca` | Atomic configuration pointer/epoch checks before stage and reopen |
+| `9c8e7cce` | Parent | Saved configuration admission and trusted native model resolver |
+| `e543b9ba` | `3908b0a5` | Immutable launch-bound candidate/live restart and role staging |
+| `7fc84de9` | `2cea62b1` | Guard final open against requested/activating pointer races |
+
+Launch-bound integration has 80 affected passes in 9.56s in worker
+`providers/configuration-launch/receipts/final07.xml`, plus a separate actual idle
+SDK/IPC restart pass in 19.44s in `native08.xml`, with zero model calls. Roles
+are included in launch hashes. The repaired five-path launch integration has
+independent Spec and Standards reviews with zero material findings. These
+observations do not bootstrap account
+evidence or prove production inference.
+Final guarded open is now committed: controller passes exact requested and
+activating version within the canonical admission CAS. Worker
+`providers/controller-final-cas/receipts/red01.xml` reproduces stale opening;
+`green02.xml` has 1 pass in 1.49s and `verification03.xml` has 5 focused passes
+in 2.03s. The first green attempt is a retained fixture mismatch (expected
+retryable where the published conflict is nonretryable), not a production
+failure. Synthetic lifecycle ports qualify these as policy/race evidence;
+independent bounded review and connected activation remain open.
+
+Current dynamic lanes supersede the historical ownership table below: Ohm owns
+terminal read-observation release in process/IPC, Sartre investigates the
+profile predecessor fence, Arendt owns guarded final configuration open,
+Turing owns the test-only actual-main saved model journey, and Russell/Nietzsche
+independently review the parent's model owner composition on Spec/Standards.
+Parent owns LearningOwner factory, cancellation, same-connection publication
+and native/Domain/registry settlement. No worker may edit another active lane.
+
+New parent model-owner receipts under
+`G:/Renulus-agent-scratch/oc-h02-h08/model-owner/receipts/` are separate runs:
+
+| Receipt | Exact result | Scope |
+| --- | --- | --- |
+| settlement-red.xml / settlement-green.xml | 1 failed, 5.67s / 1 passed, 2 deselected, 6.33s | Missing retained settlement seam, then native/callback pin proof |
+| factory-base.xml | 3 passed, 11.86s | Existing admitted model/current/native settlement contracts |
+| factory-counter.xml | 1 passed, 9.12s | Actual registry with synthetic held count; cancelled observer and Stop retain worker until native/Domain/model settlement |
+| factory-generation-red.xml | 1 failed, 5.98s | Reused registry accepted across process generations |
+| factory-final.xml | 5 passed, 21.10s | Factory/delegation/retained settlement and repaired fresh-generation refusal |
+| owner-close-red.xml / owner-close-green.xml | 1 failed, 5.93s / 1 passed, 5.15s | Saved root accepted during held shutdown, then synchronous root sealing |
+| cancel-first-red.xml / cancel-first-green.xml | 1 failed, 5.78s / 1 passed, 5.69s | Stop before first model callback could mint fresh authority; root cancellation now seals it |
+| paused-close-red.xml / paused-close-green.xml | 1 failed, 5.53s / 1 passed, 4.85s | Shutdown left a paused admitted run pinned; close now initiates retained per-run cleanup |
+| cleanup-terminal-red.xml / cleanup-terminal-green.xml | 1 failed, 5.68s / 1 passed, 5.01s | Completed answer followed by a second error on cleanup failure; retained blocked lifecycle status preserves one answer terminal |
+| queued-start-red.xml / queued-start-green.xml | 1 failed, 5.34s / 1 passed, 4.90s | Startup could spawn after close; retained shared close joins startup and queued startup checks shutdown |
+| composition-final.xml | 17 passed, 59.14s | All ten owner contracts plus three admission and four current/lineage fault contracts |
+
+The actual-main worker's constructor red is retained at
+`G:/Renulus/scratch/oc-learning-models/receipts/constructor-red01.xml`
+(1 failed, 10.85s): missing factory keyword before account discovery, subprocess,
+counter or HTTP. It proves the public constructor gap, not an inference failure.
+The composed positive native journey remains its next prerequisite. Parent
+counter tests use the actual registry/authority/provider owners but synthetic
+account/count/native observation; no production tokenizer or route limits are
+inferred. Successful settlement must prove native ownership, exact-operation
+Domain publication/finalizers and bound registry `owned == 0`, then settle the
+canonical run before registry release. Failed cleanup retains its owner.
+Independent review reported three Spec findings and one Standards finding in
+the bounded composition; each has the public red/green reproduction above.
+Focused independent Spec and Standards re-reviews close all four reported
+findings by source, with identical three-file hashes. The 17-case affected run
+passes separately; it does not prove actual-main inference. A blocked cleanup reports only its
+code through settlement observation and retains the original cause for lifecycle
+close, without another answer terminal or false canonical settlement.
+
+Terminal read receipt release is consumed as `28255634` from worker `cfd27d22`.
+Only observed definite terminal reads may retire; pending, unobserved, uncertain
+or write receipts remain owned. Authenticated native release is deferred until
+active command and pipe publications settle, and cached replay coalesces during
+held writes. Worker evidence is 59 affected Python passes in 17.02s, 12 dedicated
+passes in 7.09s, five Node contracts and TypeScript exit 0. These are separate
+runs with real private pipes and synthetic runtime effects. Independent review
+and parent Bridge/Owner/lifecycle polling call sites remain pending.
+Migrated automatic capture stays disabled; all H02–H08 acceptance stays open.
 
 The supplied-connection `begin_run_in` validates canonical active transaction,
 healthy/open exact expected configuration and role/capability scope before its
