@@ -1,9 +1,14 @@
 # Python-owned final subscription HTTP gateway
 
-2026-10-11. Providers lane, branch `codex/oc-harness-gateway`, assigned checkout
-`C:/Users/karol/.codex/worktrees/oc-providers/repo`. Base
-`9a1893eb7ddb0bc7aa0c492ee375e83a285d82fd` already contains provider preparation
-`07da2a3e0d6c7b6cec77212fe1d82bb61322d74f`. This change owns only
+2026-10-11. Providers lane, branch `codex/oc-harness-gateway-h04`, assigned
+checkout `C:/Users/karol/.codex/worktrees/oc-providers/repo`. Final prerequisite
+is parent `8fed6092fe282b8475654e93ea2b28a37a45789f`. Original implementation
+`428c818feb2343cf9a21765887cc7da209e9a413` was verified on
+`9a1893eb7ddb0bc7aa0c492ee375e83a285d82fd`, which contains provider preparation
+`07da2a3e0d6c7b6cec77212fe1d82bb61322d74f`. It is carried forward without
+rewriting that published commit as `8fb793737d00a8576ccebd51c2c6d21aa99732cd`.
+The final owned patch binds the newer H04 continuation and permit-purpose gates.
+This change owns only
 `runtime/renulus/runtime/harness_gateway.py`,
 `tests/runtime/test_harness_gateway.py` and this evidence note.
 
@@ -68,6 +73,17 @@ model terminal success, tool success, account modality or learning publication.
 The parent owns those observations and terminal settlement. Other request kinds
 are subject to the existing H04 allowlist and purpose policy. There is no retry
 parameter, fallback or same-step resend.
+
+The final gateway requires the actual parent H04 public interfaces
+`admit(..., continuation_of=...)` and
+`require_current(..., permit_id=..., conn=...)`. It forwards the explicit
+continuation reference at admission and binds every current check after
+reservation to the owned permit. This preserves the permit's dispatch purpose
+even when a run includes auxiliary requests. The owned permit remains bound
+through idle HTTP, response buffering and finalization, then is cleared when
+dispatch ownership ends. There is no fallback to the earlier H04 API. The parent
+publication transaction must recheck the same permit through `require_current`
+with its supplied canonical connection, after native terminal success.
 
 Each gateway owns its injected transport through finalization. Production
 composition should explicitly supply `httpx.AsyncHTTPTransport(retries=0)`;
@@ -165,6 +181,8 @@ All receipts and synthetic profiles are under
 | c10 | c10-red.xml: 1 failed | c10-green.xml: 1 passed | Parent guard diagnostics cannot escape |
 | c11 | c11-red.xml: 2 failed | c11-green.xml: 5 passed | Escaped/split credential echoes refused; native roundtrips retained |
 | c12 | c12-red-02.xml: 2 failed | c12-green.xml: 9 passed | 401 invalidation independent of untrusted body decoding/bounds |
+| c13 | c13-red.xml: 1 failed | c13-green.xml: 1 passed | Explicit continuation retains summary purpose after a primary in the same run |
+| c14 | c14-red.xml: 2 failed | c14-green.xml: 2 passed | Auxiliary permit purpose revocation blocks both late response and idle HTTP |
 
 `c12-red.xml` preserves the initial compressed fixture that HTTPX decoded while
 constructing a mock response. `c12-red-02.xml` uses an actual AsyncByteStream
@@ -209,7 +227,29 @@ call, account credential, acquisition or provider charge was used.
 
 ## Final verification and remaining composition
 
-From the assigned checkout, managed Python ran:
+The final H04-bound gateway was verified on parent prerequisite `8fed6092`:
+
+```powershell
+& 'C:/Renulus/dev/python/Scripts/python.exe' -m pytest tests/runtime/test_harness_gateway.py `
+  --basetemp=C:/Renulus/scratch/oc-h02-h08/providers/gateway/final-h04 `
+  --junitxml=C:/Renulus/scratch/oc-h02-h08/providers/gateway/receipts/final-h04.xml `
+  --tb=line -q
+```
+
+Result: **91 passed, zero skipped**, in 24.57 seconds. This includes both pinned
+native tool/image local-HTTP roundtrips and the three new H04 behaviors. Exact
+new test IDs are
+`test_explicit_continuation_preserves_its_permit_purpose_in_a_mixed_run` and
+`test_dispatched_permit_purpose_is_rechecked_after_or_during_http[response]` /
+`[idle]`. Each red/green command selected its corresponding test function from
+`tests/runtime/test_harness_gateway.py`, used `--tb=line -q`, wrote its
+`receipts/c13-red.xml`, `c13-green.xml`, `c14-red.xml` or `c14-green.xml`, and
+used the corresponding `gateway/c13-red`, `c13-green`, `c14-red` or `c14-green`
+basetemp directory. No broad suite was rerun for this H04 update.
+
+The original implementation on `9a1893eb` ran the following commands. Those
+historical receipts are retained and do not establish a broad-suite result for
+the newer parent prerequisite:
 
 ```powershell
 & 'C:/Renulus/dev/python/Scripts/python.exe' -m pytest tests/runtime/test_harness_gateway.py `
@@ -230,7 +270,7 @@ $env:RENULUS_LIBRARY_HELPERS='C:/Renulus/dev/helper-assets'
   --tb=line -q
 ```
 
-The final owned suite passed **88 cases, zero skipped**, in 27.01 seconds. This
+The original owned suite passed **88 cases, zero skipped**, in 27.01 seconds. This
 includes both pinned native local-HTTP tool/image roundtrips. The full runtime
 sweep collected 488 cases: **454 passed, zero failures, 34 setup errors**, in
 370.43 seconds. All 88 gateway cases and all four retained provider discrepancy
@@ -247,8 +287,8 @@ check passed. No manager/configuration/Services/IPC/host, database/migration,
 dependency lock or ticket/status edits were made. The work is committed locally;
 no push is part of this handoff.
 
-This checkout does not assemble the parent's later `7646fb5a` continuation or
-the actual Library LearningOwner composition. Parent-owned Services/host/IPC must bind
+This checkout consumes the parent's committed `8fed6092` prerequisite without
+authoring any shared changes. Parent-owned Services/host/IPC must bind
 this gateway into authenticated `model.dispatch`, derive the run/purpose/current
 route from the trusted native binding, calculate final-body input tokens, and
 own native terminal success, publication and cancellation settlement. The
@@ -261,3 +301,134 @@ expands the SSE bytes; parent IPC capacity must include that expansion and
 framing metadata. Account access, image interpretation, complete saved
 production composition and Windows package validation remain downstream gates.
 H03 and H02-H08 are not claimed accepted by this change.
+
+## Exact proposed Node boundary
+
+This is an integration contract proposal, not implemented Node code. It belongs
+in a dedicated module and dedicated tests. Parent owns the actual host,
+learning-host, server, IPC command registration, current role selection, native
+context hook and terminal/publication guard. No entry-point cutover is included.
+The actual public `DomainClient.request` and pinned
+`createSubscriptionAdapter` dispatch Effect are the underlying seams.
+
+```typescript
+interface SerializedSubscriptionHttp {
+  readonly method: "POST";
+  readonly url: string;
+  readonly headers: Readonly<Record<string, string>>;
+  readonly body_base64: string;
+}
+
+interface TrustedGatewayPreparation {
+  readonly dispatch_id: string;
+  readonly binding: DomainBinding;
+  readonly role: {
+    readonly version: string;
+    readonly purpose: string;
+    readonly model_id: string;
+    readonly output_tokens: number;
+    readonly dispatch_limit: number;
+  };
+  readonly request_kind: "primary" | "tool-continuation";
+  readonly continuation_of?: string;
+  readonly route: SubscriptionRoute;
+  readonly native_capabilities: Model.Capabilities;
+  readonly limits: {
+    readonly input_tokens: number;
+    readonly output_tokens: number;
+    readonly window_tokens: number;
+  };
+  readonly required_capabilities: readonly string[];
+  readonly bounds: {
+    readonly max_request_bytes: number;
+    readonly max_response_bytes: number;
+    readonly max_frame_bytes: number;
+  };
+}
+
+async function createGatewayAdapter(options: {
+  readonly domain: DomainClient;
+  readonly beforePrepare: (binding: DomainBinding) =>
+    Effect.Effect<TrustedGatewayPreparation, AIError>;
+  readonly validateImages: (binding: DomainBinding, images: readonly InlineImage[]) =>
+    Effect.Effect<void, AIError>;
+}): Promise<{
+  readonly client: LLMClientShape;
+  prepare(
+    trustedNativeBinding: DomainBinding,
+    request: LLMRequest,
+    settings?: StreamOptions,
+  ): Effect.Effect<LLMRequest, AIError>;
+  receipt(request: LLMRequest): Readonly<{
+    dispatch_id: string;
+    permit_id: string;
+  }> | undefined;
+  close(): Promise<void>;
+}>;
+```
+
+`DomainBinding` has exactly `operation_id`, `attempt_id`, `session_id`, `input_id`
+and `cancellation_id`. The role fields above project the existing H04 binding;
+the module does not resolve another role or use `request.model` as authority.
+`beforePrepare` runs for every primary/continuation before subscription-adapter
+preparation. Parent derives its result from the owning binding and its current
+configuration/run. Preparation creates no durable transport permit.
+
+Parent's post-preparation native-context hook invokes
+`adapter.prepare(binding, finalContextRequest, prepared.options)` and admits the
+returned request identity. The adapter updates the native `LLMRequest.model` and
+explicit output ceiling to the trusted role route, retains per-request dispatch
+metadata and delegates through a per-request `createSubscriptionAdapter`. The
+composition client accepts only registered request identities, once. There is
+no global static route override or default network executor. Parent must also
+apply trusted native model/capabilities before any upstream capability filter
+that could remove image inputs; a post-preparation hook cannot restore discarded
+content.
+
+The proposed Domain payload wraps the exact Python wire envelope:
+
+```typescript
+domain.request(trustedNativeBinding, "model.dispatch", {
+  dispatch_id: trustedPreparation.dispatch_id,
+  serialized_request: {
+    method: request.method,
+    url: request.url,
+    headers: request.headers,
+    body_base64: Buffer.from(request.body.body).toString("base64"),
+  },
+});
+```
+
+`dispatch_id` is a parent-created opaque correlation key registered against the
+full authenticated binding and one trusted run/step preparation. It grants no
+authority by itself. The Python command handler accepts only those two payload
+keys, resolves the registered record and revalidates current authority. It never
+accepts run, step, purpose, role, route, limits, required capabilities, token
+proof or continuation authority from model arguments or echoed metadata.
+Stale, unknown, mismatched, repeated and overlapping preparations fail closed.
+For a continuation the registered record identifies the explicit previous
+same-run transport permit and a fresh step.
+
+The handler accounts for the exact final serialized body after all native
+transformations, including tool definitions/results and images, then supplies
+its trusted `input_tokens` to the Python dispatch signature above. Node token
+numbers are not accepted as proof. The gateway independently checks endpoint,
+protocol, model, output ceiling and body identity before its single H04 admit
+and final dispatch mark.
+
+The terminal Domain outcome must be `committed_reference` with exactly the
+gateway's safe `status`, `headers`, `body_base64` and `permit_id` result. The
+proposed module's `bufferedHttp` wrapper validates the outcome, canonical base64,
+bounds, safe headers and permit identity before calling actual
+`HttpClientResponse.fromWeb`. Accepted-pending, errors, cancellation, disconnect,
+uncertain acknowledgement and malformed results cannot become native responses
+or publication receipts. Custom HTTP/WS, fallback, unbound calls and compaction
+remain refused. Cancellation forwards through the Domain request and retains
+ownership until settlement. The parent must configure IPC frame capacity for
+base64 expansion plus identity/framing overhead.
+
+`receipt(request)` exposes the verified transport permit for that bound request.
+It is not terminal model success. Parent publication still requires its strict
+native terminal check and permit-bound current H04/domain checks inside the
+canonical publication transaction. The strict native terminal blocker reported
+at parent `8fed6092` is parent-owned and is not claimed repaired by this lane.

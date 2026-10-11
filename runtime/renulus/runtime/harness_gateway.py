@@ -109,6 +109,7 @@ class HarnessGateway:
         self.cancellation, self.check_current = cancellation, check_current
         self.http_transport, self.bounds = http_transport, bounds
         self._busy = False
+        self._active_permit_id: str | None = None
 
     def _current(self, run_id, route, connection, required):
         self.cancellation.check_current()
@@ -120,7 +121,7 @@ class HarnessGateway:
             _deny("gateway_authority_unbound")
         self.manager.require_harness_route(route)
         return self.authority.require_current(run_id, connection=connection,
-                                               required_capabilities=required)
+            required_capabilities=required, permit_id=self._active_permit_id)
 
     def _envelope(self, route, request):
         if (not isinstance(request, dict)
@@ -243,6 +244,7 @@ class HarnessGateway:
                 raise stopped from None
             return result
         finally:
+            self._active_permit_id = None
             self._busy = False
 
     async def _dispatch(self, run_id: str, step_id: str, route: SubscriptionRoute,
@@ -272,7 +274,9 @@ class HarnessGateway:
         digest = hashlib.sha256(body).hexdigest()
         permit = self.authority.admit(run_id, step_id, payload_hash=digest,
             request_kind=request_kind, connection=connection, limits=limits,
-            input_tokens=input_tokens, required_capabilities=required_capabilities)
+            input_tokens=input_tokens, required_capabilities=required_capabilities,
+            continuation_of=continuation_of)
+        self._active_permit_id = permit["permit_id"]
         if output > permit["output_tokens"]:
             self.authority.complete(permit["permit_id"], "cancelled_before_send")
             _deny("gateway_output_exceeds_permit")

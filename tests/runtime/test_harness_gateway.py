@@ -42,7 +42,9 @@ async def configured(app_paths, request):
         credential_reference=route.credential_ref, credential_revision=route.credential_epoch,
         selected_model=route.catalog_model_id)
     spec = ConfigurationSpec(connection=connection, registry_hash="a" * 64,
-        roles=(RolePolicy(purpose="explain", output_tokens=32),), capabilities=("library-read",))
+        roles=(RolePolicy(purpose="explain", output_tokens=32),
+               RolePolicy(purpose="summary", output_tokens=8, dispatch_limit=3)),
+        capabilities=("library-read",))
     version = authority.stage(spec)
     assert authority.validate(version, lambda candidate: CandidateHealth(
         configuration_version=candidate.version, grant_epoch=candidate.grant_epoch,
@@ -233,6 +235,49 @@ async def test_continuation_requires_confirmed_same_run_transport_reference(conf
                 else first["permit_id"])
     assert len(calls) == 1 and authority.run("learning-run")["spent_dispatches"] == 1
     assert authority.run("other-run")["spent_dispatches"] == 0
+
+
+async def test_explicit_continuation_preserves_its_permit_purpose_in_a_mixed_run(configured):
+    _, authority, route, _ = configured
+    calls = []
+    client = gateway(configured, lambda request: calls.append(request) or httpx.Response(200,
+        headers={"content-type": "text/event-stream"}, content=b"data: [DONE]\n\n"))
+    summary = await dispatch(client, route, envelope(route, max_completion_tokens=8),
+        step_id="summary-step", request_kind="summary")
+    await dispatch(client, route, step_id="primary-step")
+    continuation = await dispatch(client, route, envelope(route, max_completion_tokens=8),
+        step_id="summary-continuation", request_kind="tool-continuation",
+        continuation_of=summary["permit_id"])
+    receipt = authority.permit(continuation["permit_id"])
+    assert receipt["dispatch_purpose"] == "summary"
+    assert receipt["output_tokens"] == 8
+    assert len(calls) == authority.run("learning-run")["spent_dispatches"] == 3
+
+
+@pytest.mark.parametrize("phase", ["response", "idle"])
+async def test_dispatched_permit_purpose_is_rechecked_after_or_during_http(configured, phase):
+    _, authority, route, _ = configured
+    calls = []
+    finalized = asyncio.Event()
+
+    async def serve(request):
+        calls.append(request)
+        try:
+            authority.revoke("purpose:summary")
+            if phase == "idle":
+                await asyncio.Event().wait()
+            return httpx.Response(200, headers={"content-type": "text/event-stream"},
+                                  content=b"data: [DONE]\n\n")
+        finally:
+            finalized.set()
+
+    with pytest.raises(ApiError) as denied:
+        await dispatch(gateway(configured, serve), route, envelope(route, max_completion_tokens=8),
+            request_kind="summary")
+    assert denied.value.code == "authority_revoked"
+    assert finalized.is_set()
+    assert len(calls) == authority.run("learning-run")["spent_dispatches"] == 1
+    authority.settle_run("learning-run")
 
 
 async def test_failed_sse_uses_machine_code_without_returning_provider_prose(configured):
