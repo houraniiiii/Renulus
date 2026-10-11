@@ -180,13 +180,16 @@ class ConversationStreams:
                             raise ApiError('conversation_archived','Restore the conversation before sending',409)
                         if any(e['kind']==kind and e['id']==identifier for e in self.active.values()):
                             raise ApiError('conversation_busy','Stop or finish the current response first',409,True)
+                        harness = repo.services.registry.get('learning_harness') if saved and kind == 'learning' else None
+                        if request.images and (harness is None or not hasattr(harness, 'prepare_in')):
+                            raise ApiError('learning_images_unavailable',
+                                'Inline images require saved native learning.', 409)
                         if saved:
                             repo.validate_refs(conn,request.content_refs)
                         elif request.content_refs:
                             raise ApiError('temporary_content_unavailable','Use temporary case inputs in their original case flow',409)
                         scope = ContextScope(kind=Scope.STUDY,entity_id=identifier) if saved and kind=='learning' else ContextScope(kind=Scope.UNCLASSIFIED)
                         if kind=='learning':
-                            harness = repo.services.registry.get('learning_harness') if saved else None
                             if harness is not None and hasattr(harness, 'prepare_in'):
                                 run = harness.prepare_in(conn,identifier,request,key)
                             else:

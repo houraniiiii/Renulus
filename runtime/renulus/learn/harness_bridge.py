@@ -216,7 +216,7 @@ class HarnessLearningBridge:
         snapshot = {'version': 1, 'kind': 'pending', 'configuration_id': self.configuration_id,
             'policy': entry['policy'], 'epoch': entry['epoch'],
             'revisions': list(entry['harness_revisions']), 'request_id': entry['key'],
-            'request_fields': entry['request'].model_dump(mode='json', exclude={'text'}),
+            'request_fields': entry['request'].model_dump(mode='json', exclude={'text', 'images'}),
             'request_digest': canonical_digest(entry['request'].model_dump(mode='json')),
             'input_sha256': hashlib.sha256(entry['request'].text.encode('utf-8')).hexdigest(),
             'project_digest': canonical_digest(entry.get('project')),
@@ -370,8 +370,11 @@ class HarnessLearningBridge:
             def pending(response):
                 self.db.execute('UPDATE learn_harness_answers SET command_request_id=?,process_generation=? WHERE run_id=?',
                     (response['request_id'], response['generation'], run_id))
-            result = await self._request('session.prompt', {'session_id': runtime.session_id,
-                'configuration_id': self.configuration_id, 'text': entry['request'].text}, run_id, pending=pending)
+            prompt = {'session_id': runtime.session_id,
+                'configuration_id': self.configuration_id, 'text': entry['request'].text}
+            if entry['request'].images:
+                prompt['images'] = [image.model_dump(mode='json') for image in entry['request'].images]
+            result = await self._request('session.prompt', prompt, run_id, pending=pending)
             if (result['sessionId'], result['operationId'], result['attemptId']) != (runtime.session_id, run_id, '1'):
                 raise ApiError('harness_input_conflict', 'The native input belongs to different work.', 409)
             input_id = result['inputId']
@@ -635,7 +638,16 @@ class HarnessLearningBridge:
                 if found and message['type'] == 'assistant':
                     selected.append(message)
             text = ''.join(part['text'] for message in selected for part in message.get('content', []) if part['type'] == 'text')
-            request = Send(text=matching[0]['text'], **snapshot['request_fields'])
+            files = matching[0].get('files') or []
+            if not isinstance(files, list) or len(files) > 4 or any(
+                    not isinstance(file, dict) or file.get('source') != {'type': 'inline'} for file in files):
+                raise ApiError('harness_input_conflict', 'The recovered inline files changed.', 409)
+            try:
+                request = Send(text=matching[0]['text'], **snapshot['request_fields'],
+                    **({'images': tuple({'type': 'image', 'media_type': file['mime'], 'data': file['data']}
+                        for file in files)} if files else {}))
+            except (KeyError, TypeError, ValueError):
+                raise ApiError('harness_input_conflict', 'The recovered inline files changed.', 409) from None
             if (canonical_digest(request.model_dump(mode='json')) != row['request_digest'] or
                     hashlib.sha256(request.text.encode('utf-8')).hexdigest() != snapshot['input_sha256']):
                 raise ApiError('harness_input_conflict', 'The recovered input differs from the admitted request.', 409)

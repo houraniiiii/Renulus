@@ -232,10 +232,16 @@ class HarnessLearningOwner:
 
     def admit_run_in(self, conn, run, request):
         if self.configuration_authority is None:
+            if request.images:
+                raise ApiError('harness_configuration_unavailable',
+                    'Inline images require current configuration authority.', 409, True)
             return
         pinned = self.configuration_authority.begin_run_in(conn, run.id, 'explain',
             expected_version=self.configuration_id,
             capability_scope=self.configuration_spec.capabilities, operation_model=request.model)
+        if request.images:
+            self.configuration_authority.require_current(run.id,
+                required_capabilities=('image',), conn=conn)
         run.harness_configuration_version = pinned['version']
         run.harness_model_id = pinned['route']['model_id']
         run.harness_capabilities = tuple(pinned['effective_capabilities'])
