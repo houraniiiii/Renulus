@@ -13,18 +13,26 @@ from pathlib import Path
 from uuid import uuid4
 
 from renulus.contracts import ApiError
-from .harness_configuration import Candidate, CandidateHealth, RestartBoundary
+from .harness_configuration import Candidate, CandidateHealth, ConfigurationSpec, RestartBoundary
 from .harness_configuration_controller import HarnessConfigurationController, RegistryHealth
+from .harness_launch import FrozenLaunchInputs, HarnessLaunchError, LaunchArtifactStore, finish_spec
 from .harness_process import ManagedHarnessProcess
 
 
-def install_harness_configuration(owner, *, authority, candidate_root: Path, provider=None, attempt_timeout=5):
+def _launch_error() -> ApiError:
+    return ApiError('harness_launch_invalid',
+        'The launch artifact is unavailable or does not match the configuration.', 409, True)
+
+
+def install_harness_configuration(owner, *, authority, candidate_root: Path, provider=None,
+                                  attempt_timeout=5, launch_store: LaunchArtifactStore | None = None):
     """Explicit assembly only; it does not bootstrap or activate a configuration."""
     services = owner.services
     if (services.registry.get('harness_learning') is not owner or authority.db is not services.db
             or services.registry.get('harness_configuration_controller') is not None):
         raise ApiError('harness_owner_conflict', 'Configuration already has an owner or a different profile.', 409)
-    lifecycle = ManagedConfigurationLifecycle(owner, candidate_root=candidate_root, attempt_timeout=attempt_timeout)
+    lifecycle = ManagedConfigurationLifecycle(owner, candidate_root=candidate_root,
+        attempt_timeout=attempt_timeout, launch_store=launch_store)
     controller = HarnessConfigurationController(authority, provider or services.get('provider'), lifecycle)
     services.registry['harness_configuration_authority'] = authority
     services.registry['harness_configuration_lifecycle'] = lifecycle
@@ -37,7 +45,8 @@ def install_harness_configuration(owner, *, authority, candidate_root: Path, pro
 
 
 class ManagedConfigurationLifecycle:
-    def __init__(self, owner, *, candidate_root: Path, attempt_timeout: float = 5):
+    def __init__(self, owner, *, candidate_root: Path, attempt_timeout: float = 5,
+                 launch_store: LaunchArtifactStore | None = None):
         live = owner.config.profile_root
         if (not isinstance(candidate_root, Path) or not candidate_root.is_absolute()
                 or candidate_root.resolve() != candidate_root
@@ -47,10 +56,51 @@ class ManagedConfigurationLifecycle:
             raise ValueError('Lifecycle attempts need a positive finite observation budget.')
         self.owner, self.candidate_root = owner, candidate_root
         self.attempt_timeout = attempt_timeout
+        self.launch_store = launch_store
         self._stopped = None
         self._owned_processes = set()
         self._drains = {}
         self._closing = False
+
+    def _launch_inputs(self, spec: ConfigurationSpec) -> FrozenLaunchInputs:
+        references = [item for item in spec.inputs
+                      if item.kind == 'artifact' and item.name == 'launch']
+        store = self.launch_store
+        if store is None or len(references) != 1:
+            raise _launch_error()
+        try:
+            return store.load(references[0].sha256)
+        except HarnessLaunchError:
+            raise _launch_error() from None
+
+    def freeze_inputs(self, spec: ConfigurationSpec) -> ConfigurationSpec:
+        """Save the proposed policy with its prior immutable native boot payload."""
+        if self.launch_store is None:
+            return spec
+        old = self._launch_inputs(spec)
+        try:
+            frozen = FrozenLaunchInputs(boot_settings=old.boot_settings,
+                connection=spec.connection, roles=spec.roles,
+                inputs=tuple(item for item in spec.inputs
+                    if not (item.kind == 'artifact' and item.name == 'launch')),
+                capabilities=spec.capabilities, context=spec.context,
+                attempts=spec.attempts, children=spec.children)
+            self.launch_store.save(frozen)
+            return finish_spec(frozen, spec.registry_hash)
+        except HarnessLaunchError:
+            raise _launch_error() from None
+
+    def _verified_launch(self, spec: ConfigurationSpec) -> FrozenLaunchInputs | None:
+        if self.launch_store is None:
+            return None
+        inputs = self._launch_inputs(spec)
+        try:
+            matches = finish_spec(inputs, spec.registry_hash) == spec
+        except HarnessLaunchError:
+            matches = False
+        if not matches:
+            raise _launch_error()
+        return inputs
 
     async def _own(self, work):
         """An observer cannot leave before process/finalizer ownership settles."""
@@ -121,11 +171,14 @@ class ManagedConfigurationLifecycle:
         return await self._own(self._inspect_candidate(candidate))
 
     async def _inspect_candidate(self, candidate):
+        inputs = self._verified_launch(candidate.spec)
         suffix = uuid4().hex
         root = self.candidate_root / suffix
         root.mkdir(parents=True)
         config = replace(self.owner.config, profile_root=root, profile_id='candidate-' + suffix,
             store_id='candidate-runtime-' + suffix, domain_store_id='candidate-domain-' + suffix)
+        if inputs is not None:
+            config = replace(config, boot_settings=inputs.boot_settings)
         process = ManagedHarnessProcess()  # Candidate has no domain or credential grants.
         self._owned_processes.add(process)
         try:
@@ -160,6 +213,11 @@ class ManagedConfigurationLifecycle:
         return await self._own(self._start_gated(candidate, seal))
 
     async def _start_gated(self, candidate, seal):
+        inputs = self._verified_launch(candidate.spec)
+        self._require_seal(seal)
+        if inputs is not None:
+            # Bind the copied payload before the existing owner builds activation.
+            self.owner.config = replace(self.owner.config, boot_settings=inputs.boot_settings)
         process = ManagedHarnessProcess(domain_authority=self.owner.authorize)
         self.owner.replace_process(process, configuration_id=candidate.version, seal=seal)
         # Rebinding first retains a partially started fresh owner for idempotent

@@ -185,8 +185,9 @@ class FrozenLaunchInputs:
 def finish_spec(inputs: FrozenLaunchInputs, registry_hash: str) -> ConfigurationSpec:
     """Finish the initial spec with observed registry identity, without staging/activation.
 
-    Later role-only staging retains this spec's launch input reference; it does
-    not rebuild the launch artifact or restore its initial role policy.
+    Role edits create and save a new snapshot using the proposed policy, the
+    prior boot payload and inputs excluding the prior launch reference. Candidate
+    and live starts require this function's result to equal their exact spec.
     """
     if (type(inputs) is not FrozenLaunchInputs or type(registry_hash) is not str
             or re.fullmatch(r"[0-9a-f]{64}", registry_hash) is None):

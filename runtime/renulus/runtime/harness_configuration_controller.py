@@ -249,7 +249,15 @@ class HarnessConfigurationController:
                 effective.model_copy(update={"roles": roles}).model_dump_json())
         except ValidationError:
             raise ApiError("configuration_invalid", "Supply allowed unique role policies.") from None
-        version = self.authority.stage(candidate)
+        freeze_inputs = getattr(self.lifecycle, 'freeze_inputs', None)
+        if freeze_inputs is not None:
+            try:
+                candidate = freeze_inputs(candidate)
+            except Exception as error:
+                raise _lifecycle_error(error) from None
+        version = self.authority.stage_if_current(candidate,
+            expected_effective=snapshot['effective'], expected_requested=snapshot['requested'],
+            expected_activating=snapshot['activating'], grant_epoch=snapshot['grant_epoch'])
         return {"version": version, **self.authority.status()}
 
     async def snapshot(self) -> dict:

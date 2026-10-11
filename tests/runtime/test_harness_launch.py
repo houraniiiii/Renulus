@@ -57,7 +57,7 @@ def test_frozen_launch_reconstructs_boot_without_mutable_aliases():
     assert spec.registry_hash == "c" * 64
 
 
-def test_saved_launch_reopens_identically_and_role_staging_retains_its_artifact(tmp_path):
+def test_saved_launch_reopens_identically_and_role_staging_freezes_a_new_artifact(tmp_path):
     from renulus.runtime.harness_launch import FrozenLaunchInputs, LaunchArtifactStore, finish_spec
 
     inputs = FrozenLaunchInputs(**launch_arguments())
@@ -71,9 +71,22 @@ def test_saved_launch_reopens_identically_and_role_staging_retains_its_artifact(
     assert reopened.boot_settings == launch_arguments()["boot_settings"]
     spec = finish_spec(reopened, "c" * 64)
     changed = spec.model_copy(update={"roles": (RolePolicy(purpose="explain", output_tokens=1024),)})
-    assert changed.inputs == spec.inputs
+    proposed_inputs = FrozenLaunchInputs(boot_settings=reopened.boot_settings,
+        connection=changed.connection, roles=changed.roles,
+        inputs=tuple(item for item in changed.inputs
+            if not (item.kind == "artifact" and item.name == "launch")),
+        capabilities=changed.capabilities, context=changed.context,
+        attempts=changed.attempts, children=changed.children)
+    proposed_reference = store.save(proposed_inputs)
+    proposed = finish_spec(store.load(proposed_reference.sha256), changed.registry_hash)
+    assert proposed.roles == changed.roles
+    assert proposed_reference.sha256 != reference.sha256
+    assert proposed.inputs == (*spec.inputs[:-1], proposed_reference)
+    assert store.load(proposed_reference.sha256).boot_settings == reopened.boot_settings
+    assert finish_spec(reopened, proposed.registry_hash) != proposed
     assert store.load(reference.sha256).sha256 == inputs.sha256
-    assert sorted(path.name for path in roots["artifact_root"].iterdir()) == [reference.sha256 + ".json"]
+    assert sorted(path.name for path in roots["artifact_root"].iterdir()) == sorted(
+        [reference.sha256 + ".json", proposed_reference.sha256 + ".json"])
     assert not roots["live_root"].exists() and not roots["candidate_root"].exists()
 
 
