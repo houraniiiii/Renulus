@@ -1,11 +1,12 @@
 # SPDX-License-Identifier: MIT
-"""Trusted, bounded model plans for an already admitted saved root learning run.
+"""Trusted, bounded model plans for already admitted canonical root operations.
 
-The Owner pins the real native input and canonical configuration run before any
+The owning domain pins the native input and canonical configuration run before any
 model callback. This registry allocates steps, never purposes or grants from
 model arguments. Evidence/counters are explicit local trusted injections; absent
 evidence denies. Gateway alone debits/sends, with a fresh owned HTTP transport.
-No child, auxiliary, retry or restart admission is provided by this module.
+Standalone memory-extraction is text-only and owns one primary permit. No child,
+other auxiliary, retry or restart admission is provided by this module.
 """
 from __future__ import annotations
 
@@ -231,7 +232,11 @@ then calls release. Held grants stay closed after close or release.
                 or not isinstance(admission.cancellation, DomainCancellation) or not callable(admission.current)):
             _deny("model_registry_authority_unbound")
         if (canonical["parent_id"] is not None or canonical["root_id"] != binding.operation_id
-                or canonical["purpose"] not in {"explain", "case-discuss", "case-image-discuss", "evidence-review"}):
+                or canonical["purpose"] not in {"explain", "case-discuss", "case-image-discuss", "evidence-review",
+                    "memory-extraction"}):
+            _deny("model_registry_kind_unavailable")
+        if canonical["purpose"] == "memory-extraction" and (
+                canonical["dispatch_limit"] != 1 or set(canonical["effective_capabilities"]) != {"text"}):
             _deny("model_registry_kind_unavailable")
         if canonical["spent_dispatches"]:
             _deny("model_registry_recovery_unavailable")

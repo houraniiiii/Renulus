@@ -2,8 +2,253 @@ import "./fixtures/gateway-environment.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Effect, Stream, Fiber } from "effect";
+import { LLM, LLMClient } from "@opencode/ai";
 import { createGatewayAdapter } from "../src/gateway-adapter.ts";
 import { binding, plan, request, channel, result, sse, png, toolSse, currentResolved, nativePrimary } from "./fixtures/gateway-environment.mjs";
+
+function extractionPlan(model = "mimo-v2.6-pro", patch = {}) {
+  return plan(model, {
+    role: { version: "synthetic-version", purpose: "memory-extraction", model_id: model, output_tokens: 64, dispatch_limit: 1 },
+    native_capabilities: { tools: false, input: ["text"], output: ["text"] },
+    required_capabilities: ["text"], ...patch,
+  });
+}
+
+test("prepareStateless generates through public LLM with one text extraction plan and bound receipt", async () => {
+  const wire = channel();
+  let selections = 0, registrations = 0;
+  let observed;
+  const adapter = await createGatewayAdapter({ domain: wire.domain,
+    beforePrepare: () => Effect.sync(() => { selections++; return extractionPlan(); }),
+    registerManifest: (trusted, unfiltered) => Effect.sync(() => {
+      registrations++; observed = unfiltered;
+      assert.equal(trusted.role.purpose, "memory-extraction");
+      assert.equal(unfiltered.system[0].text, "Extract eligible synthetic learning facts.");
+      assert.equal(unfiltered.messages[0].role, "user");
+      assert.equal(unfiltered.messages[0].content[0].text, "Committed synthetic CKD answer.");
+      assert.equal(unfiltered.messages.length, 1);
+      assert.equal(unfiltered.tools.length, 0);
+    }), validateImages: () => Effect.die(new Error("Unexpected image validation")),
+  });
+  try {
+    await Effect.runPromise(Effect.scoped(Effect.gen(function* () {
+      const prepared = yield* adapter.prepareStateless(binding, {
+        system: "Extract eligible synthetic learning facts.", user: "Committed synthetic CKD answer.",
+      });
+      assert.equal(prepared.receipt(), undefined);
+      assert.deepEqual(prepared.request.messages, observed.messages);
+      const response = yield* LLM.generate(prepared.request).pipe(Effect.provideService(LLMClient.Service, adapter.client));
+      assert.equal(response.text, "Synthetic safe teaching");
+      assert.deepEqual(prepared.receipt(), { dispatch_id: "synthetic-dispatch", permit_id: "synthetic-permit" });
+      assert.ok(Object.isFrozen(prepared.receipt()));
+      const replay = yield* LLM.generate(prepared.request).pipe(
+        Effect.provideService(LLMClient.Service, adapter.client), Effect.result);
+      assert.equal(replay._tag, "Failure");
+    })));
+    assert.equal(selections, 1); assert.equal(registrations, 1);
+    assert.equal(wire.frames.length, 1);
+    assert.deepEqual(Object.keys(wire.frames[0].payload).sort(), ["dispatch_id", "serialized_request"]);
+    const body = JSON.parse(Buffer.from(wire.frames[0].payload.serialized_request.body_base64, "base64"));
+    assert.equal(body.model, "mimo-v2.6-pro"); assert.equal(body.max_completion_tokens, 64);
+    assert.deepEqual(body.messages, [
+      { role: "system", content: "Extract eligible synthetic learning facts." },
+      { role: "user", content: "Committed synthetic CKD answer." },
+    ]);
+    assert.equal(body.tools, undefined);
+  } finally { await adapter.close(); }
+});
+
+test("prepareStateless refuses noncanonical extraction policy before manifest or IO", async () => {
+  for (const trusted of [
+    extractionPlan(undefined, { role: { ...extractionPlan().role, purpose: "explain" } }),
+    extractionPlan(undefined, { role: { ...extractionPlan().role, dispatch_limit: 2 } }),
+    extractionPlan(undefined, { request_kind: "tool-continuation", continuation_of: "synthetic-prior-permit" }),
+    extractionPlan(undefined, { native_capabilities: { tools: true, input: ["text"], output: ["text"] } }),
+    extractionPlan(undefined, { native_capabilities: { tools: false, input: ["text", "image"], output: ["text"] } }),
+    extractionPlan(undefined, { native_capabilities: { tools: false, input: ["text"], output: ["text", "image"] } }),
+    extractionPlan(undefined, { required_capabilities: ["text", "tools"] }),
+  ]) {
+    const wire = channel();
+    let registrations = 0;
+    const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.succeed(trusted),
+      registerManifest: () => Effect.sync(() => { registrations++; }), validateImages: () => Effect.void });
+    try {
+      await assert.rejects(Effect.runPromise(Effect.scoped(adapter.prepareStateless(binding, { system: "Synthetic facts", user: "Synthetic CKD" }))));
+      assert.equal(registrations, 0); assert.equal(wire.frames.length, 0);
+    } finally { await adapter.close(); }
+  }
+});
+
+test("prepareStateless scope finalization seals a request that was never generated", async () => {
+  const wire = channel();
+  let registrations = 0;
+  const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.succeed(extractionPlan()),
+    registerManifest: () => Effect.sync(() => { registrations++; }), validateImages: () => Effect.void });
+  try {
+    const escaped = await Effect.runPromise(Effect.scoped(adapter.prepareStateless(binding, { system: "Synthetic facts", user: "Synthetic CKD" })));
+    assert.equal(registrations, 1); assert.equal(escaped.receipt(), undefined);
+    await assert.rejects(Effect.runPromise(LLM.generate(escaped.request).pipe(Effect.provideService(LLMClient.Service, adapter.client))));
+    assert.equal(wire.frames.length, 0, "A finalized unused native request dispatched");
+    assert.equal(wire.domain.state().accepting, true);
+  } finally { await adapter.close(); }
+});
+
+test("prepareStateless snapshots text before awaited trusted preparation", async () => {
+  const wire = channel();
+  let releasePreparation, started = false;
+  const pending = new Promise(resolve => { releasePreparation = resolve; });
+  const adapter = await createGatewayAdapter({ domain: wire.domain,
+    beforePrepare: () => Effect.promise(() => { started = true; return pending; }),
+    registerManifest: (_, native) => Effect.sync(() => {
+      assert.equal(native.system[0].text, "Original synthetic system");
+      assert.equal(native.messages[0].content[0].text, "Original synthetic user");
+    }), validateImages: () => Effect.void });
+  let preparing;
+  try {
+    const input = { system: "Original synthetic system", user: "Original synthetic user" };
+    preparing = Effect.runPromise(Effect.scoped(adapter.prepareStateless(binding, input)));
+    await until(() => started);
+    input.system = "Changed synthetic system"; input.user = "Changed synthetic user";
+    releasePreparation(extractionPlan());
+    await preparing;
+    assert.equal(wire.frames.length, 0);
+  } finally { releasePreparation(extractionPlan()); await preparing?.catch(() => {}); await adapter.close(); }
+});
+
+test("prepareStateless rejects malformed or expanded input before trusted selection", async () => {
+  const wire = channel();
+  let selections = 0, registrations = 0;
+  const adapter = await createGatewayAdapter({ domain: wire.domain,
+    beforePrepare: () => Effect.sync(() => { selections++; return extractionPlan(); }),
+    registerManifest: () => Effect.sync(() => { registrations++; }), validateImages: () => Effect.void });
+  try {
+    for (const input of [undefined, null, {}, { system: "Synthetic" },
+      { system: ["Synthetic"], user: "Synthetic" }, { system: "Synthetic", user: [{ type: "text", text: "Synthetic" }] },
+      { system: "Synthetic", user: "Synthetic", model: "untrusted" }, { system: "", user: "Synthetic" }]) {
+      await assert.rejects(Effect.runPromise(Effect.scoped(adapter.prepareStateless(binding, input))));
+    }
+    assert.equal(selections, 0); assert.equal(registrations, 0); assert.equal(wire.frames.length, 0);
+  } finally { await adapter.close(); }
+});
+
+test("prepareStateless withholds its receipt until the actual native client finalizer", { timeout: 6000 }, async () => {
+  const wire = channel();
+  let prepared, started = false, releaseConsumption;
+  const pending = new Promise(resolve => { releaseConsumption = resolve; });
+  const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.succeed(extractionPlan()),
+    registerManifest: () => Effect.void, validateImages: () => Effect.void });
+  let running;
+  try {
+    running = Effect.runPromise(Effect.scoped(Effect.gen(function* () {
+      prepared = yield* adapter.prepareStateless(binding, { system: "Synthetic facts", user: "Synthetic CKD" });
+      yield* LLM.stream(prepared.request).pipe(Stream.provideService(LLMClient.Service, adapter.client),
+        Stream.tap(() => Effect.promise(() => { started = true; return pending; })), Stream.runDrain);
+    })));
+    await until(() => started);
+    assert.equal(prepared.receipt(), undefined, "Receipt escaped before native finalization");
+    releaseConsumption(); await running;
+    assert.deepEqual(prepared.receipt(), { dispatch_id: "synthetic-dispatch", permit_id: "synthetic-permit" });
+    assert.equal(wire.frames.length, 1);
+  } finally { releaseConsumption(); await running?.catch(() => {}); await adapter.close(); }
+});
+
+test("prepareStateless scope close cancels and retains a separately running native request until domain settlement", { timeout: 6000 }, async () => {
+  const wire = channel(null);
+  let prepared, closed = false, releaseScope;
+  const pending = new Promise(resolve => { releaseScope = resolve; });
+  const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.succeed(extractionPlan()),
+    registerManifest: () => Effect.void, validateImages: () => Effect.void });
+  let scope, generation;
+  try {
+    scope = Effect.runPromise(Effect.scoped(Effect.gen(function* () {
+      prepared = yield* adapter.prepareStateless(binding, { system: "Synthetic facts", user: "Synthetic CKD" });
+      yield* Effect.promise(() => pending);
+    }))).then(() => { closed = true; });
+    await until(() => prepared);
+    generation = Effect.runPromise(LLM.generate(prepared.request).pipe(
+      Effect.provideService(LLMClient.Service, adapter.client), Effect.result));
+    await until(() => wire.frames.some(frame => frame.kind === "domain_request"));
+    releaseScope();
+    await new Promise(resolve => setTimeout(resolve, 20));
+    assert.equal(closed, false, "Scope relinquished an unsettled native dispatch");
+    assert.equal(prepared.receipt(), undefined);
+    assert.equal(wire.domain.state().active, 1);
+    await until(() => wire.frames.some(frame => frame.kind === "domain_cancel"));
+    wire.reply(wire.frames[0], result());
+    await scope;
+    assert.equal((await generation)._tag, "Failure");
+    assert.equal(prepared.receipt(), undefined);
+    assert.equal(wire.domain.state().active, 0);
+  } finally { releaseScope(); wire.domain.disconnect(); await scope; await generation; await adapter.close(); }
+});
+
+test("prepareStateless requires manifest registration and a confirmed permit for its result", async () => {
+  for (const missing of ["registration", "permit"]) {
+    const wire = channel(() => { const response = result(); delete response.permit_id; return response; });
+    let selections = 0, prepared;
+    const adapter = await createGatewayAdapter({ domain: wire.domain,
+      beforePrepare: () => Effect.sync(() => { selections++; return extractionPlan(); }),
+      ...(missing === "permit" ? { registerManifest: () => Effect.void } : {}), validateImages: () => Effect.void });
+    try {
+      await assert.rejects(Effect.runPromise(Effect.scoped(Effect.gen(function* () {
+        prepared = yield* adapter.prepareStateless(binding, { system: "Synthetic facts", user: "Synthetic CKD" });
+        yield* LLM.generate(prepared.request).pipe(Effect.provideService(LLMClient.Service, adapter.client));
+      }))));
+      assert.equal(selections, missing === "permit" ? 1 : 0);
+      assert.equal(prepared?.receipt(), undefined);
+      assert.equal(wire.frames.length, missing === "permit" ? 1 : 0);
+      if (prepared) await assert.rejects(Effect.runPromise(adapter.client.generate(prepared.request)));
+    } finally { await adapter.close(); }
+  }
+});
+
+test("prepareStateless uses the actual Codex Responses serializer without a session transcript", async () => {
+  const wire = channel(() => result(sse("gpt-6.1-sol")));
+  let selections = 0, registrations = 0;
+  const adapter = await createGatewayAdapter({ domain: wire.domain,
+    beforePrepare: () => Effect.sync(() => { selections++; return extractionPlan("gpt-6.1-sol"); }),
+    registerManifest: (_, native) => Effect.sync(() => {
+      registrations++; assert.equal(native.messages.length, 1); assert.equal(native.tools.length, 0);
+    }), validateImages: () => Effect.void });
+  try {
+    await Effect.runPromise(Effect.scoped(Effect.gen(function* () {
+      const prepared = yield* adapter.prepareStateless(binding, { system: "Synthetic fact extraction", user: "Synthetic CKD publication" });
+      assert.equal((yield* LLM.generate(prepared.request).pipe(Effect.provideService(LLMClient.Service, adapter.client))).text, "Synthetic safe teaching");
+      assert.deepEqual(prepared.receipt(), { dispatch_id: "synthetic-dispatch", permit_id: "synthetic-permit" });
+    })));
+    const body = JSON.parse(Buffer.from(wire.frames[0].payload.serialized_request.body_base64, "base64"));
+    assert.equal(body.model, "gpt-6.1-sol"); assert.equal(body.max_output_tokens, 64);
+    assert.equal(body.instructions, "Synthetic fact extraction");
+    assert.deepEqual(body.input, [{ type: "message", role: "user", content: [{ type: "input_text", text: "Synthetic CKD publication" }] }]);
+    assert.equal(body.tools, undefined); assert.equal(body.previous_response_id, undefined);
+    assert.equal(body.store, false); assert.equal(selections, 1); assert.equal(registrations, 1); assert.equal(wire.frames.length, 1);
+  } finally { await adapter.close(); }
+});
+
+test("prepareStateless interruption retains acquisition and manifest finalization without generating", { timeout: 6000 }, async () => {
+  for (const phase of ["acquisition", "manifest"]) {
+    const wire = channel();
+    let release, started = false, finalized = false, interrupted = false, registrations = 0;
+    const pending = new Promise(resolve => { release = resolve; });
+    const wait = () => Effect.promise(() => { started = true; return pending; }).pipe(
+      Effect.ensuring(Effect.sync(() => { finalized = true; })));
+    const adapter = await createGatewayAdapter({ domain: wire.domain,
+      beforePrepare: () => phase === "acquisition" ? wait().pipe(Effect.as(extractionPlan())) : Effect.succeed(extractionPlan()),
+      registerManifest: () => Effect.suspend(() => { registrations++; return phase === "manifest" ? wait() : Effect.void; }),
+      validateImages: () => Effect.void });
+    let interrupting;
+    try {
+      const fiber = Effect.runFork(Effect.scoped(adapter.prepareStateless(binding, { system: "Synthetic facts", user: "Synthetic CKD" })));
+      await until(() => started);
+      interrupting = Effect.runPromise(Fiber.interrupt(fiber)).then(() => { interrupted = true; });
+      await new Promise(resolve => setTimeout(resolve, 20));
+      assert.equal(interrupted, false); assert.equal(finalized, false);
+      release(); await interrupting; await adapter.close();
+      assert.equal(finalized, true); assert.equal(wire.frames.length, 0);
+      assert.equal(registrations, phase === "manifest" ? 1 : 0);
+    } finally { release(); await interrupting; await adapter.close(); }
+  }
+});
 
 test("preparePrimary injects trusted capabilities before actual native hooks and reuses one plan for manifest and HTTP", async () => {
   const timeline = [];
