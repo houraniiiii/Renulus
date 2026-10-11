@@ -33,11 +33,42 @@ retaining ownership through success/failure and close.
 failed only on an incorrect expected ownership error string; its receipt is
 retained. Memory/conversation/configuration review fixes remain open in their lanes.
 
-Runtime migration 004 is reserved for stable dispatch-purpose accounting;
+Runtime migration 004 is integrated for stable dispatch-purpose accounting;
 002 configuration and 003 paired stores are immutable applied predecessors.
 Native publication stages exact reference-only JSON in the submitted receipt
 inside the same canonical transaction before memory lineage publication,
 then marks completed atomically. Public resolution/history requires completed.
+
+Subsequent parent integrations (source handoffs remain in their lane receipts):
+
+| Parent commit | Integrated result |
+| --- | --- |
+| `ecfba55e` | Reverse callback IPC, source `f27fee89` |
+| `9a1893eb` | Selected-provider preparation, source `07da2a3e` |
+| `c3cee829` | Final Library read/publication guards, source `650f3e44` |
+| `8ed52b82` | Three actual SDK/private-pipe tests, source `96dc85f1` |
+| `dde84eec` | Persistent memory support lineage, source `433ac165` |
+| `6fea1787` | Lost-ack native reconciliation, source `93d3a39d` |
+| `ba368855` | Adaptive byte-bounded history pages, source `6bee8f6a` |
+| `baace4ae` | Stable auxiliary dispatch purpose, source `0e1322f0` |
+
+Activation correction independent Standards and Spec reviews close the prior
+P1; focused Standards rerun passed two native tests with zero dispatch. Bounded
+004 review reports zero material Standards/Spec findings and confirms the
+122-case receipt matches the integrated source. These are bounded closures,
+not complete H02/H04 acceptance.
+
+LearningOwner composes actual paired activation, canonical input authority,
+native Library callbacks and saved publication. `learning/green05.xml` exposed
+a nested writer: a supplied-connection Library guard called the full callback
+predicate, which opened another `BEGIN IMMEDIATE`. The local guard now checks
+the exact binding and cancellation in its caller's connection.
+`learning/green06.xml`: **1 passed**, actual SDK/private IPC, real offline
+FastEmbed/LanceDB, two counted TestLLM dispatches, one native receipt/mapping,
+citation opening and no legacy transcript. Earlier failed receipts remain
+retained. The explicit owner installation is preparation; normal server/Settings
+assembly, run-aware recovery checks, context filtering and memory roundtrip
+remain required. Migrated automatic capture stays disabled.
 
 ## Goal and continuation
 

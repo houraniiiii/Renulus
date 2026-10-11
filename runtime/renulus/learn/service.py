@@ -32,6 +32,7 @@ class ActiveRun:
     context_epoch: int | None = None
     revision_ids: list[str] | None = None
     publication: object = None
+    project_id: str | None = None
 
 
 class LearnService:
