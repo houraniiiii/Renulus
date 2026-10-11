@@ -302,10 +302,10 @@ framing metadata. Account access, image interpretation, complete saved
 production composition and Windows package validation remain downstream gates.
 H03 and H02-H08 are not claimed accepted by this change.
 
-## Exact proposed Node boundary
+## Exact Node boundary
 
-This is an integration contract proposal, not implemented Node code. It belongs
-in a dedicated module and dedicated tests. Parent owns the actual host,
+The authorized contract is implemented in `packages/harness/src/gateway-adapter.ts`
+and its dedicated tests/fixture. Parent owns the actual host,
 learning-host, server, IPC command registration, current role selection, native
 context hook and terminal/publication guard. No entry-point cutover is included.
 The actual public `DomainClient.request` and pinned
@@ -385,7 +385,7 @@ apply trusted native model/capabilities before any upstream capability filter
 that could remove image inputs; a post-preparation hook cannot restore discarded
 content.
 
-The proposed Domain payload wraps the exact Python wire envelope:
+The Domain payload wraps the exact Python wire envelope:
 
 ```typescript
 domain.request(trustedNativeBinding, "model.dispatch", {
@@ -418,7 +418,7 @@ and final dispatch mark.
 
 The terminal Domain outcome must be `committed_reference` with exactly the
 gateway's safe `status`, `headers`, `body_base64` and `permit_id` result. The
-proposed module's `bufferedHttp` wrapper validates the outcome, canonical base64,
+module's local `bufferedHttp` wrapper validates the outcome, canonical base64,
 bounds, safe headers and permit identity before calling actual
 `HttpClientResponse.fromWeb`. Accepted-pending, errors, cancellation, disconnect,
 uncertain acknowledgement and malformed results cannot become native responses
@@ -430,5 +430,138 @@ base64 expansion plus identity/framing overhead.
 `receipt(request)` exposes the verified transport permit for that bound request.
 It is not terminal model success. Parent publication still requires its strict
 native terminal check and permit-bound current H04/domain checks inside the
-canonical publication transaction. The strict native terminal blocker reported
-at parent `8fed6092` is parent-owned and is not claimed repaired by this lane.
+canonical publication transaction. Parent subsequently reported its strict native
+terminal fix green; this lane does not modify that implementation or replace its
+terminal/publication checks.
+
+## Node implementation and evidence
+
+The Node change is based on full gateway prerequisite
+`4fbaf23cfa993e1f32e273f8e9169ae29cccf4c1`, preceded by
+`8fb793737d00a8576ccebd51c2c6d21aa99732cd` on parent
+`8fed6092fe282b8475654e93ea2b28a37a45789f`. Parent reports the Python changes
+consumed as `29e03c7b` and `9c30e29b`. It also requires the pinned public
+`createSubscriptionAdapter`, `DomainClient`, `LLMRequest.update`,
+`GenerationOptions`, and `HttpClientResponse.fromWeb` seams already in this
+baseline. No dependency, host, learning-host, IPC, server, configuration,
+Services, shared-contract or entry-point change is part of the Node commit.
+
+The factory requires a real bound `DomainClient` and both trusted callbacks.
+It snapshots and freezes binding/preparation data, validates role/route/bounds
+consistency, and runs `beforePrepare` for each primary/continuation. The actual
+`Model.Capabilities` shape from `@opencode/schema/model` is `{ tools: boolean,
+input: readonly string[], output: readonly string[] }`. Parent supplies that
+projection from its existing selector. The module checks actual images/tools
+against it at preparation and consumption; it does not select a second role or
+estimate account availability. The selected provider's native model replaces
+the model supplied by the incoming request. The explicit role output ceiling
+is serialized as `max_completion_tokens` for Go and `max_output_tokens` for
+Codex, then rechecked on the final bytes. No second budget/admission exists.
+
+Only the exact returned request identity can be consumed, once, through either
+`generate` or `stream`. Clones, repeated/concurrent use, custom HTTP/WS, direct
+compact and requests after close fail closed. Final native images travel through
+the supplied parent decoder before `model.dispatch`. The gateway payload has
+exactly the two documented keys; role, purpose, route, continuation, limits,
+capabilities and token proof never become model-envelope authority.
+
+Bounds are positive safe integers. `max_request_bytes` caps the final serialized
+HTTP body, `max_response_bytes` caps decoded SSE bytes, and `max_frame_bytes`
+caps the serialized outgoing payload and token-free authenticated outcome
+(including newline). The **parent must also configure the existing
+`DomainClient`/IPC full-frame limits**, accounting for base64 expansion,
+authenticated identity, binding, callback, token and JSON framing. The module
+uses no private Domain fields and cannot introspect its configured limits. A
+valid 512,000-character synthetic reply passed at its exact declared decoded
+byte bound with a 1 MiB full Domain frame.
+
+Only a terminal `committed_reference` result with exactly `status: 200`,
+`headers: { "content-type": "text/event-stream" }`, canonical nonempty
+`body_base64` and an opaque `permit_id` becomes native HTTP. Redirects, unsafe
+headers, malformed/noncanonical bodies, oversize results and noncommitted
+outcomes cannot yield a receipt. `receipt(request)` returns a frozen
+`{ dispatch_id, permit_id }` after safe transport reconstruction, including after
+the native operation's finalizer. This proves transport settlement only; parent
+must still verify strict native terminal success and current permit-bound
+publication authority.
+
+Interruption forwards an owned AbortSignal to `DomainClient.request` and waits
+for the actual terminal callback. Close refuses new work, cancels this module's
+owned IO, waits for outstanding preparation/native finalizers, and then disposes
+its per-request native runtimes. It never seals or disconnects the shared Domain
+client. Close during image validation waits for the supplied validation Effect
+to settle and refuses the still-unsent HTTP request. Parent callbacks must own
+their cancellation/finalization; this module cannot abandon their Effects or
+invent an earlier settlement. Rejected, cancelled, disconnected or uncertain
+IO cannot be replayed using the consumed request. Diagnostic failures are
+sanitized and synthetic authentication/credential canaries are excluded from
+test output and receipts.
+
+All Node receipts are under
+`C:/Renulus/scratch/oc-h02-h08/providers/node-gateway/receipts`. Each red/green
+pair below ran its one named public behavioral test, using the pinned Node and
+the command template shown below. Every red has **1 failed**, every green
+**1 passed**, with no skipped or cancelled cases.
+
+| Cycle | Public behavior | Red / green receipts |
+| --- | --- | --- |
+| n01 | Native HTTP serialization, exact two-key payload, bound receipt | `n01-red.xml` / `n01-green.xml` |
+| n02 | Single use of exact prepared identity across generate/stream | `n02-red.xml` / `n02-green.xml` |
+| n03 | Incoherent and repeated trusted preparations refused | `n03-red.xml` / `n03-green.xml` |
+| n04 | Safe exact response, canonical base64 and byte/frame bounds | `n04-red.xml` / `n04-green.xml` |
+| n05 | Final transformed request/payload bounds | `n05-red.xml` / `n05-green.xml` |
+| n06 | HTTP/WS settings cannot escape at prepare/consume | `n06-red.xml` / `n06-green.xml` |
+| n07 | Interruption and close retain IO through real callback settlement | `n07-red.xml` / `n07-green.xml` |
+| n08 | Close waits for pending preparation and refuses late request | `n08-red.xml` / `n08-green.xml` |
+| n09 | Actual native images/tools require trusted modalities | `n09-red.xml` / `n09-green.xml` |
+| n10 | Preparation diagnostics sanitized; real dependencies required | `n10-red.xml` / `n10-green.xml` |
+| n11 | Binding/preparation snapshots and fresh same-subscription role route | `n11-red.xml` / `n11-green.xml` |
+| n12 | Mutated bound input cannot widen trusted modalities | `n12-red.xml` / `n12-green.xml` |
+| n14 | Partial limit/capability records fail closed | `n14-red.xml` / `n14-green.xml` |
+| n15 | Close during image validation prevents unsent IO | `n15-red.xml` / `n15-green.xml` |
+| n16 | Synchronous trusted-hook failure releases preparation ownership | `n16-red.xml` / `n16-green.xml` |
+
+`native-tools-images.xml` separately passed the actual pinned native client for
+Go chat and Codex Responses: emitted tool calls, their paired native results,
+managed Python-decoded images and fresh primary/continuation preparations;
+**four model.dispatch requests, four decoder validations and four receipts**.
+`large-bound-proof.xml` passed the large canonical reply proof.
+`outcomes-stream-close.xml` passed two additional tests for pending/noncommitted
+outcomes/no replay and close-only buffered-stream cancellation. Those extra
+proofs were already green through the implemented public seams, not fabricated
+red cycles. Final dedicated verification: **19 passed, zero skipped**, 11.34 s,
+in `final-dedicated.xml`. Consumer typecheck exited 0; its output is
+`final-typecheck.txt`. The full Harness suite completed before the disk-space
+pause: **52 passed, zero skipped or cancelled**, 53.50 s, in
+`final-harness.xml`. Source/test files were preserved unchanged across that
+pause; no profile or broad test run was repeated after space recovery. The
+handoff/source/receipt hash manifest is `final-node-source.json` in the same
+receipt directory. Standards and spec review covered the dedicated module
+against the published contract and lane ownership; no remaining blocking
+finding was recorded.
+
+From `packages/harness`, the exact focused test command template was:
+
+```powershell
+& 'C:/Renulus/scratch/ocf/tools/node-v26.4.0-win-x64/node.exe' --test --test-name-pattern='<named behavior prefix>' --test-reporter=junit test/gateway-adapter.test.mjs > C:/Renulus/scratch/oc-h02-h08/providers/node-gateway/receipts/<cycle>-<red-or-green>.xml
+```
+
+Final dedicated suite and consumer typecheck:
+
+```powershell
+& 'C:/Renulus/scratch/ocf/tools/node-v26.4.0-win-x64/node.exe' --test --test-reporter=junit --test-reporter-destination=C:/Renulus/scratch/oc-h02-h08/providers/node-gateway/receipts/final-dedicated.xml test/gateway-adapter.test.mjs
+& 'C:/Renulus/scratch/ocf/tools/node-v26.4.0-win-x64/node.exe' node_modules/typescript/bin/tsc --noEmit > C:/Renulus/scratch/oc-h02-h08/providers/node-gateway/receipts/final-typecheck.txt
+```
+
+The completed full-suite command was:
+
+```powershell
+& 'C:/Renulus/scratch/ocf/tools/node-v26.4.0-win-x64/node.exe' --test --test-concurrency=1 --test-reporter=junit --test-reporter-destination=C:/Renulus/scratch/oc-h02-h08/providers/node-gateway/receipts/final-harness.xml test/*.test.mjs
+```
+
+These are native module/public-Domain-seam proofs with synthetic callbacks and
+the actual managed image parser. Parent still owns actual gateway command
+registration/preparation map, final body token accounting, pre-filter capability
+injection, ConfigurationAuthority lifecycle, strict terminal/publication checks
+and saved host composition. No live provider call, installation, credential
+profile copy or account/package acceptance occurred. H03 and H02-H08 remain open.
