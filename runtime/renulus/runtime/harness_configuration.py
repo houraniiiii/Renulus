@@ -319,16 +319,7 @@ class ConfigurationAuthority:
             return self.begin_run_in(conn, run_id, purpose, expected_version=pointer["effective"],
                 capability_scope=capability_scope, catalogue=catalogue, operation_model=operation_model)
 
-    def begin_run_in(self, conn, run_id: str, purpose: str, *, expected_version: str,
-                     capability_scope: tuple[str, ...] = (), catalogue: tuple[str, ...] = (),
-                     operation_model: str | None = None) -> dict:
-        """Pin trusted purpose/scope without opening a connection or transaction.
-
-        The caller owns commit/rollback on this database's active transaction.
-        A stale expected effective version denies with activation_conflict; closed
-        or unhealthy admission denies with configuration_not_active. The returned
-        projection observes the inserted run through this same connection.
-        """
+    def _require_canonical_transaction(self, conn) -> None:
         try:
             active = conn.in_transaction
         except sqlite3.ProgrammingError:
@@ -339,6 +330,18 @@ class ConfigurationAuthority:
                           if row[1] == "main"), None)
         if not canonical or Path(canonical).resolve() != self.db.path:
             _deny("configuration_connection_mismatch")
+
+    def begin_run_in(self, conn, run_id: str, purpose: str, *, expected_version: str,
+                      capability_scope: tuple[str, ...] = (), catalogue: tuple[str, ...] = (),
+                      operation_model: str | None = None) -> dict:
+        """Pin trusted purpose/scope without opening a connection or transaction.
+
+        The caller owns commit/rollback on this database's active transaction.
+        A stale expected effective version denies with activation_conflict; closed
+        or unhealthy admission denies with configuration_not_active. The returned
+        projection observes the inserted run through this same connection.
+        """
+        self._require_canonical_transaction(conn)
         _identifier(run_id)
         pointer = conn.execute("SELECT p.*,h.state AS health_state FROM harness_configuration_pointer p "
             "LEFT JOIN harness_configuration_health h ON h.version=p.effective WHERE p.id=1").fetchone()
@@ -370,27 +373,40 @@ class ConfigurationAuthority:
                     capability_scope: tuple[str, ...] = (), operation_model: str | None = None) -> dict:
         _identifier(run_id)
         with self.db.transaction() as conn:
-            parent = conn.execute("SELECT * FROM harness_configuration_runs WHERE run_id=?", (parent_id,)).fetchone()
-            if not parent or parent["state"] != "active":
-                _deny("parent_unavailable")
-            spec = self.configuration(parent["version"])
-            if parent["depth"] >= spec.children.max_depth:
-                _deny("child_depth_exhausted")
-            count = conn.execute("SELECT COUNT(*) FROM harness_configuration_runs WHERE root_id=? AND parent_id IS NOT NULL AND state='active'", (parent["root_id"],)).fetchone()[0]
-            if count >= spec.children.concurrency:
-                _deny("child_concurrency_exhausted")
-            if not set(capability_scope).issubset(self._capabilities(conn, parent)):
-                _deny("scope_widening")
-            parent_route = json.loads(parent["route_json"])
-            binding = self.resolve_role(parent["version"], purpose, operation_model=operation_model,
-                                        parent_model=parent_route["model_id"])
-            route = {**parent_route, "model_id": binding.model_id, "output_tokens": binding.output_tokens}
-            if conn.execute("SELECT 1 FROM harness_configuration_runs WHERE run_id=?", (run_id,)).fetchone():
-                _deny("run_already_exists")
-            conn.execute("INSERT INTO harness_configuration_runs VALUES(?,?,?,?,?,?,?,?,?,'active',?)",
-                (run_id, parent["version"], parent["root_id"], parent_id, purpose, parent["depth"] + 1,
-                 binding.dispatch_limit, _json(sorted(capability_scope)), _json(route), utc_now()))
-        return self.run(run_id)
+            return self.begin_child_in(conn, run_id, parent_id, purpose,
+                capability_scope=capability_scope, operation_model=operation_model)
+
+    def begin_child_in(self, conn, run_id: str, parent_id: str, purpose: str, *,
+                       capability_scope: tuple[str, ...] = (),
+                       operation_model: str | None = None) -> dict:
+        """Admit a child in the caller's canonical transaction; no nested writer."""
+        self._require_canonical_transaction(conn)
+        _identifier(run_id)
+        parent = conn.execute("SELECT * FROM harness_configuration_runs WHERE run_id=?", (parent_id,)).fetchone()
+        if not parent or parent["state"] != "active":
+            _deny("parent_unavailable")
+        current = self.require_current(parent_id, conn=conn)
+        spec = self._configuration(conn, parent["version"])
+        if parent["depth"] >= spec.children.max_depth:
+            _deny("child_depth_exhausted")
+        count = conn.execute("SELECT COUNT(*) FROM harness_configuration_runs WHERE root_id=? AND parent_id IS NOT NULL AND state='active'", (parent["root_id"],)).fetchone()[0]
+        if count >= spec.children.concurrency:
+            _deny("child_concurrency_exhausted")
+        if not set(capability_scope).issubset(current["effective_capabilities"]):
+            _deny("scope_widening")
+        parent_route = json.loads(parent["route_json"])
+        binding = self._resolve_role(spec, parent["version"], purpose, operation_model=operation_model,
+                                     parent_model=parent_route["model_id"])
+        revoked = set(self.revocation_overlay(conn=conn)["revoked"])
+        if revoked & {"purpose:" + purpose, "model:" + binding.model_id}:
+            _deny("authority_revoked")
+        route = {**parent_route, "model_id": binding.model_id, "output_tokens": binding.output_tokens}
+        if conn.execute("SELECT 1 FROM harness_configuration_runs WHERE run_id=?", (run_id,)).fetchone():
+            _deny("run_already_exists")
+        conn.execute("INSERT INTO harness_configuration_runs VALUES(?,?,?,?,?,?,?,?,?,'active',?)",
+            (run_id, parent["version"], parent["root_id"], parent_id, purpose, parent["depth"] + 1,
+             binding.dispatch_limit, _json(sorted(capability_scope)), _json(route), utc_now()))
+        return self._run_in(conn, run_id)
 
     def run(self, run_id: str) -> dict:
         with self.db.transaction() as conn:
@@ -404,6 +420,7 @@ class ConfigurationAuthority:
                 "parent_id": row["parent_id"], "purpose": row["purpose"], "state": row["state"],
                 "dispatch_limit": row["dispatch_limit"], "route": json.loads(row["route_json"]),
                 "effective_capabilities": sorted(self._capabilities(conn, row)),
+                 "own_spent_dispatches": conn.execute("SELECT COUNT(*) FROM harness_configuration_attempts WHERE run_id=?", (row["run_id"],)).fetchone()[0],
                 "spent_dispatches": conn.execute("SELECT COUNT(*) FROM harness_configuration_attempts WHERE root_id=?", (row["root_id"],)).fetchone()[0]}
 
     def _capabilities(self, conn, row) -> set[str]:

@@ -389,3 +389,65 @@ assertions preserved; configuration decoding and coherent inspection are shared.
 Spec self-review: CAS, busy preservation, durable pins and conservative state
 handling implemented. No remaining material finding in this bounded slice.
 Parent independent review and connected activation acceptance remain open.
+
+## H07 supplied-transaction child admission prerequisite — 2026-10-11
+
+Bounded Configuration lane based on `67321f02d36ba844e6d3bd7b4e306695b9f1ba65`.
+The parent has closed H02–H05 local acceptance. This slice supplies canonical
+child policy admission and accounting for H07; it does not claim actual native
+child execution, Stop, recovery or publication acceptance. No DDL changed.
+
+Exact added public signature:
+
+```python
+ConfigurationAuthority.begin_child_in(
+    self, conn, run_id: str, parent_id: str, purpose: str, *,
+    capability_scope: tuple[str, ...] = (), operation_model: str | None = None,
+) -> dict
+```
+
+The supplied connection must own an active transaction on this Authority's
+canonical Database. Closed, ended or inactive connections deny with
+`configuration_transaction_required`; an active foreign database connection
+denies with `configuration_connection_mismatch`, even with identical configuration.
+Validation is shared with `begin_run_in`. The method opens no connection or
+nested transaction. The caller owns commit/rollback, and the returned projection
+observes uncommitted parent and child admissions through the supplied connection.
+The existing `begin_child` opens its normal Database transaction and delegates.
+
+Admission requires the parent to remain active and its ancestor chain to retain
+current purpose/model/connection authority. Child purpose and selected model
+revocations deny before insertion. Requested capability scope cannot exceed the
+parent's current effective capabilities; subsequent revocations continue to narrow
+both existing and new children. Role/model/output/dispatch settings come from the
+parent's hash-verified immutable configuration, not a newer requested candidate.
+Configured evidence-review settings and existing override/disabled-role precedence
+are preserved. Depth and concurrency checks include uncommitted children in the
+same transaction. Admission remains policy ownership; parent ingress, native
+construction, cancellation and journal settlement retain their separate owners.
+
+Public `run`, `begin_run[_in]` and `begin_child[_in]` projections now also expose
+`own_spent_dispatches`: the count of all durable attempts belonging to that run.
+`spent_dispatches` remains the shared root-family count. Both include reserved,
+dispatched, confirmed, failed, uncertain and cancelled-before-send receipts,
+survive reopen and never refund allowance. The new own count lets a child
+recovery guard distinguish its attempts from parent/sibling debits; it does not
+grant replay permission. Existing root and pooled-purpose dispatch ceilings remain
+enforced independently. Unknown connection/token-count evidence remains external.
+
+Dedicated public red/green receipts in
+`G:/Renulus-agent-scratch/oc-h02-h08/configuration-children/receipts/`:
+
+| Receipt pair | Red | Green |
+| --- | --- | --- |
+| admission-red01 / admission-green01 | Missing `begin_child_in`, 1 failed | Parent/child atomic admission, 1 passed |
+| own-red02 / own-green02 | Missing own-count projection, 1 failed | All six attempt states, 6 passed |
+| revocation-red03 / revocation-green03 | Revoked parent purpose still admitted a child, 1 failed | Parent/child purpose, model and connection revocations, 5 passed |
+
+Final `children-final04.xml` / `.txt`: **28 passed, zero failures/errors/skips,
+4.81 seconds**. These are real canonical SQLite/public Authority tests with
+synthetic health/restart setup. No provider, registry, native SDK, CPU engine,
+host/Services or parent schema is exercised. The existing 122/150-case suite was
+not repeated. Exact focused command/environment and hashes are in the receipt
+directory's `handoff.json`; overlapping red/green selections are not added to
+the final case count.
