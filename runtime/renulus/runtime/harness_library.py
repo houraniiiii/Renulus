@@ -155,17 +155,24 @@ class HarnessLibrary:
         self._require_evidence(passages, authority, conn=conn)
         self._check(authority, conn)
 
-    def resolve_dependency(self, conn, identity: Identity, *, authority: LibraryAuthority) -> str | None:
+    def resolve_dependency(self, conn, identity: Identity, *, authority: LibraryAuthority,
+                           for_support: bool = False) -> str | None:
         """Resolve a library_revision in the caller's canonical snapshot.
 
         This composes into an owner's dependency resolver, so it deliberately
         does not recurse through guard or record_dependencies. No body, original,
         index or engine work occurs; None means unavailable in this host scope.
+
+        A trusted local caller may validate retained support with for_support=True
+        while Test temporarily restricts assistance. This omits only assistance
+        admission; source rights, active revision, scope/pins, cancellation and
+        context checks still apply. This flag never grants retrieval/disclosure.
         """
         if (identity.type != "library_revision" or _local(authority.cancelled)
                 or authority.revision_ids is not None and identity.id not in authority.revision_ids):
             return None
-        require_assistance(conn, expected_revision=authority.policy_revision)
+        if not for_support:
+            require_assistance(conn, expected_revision=authority.policy_revision)
         if context_epoch_in(conn) != authority.context_epoch:
             return None
         row = conn.execute("SELECT r.id,r.document_id,r.sha256,r.metadata_json,r.rights_json,d.title,d.source_id "

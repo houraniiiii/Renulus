@@ -190,6 +190,7 @@ def test_publication_rechecks_canonical_source_eligibility_in_its_transaction(li
     {"query": "CKD", "scope": {"kind": "personal-library"}},
     {"query": "CKD", "revision_ids": ["ungranted"]},
     {"query": "CKD", "toolkit": ["shell"]},
+    {"query": "CKD", "for_support": True},
     {"query": "CKD", "limit": 50}, {"query": "CKD", "limit": "2"},
     {"query": " "},
 ])
@@ -472,3 +473,85 @@ def test_library_revision_dependency_resolver_is_local_and_revocation_sensitive(
     repo.update_source_status(status_event(doi, retracted=True))
     with repo.db.transaction() as conn:
         assert adapter.resolve_dependency(conn, identity, authority=trusted) is None
+
+
+@pytest.fixture
+def persistent_library_support(assessment, library):
+    # The existing real-engine fixture denies external sockets during this test.
+    services, adapter = assessment
+    services.paths.helpers.rmdir()  # Empty synthetic directory, never a profile copy.
+    assets = Path(os.environ["RENULUS_LIBRARY_HELPERS"]).resolve()
+    import subprocess
+    subprocess.run(["powershell.exe", "-NoProfile", "-Command",
+        f"New-Item -ItemType Junction -Path '{services.paths.helpers}' -Target '{assets}' | Out-Null"], check=True)
+    source = note(adapter.repository, "Synthetic retained CKD source support across active Test.",
+        metadata=SourceMetadata(source_id="L02", doi="10.1234/h02-persistent-support",
+            publication_status="final", latest_final_verified=True, content_reviewed=True,
+            review_due="2999-12-31", topic_ids=["general"]))
+    yield services, adapter, source
+    services.get("helpers").startup.close()
+
+
+def test_persistent_library_support_survives_a_transient_active_test(persistent_library_support):
+    services, adapter, source = persistent_library_support
+    identity = Identity(type="library_revision", id=source["revision_id"])
+    trusted = authority(source["revision_id"], current_only=True)
+    with services.db.transaction() as conn:
+        token = adapter.resolve_dependency(conn, identity, authority=trusted)
+    assert isinstance(token, str) and len(token) == 64
+    start_assessment(services, "test")
+    with services.db.transaction() as conn:
+        assert adapter.resolve_dependency(conn, identity, authority=trusted, for_support=True) == token
+        assert HarnessLibrary(adapter.repository).resolve_dependency(
+            conn, identity, authority=trusted, for_support=True) == token
+        with pytest.raises(ApiError) as caught:
+            adapter.resolve_dependency(conn, identity, authority=trusted)
+        assert caught.value.code == "assistance_restricted"
+
+
+def test_persistent_library_support_keeps_source_rights_scope_and_local_only_checks(
+        persistent_library_support, monkeypatch):
+    from dataclasses import replace
+    import json
+    services, adapter, source = persistent_library_support
+    repo = adapter.repository
+    scoped = repo.import_text("Synthetic project-owned transplantation source.",
+        scope=ContextScope(kind=Scope.LIBRARY, entity_id="project-owner"))
+    assert scoped["status"] == "ready"
+    identity = Identity(type="library_revision", id=source["revision_id"])
+    scoped_identity = Identity(type="library_revision", id=scoped["revision_id"])
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Retained support cannot perform callbacks, disclosure or engine work")
+    trusted = authority(source["revision_id"], guard=forbidden, record_dependencies=forbidden, current_only=True)
+    scoped_authority = replace(trusted, revision_ids=(scoped["revision_id"],), current_only=False,
+        scope=ContextScope(kind=Scope.STUDY, entity_id="project-owner"))
+    for owner, name in [(repo, "retrieve"), (repo, "original"), (repo, "citation"),
+                        (repo.embedder, "embed"), (repo.index, "search")]:
+        monkeypatch.setattr(owner, name, forbidden)
+    start_assessment(services, "test")
+    with services.db.transaction() as conn:
+        token = adapter.resolve_dependency(conn, identity, authority=trusted, for_support=True)
+        assert isinstance(token, str) and len(token) == 64
+        assert adapter.resolve_dependency(conn, scoped_identity, authority=scoped_authority, for_support=True) is not None
+        wrong_scope = replace(scoped_authority, scope=ContextScope(kind=Scope.STUDY, entity_id="other-project"))
+        assert adapter.resolve_dependency(conn, scoped_identity, authority=wrong_scope, for_support=True) is None
+        for restricted in [replace(trusted, revision_ids=()), replace(trusted, topic_id="other-topic"),
+                replace(trusted, context_epoch=99), replace(trusted, cancelled=lambda: True)]:
+            assert adapter.resolve_dependency(conn, identity, authority=restricted, for_support=True) is None
+        assert adapter.resolve_dependency(conn, Identity(type="goal", id="unknown"),
+            authority=trusted, for_support=True) is None
+        original_rights = conn.execute("SELECT rights_json FROM knowledge_revisions WHERE id=?",
+            (source["revision_id"],)).fetchone()[0]
+        # Fixture-only revocation: Library has no public per-operation rights editor.
+        for operation in ["display", "cache", "index", "embedding", "model_input", "derivation"]:
+            rights = json.loads(original_rights)
+            rights[operation] = False
+            conn.execute("UPDATE knowledge_revisions SET rights_json=? WHERE id=?",
+                (json.dumps(rights), source["revision_id"]))
+            assert adapter.resolve_dependency(conn, identity, authority=trusted, for_support=True) is None
+        conn.execute("UPDATE knowledge_revisions SET rights_json=? WHERE id=?",
+            (original_rights, source["revision_id"]))
+        assert adapter.resolve_dependency(conn, identity, authority=trusted, for_support=True) == token
+    repo.update_source_status(status_event("10.1234/h02-persistent-support", retracted=True))
+    with services.db.transaction() as conn:
+        assert adapter.resolve_dependency(conn, identity, authority=trusted, for_support=True) is None
