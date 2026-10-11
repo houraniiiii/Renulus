@@ -1,6 +1,7 @@
 import path from "node:path";
 import { createHash, timingSafeEqual } from "node:crypto";
 import type { openHarness } from "./host.ts";
+import { DomainClient } from "./domain-ipc.ts";
 
 export interface HarnessBoot {
   protocol: "renulus-harness/1";
@@ -12,7 +13,8 @@ export interface HarnessBoot {
   domain_store_id: string;
   domain_path: string;
   ipc?: { max_result_records?: number; max_result_bytes?: number; max_frame_bytes?: number;
-    max_inflight?: number; max_control_inflight?: number };
+    max_inflight?: number; max_control_inflight?: number; max_domain_inflight?: number;
+    max_domain_result_records?: number; max_domain_result_bytes?: number };
 }
 
 type Host = Awaited<ReturnType<typeof openHarness>>;
@@ -43,6 +45,8 @@ function bootConfiguration(): HarnessBoot {
       ["max_result_records", 1, 256], ["max_result_bytes", 4096, 16_777_216],
       ["max_frame_bytes", 4096, 1_048_576],
       ["max_inflight", 1, 8], ["max_control_inflight", 1, 4],
+      ["max_domain_inflight", 1, 8], ["max_domain_result_records", 1, 256],
+      ["max_domain_result_bytes", 4096, 16_777_216],
     ] as const) {
       const value = boot.ipc[key];
       if (value !== undefined && (!Number.isSafeInteger(value) || (value as number) < minimum || (value as number) > maximum)) throw new Error("invalid_boot_limits");
@@ -67,10 +71,9 @@ function page(payload: Record<string, unknown>) {
 }
 
 /** Owns one private pipe generation. Only the caller supplies an execution host. */
-export async function runHarnessIpc(create: (boot: HarnessBoot) => Promise<Host>): Promise<void> {
+export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainClient) => Promise<Host>): Promise<void> {
   const boot = bootConfiguration();
   const identity = Object.fromEntries(identityKeys.map(key => [key, boot[key]]));
-  const host = await create(boot);
   const records = new Map<string, RecordEntry>();
   const maxRecords = boot.ipc?.max_result_records ?? 256;
   const maxBytes = boot.ipc?.max_result_bytes ?? 16_777_216;
@@ -95,6 +98,11 @@ export async function runHarnessIpc(create: (boot: HarnessBoot) => Promise<Host>
     void pending.then(() => writes.delete(pending), () => { writes.delete(pending); process.exitCode = 1; });
     return pending;
   };
+  const domain = new DomainClient(boot, bytes => write(bytes), {
+    maxInflight: boot.ipc?.max_domain_inflight, maxRecords: boot.ipc?.max_domain_result_records,
+    maxBytes: boot.ipc?.max_domain_result_bytes, maxFrameBytes,
+  });
+  const host = await create(boot, domain);
   const stop = () => {
     stopped = true;
     process.stdin.destroy();
@@ -102,9 +110,10 @@ export async function runHarnessIpc(create: (boot: HarnessBoot) => Promise<Host>
   };
   const settleHost = () => {
     closing = true;
+    domain.seal();
     return settlement ??= (async () => {
       await host.close({ timeoutMs: 0 });
-      await host.settled();
+      await Promise.all([host.settled(), domain.settled()]);
     })();
   };
   const flush = async (except?: string) => {
@@ -115,6 +124,7 @@ export async function runHarnessIpc(create: (boot: HarnessBoot) => Promise<Host>
   const drain = () => {
     if (stopped || draining) return;
     accepting = false;
+    domain.disconnect();
     draining = (async () => {
       await settleHost();
       await flush();
@@ -156,6 +166,12 @@ export async function runHarnessIpc(create: (boot: HarnessBoot) => Promise<Host>
           result = await host.status(); break;
         case "session.create":
           result = { session: await host.createSession({ operationId: request.operation_id, title: text(request.payload, "title") }) }; break;
+        case "session.find": {
+          if (Object.keys(request.payload).length) throw new Error("invalid_payload");
+          const found = await host.findSession(request.operation_id);
+          if (!Array.isArray(found.sessions) || found.sessions.length > 1) throw new Error("harness_session_identity_conflict");
+          result = found; break;
+        }
         case "session.prompt":
           if (text(request.payload, "configuration_id") !== (await host.status()).configurationId) throw new Error("configuration_mismatch");
           result = await host.submit({
@@ -184,7 +200,7 @@ export async function runHarnessIpc(create: (boot: HarnessBoot) => Promise<Host>
       const rejected = ["invalid_payload", "invalid_observation_page", "unknown_command", "harness_policy_blocked", "host_closing", "harness_closing", "configuration_requires_new_generation", "configuration_mismatch", "recovery_required", "recovery_admission_mismatch", "recovery_requires_quiescence",
         "store_activation_requires_quiescence", "harness_store_invalid", "harness_domain_schema_mismatch",
         "harness_store_schema_mismatch", "harness_runtime_schema_mismatch", "harness_store_identity_mismatch",
-        "harness_manifest_mismatch", "harness_selection_changed"].includes(code);
+        "harness_manifest_mismatch", "harness_selection_changed", "harness_session_identity_conflict"].includes(code);
       await reply(request, rejected ? "rejected_before_admission" : "uncertain_after_disconnect", { error: { code: rejected ? code : "host_error" } });
     }
   };
@@ -192,11 +208,13 @@ export async function runHarnessIpc(create: (boot: HarnessBoot) => Promise<Host>
     let frame: unknown;
     try { frame = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(line)); }
     catch { drain(); return; }
-    if (!object(frame) || frame.kind !== "request" || !nonempty(frame.token)) return;
+    if (!object(frame) || !nonempty(frame.token)) return;
     const token = Buffer.from(frame.token);
     const expected = Buffer.from(boot.token);
     if (token.length !== expected.length || !timingSafeEqual(token, expected) ||
         !identityKeys.every(key => frame[key] === boot[key])) return;
+    if (frame.kind === "domain_result") { domain.receive(frame); return; }
+    if (frame.kind !== "request") return;
     if (!["operation_id", "attempt_id", "request_id"].every(key => identifier(frame[key])) ||
         !nonempty(frame.command) || !object(frame.payload)) return;
     const request = frame as Request;

@@ -12,13 +12,14 @@ import subprocess
 from uuid import uuid4
 
 from .harness_profile import load_harness_profile
+from .harness_domain import DomainAuthority, DomainCallbacks
 from renulus.harness_contracts import HarnessCommandIdentity, validate_command_outcome
 
 
 PROTOCOL = "renulus-harness/1"
 CONTROLS = frozenset({"host.status", "session.cancel", "host.close"})
 COMMANDS = CONTROLS | {"host.activate", "host.stores.activate", "host.recover", "session.create", "session.prompt",
-                       "session.get", "session.messages"}
+                       "session.get", "session.messages", "session.find"}
 
 
 def _json_bytes(value: dict) -> bytes:
@@ -50,6 +51,9 @@ class HarnessProcessConfig:
     domain_path: str
     max_inflight: int = 8
     max_control_inflight: int = 4
+    max_domain_inflight: int = 4
+    max_domain_result_records: int = 256
+    max_domain_result_bytes: int = 16777216
     max_frame_bytes: int = 1048576
     max_result_records: int = 256
     max_result_bytes: int = 16777216
@@ -106,7 +110,9 @@ class _Request:
 class ManagedHarnessProcess:
     """A single event loop owns launch, request observations and bounded close."""
 
-    def __init__(self):
+    def __init__(self, *, domain_authority: DomainAuthority | None = None):
+        self._domain_authority = domain_authority
+        self._domains: DomainCallbacks | None = None
         self._process: asyncio.subprocess.Process | None = None
         self._identity: dict = {}
         self._requests: dict[str, _Request] = {}
@@ -128,7 +134,8 @@ class ManagedHarnessProcess:
         if (not isinstance(config.profile_id, str) or not config.profile_id
                 or not isinstance(config.store_id, str) or not config.store_id):
             raise ValueError("Profile and store identities must be nonempty strings.")
-        for value in (config.max_inflight, config.max_control_inflight, config.max_frame_bytes,
+        for value in (config.max_inflight, config.max_control_inflight, config.max_domain_inflight,
+                      config.max_domain_result_records, config.max_domain_result_bytes, config.max_frame_bytes,
                       config.max_result_records, config.max_result_bytes):
             if type(value) is not int or value < 1:
                 raise ValueError("Admission and frame limits must be positive integers.")
@@ -158,6 +165,18 @@ class ManagedHarnessProcess:
         }
         boot = {**config.boot_settings, **self._identity, "root": str(root),
                 "domain_store_id": config.domain_store_id, "domain_path": config.domain_path}
+        ipc = boot.get("ipc", {})
+        if not isinstance(ipc, dict):
+            raise ValueError("IPC limits must be a JSON object.")
+        ipc = dict(ipc)
+        for key, limit in {"max_domain_inflight": config.max_domain_inflight,
+                           "max_domain_result_records": config.max_domain_result_records,
+                           "max_domain_result_bytes": config.max_domain_result_bytes}.items():
+            requested = ipc.get(key, limit)
+            if type(requested) is not int or requested < 1:
+                raise ValueError("Domain IPC limits must be positive integers.")
+            ipc[key] = min(requested, limit)
+        boot["ipc"] = ipc
         environment = {key: os.environ[key] for key in ("SYSTEMROOT", "WINDIR")
                        if key in os.environ}
         environment["PATH"] = str(config.node_executable.parent)
@@ -173,7 +192,10 @@ class ManagedHarnessProcess:
         self._ready = asyncio.get_running_loop().create_future()
         self._ready.add_done_callback(_observe_exception)
         self._outbound: asyncio.PriorityQueue = asyncio.PriorityQueue(
-            maxsize=config.max_inflight + config.max_control_inflight + 1)
+            maxsize=config.max_inflight + config.max_control_inflight + config.max_domain_inflight + 2)
+        self._domains = DomainCallbacks(self._identity, self._domain_authority, self._send_domain,
+            max_inflight=config.max_domain_inflight, max_records=config.max_domain_result_records,
+            max_bytes=config.max_domain_result_bytes, max_frame=config.max_frame_bytes)
         self._sequence = 0
         self._started = True
         self._spawn = asyncio.create_task(self._spawn_child(config, root, environment))
@@ -275,8 +297,10 @@ class ManagedHarnessProcess:
         if lane == "close":
             self._close_request_id = frame["request_id"]
             self._closing = True
+            if self._domains:
+                self._domains.seal()
         self._sequence += 1
-        self._outbound.put_nowait((0 if control else 1, self._sequence, frame["request_id"], encoded))
+        self._outbound.put_nowait((0 if control else 2, self._sequence, frame["request_id"], encoded, None, None))
         try:
             await asyncio.wait_for(asyncio.shield(future), timeout)
         except TimeoutError:
@@ -288,6 +312,25 @@ class ManagedHarnessProcess:
     async def query_result(self, request_id: str) -> dict | None:
         record = self._requests.get(request_id)
         return record.snapshot() if record else None
+
+    def domain_result(self, callback_id: str) -> dict | None:
+        return self._domains.result(callback_id) if self._domains else None
+
+    def domain_status(self) -> dict:
+        return self._domains.status() if self._domains else {"active": 0, "retained": 0}
+
+    def cancel_domain(self, cancellation_id: str) -> int:
+        return self._domains.cancel(cancellation_id) if self._domains else 0
+
+    async def _send_domain(self, encoded: bytes, callback_id: str | None = None) -> None:
+        if self._disconnected or self._process is None or self._process.returncode is not None:
+            raise ConnectionError("domain_disconnected")
+        if len(encoded) > self._config.max_frame_bytes:
+            raise ConnectionError("domain_frame_too_large")
+        done = asyncio.get_running_loop().create_future()
+        self._sequence += 1
+        self._outbound.put_nowait((1, self._sequence, None, encoded, done, callback_id))
+        await done
 
     async def settlement(self, timeout: float) -> dict:
         """Observe actual child/pipe settlement, separate from clean close proof.
@@ -316,6 +359,8 @@ class ManagedHarnessProcess:
             raise ValueError("Close timeout must be nonnegative and finite.")
         deadline = asyncio.get_running_loop().time() + timeout
         self._closing = True
+        if self._domains:
+            self._domains.seal()
         if self._spawn is not None:
             try:
                 await asyncio.wait_for(asyncio.shield(self._spawn), timeout)
@@ -367,7 +412,11 @@ class ManagedHarnessProcess:
                     frame.get(key) != value for key, value in self._identity.items()):
                 continue
             public = {key: value for key, value in frame.items() if key != "token"}
-            if frame.get("kind") == "ready":
+            if frame.get("kind") == "domain_request":
+                self._domains.accept(frame)
+            elif frame.get("kind") == "domain_cancel":
+                self._domains.receive_cancel(frame)
+            elif frame.get("kind") == "ready":
                 if not isinstance(frame.get("state"), str) or not frame["state"]:
                     continue
                 if self._ready is not None and not self._ready.done():
@@ -399,17 +448,27 @@ class ManagedHarnessProcess:
 
     async def _write(self):
         assert self._process is not None and self._process.stdin is not None
+        completion = None
         try:
             while True:
-                _, _, request_id, encoded = await self._outbound.get()
-                record = self._requests[request_id]
+                _, _, request_id, encoded, completion, callback_id = await self._outbound.get()
+                record = self._requests.get(request_id)
+                if callback_id:
+                    encoded = self._domains.publication_wire(callback_id)
                 self._process.stdin.write(encoded)
-                record.admission = "sent_unacknowledged"
+                if record:
+                    record.admission = "sent_unacknowledged"
                 await self._process.stdin.drain()
                 encoded = None
-                record.finish_write()
+                if record:
+                    record.finish_write()
+                if completion and not completion.done():
+                    completion.set_result(None)
         except (BrokenPipeError, ConnectionError, OSError):
             self._disconnect("pipe_disconnected")
+        finally:
+            if completion and not completion.done():
+                completion.set_exception(ConnectionError("domain_disconnected"))
 
     async def _watch_exit(self):
         assert self._process is not None
@@ -420,12 +479,18 @@ class ManagedHarnessProcess:
         self._writer.cancel()
         await asyncio.gather(self._writer, return_exceptions=True)
         while not self._outbound.empty():
-            self._outbound.get_nowait()
+            _, _, _, _, completion, _ = self._outbound.get_nowait()
+            if completion and not completion.done():
+                completion.set_exception(ConnectionError("domain_disconnected"))
         for record in self._requests.values():
             record.finish_write()
+        if self._domains:
+            await self._domains.settled()
 
     def _disconnect(self, code: str):
         self._disconnected = True
+        if self._domains:
+            self._domains.seal()
         if self._ready is not None and not self._ready.done():
             self._ready.set_exception(HarnessProcessError("The child disconnected before readiness."))
         for record in self._requests.values():
