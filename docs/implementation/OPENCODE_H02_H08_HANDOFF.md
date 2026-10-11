@@ -17,7 +17,7 @@ installation, push or downstream-ticket expansion is authorized.
 
 ### Dependency readiness
 
-Current continuation: parent `02166b6e`. The reviewed child-learning routing
+Current continuation: parent `62e812c2`. The reviewed child-learning routing
 helper `abdad45b` is integrated as `f0e433d6`; supplied-transaction policy
 settlement `dd75d5eb` is integrated as `294b8218`. Both independent axes are
 clear, with original62-case helper and12-case settlement evidence retained;
@@ -150,8 +150,8 @@ main tracer must inspect a new registry hash, consume real Library references
 and use the existing root publisher. The original H06 integration registry is
 unchanged. No native/helper/schema/Services edits or broad reruns are leased.
 
-That connected Owner tracer is currently paused on two confirmed prerequisite
-mismatches, with its two-file WIP preserved in oc-library. Public constructor
+That connected Owner tracer exposed two confirmed prerequisite mismatches,
+with its two-file WIP preserved in oc-library. Public constructor
 red `G:/rh07a/e/children-red02.xml` failed in11.109s after actual candidate
 inspection and before model sends. Subsequent `children-green01` through
 `children-green06` are all failed attempts despite their filenames; none is a
@@ -164,12 +164,19 @@ does not establish a child-model send or successful report consumption.
 Arendt owns the narrow gateway adapter/test prerequisite; Russell owns the
 Children/journal and dedicated-test prerequisite. The latter preserves exact
 job identity/generation and detached-notification checks, without a schema
-change. No connected rerun is authorized until those published repairs clear
-review. Existing H06 runtime/registry and Owner WIP remain untouched by them.
+change. Existing H06 runtime/registry and Owner WIP remain untouched by them.
 
-Gateway prerequisite `678540eb` is ready with one behavioral red, one minimal
-green and eight focused affected checks passing; independent review is pending.
-It accepts only the trusted first child kind, keeps continuation references
+Gateway prerequisite `678540eb` is integrated as `9cad9008`, with one behavioral
+red, one minimal green and eight focused affected checks passing. Independent
+Standards and Spec reviews each report zero material findings. Foreground
+notification repair `e692dbd9` is integrated as `62e812c2`, with a public
+`child_identity_invalid` red, a minimal green and25 focused passes in3.492s;
+both independent axes are clear. The actual SQLite/configuration/journal
+evidence retains synthetic native observations and does not prove a connected
+child flow. Foreground notifications may be null or exact native IDs;
+background jobs still require an ID, immutable observed tuples remain required,
+and separate null foreground notifications no longer collide. No schema changed.
+The gateway repair accepts only the trusted first child kind, keeps continuation references
 strict, and leaves stateless extraction primary-only. A separate source-only
 check by Ohm confirms the Owner WIP's temporary cancellation wrapper loses the
 original callback link when Children assigns its family token. Passing the
@@ -178,10 +185,15 @@ supplied connection and the callback cancellation signal, rather than opening
 a nested writer through the full Domain current predicate. Source recording has
 the same in-transaction risk. Ordinary Library read connections also require a
 read-safe child-state check; citation publication validation remains inside the
-existing transaction. This third concern has no dynamic reproduction yet and
-will receive a separate bounded Children follow-on after the notification
-repair is committed. Domain transport remains unchanged; the connected Owner
-test stays paused until these prerequisites and independent reviews are clear.
+existing transaction. Russell's separate two-file Children/test follow-on from
+`e692dbd9` has now reproduced public `child_transaction_required` through real
+DomainCallbacks, Children and HarnessLibrary on an ordinary Library connection;
+the synthetic extraction/embedding/index ports do not establish native child
+acceptance. The separate cancellation-link concern is still source-grounded.
+Domain transport remains unchanged. Sartre may consume only these
+reviewed prerequisites while preserving Owner WIP; the connected test remains
+paused until the supplied-connection repair and its reviews are clear. No
+unchanged suite was rerun for either integration.
 
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
