@@ -202,6 +202,37 @@ module-absence and fixture setup receipts remain separately qualified. The v1
 manifest still denies system-role messages, opaque context, remote media and
 unproven native tools. Production learner context must use ordered system parts.
 
+### Model identity, learner context and inline ingress — October 11
+
+Trusted primary preparation now runs inside the native primary context load's
+scoped model resolution. Its resolved model controls history provenance, native
+shaping, tool preparation and saved assistant identity; primary preparation
+consumes that same plan once. Auxiliary resolution has no primary scope. The
+public SDK regression in primary-model-red02 records a different saved model
+from the actual dispatched model; primary-model-green01 passes. Red01 is an
+incorrect fixture role lookup and remains qualified separately.
+
+Learner data is appended to ordered native system parts through the trusted
+context selector, with original history eligibility and consumed pins preserved.
+learning/learner-system-red01.xml reproduces missing retained memory in that
+ordered system text. learner-system-green01.xml passes the actual native/IPC/
+canonical Memory edit and stale-history flow in **16.36 seconds**; one case,
+synthetic inference, managed CPU helpers, automatic migrated capture disabled.
+
+The public submit/IPC seam admits only bounded, canonical inline PNG/JPEG/WebP
+objects. It supplies the supported SDK data-URI attachment, without accepting
+file/remote URI fields. A trusted inference adapter must still use Python's real
+image decoder. primary-image-red01 reproduces dropped ingress; green01 and
+diagnostic01 expose structuredClone stripping Media.Asset's required prototype.
+Restoring the copied public asset without changing its bytes passes green02;
+native image hash/length and persisted inline attachment survive reopen with no
+additional inference. Invalid MIME/base64/shape/extra URI and count reject before
+input or model admission. primary-final02.xml has **5 passed**, zero failed/
+skipped/cancelled, 6.58 seconds; TypeScript exits 0. The IPC safe rejection list
+also preserves recovery_admission_unavailable without releasing retained claims.
+Actual authenticated deployment/final HTTP accounting and account acceptance
+remain open, as do full H02–H08 acceptance and hidden desktop verification.
+
 Parent consumed native tools (`ce85b7c5`), saved bridge (`1631e767`),
 configuration authority (`a85e1ee0`), controlled Library SDK composition
 (`63dde885`), pre-dispatch native input binding (`a884ef17`), failed-store

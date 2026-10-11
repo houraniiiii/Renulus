@@ -15,7 +15,7 @@ await runHarnessIpc(async (boot, domain) => {
       const requests = await model.requests();
       return { ...await host.status(), modelCalls: requests.length,
         contexts: requests.map(request => ({ messages: describeNativeContext(request.messages),
-          system: request.messages.filter(message => message.role === 'system') })) };
+          system: request.system })) };
     },
     settled() { return settled ??= (async () => { await host.settled(); await model.close(); })(); },
   };

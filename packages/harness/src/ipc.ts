@@ -179,7 +179,7 @@ export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainCl
           if (text(request.payload, "configuration_id") !== (await host.status()).configurationId) throw new Error("configuration_mismatch");
           result = await host.submit({
             sessionId: text(request.payload, "session_id"), operationId: request.operation_id,
-            attemptId: request.attempt_id, text: text(request.payload, "text"),
+            attemptId: request.attempt_id, text: text(request.payload, "text"), images: request.payload.images,
           }); break;
         case "session.get": {
           const observed = await host.observe(text(request.payload, "session_id"));
@@ -202,7 +202,7 @@ export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainCl
       await reply(request, "committed_reference", { result });
     } catch (error) {
       const code = error instanceof Error ? error.message : "host_error";
-      const rejected = ["invalid_payload", "invalid_observation_page", "unknown_command", "harness_policy_blocked", "host_closing", "harness_closing", "configuration_requires_new_generation", "configuration_mismatch", "recovery_required", "recovery_admission_mismatch", "recovery_requires_quiescence",
+      const rejected = ["invalid_payload", "invalid_images", "invalid_observation_page", "unknown_command", "harness_policy_blocked", "host_closing", "harness_closing", "configuration_requires_new_generation", "configuration_mismatch", "recovery_required", "recovery_admission_mismatch", "recovery_admission_unavailable", "recovery_requires_quiescence",
         "store_activation_requires_quiescence", "harness_store_invalid", "harness_domain_schema_mismatch",
         "harness_store_schema_mismatch", "harness_runtime_schema_mismatch", "harness_store_identity_mismatch",
         "harness_manifest_mismatch", "harness_selection_changed", "harness_session_identity_conflict"].includes(code);

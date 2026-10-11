@@ -2,7 +2,7 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { Cause, Context, Effect, Layer, Logger, ManagedRuntime, Schema, Stream } from "effect";
-import { AIError, InvalidRequestError, LLMClient, LLMRequest, type LLMClientShape, type Message } from "@opencode/ai";
+import { AIError, InvalidRequestError, LLMClient, LLMRequest, Media, type LLMClientShape, type Message, type SystemPart } from "@opencode/ai";
 import { OpenCode, AbsolutePath, Location, Session, Agent } from "@opencode/sdk/effect";
 import { Config } from "@opencode/core/config";
 import { Agent as NativeAgent } from "@opencode/core/agent";
@@ -13,7 +13,8 @@ import { SessionExecution } from "@opencode/core/session/execution";
 import { SessionStore } from "@opencode/core/session/store";
 import { Job } from "@opencode/core/job";
 import { SessionModelRequest } from "@opencode/core/session/model-request";
-import type { SessionRunnerModel } from "@opencode/core/session/runner/model";
+import { SessionRunnerModel } from "@opencode/core/session/runner/model";
+import { SessionContext as NativeSessionContext } from "@opencode/core/session/context";
 import type { StreamOptions } from "@opencode/ai/route/client";
 import { Instance } from "@opencode/core/instance";
 import { Plugin } from "@opencode/core/plugin";
@@ -48,7 +49,14 @@ export interface HarnessOptions extends ProfileSelection {
   readonly model?: ModelAdapter;
   readonly library?: LibraryToolBridge;
   readonly admitInput?: (binding: NativeInputBinding) => Promise<void>;
-  readonly selectContext?: (binding: NativeInputBinding, messages: readonly Message[]) => Promise<readonly Message[]>;
+  readonly selectContext?: (binding: NativeInputBinding, messages: readonly Message[]) =>
+    Promise<readonly Message[] | NativeContextSelection>;
+}
+
+export interface NativeContextSelection {
+  readonly messages: readonly Message[];
+  /** Trusted data context appended to native ordered system parts. */
+  readonly additionalSystem?: readonly SystemPart[];
 }
 
 export interface NativeInputBinding {
@@ -57,6 +65,28 @@ export interface NativeInputBinding {
   readonly session_id: string;
   readonly input_id: string;
   readonly cancellation_id: string;
+}
+
+function imageFiles(value: unknown): { uri: string }[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.length > 4) throw new Error("invalid_images");
+  let total = 0;
+  return value.map(image => {
+    if (!image || typeof image !== "object" || Array.isArray(image) ||
+        Object.keys(image).sort().join(",") !== "data,media_type,type" || image.type !== "image" ||
+        !["image/png", "image/jpeg", "image/webp"].includes(image.media_type) || typeof image.data !== "string" ||
+        image.data.length > 11184812 ||
+        !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(image.data))
+      throw new Error("invalid_images");
+    const bytes = Buffer.from(image.data, "base64");
+    total += bytes.length;
+    if (!bytes.length || bytes.length > 8 * 1024 * 1024 || total > 16 * 1024 * 1024 ||
+        bytes.toString("base64") !== image.data || Media.detectMediaType(bytes) !== image.media_type)
+      throw new Error("invalid_images");
+    // Only validated inline bytes enter the SDK's public data-URI attachment
+    // seam. Python's managed decoder must separately admit actual inference.
+    return { uri: `data:${image.media_type};base64,${image.data}` };
+  });
 }
 
 /** A persistent execution owner. Domain records continue to belong to Python. */
@@ -77,6 +107,12 @@ export async function openHarness(options: HarnessOptions) {
   let instances!: Instance.Interface;
   const held = new Set<string>();
   const bindings = new Map<string, NativeInputBinding>();
+  const primaryLoad = Context.Reference<NativeInputBinding | undefined>("Renulus.PrimaryModelLoad", {
+    defaultValue: () => undefined,
+  });
+  const primaryPreparations = new WeakMap<object, {
+    readonly binding: NativeInputBinding; readonly preparation: PrimaryModelPreparation;
+  }>();
   const primaryContexts = new Map<string, {
     readonly binding: NativeInputBinding | undefined;
     snapshot?: Pick<SessionContext, "system" | "messages">;
@@ -145,6 +181,42 @@ export async function openHarness(options: HarnessOptions) {
       jobs = Context.get(context, Job.Service);
       return Layer.succeed(Job.Service, jobs);
     }))),
+    NativeSessionContext.node.replace(NativeSessionContext.node.mapLayer(original => Layer.flatMap(original, context => {
+      const service = Context.get(context, NativeSessionContext.Service);
+      return Layer.succeed(NativeSessionContext.Service, { ...service,
+        load: selection => {
+          if (!options.model?.preparePrimary) return service.load(selection);
+          const binding = bindings.get(selection.session.id);
+          if (!binding || !["ready", "recovering"].includes(phase) || held.has(selection.session.id))
+            return Effect.die(denied());
+          // Scope resolution to this primary load. Auxiliary title resolution
+          // must not allocate a primary plan, even for the same session.
+          return service.load(selection).pipe(Effect.provideService(primaryLoad, binding));
+        },
+      });
+    }))),
+    SessionRunnerModel.node.replace(SessionRunnerModel.node.mapLayer(original => Layer.flatMap(original, context => {
+      const service = Context.get(context, SessionRunnerModel.Service);
+      return Layer.succeed(SessionRunnerModel.Service, { ...service,
+        resolve: (session, available) => Effect.gen(function* () {
+          const initial = yield* service.resolve(session, available);
+          const binding = yield* primaryLoad;
+          if (!binding) return initial;
+          const requireCurrent = () => {
+            if (binding.session_id !== session.id || bindings.get(session.id) !== binding ||
+                !["ready", "recovering"].includes(phase) || held.has(session.id)) throw denied();
+          };
+          requireCurrent();
+          const preparation = yield* options.model!.preparePrimary!(binding, initial).pipe(Effect.orDie);
+          requireCurrent();
+          if (primaryPreparations.has(preparation.resolved)) throw denied();
+          primaryPreparations.set(preparation.resolved, { binding, preparation });
+          // History provenance, tool preparation and saved assistant identity
+          // now use the same trusted model that will serialize the request.
+          return preparation.resolved;
+        }),
+      });
+    }))),
     PluginHooks.node.replace(PluginHooks.node.mapLayer(original => Layer.flatMap(original, context => {
       const service = Context.get(context, PluginHooks.Service);
       const trigger: typeof service.trigger = (domain, name, event) => service.trigger(domain, name, event).pipe(
@@ -161,7 +233,11 @@ export async function openHarness(options: HarnessOptions) {
           requireCurrent();
           if (options.selectContext) {
             if (!current.binding) throw denied();
-            draft.messages = [...yield* Effect.promise(() => options.selectContext!(current.binding!, draft.messages))];
+            const selected = yield* Effect.promise(() => options.selectContext!(current.binding!, draft.messages));
+            if ("messages" in selected) {
+              draft.messages = [...selected.messages];
+              draft.system = [...draft.system, ...(selected.additionalSystem ?? [])];
+            } else draft.messages = [...selected];
             requireCurrent();
           }
           // This is the shaped native context before unsupportedParts/boundImages.
@@ -184,8 +260,10 @@ export async function openHarness(options: HarnessOptions) {
                 !["ready", "recovering"].includes(phase) || held.has(input.session.id)) throw denied();
             return binding;
           };
-          const preparation = options.model?.preparePrimary
-            ? yield* options.model.preparePrimary(requireBinding(), input.model) : undefined;
+          const selected = primaryPreparations.get(input.model);
+          const preparation = options.model?.preparePrimary ? selected?.preparation : undefined;
+          if (options.model?.preparePrimary && (!selected || selected.binding !== requireBinding())) throw denied();
+          primaryPreparations.delete(input.model);
           if (preparation) requireBinding();
           // Native primary shapes media against this exact resolved capability
           // snapshot. Preparing only its final request would lose images first.
@@ -201,7 +279,14 @@ export async function openHarness(options: HarnessOptions) {
           if (preparation) {
             requireBinding();
             if (!context.snapshot) throw denied();
-            const unfiltered = LLMRequest.update(request, { ...context.snapshot,
+            // structuredClone detaches the snapshot but removes Media.Asset's
+            // prototype. Restore the public asset from its exact copied source
+            // before the native request codec validates the input.
+            const messages = context.snapshot.messages.map(message => ({ ...message,
+              content: message.content.map(part => part.type === "media"
+                ? { ...part, media: new Media.Asset(part.media) } : part),
+            }));
+            const unfiltered = LLMRequest.update(request, { system: context.snapshot.system, messages,
               tools: structuredClone(request.tools) });
             request = yield* preparation.prepare(request, prepared.options, unfiltered);
             requireBinding();
@@ -401,9 +486,10 @@ export async function openHarness(options: HarnessOptions) {
         metadata: { renulusProfile: options.profileId, renulusStore: options.storeId, operationId: input.operationId },
       }))));
     },
-    async submit(input: { sessionId: string; operationId: string; attemptId: string; text: string }) {
+    async submit(input: { sessionId: string; operationId: string; attemptId: string; text: string; images?: unknown }) {
       return mutate(async () => {
         if (held.has(input.sessionId)) throw new Error("recovery_required");
+        const files = imageFiles(input.images);
         const inputId = SessionMessage.ID.create();
         const binding = Object.freeze({ operation_id: input.operationId, attempt_id: input.attemptId,
           session_id: input.sessionId, input_id: inputId, cancellation_id: input.operationId });
@@ -413,7 +499,7 @@ export async function openHarness(options: HarnessOptions) {
         requireReady();
         bindings.set(input.sessionId, binding);
         const item = await run(sdk.sessions.prompt({
-          sessionID: Session.ID.make(input.sessionId), id: inputId, text: input.text,
+          sessionID: Session.ID.make(input.sessionId), id: inputId, text: input.text, files,
           metadata: { operationId: input.operationId, attemptId: input.attemptId, configurationId },
         }));
         if (item.id !== inputId) throw new Error("native_input_identity_conflict");
