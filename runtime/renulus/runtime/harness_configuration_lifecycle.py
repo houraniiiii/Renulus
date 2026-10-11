@@ -16,7 +16,7 @@ from renulus.contracts import ApiError
 from .harness_configuration import Candidate, CandidateHealth, ConfigurationSpec, RestartBoundary
 from .harness_configuration_controller import HarnessConfigurationController, RegistryHealth
 from .harness_launch import FrozenLaunchInputs, HarnessLaunchError, LaunchArtifactStore, finish_spec
-from .harness_process import ManagedHarnessProcess
+from .harness_process import ManagedHarnessProcess, OBSERVATION_COMMANDS
 
 
 def _launch_error() -> ApiError:
@@ -243,6 +243,14 @@ class ManagedConfigurationLifecycle:
                     'The configuration operation remains pending; its owner is retained.', 503, True)
             await asyncio.sleep(min(0.02, remaining))
             response = await process.query_result(response['request_id'])
+        release = getattr(process, 'release_observation', None)
+        if command in OBSERVATION_COMMANDS and release is not None:
+            try:
+                await asyncio.wait_for(release(response['request_id']),
+                    max(0, deadline - asyncio.get_running_loop().time()))
+            except TimeoutError:
+                raise ApiError('harness_configuration_lifecycle_failed',
+                    'The observation release remains pending; its owner is retained.', 503, True) from None
         if response['outcome'] != 'committed_reference':
             raise ApiError('harness_configuration_lifecycle_failed',
                 'The managed runtime did not confirm its configuration operation.', 503, True)

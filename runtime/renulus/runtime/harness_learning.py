@@ -179,13 +179,20 @@ class HarnessLearningOwner:
         run_id = entry['run'].id
         runtime = entry.get('harness_runtime')
         binding = self.bindings.get(run_id)
+        observation = None
         while True:
             native_settled = not entry.get('harness_native_started')
             if not native_settled and (await process.settlement(0))['state'] == 'settled':
                 native_settled = True
             if not native_settled and runtime is not None:
-                response = await process.request('session.get', {'session_id': runtime.session_id},
-                    run_id, '1', 1)
+                response = (await process.query_result(observation) if observation is not None else
+                    await process.request('session.get', {'session_id': runtime.session_id}, run_id, '1', 1))
+                if response is None:
+                    raise ApiError('harness_settlement_unavailable', 'The retained native observation is unavailable.', 503, True)
+                observation = response.get('request_id') if response.get('outcome') == 'accepted_pending' else None
+                release = getattr(process, 'release_observation', None)
+                if observation is None and release is not None:
+                    await release(response['request_id'])
                 observed = response.get('result', {})
                 native_settled = (response.get('outcome') == 'committed_reference'
                     and observed.get('session', {}).get('id') == runtime.session_id

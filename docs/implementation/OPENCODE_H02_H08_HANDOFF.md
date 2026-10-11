@@ -37,6 +37,9 @@ All H02–H08 acceptance remains open. Newer committed integration work is:
 | `9c8e7cce` | Parent | Saved configuration admission and trusted native model resolver |
 | `e543b9ba` | `3908b0a5` | Immutable launch-bound candidate/live restart and role staging |
 | `7fc84de9` | `2cea62b1` | Guard final open against requested/activating pointer races |
+| `28255634` | `cfd27d22` | Retire observed definite terminal read receipts after native publication settles |
+| `64e1fcf4` | Parent | Production saved model-registry composition and actual per-run settlement |
+| `0ef1889f` | `27350594` | Actual production entry-point saved model publication and held-counter Stop contracts |
 
 Launch-bound integration has 80 affected passes in 9.56s in worker
 `providers/configuration-launch/receipts/final07.xml`, plus a separate actual idle
@@ -52,15 +55,16 @@ activating version within the canonical admission CAS. Worker
 in 2.03s. The first green attempt is a retained fixture mismatch (expected
 retryable where the published conflict is nonretryable), not a production
 failure. Synthetic lifecycle ports qualify these as policy/race evidence;
-independent bounded review and connected activation remain open.
+independent Standards and Spec reviews report zero material findings in the bounded
+CAS change. Connected activation remains open.
 
-Current dynamic lanes supersede the historical ownership table below: Ohm owns
-terminal read-observation release in process/IPC, Sartre investigates the
-profile predecessor fence, Arendt owns guarded final configuration open,
-Turing owns the test-only actual-main saved model journey, and Russell/Nietzsche
-independently review the parent's model owner composition on Spec/Standards.
-Parent owns LearningOwner factory, cancellation, same-connection publication
-and native/Domain/registry settlement. No worker may edit another active lane.
+Current dynamic lanes supersede the historical ownership table below: Sartre owns
+the dedicated Windows profile-predecessor fence; Ohm has released the read-receipt
+transport lease and prepares a test-only production Library/M5/model journey;
+Turing has delivered the actual-main positive/Stop test-only commit; Arendt reviews
+the transport release on Standards. Russell/Nietzsche independently review the
+parent's four read-release callsite paths on Spec/Standards. Parent owns polling
+integration and opt-in bootstrap/reopen assembly. No worker may edit another lane.
 
 New parent model-owner receipts under
 `G:/Renulus-agent-scratch/oc-h02-h08/model-owner/receipts/` are separate runs:
@@ -83,7 +87,8 @@ The actual-main worker's constructor red is retained at
 `G:/Renulus/scratch/oc-learning-models/receipts/constructor-red01.xml`
 (1 failed, 10.85s): missing factory keyword before account discovery, subprocess,
 counter or HTTP. It proves the public constructor gap, not an inference failure.
-The composed positive native journey remains its next prerequisite. Parent
+The actual-main positive and held-counter Stop journeys now pass in the dedicated
+worker commit `27350594`, consumed as `0ef1889f`. Parent
 counter tests use the actual registry/authority/provider owners but synthetic
 account/count/native observation; no production tokenizer or route limits are
 inferred. Successful settlement must prove native ownership, exact-operation
@@ -103,8 +108,52 @@ or write receipts remain owned. Authenticated native release is deferred until
 active command and pipe publications settle, and cached replay coalesces during
 held writes. Worker evidence is 59 affected Python passes in 17.02s, 12 dedicated
 passes in 7.09s, five Node contracts and TypeScript exit 0. These are separate
-runs with real private pipes and synthetic runtime effects. Independent review
-and parent Bridge/Owner/lifecycle polling call sites remain pending.
+runs with real private pipes and synthetic runtime effects. Independent Spec
+review reports zero material findings; Standards identifies one source-derived
+P2: release bursts can consume reserved control/close queue slots. Arendt owns
+its public reproduction and bounded transport repair; that finding remains open.
+Parent Bridge/Owner/lifecycle polling consumes release only for allowlisted terminal
+reads. Cleanup retains and queries one pending observation instead of allocating
+new requests. The public bounded saved-answer/history red exhausted two retained
+read replies; the repaired flow completes and reopens history eight times while
+preserving one create/prompt. Callsite Standards has zero material violations and
+one optional small-duplication heuristic. Spec identifies release awaiting outside
+the lifecycle command deadline. The public closed-candidate test reproduces the
+indefinite wait; release now shares the original command deadline. A timed-out
+observer leaves the process-owned publication task and finally cleanup retained.
+Focused independent Spec and Standards re-reviews close the deadline P2 with
+zero residual material findings and unchanged source/test hashes. The transport
+queue P2 remains assigned separately.
+
+Separate connected receipts under
+`G:/Renulus-agent-scratch/oc-h02-h08/model-owner/receipts/`:
+
+| Receipt | Exact result | Qualification |
+| --- | --- | --- |
+| read-release-red.xml / read-release-green.xml | 1 failed, 5.77s / 1 passed, 7.63s | Synthetic two-read capacity at the public saved/history seam |
+| read-release-connected.xml | 3 passed, 1 failed, 30.31s | Saved/history, native/callback settlement and actual idle restart passed; Library setup lacked RENULUS_LIBRARY_HELPERS |
+| read-release-library.xml | 1 passed, 54.26s | Only the missing-environment Library/M5/SDK case rerun with the reviewed helper path |
+| read-release-production.xml | 2 passed, 29.27s | Actual production main positive and held-counter Stop with the callsite changes |
+| release-deadline-red.xml / release-deadline-green.xml | 1 failed, 13.53s / 1 passed, 14.04s | Actual closed SDK candidate with synthetic retained latency at the public release port; bounded failure preserves its owned task |
+| release-deadline-restart.xml | 1 passed, 21.22s | Normal actual idle SDK/IPC restart with the same release deadline |
+
+The worker's `G:/Renulus/scratch/oc-learning-models/receipts/final02.xml` has
+2 passed, zero failures/errors/skips, in 26.989 seconds. Its positive04 has
+1 pass in 17.86s; held01 has 1 pass/1 deselected in 18.02s. These are distinct
+runs. Actual production `main.mjs`/SDK/private IPC, canonical owners and one owned
+loopback HTTP produce a saved answer and same-connection publication. System,
+ordinary Library schemas, exact body/manifest hashes, Python-only credentials,
+one confirmed permit, native model identity and no-effect replay are checked.
+Control stays responsive with one data/one Domain slot during count and HTTP.
+Stop with a held counter finalizer keeps Domain/registry ownership and canonical
+pin active, with zero HTTP/debits/publication. Cancelling a settle_run observer
+leaves cleanup retained. Actual native/Domain/registry settlement precedes
+canonical settlement and release, with exactly one cancellation terminal.
+Metadata bootstrap, account/limits/inclusive count and inference are explicitly
+test-owned synthetic evidence. There is no production tokenizer, account/TLS,
+Library retrieval/tool-continuation, image or desktop acceptance from this fixture.
+The earlier positive01–03 and final01 attempts corrected public receipt assertions,
+not production defects. No aggregate green suite is claimed.
 Migrated automatic capture stays disabled; all H02–H08 acceptance stays open.
 
 The supplied-connection `begin_run_in` validates canonical active transaction,

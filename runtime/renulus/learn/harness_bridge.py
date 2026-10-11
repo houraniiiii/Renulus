@@ -22,6 +22,7 @@ from renulus.harness_contracts import (HarnessCommandIdentity, HarnessEngineRefe
 from renulus.storage import utc_now
 from renulus.storage.assessment_policy import require_assistance
 from renulus.storage.invalidation import context_epoch_in
+from renulus.runtime.harness_process import OBSERVATION_COMMANDS
 from .service import ActiveRun
 from .conversation_models import Send
 
@@ -283,6 +284,9 @@ class HarnessLearningBridge:
             if guard:
                 self.check(run_id)
             response = await self.transport.query_result(expected.request_id)
+        release = getattr(self.transport, 'release_observation', None)
+        if command in OBSERVATION_COMMANDS and release is not None:
+            await release(expected.request_id)
         if guard:
             self.check(run_id)
         if checked.outcome not in ('committed_reference', 'cancelled_settled') or checked.error:
