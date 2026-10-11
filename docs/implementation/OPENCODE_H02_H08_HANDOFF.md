@@ -17,7 +17,7 @@ installation, push or downstream-ticket expansion is authorized.
 
 ### Dependency readiness
 
-Current continuation: parent `499cb3c8`. The reviewed child-learning routing
+Current continuation: parent `8a2f549f`. The reviewed child-learning routing
 helper `abdad45b` is integrated as `f0e433d6`; supplied-transaction policy
 settlement `dd75d5eb` is integrated as `294b8218`. Both independent axes are
 clear, with original62-case helper and12-case settlement evidence retained;
@@ -230,7 +230,23 @@ adapter preparation reject those names. Arendt owns the narrow three-path
 compatibility regression/repair: recognize only those native correlation
 headers, preserve the existing strip/reconstruction before Python dispatch,
 and leave Python's outbound header allowlist and all authority unchanged.
-No further connected rerun or Owner edits are released pending that repair.
+That compatibility repair `216491dc` is now integrated as `8a2f549f`, with
+exact reviewed source/test hashes and independent Standards0/Spec0. The two
+existing allowlists recognize only the native parent correlation names;
+existing reconstruction strips them before serialization/Python dispatch.
+Unknown and authorization headers still deny. The actual pinned primary
+preparation regression records one behavioral failure then one pass; eight
+focused cases passed in11.262s and typecheck exited0. Intermediate green01/02
+filenames contain failed fixture expectations about native content-length and
+existing Codex body affinity, not further production defects. Exact evidence
+is providers/gateway-parent-headers/handoff-216491dc.json under the G: scratch
+root. Native preparation/serialization plus synthetic Domain/SSE proves the
+bounded compatibility repair, not connected child publication or settlement.
+No unchanged suite was rerun during integration. Sartre is released for one
+unchanged four-send connected tracer after consuming only the published repair;
+the first result must be classified before any further fixture/source changes.
+Owner/test remain the same two-file WIP; no native child assembly is enabled in
+the parent H06 registry by this prerequisite.
 
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
