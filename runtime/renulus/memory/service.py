@@ -1,6 +1,7 @@
 """Durable capture/recovery and rebuildable, revision-filtered learner recall."""
 import asyncio
 import hashlib
+import inspect
 from concurrent.futures import Future
 from contextlib import closing, contextmanager
 from contextvars import copy_context
@@ -9,12 +10,90 @@ import threading
 from pathlib import Path
 
 from renulus.contracts import ApiError, ContextScope, durable_id
+from renulus.design_c_contracts import Dependency, EligibleInput, Identity
 
+from .capture import CaptureBinding, CommittedCapture, PrepareCapture, _local_result
 from .engine import Mem0Index, bootstrap, embedding_config
 from .models import require_eligible
 from .repository import MemoryRepository
 from .lineage import AnswerInputs
 from .study_answers import MAX_ANSWER_CHARS, answer_text
+
+
+class _CommittedAttempt:
+    """One retained CPU/generation/finalizer owner for one claimed outbox attempt."""
+    def __init__(self, service, job, binding):
+        self.service, self.job, self.binding = service, job, binding
+        self.cancelled = False
+        self.generation = self.settlement = self.task = None
+        self.failure = None
+        self.cleanup_pending = None
+
+    def current(self, *, conn=None):
+        with self.service._capture_state:
+            if self.cancelled:
+                raise ApiError('memory_capture_cancelled', 'Memory capture was cancelled or superseded', 409)
+        self.service._require_capture_current(self.job, conn=conn)
+        _local_result(self.binding.current(conn=conn))
+
+    def reject(self, error):
+        # Mem0 wraps/logs its LLM errors. Keep trusted classification separately
+        # and send only fixed text into that upstream exception boundary.
+        safe = ApiError(error.code if isinstance(error, ApiError) else 'memory_capture_failed',
+            'The committed-answer extractor could not complete this capture',
+            error.status if isinstance(error, ApiError) else 503,
+            error.retryable if isinstance(error, ApiError) else True)
+        with self.service._capture_state:
+            if self.failure is None:
+                self.failure = safe
+        return safe
+
+    def cancel(self):
+        with self.service._capture_state:
+            if self.cancelled:
+                return
+            self.cancelled = True
+        try:
+            _local_result(self.binding.cancel())
+        except Exception as error:
+            self.reject(error)
+
+    async def generate(self, messages):
+        try:
+            self.current()
+            if self.generation is not None:
+                raise ApiError('memory_generation_repeated', 'One capture attempt permits one generation', 409)
+            async def invoke():
+                try:
+                    self.current()
+                    output = await self.binding.generate(messages)
+                    self.current()
+                    return output
+                except BaseException as error:
+                    raise self.reject(error) from None
+            self.generation = asyncio.create_task(invoke(), name='renulus-memory-generation')
+            return await asyncio.shield(self.generation)
+        except Exception as error:
+            raise self.reject(error) from None
+
+    async def settle(self):
+        if self.generation is not None:
+            await asyncio.gather(asyncio.shield(self.generation), return_exceptions=True)
+        if self.settlement is None:
+            async def finish():
+                _local_result(await self.binding.settle())
+            self.settlement = asyncio.create_task(finish(), name='renulus-memory-transport-drain')
+        try:
+            await asyncio.shield(self.settlement)
+            if self.cleanup_pending is not None:
+                raise RuntimeError('CPU cleanup is unproven')
+        except BaseException:
+            raise ApiError('memory_settlement_pending',
+                'Committed capture cleanup has not settled; keep this profile open', 503, True) from None
+
+    def publication_in(self, conn):
+        self.current(conn=conn)
+        _local_result(self.binding.require_publication_in(conn))
 
 
 class MemoryService:
@@ -36,6 +115,9 @@ class MemoryService:
         self._stopping = False
         self._closed = False
         self._close_task = None
+        self._committed_extractor = None
+        self._captures = {}
+        self._capture_started = False
         # Reindex on restart; no index file is a record authority. This also
         # reconciles deletion markers from restores before any recall.
         self.db.execute("UPDATE memory_index_state SET state='dirty' WHERE singleton=1")
@@ -43,6 +125,73 @@ class MemoryService:
     def notify(self):
         if self._loop and not self._loop.is_closed():
             self._loop.call_soon_threadsafe(self._wake.set)
+
+    def bind_committed_answer_extractor(self, prepare: PrepareCapture) -> None:
+        """Bind the trusted native factory before any outbox worker admission."""
+        with self._capture_state:
+            self._require_open()
+            if not callable(prepare) or inspect.iscoroutinefunction(prepare):
+                raise ApiError('memory_generation_not_scoped', 'Capture needs a synchronous local factory', 503)
+            if self._committed_extractor is not None or self._capture_started:
+                raise ApiError('memory_extractor_bound', 'Bind the extractor once before capture starts', 409)
+            self._committed_extractor = prepare
+
+    def _require_capture_current(self, job, *, conn=None):
+        if not self._capture_current(job, conn=conn):
+            raise ApiError('memory_capture_cancelled', 'Memory capture was cancelled or superseded', 409)
+
+    def _prepare_capture(self, job, material):
+        request = CommittedCapture(job_id=job['id'], attempt=job['attempts'],
+            fingerprint=job['evidence_hash'], scope_json=job['scope'],
+            project_id=material['lineage']['project_id'],
+            input=EligibleInput(kind='committed_evidence', dependency=Dependency(
+                target=Identity(type='learning_evidence', id=job['evidence_id']),
+                expected_revision=material['lineage']['publication_digest'])))
+        self._require_capture_current(job)
+        binding = self._committed_extractor(request,
+            current=lambda *, conn=None: self._require_capture_current(job, conn=conn))
+        if not isinstance(binding, CaptureBinding):
+            if inspect.iscoroutine(binding):
+                binding.close()
+            raise ApiError('memory_generation_not_scoped', 'Capture needs a trusted local binding', 503)
+        attempt = _CommittedAttempt(self, job, binding)
+        self._captures[job['id']] = attempt
+        attempt.task = asyncio.create_task(self._run_committed(attempt, material),
+            name='renulus-memory-committed-capture')
+        attempt.task.add_done_callback(lambda done: None if done.cancelled() else done.exception())
+        return attempt
+
+    async def _run_committed(self, attempt, material):
+        job = attempt.job
+        try:
+            try:
+                attempt.current()
+                texts = await self._in_thread(self._extract, job, material,
+                    asyncio.get_running_loop(), attempt)
+                await attempt.settle()
+                attempt.current()
+                saved = self.repository.commit_capture(job, material, texts,
+                    publication_guard=attempt.publication_in)
+            except Exception as error:
+                failure = attempt.failure or error
+                attempt.cancel()
+                await attempt.settle()
+                code = failure.code if isinstance(failure, ApiError) else 'memory_capture_failed'
+                if not self.repository.current(job):
+                    self.repository.cancel_stale(job)
+                else:
+                    self.repository.fail(job['id'], code)
+                saved = []
+            _local_result(attempt.binding.release())
+        except BaseException:
+            # A failed finalizer/release is not evidence of settlement. Retain
+            # the attempt and its recovery barrier, even after its task ends.
+            raise ApiError('memory_settlement_pending',
+                'Committed capture cleanup has not settled; keep this profile open', 503, True) from None
+        with self._capture_state:
+            self._captures.pop(job['id'])
+            self._active_runs.discard(job['id'])
+        return bool(saved)
 
     def publish_answer_lineage_in(self, conn, evidence_id, *, inputs, dependencies=(), project_id=None):
         return self.repository.lineage.publish_in(conn, evidence_id, inputs=inputs,
@@ -141,12 +290,18 @@ class MemoryService:
 
     def _cancel_retired_jobs(self):
         provider = self.services.registry.get('provider')
-        if not provider or not self._loop or self._loop.is_closed():
+        if not self._loop or self._loop.is_closed():
             return
         identifiers = [row['id'] for row in self.db.fetch_all(
             "SELECT id FROM memory_jobs WHERE state='cancelled'") if row['id'] in self._active_runs]
         async def cancel_runs():
             for identifier in identifiers:
+                capture = self._captures.get(identifier)
+                if capture is not None:
+                    capture.cancel()
+                    continue
+                if provider is None:
+                    continue
                 try:
                     await provider.cancel(identifier)
                 except Exception:
@@ -179,6 +334,10 @@ class MemoryService:
     async def cancel(self, identifier):
         job = self.repository.cancel(identifier)
         if job['state'] == 'cancelled':
+            capture = self._captures.get(identifier)
+            if capture is not None:
+                capture.cancel()
+                return job
             provider = self.services.registry.get('provider')
             if provider:
                 await provider.cancel(identifier)
@@ -193,7 +352,7 @@ class MemoryService:
                 self._embedding = OfflineEmbedding(config)
             return self._embedding
 
-    def _extract(self, job, material, loop):
+    def _extract(self, job, material, loop, capture=None):
         # Extraction gets its own disposable derived namespace, never the live
         # recall index. Only durable general evidence can reach this function.
         path = self.root / durable_id('capture')
@@ -203,16 +362,27 @@ class MemoryService:
             engine = self.index_factory(self.services, path, embedding, transient=True)
             binding = {'services': self.services, 'loop': loop, 'scope': material['scope'],
                        'run_id': job['id'], 'current': lambda: self._capture_current(job)}
+            if capture is not None:
+                binding['capture'] = capture
             return engine.extract(material['text'], binding)
         finally:
-            if engine:
-                engine.close()
-            self._remove(path)
+            try:
+                if engine:
+                    engine.close()
+                self._remove(path)
+            except BaseException:
+                if capture is not None:
+                    # Keep the actual CPU owner/reference when its finalizer
+                    # cannot attest cleanup. Thread exit alone cannot release it.
+                    capture.cleanup_pending = (engine, path)
+                raise
 
-    def _capture_current(self, job):
+    def _capture_current(self, job, *, conn=None):
         with self._capture_state:
-            admitted = not self._stopping and not self.services.stopping and job['id'] in self._active_runs
-        return admitted and self.repository.current(job)
+            attempt = self._captures.get(job['id'])
+            admitted = (not self._stopping and not self.services.stopping and job['id'] in self._active_runs
+                and (attempt is None or not attempt.cancelled))
+        return admitted and self.repository.current(job, conn=conn)
 
     async def resolve_material(self, job):
         """Resolve immutable bytes with the loop/reply pump and writers free."""
@@ -268,6 +438,7 @@ class MemoryService:
     async def process_pending(self, *, retry=False):
         with self._capture_state:
             self._require_open()
+            self._capture_started = True
             owner = asyncio.current_task()
             self._processors.add(owner)
         try:
@@ -281,7 +452,7 @@ class MemoryService:
             self._loop = asyncio.get_running_loop()
         async with self._process_lock:
             with self._capture_state:
-                if self._recovery_paused or self._threads:
+                if self._recovery_paused or self._threads or self._captures:
                     return {'processed': 0}
                 if retry:
                     self.repository.retry()
@@ -290,26 +461,39 @@ class MemoryService:
             processed = 0
             for row in queued:
                 with self._capture_state:
-                    if self._stopping or self._recovery_paused:
+                    if self._stopping or self._recovery_paused or self._captures:
                         break
                     job = self.repository.claim(row['id'])
                     if not job:
                         continue
                     self._active_runs.add(job['id'])
                 try:
+                    capture = None
                     if not self.repository.current(job):
                         self.repository.cancel_stale(job)
                         continue
                     material = await self.resolve_material(job)
+                    if (material.get('_answer') and 'runtime' in material['_answer'][1]['answer_reference']
+                            and self._committed_extractor is None):
+                        raise ApiError('memory_generation_not_scoped',
+                            'Native answer capture needs its trusted extractor.', 503, True)
+                    if material.get('_answer') and 'runtime' in material['_answer'][1]['answer_reference']:
+                        capture = self._prepare_capture(job, material)
+                        processed += await asyncio.shield(capture.task)
+                        continue
                     # Structured assessment/interest records need no generated
                     # claim. General points use real Mem0 extraction through F0.
                     if material['infer']:
                         texts = await self._in_thread(self._extract, job, material, asyncio.get_running_loop())
                     else:
                         texts = [material['text']]
-                    if self.repository.commit_capture(job, material, texts):
+                    saved = self.repository.commit_capture(job, material, texts)
+                    if saved:
                         processed += 1
                 except asyncio.CancelledError:
+                    if capture is not None:
+                        capture.cancel()
+                        raise
                     # A user Stop is already explicit in the canonical outbox.
                     # Shutdown leaves current work recoverable on restart; a
                     # crossed boundary retains its distinct cancellation reason.
@@ -328,7 +512,11 @@ class MemoryService:
                         self.repository.fail(job['id'], code)
                 finally:
                     with self._capture_state:
-                        self._active_runs.discard(job['id'])
+                        if capture is None:
+                            self._active_runs.discard(job['id'])
+            with self._capture_state:
+                if self._captures:
+                    return {'processed': processed}
             state = self.db.fetch_one('SELECT state FROM memory_index_state WHERE singleton=1')['state']
             if state in ('dirty', 'empty') or retry:
                 try:
@@ -453,6 +641,7 @@ class MemoryService:
 
     async def start(self):
         self._require_open()
+        self._capture_started = True
         self._loop = asyncio.get_running_loop()
         self._worker = asyncio.create_task(self._run(), name='renulus-memory-outbox')
 
@@ -512,12 +701,17 @@ class MemoryService:
         self._close_task.result()
 
     async def _close(self):
+        for attempt in tuple(self._captures.values()):
+            attempt.cancel()
         with self._capture_state:
             owners = self._processors | ({self._worker} if self._worker else set())
         for owner in owners:
             owner.cancel()
         if owners:
             await asyncio.gather(*owners, return_exceptions=True)
+        captures = tuple(self._captures.values())
+        if captures:
+            await asyncio.gather(*(asyncio.shield(attempt.task) for attempt in captures))
         with self._capture_state:
             threads = tuple(self._threads)
         if threads:

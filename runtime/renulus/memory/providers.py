@@ -68,6 +68,22 @@ class ApprovedLLM(LLMBase):
             binding = generation_binding.get()
         except LookupError:
             raise ApiError('memory_generation_not_scoped', 'Memory extraction needs the approved scoped provider', 503) from None
+        capture = binding.get('capture')
+        if capture is not None:
+            try:
+                capture.current()
+                frozen = tuple((message['role'], message['content']) for message in messages)
+                future = asyncio.run_coroutine_threadsafe(capture.generate(frozen), binding['loop'])
+                try:
+                    output = future.result(timeout=120)
+                except TimeoutError:
+                    # Cancel is a signal, never evidence that loop/transport
+                    # work settled. The attempt owner joins both after CPU exit.
+                    binding['loop'].call_soon_threadsafe(capture.cancel)
+                    raise ApiError('memory_extraction_timeout', 'Memory extraction timed out', 503, True) from None
+                return _facts(output)
+            except Exception as error:
+                raise capture.reject(error) from None
         if not binding['current']():
             raise ApiError('memory_capture_cancelled', 'Memory capture was cancelled or superseded', 409)
 
@@ -89,16 +105,7 @@ class ApprovedLLM(LLMBase):
                 output += delta
                 if len(output) > 16000:
                     raise ApiError('memory_extraction_invalid', 'Memory extraction exceeded its response budget', 502)
-            try:
-                result = json.loads(output)
-                records = result['memory']
-                if not isinstance(records, list) or len(records) > 12 or any(
-                        not isinstance(row, dict) or not isinstance(row.get('text'), str) or
-                        not row['text'].strip() or len(row['text']) > 2000 for row in records):
-                    raise ValueError()
-            except (ValueError, TypeError, KeyError):
-                raise ApiError('memory_extraction_invalid', 'The selected provider did not return usable learning facts', 502, True) from None
-            return json.dumps({'memory': [{'text': row['text']} for row in records]})
+            return _facts(output)
 
         future = asyncio.run_coroutine_threadsafe(generate(), binding['loop'])
         try:
@@ -106,3 +113,17 @@ class ApprovedLLM(LLMBase):
         except TimeoutError:
             future.cancel()
             raise ApiError('memory_extraction_timeout', 'Memory extraction timed out. Retry the capture', 503, True) from None
+
+
+def _facts(output):
+    try:
+        if not isinstance(output, str) or len(output) > 16000:
+            raise ValueError()
+        records = json.loads(output)['memory']
+        if not isinstance(records, list) or len(records) > 12 or any(
+                not isinstance(row, dict) or not isinstance(row.get('text'), str) or
+                not row['text'].strip() or len(row['text']) > 2000 for row in records):
+            raise ValueError()
+    except (ValueError, TypeError, KeyError):
+        raise ApiError('memory_extraction_invalid', 'The selected provider did not return usable learning facts', 502, True) from None
+    return json.dumps({'memory': [{'text': row['text']} for row in records]})

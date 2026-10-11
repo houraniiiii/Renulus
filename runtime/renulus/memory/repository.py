@@ -11,6 +11,7 @@ from renulus.storage.invalidation import MEMORY_RESTORE_CAPTURE_PREFIX, context_
 from .models import ManualFact, clean_text, digest, require_eligible
 from .study_answers import answer_text, answer_reference_in
 from .lineage import AnswerInputs, AnswerLineage, INELIGIBLE_LINEAGE_CODES
+from .capture import _local_result
 
 
 BOUNDARY_CANCELLATIONS = ('boundary_policy_changed', 'boundary_context_changed', 'restore_interrupted')
@@ -559,7 +560,7 @@ class MemoryRepository:
                 self._cancel_stale_in(conn, job, code)
         return self.job(job['id'])
 
-    def commit_capture(self, job, material, texts):
+    def commit_capture(self, job, material, texts, *, publication_guard=None):
         # Hash resolved immutable bytes before entering the canonical write.
         answer_digest = (hashlib.sha256(material['text'].encode('utf-8')).hexdigest()
                          if material.get('_answer') else None)
@@ -591,6 +592,8 @@ class MemoryRepository:
                 # text. Resolve the exact current scalar material in this write.
                 material = self.material(job['evidence_id'], ContextScope.model_validate_json(job['scope']), conn=conn)
                 texts = [material['text']]
+            if publication_guard is not None:
+                _local_result(publication_guard(conn))
             identifiers = []
             for text in texts:
                 lineage = material.get('lineage')
