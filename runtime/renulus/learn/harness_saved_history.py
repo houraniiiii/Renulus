@@ -4,7 +4,7 @@ from pathlib import Path
 
 from renulus.contracts import ApiError
 from renulus.design_c_contracts import Conversation, canonical_digest
-from renulus.harness_contracts import PairedStoreManifest
+from renulus.harness_contracts import PairedStoreManifest, map_saved_conversation
 from renulus.storage.assessment_policy import require_assistance
 from renulus.storage.invalidation import context_epoch_in
 from .harness_migration import (MAX_MESSAGES, LegacyMessage, MigrationPins, SavedHistory)
@@ -15,11 +15,40 @@ class HarnessSavedHistory:
         self.repo, self.db = repository, repository.db
         self.active_manifest = active_manifest
 
-    def snapshot_in(self, conn, thread_id, *, expected_revision):
+    def _transaction(self, conn):
         path = next((row[2] for row in conn.execute('PRAGMA database_list') if row[1] == 'main'), None)
         if not conn.in_transaction or not path or Path(path).resolve() != self.db.path:
             raise ApiError('harness_migration_transaction_required',
                 'Read the saved owner in its canonical transaction.', 409)
+
+    def active_in(self, conn, thread_id):
+        """Check a committed transfer under today's owner and paired-store authority."""
+        self._transaction(conn)
+        require_assistance(conn)
+        summary, _ = self.repo._get(conn, 'learning', thread_id)
+        record = self.repo.migration_journal.find_in(conn, thread_id=thread_id)
+        mapping = self.repo.migration_journal.mapping_in(conn, thread_id)
+        manifest = PairedStoreManifest.model_validate(self.active_manifest())
+        if (record is None or record.state != 'active'
+                or record.readback_digest != record.source_digest or mapping is None
+                or manifest.state != 'active'
+                or PairedStoreManifest.model_validate_json(record.manifest_json) != manifest
+                or mapping.runtime.session_id != record.session_id
+                or mapping != map_saved_conversation(Conversation.model_validate(summary), mapping.runtime, manifest=manifest)):
+            raise ApiError('harness_history_requires_migration',
+                'This saved history needs its verified migration before native continuation.', 409)
+        originals = tuple((row['id'], row['run_id'], row['role']) for row in conn.execute(
+            'SELECT id,run_id,role FROM learn_messages WHERE thread_id=? ORDER BY created_at,id', (thread_id,)))
+        if originals != tuple((ref.legacy_id, ref.run_id, ref.role) for ref in record.message_refs):
+            raise ApiError('harness_migration_conflict', 'The retained original history identities changed.', 409)
+        return record
+
+    def check_active_in(self, conn, record):
+        if self.active_in(conn, record.thread_id) != record:
+            raise ApiError('harness_migration_conflict', 'The committed migration receipt changed.', 409)
+
+    def snapshot_in(self, conn, thread_id, *, expected_revision):
+        self._transaction(conn)
         policy = require_assistance(conn)
         summary, metadata = self.repo._get(conn, 'learning', thread_id)
         if summary['retention'] != 'saved' or summary['lifecycle'] == 'deleted':

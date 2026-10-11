@@ -5,6 +5,27 @@ to committed integration `4ce4ab17a979ad58656c8e21959d414a40cbd8b4`; it records
 existing source and retained receipts, without new tests or provider calls.
 Parent migration/continuation work after that checkpoint is not accepted here.
 
+## Subsequent connected checkpoint
+
+The parent Owner assembly now has owner-final01.xml:6 passes/89.295s and
+local-affected01.xml:50 passes/36.520s, both with zero failures/errors/skips,
+under G:/Renulus-agent-scratch/oc-h02-h08/saved-migration/receipts/.
+This newer scope supersedes the historical prepare_in refusal described
+below, without upgrading unrelated old receipts or closing H06 prematurely.
+
+| Criterion | New connected evidence | Remaining closure |
+| --- | --- | --- |
+| C1 | Actual production-main stable mapping, zero-inference conversion, retained stage acknowledgement, ordinary native continuation and fresh-generation reopen | Frozen assembly review and bounded transfer-capacity disposition |
+| C2 | Actual migrated Archive/restore/project/draft, Stop with retained settlement, saved observer disconnect and exact neutral status under a real active Test | Hidden desktop flow through the existing facade |
+| C3 | Original legacy IDs/text/citations remain public; imported aliases are unknown/ineligible and absent from the next manifest | Frozen assembly review and desktop history/reader observation |
+| C4 | Genuinely migrated populated owner deletion, project survives, native replies forgotten and no new inference; earlier command/export deletion evidence retained | Final criterion review, retaining independently owned originals/learning boundaries |
+| C5 | Retired original create denied after native reopen; lost-purge-ACK independent closure already complete | Real pre-producer legacy crash/orphan proof in assigned test-only lane |
+| C6 | Saved-only routing preserves the existing temporary owner | H21 remains separate; no new temporary runtime is claimed |
+
+Native child assembly969ac780 is not integrated during these checks. Its
+subagent changes require a newly observed final registry artifact; these
+H06 receipts retain their two-Library-tool native registry.
+
 The authoritative requirements are [H06](../planning/opencode-v2/tickets/06-continue-saved-and-temporary-chats-through-one-owner.md),
 [S2](../planning/opencode-v2/specs/02-memory-context.md) and
 [S3](../planning/opencode-v2/specs/03-workflows-migration.md).

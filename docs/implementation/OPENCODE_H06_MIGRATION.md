@@ -103,8 +103,12 @@ Runs overlap; they are not an aggregate count. These deletion traces use
 production main/SDK/private pipes/SQLite and one loopback synthetic inference
 effect. The cancellation observer wraps and delegates the actual process
 request, holding its result observation; it does not claim a held native
-resource finalizer. Lost-purge-ack and migration/continuation acceptance
-remain open. Account/TLS/package scopes are unchanged.
+resource finalizer. Lost-purge-ack reconciliation is independently closed on
+both axes by the unchanged public tracer d62a9339: red03 reproduced a second
+remove, and green01 observes exact native absence, one remove, journal
+retirement and gate release across a fresh native generation. Migration
+acceptance still needs the complete connected criterion disposition.
+Account/TLS/package scopes are unchanged.
 
 Independent Spec review found that a cached terminal purge failure prevented
 Owner.close from reaching unrelated native work. shutdown-red01.xml reproduced
@@ -166,3 +170,48 @@ before any potential import. Only the typed missing-session result proves
 absence. Empty SDK templates are tracked and cleaned through actual settlement.
 Retirement erases staged text/caches only after settlement and keeps opaque
 terminal identity without deleted payload digests.
+
+## Connected saved Owner assembly
+
+The learning Owner now retains migration tasks and their root-admission seal,
+binds the canonical journal/history adapter to the actual process transfer, and
+exposes migrate_saved(thread_id, *, expected_revision). The explicit HTTP port
+is POST /api/v1/conversations/learning/{id}/migrate with the existing strict
+Mutation body. Ordinary saved Send performs the same conversion before stream
+admission. An active mapping is checked against current owner, paired manifest,
+exact original message/run/role identities and committed readback; normal
+revision, draft and project changes after conversion do not invalidate it.
+
+Legacy rows remain read-only through the public history facade. Imported native
+aliases do not duplicate these rows or grant context/capture eligibility. New
+native turns append only through admitted receipt identities and existing M5
+publication. A failed/cancelled previous turn permits continuation only after
+its terminal Learn receipt and trusted native/Domain/Registry settlement;
+eligible completed references alone can contribute inherited context.
+
+The actual production-main receipt owner-final01.xml has six passes, zero
+failures/errors/skips, 89.295s. It covers stable zero-inference migration,
+unknown-context exclusion, strict explicit HTTP migration, retained stage
+observation/root gate, ordinary Send with Archive/project/draft/reopen/deletion,
+and Stop followed by saved observer disconnect and neutral active-Test status.
+local-affected01.xml has 50 passes, zero failures/errors/skips, 36.520s.
+Both are under G:/Renulus-agent-scratch/oc-h02-h08/saved-migration/receipts/.
+These are separate runs; no unchanged broad suite was repeated.
+
+Meaningful reds are http-send-red01 (ordinary Send409) and
+stop-disconnect-red02 (cancelled receipt blocks the next Send).
+retire-and-stop01 has two passes, 31.89s. The aborted first Stop fixture waited
+for cancellation before releasing its synthetic counter; its exact owned
+descendants were terminated and it supplies no clean-settlement evidence.
+stop-disconnect-green01 failed a fixture assumption that a completed receipt
+already proves canonical settlement; the final case explicitly observes the
+public settle_run port. Earlier imported-policy and facade failures remain
+qualified in the receipt directory.
+
+The concurrent retirement/read-release repair a3768b33 is integrated as4c7e81dc.
+Only authenticated exact retirement acknowledgement can end a terminal read
+whose process receipt was concurrently erased; in-flight release ownership is
+still retained. Its focused 12-pass receipt is separate from the six-case Owner
+run. Maximum-transfer capacity, a real orphaned legacy crash and the hidden
+desktop migration journey remain open; native child assembly has not changed
+the two-tool registry used by these receipts.

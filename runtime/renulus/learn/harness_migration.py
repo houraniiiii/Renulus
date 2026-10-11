@@ -163,12 +163,14 @@ class HarnessSavedMigration:
     def __init__(self, database: Database, *,
                  snapshot_in: SnapshotIn,
                  check_current_in: Callable[[sqlite3.Connection, SavedHistory], None],
-                 journal: MigrationJournal, transfer: NativeTransfer):
+                 journal: MigrationJournal, transfer: NativeTransfer,
+                 check_active_in: Callable[[sqlite3.Connection, MigrationRecord], None] | None = None):
         self.db = database
         self.snapshot_in = snapshot_in
         self.check_current_in = check_current_in
         self.journal = journal
         self.transfer = transfer
+        self.check_active_in = check_active_in
 
     async def migrate_saved(self, thread_id: str, *, expected_revision: int) -> MigrationResult:
         with self.db.transaction() as conn:
@@ -183,7 +185,10 @@ class HarnessSavedMigration:
                 self.journal.reserve_in(conn, candidate)
                 record = candidate
             else:
-                self._same_source(record, candidate)
+                if record.state == 'active' and self.check_active_in is not None:
+                    self.check_active_in(conn, record)
+                else:
+                    self._same_source(record, candidate)
         return await self._resume(record)
 
     async def reconcile_migration(self, migration_id: str) -> MigrationResult:
@@ -191,7 +196,10 @@ class HarnessSavedMigration:
             record = self.journal.find_in(conn, migration_id=migration_id)
             if record is None:
                 raise ApiError("harness_migration_unavailable", "Saved migration unavailable.", 404)
-            self._current_in(conn, record)
+            if record.state == 'active' and self.check_active_in is not None:
+                self.check_active_in(conn, record)
+            else:
+                self._current_in(conn, record)
         return await self._resume(record)
 
     def _record(self, snapshot):

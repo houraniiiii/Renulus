@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Header, Query, Response
 from fastapi.responses import StreamingResponse
 
 from renulus.design_c_contracts import ConversationDraft
+from renulus.contracts import ApiError
 from .conversation_models import (Mutation, NewConversation, Rename, ProjectMove, Send,
     CaseMutation, CaseContextEdit, CaseAttachmentRemove, CasePreviewApply, CasePreviewKeep, CasePreviewText, CaseHandoffRequest)
 from .conversation_case import ConversationCases
@@ -44,6 +45,14 @@ def create_router(services):
             return await harness.messages(identifier, limit, cursor)
         return repository.messages(kind, identifier, limit, cursor)
 
+    @router.post('/learning/{identifier}/migrate')
+    async def migrate(identifier: str, body: Mutation):
+        owner = services.registry.get('harness_learning')
+        if owner is None:
+            raise ApiError('harness_migration_unavailable',
+                'Saved migration requires the active learning runtime.', 503, True)
+        return await owner.migrate_saved(identifier, expected_revision=body.expected_revision)
+
     @router.get('/case/{identifier}/context')
     def case_context(identifier: str):
         return cases.context(identifier)
@@ -78,6 +87,9 @@ def create_router(services):
 
     @router.post('/{kind}/{identifier}/messages')
     async def send(kind: Literal['learning','case'], identifier: str, body: Send, idempotency_key: str | None = Header(default=None)):
+        owner = services.registry.get('harness_learning') if kind == 'learning' else None
+        if owner is not None:
+            await owner.prepare_saved_continuation(identifier, expected_revision=body.expected_revision)
         entry,receipt=streaming.begin(kind,identifier,body,idempotency_key)
         streaming.launch(entry)
         return StreamingResponse(streaming.events(entry,receipt),media_type='text/event-stream',

@@ -7,6 +7,8 @@ import math
 from renulus.contracts import ApiError, ContextScope, Scope
 from renulus.design_c_contracts import Dependency, EligibleInput, Identity, canonical_digest
 from renulus.learn.harness_bridge import HarnessLearningBridge
+from renulus.learn.harness_migration import HarnessSavedMigration
+from renulus.learn.harness_saved_history import HarnessSavedHistory
 from renulus.learn.memory_context import MemoryContext
 from renulus.memory.lineage import INELIGIBLE_LINEAGE_CODES
 from renulus.storage import utc_now
@@ -20,6 +22,7 @@ from .harness_memory_capture import HarnessMemoryCaptures
 from .harness_process import ManagedHarnessProcess, NativeProcessIdentity, OBSERVATION_COMMANDS
 from .harness_profile import load_harness_profile
 from .harness_profile_owner import ProfileOwnerLease, ProfileOwnerScope
+from .harness_saved_transfer import HarnessSavedTransfer
 
 
 _STALE_LEARNING_AUTHORITY_CODES = INELIGIBLE_LINEAGE_CODES | frozenset({
@@ -62,6 +65,9 @@ class HarnessLearningOwner:
         self._purges = {}
         self._purge_seal = None
         self._deletions = set()
+        self._migrations = set()
+        self._migration_seal = None
+        self._migration_thread = None
         self.model_registry_factory = model_registry_factory
         self.model_registry = self._make_model_registry()
         self.memory_captures = HarnessMemoryCaptures(self)
@@ -75,6 +81,61 @@ class HarnessLearningOwner:
         self._starting = None
         self._starting_candidate = None
         self._close_task = None
+        self._bind_saved_transfer()
+
+    def _bind_saved_transfer(self):
+        self.saved_history = HarnessSavedHistory(self.repo, active_manifest=self.manifest)
+        self.bridge.check_migration_in = self.saved_history.active_in
+        self.saved_transfer = HarnessSavedTransfer(self.process, observation_timeout=5)
+        self.saved_migration = HarnessSavedMigration(self.db,
+            snapshot_in=self.saved_history.snapshot_in,
+            check_current_in=self.saved_history.check_current_in,
+            journal=self.repo.migration_journal, transfer=self.saved_transfer,
+            check_active_in=self.saved_history.check_active_in)
+
+    async def migrate_saved(self, thread_id, *, expected_revision):
+        task = asyncio.create_task(self._migrate_saved(thread_id, expected_revision),
+            name='renulus-saved-migration-' + thread_id)
+        self._migrations.add(task)
+        def finished(completed):
+            self._migrations.discard(completed)
+            if not completed.cancelled():
+                completed.exception()
+        task.add_done_callback(finished)
+        return await asyncio.shield(task)
+
+    async def prepare_saved_continuation(self, thread_id, *, expected_revision):
+        """Convert original history before the ordinary saved Send admits its run."""
+        with self.db.transaction() as conn:
+            legacy = conn.execute('SELECT 1 FROM learn_messages WHERE thread_id=? LIMIT 1',
+                (thread_id,)).fetchone()
+            record = self.repo.migration_journal.find_in(conn, thread_id=thread_id) if legacy else None
+        if legacy and (record is None or record.state != 'active'):
+            await self.migrate_saved(thread_id, expected_revision=expected_revision)
+
+    async def _migrate_saved(self, thread_id, expected_revision):
+        if self._closing:
+            raise ApiError('runtime_stopping', 'The learning runtime is closing.', 503, True)
+        if self._migration_seal is None:
+            seal = self.seal_new_runs(expected_effective=self.configuration_id)
+            self._migration_seal, self._migration_thread = seal, thread_id
+        else:
+            seal = self._migration_seal
+            self.require_root_seal(seal)
+            if self._migration_thread != thread_id:
+                raise ApiError('harness_configuration_busy', 'Reconcile the retained saved migration first.', 409, True)
+        retired = False
+        try:
+            result = await self.saved_migration.migrate_saved(thread_id, expected_revision=expected_revision)
+            retired = result.state == 'active' and result.retirement == 'retired'
+            return result
+        finally:
+            with self.db.transaction() as conn:
+                record = self.repo.migration_journal.find_in(conn, thread_id=thread_id)
+            if not self.saved_transfer.status()['active'] and (retired or record is None):
+                seal.release()
+                if self._migration_seal is seal:
+                    self._migration_seal = self._migration_thread = None
 
     def _make_model_registry(self, *, previous=None):
         if self.model_registry_factory is None:
@@ -232,6 +293,7 @@ class HarnessLearningOwner:
     def begin_shutdown(self):
         """Seal and start retained cleanup before producer joins need native exit."""
         self._closing = True
+        self.saved_transfer.seal()
         if self._close_task is None:
             self._close_task = asyncio.create_task(self._close(), name='renulus-learning-harness-close')
 
@@ -261,6 +323,10 @@ class HarnessLearningOwner:
         while (await self.process.close(1))['state'] != 'closed':
             if (await self.process.settlement(1))['state'] == 'settled':
                 break
+        if self._migrations:
+            await asyncio.gather(*(asyncio.shield(task) for task in tuple(self._migrations)),
+                return_exceptions=True)
+        await self.saved_transfer.settled()
         if self._settlements:
             await asyncio.gather(*(asyncio.shield(task) for task in tuple(self._settlements.values())))
         if self.model_registry is not None:
@@ -442,7 +508,12 @@ class HarnessLearningOwner:
     def check_new_run_in(self, conn):
         if self._closing:
             raise ApiError('runtime_stopping', 'The learning runtime is closing.', 503, True)
-        if self._root_seal is not None:
+        unsettled_terminal = self.configuration_authority is not None and conn.execute(
+            "SELECT 1 FROM learn_harness_answers a JOIN harness_configuration_runs c ON c.run_id=a.run_id "
+            "WHERE a.state IN ('failed','cancelled') AND c.state!='settled' LIMIT 1").fetchone()
+        if (self._root_seal is not None or self._migrations or self._settlements or unsettled_terminal
+                or self.saved_transfer.status()['active']
+                or conn.execute("SELECT 1 FROM learn_harness_migrations WHERE state!='active' LIMIT 1").fetchone()):
             raise ApiError('harness_configuration_busy',
                 'Configuration is changing. New learning runs are sealed.', 409, True)
 
@@ -469,7 +540,7 @@ class HarnessLearningOwner:
             with self.db.transaction() as conn:
                 if self._root_seal is not None or self.configuration_id != expected_effective:
                     raise ApiError('activation_conflict', 'The live configuration changed.', 409, True)
-                if (self.memory_captures.retained() or any(entry.get('harness_revisions') is not None
+                if (self.saved_transfer.status()['active'] or self.memory_captures.retained() or any(entry.get('harness_revisions') is not None
                         for entry in tuple(self.repo.streaming.active.values())) or conn.execute(
                     "SELECT 1 FROM learn_harness_answers a JOIN learn_runs r ON r.id=a.run_id "
                     "WHERE r.state IS NULL OR r.state='running' OR a.state IS NULL "
@@ -491,7 +562,7 @@ class HarnessLearningOwner:
         self.require_root_seal(seal)
         if self._closing:
             raise ApiError('runtime_stopping', 'The learning runtime is closing.', 503, True)
-        if self.memory_captures.retained() or self._settlements or (self.model_registry is not None and (
+        if self._migrations or self.saved_transfer.status()['active'] or self.memory_captures.retained() or self._settlements or (self.model_registry is not None and (
                 self.model_registry.status().owned or self.model_registry.status().runs)):
             raise ApiError('harness_settlement_pending', 'The previous model owner is still retained.', 409, True)
         registry = self._make_model_registry(previous=self.model_registry)
@@ -506,6 +577,7 @@ class HarnessLearningOwner:
         self.activation = HarnessProfileActivation(self.db, process, self.config)
         self._starting = None
         self._starting_candidate = None
+        self._bind_saved_transfer()
 
     def _entry(self, binding, *, admitting=False, conn=None):
         self.bridge.check(binding.operation_id, conn=conn)

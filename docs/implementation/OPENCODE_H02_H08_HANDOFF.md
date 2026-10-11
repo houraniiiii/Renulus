@@ -17,6 +17,23 @@ installation, push or downstream-ticket expansion is authorized.
 
 ### Dependency readiness
 
+Latest H06 checkpoint: six actual production-main Owner cases pass in
+89.295s, and 50 affected migration/history/context checks pass in36.520s.
+The Owner now prepares legacy conversion before ordinary saved Send and
+retains the public history/draft/project/Archive facade through native
+continuation, Stop, disconnect, reopen and populated-owner deletion.
+Receipts are saved-migration/receipts/owner-final01.xml and local-affected01.xml
+under G:/Renulus-agent-scratch/oc-h02-h08/. The assembly awaits frozen
+independent review, orphan-crash evidence, transfer-capacity disposition and
+hidden desktop verification; H06 acceptance is still open. Lost-purge-ACK
+reconciliation already has independent closure and is not an open defect.
+
+Transfer residual a3768b33 is integrated as4c7e81dc after those runs exited.
+Native child assembly969ac780 and Python routing helper abdad45b are READY
+but not integrated. Both native assembly review axes are clear. Keep the
+current two-Library-tool registry until H06 evidence is committed/reviewed;
+H07 composition must observe a new immutable final registry artifact.
+
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
 expectation-disposition reviews clear. H06–H08 remain open. Required unmet

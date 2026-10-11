@@ -59,7 +59,7 @@ class HarnessLearningBridge:
     def __init__(self, repository, transport, *, active_manifest, configuration_id,
                  publish_answer_in=None, check_dependencies_in=None, check_run_dependencies_in=None,
                  eligible_history_in=None, context_filtering=False, check_new_run_in=None,
-                 admit_run_in=None, settle_run=None, cancel_run=None, poll_interval=0.05):
+                 admit_run_in=None, settle_run=None, cancel_run=None, check_migration_in=None, poll_interval=0.05):
         self.repo, self.db, self.transport = repository, repository.db, transport
         self.active_manifest, self.configuration_id = active_manifest, configuration_id
         self.publish_answer_in = publish_answer_in
@@ -70,6 +70,7 @@ class HarnessLearningBridge:
         self.admit_run_in = admit_run_in
         self.settle_run = settle_run
         self.cancel_run = cancel_run
+        self.check_migration_in = check_migration_in
         # Trusted assembly asserts that the native per-model hook is installed.
         self.context_filtering = context_filtering
         self.poll_interval = poll_interval
@@ -91,12 +92,18 @@ class HarnessLearningBridge:
             self.check_new_run_in(conn)
         # H02 admits new saved learning. Importing legacy text is the H06 gate.
         if conn.execute('SELECT 1 FROM learn_messages WHERE thread_id=? LIMIT 1', (identifier,)).fetchone():
-            raise ApiError('harness_history_requires_migration',
-                'This saved history needs its verified migration before native continuation.', 409)
-        for previous in conn.execute('SELECT state FROM learn_harness_answers WHERE thread_id=?', (identifier,)):
-            if (previous['state'] != 'completed' or self.publish_answer_in is None or
+            if self.check_migration_in is None:
+                raise ApiError('harness_history_requires_migration',
+                    'This saved history needs its verified migration before native continuation.', 409)
+            self.check_migration_in(conn, identifier)
+        for previous in conn.execute('SELECT a.state,r.state AS run_state FROM learn_harness_answers a '
+                'JOIN learn_runs r ON r.id=a.run_id WHERE a.thread_id=?', (identifier,)):
+            if (previous['state'] not in ('completed', 'failed', 'cancelled') or
+                    previous['run_state'] not in ('completed', 'failed', 'cancelled', 'interrupted') or
+                    self.publish_answer_in is None or
                     not (self.check_run_dependencies_in or self.check_dependencies_in) or
-                    self.eligible_history_in is None or not self.context_filtering):
+                    self.eligible_history_in is None or not self.context_filtering or
+                    previous['state'] != 'completed' and (self.settle_run is None or self.check_new_run_in is None)):
                 raise ApiError('harness_history_requires_lineage',
                     'The retained native history needs verified publication lineage before continuation.', 409)
         run = ActiveRun(durable_id('run'), identifier, ContextScope(kind=Scope.STUDY, entity_id=identifier))
@@ -715,12 +722,25 @@ class HarnessLearningBridge:
         with self.db.transaction() as conn:
             policy, epoch = require_assistance(conn), context_epoch_in(conn)
             receipts = [dict(row) for row in conn.execute('SELECT * FROM learn_harness_answers WHERE thread_id=? AND input_id IS NOT NULL', (identifier,))]
+            legacy = [dict(row) for row in conn.execute(
+                'SELECT * FROM learn_messages WHERE thread_id=? ORDER BY created_at,id', (identifier,))]
+            if legacy:
+                if self.check_migration_in is None:
+                    raise ApiError('harness_history_requires_migration',
+                        'This saved history needs its verified migration before native continuation.', 409)
+                self.check_migration_in(conn, identifier)
+                for item in legacy:
+                    item['content_refs'] = [citation['content_ref']
+                        for citation in json.loads(item.pop('citations_json')) if 'content_ref' in citation]
+                    item.pop('thread_id')
         native = await self._native_messages(mapping['runtime']['session_id'], 'history:' + identifier, guard=False)
         with self.db.transaction() as conn:
             require_assistance(conn, expected_revision=policy)
             if context_epoch_in(conn) != epoch:
                 raise ApiError('dependency_changed', 'The learning context changed.', 409)
             self.repo._get(conn, 'learning', identifier)
+            if legacy:
+                self.check_migration_in(conn, identifier)
         by_id = {row['input_id']: row for row in receipts}
         for row in receipts:
             if row['state'] == 'completed':
@@ -728,7 +748,9 @@ class HarnessLearningBridge:
                 self._completed_text(reference, native)
                 for message_id in reference['message_ids']:
                     by_id[message_id] = row
-        items = []
+        # Imported aliases have unknown lineage. Show original read-only rows
+        # through the saved facade; only new receipt-owned native turns append.
+        items = legacy
         for message in native:
             receipt = by_id.get(message['id'])
             if receipt is None or message['type'] not in ('user', 'assistant'):
