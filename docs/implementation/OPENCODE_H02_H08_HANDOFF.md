@@ -17,7 +17,17 @@ installation, push or downstream-ticket expansion is authorized.
 
 ### Dependency readiness
 
-Current continuation: parent `6e28a81c`. The reviewed child-learning routing
+Current integration source baseline: `6e28a81c`; later parent commits record
+evidence and ownership updates. Ready isolated Owner assembly `aebb5ef2` and
+test-only `f12c6375` have both independent review axes clear. Actual four-send
+child/Library/M5 composition, three cleanup races and the two-send admitted-child
+Stop finalizer case have passing receipts. Sartre alone owns the next test-only
+graceful reopen case in oc-library; the public active-Test exposure case is queued.
+No native/transport/Owner child assembly is integrated in this parent yet.
+H06's immediate-Archive hidden check remains blocked by controller approval policy;
+H06–H08 acceptance stays open. The chronological qualifications below remain binding.
+
+The reviewed child-learning routing
 helper `abdad45b` is integrated as `f0e433d6`; supplied-transaction policy
 settlement `dd75d5eb` is integrated as `294b8218`. Both independent axes are
 clear, with original62-case helper and12-case settlement evidence retained;
