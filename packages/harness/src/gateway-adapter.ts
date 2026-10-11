@@ -2,7 +2,9 @@ import { Cause, Effect, Option, Stream } from "effect";
 import { HttpClientResponse, type HttpClientRequest } from "effect/http";
 import { AIError, AuthenticationError, RateLimitError, QuotaExceededError, ProviderInternalError, TransportError,
   InvalidRequestError, GenerationOptions, LLMRequest, type LLMClientShape } from "@opencode/ai";
-import type { Model } from "@opencode/schema/model";
+import { Model } from "@opencode/schema/model";
+import { Provider } from "@opencode/schema/provider";
+import { SessionRunnerModel } from "@opencode/core/session/runner/model";
 import type { StreamOptions } from "@opencode/ai/route/client";
 import { DomainClient, type DomainBinding, type DomainOutcome } from "./domain-ipc.ts";
 import { createSubscriptionAdapter, type InlineImage, type SubscriptionRoute } from "./provider-adapter.ts";
@@ -27,14 +29,21 @@ export interface TrustedGatewayPreparation {
   readonly bounds: { readonly max_request_bytes: number; readonly max_response_bytes: number; readonly max_frame_bytes: number };
 }
 export interface GatewayReceipt { readonly dispatch_id: string; readonly permit_id: string }
+export interface GatewayPrimaryPreparation {
+  readonly resolved: SessionRunnerModel.Resolved;
+  readonly prepare: (request: LLMRequest, settings: StreamOptions, unfiltered: LLMRequest) => Effect.Effect<LLMRequest, AIError>;
+}
 export interface GatewayAdapterOptions {
   readonly domain: DomainClient;
   readonly beforePrepare: (binding: DomainBinding) => Effect.Effect<TrustedGatewayPreparation, AIError>;
   readonly validateImages: (binding: DomainBinding, images: readonly InlineImage[]) => Effect.Effect<void, AIError>;
+  /** Trusted parent builds/registers native pre-filter evidence; no model envelope authority. */
+  readonly registerManifest?: (plan: Readonly<TrustedGatewayPreparation>, unfiltered: LLMRequest) => Effect.Effect<void, AIError>;
 }
 export interface GatewayAdapter {
   readonly client: LLMClientShape;
   prepare(binding: DomainBinding, request: LLMRequest, settings?: StreamOptions): Effect.Effect<LLMRequest, AIError>;
+  preparePrimary(binding: DomainBinding, resolved: SessionRunnerModel.Resolved): Effect.Effect<GatewayPrimaryPreparation, AIError>;
   receipt(request: LLMRequest): Readonly<GatewayReceipt> | undefined;
   close(): Promise<void>;
 }
@@ -82,7 +91,7 @@ function trustedPreparation(value: TrustedGatewayPreparation, binding: DomainBin
   return Object.freeze(plan);
 }
 type NativeAdapter = Awaited<ReturnType<typeof createSubscriptionAdapter>>;
-type Entry = { adapter: NativeAdapter; plan: TrustedGatewayPreparation; used: boolean;
+type Entry = { adapter: NativeAdapter; plan: TrustedGatewayPreparation; bound: boolean; used: boolean;
   release?: () => void; receipt?: Readonly<GatewayReceipt>; failure?: AIError };
 function requireInputs(request: LLMRequest, plan: TrustedGatewayPreparation) {
   if (!plan.native_capabilities.tools && (request.tools.length || request.messages.some(message =>
@@ -154,8 +163,8 @@ export async function createGatewayAdapter(options: GatewayAdapterOptions): Prom
         Effect.ensuring(Effect.sync(() => { controllers.delete(controller); })),
       );
     }));
-  const prepare: GatewayAdapter["prepare"] = (binding, request, settings) => Effect.suspend(() => {
-    if (closing || settings && Object.values(settings).some(value => value !== undefined)) return Effect.fail(denied());
+  const open = (binding: DomainBinding): Effect.Effect<Entry, AIError> => Effect.suspend(() => {
+    if (closing) return Effect.fail(denied());
     if (Object.keys(binding).length !== bindingKeys.length || !bindingKeys.every(key => identifier(binding[key]))) return Effect.fail(denied());
     binding = Object.freeze({ ...binding });
     const release = hold();
@@ -163,7 +172,6 @@ export async function createGatewayAdapter(options: GatewayAdapterOptions): Prom
     Effect.flatMap(value => ownedIO(async signal => {
         const preparation = trustedPreparation(value, binding);
         if (closing || dispatches.has(preparation.dispatch_id)) throw denied();
-        requireInputs(request, preparation);
         dispatches.add(preparation.dispatch_id);
         binding = preparation.binding;
         let entry: Entry;
@@ -189,15 +197,71 @@ export async function createGatewayAdapter(options: GatewayAdapterOptions): Prom
           }),
         });
         if (closing || signal.aborted) { await adapter.close(); throw denied(); }
-        entry = { adapter, plan: preparation, used: false };
+        entry = { adapter, plan: preparation, bound: false, used: false };
         adapters.add(adapter);
-        const prepared = LLMRequest.update(request, { model: adapter.model,
-          generation: new GenerationOptions({ ...request.generation, maxTokens: preparation.role.output_tokens }) });
-        entries.set(prepared, entry);
-        return prepared;
+        return entry;
     })), Effect.ensuring(Effect.sync(release)));
   }).pipe(Effect.catchCause(cause => Cause.hasInterruptsOnly(cause) ? Effect.failCause(cause)
     : Effect.fail(safeFailure(Option.getOrUndefined(Cause.findErrorOption(cause))))));
+  const settingsAllowed = (settings?: StreamOptions) => !settings || Object.values(settings).every(value => value === undefined);
+  const checkPrimary = (entry: Entry, request: LLMRequest, settings: StreamOptions) => {
+    const route = entry.plan.route;
+    const headers = new Set(["x-opencode-session-id", "x-session-affinity", "x-session-id",
+      "user-agent", "x-opencode-project", "x-opencode-session", "x-opencode-client"]);
+    if (!settingsAllowed(settings) || request.model.id !== route.wire_model_id || request.model.provider !== route.provider_id
+        || request.model.route.protocol !== route.protocol
+        || `${request.model.route.endpoint.baseURL}${request.model.route.endpoint.path}` !== route.endpoint
+        || request.http?.body || request.http?.query
+        || Object.keys(request.http?.headers ?? {}).some(name => !headers.has(name.toLowerCase()))
+        || request.generation?.maxTokens !== undefined && (!positive(request.generation.maxTokens)
+          || request.generation.maxTokens > entry.plan.role.output_tokens)) throw denied();
+    requireInputs(request, entry.plan);
+  };
+  const bind = (entry: Entry, request: LLMRequest, maxTokens = entry.plan.role.output_tokens) => {
+    if (closing) throw denied();
+    requireInputs(request, entry.plan);
+    const prepared = LLMRequest.update(request, { model: entry.adapter.model,
+      generation: new GenerationOptions({ ...request.generation, maxTokens }) });
+    entries.set(prepared, entry);
+    return prepared;
+  };
+  const use = (entry: Entry, work: () => Effect.Effect<LLMRequest, AIError>) => Effect.suspend(() => {
+    if (closing || entry.bound) return Effect.fail(denied());
+    entry.bound = true;
+    const release = hold();
+    return Effect.suspend(work).pipe(
+      Effect.onExit(exit => exit._tag === "Failure" ? finish(entry) : Effect.void),
+      Effect.ensuring(Effect.sync(release)),
+      Effect.catchCause(cause => Cause.hasInterruptsOnly(cause) ? Effect.failCause(cause)
+        : Effect.fail(safeFailure(Option.getOrUndefined(Cause.findErrorOption(cause))))),
+    );
+  });
+  const prepare: GatewayAdapter["prepare"] = (binding, request, settings) => Effect.suspend(() => {
+    if (!settingsAllowed(settings)) return Effect.fail(denied());
+    return open(binding).pipe(Effect.flatMap(entry => use(entry, () => Effect.try({ try: () => bind(entry, request), catch: safeFailure }))));
+  });
+  const preparePrimary: GatewayAdapter["preparePrimary"] = (binding, currentResolved) => Effect.suspend(() => {
+    if (typeof options.registerManifest !== "function") return Effect.fail(denied());
+    return open(binding).pipe(Effect.flatMap(entry => Effect.try({ try: () => {
+      const nativeResolved = SessionRunnerModel.resolved(entry.adapter.model, { capabilities: entry.plan.native_capabilities,
+        cost: Object.freeze(structuredClone(currentResolved.cost)),
+        limit: Object.freeze({ input: entry.plan.limits.input_tokens, output: entry.plan.role.output_tokens, context: entry.plan.limits.window_tokens }),
+      });
+      const resolved: SessionRunnerModel.Resolved = { ...nativeResolved,
+        ref: Model.Ref.make({ providerID: Provider.ID.make(entry.plan.route.provider_id), id: Model.ID.make(entry.plan.route.catalog_model_id) }) };
+      const primary: GatewayPrimaryPreparation = { resolved: Object.freeze(resolved),
+        prepare: (request, settings, unfiltered) => use(entry, () => Effect.gen(function* () {
+          if (!settingsAllowed(settings) || !unfiltered || !Array.isArray(unfiltered.system)
+              || !Array.isArray(unfiltered.messages) || !Array.isArray(unfiltered.tools)) return yield* Effect.fail(denied());
+          checkPrimary(entry, request, settings); requireInputs(unfiltered, entry.plan);
+          yield* Effect.uninterruptible(Effect.suspend(() => options.registerManifest!(entry.plan, unfiltered)));
+          checkPrimary(entry, request, settings);
+          return bind(entry, request, request.generation?.maxTokens ?? entry.plan.role.output_tokens);
+        })),
+      };
+      return Object.freeze(primary);
+    }, catch: safeFailure }).pipe(Effect.onExit(exit => exit._tag === "Failure" ? finish(entry) : Effect.void))));
+  });
   const claim = (request: LLMRequest) => {
     const entry = entries.get(request);
     if (closing || !entry || entry.used) throw denied();
@@ -222,7 +286,7 @@ export async function createGatewayAdapter(options: GatewayAdapterOptions): Prom
           : Stream.fail(entry.failure ?? safeFailure(Option.getOrUndefined(Cause.findErrorOption(cause))))))))),
     compact: () => Effect.fail(denied()),
   };
-  return { client, prepare, receipt: request => entries.get(request)?.receipt,
+  return { client, prepare, preparePrimary, receipt: request => entries.get(request)?.receipt,
     close: () => {
       closing = true;
       for (const controller of controllers) controller.abort();

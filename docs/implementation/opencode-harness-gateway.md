@@ -563,9 +563,9 @@ The completed full-suite command was:
 
 These are native module/public-Domain-seam proofs with synthetic callbacks and
 the actual managed image parser. Parent still owns actual gateway command
-registration/preparation map, final body token accounting, pre-filter capability
-injection, ConfigurationAuthority lifecycle, strict terminal/publication checks
-and saved host composition. No live provider call, installation, credential
+registration/preparation map, final body token accounting, applying the trusted
+preparation before native filtering, ConfigurationAuthority lifecycle, strict
+terminal/publication checks and saved host composition. No live provider call, installation, credential
 profile copy or account/package acceptance occurred. H03 and H02-H08 remain open.
 
 ## P2 safe error-channel repair — 2026-10-11
@@ -632,64 +632,139 @@ module bytes. Exact commands, from `packages/harness`:
 & 'C:/Renulus/scratch/ocf/tools/node-v26.4.0-win-x64/node.exe' node_modules/typescript/bin/tsc --noEmit > C:/Renulus/scratch/oc-h02-h08/providers/node-gateway/receipts/p2-typecheck.txt
 ```
 
-## Read-only host proposal; not implemented by this repair
+## One trusted preparation before native media filtering — 2026-10-11
 
-The parent owns the host and its primary-policy tracer. The proposed optional
-member matches that tracer; `currentResolved` is context, never route authority:
+This extension follows `307a43d79a03c9413b6bdd15b4627634abbf7393` and preserves
+its safe typed errors. It implements the parent's committed `5500341e`
+`PrimaryModelPreparation` interface in the gateway-owned module, tests and
+fixture. No host, IPC, configuration, provider-adapter, manifest-builder,
+dependency or entry-point source is changed. Its exact added interface is:
 
 ```typescript
-readonly preparePrimary?: (
-  binding: NativeInputBinding,
-  currentResolved: SessionRunnerModel.Resolved,
-) => Effect.Effect<{
+export interface GatewayPrimaryPreparation {
   readonly resolved: SessionRunnerModel.Resolved;
-  readonly prepare: (request: LLMRequest, settings: StreamOptions) => Effect.Effect<LLMRequest, AIError>;
-}, AIError>;
+  readonly prepare: (
+    request: LLMRequest,
+    settings: StreamOptions,
+    unfiltered: LLMRequest,
+  ) => Effect.Effect<LLMRequest, AIError>;
+}
+
+// New GatewayAdapter member; existing direct prepare remains available.
+preparePrimary(
+  binding: DomainBinding,
+  resolved: SessionRunnerModel.Resolved,
+): Effect.Effect<GatewayPrimaryPreparation, AIError>;
+
+// Optional factory option; mandatory for preparePrimary.
+readonly registerManifest?: (
+  plan: Readonly<TrustedGatewayPreparation>,
+  unfiltered: LLMRequest,
+) => Effect.Effect<void, AIError>;
 ```
 
-It must return one trusted dispatch preparation before native `service.primary`
-filters media; the returned closure reuses it after native hooks and parent
-`selectContext`. Close the `AIError` channel with `Effect.orDie` at native
-service overrides, preserving interrupts. Preserve `executeTool` and native
-terminal handling; deny retries and auxiliary title/generate/compaction without
-explicit policy. Binding/phase/held checks and unused-plan retirement belong to
-the parent. Consumed IO stays owned through the actual gateway finalizer.
+All Effects have a closed environment (`R = never`). Missing registration denies
+before `beforePrepare` is invoked. Successful early preparation calls the
+trusted selector once, freezes its plan, consumes one dispatch identity and
+creates one native subscription adapter. `SessionRunnerModel.resolved` receives
+that adapter model, the trusted native capabilities and limits
+`{ input: input_tokens, output: role.output_tokens, context: window_tokens }`.
+The catalogue `Model.Ref` is projected explicitly from the same route. The
+incoming resolved model, capabilities, transport and compaction do not grant
+authority. Only its cost metadata is cloned. The result, capabilities and
+limits are frozen; no WS or opaque compaction setting is inherited.
 
-The current gateway selects inside late `prepare`. A future proposed
-`begin(binding: DomainBinding): Effect.Effect<GatewayPreparationLease, AIError>`
-would expose `{ model: LanguageModel, preparation: Readonly<TrustedGatewayPreparation>,
-prepare(request, settings?), discard() }`. `begin` would call `beforePrepare`
-once and create one native adapter. Parent `preparePrimary` projects `Resolved`
-from the lease's model and trusted catalogue/capabilities/limits, then returns
-its late preparation closure. Do not call top-level `gateway.prepare` again:
-that currently obtains another plan. Existing preparation can become
-convenience over `begin`; no second selector, admission or token estimate is
-needed. This lease API is **unimplemented** and absent from the P2 commit.
+Parent applies `resolved` before native shaping, captures its admitted context
+after context hooks and selection but before `unsupportedParts`/`boundImages`,
+then invokes this result's `prepare` after native preparation. The closure
+reuses the original plan and adapter, checks final route/output/settings/media,
+registers the manifest once, rechecks after registration and binds the returned
+request identity. Calling top-level `gateway.prepare` at that point would
+allocate a different plan and must not be part of this composition. The final
+explicit output stays at or below the role ceiling; a smaller native limit is
+preserved and a missing limit is supplied from the role. The final native
+serialized bytes remain bounded and carry exactly the original dispatch ID.
+No second budget, token estimate or admission is introduced.
 
-Pinned source-built 2.0.26 at `4b6fea2875e4f2e3e8a8fee181803e54f7056845`
-provides declaration/source proof in `dist/types/session/model-request.d.ts`,
-`dist/types/session/runner/model.d.ts`, `dist/types/session/context.d.ts` and
-chunks `agent-j1chax0k.js`, `agent-g5v8b9tv.js`, `agent-7p3yjfky.js` and
-`agent-xasq558m.js`. `SessionRunnerModel.resolved` is pure; its limits are
-`{ input, output, context }`. Project the trusted catalogue `ref` explicitly
-when native wire model ID differs from catalogue ID. The runner passes `loaded.model`
-to transcript construction and `steps.attempt` separately from prepared input;
-that step model supplies saved assistant identity and cost. Therefore the
-primary-only seam leaves a saved-model identity gap. Complete composition
-should allocate the same preparation at runner resolution and consume it in
-primary, with auxiliary resolution guarded against primary allocation.
+`registerManifest` is a trusted parent callback. Parent composes its imported
+`captureNativeManifest` builder and authenticated internal `model.manifest`
+registration there, binding evidence to `plan.dispatch_id`. This module neither
+builds a competing manifest nor accepts one from `model.dispatch` arguments.
+The callback receives a plain request-shaped snapshot whose media has `.source`
+and `.mediaType`, without `.inline()` methods, plus exactly the surviving native
+tool definitions. It must reject lost/unproven media, invalid projections and
+stale authority. Parent owns route provider metadata namespace interpretation,
+imageIngress, final body input measurement and Python preparation registration.
 
-An in-memory TypeScript check of this interface and graph-preserving
-runner/model-request/context `node.mapLayer` overrides completed with **zero
-diagnostics, no source emitted**. Closed callbacks have `R = never`; original
-Layer dependencies remain intact. This proves declaration feasibility only.
-No private context access or new Layer dependency is required.
+**Construction prerequisite discovered by the actual-media fixture:** pinned
+`LLMRequest.update(request, { ...structuredClone(snapshot) })` rejects plain
+cloned media with `Schema validation failed`. Keep the third argument as plain
+data, structurally projected from `{ ...request, ...snapshot, tools: clonedTools }`
+at the trusted host seam; do not invoke the native constructor for that evidence.
+The actual final native request retains its native instances. The agreed
+`LLMRequest` callback type is unchanged; the evidence is never passed to a
+native client. This exact representation passed the supplied callback in the
+fixture. Parent was notified before finalization.
 
-A future bounded SDK fixture should use one saved primary, one actual tool
-continuation and a synthetic PNG with conflicting initial model/capabilities:
-two trusted selections/two dispatch IDs, preserved final image bytes, paired
-tool result and correct saved catalogue identity. Auxiliary attempts should
-have zero selections/IO. No such fixture was run in this read-only task. Parent
-Python `model.dispatch` must measure/hash the actual serialized body after all
-lowering/transforms and bind that proof to its single durable permit; native
-`Input.inputTokens`, pre-hook messages and model args cannot supply it.
+The closure is single-use, including a failed registration; concurrent reuse
+cannot trigger another callback or send. Registration runs uninterruptibly
+through its actual Effect finalizer. Interrupt requests and close wait for it
+to settle, then dispose unsent native work and refuse IO. The callback must
+implement cooperative cancellation/current checks through its supplied domain
+binding and settle boundedly: this gateway cannot force an uncooperative callback
+to finish. It accepts no detached registration work. Typed errors are rebuilt
+with the existing safe categories/messages, and interruption stays interruption.
+Close retains unused native adapters until disposal. Parent owns unused trusted
+preparation-map retirement when native shaping fails before the late closure.
+
+The actual source-built 2.0.26 fixture runs `SessionModelRequest.layer` with
+public `PluginHooks` registration and an explicitly injected transport that
+denies WS. Its Layer requires only `PluginHooks.Service` and
+`SessionModelTransport.Service`; no host/store/profile dependency was acquired.
+It exercises actual context and model.request hooks, tool renaming with native
+definition identity, plain PNG evidence, native surviving tools and buffered
+HTTP generation for both selected Go and Codex routes. One selector, one manifest
+registration and one HTTP dispatch are observed per early preparation. The Go
+order is selector → context hook → model.request hook → manifest → trusted image
+validator → dispatch. Synthetic callbacks prove composition of these public
+seams, not the parent's strict builder, saved store or private IPC assembly.
+
+Each behavioral cycle ran one focused red followed by one green, with one
+failure/pass respectively and zero skips/cancels. Receipts remain under
+`C:/Renulus/scratch/oc-h02-h08/providers/node-gateway/receipts`.
+
+| Cycle | Public behavior | Red / green receipts |
+| --- | --- | --- |
+| n22 | Early trusted native capabilities and one plan through actual hooks, manifest and HTTP | `n22-red.xml` / `n22-green.xml` |
+| n23 | Reject changed final route/output/custom HTTP before registration | `n23-red.xml` / `n23-green.xml` |
+| n24 | Interruption and close retain actual registration/finalizer ownership | `n24-red.xml` / `n24-green.xml` |
+| n25 | Post-registration route check uses frozen authority despite shared model mutation | `n25-red.xml` / `n25-green.xml` |
+| n26 | Preserve a smaller final native output ceiling | `n26-red.xml` / `n26-green.xml` |
+
+Additional controls were already green: missing mandatory callback, malformed
+or unsupported raw snapshots, concurrent single use, output/settings/media
+mutation during registration, sanitized registration errors and no replay.
+`primary-controls.xml` retains the initial fixture construction failure
+(7 passed / 3 failed). `primary-controls-fixed.xml` records its corrected
+plain projection (10 passed / 0 failed); the later Codex native fixture is
+included in the final dedicated run. `primary-dedicated.xml` records
+**37 passed, zero failures/skips/cancels, 11.47 s**; consumer typecheck exited
+zero (`primary-typecheck.txt`). Earlier P2 and full Harness receipts remain
+separately attributed to their original commits. No broad Harness rerun or
+profile-heavy proof was used for this extension. Exact final commands, from
+`packages/harness`:
+
+```powershell
+& 'C:/Renulus/scratch/ocf/tools/node-v26.4.0-win-x64/node.exe' --test --test-reporter=junit --test-reporter-destination=C:/Renulus/scratch/oc-h02-h08/providers/node-gateway/receipts/primary-dedicated.xml test/gateway-adapter.test.mjs
+& 'C:/Renulus/scratch/ocf/tools/node-v26.4.0-win-x64/node.exe' node_modules/typescript/bin/tsc --noEmit > C:/Renulus/scratch/oc-h02-h08/providers/node-gateway/receipts/primary-typecheck.txt
+```
+
+Source and receipt hashes are recorded in `primary-handoff.json` beside those
+receipts after the coherent local commit. The worker checked lane ownership and
+the contract locally; no independent review is claimed. Parent `5500341e` is the
+host application prerequisite, and its scoped context/model resolution must
+reuse the same preparation before history provenance to close the saved-model
+identity gap. Parent still owns current/role/permit checks, auxiliary denial,
+final output and body proof, native terminal/publication authority and the full
+connected route. No live provider call, credentials, installation or account/
+package acceptance occurred. H03 and H02-H08 acceptance remain open.

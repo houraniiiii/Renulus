@@ -1,10 +1,54 @@
 import "./provider-environment.mjs";
 import { DomainClient } from "../../src/domain-ipc.ts";
-import { LLMRequest, LanguageModel, Message } from "@opencode/ai";
+import { LLMRequest, LanguageModel, Message, SystemPart, Media, ToolDefinition } from "@opencode/ai";
+import { Effect, Layer, ManagedRuntime } from "effect";
+import { LayerNode } from "@opencode/util/effect/layer-node";
+import { SessionRunnerModel } from "@opencode/core/session/runner/model";
+import { SessionModelRequest } from "@opencode/core/session/model-request";
+import { SessionModelTransport } from "@opencode/core/session/model-transport";
+import { PluginHooks } from "@opencode/core/plugin/hooks";
 
 export const binding = Object.freeze({ operation_id: "synthetic-operation", attempt_id: "synthetic-attempt",
   session_id: "synthetic-session", input_id: "synthetic-input", cancellation_id: "synthetic-cancellation" });
 export const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGNgAAAAAgABSK+kcQAAAABJRU5ErkJggg==";
+export function currentResolved() {
+  return SessionRunnerModel.resolved(LanguageModel.make({ provider: "openai", id: "untrusted-model" }), {
+    capabilities: { tools: false, input: ["text"], output: ["text"] },
+    cost: { input: 0, output: 0 }, limit: { input: 16, output: 8, context: 32 }, transport: "websocket" });
+}
+
+/** Actual pinned preparation and hook registry; no host/profile/store or default transport. */
+export async function nativePrimary(resolved, timeline, shape = () => {}) {
+  const runtime = ManagedRuntime.make(SessionModelRequest.layer.pipe(Layer.provideMerge(Layer.mergeAll(
+    LayerNode.compile(PluginHooks.node), Layer.succeed(SessionModelTransport.Service, {
+      bind: () => { throw new Error("synthetic-websocket-refused"); }, close: () => Effect.void, closeAll: Effect.void,
+    }),
+  ))));
+  try {
+    return await runtime.runPromise(Effect.gen(function* () {
+      const hooks = yield* PluginHooks.Service;
+      let captured;
+      yield* hooks.register("session", "context", event => Effect.sync(() => {
+        timeline.push("native-context");
+        event.system = [SystemPart.make("Synthetic post-hook teaching instruction")];
+        event.messages = [Message.user([Message.text("Synthetic post-hook dialysis"), Message.media(Media.base64(png, "image/png"))])];
+        event.tools = { eligible_passage: event.tools.library_passage };
+        shape(event);
+        captured = { system: structuredClone(event.system), messages: structuredClone(event.messages) };
+      }));
+      yield* hooks.register("session", "model.request", () => Effect.sync(() => { timeline.push("native-model-request"); }));
+      const service = yield* SessionModelRequest.Service;
+      const prepared = yield* service.primary({
+        session: { id: binding.session_id, projectID: "synthetic-project" }, agent: "renulus", model: resolved,
+        tools: { definitions: [ToolDefinition.make({ name: "library_passage", description: "Synthetic passage", inputSchema: { type: "object" } })],
+          execute: () => Effect.die(new Error("synthetic-unused-tool")) },
+        system: [], messages: [Message.user("Synthetic pre-hook input")], webSocket: "session",
+      });
+      // Manifest evidence is plain data. Native constructors reject cloned MediaAsset instances.
+      return { prepared, unfiltered: { ...prepared.request, ...captured, tools: structuredClone(prepared.request.tools) } };
+    }).pipe(Effect.scoped));
+  } finally { await runtime.dispose(); }
+}
 export function plan(model = "mimo-v2.6-pro", patch = {}) {
   const codex = model.startsWith("gpt-");
   return { dispatch_id: "synthetic-dispatch", binding,

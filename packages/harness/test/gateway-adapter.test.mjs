@@ -3,7 +3,282 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Effect, Stream, Fiber } from "effect";
 import { createGatewayAdapter } from "../src/gateway-adapter.ts";
-import { binding, plan, request, channel, result, sse, png, toolSse } from "./fixtures/gateway-environment.mjs";
+import { binding, plan, request, channel, result, sse, png, toolSse, currentResolved, nativePrimary } from "./fixtures/gateway-environment.mjs";
+
+test("preparePrimary injects trusted capabilities before actual native hooks and reuses one plan for manifest and HTTP", async () => {
+  const timeline = [];
+  let preparations = 0, registrations = 0, validations = 0;
+  const wire = channel(() => { timeline.push("dispatch"); return result(); });
+  const adapter = await createGatewayAdapter({ domain: wire.domain,
+    beforePrepare: () => Effect.sync(() => { preparations++; timeline.push("before-prepare"); return plan(); }),
+    registerManifest: (trusted, unfiltered) => Effect.sync(() => {
+      registrations++; timeline.push("manifest");
+      assert.equal(trusted.dispatch_id, "synthetic-dispatch");
+      assert.equal(unfiltered.system[0].text, "Synthetic post-hook teaching instruction");
+      assert.equal(unfiltered.messages[0].content[1].media.source.data, png);
+      assert.equal(unfiltered.messages[0].content[1].media.mediaType, "image/png");
+      assert.equal(unfiltered.messages[0].content[1].media.inline, undefined);
+      assert.ok(Object.isFrozen(trusted) && Object.isFrozen(trusted.native_capabilities.input));
+      assert.equal(unfiltered.tools[0].name, "eligible_passage");
+    }),
+    validateImages: () => Effect.sync(() => { validations++; timeline.push("images"); }),
+  });
+  try {
+    const primary = await Effect.runPromise(adapter.preparePrimary(binding, currentResolved()));
+    assert.equal(primary.resolved.model.id, "mimo-v2.6-pro");
+    assert.equal(primary.resolved.ref.id, "mimo-v2.6-pro");
+    assert.deepEqual(primary.resolved.capabilities, plan().native_capabilities);
+    assert.deepEqual(primary.resolved.limit, { input: 1024, output: 64, context: 2048 });
+    assert.ok(Object.isFrozen(primary) && Object.isFrozen(primary.resolved) && Object.isFrozen(primary.resolved.limit));
+    assert.notEqual(primary.resolved.transport, "websocket");
+    const { prepared, unfiltered } = await nativePrimary(primary.resolved, timeline);
+    assert.equal(prepared.request.messages[0].content[1].type, "media");
+    const final = await Effect.runPromise(primary.prepare(prepared.request, prepared.options, unfiltered));
+    const response = await Effect.runPromise(adapter.client.generate(final));
+    assert.equal(response.text, "Synthetic safe teaching");
+    assert.deepEqual(timeline, ["before-prepare", "native-context", "native-model-request", "manifest", "images", "dispatch"]);
+    assert.equal(preparations, 1); assert.equal(registrations, 1); assert.equal(validations, 1);
+    assert.equal(wire.frames.length, 1);
+    const body = JSON.parse(Buffer.from(wire.frames[0].payload.serialized_request.body_base64, "base64"));
+    assert.equal(body.model, "mimo-v2.6-pro");
+    assert.equal(body.max_completion_tokens, 64);
+    assert.equal(body.tools[0].function.name, "eligible_passage");
+    assert.deepEqual(adapter.receipt(final), { dispatch_id: "synthetic-dispatch", permit_id: "synthetic-permit" });
+  } finally { await adapter.close(); }
+});
+
+test("preparePrimary exposes the selected Codex route before actual native media preparation", async () => {
+  const wire = channel(() => result(sse("gpt-6.1-sol")));
+  let selections = 0, registrations = 0;
+  const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.sync(() => { selections++; return plan("gpt-6.1-sol"); }),
+    registerManifest: (trusted, unfiltered) => Effect.sync(() => {
+      registrations++;
+      assert.equal(trusted.route.provider_id, "codex");
+      assert.equal(unfiltered.messages[0].content[1].media.source.data, png);
+      assert.equal(unfiltered.messages[0].content[1].media.inline, undefined);
+    }), validateImages: () => Effect.void });
+  try {
+    const primary = await Effect.runPromise(adapter.preparePrimary(binding, currentResolved()));
+    assert.equal(primary.resolved.ref.providerID, "codex");
+    assert.equal(primary.resolved.ref.id, "gpt-6.1-sol");
+    assert.equal(primary.resolved.model.route.protocol, "openai-responses");
+    const { prepared, unfiltered } = await nativePrimary(primary.resolved, []);
+    const final = await Effect.runPromise(primary.prepare(prepared.request, prepared.options, unfiltered));
+    assert.equal((await Effect.runPromise(adapter.client.generate(final))).text, "Synthetic safe teaching");
+    const body = JSON.parse(Buffer.from(wire.frames[0].payload.serialized_request.body_base64, "base64"));
+    assert.equal(body.model, "gpt-6.1-sol"); assert.equal(body.max_output_tokens, 64);
+    assert.equal(body.tools[0].name, "eligible_passage");
+    assert.equal(body.input[0].content[1].image_url, `data:image/png;base64,${png}`);
+    assert.equal(selections, 1); assert.equal(registrations, 1); assert.equal(wire.frames.length, 1);
+    assert.deepEqual(adapter.receipt(final), { dispatch_id: "synthetic-dispatch", permit_id: "synthetic-permit" });
+  } finally { await adapter.close(); }
+});
+
+test("preparePrimary rejects final route output and custom HTTP changes before manifest registration", async () => {
+  const { LanguageModel, LLMRequest, GenerationOptions, HttpOptions } = await import("@opencode/ai");
+  for (const mutate of [
+    request => LLMRequest.update(request, { model: LanguageModel.update(request.model, { id: "deepseek-v4.1-flash" }) }),
+    request => LLMRequest.update(request, { model: LanguageModel.update(request.model, { route: request.model.route.with({ endpoint: { baseURL: "https://synthetic.invalid" } }) }) }),
+    request => LLMRequest.update(request, { generation: new GenerationOptions({ maxTokens: 65 }) }),
+    request => LLMRequest.update(request, { http: new HttpOptions({ headers: { authorization: "synthetic-unowned-credential" } }) }),
+    request => LLMRequest.update(request, { http: new HttpOptions({ query: { fallback: "yes" } }) }),
+    request => LLMRequest.update(request, { http: new HttpOptions({ body: { model: "fallback-model" } }) }),
+  ]) {
+    const wire = channel();
+    let registrations = 0, preparations = 0;
+    const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.sync(() => { preparations++; return plan(); }),
+      registerManifest: () => Effect.sync(() => { registrations++; }), validateImages: () => Effect.void });
+    try {
+      const primary = await Effect.runPromise(adapter.preparePrimary(binding, currentResolved()));
+      const { prepared, unfiltered } = await nativePrimary(primary.resolved, []);
+      await assert.rejects(Effect.runPromise(primary.prepare(mutate(prepared.request), prepared.options, unfiltered)));
+      assert.equal(registrations, 0); assert.equal(preparations, 1); assert.equal(wire.frames.length, 0);
+      await assert.rejects(Effect.runPromise(primary.prepare(prepared.request, prepared.options, unfiltered)));
+      assert.equal(registrations, 0);
+    } finally { await adapter.close(); }
+  }
+});
+
+test("preparePrimary interruption and close wait for actual manifest registration finalization", { timeout: 6000 }, async () => {
+  const { LLMRequest } = await import("@opencode/ai");
+  const wire = channel();
+  let releaseRegistration;
+  const pending = new Promise(resolve => { releaseRegistration = resolve; });
+  let started = false, finalized = false, interrupted = false, closed = false;
+  const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.succeed(plan()),
+    registerManifest: () => Effect.promise(() => { started = true; return pending; }).pipe(
+      Effect.ensuring(Effect.sync(() => { finalized = true; }))), validateImages: () => Effect.void });
+  let interrupting, closing;
+  try {
+    const primary = await Effect.runPromise(adapter.preparePrimary(binding, currentResolved()));
+    const shaped = LLMRequest.update(request(), { model: primary.resolved.model });
+    const fiber = Effect.runFork(primary.prepare(shaped, {}, shaped));
+    await until(() => started);
+    interrupting = Effect.runPromise(Fiber.interrupt(fiber)).then(() => { interrupted = true; });
+    closing = adapter.close().then(() => { closed = true; });
+    await new Promise(resolve => setTimeout(resolve, 20));
+    assert.equal(interrupted, false, "Preparation settled before registration finished");
+    assert.equal(closed, false, "Close released an outstanding registration");
+    assert.equal(finalized, false);
+    assert.equal(wire.frames.length, 0);
+    releaseRegistration();
+    await Promise.all([interrupting, closing]);
+    assert.equal(finalized, true);
+    assert.equal(wire.frames.length, 0);
+    assert.equal(adapter.receipt(shaped), undefined);
+    await assert.rejects(Effect.runPromise(primary.prepare(shaped, {}, shaped)));
+    assert.equal(wire.domain.state().accepting, true);
+  } finally { releaseRegistration(); await interrupting; await closing; await adapter.close(); }
+});
+
+test("preparePrimary rechecks its trusted route after pending manifest registration despite shared model mutation", async () => {
+  const { LLMRequest } = await import("@opencode/ai");
+  const wire = channel();
+  let releaseRegistration;
+  const pending = new Promise(resolve => { releaseRegistration = resolve; });
+  let started = false, registrations = 0;
+  const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.succeed(plan()),
+    registerManifest: () => Effect.promise(() => { registrations++; started = true; return pending; }), validateImages: () => Effect.void });
+  let preparing;
+  try {
+    const primary = await Effect.runPromise(adapter.preparePrimary(binding, currentResolved()));
+    const shaped = LLMRequest.update(request(), { model: primary.resolved.model });
+    preparing = Effect.runPromise(primary.prepare(shaped, {}, shaped).pipe(Effect.result));
+    await until(() => started);
+    shaped.model.id = "deepseek-v4.1-flash";
+    releaseRegistration();
+    assert.equal((await preparing)._tag, "Failure", "Changed native route was bound after registration");
+    assert.equal(registrations, 1); assert.equal(wire.frames.length, 0);
+    assert.equal(adapter.receipt(shaped), undefined);
+    await assert.rejects(Effect.runPromise(primary.prepare(shaped, {}, shaped)));
+  } finally { releaseRegistration(); await preparing; await adapter.close(); }
+});
+
+test("preparePrimary retains a smaller native output limit within the trusted role ceiling", async () => {
+  const { LLMRequest, GenerationOptions } = await import("@opencode/ai");
+  const wire = channel();
+  const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.succeed(plan()),
+    registerManifest: () => Effect.void, validateImages: () => Effect.void });
+  try {
+    const primary = await Effect.runPromise(adapter.preparePrimary(binding, currentResolved()));
+    const shaped = LLMRequest.update(request(), { model: primary.resolved.model, generation: new GenerationOptions({ maxTokens: 32 }) });
+    const final = await Effect.runPromise(primary.prepare(shaped, {}, shaped));
+    await Effect.runPromise(adapter.client.generate(final));
+    const body = JSON.parse(Buffer.from(wire.frames[0].payload.serialized_request.body_base64, "base64"));
+    assert.equal(body.max_completion_tokens, 32, "Final native output budget was widened");
+    assert.equal(wire.frames.length, 1);
+    assert.deepEqual(adapter.receipt(final), { dispatch_id: "synthetic-dispatch", permit_id: "synthetic-permit" });
+  } finally { await adapter.close(); }
+});
+
+test("preparePrimary requires manifest registration before selection while direct preparation stays compatible", async () => {
+  const wire = channel();
+  let selections = 0;
+  const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.sync(() => { selections++; return plan(); }),
+    validateImages: () => Effect.void });
+  try {
+    await assert.rejects(Effect.runPromise(adapter.preparePrimary(binding, currentResolved())));
+    assert.equal(selections, 0); assert.equal(wire.frames.length, 0);
+    const direct = await Effect.runPromise(adapter.prepare(binding, request()));
+    await Effect.runPromise(adapter.client.generate(direct));
+    assert.equal(selections, 1); assert.equal(wire.frames.length, 1);
+  } finally { await adapter.close(); }
+});
+
+test("preparePrimary refuses missing snapshots and unsupported unfiltered media without registration or IO", async () => {
+  const { LLMRequest, Media, Message } = await import("@opencode/ai");
+  const wire = channel();
+  let selections = 0, registrations = 0;
+  const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.sync(() => plan(undefined, {
+    dispatch_id: `synthetic-dispatch-${++selections}`, native_capabilities: { tools: false, input: ["text"], output: ["text"] },
+  })), registerManifest: () => Effect.sync(() => { registrations++; }), validateImages: () => Effect.void });
+  try {
+    for (const snapshot of [undefined, {}, { system: [], messages: [], tools: undefined },
+      { ...request(), messages: structuredClone([Message.user(Message.media(Media.base64(png, "image/png")))]) }]) {
+      const primary = await Effect.runPromise(adapter.preparePrimary(binding, currentResolved()));
+      const shaped = LLMRequest.update(request(), { model: primary.resolved.model });
+      await assert.rejects(Effect.runPromise(primary.prepare(shaped, {}, snapshot)));
+      await assert.rejects(Effect.runPromise(primary.prepare(shaped, {}, shaped)));
+    }
+    assert.equal(selections, 4); assert.equal(registrations, 0); assert.equal(wire.frames.length, 0);
+  } finally { await adapter.close(); }
+});
+
+test("preparePrimary closure registers once under concurrent use and returns only its bound request", async () => {
+  const { LLMRequest } = await import("@opencode/ai");
+  const wire = channel();
+  let releaseRegistration;
+  const pending = new Promise(resolve => { releaseRegistration = resolve; });
+  let registrations = 0, selections = 0;
+  const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.sync(() => { selections++; return plan(); }),
+    registerManifest: () => Effect.promise(() => { registrations++; return pending; }), validateImages: () => Effect.void });
+  let preparing;
+  try {
+    const primary = await Effect.runPromise(adapter.preparePrimary(binding, currentResolved()));
+    const shaped = LLMRequest.update(request(), { model: primary.resolved.model });
+    preparing = Effect.runPromise(primary.prepare(shaped, {}, shaped));
+    await until(() => registrations === 1);
+    await assert.rejects(Effect.runPromise(primary.prepare(shaped, {}, shaped)));
+    releaseRegistration();
+    const final = await preparing;
+    await assert.rejects(Effect.runPromise(adapter.client.generate(shaped)));
+    await Effect.runPromise(adapter.client.generate(final));
+    await assert.rejects(Effect.runPromise(adapter.client.generate(final)));
+    assert.equal(selections, 1); assert.equal(registrations, 1); assert.equal(wire.frames.length, 1);
+    assert.deepEqual(adapter.receipt(final), { dispatch_id: "synthetic-dispatch", permit_id: "synthetic-permit" });
+  } finally { releaseRegistration(); await preparing; await adapter.close(); }
+});
+
+test("preparePrimary rechecks final output settings and media after its trusted registration callback", async () => {
+  const { LLMRequest, GenerationOptions, Media, Message } = await import("@opencode/ai");
+  for (const mutate of [
+    (shaped, _settings) => { shaped.generation = new GenerationOptions({ maxTokens: 65 }); },
+    (_shaped, settings) => { settings.http = () => { throw new Error("synthetic-unused-http"); }; },
+    (shaped, _settings) => { shaped.messages.push(Message.user(Message.media(Media.base64(png, "image/png")))); },
+  ]) {
+    const wire = channel();
+    let releaseRegistration;
+    const pending = new Promise(resolve => { releaseRegistration = resolve; });
+    let registrations = 0;
+    const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.succeed(plan(undefined, {
+      native_capabilities: { tools: false, input: ["text"], output: ["text"] },
+    })), registerManifest: () => Effect.promise(() => { registrations++; return pending; }), validateImages: () => Effect.void });
+    let preparing;
+    try {
+      const primary = await Effect.runPromise(adapter.preparePrimary(binding, currentResolved()));
+      const shaped = LLMRequest.update(request(), { model: primary.resolved.model }), settings = {};
+      preparing = Effect.runPromise(primary.prepare(shaped, settings, shaped).pipe(Effect.result));
+      await until(() => registrations === 1);
+      mutate(shaped, settings); releaseRegistration();
+      assert.equal((await preparing)._tag, "Failure");
+      assert.equal(wire.frames.length, 0); assert.equal(adapter.receipt(shaped), undefined);
+    } finally { releaseRegistration(); await preparing; await adapter.close(); }
+  }
+});
+
+test("preparePrimary registration failure preserves only safe typed errors and cannot register again", async () => {
+  const { AIError, AuthenticationError, LLMRequest } = await import("@opencode/ai");
+  const canary = crypto.randomUUID();
+  for (const category of ["Authentication", "InvalidRequest"]) {
+    const wire = channel();
+    let registrations = 0;
+    const adapter = await createGatewayAdapter({ domain: wire.domain, beforePrepare: () => Effect.succeed(plan()),
+      registerManifest: () => {
+        registrations++;
+        if (category === "InvalidRequest") throw new Error(canary);
+        return Effect.fail(new AIError({ reason: new AuthenticationError({ message: canary, body: canary }) }));
+      }, validateImages: () => Effect.void });
+    try {
+      const primary = await Effect.runPromise(adapter.preparePrimary(binding, currentResolved()));
+      const shaped = LLMRequest.update(request(), { model: primary.resolved.model });
+      const failed = await Effect.runPromise(primary.prepare(shaped, {}, shaped).pipe(Effect.result));
+      assert.equal(failed._tag, "Failure"); assert.equal(failed.failure.reason._tag, category);
+      assert.ok(!JSON.stringify(failed).includes(canary), "Registration diagnostic canary surfaced");
+      await assert.rejects(Effect.runPromise(primary.prepare(shaped, {}, shaped)));
+      assert.equal(registrations, 1); assert.equal(wire.frames.length, 0); assert.equal(adapter.receipt(shaped), undefined);
+    } finally { await adapter.close(); }
+  }
+});
 
 test("authenticated safe gateway 401 reaches the native caller as Authentication without a receipt or replay", async () => {
   for (const mode of ["generate", "stream"]) {
