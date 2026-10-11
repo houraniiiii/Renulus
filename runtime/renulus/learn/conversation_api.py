@@ -37,8 +37,11 @@ def create_router(services):
         return repository.get(kind, identifier)
 
     @router.get("/{kind}/{identifier}/messages")
-    def messages(kind: Literal["learning", "case"], identifier: str, limit: int = Query(default=50, ge=1, le=100),
+    async def messages(kind: Literal["learning", "case"], identifier: str, limit: int = Query(default=50, ge=1, le=100),
                  cursor: str | None = Query(default=None, max_length=2048)):
+        harness = services.registry.get('learning_harness') if kind == 'learning' else None
+        if harness is not None and hasattr(harness, 'messages'):
+            return await harness.messages(identifier, limit, cursor)
         return repository.messages(kind, identifier, limit, cursor)
 
     @router.get('/case/{identifier}/context')

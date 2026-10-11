@@ -1,0 +1,415 @@
+# SPDX-License-Identifier: MIT
+"""Saved learning adapts the native transcript, never another execution loop.
+
+The integration owner supplies a verified active selection and a managed process.
+All transport waits happen outside canonical transactions and physical locks.
+Publication receives resolved immutable bytes and performs local checks only.
+"""
+from __future__ import annotations
+
+import asyncio
+from contextlib import nullcontext
+from dataclasses import dataclass
+from datetime import datetime, timezone
+import hashlib
+import json
+
+from renulus.contracts import ApiError, ContextScope, Event, Scope, durable_id
+from renulus.design_c_contracts import (Conversation, Dependency, EligibleInput,
+    canonical_digest)
+from renulus.harness_contracts import (HarnessCommandIdentity, HarnessEngineReference,
+    PairedStoreManifest, SavedConversationMapping, map_saved_conversation, validate_command_outcome)
+from renulus.storage import utc_now
+from renulus.storage.assessment_policy import require_assistance
+from renulus.storage.invalidation import context_epoch_in
+from .service import ActiveRun
+
+
+@dataclass(frozen=True)
+class CompletedAnswer:
+    run_id: str
+    thread_id: str
+    runtime: HarnessEngineReference
+    input_id: str
+    message_ids: tuple[str, ...]
+    text: str
+    sha256: str
+    citations_json: str = '[]'
+    inputs: tuple[EligibleInput, ...] = ()
+    dependencies: tuple[Dependency, ...] = ()
+
+    @property
+    def citations(self):
+        return json.loads(self.citations_json)
+
+    def reference(self):
+        return {'version': 1, 'run_id': self.run_id, 'thread_id': self.thread_id,
+            'runtime': self.runtime.model_dump(mode='json'), 'input_id': self.input_id,
+            'message_ids': list(self.message_ids), 'sha256': self.sha256,
+            'citations': [{key: value for key, value in citation.items()
+                if key in {'content_ref', 'passage_id', 'document_id', 'revision_id', 'locator'}}
+                for citation in self.citations],
+            'inputs': [item.model_dump(mode='json') for item in self.inputs],
+            'dependencies': [item.model_dump(mode='json') for item in self.dependencies]}
+
+
+class HarnessLearningBridge:
+    def __init__(self, repository, transport, *, active_manifest, configuration_id,
+                 publish_answer_in=None, check_dependencies_in=None, poll_interval=0.05):
+        self.repo, self.db, self.transport = repository, repository.db, transport
+        self.active_manifest, self.configuration_id = active_manifest, configuration_id
+        self.publish_answer_in = publish_answer_in
+        self.check_dependencies_in = check_dependencies_in
+        self.poll_interval = poll_interval
+        self._consumed = {}
+
+    def _manifest(self):
+        try:
+            manifest = PairedStoreManifest.model_validate(self.active_manifest())
+            if manifest.state != 'active':
+                raise ValueError('prepared')
+            return manifest
+        except (ValueError, TypeError):
+            raise ApiError('harness_not_active', 'Activate the validated learning stores first.', 409, True) from None
+
+    def prepare_in(self, conn, identifier, request, key):
+        self._manifest()
+        # H02 admits new saved learning. Importing legacy text is the H06 gate.
+        if conn.execute('SELECT 1 FROM learn_messages WHERE thread_id=? LIMIT 1', (identifier,)).fetchone():
+            raise ApiError('harness_history_requires_migration',
+                'This saved history needs its verified migration before native continuation.', 409)
+        inherited_inputs, inherited_dependencies = [], []
+        for previous in conn.execute('SELECT * FROM learn_harness_answers WHERE thread_id=?', (identifier,)):
+            if previous['state'] != 'completed' or self.check_dependencies_in is None or self.publish_answer_in is None:
+                raise ApiError('harness_history_requires_lineage',
+                    'The retained native history needs verified publication lineage before continuation.', 409)
+            reference = json.loads(previous['reference_json'])
+            inherited_inputs.append(EligibleInput(kind='committed_evidence', dependency=Dependency(
+                target={'type': 'learning_evidence', 'id': 'learn-answer:' + previous['run_id']},
+                expected_revision=previous['publication_digest'])))
+            inherited_inputs.extend(EligibleInput.model_validate(item) for item in reference['inputs'])
+            inherited_dependencies.extend(Dependency.model_validate(item) for item in reference['dependencies'])
+        if inherited_inputs or inherited_dependencies:
+            self.check_dependencies_in(conn, inputs=tuple(inherited_inputs), dependencies=tuple(inherited_dependencies))
+        run = ActiveRun(durable_id('run'), identifier, ContextScope(kind=Scope.STUDY, entity_id=identifier))
+        run.policy_revision, run.context_epoch = require_assistance(conn), context_epoch_in(conn)
+        now = utc_now()
+        conn.execute('INSERT INTO learn_runs VALUES(?,?,?,?,?,?,?)',
+            (run.id, identifier, 'conversation:' + key, 'running', None, now, now))
+        conn.execute('INSERT INTO learn_harness_answers(run_id,thread_id,request_digest,state) VALUES(?,?,?,?)',
+            (run.id, identifier, canonical_digest(request.model_dump(mode='json')), 'reserved'))
+        self.repo.learn.active[run.id] = run
+        self._consumed[run.id] = (tuple(inherited_inputs), tuple(inherited_dependencies), '[]')
+        return run
+
+    def check(self, run_id, *, conn=None):
+        entry = self.repo.streaming.active.get(run_id)
+        if entry is None:
+            raise ApiError('harness_run_unavailable', 'This learning operation is no longer active.', 409)
+        with nullcontext(conn) if conn is not None else self.db.transaction() as current:
+            self.repo.streaming._guard(current, entry)
+            if entry['run'].cancelled.is_set():
+                raise ApiError('harness_cancelled', 'The learning operation was stopped.', 409)
+            summary, metadata = self.repo._get(current, 'learning', entry['id'])
+            if summary['lifecycle'] != 'active' or (summary['revision'], metadata['draft_revision']) != entry['harness_revisions']:
+                raise ApiError('conversation_revision_conflict', 'The conversation or draft changed. Retry this request.', 409, True)
+            consumed = self._consumed.get(run_id, ((), (), '[]'))
+            if consumed[0] or consumed[1]:
+                if self.check_dependencies_in is None:
+                    raise ApiError('harness_dependencies_unavailable', 'Learning dependencies need local validation.', 409)
+                self.check_dependencies_in(current, inputs=consumed[0], dependencies=consumed[1])
+
+    def record_consumed(self, run_id, *, inputs=(), dependencies=(), citations=()):
+        """Trusted domain callback only; model/tool argument text is never lineage."""
+        self.check(run_id)
+        old_inputs, old_dependencies, old_citations = self._consumed.get(run_id, ((), (), '[]'))
+        inputs = tuple(EligibleInput.model_validate(value) for value in inputs)
+        dependencies = tuple(Dependency.model_validate(value) for value in dependencies)
+        merged = {}
+        for dependency in (*old_dependencies, *dependencies,
+                           *(value.dependency for value in (*old_inputs, *inputs))):
+            previous = merged.get(dependency.target.key)
+            if previous is not None and previous != dependency:
+                raise ApiError('harness_dependency_conflict', 'A consumed dependency changed revision.', 409)
+            merged[dependency.target.key] = dependency
+        unique_inputs = tuple(dict.fromkeys((*old_inputs, *inputs)))
+        refs = json.loads(old_citations)
+        for citation in citations:
+            if citation not in refs:
+                refs.append(citation)
+        self._consumed[run_id] = (unique_inputs, tuple(merged.values()),
+            json.dumps(refs, sort_keys=True, ensure_ascii=False, allow_nan=False))
+        self.check(run_id)
+
+    def mapping(self, identifier):
+        with self.db.transaction() as conn:
+            require_assistance(conn)
+            summary, _ = self.repo._get(conn, 'learning', identifier)
+            row = conn.execute('SELECT mapping_json FROM learn_harness_mappings WHERE thread_id=?', (identifier,)).fetchone()
+            if row is None or row['mapping_json'] is None:
+                return None
+            mapping = SavedConversationMapping.model_validate_json(row['mapping_json'])
+            checked = map_saved_conversation(Conversation.model_validate(summary), mapping.runtime, manifest=self._manifest())
+            if mapping != checked:
+                raise ApiError('harness_mapping_conflict', 'The saved runtime mapping changed.', 409)
+            return mapping.model_dump(mode='json')
+
+    def completed(self, run_id):
+        with self.db.transaction() as conn:
+            require_assistance(conn)
+            row = conn.execute('SELECT * FROM learn_harness_answers WHERE run_id=?', (run_id,)).fetchone()
+            if row is None or row['state'] != 'completed':
+                return None
+            self.repo._get(conn, 'learning', row['thread_id'])
+            return {**json.loads(row['reference_json']), 'publication_digest': row['publication_digest']}
+
+    async def _request(self, command, payload, run_id, *, pending=None, guard=True):
+        if guard:
+            self.check(run_id)
+        manifest = self._manifest()
+        response = await self.transport.request(command, payload, run_id, '1', 1)
+        expected = HarnessCommandIdentity(protocol='renulus-harness/1', profile_id=manifest.profile_id,
+            store_id=manifest.runtime_store.store_id, generation=response['generation'],
+            operation_id=run_id, attempt_id='1', request_id=response['request_id'])
+        if pending is not None:
+            pending(response)  # short local write; the transport wait already finished
+        while True:
+            checked = validate_command_outcome({key: value for key, value in response.items()
+                if key in {'kind', 'outcome', 'result', 'error', *HarnessCommandIdentity.model_fields}}, expected=expected)
+            if checked.outcome != 'accepted_pending':
+                break
+            await asyncio.sleep(self.poll_interval)
+            if guard:
+                self.check(run_id)
+            response = await self.transport.query_result(expected.request_id)
+        if guard:
+            self.check(run_id)
+        if checked.outcome not in ('committed_reference', 'cancelled_settled') or checked.error:
+            raise ApiError('harness_command_uncertain' if checked.outcome == 'uncertain_after_disconnect' else 'harness_command_rejected',
+                'The native operation could not be confirmed. It will not be sent again automatically.', 409, True)
+        return checked.result
+
+    async def _session(self, entry):
+        identifier, run_id = entry['id'], entry['run'].id
+        mapped = self.mapping(identifier)
+        if mapped is not None:
+            return HarnessEngineReference.model_validate(mapped['runtime'])
+        manifest = self._manifest()
+        with self.db.transaction() as conn:
+            self.check(run_id, conn=conn)
+            if conn.execute('SELECT 1 FROM learn_harness_mappings WHERE thread_id=?', (identifier,)).fetchone():
+                raise ApiError('harness_mapping_uncertain', 'Reconcile the pending native session before continuing.', 409, True)
+            conn.execute('INSERT INTO learn_harness_mappings(thread_id,profile_id,store_id) VALUES(?,?,?)',
+                (identifier, manifest.profile_id, manifest.runtime_store.store_id))
+        def pending(response):
+            self.db.execute('UPDATE learn_harness_mappings SET create_request_id=?,process_generation=? WHERE thread_id=?',
+                (response['request_id'], response['generation'], identifier))
+        result = await self._request('session.create', {'title': entry['receipt']['conversation']['title']}, run_id, pending=pending)
+        runtime = HarnessEngineReference(contract_version='harness/1', profile_id=manifest.profile_id,
+            store_id=manifest.runtime_store.store_id, engine=manifest.runtime_store.engine, session_id=result['session']['id'])
+        with self.db.transaction() as conn:
+            self.check(run_id, conn=conn)
+            summary, _ = self.repo._get(conn, 'learning', identifier)
+            mapping = map_saved_conversation(Conversation.model_validate(summary), runtime, manifest=self._manifest())
+            conn.execute('UPDATE learn_harness_mappings SET session_id=?,mapping_json=? WHERE thread_id=? AND session_id IS NULL',
+                (runtime.session_id, mapping.model_dump_json(), identifier))
+        return runtime
+
+    async def _native_messages(self, session_id, run_id, *, guard=True):
+        messages, cursor, cursors = [], None, set()
+        while True:
+            payload = {'session_id': session_id, 'limit': 200}
+            payload.update({'cursor': cursor} if cursor else {'order': 'asc'})
+            result = await self._request('session.messages', payload, run_id, guard=guard)
+            messages.extend(result['messages'])
+            cursor = result.get('cursor')
+            if not cursor:
+                return messages
+            if cursor in cursors or len(messages) >= 10000:
+                raise ApiError('harness_history_unavailable', 'Native history could not be read completely.', 409, True)
+            cursors.add(cursor)
+
+    async def answer(self, entry):
+        run_id = entry['run'].id
+        sequence = 0
+        def event(kind, payload=None):
+            nonlocal sequence
+            sequence += 1
+            return Event(run_id=run_id, sequence=sequence, type=kind, payload=payload or {})
+        try:
+            self.check(run_id)
+            yield event('started', {'thread_id': entry['id'], 'scope': 'study'})
+            runtime = await self._session(entry)
+            entry['harness_runtime'] = runtime
+            with self.db.transaction() as conn:
+                self.check(run_id, conn=conn)
+                row = conn.execute('SELECT state FROM learn_harness_answers WHERE run_id=?', (run_id,)).fetchone()
+                if row['state'] != 'reserved':
+                    raise ApiError('harness_submission_uncertain', 'Reconcile this native input before continuing.', 409, True)
+                conn.execute("UPDATE learn_harness_answers SET state='uncertain' WHERE run_id=?", (run_id,))
+            def pending(response):
+                self.db.execute('UPDATE learn_harness_answers SET command_request_id=?,process_generation=? WHERE run_id=?',
+                    (response['request_id'], response['generation'], run_id))
+            result = await self._request('session.prompt', {'session_id': runtime.session_id,
+                'configuration_id': self.configuration_id, 'text': entry['request'].text}, run_id, pending=pending)
+            if (result['sessionId'], result['operationId'], result['attemptId']) != (runtime.session_id, run_id, '1'):
+                raise ApiError('harness_input_conflict', 'The native input belongs to different work.', 409)
+            input_id = result['inputId']
+            with self.db.transaction() as conn:
+                self.check(run_id, conn=conn)
+                conn.execute("UPDATE learn_harness_answers SET state='submitted',input_id=? WHERE run_id=?", (input_id, run_id))
+            seen_tools = set()
+            yield event('progress', {'stage': 'native-execution'})
+            while True:
+                observed = await self._request('session.get', {'session_id': runtime.session_id}, run_id)
+                messages = await self._native_messages(runtime.session_id, run_id)
+                selected, found = [], False
+                for message in messages:
+                    if message['id'] == input_id:
+                        found = True
+                        continue
+                    if found and message['type'] == 'user':
+                        break
+                    if found and message['type'] == 'assistant':
+                        selected.append(message)
+                        for part in message.get('content', []):
+                            if part['type'] == 'tool':
+                                key = (part['id'], part['state']['status'])
+                                if key not in seen_tools:
+                                    self.check(run_id)
+                                    seen_tools.add(key)
+                                    yield event('tool', {'tool_call_id': part['id'], 'name': part['name'], 'state': part['state']['status']})
+                outcome = observed['session'].get('outcome')
+                if outcome in ('succeeded', 'failed', 'interrupted'):
+                    break
+                await asyncio.sleep(self.poll_interval)
+            if outcome != 'succeeded':
+                raise ApiError('harness_execution_failed', 'The native explanation did not complete.', 409, True)
+            text = ''.join(part['text'] for message in selected for part in message.get('content', []) if part['type'] == 'text')
+            if not text or not selected or not selected[-1].get('time', {}).get('completed') or selected[-1].get('error'):
+                raise ApiError('harness_answer_incomplete', 'The native completed answer is unavailable.', 409, True)
+            inputs, dependencies, citations = self._consumed.get(run_id, ((), (), '[]'))
+            answer = CompletedAnswer(run_id, entry['id'], runtime, input_id,
+                tuple(message['id'] for message in selected), text, hashlib.sha256(text.encode('utf-8')).hexdigest(),
+                citations, inputs, dependencies)
+            self.check(run_id)
+            entry['harness_answer'] = answer
+            yield event('sources', {'citations': answer.citations, 'verification': 'retrieved' if answer.citations else 'not-verified'})
+            self.check(run_id)
+            yield event('delta', {'text': answer.text})
+            self.check(run_id)
+            yield event('completed', {'thread_id': entry['id'], 'citations': answer.citations, 'answer_reference': answer.reference()})
+        except asyncio.CancelledError:
+            await self.cancel(run_id)
+            raise
+        except Exception as error:
+            await self.cancel(run_id)
+            if entry['run'].cancelled.is_set():
+                yield event('cancelled')
+            else:
+                yield event('error', {'code': error.code if isinstance(error, ApiError) else 'harness_answer_failed',
+                    'message': error.message if isinstance(error, ApiError) else 'The native explanation could not finish.', 'retryable': True})
+        finally:
+            self.repo.learn.active.pop(run_id, None)
+            self._consumed.pop(run_id, None)
+
+    def publish_in(self, conn, entry):
+        self.check(entry['run'].id, conn=conn)
+        answer = entry['harness_answer']
+        row = conn.execute('SELECT * FROM learn_harness_answers WHERE run_id=?', (answer.run_id,)).fetchone()
+        reference = json.dumps(answer.reference(), sort_keys=True, ensure_ascii=False, allow_nan=False)
+        if row['request_digest'] != canonical_digest(entry['request'].model_dump(mode='json')):
+            raise ApiError('idempotency_conflict', 'This request key belongs to different work.', 409)
+        if row['state'] == 'completed':
+            if row['reference_json'] != reference:
+                raise ApiError('harness_answer_conflict', 'The immutable completed answer changed.', 409)
+            return json.loads(row['reference_json'])
+        if row['state'] != 'submitted' or row['input_id'] != answer.input_id:
+            raise ApiError('harness_answer_conflict', 'The completed input does not match its admitted receipt.', 409)
+        publication = self.publish_answer_in(conn, answer, entry) if self.publish_answer_in else canonical_digest(answer.reference())
+        conn.execute("UPDATE learn_harness_answers SET state='completed',reference_json=?,publication_digest=? WHERE run_id=?",
+            (reference, publication, answer.run_id))
+        now = utc_now()
+        conn.execute("UPDATE learn_runs SET state='completed',updated_at=? WHERE id=? AND state='running'", (now, answer.run_id))
+        conn.execute('UPDATE learn_threads SET updated_at=? WHERE id=?', (now, answer.thread_id))
+        return answer.reference()
+
+    async def cancel(self, run_id):
+        entry = self.repo.streaming.active.get(run_id)
+        if entry is None or 'harness_runtime' not in entry:
+            return {'state': 'not-submitted'}
+        if 'harness_cancel_task' not in entry:
+            entry['harness_cancel_task'] = asyncio.create_task(self._request('session.cancel',
+                {'session_id': entry['harness_runtime'].session_id}, run_id, guard=False))
+        result = await asyncio.shield(entry['harness_cancel_task'])
+        if entry['run'].cancelled.is_set():
+            self.db.execute("UPDATE learn_harness_answers SET state='cancelled' WHERE run_id=? AND state!='completed'", (run_id,))
+        return result
+
+    async def resolve_completed(self, run_id):
+        """Resolve immutable bytes before a caller enters its publication transaction."""
+        reference = self.completed(run_id)
+        if reference is None:
+            raise ApiError('harness_answer_unavailable', 'The completed native answer is unavailable.', 409)
+        mapping = self.mapping(reference['thread_id'])
+        if mapping is None or mapping['runtime'] != reference['runtime']:
+            raise ApiError('harness_answer_conflict', 'The completed answer belongs to another runtime.', 409)
+        messages = await self._native_messages(reference['runtime']['session_id'], run_id, guard=False)
+        text = self._completed_text(reference, messages)
+        if self.completed(run_id) != reference:
+            raise ApiError('harness_answer_conflict', 'The immutable completed answer changed.', 409)
+        return CompletedAnswer(run_id, reference['thread_id'], HarnessEngineReference.model_validate(reference['runtime']),
+            reference['input_id'], tuple(reference['message_ids']), text, reference['sha256'],
+            json.dumps(reference['citations'], sort_keys=True, ensure_ascii=False, allow_nan=False),
+            tuple(EligibleInput.model_validate(item) for item in reference['inputs']),
+            tuple(Dependency.model_validate(item) for item in reference['dependencies']))
+
+    @staticmethod
+    def _completed_text(reference, messages):
+        by_id = {message['id']: message for message in messages}
+        selected = [by_id.get(identifier) for identifier in reference['message_ids']]
+        if (reference['input_id'] not in by_id or not selected or
+                any(message is None or message['type'] != 'assistant' or message.get('error') or
+                    not message.get('time', {}).get('completed') for message in selected)):
+            raise ApiError('harness_answer_unavailable', 'The immutable native message range is unavailable.', 409)
+        text = ''.join(part['text'] for message in selected for part in message['content'] if part['type'] == 'text')
+        if hashlib.sha256(text.encode('utf-8')).hexdigest() != reference['sha256']:
+            raise ApiError('harness_answer_conflict', 'The immutable completed answer changed.', 409)
+        return text
+
+    async def messages(self, identifier, limit=50, cursor=None):
+        mapping = self.mapping(identifier)
+        if mapping is None:
+            return self.repo.messages('learning', identifier, limit, cursor)
+        with self.db.transaction() as conn:
+            policy, epoch = require_assistance(conn), context_epoch_in(conn)
+            receipts = [dict(row) for row in conn.execute('SELECT * FROM learn_harness_answers WHERE thread_id=? AND input_id IS NOT NULL', (identifier,))]
+        native = await self._native_messages(mapping['runtime']['session_id'], 'history:' + identifier, guard=False)
+        with self.db.transaction() as conn:
+            require_assistance(conn, expected_revision=policy)
+            if context_epoch_in(conn) != epoch:
+                raise ApiError('dependency_changed', 'The learning context changed.', 409)
+            self.repo._get(conn, 'learning', identifier)
+        by_id = {row['input_id']: row for row in receipts}
+        for row in receipts:
+            if row['state'] == 'completed':
+                reference = json.loads(row['reference_json'])
+                self._completed_text(reference, native)
+                for message_id in reference['message_ids']:
+                    by_id[message_id] = row
+        items = []
+        for message in native:
+            receipt = by_id.get(message['id'])
+            if receipt is None or message['type'] not in ('user', 'assistant'):
+                continue
+            content = message['text'] if message['type'] == 'user' else ''.join(part['text'] for part in message['content'] if part['type'] == 'text')
+            reference = json.loads(receipt['reference_json']) if receipt['state'] == 'completed' else {}
+            items.append({'id': message['id'], 'run_id': receipt['run_id'], 'role': message['type'],
+                'content': content, 'created_at': datetime.fromtimestamp(message['time']['created'] / 1000, timezone.utc).isoformat(),
+                'content_refs': [citation['content_ref'] for citation in reference.get('citations', [])
+                    if message['type'] == 'assistant' and 'content_ref' in citation]})
+        scope = ['harness-messages', identifier, mapping['runtime']['session_id']]
+        page = self.repo._uncursor(cursor, scope) if cursor else {'after': 0, 'boundary': len(items)}
+        end = min(page['after'] + limit, page['boundary'])
+        return {'conversation': mapping['conversation'], 'items': items[page['after']:end],
+            'next_cursor': self.repo._cursor({'scope': scope, 'after': end, 'boundary': page['boundary']}) if end < page['boundary'] else None}

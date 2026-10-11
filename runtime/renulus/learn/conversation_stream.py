@@ -132,7 +132,11 @@ class ConversationStreams:
         require_assistance(conn, entry['policy'])
         if context_epoch_in(conn)!=entry['epoch']:
             raise ApiError('dependency_changed','The learning context changed. Retry this request.',409,True)
-        self.repo._get(conn,entry['kind'],entry['id'])
+        summary, metadata = self.repo._get(conn,entry['kind'],entry['id'])
+        if entry.get('harness_revisions') is not None and (
+                summary['lifecycle'] != 'active' or
+                (summary['revision'], metadata['draft_revision']) != entry['harness_revisions']):
+            raise ApiError('conversation_revision_conflict','The conversation or draft changed. Retry this request.',409,True)
 
     def _finish(self, conn, entry, state, error=None):
         if state=='completed':
@@ -148,6 +152,9 @@ class ConversationStreams:
             digest,_ = self.repo._temporary_commands[entry['key']]
             self.repo._temporary_commands[entry['key']] = (digest,deepcopy(receipt))
         entry['receipt'] = receipt
+        if entry.get('harness_revisions') is not None and state != 'completed':
+            conn.execute("UPDATE learn_runs SET state=?,error_code=?,updated_at=? WHERE id=? AND state='running'",
+                ('failed' if state=='error' else state, (error or {}).get('code'), utc_now(), entry['run'].id))
         return receipt
 
     def begin(self, kind, identifier, request, key=None):
@@ -179,14 +186,18 @@ class ConversationStreams:
                             raise ApiError('temporary_content_unavailable','Use temporary case inputs in their original case flow',409)
                         scope = ContextScope(kind=Scope.STUDY,entity_id=identifier) if saved and kind=='learning' else ContextScope(kind=Scope.UNCLASSIFIED)
                         if kind=='learning':
-                            _,run = repo.learn.prepare(request.text,scope,identifier if saved else None,
-                                request.topic_id,request.teaching_style,'conversation:'+key,conn=conn)
+                            harness = repo.services.registry.get('learning_harness') if saved else None
+                            if harness is not None and hasattr(harness, 'prepare_in'):
+                                run = harness.prepare_in(conn,identifier,request,key)
+                            else:
+                                _,run = repo.learn.prepare(request.text,scope,identifier if saved else None,
+                                    request.topic_id,request.teaching_style,'conversation:'+key,conn=conn)
                             prepared_run = run
                             messages = None
                             if not saved:
                                 run.context = [{'role':m['role'],'content':m['content']} for m in row['messages']]
                                 row['messages'].append({'id':durable_id('message'),'run_id':run.id,'role':'user','content':request.text,'created_at':utc_now(),'content_refs':[]})
-                            else:
+                            elif harness is None or not hasattr(harness, 'prepare_in'):
                                 conn.execute("UPDATE learn_messages SET citations_json=? WHERE run_id=? AND role='user'",
                                     (json.dumps([{'content_ref':r.model_dump(mode='json')} for r in request.content_refs]),run.id))
                         else:
@@ -216,6 +227,8 @@ class ConversationStreams:
                             projects = repo.services.registry.get('projects')
                             project = projects.context_in(conn,kind,identifier) if projects else None
                             entry['project'] = project
+                            if kind=='learning':
+                                run.project_id = project['project_id'] if project else None
                             if kind=='learning' and project and project['project_id']:
                                 run.revision_ids = project['revision_ids']
                             _,sidecar,column,_ = repo._owner(kind)
@@ -226,6 +239,9 @@ class ConversationStreams:
                             row['draft_text']=request.text
                         receipt = {'run_id':run.id,'state':'running','conversation':self._touch(conn,entry)}
                         entry['receipt']=receipt
+                        if kind=='learning' and saved and harness is not None and hasattr(harness, 'prepare_in'):
+                            metadata = repo._get(conn,kind,identifier)[1]
+                            entry['harness_revisions'] = (receipt['conversation']['revision'], metadata['draft_revision'])
                         if kind=='case':
                             entry['checkpoint']=deepcopy(repo.cases._sessions[identifier])
                         self.active[run.id]=entry
@@ -282,7 +298,9 @@ class ConversationStreams:
         repo=self.repo
         run,request=entry['run'],entry['request']
         terminal=False
-        stream=repo.learn.answer(run,request.text,request.teaching_style,request.topic_id,request.model,freshness=request.freshness) if entry['kind']=='learning' else discuss(repo.cases,run,entry['messages'])
+        harness=repo.services.registry.get('learning_harness') if entry['saved'] and entry['kind']=='learning' else None
+        stream=(harness.answer(entry) if harness is not None else
+            repo.learn.answer(run,request.text,request.teaching_style,request.topic_id,request.model,freshness=request.freshness)) if entry['kind']=='learning' else discuss(repo.cases,run,entry['messages'])
         try:
             async with aclosing(stream):
                 async for event in stream:
@@ -301,6 +319,9 @@ class ConversationStreams:
                                         session.messages[-1]['run_id']=run.id
                                         if entry['saved']:
                                             repo.cases.save(entry['id'],session.revision,conn=conn)
+                                    if event.type=='completed' and entry.get('harness_revisions') is not None:
+                                        harness.publish_in(conn,entry)
+                                        self._finish(conn,entry,'completed')
                                     if not (event.type=='completed' and entry['saved'] and entry['kind']=='learning'):
                                         if event.type=='completed' and entry['kind']=='learning':
                                             self._guard(conn,entry)
@@ -364,7 +385,14 @@ class ConversationStreams:
             result=self.status(kind,identifier,run_id)
             return {'run_id':run_id,'state':result['state']}
         if kind=='learning':
-            await self.repo.learn.cancel(run_id)
+            harness=self.repo.services.registry.get('learning_harness') if entry.get('harness_revisions') is not None else None
+            if harness is not None:
+                entry['run'].cancelled.set()
+                self.repo.db.execute("UPDATE learn_runs SET state='cancelled',updated_at=? WHERE id=? AND state='running'",
+                    (utc_now(),run_id))
+                await harness.cancel(run_id)
+            else:
+                await self.repo.learn.cancel(run_id)
         else:
             self.repo.cases.cancel(run_id)
             from renulus.cases.streaming import cancel_provider
