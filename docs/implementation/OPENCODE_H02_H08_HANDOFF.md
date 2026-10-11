@@ -17,6 +17,39 @@ installation, push or downstream-ticket expansion is authorized.
 
 ### Dependency readiness
 
+Current continuation: parent `53125d85`. The reviewed child-learning routing
+helper `abdad45b` is integrated as `f0e433d6`; supplied-transaction policy
+settlement `dd75d5eb` is integrated as `294b8218`. Both independent axes are
+clear, with original62-case helper and12-case settlement evidence retained;
+no unchanged suite was repeated. These ports do not enable native children.
+
+The hidden H06 journey completed migration, cited continuation, reader,
+Archive/Restore, explicit saved-draft reopen and populated conversation
+deletion while preserving the shared PDF. Its normal close and exact
+qualifications are in [the hidden journey](OPENCODE_H06_HIDDEN_MIGRATION.md).
+Immediate Archive exposed a debounce loss. Repairs `3dda085e` and `40163437`
+are integrated as `22276aa0` and `53125d85`, with both review axes clear,
+20 affected component tests and recorded typecheck0. The renderer rebuild
+passed. Immediate-Archive hidden verification is still pending.
+
+Transfer capacity `698ec926` remains unintegrated: independent Spec found a
+duplicate refused reservation could erase an earlier pending local hold.
+Follow-on `1881dce8` binds cleanup to the originating request; meaningful
+red1/2.29s, green1/1.63s and four affected cases/3.32s are retained under
+G:/Renulus-agent-scratch/oc-h02-h08/h06-transfer-capacity/. Independent
+follow-on reviews are active. Do not treat the original Standards0 as Spec
+closure, or infer unlimited capacity from the multipart SDK proof.
+
+A fresh synthetic legacy seed for the Archive follow-up failed before its
+synthetic generation: recalled Library-backed memory reached the persistent
+source resolver without an active canonical transaction. The original public
+failure is `harness_publication_transaction_required`; no failed seed is
+claimed as completed migration evidence. Sartre owns only Learn service and
+a dedicated regression for this local source-check path. Russell retains the
+separate Bridge `record_consumed_in` lease. All new profiles/receipts use G:;
+pause writes if C: falls below200MiB. H06 acceptance and H08 implementation
+remain gated; native assembly `969ac780` stays frozen and unintegrated.
+
 Latest H06 checkpoint: six actual production-main Owner cases pass in
 89.295s, and 50 affected migration/history/context checks pass in36.520s.
 The Owner now prepares legacy conversion before ordinary saved Send and
@@ -29,8 +62,8 @@ hidden desktop verification; H06 acceptance is still open. Lost-purge-ACK
 reconciliation already has independent closure and is not an open defect.
 
 Transfer residual a3768b33 is integrated as4c7e81dc after those runs exited.
-Native child assembly969ac780 and Python routing helper abdad45b are READY
-but not integrated. Both native assembly review axes are clear. Keep the
+Native child assembly969ac780 is READY but not integrated; the Python routing
+helper is now integrated as recorded above. Both native assembly review axes are clear. Keep the
 current two-Library-tool registry until H06 evidence is committed/reviewed;
 H07 composition must observe a new immutable final registry artifact.
 
