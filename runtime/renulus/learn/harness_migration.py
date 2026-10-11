@@ -257,15 +257,16 @@ class HarnessSavedMigration:
                     completed = datetime.fromisoformat(message.completed_at)
                     if completed.utcoffset() is None or completed < created:
                         raise ValueError("invalid legacy completion")
-                    if message.run_outcome != "completed":
+                    if message.run_outcome not in {"completed", "cancelled", "failed", "interrupted"}:
                         raise ApiError("harness_migration_outcome_unsupported",
-                            "Native transfer must preserve the legacy terminal outcome before conversion.", 409)
+                            "Saved history requires a known legacy terminal outcome before conversion.", 409)
                 citations = json.loads(message.citations_json)
                 if not isinstance(citations, list) or any(not isinstance(item, dict) for item in citations):
                     raise ValueError("invalid legacy citations")
                 messages.append({"id": message.message_id, "role": message.role,
                     "content": message.text, "runId": message.run_id, "createdAt": message.created_at,
-                    **({"completedAt": message.completed_at} if message.role == "assistant" else {}),
+                    **({"completedAt": message.completed_at, "legacyOutcome": message.run_outcome}
+                       if message.role == "assistant" else {}),
                     "citations": citations})
             document = json.dumps({"format": "renulus.saved-session/1",
                 "conversationId": snapshot.conversation.identity.id,

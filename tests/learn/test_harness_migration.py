@@ -220,6 +220,34 @@ async def test_saved_history_maps_once_after_exact_readback_without_generation(t
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("outcome", ["completed", "cancelled", "failed", "interrupted"])
+async def test_terminal_legacy_outcomes_preserve_exact_partial_history_as_unknown(tmp_path, outcome):
+    canonical = CanonicalFixture(tmp_path / "synthetic.sqlite")
+    user, assistant = canonical.current.messages
+    canonical.current = replace(canonical.current, messages=(
+        replace(user, run_outcome=outcome),
+        replace(assistant, text="Exact retained partial explanation. α\n", run_outcome=outcome)))
+    original = canonical.legacy_read()
+    transfer = TransferFixture(canonical)
+
+    result = await migration(canonical, transfer).migrate_saved("thread_transplant", expected_revision=7)
+
+    assert result.state == "active" and result.mapping == canonical.mapping()
+    retained = json.loads(transfer.documents[result.mapping.runtime.session_id])["messages"]
+    assert retained == [
+        {"id": "legacy_user", "role": "user", "content": "Discuss transplant rejection.",
+         "runId": "old_run", "createdAt": "2026-10-10T12:00:00+00:00", "citations": []},
+        {"id": "legacy_answer", "role": "assistant", "content": "Exact retained partial explanation. α\n",
+         "runId": "old_run", "createdAt": "2026-10-10T12:00:01+00:00",
+         "completedAt": "2026-10-10T12:00:02+00:00", "legacyOutcome": outcome,
+         "citations": [{"passage_id": "passage_7", "document_id": "pdf_1", "revision_id": "rev_2",
+                        "locators": [{"kind": "pdf", "physical_page": 7, "printed_label": "5"}]}]}]
+    assert canonical.legacy_read() == original
+    assert all(reference.lineage == "unknown" and not reference.context_eligible and
+               not reference.capture_eligible for reference in result.message_refs)
+
+
+@pytest.mark.asyncio
 async def test_commit_then_retire_stage_payload_without_repeating_transfer(tmp_path):
     canonical = CanonicalFixture(tmp_path / "synthetic.sqlite")
     transfer = TransferFixture(canonical)
@@ -235,10 +263,11 @@ async def test_commit_then_retire_stage_payload_without_repeating_transfer(tmp_p
 
 
 @pytest.mark.asyncio
-async def test_unsettled_legacy_assistant_is_not_silently_dropped_by_transfer(tmp_path):
+@pytest.mark.parametrize("outcome", ["completed", "cancelled", "failed", "interrupted"])
+async def test_unsettled_legacy_assistant_is_not_silently_dropped_by_transfer(tmp_path, outcome):
     canonical = CanonicalFixture(tmp_path / "synthetic.sqlite")
     canonical.current = replace(canonical.current, messages=(canonical.current.messages[0],
-        replace(canonical.current.messages[1], completed_at=None)))
+        replace(canonical.current.messages[1], completed_at=None, run_outcome=outcome)))
     transfer = TransferFixture(canonical)
     with pytest.raises(ApiError) as refusal:
         await migration(canonical, transfer).migrate_saved("thread_transplant", expected_revision=7)
@@ -248,8 +277,25 @@ async def test_unsettled_legacy_assistant_is_not_silently_dropped_by_transfer(tm
 
 
 @pytest.mark.asyncio
-async def test_lost_import_ack_restarts_with_inspection_and_original_identities(tmp_path):
+@pytest.mark.parametrize("outcome", [None, "running", "unknown"])
+async def test_unknown_or_nonterminal_legacy_outcome_refuses_before_native_stage(tmp_path, outcome):
     canonical = CanonicalFixture(tmp_path / "synthetic.sqlite")
+    canonical.current = replace(canonical.current, messages=(canonical.current.messages[0],
+        replace(canonical.current.messages[1], run_outcome=outcome)))
+    transfer = TransferFixture(canonical)
+    with pytest.raises(ApiError) as refusal:
+        await migration(canonical, transfer).migrate_saved("thread_transplant", expected_revision=7)
+    assert refusal.value.code == "harness_migration_outcome_unsupported"
+    assert transfer.stages == {} and transfer.imports == []
+    assert canonical.migration() is None and canonical.mapping() is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("outcome", ["completed", "cancelled", "failed", "interrupted"])
+async def test_lost_import_ack_restarts_with_inspection_and_original_identities(tmp_path, outcome):
+    canonical = CanonicalFixture(tmp_path / "synthetic.sqlite")
+    canonical.current = replace(canonical.current, messages=(canonical.current.messages[0],
+        replace(canonical.current.messages[1], run_outcome=outcome)))
     transfer = TransferFixture(canonical)
     transfer.import_error = TimeoutError("Synthetic acknowledgement lost after native commit.")
     with pytest.raises(TimeoutError):
@@ -329,7 +375,7 @@ async def test_late_authority_change_keeps_native_stage_nonadmitted(tmp_path, fi
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("defect", ["text", "citation", "missing", "order", "extra", "counts", "identity"])
+@pytest.mark.parametrize("defect", ["text", "citation", "outcome", "missing", "order", "extra", "counts", "identity"])
 async def test_readback_must_prove_exact_bytes_references_and_order(tmp_path, defect):
     canonical = CanonicalFixture(tmp_path / "synthetic.sqlite")
     transfer = TransferFixture(canonical)
@@ -337,10 +383,11 @@ async def test_readback_must_prove_exact_bytes_references_and_order(tmp_path, de
         request = transfer.imports[0]
         observed = transfer.sessions[request.session_id]
         ids = observed.native_message_ids
-        if defect in {"text", "citation"}:
+        if defect in {"text", "citation", "outcome"}:
             document = json.loads(transfer.documents[request.session_id])
-            document["messages"][1]["content" if defect == "text" else "citations"] = (
-                "Wrong retained explanation." if defect == "text" else [])
+            field, value = {"text": ("content", "Wrong retained explanation."),
+                            "citation": ("citations", []), "outcome": ("legacyOutcome", "failed")}[defect]
+            document["messages"][1][field] = value
             transfer.documents[request.session_id] = json.dumps(document).encode("utf-8")
         elif defect == "missing":
             ids = ids[:1]
