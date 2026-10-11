@@ -26,8 +26,8 @@ lower in the historical ledger.
 | --- | --- | --- |
 | H02 | Actual saved native Library retrieval, canonical cited M5 publication, native mapping/reconciliation and store activation | Connected desktop retrieval/citation opening and remaining exposure/failure acceptance |
 | H03 | Actual production-main text/tool/image loopback dispatch, strict final deployment proof, canonical permits and selected provider identity | Full production admission coverage and required evidence; matching-account tool/image gate remains separate before cutover |
-| H04 | Canonical authority/API, actual candidate/live lifecycle, managed initial/reopen, hidden Settings stage/activate/reopen and ordinary settlement | Required connected failure/crash reconciliation; account/package scope remains separate |
-| H05 | Persistent lineage, legacy real hooks, four recapture regressions and actual Mem0/Qdrant/FastEmbed correction/reopen preparation | Separately admitted native memory-extraction inference and integrated capture/settlement acceptance after H04; automatic migrated capture remains OFF |
+| H04 | Canonical authority/API, actual candidate/live lifecycle, managed initial/reopen, hidden Settings stage/activate/reopen, actual interrupted activation reconciliation and ordinary settlement | Criterion/readiness closure with H03 dependency; other crash phases and account/package scope remain distinct |
+| H05 | Persistent lineage, legacy real hooks, four recapture regressions, reviewed actual Mem0/Qdrant/FastEmbed native extraction and held-source-revocation/reopen proof | Remaining capture acceptance and H04 dependency; automatic migrated capture remains OFF in integration |
 | H06 | Actual supported SDK import/export/remove capability with zero inference | Existing conversation migration, one transcript owner, native purge and canonical deletion/replay integration after H05 |
 | H07 | Actual native child/permission snapshot and narrowed-epoch seam preparation | Bounded delegated evidence review, inherited authority and actual family cancellation/settlement after H05 |
 | H08 | Existing instructions/skills and pinned native hooks are source inputs | Versioned instruction/skill activation and connected task use after accepted H04/H06 |
@@ -49,9 +49,24 @@ Four GET200 responses retain complete hashes. Both restart and final explicit
 close were normal with no forced/remaining PIDs; fault=null. Four screenshots
 include1000×720 layout. Read [the exact journey](OPENCODE_H04_HIDDEN_SETTINGS.md).
 POST observer bodies remained pending until renderer close, then status200/body
-unavailable; their bounded passive tooling repair is separately owned. No
-successful inference, live provider, account action or packaged acceptance is
-claimed. Connected failed-candidate/crash reconciliation remains open.
+unavailable. Passive repairbc742b63 is now integrated asa9f1b0fa: public CDP
+request identity plus Network.getResponseBody replaces the Playwright body
+fallback, with a2s observation deadline,64KiB bytes and four retained reads.
+Both independent axes report zero findings. Saved synthetic protocol evidence
+has1 failure→1 pass and an affected4-pass file; no unchanged suite was repeated.
+The short actual Chromium follow-up atG:/rp4/c/s-99eb5ce0/ retained two complete
+GET200 rows with matching requested/effective hashes, pending0/dropped0/fault
+null. Seven controller operations ended in normal close1.065s with no forced
+or remaining PIDs; readiness was37.063s. It did not repeat stage/activate/reopen
+or exercise inference. No live provider, account action or packaged acceptance
+is claimed. Actual interrupted activation test9547ac66, integrated asb2a769cf,
+has1 first-run pass/37.259s, zero failures/errors/skips. Its public gated-start
+wrapper awaits real healthy B before holding admission. Only the retained issuer
+is terminated; A/B exits and pipe EOF precede successor acquisition. Original
+managed reopen restores effective A/requested and failed B/activation_interrupted
+under preserved tools revocation, then validates A and settles normally. Both
+review axes have zero material findings. This proves one idle crash point; other
+phases, inference, pinned-run migration and complete H04 acceptance remain open.
 
 ### Stateless committed-answer extraction assembly
 
@@ -134,7 +149,7 @@ requested48/2 while effective64/default remains (1 passed,15.35s). No successful
 inference occurs; both runs deselect the16 unchanged cases. Both independent
 axes explicitly close this repair. The new hidden activation/reopen journey is
 recorded above. The validated proxy Content-Length repair is also independently
-closed; bounded passive POST observation remains a separate tooling lease.
+closed; the separately reviewed passive recorder is integrated asa9f1b0fa.
 
 The actual-engine positive receipt positive02.xml has1 pass/0 failures/errors/
 skips (21.029s): genuine saved setup1 send plus explicit extraction1 send through
@@ -143,15 +158,25 @@ native resolution, same-connection permit publication and actual settlement.
 Its retained positive01 timeout (1 failure,79.672s) is classified by public job
 state as a fixture32KiB capacity refusal; the actual Mem0 system has34276 UTF-8
 bytes. Only fixture byte/frame/retention limits and early failure diagnostics
-changed. The held-source-revocation negative and coherent test commit remain
-pending; no H05 acceptance or automatic capture is granted.
+changed. The held-source-revocation negative revocation01.xml has1 pass/23.541s.
+The final two-case file final01.xml records2 passes/43.924s with zero failures/
+errors/skips. Actual ManualFact r1→r2 prevents extraction sends/debits/receipts/
+points while CPU/native/Domain/Registry ownership remains held; after settlement,
+real-store reopen denies stale resolution/enqueue/retry. Coherent tests-only
+af337107 is integrated as97c432aa. Independent Spec and Standards reviews each
+report zero material findings in this exact test scope; the final source and
+receipt fingerprints match the reviewed bytes. No H05 acceptance or automatic
+capture is granted.
 
-Current directed lanes: Sartre prepares the distinct H02 desktop fixture backend
-in two new dedicated files; Arendt handed off the actual managed-child H04
-interruption test9547ac66; Ohm handed off passive recorder repairbc742b63.
-Russell and Nietzsche independently review these two exact scopes for Spec and
-Standards. Turing implements the held-source-revocation real-engine tracer after
-its positive result; automatic capture remains OFF. The parent owns
+Current directed lanes: Sartre implements the distinct H02 desktop fixture
+backend in two dedicated new files; Ohm owns its fixed learning launch envelope
+and control route. Arendt prepares the actual non-crash H04 candidate failure
+tracer after the interrupted-startup proof landed. Russell traces production
+tokenizer and framing evidence in local pinned sources. Nietzsche is available
+for independent Standards review. Turing prepares automatic native capture in
+an isolated branch; its narrow refusal-removal patch is not enabled in the
+integration checkout. Recorder, interruption and explicit native extraction
+scopes have independent Spec and Standards closure. The parent owns
 shared integration and durable evidence. No H06/H07 implementation is released
 before real H05 acceptance, and H08 still requires accepted H04/H06.
 

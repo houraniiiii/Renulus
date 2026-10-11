@@ -86,8 +86,30 @@ FastEmbed. Setup and extraction each issue one synthetic-account loopback
 request, for two total sends. The explicit native capture has a separate
 confirmed permit, checks publication in the final Memory transaction, creates
 no extraction transcript and settles its actual owners. Account limits and
-inclusive counts remain synthetic. The held-source-revocation case is still
-being implemented; this positive does not accept H05 or enable automatic capture.
+inclusive counts remain synthetic. This positive does not accept H05 or enable
+automatic capture.
+
+The completed held-source-revocation tracer, revocation01.xml, has1 pass in
+23.541s. Actual ManualFact r1→r2 cancels the capture with
+memory_dependency_revoked while the counter finalizer holds CPU, native, Domain
+and registry ownership. Reserved control stays responsive under one data slot
+and one Domain callback. Extraction sends, debits, receipts and points are all
+zero. Recovery and close refuse premature release. After actual settlement,
+physical store reopen rejects stale answer resolution, enqueue and retry while
+preserving corrected r2 and the saved history.
+
+The final two-case file final01.xml records2 passes, zero failures/errors/skips,
+43.924s (positive20.634s, negative21.739s). These are the two final cases, not an
+addition to the earlier focused counts. Test-only sourceaf337107 is integrated
+as97c432aa; independent Spec and Standards reviews each found zero material
+issues in this bounded test scope. Its file SHA-256 is
+1adcdefab77f49d4998094d552ba02d605087425af79ff6b27951c3e0e52211a;
+the final XML SHA-256 is
+e8edd8522a18a7f7690191c63d79efea6958765034a930a8c2ca52f152c2bda1.
+The handoff and receipts are under
+G:/Renulus-agent-scratch/oc-h02-h08/native-extraction-tracer/.
+Automatic native capture remains disabled in integration. Its isolated
+preparation lane does not change this evidence or grant H05 acceptance.
 
 The retained first receipt, positive01.xml (1 failure, 79.672s), timed out while
 waiting for the counter. Public job state subsequently classified the cause as
