@@ -17,7 +17,7 @@ installation, push or downstream-ticket expansion is authorized.
 
 ### Dependency readiness
 
-Current continuation: parent `cebda1fc`. The reviewed child-learning routing
+Current continuation: parent `02166b6e`. The reviewed child-learning routing
 helper `abdad45b` is integrated as `f0e433d6`; supplied-transaction policy
 settlement `dd75d5eb` is integrated as `294b8218`. Both independent axes are
 clear, with original62-case helper and12-case settlement evidence retained;
@@ -149,6 +149,39 @@ only native969 and transport490/958 as additional prerequisites. Its production-
 main tracer must inspect a new registry hash, consume real Library references
 and use the existing root publisher. The original H06 integration registry is
 unchanged. No native/helper/schema/Services edits or broad reruns are leased.
+
+That connected Owner tracer is currently paused on two confirmed prerequisite
+mismatches, with its two-file WIP preserved in oc-library. Public constructor
+red `G:/rh07a/e/children-red02.xml` failed in11.109s after actual candidate
+inspection and before model sends. Subsequent `children-green01` through
+`children-green06` are all failed attempts despite their filenames; none is a
+positive receipt. The latest trace prepares a canonical child, but the Node
+gateway rejects its first `request_kind=child` because its allowlist only admits
+primary/continuation. Foreground native job reporting independently sends
+`notification_id=null`, which Python Children and the journal reject. The root's
+later continuation then hits the four-send fixture's sequence assertion; this
+does not establish a child-model send or successful report consumption.
+Arendt owns the narrow gateway adapter/test prerequisite; Russell owns the
+Children/journal and dedicated-test prerequisite. The latter preserves exact
+job identity/generation and detached-notification checks, without a schema
+change. No connected rerun is authorized until those published repairs clear
+review. Existing H06 runtime/registry and Owner WIP remain untouched by them.
+
+Gateway prerequisite `678540eb` is ready with one behavioral red, one minimal
+green and eight focused affected checks passing; independent review is pending.
+It accepts only the trusted first child kind, keeps continuation references
+strict, and leaves stateless extraction primary-only. A separate source-only
+check by Ohm confirms the Owner WIP's temporary cancellation wrapper loses the
+original callback link when Children assigns its family token. Passing the
+original Domain grant through requires Children Library guards to use their
+supplied connection and the callback cancellation signal, rather than opening
+a nested writer through the full Domain current predicate. Source recording has
+the same in-transaction risk. Ordinary Library read connections also require a
+read-safe child-state check; citation publication validation remains inside the
+existing transaction. This third concern has no dynamic reproduction yet and
+will receive a separate bounded Children follow-on after the notification
+repair is committed. Domain transport remains unchanged; the connected Owner
+test stays paused until these prerequisites and independent reviews are clear.
 
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
