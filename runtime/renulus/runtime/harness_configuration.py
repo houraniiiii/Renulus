@@ -431,17 +431,27 @@ class ConfigurationAuthority:
             granted &= self._capabilities(conn, parent)
         return granted
 
-    def settle_run(self, run_id: str):
+    def settle_run(self, run_id: str) -> None:
         """Integrator calls after actual runtime settlement; this only closes policy ownership."""
         with self.db.transaction() as conn:
-            row = conn.execute("SELECT state FROM harness_configuration_runs WHERE run_id=?", (run_id,)).fetchone()
-            if not row:
-                _deny("run_missing")
-            if conn.execute("SELECT 1 FROM harness_configuration_attempts WHERE run_id=? AND state IN ('reserved','dispatched')", (run_id,)).fetchone():
-                _deny("run_not_settled")
-            if conn.execute("SELECT 1 FROM harness_configuration_runs WHERE parent_id=? AND state='active'", (run_id,)).fetchone():
-                _deny("run_not_settled")
-            conn.execute("UPDATE harness_configuration_runs SET state='settled' WHERE run_id=?", (run_id,))
+            self.settle_run_in(conn, run_id)
+
+    def settle_run_in(self, conn: sqlite3.Connection, run_id: str) -> None:
+        """Close policy ownership inside the caller's active canonical transaction.
+
+        Actual runtime settlement must precede this call. The caller owns
+        commit/rollback; unresolved permits and active direct children refuse.
+        Settlement preserves dispatch debits and the current grant overlay.
+        """
+        self._require_canonical_transaction(conn)
+        row = conn.execute("SELECT state FROM harness_configuration_runs WHERE run_id=?", (run_id,)).fetchone()
+        if not row:
+            _deny("run_missing")
+        if conn.execute("SELECT 1 FROM harness_configuration_attempts WHERE run_id=? AND state IN ('reserved','dispatched')", (run_id,)).fetchone():
+            _deny("run_not_settled")
+        if conn.execute("SELECT 1 FROM harness_configuration_runs WHERE parent_id=? AND state='active'", (run_id,)).fetchone():
+            _deny("run_not_settled")
+        conn.execute("UPDATE harness_configuration_runs SET state='settled' WHERE run_id=?", (run_id,))
 
     def revoke(self, capability: str) -> int:
         """Monotonic narrowing also supports purpose:<id>, connection:<ref>, model:<id>."""
