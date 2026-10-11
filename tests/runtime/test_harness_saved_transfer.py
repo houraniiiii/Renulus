@@ -87,7 +87,14 @@ class ControlledProcess:
 
     def finish(self, entry):
         command, payload = entry["command"], entry["payload"]
-        if command == "session.import.stage":
+        if command == "session.import.reserve":
+            plan_digest = hashlib.sha256(json.dumps(["renulus-transfer-reservation/1",
+                payload["sessionId"], payload["bundleDigest"], payload["totalBytes"],
+                payload["partPayloadBytes"]], ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+            result = {"state": "reserved", "sessionId": payload["sessionId"],
+                "bundleDigest": payload["bundleDigest"], "partCount": len(payload["partPayloadBytes"]),
+                "planDigest": plan_digest}
+        elif command == "session.import.stage":
             assert len(json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode()) <= 48 * 1024
             self.parts[(entry["operation_id"], payload["partIndex"])] = payload["chunk"]
             parts = [chunk for (operation, _), chunk in self.parts.items() if operation == entry["operation_id"]]
@@ -186,7 +193,8 @@ async def test_stage_sends_exact_unicode_bytes_in_bounded_serialized_parts():
     request = request_for(source)
     adapter = HarnessSavedTransfer(process, observation_timeout=0.2)
     await adapter.stage(request, document=source)
-    sent = process.requests
+    assert process.requests[0]["command"] == "session.import.reserve"
+    sent = process.requests[1:]
     assert 1 < len(sent) <= 256
     assert b"".join(item["payload"]["chunk"].encode() for item in sent) == source
     assert [item["payload"]["partIndex"] for item in sent] == list(range(len(sent)))
@@ -196,6 +204,23 @@ async def test_stage_sends_exact_unicode_bytes_in_bounded_serialized_parts():
         item["payload"]["bundleDigest"] == request.bundle_digest and
         item["payload"]["partCount"] == len(sent) and
         item["payload"]["totalBytes"] == len(source) for item in sent)
+
+
+@pytest.mark.asyncio
+async def test_reservation_count_boolean_is_denied_before_any_stage():
+    process = ControlledProcess()
+    def malformed(command, reply):
+        if command == "session.import.reserve":
+            reply["result"]["partCount"] = True
+        return reply
+    process.transform = malformed
+    source = document()
+    adapter = HarnessSavedTransfer(process, observation_timeout=.2)
+    with pytest.raises(ApiError) as denied:
+        await adapter.stage(request_for(source), document=source)
+    assert denied.value.code == "harness_migration_response"
+    assert [entry["command"] for entry in process.requests] == ["session.import.reserve"]
+    await adapter.close()
 
 
 @pytest.mark.asyncio
@@ -497,7 +522,8 @@ async def test_one_stage_observation_deadline_covers_all_parts_and_retains_start
         with pytest.raises(ApiError) as expired:
             await adapter.stage(request, document=source)
         assert expired.value.code == "harness_migration_observation_timeout"
-        assert 1 <= len(process.requests) < process.requests[0]["payload"]["partCount"]
+        stages = [entry for entry in process.requests if entry["command"] == "session.import.stage"]
+        assert 1 <= len(stages) < stages[0]["payload"]["partCount"]
     finally:
         await adapter.close()
     assert process.cancelled == []
@@ -533,7 +559,7 @@ async def test_incomplete_stage_can_be_retired_after_actual_pending_request_sett
     process.publish_terminal(process.requests[-1]["request_id"])
     await adapter.settled()
     assert await adapter.retire(request) == "retired"
-    assert [item["command"] for item in process.requests] == ["session.import.stage", "operation.retire"]
+    assert [item["command"] for item in process.requests] == ["session.import.reserve", "session.import.stage", "operation.retire"]
     await adapter.close()
 
 

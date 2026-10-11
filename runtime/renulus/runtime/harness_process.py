@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
+import hashlib
 import json
 import math
 import os
+import re
 from pathlib import Path
 import secrets
 import subprocess
@@ -18,7 +20,8 @@ from renulus.harness_contracts import HarnessCommandIdentity, validate_command_o
 
 PROTOCOL = "renulus-harness/1"
 CONTROLS = frozenset({"host.status", "session.cancel", "host.close",
-                      "model.extract.status", "model.extract.cancel", "model.extract.release"})
+                      "model.extract.status", "model.extract.cancel", "model.extract.release",
+                      "session.import.reserve"})
 COMMANDS = CONTROLS | {"host.inspect", "host.activate", "host.stores.activate", "host.recover", "session.create", "session.prompt",
                        "session.get", "session.messages", "session.find", "model.extract",
                        "session.import.stage", "session.import", "session.import.inspect",
@@ -28,6 +31,81 @@ OBSERVATION_COMMANDS = frozenset({"session.get", "session.messages", "session.fi
                                   "session.import.inspect"})
 OBSERVATION_OUTCOMES = frozenset({"committed_reference", "rejected_before_admission",
                                  "cancelled_settled"})
+TRANSFER_COMMANDS = frozenset({"session.import.reserve", "session.import.stage",
+    "session.import", "session.import.inspect", "session.remove", "operation.retire"})
+TRANSFER_REPLY_BYTES = 8192
+TRANSFER_OVERHEAD = 4096
+
+
+@dataclass
+class _TransferReservation:
+    payload: dict
+    attempt_id: str
+    digest: str
+    base: int
+    peak: int
+    stages: set[int] = field(default_factory=set)
+    reads: int = 0
+    imports: int = 0
+    retires: int = 0
+    granted: bool = False
+
+    @property
+    def remaining(self):
+        return len(self.payload["partPayloadBytes"]) + 4 - len(self.stages) - self.reads - self.imports - self.retires
+
+    def slot(self, command, payload, attempt_id):
+        if attempt_id != self.attempt_id:
+            raise ValueError("transfer_reservation_conflict")
+        if command == "operation.retire":
+            if payload != {}:
+                raise ValueError("invalid_payload")
+            return self.retires == 0
+        if command not in {"session.import.stage", "session.import", "session.import.inspect"}:
+            raise ValueError("transfer_reservation_conflict")
+        target = {key: self.payload[key] for key in ("sessionId", "bundleDigest")}
+        if any(payload.get(key) != value for key, value in target.items()):
+            raise ValueError("transfer_reservation_conflict")
+        if command == "session.import.stage":
+            index = payload.get("partIndex")
+            if (set(payload) != {*target, "partIndex", "partCount", "totalBytes", "chunk"}
+                    or type(index) is not int or not 0 <= index < len(self.payload["partPayloadBytes"])
+                    or type(payload["partCount"]) is not int or payload["partCount"] != len(self.payload["partPayloadBytes"])
+                    or type(payload["totalBytes"]) is not int or payload["totalBytes"] != self.payload["totalBytes"]
+                    or type(payload["chunk"]) is not str
+                    or len(_json_bytes(payload)) != self.payload["partPayloadBytes"][index]):
+                raise ValueError("transfer_reservation_conflict")
+            return index not in self.stages
+        if payload != target:
+            raise ValueError("transfer_reservation_conflict")
+        return self.imports == 0 if command == "session.import" else self.reads < 2
+
+    def consume(self, command, payload):
+        if command == "session.import.stage":
+            self.stages.add(payload["partIndex"])
+        elif command == "session.import.inspect":
+            self.reads += 1
+        elif command == "session.import":
+            self.imports += 1
+        else:
+            self.retires += 1
+
+
+def _transfer_reservation(payload, attempt_id, reply_limit, inflight):
+    if (type(payload) is not dict or set(payload) != {"sessionId", "bundleDigest", "totalBytes", "partPayloadBytes"}
+            or type(payload["sessionId"]) is not str or not re.fullmatch(r"ses_[0-9a-f]{64}", payload["sessionId"])
+            or type(payload["bundleDigest"]) is not str or not re.fullmatch(r"[0-9a-f]{64}", payload["bundleDigest"])
+            or type(payload["totalBytes"]) is not int or not 0 < payload["totalBytes"] <= 8388608
+            or type(payload["partPayloadBytes"]) is not list or not 1 <= len(payload["partPayloadBytes"]) <= 256
+            or any(type(size) is not int or not 1 <= size <= 49152 for size in payload["partPayloadBytes"])
+            or sum(payload["partPayloadBytes"]) < payload["totalBytes"]):
+        raise ValueError("invalid_payload")
+    copied = json.loads(_json_bytes(payload))
+    digest = hashlib.sha256(_json_bytes(["renulus-transfer-reservation/1", copied["sessionId"],
+        copied["bundleDigest"], copied["totalBytes"], copied["partPayloadBytes"]])).hexdigest()
+    count = len(copied["partPayloadBytes"]) + 4
+    return _TransferReservation(copied, attempt_id, digest, reply_limit + TRANSFER_OVERHEAD,
+        (max(copied["partPayloadBytes"]) + TRANSFER_OVERHEAD) * min(count, inflight))
 
 
 def _json_bytes(value: dict) -> bytes:
@@ -92,6 +170,7 @@ class _Request:
     disconnect_error: str | None = None
     observed: bool = False
     releasing: asyncio.Task[bool] | None = None
+    transfer_slot: bool = False
 
     @property
     def size(self) -> int:
@@ -138,6 +217,8 @@ class ManagedHarnessProcess:
         self._identity: dict = {}
         self._requests: dict[str, _Request] = {}
         self._retired_operations: set[str] = set()
+        self._retirement_requests: dict[str, set[str]] = {}
+        self._transfer_reservations: dict[str, _TransferReservation] = {}
         self._ready: asyncio.Future | None = None
         self._disconnected = False
         self._closing = False
@@ -326,7 +407,7 @@ class ManagedHarnessProcess:
         records = [record for record in self._requests.values() if record.lane == lane]
         if lane == "close" and records:
             return records[0].snapshot()
-        inflight = sum(record.pending for record in records)
+        inflight = sum(record.pending or record.wire_size > 0 for record in records)
         unavailable = (self._disconnected or self._process is None
                        or self._process.returncode is not None)
         if unavailable or (self._closing and not control) or inflight >= limit:
@@ -340,17 +421,56 @@ class ManagedHarnessProcess:
         # earlier ones to make space. Data and control use independent budgets.
         metadata = {key: value for key, value in frame.items() if key not in ("payload", "token")}
         metadata_size = len(_json_bytes(metadata))
-        reservation = metadata_size + len(encoded) + self._config.max_frame_bytes + 256
+        reply_limit = min(TRANSFER_REPLY_BYTES, self._config.max_frame_bytes) if command in TRANSFER_COMMANDS else self._config.max_frame_bytes
+        reservation = metadata_size + len(encoded) + reply_limit + 256
+        plan = self._transfer_reservations.get(operation_id)
+        new_plan = False
+        slot = False
+        try:
+            if command == "session.import.reserve":
+                proposed = _transfer_reservation(payload, attempt_id, reply_limit, self._config.max_inflight)
+                stage_envelope = len(_json_bytes({**frame, "command": "session.import.stage", "payload": {}})) - 2 + 1
+                if max(proposed.payload["partPayloadBytes"]) + stage_envelope > self._config.max_frame_bytes:
+                    raise ValueError("frame_too_large")
+                if plan is not None and (plan.digest != proposed.digest or plan.attempt_id != attempt_id):
+                    raise ValueError("transfer_reservation_conflict")
+                if plan is None:
+                    plan = proposed
+                    data = [record for record in self._requests.values() if record.lane == "data"]
+                    held_count, held_bytes = self._transfer_capacity()
+                    if (len(data) + held_count + plan.remaining > self._config.max_result_records
+                            or sum(record.size for record in data) + held_bytes +
+                            plan.remaining * plan.base + plan.peak > self._config.max_result_bytes):
+                        raise ValueError("transfer_capacity")
+                    new_plan = True
+            elif lane == "data" and plan is not None:
+                if not plan.granted and command != "operation.retire":
+                    raise ValueError("transfer_reservation_pending")
+                slot = plan.slot(command, payload, attempt_id)
+            elif command in {"session.import.stage", "session.import", "session.import.inspect"}:
+                raise ValueError("transfer_reservation_required")
+        except ValueError as error:
+            pending.update(outcome="rejected_before_admission", admission="rejected_before_admission",
+                           error={"code": str(error)})
+            return pending
         used = sum(record.size for record in records)
-        if lane != "close" and (len(records) >= self._config.max_result_records
-                                or used + reservation > self._config.max_result_bytes):
+        held_count, held_bytes = self._transfer_capacity() if lane == "data" else (0, 0)
+        # Converting a promised slot transfers its metadata budget and its
+        # actual queued wire bytes; future read release provides no credit.
+        conversion = plan.base + len(encoded) if slot else 0
+        if lane != "close" and (len(records) + held_count + 1 - int(slot) > self._config.max_result_records
+                                or used + held_bytes + reservation - conversion > self._config.max_result_bytes):
             pending.update(outcome="rejected_before_admission", admission="rejected_before_admission",
                            error={"code": "result_capacity"})
             return pending
+        if new_plan:
+            self._transfer_reservations[operation_id] = plan
+        if slot:
+            plan.consume(command, payload)
         self._requests[frame["request_id"]] = _Request(
             frame=metadata, future=future, result=_json_bytes(pending), lane=lane,
             metadata_size=metadata_size, wire_size=len(encoded),
-            reply_capacity=self._config.max_frame_bytes + 256)
+            reply_capacity=reply_limit + 256, transfer_slot=slot)
         record = self._requests[frame['request_id']]
         if lane == "close":
             self._close_request_id = frame["request_id"]
@@ -366,6 +486,30 @@ class ManagedHarnessProcess:
             result["observation"] = "timeout"
             return result
         return record.snapshot()
+
+    def _transfer_capacity(self):
+        count, size = 0, 0
+        for operation_id, plan in self._transfer_reservations.items():
+            wires = sum(record.wire_size for record in self._requests.values()
+                if record.transfer_slot and record.frame["operation_id"] == operation_id)
+            count += plan.remaining
+            size += plan.remaining * plan.base + max(0, plan.peak - wires)
+        return count, size
+
+    def _finish_retirement(self, operation_id):
+        identifiers = self._retirement_requests.get(operation_id)
+        if identifiers is None:
+            return
+        # Only receipts present at the authenticated ACK are retired. Later
+        # public reads of the same operation retain their own observation.
+        scoped = [(key, self._requests[key]) for key in identifiers if key in self._requests]
+        if any(record.pending or record.wire_size or record.releasing is not None
+               and not record.releasing.done() for _, record in scoped):
+            return
+        self._transfer_reservations.pop(operation_id, None)
+        self._retirement_requests.pop(operation_id, None)
+        for key, _ in scoped:
+            self._requests.pop(key, None)
 
     async def query_result(self, request_id: str) -> dict | None:
         record = self._requests.get(request_id)
@@ -411,6 +555,7 @@ class ManagedHarnessProcess:
             self._observation_release_pending = False
         if self._requests.get(request_id) is record:
             del self._requests[request_id]
+        self._finish_retirement(record.frame["operation_id"])
         return True
 
     def domain_result(self, callback_id: str) -> dict | None:
@@ -533,6 +678,9 @@ class ManagedHarnessProcess:
                 if record is None or any(frame.get(key) != record.frame[key]
                                          for key in ("operation_id", "attempt_id")):
                     continue
+                if record.frame["command"] in TRANSFER_COMMANDS and len(line) > min(TRANSFER_REPLY_BYTES, self._config.max_frame_bytes):
+                    self._disconnect("reply_too_large")
+                    continue
                 try:
                     expected = HarnessCommandIdentity.model_validate({
                         key: record.frame[key] for key in HarnessCommandIdentity.model_fields})
@@ -545,14 +693,28 @@ class ManagedHarnessProcess:
                                        if frame["outcome"] == "rejected_before_admission"
                                        else "host_accepted")
                 record.publish(public, line)
+                if record.frame["command"] == "session.import.reserve":
+                    operation_id = record.frame["operation_id"]
+                    plan = self._transfer_reservations.get(operation_id)
+                    if plan is not None:
+                        expected_result = {"state": "reserved", "sessionId": plan.payload["sessionId"],
+                            "bundleDigest": plan.payload["bundleDigest"],
+                            "partCount": len(plan.payload["partPayloadBytes"]), "planDigest": plan.digest}
+                        if (public["outcome"] == "committed_reference"
+                                and type(public.get("result")) is dict
+                                and type(public["result"].get("partCount")) is int
+                                and public["result"] == expected_result):
+                            plan.granted = True
+                        elif public["outcome"] == "rejected_before_admission" and not plan.granted:
+                            self._transfer_reservations.pop(operation_id, None)
                 if (record.frame['command'] == 'operation.retire'
                         and public['outcome'] == 'committed_reference'
                         and public.get('result') == {'state': 'retired'}):
                     operation_id = record.frame['operation_id']
                     self._retired_operations.add(operation_id)
-                    for identifier, previous in tuple(self._requests.items()):
-                        if previous.frame['operation_id'] == operation_id and not previous.pending:
-                            del self._requests[identifier]
+                    self._retirement_requests[operation_id] = {key for key, previous in self._requests.items()
+                        if previous.frame["operation_id"] == operation_id}
+                    self._finish_retirement(operation_id)
 
     async def _drain_stderr(self):
         assert self._process is not None and self._process.stderr is not None
@@ -575,6 +737,7 @@ class ManagedHarnessProcess:
                 encoded = None
                 if record:
                     record.finish_write()
+                    self._finish_retirement(record.frame["operation_id"])
                 if completion and not completion.done():
                     completion.set_result(None)
         except (BrokenPipeError, ConnectionError, OSError):
@@ -599,6 +762,8 @@ class ManagedHarnessProcess:
             record.finish_write()
         if self._domains:
             await self._domains.settled()
+        self._transfer_reservations.clear()
+        self._retirement_requests.clear()
 
     def _disconnect(self, code: str):
         self._disconnected = True

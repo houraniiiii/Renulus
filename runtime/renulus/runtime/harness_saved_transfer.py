@@ -44,6 +44,7 @@ class _Bundle:
     part_count: int
     total_bytes: int
     part_bytes: tuple[int, ...]
+    plan_digest: str = ""
     staged: bool = False
     committed: bool = False
     retirement_acknowledged: bool = False
@@ -267,7 +268,12 @@ class HarnessSavedTransfer:
             raise ApiError(checked.error.code if checked.error else "harness_migration_uncertain",
                 "Native transfer could not be confirmed; no write is retried.", 409)
         result = checked.result
-        if command == "session.import.stage":
+        if command == "session.import.reserve":
+            if (type(result) is not dict or type(result.get("partCount")) is not int or
+                    result != {"state": "reserved", **self._target(request),
+                    "partCount": bundle.part_count, "planDigest": bundle.plan_digest}):
+                raise ApiError("harness_migration_response", "Native reservation acknowledgement is invalid.", 409)
+        elif command == "session.import.stage":
             self._stage_reply(bundle, result, part_index)
         elif command in ("session.import", "session.import.inspect"):
             self._readback(bundle, result, absent=command == "session.import.inspect")
@@ -286,6 +292,11 @@ class HarnessSavedTransfer:
         chunks = self._parts(request, text, len(document))
         bundle = _Bundle(request, identity, aliases, roles, len(chunks), len(document),
                          tuple(len(chunk.encode()) for chunk in chunks))
+        payloads = [{**self._target(request), "partIndex": index, "partCount": len(chunks),
+                     "totalBytes": len(document), "chunk": chunk} for index, chunk in enumerate(chunks)]
+        part_sizes = [len(_json_bytes(payload)) for payload in payloads]
+        bundle.plan_digest = canonical_digest(["renulus-transfer-reservation/1", request.session_id,
+            request.bundle_digest, len(document), part_sizes])
         prior = self._bundles.get(request.migration_id)
         if prior is not None:
             if (prior.request, prior.identity, prior.aliases, prior.roles) != (request, identity, aliases, roles):
@@ -299,9 +310,10 @@ class HarnessSavedTransfer:
                     sum(item.total_bytes for item in self._bundles.values()) + len(document) > MAX_STAGED_BYTES):
                 raise ApiError("harness_migration_capacity", "Native staging capacity is retained.", 409)
             self._bundles[request.migration_id] = bundle
-        for index, chunk in enumerate(chunks):
-            await self._send(bundle, "session.import.stage", {**self._target(request),
-                "partIndex": index, "partCount": len(chunks), "totalBytes": len(document), "chunk": chunk}, deadline=deadline)
+        await self._send(bundle, "session.import.reserve", {**self._target(request),
+            "totalBytes": len(document), "partPayloadBytes": part_sizes}, deadline=deadline)
+        for payload in payloads:
+            await self._send(bundle, "session.import.stage", payload, deadline=deadline)
         bundle.staged = True
 
     @classmethod

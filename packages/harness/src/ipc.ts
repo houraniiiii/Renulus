@@ -30,12 +30,62 @@ type Request = Record<string, unknown> & {
   command: string; payload: Record<string, unknown>;
 };
 const identityKeys = ["protocol", "profile_id", "store_id", "generation", "token"] as const;
-const controls = new Set(["host.status", "session.cancel", "model.extract.status", "model.extract.cancel", "model.extract.release"]);
+const controls = new Set(["host.status", "session.cancel", "model.extract.status", "model.extract.cancel", "model.extract.release", "session.import.reserve"]);
+const transferCommands = new Set(["session.import.reserve", "session.import.stage", "session.import",
+  "session.import.inspect", "session.remove", "operation.retire"]);
+const transferReplyBytes = 8192;
+const transferOverhead = 4096;
+type TransferPlan = { sessionId: string; bundleDigest: string; totalBytes: number; partPayloadBytes: number[] };
+type TransferReservation = { plan: TransferPlan; attemptId: string; digest: string; base: number; peak: number;
+  stages: Set<number>; reads: number; imports: number; retires: number };
+const remaining = (hold: TransferReservation) => hold.plan.partPayloadBytes.length + 4 - hold.stages.size - hold.reads - hold.imports - hold.retires;
+function transferPlan(payload: Record<string, unknown>, attemptId: string, replyLimit: number, inflight: number): TransferReservation {
+  if (Object.keys(payload).sort().join(',') !== 'bundleDigest,partPayloadBytes,sessionId,totalBytes' ||
+      typeof payload.sessionId !== "string" || !/^ses_[0-9a-f]{64}$/.test(payload.sessionId) ||
+      typeof payload.bundleDigest !== "string" || !/^[0-9a-f]{64}$/.test(payload.bundleDigest) ||
+      !Number.isSafeInteger(payload.totalBytes) || (payload.totalBytes as number) < 1 || (payload.totalBytes as number) > 8_388_608 ||
+      !Array.isArray(payload.partPayloadBytes) || payload.partPayloadBytes.length < 1 || payload.partPayloadBytes.length > 256 ||
+      !payload.partPayloadBytes.every(size => Number.isSafeInteger(size) && size >= 1 && size <= 49_152) ||
+      payload.partPayloadBytes.reduce((n: number, size: number) => n + size, 0) < (payload.totalBytes as number)) throw new Error("invalid_payload");
+  const plan = payload as unknown as TransferPlan;
+  const digest = createHash("sha256").update(JSON.stringify(["renulus-transfer-reservation/1", plan.sessionId,
+    plan.bundleDigest, plan.totalBytes, plan.partPayloadBytes])).digest("hex");
+  return { plan, attemptId, digest, base: replyLimit + transferOverhead,
+    peak: (Math.max(...plan.partPayloadBytes) + transferOverhead) * Math.min(inflight, plan.partPayloadBytes.length + 4),
+    stages: new Set(), reads: 0, imports: 0, retires: 0 };
+}
+function transferSlot(hold: TransferReservation, request: Request): boolean {
+  const { command, payload } = request, plan = hold.plan;
+  if (request.attempt_id !== hold.attemptId) throw new Error("transfer_reservation_conflict");
+  if (command === "operation.retire") {
+    if (Object.keys(payload).length) throw new Error("invalid_payload");
+    return hold.retires === 0;
+  }
+  if (!["session.import.stage", "session.import", "session.import.inspect"].includes(command) ||
+      payload.sessionId !== plan.sessionId || payload.bundleDigest !== plan.bundleDigest) throw new Error("transfer_reservation_conflict");
+  if (command === "session.import.stage") {
+    const index = payload.partIndex as number;
+    if (Object.keys(payload).sort().join(',') !== 'bundleDigest,chunk,partCount,partIndex,sessionId,totalBytes' ||
+        !Number.isSafeInteger(index) || index < 0 || index >= plan.partPayloadBytes.length ||
+        payload.partCount !== plan.partPayloadBytes.length || payload.totalBytes !== plan.totalBytes ||
+        typeof payload.chunk !== "string" || Buffer.byteLength(JSON.stringify(payload)) !== plan.partPayloadBytes[index]) throw new Error("transfer_reservation_conflict");
+    return !hold.stages.has(index);
+  }
+  if (Object.keys(payload).sort().join(',') !== 'bundleDigest,sessionId') throw new Error("transfer_reservation_conflict");
+  return command === "session.import" ? hold.imports === 0 : hold.reads < 2;
+}
+function consumeTransferSlot(hold: TransferReservation, request: Request) {
+  if (request.command === "session.import.stage") hold.stages.add(request.payload.partIndex as number);
+  else if (request.command === "session.import.inspect") hold.reads++;
+  else if (request.command === "session.import") hold.imports++;
+  else hold.retires++;
+}
 const observations = new Set(["session.get", "session.messages", "session.find", "host.status", "host.inspect", "model.extract.status", "session.import.inspect"]);
 const observationOutcomes = new Set(["committed_reference", "rejected_before_admission", "cancelled_settled"]);
 type Lane = "data" | "control" | "close";
 type RecordEntry = { lane: Lane; operationId: string; command: string; digest: string; size: number; overhead: number;
-  pending: boolean; publications: number; outcome?: string; releaseRequested?: boolean; reply?: Buffer };
+  pending: boolean; publications: number; outcome?: string; releaseRequested?: boolean; reply?: Buffer;
+  transferWire?: number; retirementAcknowledged?: boolean };
 const object = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 const nonempty = (value: unknown): value is string => typeof value === "string" && value.length > 0;
@@ -86,11 +136,22 @@ export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainCl
   const identity = Object.fromEntries(identityKeys.map(key => [key, boot[key]]));
   const records = new Map<string, RecordEntry>();
   const retiredOperations = new Set<string>();
+  const transferReservations = new Map<string, TransferReservation>();
   const maxRecords = boot.ipc?.max_result_records ?? 256;
   const maxBytes = boot.ipc?.max_result_bytes ?? 16_777_216;
   const maxFrameBytes = boot.ipc?.max_frame_bytes ?? 1_048_576;
   const active = new Map<string, Promise<void>>();
   const writes = new Set<Promise<void>>();
+  const transferCapacity = () => {
+    let count = 0, bytes = 0;
+    for (const [operationId, hold] of transferReservations) {
+      const wires = [...records.values()].filter(record => record.operationId === operationId)
+        .reduce((n, record) => n + (record.transferWire ?? 0), 0);
+      count += remaining(hold);
+      bytes += remaining(hold) * hold.base + Math.max(0, hold.peak - wires);
+    }
+    return { count, bytes };
+  };
   let closing = false;
   let accepting = true;
   let stopped = false;
@@ -151,6 +212,7 @@ export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainCl
     draining = (async () => {
       await settleHost();
       await flush();
+      transferReservations.clear();
       stop();
     })();
     // A failed native drain leaves ownership alive and uncertain; it never kills.
@@ -162,7 +224,8 @@ export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainCl
       attempt_id: request.attempt_id, request_id: request.request_id,
     };
     let line = Buffer.from(JSON.stringify({ ...envelope, outcome, ...body }) + "\n");
-    if (line.length > maxFrameBytes) {
+    const ceiling = transferCommands.has(request.command) ? Math.min(transferReplyBytes, maxFrameBytes) : maxFrameBytes;
+    if (line.length > ceiling) {
       outcome = "uncertain_after_disconnect";
       line = Buffer.from(JSON.stringify({ ...envelope, outcome: "uncertain_after_disconnect", error: { code: "reply_too_large" } }) + "\n");
     }
@@ -175,6 +238,11 @@ export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainCl
       if (closing && !["host.status", "host.close"].includes(request.command)) throw new Error("host_closing");
       let result: unknown;
       switch (request.command) {
+        case "session.import.reserve": {
+          const hold = transferReservations.get(request.operation_id)!;
+          result = { state: "reserved", sessionId: hold.plan.sessionId, bundleDigest: hold.plan.bundleDigest,
+            partCount: hold.plan.partPayloadBytes.length, planDigest: hold.digest }; break;
+        }
         case "session.import.stage":
         case "session.import":
         case "session.import.inspect":
@@ -273,6 +341,10 @@ export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainCl
         default: throw new Error("unknown_command");
       }
       await reply(request, "committed_reference", { result });
+      if (request.command === "operation.retire" && (result as { state: string }).state === "retired") {
+        const record = records.get(request.request_id);
+        if (record) record.retirementAcknowledged = true;
+      }
     } catch (error) {
       const code = error instanceof Error ? error.message : "host_error";
       const rejected = ["invalid_payload", "invalid_images", "invalid_observation_page", "unknown_command", "harness_policy_blocked", "host_closing", "harness_closing", "configuration_requires_new_generation", "configuration_mismatch", "recovery_required", "recovery_admission_mismatch", "recovery_admission_unavailable", "recovery_requires_quiescence",
@@ -345,20 +417,53 @@ export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainCl
     const overhead = Buffer.byteLength(JSON.stringify({ ...identity,
       operation_id: request.operation_id, attempt_id: request.attempt_id, request_id: request.request_id,
     })) + 256;
-    const reservation = maxFrameBytes * 2 + overhead;
-    if (retained.length >= (lane === "close" ? 1 : maxRecords) ||
-        (lane !== "close" && retained.reduce((total, record) => total + record.size, 0) + reservation > maxBytes)) {
+    const replyLimit = transferCommands.has(request.command) ? Math.min(transferReplyBytes, maxFrameBytes) : maxFrameBytes;
+    const reservation = transferCommands.has(request.command) ? line.length + replyLimit + overhead : maxFrameBytes * 2 + overhead;
+    let hold = transferReservations.get(request.operation_id);
+    let proposed: TransferReservation | undefined;
+    let slot = false;
+    try {
+      if (request.command === "session.import.reserve") {
+        if (closing) throw new Error("host_closing");
+        proposed = transferPlan(request.payload, request.attempt_id, replyLimit, boot.ipc?.max_inflight ?? 8);
+        const stageEnvelope = Buffer.byteLength(JSON.stringify({ ...request, command: "session.import.stage", payload: {} })) - 2 + 1;
+        if (Math.max(...proposed.plan.partPayloadBytes) + stageEnvelope > maxFrameBytes) throw new Error("frame_too_large");
+        if (hold && (hold.digest !== proposed.digest || hold.attemptId !== request.attempt_id)) throw new Error("transfer_reservation_conflict");
+        if (!hold) {
+          const data = [...records.values()].filter(record => record.lane === "data"), held = transferCapacity();
+          if (data.length + held.count + remaining(proposed) > maxRecords ||
+              data.reduce((n, record) => n + record.size, 0) + held.bytes + remaining(proposed) * proposed.base + proposed.peak > maxBytes) throw new Error("transfer_capacity");
+        }
+      } else if (lane === "data" && hold) {
+        slot = transferSlot(hold, request);
+      } else if (["session.import.stage", "session.import", "session.import.inspect"].includes(request.command)) {
+        throw new Error("transfer_reservation_required");
+      }
+    } catch (error) {
+      await reply(request, "rejected_before_admission", { error: { code: (error as Error).message } }, false);
+      return;
+    }
+    const held = lane === "data" ? transferCapacity() : { count: 0, bytes: 0 };
+    const conversion = slot ? hold!.base + line.length : 0;
+    if (retained.length + held.count + 1 - Number(slot) > (lane === "close" ? 1 : maxRecords) ||
+        (lane !== "close" && retained.reduce((total, record) => total + record.size, 0) + held.bytes + reservation - conversion > maxBytes)) {
       await reply(request, "rejected_before_admission", { error: { code: "result_capacity" } }, false);
       return;
     }
+    if (proposed && !hold) { transferReservations.set(request.operation_id, proposed); hold = proposed; }
+    if (slot) consumeTransferSlot(hold!, request);
     const record: RecordEntry = { lane, operationId: request.operation_id, command: request.command, digest, size: reservation, overhead,
-      pending: true, publications: 0 };
+      pending: true, publications: 0, transferWire: slot ? line.length : 0 };
     records.set(request.request_id, record);
     const task = dispatch(request).catch(() => { drain(); }).finally(() => {
       record.pending = false;
       record.size = overhead + (record.reply?.length ?? 0);
+      record.transferWire = 0;
       active.delete(request.request_id);
       release(request.request_id, record);
+      if (record.retirementAcknowledged) {
+        transferReservations.delete(request.operation_id);
+      }
     });
     active.set(request.request_id, task);
   };
