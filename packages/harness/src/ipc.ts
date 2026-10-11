@@ -2,6 +2,7 @@ import path from "node:path";
 import { createHash, timingSafeEqual } from "node:crypto";
 import type { openHarness } from "./host.ts";
 import { DomainClient } from "./domain-ipc.ts";
+import { SessionTransferError } from "./session-transfer.ts";
 import type { ExtractionIdentity, ExtractionInput, ExtractionReply } from "./extraction-host.ts";
 
 export interface HarnessBoot {
@@ -30,10 +31,10 @@ type Request = Record<string, unknown> & {
 };
 const identityKeys = ["protocol", "profile_id", "store_id", "generation", "token"] as const;
 const controls = new Set(["host.status", "session.cancel", "model.extract.status", "model.extract.cancel", "model.extract.release"]);
-const observations = new Set(["session.get", "session.messages", "session.find", "host.status", "host.inspect", "model.extract.status"]);
+const observations = new Set(["session.get", "session.messages", "session.find", "host.status", "host.inspect", "model.extract.status", "session.import.inspect"]);
 const observationOutcomes = new Set(["committed_reference", "rejected_before_admission", "cancelled_settled"]);
 type Lane = "data" | "control" | "close";
-type RecordEntry = { lane: Lane; command: string; digest: string; size: number; overhead: number;
+type RecordEntry = { lane: Lane; operationId: string; command: string; digest: string; size: number; overhead: number;
   pending: boolean; publications: number; outcome?: string; releaseRequested?: boolean; reply?: Buffer };
 const object = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
@@ -84,6 +85,7 @@ export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainCl
   const boot = bootConfiguration();
   const identity = Object.fromEntries(identityKeys.map(key => [key, boot[key]]));
   const records = new Map<string, RecordEntry>();
+  const retiredOperations = new Set<string>();
   const maxRecords = boot.ipc?.max_result_records ?? 256;
   const maxBytes = boot.ipc?.max_result_bytes ?? 16_777_216;
   const maxFrameBytes = boot.ipc?.max_frame_bytes ?? 1_048_576;
@@ -173,6 +175,34 @@ export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainCl
       if (closing && !["host.status", "host.close"].includes(request.command)) throw new Error("host_closing");
       let result: unknown;
       switch (request.command) {
+        case "session.import.stage":
+        case "session.import":
+        case "session.import.inspect":
+        case "session.remove":
+          result = await host.transferCommand({ profileId: boot.profile_id, storeId: boot.store_id,
+            generation: boot.generation, operationId: request.operation_id, attemptId: request.attempt_id },
+            request.command, request.payload); break;
+        case "operation.retire": {
+          if (Object.keys(request.payload).length) throw new Error("invalid_payload");
+          if (retiredOperations.has(request.operation_id)) { result = { state: "retired" }; break; }
+          const scoped = [...records.entries()].filter(([id, record]) =>
+            id !== request.request_id && record.operationId === request.operation_id);
+          if (scoped.some(([, record]) => record.pending || record.publications)) {
+            result = { state: "pending" }; break;
+          }
+          const retiredBytes = [...retiredOperations, request.operation_id].reduce((n, id) => n + Buffer.byteLength(id) + 256, 0);
+          if (retiredOperations.size >= maxRecords || retiredBytes > maxBytes) throw new Error("operation_retirement_capacity");
+          result = await host.transferCommand({ profileId: boot.profile_id, storeId: boot.store_id,
+            generation: boot.generation, operationId: request.operation_id, attemptId: request.attempt_id },
+            request.command, request.payload);
+          if ((result as { state: string }).state === "retired") {
+            retiredOperations.add(request.operation_id);
+            for (const [id] of scoped) records.delete(id);
+            const own = records.get(request.request_id);
+            if (own) own.releaseRequested = true;
+          }
+          break;
+        }
         case "host.status":
           result = closing ? { state: "blocked", outcome: "uncertain_after_disconnect" } : await host.status(); break;
         case "host.inspect":
@@ -250,8 +280,9 @@ export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainCl
         "harness_store_schema_mismatch", "harness_runtime_schema_mismatch", "harness_store_identity_mismatch",
         "harness_manifest_mismatch", "harness_selection_changed", "harness_session_identity_conflict",
         "memory_extraction_identity_conflict", "memory_extraction_capacity", "memory_extraction_unavailable",
-        "memory_extraction_active"].includes(code);
-      await reply(request, rejected ? "rejected_before_admission" : "uncertain_after_disconnect", { error: { code: rejected ? code : "host_error" } });
+        "memory_extraction_active", "operation_retirement_capacity"].includes(code);
+      await reply(request, rejected ? "rejected_before_admission" : "uncertain_after_disconnect",
+        { error: { code: rejected || error instanceof SessionTransferError ? code : "host_error" } });
     }
   };
   const receive = async (line: Buffer) => {
@@ -279,6 +310,16 @@ export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainCl
     if (!["operation_id", "attempt_id", "request_id"].every(key => identifier(frame[key])) ||
         !nonempty(frame.command) || !object(frame.payload)) return;
     const request = frame as Request;
+    if (retiredOperations.has(request.operation_id) && request.command === 'operation.retire') {
+      await reply(request, Object.keys(request.payload).length ? 'rejected_before_admission' : 'committed_reference',
+        Object.keys(request.payload).length ? { error: { code: 'invalid_payload' } } : { result: { state: 'retired' } }, false);
+      return;
+    }
+    if (retiredOperations.has(request.operation_id) && !observations.has(request.command) &&
+        request.command !== "operation.retire" && request.command !== "host.close") {
+      await reply(request, "rejected_before_admission", { error: { code: "operation_terminal_unavailable" } }, false);
+      return;
+    }
     const digest = createHash("sha256").update(JSON.stringify([
       request.operation_id, request.attempt_id, request.command, request.payload,
     ])).digest("hex");
@@ -310,8 +351,8 @@ export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainCl
       await reply(request, "rejected_before_admission", { error: { code: "result_capacity" } }, false);
       return;
     }
-    const record = { lane, command: request.command, digest, size: reservation, overhead,
-      pending: true, publications: 0 } as RecordEntry;
+    const record: RecordEntry = { lane, operationId: request.operation_id, command: request.command, digest, size: reservation, overhead,
+      pending: true, publications: 0 };
     records.set(request.request_id, record);
     const task = dispatch(request).catch(() => { drain(); }).finally(() => {
       record.pending = false;

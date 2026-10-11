@@ -72,6 +72,12 @@ class LearnService:
                 "messages": [], "runs": []}
 
     async def delete_thread(self, identifier):
+        owner = self.services.registry.get('harness_learning')
+        if owner is not None:
+            return await owner.delete_saved_owner(identifier, lambda: self._delete_thread(identifier, owner))
+        return await self._delete_thread(identifier, owner)
+
+    async def _delete_thread(self, identifier, owner):
         for run in list(self.active.values()):
             if run.thread_id == identifier:
                 await self.cancel(run.id)
@@ -87,6 +93,8 @@ class LearnService:
             if attachments is not None:
                 attachments.discard_volatile('learning', identifier)
         drain(self.services)
+        if owner is not None:
+            await owner.purge_native_owners()
         return {"deleted": True}
 
     def prepare(self, question, scope, thread_id, topic_id, style, idempotency_key, *, case_handoff_id=None, conn=None):

@@ -59,6 +59,8 @@ class HarnessLearningOwner:
         self.bindings = {}
         self.model_bindings = {}
         self._settlements = {}
+        self._purges = {}
+        self._deletions = set()
         self.model_registry_factory = model_registry_factory
         self.model_registry = self._make_model_registry()
         self.memory_captures = HarnessMemoryCaptures(self)
@@ -189,6 +191,13 @@ class HarnessLearningOwner:
                         'recovery_open', 'package_acquisition_open', 'mcp_startup_open'))):
                 raise ApiError('registry_mismatch', 'The gated live registry differs from the candidate.', 409, True)
         ready = await self._startup_command('host.activate', {'configuration_id': self.configuration_id})
+        for purge in self.repo.migration_journal.removed_purges():
+            manifest = self.manifest()
+            if (purge.profile_id, purge.store_id) != (manifest['profile_id'], manifest['runtime_store']['store_id']):
+                raise ApiError('harness_purge_scope', 'Retired ownership belongs to another paired store.', 409)
+            if await self._purge_command('operation.retire', {}, purge.operation_id) != {'state': 'retired'}:
+                raise ApiError('harness_purge_pending', 'Retired ownership remains pending.', 503, True)
+        await self.purge_native_owners()
         if candidate is not None:
             self._require_gated_candidate(candidate)
             if ready.get('state') != 'ready' or ready.get('configurationId') != candidate.version:
@@ -232,6 +241,10 @@ class HarnessLearningOwner:
     async def _close(self):
         if self._starting is not None:
             await asyncio.gather(asyncio.shield(self._starting), return_exceptions=True)
+        if self._deletions:
+            await asyncio.gather(*(asyncio.shield(task) for task in tuple(self._deletions)))
+        if self._purges:
+            await asyncio.gather(*(asyncio.shield(task) for task in tuple(self._purges.values())))
         for entry in tuple(self.repo.streaming.active.values()):
             if entry.get('harness_revisions') is not None:
                 entry['run'].cancelled.set()
@@ -248,6 +261,84 @@ class HarnessLearningOwner:
         if self.model_registry is not None:
             while (await self.model_registry.settlement(1)).owned:
                 pass
+
+    async def delete_saved_owner(self, thread_id, action):
+        """Retain the accepted deletion and its gate after an observer leaves."""
+        task = asyncio.create_task(self._delete_saved_owner(thread_id, action), name='renulus-owner-delete-' + thread_id)
+        self._deletions.add(task)
+        def finished(completed):
+            self._deletions.discard(completed)
+            if not completed.cancelled():
+                completed.exception()
+        task.add_done_callback(finished)
+        return await asyncio.shield(task)
+
+    async def _delete_saved_owner(self, thread_id, action):
+        seal = await self.prepare_owner_delete(thread_id)
+        try:
+            return await action()
+        finally:
+            if (self.db.fetch_one('SELECT id FROM learn_threads WHERE id=?', (thread_id,))
+                    or not self.repo.migration_journal.pending_purges()):
+                seal.release()
+            # A deleted owner with uncertain native removal retains ingress.
+            # Startup reconciles its durable obligation before admitting work.
+
+    async def prepare_owner_delete(self, thread_id):
+        if self._closing or self._root_seal is not None:
+            raise ApiError('harness_configuration_busy', 'New owner mutations are sealed.', 409, True)
+        if self.memory_captures.retained():
+            raise ApiError('harness_settlement_pending', 'Settle retained extraction before deleting this owner.', 409, True)
+        seal = _LearningRootSeal(self)
+        self._root_seal = seal
+        try:
+            for entry in tuple(self.repo.streaming.active.values()):
+                if entry['kind'] == 'learning' and entry['id'] == thread_id and entry.get('harness_revisions') is not None:
+                    await self.repo.streaming.cancel('learning', thread_id, entry['run'].id)
+                    if (await self.settle_run(entry))['state'] != 'settled':
+                        raise ApiError('harness_settlement_pending', 'The saved execution still owns native work.', 409, True)
+            return seal
+        except BaseException:
+            seal.release()
+            raise
+
+    async def _purge_command(self, command, payload, operation_id):
+        response = await self.process.request(command, payload, operation_id, '1', 5)
+        deadline = asyncio.get_running_loop().time() + 5
+        while response['outcome'] == 'accepted_pending':
+            if asyncio.get_running_loop().time() >= deadline:
+                raise ApiError('harness_purge_pending', 'The native purge remains owned and pending.', 503, True)
+            await asyncio.sleep(.02)
+            response = await self.process.query_result(response['request_id'])
+            if response is None:
+                raise ApiError('harness_purge_pending', 'The native purge observation is unavailable.', 503, True)
+        if response['outcome'] != 'committed_reference':
+            raise ApiError('harness_purge_pending', 'The native purge requires reconciliation.', 503, True)
+        return response['result']
+
+    async def _purge_native(self, purge):
+        manifest = self.manifest()
+        if (purge.profile_id, purge.store_id) != (manifest['profile_id'], manifest['runtime_store']['store_id']):
+            raise ApiError('harness_purge_scope', 'The native purge belongs to another paired store.', 409)
+        removed = await self._purge_command('session.remove', {'sessionId': purge.session_id}, purge.purge_id)
+        if removed != {'state': 'removed', 'sessionId': purge.session_id}:
+            raise ApiError('harness_purge_pending', 'Exact native removal is not confirmed.', 503, True)
+        if await self._purge_command('operation.retire', {}, purge.operation_id) != {'state': 'retired'}:
+            raise ApiError('harness_purge_pending', 'Native command retirement remains pending.', 503, True)
+        with self.db.transaction() as conn:
+            self.repo.migration_journal.mark_removed_in(conn, purge)
+
+    async def purge_native_owners(self):
+        for purge in self.repo.migration_journal.pending_purges():
+            task = self._purges.get(purge.purge_id)
+            if task is None or task.done():
+                if task is not None and not task.cancelled():
+                    task.exception()
+                task = asyncio.create_task(self._purge_native(purge), name='renulus-native-purge-' + purge.purge_id)
+                self._purges[purge.purge_id] = task
+                task.add_done_callback(lambda finished: finished.exception() if not finished.cancelled() else None)
+            await asyncio.shield(task)
+            self._purges.pop(purge.purge_id, None)
 
     async def settle_run(self, entry, *, timeout=5):
         """Bounded observation; retained cleanup owns the canonical pin until proof."""

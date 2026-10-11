@@ -366,12 +366,22 @@ class ConversationRepository:
             return command(conn, "conversation_commands", idempotency_key, operation, self._owner(kind)[3], identifier, request, change)
 
     async def delete(self, kind, identifier, request: Mutation, idempotency_key=None):
+        with self.db.transaction() as conn:
+            require_command_current(conn, 'conversation_commands', idempotency_key)
+        owner = self.services.registry.get('harness_learning') if kind == 'learning' else None
+        if owner is not None:
+            return await owner.delete_saved_owner(identifier,
+                lambda: self._delete(kind, identifier, request, idempotency_key))
+        return await self._delete(kind, identifier, request, idempotency_key)
+
+    async def _delete(self, kind, identifier, request: Mutation, idempotency_key):
         self._owner(kind)
         with self.db.transaction() as conn:
             require_command_current(conn, 'conversation_commands', idempotency_key)
         # Stop local runs before deleting their canonical authority. No provider
         # is called in a SQLite transaction or while a synchronous lock is held.
         if kind == "learning":
+            owner = self.services.registry.get('harness_learning')
             for run in list(self.learn.active.values()):
                 if run.thread_id == identifier:
                     await self.learn.cancel(run.id)
@@ -409,6 +419,8 @@ class ConversationRepository:
             if attachments is not None:
                 attachments.discard_volatile(kind, identifier)
         drain(self.services)
+        if kind == 'learning' and owner is not None:
+            await owner.purge_native_owners()
         return result
 
     def owner_removed(self, conn, kind, identifier):

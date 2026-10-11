@@ -12,6 +12,7 @@ import { SessionRestart } from "@opencode/core/session/execution/restart";
 import { SessionExecution } from "@opencode/core/session/execution";
 import { SessionStore } from "@opencode/core/session/store";
 import { Job } from "@opencode/core/job";
+import { createSessionTransfer, type TransferFrame, type TransferCommand, type StagePayload, type ImportTarget } from "./session-transfer.ts";
 import { SessionModelRequest } from "@opencode/core/session/model-request";
 import { SessionRunnerModel } from "@opencode/core/session/runner/model";
 import { SessionContext as NativeSessionContext } from "@opencode/core/session/context";
@@ -46,6 +47,7 @@ export interface PrimaryModelPreparation {
 }
 
 export interface HarnessOptions extends ProfileSelection {
+  readonly processGeneration?: string;
   readonly model?: ModelAdapter;
   readonly library?: LibraryToolBridge;
   readonly admitInput?: (binding: NativeInputBinding) => Promise<void>;
@@ -344,6 +346,13 @@ export async function openHarness(options: HarnessOptions) {
   const requireReady = () => {
     if (phase !== "ready" || !configurationId || !options.model) throw new Error("harness_policy_blocked");
   };
+  const transfer = options.processGeneration ? createSessionTransfer({ sdk, run,
+    scope: { profileId: options.profileId, storeId: options.storeId, generation: options.processGeneration,
+      location: Location.Ref.make({ directory: AbsolutePath.make(workspace) }) },
+    checkCurrent: () => {
+      if (phase !== "store_transfer" || !storesActive) throw new Error("harness_policy_blocked");
+    },
+  }) : undefined;
   const mutate = async <A>(action: () => Promise<A>) => {
     requireReady();
     let settled!: () => void;
@@ -353,6 +362,29 @@ export async function openHarness(options: HarnessOptions) {
     finally { admittedWrites.delete(lease); settled(); }
   };
   return {
+    async transferCommand(frame: TransferFrame, command: TransferCommand, payload: Record<string, unknown>) {
+      requireReady();
+      if (!transfer || !storesActive) throw new Error("harness_policy_blocked");
+      phase = "store_transfer";
+      let settle!: () => void;
+      const lease = new Promise<void>(resolve => { settle = resolve; });
+      admittedWrites.add(lease);
+      try {
+        if ((await run(execution.active)).size || held.size) throw new Error("recovery_requires_quiescence");
+        switch (command) {
+          case "session.import.stage": return transfer.stage(frame, payload as unknown as StagePayload);
+          case "session.import": return await transfer.commit(frame, payload as unknown as ImportTarget);
+          case "session.import.inspect": return await transfer.inspect(frame, payload as unknown as ImportTarget);
+          case "session.remove": return await transfer.remove(frame, payload as unknown as { sessionId: string });
+          case "operation.retire":
+            if (Object.keys(payload).length) throw new Error("invalid_payload");
+            return transfer.retire(frame);
+        }
+      } finally {
+        if (phase === "store_transfer") phase = "ready";
+        admittedWrites.delete(lease); settle();
+      }
+    },
     async inspect() {
       if (phase !== "policy_blocked" || admittedWrites.size) {
         throw new Error("harness_candidate_inspection_blocked");
@@ -543,8 +575,10 @@ export async function openHarness(options: HarnessOptions) {
       if (!Number.isFinite(timeout) || timeout < 0) throw new Error("invalid_close_timeout");
       if (phase === "closed") return { state: "closed", outcome: "cancelled_settled" };
       phase = "closing";
+      transfer?.seal();
       closing ??= (async () => {
         await Promise.all([...admittedWrites]);
+        await transfer?.settled();
         await runtime.dispose();
         await ownership.release();
         phase = "closed";

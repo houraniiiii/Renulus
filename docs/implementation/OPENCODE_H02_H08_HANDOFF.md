@@ -238,6 +238,24 @@ dependency-ready for bounded implementation, while H08 still requires H06.
 
 ### H06/H07 implementation leases after local H05 closure
 
+Current implementation checkpoint: native transfer93c6c7ce, canonical journal
+740fbe2e and unresolved-identity deletion guardecd5b143 are integrated. Both
+independent axes close the journal repair. Native transfer Standards is clear;
+its producer legacyOutcome compatibility finding is repaired by5b09231e
+(source4980e0b8), with focused independent review underway. Actual native
+deletion/replay/restart and observer-retained gate evidence is recorded in
+[H06 contracts](OPENCODE_H06_MIGRATION.md); migration/continuation and lost
+purge acknowledgement remain open.
+
+Python bounded child authority7707c244 and native child authority63cbced6
+(sourcece390b70) are integrated as preparation. Native actual SDK10/10
+passes7.223s and typecheck0 are retained under
+G:/Renulus-agent-scratch/oc-h07/native-child/. Independent Spec has zero
+material findings. Standards found fixture system-home variable reassignment;
+Turing owns the narrow explicit-path repair. Runtime005 family journal and
+the bounded Python transfer adapter are assigned disjoint new-file leases.
+Parent retains host/Owner/IPC/API/bridge assembly; no H07 acceptance is granted.
+
 The following leases supersede the historical lane scopes below. Workers reuse
 their existing checkouts from published67321f02. No new agents, private profiles
 or native core edits are authorized. H06/H07 acceptance remains open.

@@ -191,6 +191,12 @@ class HarnessMigrationJournal:
             return tuple(NativePurge(**dict(row)) for row in conn.execute(
                 "SELECT * FROM learn_harness_purges WHERE state='pending' ORDER BY purge_id"))
 
+    def removed_purges(self):
+        """Opaque originating identities that must stay retired on a new generation."""
+        with self.db.transaction() as conn:
+            return tuple(NativePurge(**dict(row)) for row in conn.execute(
+                "SELECT * FROM learn_harness_purges WHERE state='removed' ORDER BY purge_id"))
+
     def mark_removed_in(self, conn, purge):
         self._transaction(conn)
         current = conn.execute('SELECT * FROM learn_harness_purges WHERE purge_id=?', (purge.purge_id,)).fetchone()

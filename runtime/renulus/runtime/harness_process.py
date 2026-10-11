@@ -20,9 +20,12 @@ PROTOCOL = "renulus-harness/1"
 CONTROLS = frozenset({"host.status", "session.cancel", "host.close",
                       "model.extract.status", "model.extract.cancel", "model.extract.release"})
 COMMANDS = CONTROLS | {"host.inspect", "host.activate", "host.stores.activate", "host.recover", "session.create", "session.prompt",
-                       "session.get", "session.messages", "session.find", "model.extract"}
+                       "session.get", "session.messages", "session.find", "model.extract",
+                       "session.import.stage", "session.import", "session.import.inspect",
+                       "session.remove", "operation.retire"}
 OBSERVATION_COMMANDS = frozenset({"session.get", "session.messages", "session.find",
-                                  "host.status", "host.inspect", "model.extract.status"})
+                                  "host.status", "host.inspect", "model.extract.status",
+                                  "session.import.inspect"})
 OBSERVATION_OUTCOMES = frozenset({"committed_reference", "rejected_before_admission",
                                  "cancelled_settled"})
 
@@ -134,6 +137,7 @@ class ManagedHarnessProcess:
         self._process: asyncio.subprocess.Process | None = None
         self._identity: dict = {}
         self._requests: dict[str, _Request] = {}
+        self._retired_operations: set[str] = set()
         self._ready: asyncio.Future | None = None
         self._disconnected = False
         self._closing = False
@@ -287,6 +291,15 @@ class ManagedHarnessProcess:
             pending.update(outcome="rejected_before_admission", admission="rejected_before_admission",
                            error={"code": "not_started"})
             return pending
+        if (type(operation_id) is str and type(command) is str
+                and operation_id in self._retired_operations
+                and command not in OBSERVATION_COMMANDS | {'host.close'}):
+            if command == 'operation.retire' and payload == {}:
+                pending.update(outcome='committed_reference', admission='host_accepted', result={'state': 'retired'})
+            else:
+                pending.update(outcome='rejected_before_admission', admission='rejected_before_admission',
+                    error={'code': 'operation_terminal_unavailable'})
+            return pending
         invalid = None
         try:
             if (not isinstance(command, str) or command not in COMMANDS
@@ -338,6 +351,7 @@ class ManagedHarnessProcess:
             frame=metadata, future=future, result=_json_bytes(pending), lane=lane,
             metadata_size=metadata_size, wire_size=len(encoded),
             reply_capacity=self._config.max_frame_bytes + 256)
+        record = self._requests[frame['request_id']]
         if lane == "close":
             self._close_request_id = frame["request_id"]
             self._closing = True
@@ -348,10 +362,10 @@ class ManagedHarnessProcess:
         try:
             await asyncio.wait_for(asyncio.shield(future), timeout)
         except TimeoutError:
-            result = self._requests[frame["request_id"]].snapshot()
+            result = record.snapshot()
             result["observation"] = "timeout"
             return result
-        return self._requests[frame["request_id"]].snapshot()
+        return record.snapshot()
 
     async def query_result(self, request_id: str) -> dict | None:
         record = self._requests.get(request_id)
@@ -531,6 +545,14 @@ class ManagedHarnessProcess:
                                        if frame["outcome"] == "rejected_before_admission"
                                        else "host_accepted")
                 record.publish(public, line)
+                if (record.frame['command'] == 'operation.retire'
+                        and public['outcome'] == 'committed_reference'
+                        and public.get('result') == {'state': 'retired'}):
+                    operation_id = record.frame['operation_id']
+                    self._retired_operations.add(operation_id)
+                    for identifier, previous in tuple(self._requests.items()):
+                        if previous.frame['operation_id'] == operation_id and not previous.pending:
+                            del self._requests[identifier]
 
     async def _drain_stderr(self):
         assert self._process is not None and self._process.stderr is not None

@@ -71,9 +71,40 @@ G:/Renulus-agent-scratch/oc-h02-h08/native-deletion/receipts/.
 journal-red04.xml records two meaningful failures (partial reservation and wrong
 engine cohort),8.29s. journal-green04.xml records four passes,16.46s, covering
 rollback/activation/reopen, durable purge coordinates and both repairs.
-The actual production-main deletion tracer red01.xml still fails: canonical
-deletion succeeds but session.find retains the native transcript (1fail,16.97s).
-The native purge and connected migration/continuation paths remain open.
+The actual production-main deletion red01.xml reproduced retained native
+history after canonical deletion (1fail,16.97s). Native purge now uses the
+supported exact-session removal/readback outside canonical transactions.
+Both ConversationRepository.delete and LearnService.delete_thread use this
+owner flow. Canonical purge coordinates survive owner cascades; completed
+originating operation identities are retired again before a new native
+generation admits work. No original operation can recreate its deleted
+session after that observed restart.
+
+Authenticated operation retirement forgets native replay records and Python
+transcript reply records, retaining only bounded opaque operation identities.
+Unrelated receipts remain observable. A retained deletion task holds the
+root gate across observer cancellation; an uncertain post-delete purge
+retains the seal until reconciliation. Services close joins these tasks
+before disposing native dependencies.
+
+| Receipt in native-deletion/receipts | Result | Behavior / qualification |
+| --- | --- | --- |
+| native-green01.xml | 1 pass,15.76s | Original native purge |
+| replay-red01.xml / replay-green01.xml | 1 failure,14.63s / 1 pass,15.13s | Same-generation retired create replay |
+| retirement-red01.xml / retirement-green01.xml | 1 failure,16.54s / 1 pass,16.41s | Deleted transcript reply forgotten; unrelated receipt preserved |
+| legacy-red01.xml / deletion-final01.xml | 1 failure,14.99s / 2 passes,27.46s | Both public deletion routes |
+| restart-red01.xml / restart-green01.xml | 1 failure,18.62s / 2 passes,28.73s | New native generation retains originating operation retirement |
+| cancel-red01.xml | 1 failure,25.24s | Fixture cancellation sequencing/revision mismatch; excluded from behavioral red claim |
+| cancel-red02.xml / cancel-green01.xml | 1 failure,21.46s / 1 pass,17.77s | Cancelled deletion observer retains root gate through an actual removal observation |
+| process01.xml | 46 passes,10.73s | Affected owned-process transport checks |
+| final02.xml | 3 passes,47.30s | Final deletion routes/restart/retirement and cancelled-observer file |
+
+Runs overlap; they are not an aggregate count. These deletion traces use
+production main/SDK/private pipes/SQLite and one loopback synthetic inference
+effect. The cancellation observer wraps and delegates the actual process
+request, holding its result observation; it does not claim a held native
+resource finalizer. Lost-purge-ack and migration/continuation acceptance
+remain open. Account/TLS/package scopes are unchanged.
 
 ## Native logical transfer port
 
@@ -90,8 +121,12 @@ generation/operationId/attemptId separately from model payloads. Commands:
 | operation.retire | empty object | pending or retired |
 
 The staged UTF8 document is renulus.saved-session/1 with conversationId,title
-and ordered messages(id,role,content,runId,createdAt,completedAt,citations).
-Only settled historical user/assistant text is transferred; legacy partial
+and ordered messages(id,role,content,runId,createdAt,completedAt,citations),
+with assistant-only legacyOutcome completed/cancelled/failed/interrupted.
+Producer repair4980e0b8 is integrated as5b09231e; it matches native93c6c7ce
+without rewriting staged bytes. Its four terminal-outcome reds become four
+passes;23 affected public coordination checks pass. Only settled historical
+user/assistant text is transferred; legacy partial
 history must retain its original public rows/outcome and cannot acquire
 eligible M5 lineage by receiving an imported storage timestamp.
 

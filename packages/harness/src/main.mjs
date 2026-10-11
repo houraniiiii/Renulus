@@ -10,6 +10,7 @@ await runHarnessIpc(async (boot, domain) => {
   try {
     const native = await openLearningHarness({
       root: boot.root, profileId: boot.profile_id, storeId: boot.store_id,
+      processGeneration: boot.generation,
       domainStoreId: boot.domain_store_id, domainPath: boot.domain_path,
       model: { providerId: 'renulus', modelId: 'admission', configuration: {
         model: 'renulus/admission', providers: { renulus: {
