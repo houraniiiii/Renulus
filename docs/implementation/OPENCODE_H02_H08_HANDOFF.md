@@ -248,6 +248,17 @@ the first result must be classified before any further fixture/source changes.
 Owner/test remain the same two-file WIP; no native child assembly is enabled in
 the parent H06 registry by this prerequisite.
 
+That unchanged rerun, `G:/rh07a/e/children-positive08.xml`, failed once in50.552s
+with no teardown error. It now reaches child manifest registration and dispatch,
+then a subsequent child dispatch returns `deployment_manifest_mismatch`.
+Report consumption still correctly refuses the unconfirmed plan; the later
+root-versus-child HTTP fixture mismatch is secondary. No completed child report,
+root M5 publication or H07 acceptance is established. Owner/test hashes remain
+85ef6dc1/1f7a284a. The lane is paused for source and retained-artifact diagnosis,
+without another process launch or rerun. A source candidate is native Chat's
+empty `reasoning_content` field on DeepSeek assistant replay, which the strict
+v1 wire validator does not recognize; this is not yet a payload-confirmed cause.
+
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
 expectation-disposition reviews clear. H06–H08 remain open. Required unmet
