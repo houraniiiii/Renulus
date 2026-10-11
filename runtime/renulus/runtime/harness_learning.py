@@ -60,6 +60,7 @@ class HarnessLearningOwner:
         self.model_bindings = {}
         self._settlements = {}
         self._purges = {}
+        self._purge_seal = None
         self._deletions = set()
         self.model_registry_factory = model_registry_factory
         self.model_registry = self._make_model_registry()
@@ -285,6 +286,8 @@ class HarnessLearningOwner:
             if (self.db.fetch_one('SELECT id FROM learn_threads WHERE id=?', (thread_id,))
                     or not self.repo.migration_journal.pending_purges()):
                 seal.release()
+            else:
+                self._purge_seal = seal
             # A deleted owner with uncertain native removal retains ingress.
             # Startup reconciles its durable obligation before admitting work.
 
@@ -324,9 +327,17 @@ class HarnessLearningOwner:
         manifest = self.manifest()
         if (purge.profile_id, purge.store_id) != (manifest['profile_id'], manifest['runtime_store']['store_id']):
             raise ApiError('harness_purge_scope', 'The native purge belongs to another paired store.', 409)
-        removed = await self._purge_command('session.remove', {'sessionId': purge.session_id}, purge.purge_id)
-        if removed != {'state': 'removed', 'sessionId': purge.session_id}:
-            raise ApiError('harness_purge_pending', 'Exact native removal is not confirmed.', 503, True)
+        # Find is an authenticated exact-operation observation. After a lost
+        # removal acknowledgement, absence reconciles without another effect.
+        found = await self._purge_command('session.find', {}, purge.operation_id)
+        sessions = found.get('sessions') if type(found) is dict else None
+        if (not isinstance(sessions, list) or len(sessions) > 1
+                or (sessions and sessions[0].get('id') != purge.session_id)):
+            raise ApiError('harness_purge_pending', 'Exact native absence is not confirmed.', 503, True)
+        if sessions:
+            removed = await self._purge_command('session.remove', {'sessionId': purge.session_id}, purge.purge_id)
+            if removed != {'state': 'removed', 'sessionId': purge.session_id}:
+                raise ApiError('harness_purge_pending', 'Exact native removal is not confirmed.', 503, True)
         if await self._purge_command('operation.retire', {}, purge.operation_id) != {'state': 'retired'}:
             raise ApiError('harness_purge_pending', 'Native command retirement remains pending.', 503, True)
         with self.db.transaction() as conn:
@@ -343,6 +354,9 @@ class HarnessLearningOwner:
                 task.add_done_callback(lambda finished: finished.exception() if not finished.cancelled() else None)
             await asyncio.shield(task)
             self._purges.pop(purge.purge_id, None)
+        if self._purge_seal is not None and not self.repo.migration_journal.pending_purges():
+            self._purge_seal.release()
+            self._purge_seal = None
 
     async def settle_run(self, entry, *, timeout=5):
         """Bounded observation; retained cleanup owns the canonical pin until proof."""
