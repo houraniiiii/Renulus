@@ -115,6 +115,8 @@ class HarnessGateway:
         self.cancellation.check_current()
         try:
             current = self.check_current()
+        except (ApiError, DomainCancelled):
+            raise
         except Exception:
             raise ApiError("gateway_authority_unbound", "The parent gateway guard is unavailable.", 409) from None
         if current is not True:

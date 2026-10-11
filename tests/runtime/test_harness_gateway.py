@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 import time
 from uuid import uuid4
-from dataclasses import replace
+from dataclasses import asdict, replace
 
 import httpx
 import pytest
@@ -103,6 +103,183 @@ async def test_one_protected_post_returns_bounded_native_bytes_and_spends_one_pe
     assert manager.harness_capabilities(route)["text_input"] == "unknown"
     if credential in json.dumps(result):
         pytest.fail("Credential leaked into the native result", pytrace=False)
+
+
+@pytest.mark.parametrize("code,status,retryable", [
+    ("memory_support_budget", 409, False), ("memory_answer_resolver_unavailable", 503, True),
+])
+async def test_trusted_guard_api_error_survives_before_send_without_spending_a_permit(
+        configured, code, status, retryable):
+    _, authority, route, _ = configured
+    error = ApiError(code, "SYNTHETIC_PRIVATE_GATEWAY_GUARD_7341", status, retryable)
+    failure = error
+    calls = []
+
+    def current():
+        if failure:
+            raise failure
+        return True
+
+    client = gateway(configured, lambda request: calls.append(request) or httpx.Response(200,
+        headers={"content-type": "text/event-stream"}, content=b"data: [DONE]\n\n"),
+        check_current=current)
+    with pytest.raises(ApiError) as denied:
+        await dispatch(client, route)
+    assert (denied.value.code, denied.value.status, denied.value.retryable) == (code, status, retryable)
+    # The trusted in-process caller receives the original error; it is not a wire result.
+    assert denied.value is error
+    assert calls == [] and authority.run("learning-run")["spent_dispatches"] == 0
+    failure = None
+    result = await dispatch(client, route)
+    assert len(calls) == authority.run("learning-run")["spent_dispatches"] == 1
+    assert authority.permit(result["permit_id"])["state"] == "confirmed"
+    authority.settle_run("learning-run")
+
+
+async def test_trusted_guard_domain_cancellation_retains_its_type_before_send(configured):
+    _, authority, route, _ = configured
+    cancellation = DomainCancelled("SYNTHETIC_PRIVATE_GATEWAY_CANCEL_7341")
+    calls = []
+
+    def current():
+        raise cancellation
+
+    client = gateway(configured, lambda request: calls.append(request), check_current=current)
+    with pytest.raises(DomainCancelled) as denied:
+        await dispatch(client, route)
+    assert denied.value is cancellation
+    assert calls == [] and authority.run("learning-run")["spent_dispatches"] == 0
+    authority.settle_run("learning-run")
+
+
+@pytest.mark.parametrize("code,status,retryable", [
+    ("memory_support_budget", 409, False), ("memory_answer_resolver_unavailable", 503, True),
+])
+@pytest.mark.parametrize("phase", ["idle_headers", "after_response"])
+async def test_trusted_guard_error_retains_owned_http_finalizers_and_prevents_replay(
+        configured, code, status, retryable, phase):
+    _, authority, route, _ = configured
+    error = ApiError(code, "SYNTHETIC_PRIVATE_GATEWAY_GUARD_7341", status, retryable)
+    failure = None
+    entered, closing, released = asyncio.Event(), asyncio.Event(), asyncio.Event()
+    calls = []
+
+    def current():
+        if failure:
+            raise failure
+        return True
+
+    class HeldFinalizer(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            yield b'data: {"text":"SYNTHETIC_PRIVATE_RESPONSE_7341"}\n\n'
+
+        async def aclose(self):
+            nonlocal failure
+            closing.set()
+            await released.wait()
+            failure = error
+
+    async def serve(request):
+        calls.append(request)
+        entered.set()
+        if phase == "idle_headers":
+            try:
+                await asyncio.Event().wait()
+            finally:
+                closing.set()
+                await released.wait()
+        return httpx.Response(200, headers={"content-type": "text/event-stream"},
+                              stream=HeldFinalizer())
+
+    client = gateway(configured, serve, check_current=current)
+    task = asyncio.create_task(dispatch(client, route))
+    try:
+        await asyncio.wait_for(entered.wait(), 2)
+        if phase == "idle_headers":
+            failure = error
+        await asyncio.wait_for(closing.wait(), 2)
+        assert not task.done()
+        with pytest.raises(ApiError) as pending:
+            authority.settle_run("learning-run")
+        assert pending.value.code == "run_not_settled"
+        with pytest.raises(ApiError) as busy:
+            await dispatch(client, route, step_id="parallel-step")
+        assert busy.value.code == "gateway_busy"
+        if phase == "idle_headers":
+            # Caller cancellation after the guard fault cannot abandon its finalizer.
+            task.cancel()
+            await asyncio.sleep(0)
+            assert not task.done()
+        released.set()
+        with pytest.raises(ApiError) as denied:
+            await asyncio.wait_for(asyncio.shield(task), 2)
+        assert (denied.value.code, denied.value.status, denied.value.retryable) == (code, status, retryable)
+        assert denied.value is error
+        failure = None
+        with pytest.raises(ApiError) as replay:
+            await dispatch(client, route)
+        assert replay.value.code == "dispatch_uncertain"
+        assert len(calls) == authority.run("learning-run")["spent_dispatches"] == 1
+        authority.settle_run("learning-run")
+        assert authority.run("learning-run")["state"] == "settled"
+    finally:
+        released.set()
+        if not task.done():
+            task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+
+
+@pytest.mark.parametrize("code,status,retryable", [
+    ("memory_support_budget", 409, False), ("memory_answer_resolver_unavailable", 503, True),
+])
+async def test_gateway_guard_api_error_crosses_domain_grant_without_private_wire_data(
+        configured, code, status, retryable):
+    from renulus.runtime.harness_domain import DomainBinding, DomainCallbacks, DomainGrant
+
+    _, configuration, route, credential = configured
+    canary = "SYNTHETIC_PRIVATE_GATEWAY_GUARD_7341"
+    payload_canary = "SYNTHETIC_PRIVATE_MODEL_PAYLOAD_7341"
+    error = ApiError(code, canary, status, retryable)
+    binding = DomainBinding("learning-run", "attempt-1", "native-session",
+                            "native-input", "learning-run")
+    identity = {"protocol": "renulus-harness/1", "profile_id": "synthetic-profile",
+                "store_id": "synthetic-runtime", "generation": "generation", "token": "token"}
+    calls, wires = [], []
+
+    def current():
+        raise error
+
+    async def handler(request, cancellation):
+        client = gateway(configured, lambda request: calls.append(request),
+                         check_current=current, cancellation=cancellation)
+        return await dispatch(client, route)
+
+    async def authority(request):
+        return DomainGrant(binding, handler, lambda: True)
+
+    async def send(wire, callback_id):
+        wires.append(callbacks.publication_wire(callback_id))
+
+    callbacks = DomainCallbacks(identity, authority, send, max_inflight=1, max_records=1,
+                                max_bytes=12000, max_frame=4096)
+    callbacks.accept({**identity, **asdict(binding), "kind": "domain_request",
+                      "callback_id": "gateway-callback", "command": "gateway.dispatch",
+                      "payload": {"private": payload_canary}})
+    await asyncio.wait_for(callbacks.settled(), 2)
+    assert len(wires) == 1
+    peer = json.loads(wires[0])
+    assert peer["outcome"] == "uncertain_after_disconnect"
+    assert peer["error"] == {"code": code, "status": status, "retryable": retryable}
+    assert "result" not in peer and "payload" not in peer
+    text = wires[0].decode()
+    assert canary not in text and payload_canary not in text
+    if credential in text:
+        pytest.fail("Gateway credential entered the domain wire", pytrace=False)
+    peer.pop("token")
+    assert callbacks.result("gateway-callback") == peer
+    assert calls == [] and configuration.run("learning-run")["spent_dispatches"] == 0
+    configuration.settle_run("learning-run")
+    callbacks.seal()
 
 
 @pytest.mark.parametrize("change", [
@@ -316,15 +493,16 @@ def test_invalid_transport_bounds_cannot_create_an_unowned_request(change):
         GatewayBounds(**{**dict(max_request_bytes=4096, max_response_bytes=4096, timeout_seconds=3), **change})
 
 
-async def test_parent_guard_failure_does_not_expose_arbitrary_diagnostics(configured):
+async def test_unexpected_parent_guard_failure_does_not_expose_arbitrary_diagnostics(configured):
     _, authority, route, credential = configured
 
     def broken_guard():
-        raise ApiError("synthetic_callback_error", credential)
+        raise RuntimeError(credential)
 
     with pytest.raises(ApiError) as denied:
         await dispatch(gateway(configured, None, check_current=broken_guard), route)
     assert denied.value.code == "gateway_authority_unbound"
+    assert denied.value.status == 409 and denied.value.retryable is False
     if credential in str(denied.value):
         pytest.fail("Guard diagnostics leaked a credential", pytrace=False)
     assert authority.run("learning-run")["spent_dispatches"] == 0
