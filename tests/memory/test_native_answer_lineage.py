@@ -96,15 +96,23 @@ async def test_staged_native_publication_finalizes_atomically_and_supplies_exact
 
 
 @pytest.mark.asyncio
-async def test_native_receipt_support_does_not_enable_migrated_automatic_capture(native_receipt, services):
+async def test_committed_native_receipt_scan_queues_once(native_receipt, services):
     _, memory, _, run, reference, evidence_id, scope = native_receipt
     try:
+        memory.repository.scan()
+        assert memory.repository.jobs() == []
         with services.db.transaction() as conn:
             publication = stage_and_publish(conn, memory, run, reference, evidence_id)
             finalize(conn, run, publication)
         memory.repository.scan()
-        assert memory.repository.jobs() == []
+        jobs = memory.repository.jobs()
+        assert len(jobs) == 1
+        assert jobs[0]['evidence_id'] == evidence_id
+        assert ContextScope.model_validate_json(jobs[0]['scope']) == scope
+        assert jobs[0]['state'] == 'queued' and jobs[0]['attempts'] == 0
         assert memory.repository.enqueue(evidence_id, scope, automatic=True) is None
+        memory.repository.scan()
+        assert memory.repository.jobs() == jobs
     finally:
         await memory.close()
 
