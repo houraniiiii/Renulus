@@ -630,6 +630,53 @@ describe('Deliberate import recovery', () => {
     expect([...posted[0].header].every(character => character.charCodeAt(0) < 127)).toBe(true);
   });
 
+  it('requires explicit derived-learning permission and retains that choice for a failed import retry', async () => {
+    const posted: Record<string, unknown>[] = [];
+    request.mockImplementation(async (url, options) => {
+      if (String(url) === '/api/v1/library/import/file') {
+        posted.push(JSON.parse(new Headers(options!.headers).get('x-renulus-import-options')!));
+        return posted.length === 1
+          ? json({ error: { code: 'unavailable', message: 'Synthetic import unavailable.', retryable: true } }, 503)
+          : json({ document_id: 'doc_file', revision_id: 'rev_file', status: 'queued', job: { id: 'job_file', revision_id: 'rev_file', state: 'queued', phase: 'queued', error_code: null, error_message: null } }, 202);
+      }
+      return base(url, options);
+    });
+    await mount(); fireEvent.click(screen.getByRole('button', { name: 'Add to library' })); fireEvent.click(screen.getByRole('button', { name: 'Document' }));
+    fireEvent.change(screen.getByLabelText('Choose a study document'), { target: { files: [new File(['Synthetic CKD study'], 'synthetic-ckd.txt')] } });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'I have permission to read, store, index and use this file for local learning.' }));
+    const derived = screen.getByRole('checkbox', { name: 'I have permission to create explanations, study notes and practice from this file.' }) as HTMLInputElement;
+    expect(derived.checked).toBe(false);
+    fireEvent.click(derived); fireEvent.click(screen.getByRole('button', { name: 'Add document' }));
+    await screen.findByText('Synthetic import unavailable.');
+    expect(derived.checked).toBe(true);
+    expect(posted[0].rights).toMatchObject({ model_input: true, derivation: true, evaluation: false, redistribution: false });
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await screen.findByText('Queued: follow processing below.');
+    expect(posted).toHaveLength(2); expect(posted[1]).toEqual(posted[0]);
+  });
+
+  it('clears derived-learning permission for a different file and imports with derivation off by default', async () => {
+    let posted: Record<string, unknown> | undefined;
+    request.mockImplementation(async (url, options) => {
+      if (String(url) === '/api/v1/library/import/file') {
+        posted = JSON.parse(new Headers(options!.headers).get('x-renulus-import-options')!);
+        return json({ document_id: 'doc_file', revision_id: 'rev_file', status: 'queued', job: { id: 'job_file', revision_id: 'rev_file', state: 'queued', phase: 'queued', error_code: null, error_message: null } }, 202);
+      }
+      return base(url, options);
+    });
+    await mount(); fireEvent.click(screen.getByRole('button', { name: 'Add to library' })); fireEvent.click(screen.getByRole('button', { name: 'Document' }));
+    const input = screen.getByLabelText('Choose a study document');
+    fireEvent.change(input, { target: { files: [new File(['Synthetic first file'], 'first.txt')] } });
+    const allowed = screen.getByRole('checkbox', { name: 'I have permission to read, store, index and use this file for local learning.' }) as HTMLInputElement;
+    const derived = screen.getByRole('checkbox', { name: 'I have permission to create explanations, study notes and practice from this file.' }) as HTMLInputElement;
+    fireEvent.click(allowed); fireEvent.click(derived);
+    fireEvent.change(input, { target: { files: [new File(['Synthetic replacement file'], 'second.txt')] } });
+    expect(allowed.checked).toBe(false); expect(derived.checked).toBe(false); expect(derived.disabled).toBe(true);
+    fireEvent.click(allowed); fireEvent.click(screen.getByRole('button', { name: 'Add document' }));
+    await screen.findByText('Queued: follow processing below.');
+    expect(posted!.rights).toMatchObject({ model_input: true, derivation: false, evaluation: false, redistribution: false });
+  });
+
   it('requires a new permission confirmation when the selected file changes and explains unsupported input', async () => {
     await mount(); fireEvent.click(screen.getByRole('button', { name: 'Add to library' })); fireEvent.click(screen.getByRole('button', { name: 'Document' }));
     const input = screen.getByLabelText('Choose a study document');
@@ -673,6 +720,7 @@ describe('Deliberate import recovery', () => {
     expect(screen.getByText('Synthetic retained licence', { selector: 'dd' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Retry import' }));
     expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe(source.title);
+    expect(screen.queryByRole('checkbox', { name: 'I have permission to create explanations, study notes and practice from this file.' })).toBeNull();
     fireEvent.change(screen.getByLabelText('Choose a study document'), { target: { files: [new File(['Synthetic replacement bytes'], 'retry.txt')] } });
     fireEvent.click(screen.getByRole('checkbox', { name: 'I have permission to read, store, index and use this file for local learning.' }));
     fireEvent.click(screen.getByRole('button', { name: 'Add document' }));

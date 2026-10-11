@@ -77,6 +77,7 @@ export default function LibraryPage({ onPassage }: { onPassage?: (passage: Passa
   const [text, setText] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [allowed, setAllowed] = useState(false);
+  const [derivedAllowed, setDerivedAllowed] = useState(false);
   const [actionBusy, setBusy] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
   const busy = actionBusy || bulkBusy;
@@ -230,14 +231,14 @@ export default function LibraryPage({ onPassage }: { onPassage?: (passage: Passa
     if (metadata?.original_sha256 || metadata?.asset_role?.includes('acquired-jats')) {
       // Acquired copies must repeat their receipt/version/permission checks.
       // A raw-file replacement would skip those operation-specific guards.
-      setReplacement(null); setFile(null); setText(''); setTitle(''); setAllowed(false); importAttempt.current = null;
+      setReplacement(null); setFile(null); setText(''); setTitle(''); setAllowed(false); setDerivedAllowed(false); importAttempt.current = null;
       setError(undefined); setErrorImport(null); setSourceId(document.source_id);
       const query = document.title.slice(0, 200);
       setCollectionQueryInput(query); setCollectionQuery(query); setCollectionEligibility(''); setOffset(0); setSelectedEntries(new Set()); setMode('catalogue');
       setMessage('Find the matching receipt in Collected sources, then queue it again. The original file, version and permission checks will run again.');
       return;
     }
-    setReplacement(document); setTitle(document.title); setText(''); setFile(null); setAllowed(false);
+    setReplacement(document); setTitle(document.title); setText(''); setFile(null); setAllowed(false); setDerivedAllowed(false);
     importAttempt.current = null; setError(undefined); setErrorImport(null); setMode('file');
     setMessage('Choose the original again, or paste the study note. The existing source details and permissions will be retained.');
   }
@@ -257,10 +258,12 @@ export default function LibraryPage({ onPassage }: { onPassage?: (passage: Passa
   async function addFile() {
     if (temporary || !file || !allowed || fileImportProblem(file, ready)) return;
     await act(async () => {
-      const options = importOptions({ title: title.trim() || file.name, rights: permissions, ...replacementOptions() }, file);
+      const rights = { ...permissions, derivation: derivedAllowed, permission_reference: derivedAllowed
+        ? 'User confirms local library processing and derived learning for the selected file' : permissions.permission_reference };
+      const options = importOptions({ title: title.trim() || file.name, rights, ...replacementOptions() }, file);
       const result = await api<ImportResult>('/library/import/file', { method: 'POST', body: file,
         headers: { 'x-renulus-filename': encodeURIComponent(file.name), 'x-renulus-import-options': importOptionsHeader(options) } });
-      setLastImport(result); setMessage(statusLabel(result.status) + ': follow processing below.'); setFile(null); setTitle(''); setAllowed(false); setReplacement(null); importAttempt.current = null; setMode('browse');
+      setLastImport(result); setMessage(statusLabel(result.status) + ': follow processing below.'); setFile(null); setTitle(''); setAllowed(false); setDerivedAllowed(false); setReplacement(null); importAttempt.current = null; setMode('browse');
     }, 'file');
   }
   async function search() {
@@ -344,9 +347,11 @@ export default function LibraryPage({ onPassage }: { onPassage?: (passage: Passa
           {replacement && <Notice><p>Retrying {replacement.title}. Edition and original terms will be retained.</p></Notice>}
           <Input label="Title" value={title} disabled={busy} onChange={event => setTitle(event.target.value)} maxLength={500} />
           {mode === 'text' ? <Textarea label="Your study note" value={text} disabled={busy} onChange={event => setText(event.target.value)} hint="Deliberately added study material is saved in your personal library." /> : <>
-            <Input label="Choose a study document" type="file" disabled={busy} accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.txt,.md,.csv,.html,.htm,.xml,.docx,.pptx,.xlsx" hint="PDF, image, text, CSV, HTML, XML, Word (.docx), PowerPoint (.pptx) or Excel (.xlsx)." error={fileProblem} onChange={event => { setFile(event.target.files?.[0] ?? null); setAllowed(false); }} />
+            <Input label="Choose a study document" type="file" disabled={busy} accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.txt,.md,.csv,.html,.htm,.xml,.docx,.pptx,.xlsx" hint="PDF, image, text, CSV, HTML, XML, Word (.docx), PowerPoint (.pptx) or Excel (.xlsx)." error={fileProblem} onChange={event => { setFile(event.target.files?.[0] ?? null); setAllowed(false); setDerivedAllowed(false); }} />
             {file && <p className="field-hint">Selected: {file.name} · {(file.size / 1024 / 1024).toFixed(2)} MiB</p>}
             <label className="library-check"><input type="checkbox" checked={allowed} disabled={busy} onChange={event => setAllowed(event.target.checked)} />I have permission to read, store, index and use this file for local learning.</label>
+            {!replacement && <><label className="library-check"><input type="checkbox" checked={derivedAllowed} disabled={busy || !file || !allowed} aria-describedby="library-derived-permission" onChange={event => setDerivedAllowed(event.target.checked)} />I have permission to create explanations, study notes and practice from this file.</label>
+              <p className="muted" id="library-derived-permission">Optional. Without this permission, use the file for reading and passage search.</p></>}
             <p className="muted">Maximum 64 MiB. Original terms remain attached to the file.</p>
             <p className="muted">Add teaching material here. Patient material belongs in a temporary case and requires a verified temporary extraction path.</p>
           </>}
