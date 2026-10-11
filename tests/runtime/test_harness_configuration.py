@@ -1353,3 +1353,297 @@ def test_begin_run_in_preserves_explicit_role_budget_output_and_override(configu
     assert run["route"]["credential_reference"] == "connection-go"
     assert run["route"]["credential_revision"] == 1
     assert authority.run("explicit-role") == run
+
+
+def test_stage_if_current_rejects_request_changed_after_bootstrap_inspection(tmp_path):
+    authority = ConfigurationAuthority(Database(tmp_path / "canonical.sqlite"))
+    captured = authority.activation_snapshot()
+    spec = ConfigurationSpec(connection=ConnectionReference(provider="opencode-go",
+        credential_reference="connection-go", credential_revision=1), registry_hash="a" * 64)
+    independent = ConfigurationAuthority(Database(authority.db.path))
+    requested = independent.stage(spec.model_copy(update={"registry_hash": "b" * 64}))
+    before = authority.activation_snapshot()
+    with pytest.raises(ApiError) as error:
+        authority.stage_if_current(spec, expected_effective=captured["effective"],
+            expected_requested=captured["requested"], expected_activating=captured["activating"],
+            grant_epoch=captured["grant_epoch"])
+    assert error.value.code == "activation_conflict"
+    assert authority.activation_snapshot() == before
+    assert independent.status()["requested"] == requested
+    assert independent.status()["effective"] is None
+
+
+def test_stage_if_current_rejects_revocation_after_inspection(configured):
+    authority, spec, version, connection, limits = configured
+    captured = authority.activation_snapshot()
+    independent = ConfigurationAuthority(Database(authority.db.path))
+    independent.revoke("library-read")
+    before = authority.activation_snapshot()
+    with pytest.raises(ApiError) as error:
+        authority.stage_if_current(spec.model_copy(update={"registry_hash": "b" * 64}),
+            expected_effective=captured["effective"], expected_requested=captured["requested"],
+            expected_activating=captured["activating"], grant_epoch=captured["grant_epoch"])
+    assert error.value.code == "candidate_authority_stale"
+    assert authority.activation_snapshot() == before
+
+
+def test_guarded_open_admission_rejects_request_changed_after_inspection(configured):
+    authority, spec, version, connection, limits = configured
+    captured = authority.close_admission(
+        expected_effective=version, requested_version=version, grant_epoch=0)
+    independent = ConfigurationAuthority(Database(authority.db.path))
+    requested = independent.stage(spec.model_copy(update={"registry_hash": "b" * 64}))
+    before = authority.activation_snapshot()
+    with pytest.raises(ApiError) as error:
+        authority.open_admission(version, registry_hash=spec.registry_hash, grant_epoch=0,
+            expected_requested=captured["requested"], expected_activating=captured["activating"])
+    assert error.value.code == "activation_conflict"
+    assert authority.activation_snapshot() == before
+    assert authority.status()["requested"] == requested
+    assert authority.status()["admission_open"] is False
+
+
+@pytest.mark.parametrize("grant_epoch", [False, 0.0])
+def test_guarded_open_admission_requires_an_exact_integer_epoch(configured, grant_epoch):
+    authority, spec, version, connection, limits = configured
+    before = authority.close_admission(
+        expected_effective=version, requested_version=version, grant_epoch=0)
+    with pytest.raises(ApiError) as error:
+        authority.open_admission(version, registry_hash=spec.registry_hash, grant_epoch=grant_epoch,
+                                 expected_requested=version, expected_activating=None)
+    assert error.value.code == "candidate_authority_stale"
+    assert authority.activation_snapshot() == before
+
+
+def test_stage_if_current_bootstraps_without_granting_candidate_health(tmp_path):
+    authority = ConfigurationAuthority(Database(tmp_path / "canonical.sqlite"))
+    spec = ConfigurationSpec(connection=ConnectionReference(provider="opencode-go",
+        credential_reference="connection-go", credential_revision=1), registry_hash="a" * 64)
+    version = authority.stage_if_current(spec, expected_effective=None, expected_requested=None,
+                                         grant_epoch=0)
+    assert authority.configuration(version) == spec
+    assert authority.status() == {"requested": version, "effective": None, "failed": None,
+                                 "failure_code": None, "admission_open": False}
+    before = authority.activation_snapshot()
+    with pytest.raises(ApiError) as error:
+        authority.activate(version, RestartBoundary(admission_closed=True,
+            runtime_stopped=True, domain_settled=True), expected_effective=None)
+    assert error.value.code == "activation_conflict"
+    assert authority.activation_snapshot() == before
+
+
+def test_stage_if_current_changes_requested_only_and_preserves_pinned_owner(configured):
+    authority, spec, version, connection, limits = configured
+    authority.begin_run("pinned-owner", "explain", capability_scope=("library-read",))
+    captured = authority.activation_snapshot()
+    replacement = spec.model_copy(update={"registry_hash": "b" * 64})
+    requested = authority.stage_if_current(replacement, expected_effective=version,
+        expected_requested=version, expected_activating=None, grant_epoch=0)
+    assert authority.activation_snapshot() == {**captured, "requested": requested,
+                                              "requested_configuration": replacement}
+    assert authority.run("pinned-owner")["version"] == version
+    assert authority.stage_if_current(replacement, expected_effective=version,
+        expected_requested=requested, expected_activating=None, grant_epoch=0) == requested
+
+
+@pytest.mark.parametrize("grant_epoch", [False, 0.0, -1, None])
+def test_stage_if_current_requires_an_exact_nonnegative_integer_epoch(configured, grant_epoch):
+    authority, spec, version, connection, limits = configured
+    before = authority.activation_snapshot()
+    with pytest.raises(ApiError) as error:
+        authority.stage_if_current(spec.model_copy(update={"registry_hash": "b" * 64}),
+            expected_effective=version, expected_requested=version, grant_epoch=grant_epoch)
+    assert error.value.code == "candidate_authority_stale"
+    assert authority.activation_snapshot() == before
+
+
+def test_stage_if_current_rejects_effective_change_after_inspection(configured):
+    authority, spec, version, connection, limits = configured
+    captured = authority.activation_snapshot()
+    independent = ConfigurationAuthority(Database(authority.db.path))
+    current = activate(independent, spec.model_copy(update={"registry_hash": "b" * 64}), expected=version)
+    before = authority.activation_snapshot()
+    with pytest.raises(ApiError) as error:
+        authority.stage_if_current(spec, expected_effective=captured["effective"],
+            expected_requested=captured["requested"], expected_activating=captured["activating"],
+            grant_epoch=captured["grant_epoch"])
+    assert error.value.code == "activation_conflict"
+    assert authority.activation_snapshot() == before
+    assert authority.status()["effective"] == current
+
+
+def test_stage_if_current_rejects_activating_change_with_same_effective_and_requested(configured):
+    authority, spec, version, connection, limits = configured
+    replacement = spec.model_copy(update={"registry_hash": "b" * 64})
+    pending = authority.stage(replacement)
+    assert authority.validate(pending, healthy)
+    authority.activate(pending, RestartBoundary(admission_closed=True,
+        runtime_stopped=True, domain_settled=True), expected_effective=version)
+    captured = authority.activation_snapshot()
+    independent = ConfigurationAuthority(Database(authority.db.path))
+    independent.open_admission(pending, registry_hash=replacement.registry_hash, grant_epoch=0)
+    before = authority.activation_snapshot()
+    assert before["effective"] == before["requested"] == pending
+    assert before["activating"] is None
+    assert captured["activating"] == pending
+    with pytest.raises(ApiError) as error:
+        authority.stage_if_current(spec, expected_effective=pending, expected_requested=pending,
+                                   expected_activating=captured["activating"], grant_epoch=0)
+    assert error.value.code == "activation_conflict"
+    assert authority.activation_snapshot() == before
+
+
+def test_stage_if_current_serializes_competing_bootstrap_requests(tmp_path):
+    authority = ConfigurationAuthority(Database(tmp_path / "canonical.sqlite"))
+    independent = ConfigurationAuthority(Database(authority.db.path))
+    spec = ConfigurationSpec(connection=ConnectionReference(provider="opencode-go",
+        credential_reference="connection-go", credential_revision=1), registry_hash="a" * 64)
+    alternate = spec.model_copy(update={"registry_hash": "b" * 64})
+    barrier = Barrier(2)
+
+    def stage(owner, candidate):
+        barrier.wait(timeout=5)
+        try:
+            return owner.stage_if_current(candidate, expected_effective=None,
+                expected_requested=None, expected_activating=None, grant_epoch=0), candidate
+        except ApiError as error:
+            assert error.code == "activation_conflict"
+            return None, candidate
+
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        first = workers.submit(stage, authority, spec)
+        second = workers.submit(stage, independent, alternate)
+        outcomes = [first.result(timeout=10), second.result(timeout=10)]
+    winners = [(version, candidate) for version, candidate in outcomes if version is not None]
+    assert len(winners) == 1
+    version, candidate = winners[0]
+    assert authority.status()["requested"] == version
+    assert authority.configuration(version) == candidate
+    assert authority.status()["effective"] is None
+    assert authority.status()["admission_open"] is False
+
+
+@pytest.mark.parametrize("expectation", [{"expected_requested": None}, {"expected_activating": None}])
+def test_guarded_open_admission_requires_closed_gate_when_either_check_is_supplied(configured, expectation):
+    authority, spec, version, connection, limits = configured
+    if "expected_requested" in expectation:
+        expectation = {"expected_requested": version}
+    before = authority.activation_snapshot()
+    with pytest.raises(ApiError) as error:
+        authority.open_admission(version, registry_hash=spec.registry_hash, grant_epoch=0, **expectation)
+    assert error.value.code == "activation_conflict"
+    assert authority.activation_snapshot() == before
+
+
+def test_guarded_open_admission_distinguishes_explicit_null_requested_from_omission(configured):
+    authority, spec, version, connection, limits = configured
+    before = authority.close_admission(
+        expected_effective=version, requested_version=version, grant_epoch=0)
+    with pytest.raises(ApiError) as error:
+        authority.open_admission(version, registry_hash=spec.registry_hash, grant_epoch=0,
+                                 expected_requested=None)
+    assert error.value.code == "activation_conflict"
+    assert authority.activation_snapshot() == before
+    authority.open_admission(version, registry_hash=spec.registry_hash, grant_epoch=0)
+    assert authority.status()["admission_open"] is True
+
+
+def test_guarded_open_admission_bootstrap_requires_exact_pending_activating_identity(tmp_path):
+    authority = ConfigurationAuthority(Database(tmp_path / "canonical.sqlite"))
+    spec = ConfigurationSpec(connection=ConnectionReference(provider="opencode-go",
+        credential_reference="connection-go", credential_revision=1), registry_hash="a" * 64)
+    version = authority.stage_if_current(spec, expected_effective=None, expected_requested=None, grant_epoch=0)
+    assert authority.validate(version, healthy)
+    authority.activate(version, RestartBoundary(admission_closed=True,
+        runtime_stopped=True, domain_settled=True), expected_effective=None)
+    before = authority.activation_snapshot()
+    with pytest.raises(ApiError) as error:
+        authority.open_admission(version, registry_hash=spec.registry_hash, grant_epoch=0,
+                                 expected_requested=version, expected_activating=None)
+    assert error.value.code == "activation_conflict"
+    assert authority.activation_snapshot() == before
+    authority.open_admission(version, registry_hash=spec.registry_hash, grant_epoch=0,
+                             expected_requested=version, expected_activating=version)
+    assert authority.activation_snapshot() == {**before, "admission_open": True, "activating": None}
+
+
+def test_guarded_open_admission_reopens_effective_v_preserving_pending_requested_w(configured):
+    authority, spec, version, connection, limits = configured
+    replacement = spec.model_copy(update={"registry_hash": "b" * 64})
+    requested = authority.stage(replacement)
+    reopened = ConfigurationAuthority(Database(authority.db.path))
+    reopened.reconcile_restart(RestartBoundary(
+        admission_closed=True, runtime_stopped=True, domain_settled=True))
+    captured = reopened.activation_snapshot()
+    assert captured["effective"] == version
+    assert captured["requested"] == requested
+    assert captured["activating"] is None
+    assert reopened.validate(version, healthy)
+    reopened.open_admission(version, registry_hash=spec.registry_hash, grant_epoch=0,
+        expected_requested=captured["requested"], expected_activating=captured["activating"])
+    assert reopened.activation_snapshot() == {**captured, "admission_open": True}
+    assert reopened.configuration(requested) == replacement
+    assert reopened.begin_run("reopened-owner", "explain")["version"] == version
+
+
+def test_guarded_open_admission_rejects_activating_change_without_other_pointer_changes(configured):
+    authority, spec, version, connection, limits = configured
+    replacement = spec.model_copy(update={"registry_hash": "b" * 64})
+    pending = authority.stage(replacement)
+    assert authority.validate(pending, healthy)
+    authority.activate(pending, RestartBoundary(admission_closed=True,
+        runtime_stopped=True, domain_settled=True), expected_effective=version)
+    captured = authority.activation_snapshot()
+    independent = ConfigurationAuthority(Database(authority.db.path))
+    independent.open_admission(pending, registry_hash=replacement.registry_hash, grant_epoch=0)
+    before = independent.close_admission(
+        expected_effective=pending, requested_version=pending, grant_epoch=0)
+    assert before["effective"] == before["requested"] == pending
+    assert before["activating"] is None
+    with pytest.raises(ApiError) as error:
+        authority.open_admission(pending, registry_hash=replacement.registry_hash, grant_epoch=0,
+            expected_requested=captured["requested"], expected_activating=captured["activating"])
+    assert error.value.code == "activation_conflict"
+    assert authority.activation_snapshot() == before
+
+
+def test_guarded_open_admission_rejects_epoch_changed_after_inspection(configured):
+    authority, spec, version, connection, limits = configured
+    captured = authority.close_admission(
+        expected_effective=version, requested_version=version, grant_epoch=0)
+    authority.revoke("library-read")
+    assert authority.validate(version, healthy)
+    before = authority.activation_snapshot()
+    with pytest.raises(ApiError) as error:
+        authority.open_admission(version, registry_hash=spec.registry_hash,
+            grant_epoch=captured["grant_epoch"], expected_requested=captured["requested"],
+            expected_activating=captured["activating"])
+    assert error.value.code == "candidate_authority_stale"
+    assert authority.activation_snapshot() == before
+
+
+@pytest.mark.parametrize("changed,error_code", [
+    ("registry", "registry_mismatch"), ("health", "candidate_authority_stale")])
+def test_guarded_open_admission_retains_registry_and_candidate_health_requirements(configured, changed, error_code):
+    authority, spec, version, connection, limits = configured
+    authority.close_admission(expected_effective=version, requested_version=version, grant_epoch=0)
+    registry_hash = spec.registry_hash
+    if changed == "registry":
+        registry_hash = "b" * 64
+    else:
+        assert not authority.validate(version, lambda candidate: healthy(candidate).model_copy(update={"healthy": False}))
+    before = authority.activation_snapshot()
+    with pytest.raises(ApiError) as error:
+        authority.open_admission(version, registry_hash=registry_hash, grant_epoch=0,
+                                 expected_requested=version, expected_activating=None)
+    assert error.value.code == error_code
+    assert authority.activation_snapshot() == before
+
+
+def test_legacy_open_admission_remains_repeatable_and_keeps_pending_request(configured):
+    authority, spec, version, connection, limits = configured
+    requested = authority.stage(spec.model_copy(update={"registry_hash": "b" * 64}))
+    before = authority.activation_snapshot()
+    authority.open_admission(version, registry_hash=spec.registry_hash, grant_epoch=0)
+    assert authority.activation_snapshot() == before
+    assert authority.status()["requested"] == requested

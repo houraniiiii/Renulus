@@ -48,6 +48,13 @@ AUXILIARY_PURPOSES = {"title": "title", "summary": "summary", "compaction": "com
                       "summary-repair": "compaction"}
 
 
+class _Omitted:
+    """An omitted pointer check is distinct from an expected canonical null."""
+
+
+_OMITTED = _Omitted()
+
+
 class RolePolicy(FrozenModel):
     purpose: str
     enabled: bool = True
@@ -171,6 +178,12 @@ def _identifier(value: str):
         _deny("invalid_operation_identity")
 
 
+def _validated_spec(spec: ConfigurationSpec) -> ConfigurationSpec:
+    if not isinstance(spec, ConfigurationSpec):
+        _deny("configuration_invalid")
+    return ConfigurationSpec.model_validate_json(spec.model_dump_json())
+
+
 class ConfigurationAuthority:
     def __init__(self, database: Database):
         self.db = database
@@ -243,17 +256,32 @@ class ConfigurationAuthority:
             return {**snapshot, "admission_open": False}
 
     def stage(self, spec: ConfigurationSpec) -> str:
-        if not isinstance(spec, ConfigurationSpec):
-            _deny("configuration_invalid")
-        spec = ConfigurationSpec.model_validate_json(spec.model_dump_json())
+        spec = _validated_spec(spec)
         with self.db.transaction() as conn:
-            predecessor = conn.execute("SELECT effective FROM harness_configuration_pointer WHERE id=1").fetchone()[0]
-            payload = _json({"predecessor": predecessor, "spec": spec.model_dump(mode="json")})
-            version = hashlib.sha256(payload.encode()).hexdigest()
-            conn.execute("INSERT OR IGNORE INTO harness_configuration_versions VALUES(?,?,?,?)",
-                         (version, predecessor, payload, utc_now()))
-            conn.execute("INSERT OR IGNORE INTO harness_configuration_health(version,state) VALUES(?,'staged')", (version,))
-            conn.execute("UPDATE harness_configuration_pointer SET requested=? WHERE id=1", (version,))
+            return self._stage_in(conn, spec)
+
+    def stage_if_current(self, spec: ConfigurationSpec, *, expected_effective: str | None,
+                         expected_requested: str | None, grant_epoch: int,
+                         expected_activating: str | None = None) -> str:
+        """Stage only against the trusted pointer observation made before inspection."""
+        spec = _validated_spec(spec)
+        with self.db.transaction() as conn:
+            pointer = conn.execute("SELECT effective,requested,activating FROM harness_configuration_pointer WHERE id=1").fetchone()
+            if tuple(pointer) != (expected_effective, expected_requested, expected_activating):
+                _deny("activation_conflict")
+            epoch = conn.execute("SELECT epoch FROM harness_configuration_grants WHERE id=1").fetchone()[0]
+            if type(grant_epoch) is not int or grant_epoch < 0 or grant_epoch != epoch:
+                _deny("candidate_authority_stale")
+            return self._stage_in(conn, spec)
+
+    def _stage_in(self, conn, spec: ConfigurationSpec) -> str:
+        predecessor = conn.execute("SELECT effective FROM harness_configuration_pointer WHERE id=1").fetchone()[0]
+        payload = _json({"predecessor": predecessor, "spec": spec.model_dump(mode="json")})
+        version = hashlib.sha256(payload.encode()).hexdigest()
+        conn.execute("INSERT OR IGNORE INTO harness_configuration_versions VALUES(?,?,?,?)",
+                     (version, predecessor, payload, utc_now()))
+        conn.execute("INSERT OR IGNORE INTO harness_configuration_health(version,state) VALUES(?,'staged')", (version,))
+        conn.execute("UPDATE harness_configuration_pointer SET requested=? WHERE id=1", (version,))
         return version
 
     def resolve_role(self, version: str, purpose: str, *, catalogue: tuple[str, ...] = (),
@@ -716,17 +744,24 @@ class ConfigurationAuthority:
                 _deny("activation_conflict")
             conn.execute("UPDATE harness_configuration_pointer SET previous=effective,effective=?,activating=?,admission_open=0 WHERE id=1", (version, version))
 
-    def open_admission(self, version: str, *, registry_hash: str, grant_epoch: int):
-        spec = self.configuration(version)
-        if registry_hash != spec.registry_hash:
-            _deny("registry_mismatch")
+    def open_admission(self, version: str, *, registry_hash: str, grant_epoch: int,
+                       expected_requested: str | None | _Omitted = _OMITTED,
+                       expected_activating: str | None | _Omitted = _OMITTED) -> None:
+        """Optional exact pointer checks also require admission to remain closed."""
+        guarded = expected_requested is not _OMITTED or expected_activating is not _OMITTED
         with self.db.transaction() as conn:
-            pointer = conn.execute("SELECT effective FROM harness_configuration_pointer WHERE id=1").fetchone()
-            if pointer[0] != version:
+            spec = self._configuration(conn, version)
+            if registry_hash != spec.registry_hash:
+                _deny("registry_mismatch")
+            pointer = conn.execute("SELECT * FROM harness_configuration_pointer WHERE id=1").fetchone()
+            if (pointer["effective"] != version or (guarded and (pointer["admission_open"]
+                    or (expected_requested is not _OMITTED and pointer["requested"] != expected_requested)
+                    or (expected_activating is not _OMITTED and pointer["activating"] != expected_activating)))):
                 _deny("activation_conflict")
             health = conn.execute("SELECT state,grant_epoch FROM harness_configuration_health WHERE version=?", (version,)).fetchone()
             epoch = conn.execute("SELECT epoch FROM harness_configuration_grants WHERE id=1").fetchone()[0]
-            if health["state"] != "ready" or grant_epoch != epoch or health["grant_epoch"] != epoch:
+            if (health["state"] != "ready" or grant_epoch != epoch or health["grant_epoch"] != epoch
+                    or (guarded and (type(grant_epoch) is not int or grant_epoch < 0))):
                 _deny("candidate_authority_stale")
             conn.execute("UPDATE harness_configuration_pointer SET admission_open=1,previous=NULL,activating=NULL WHERE id=1")
 
