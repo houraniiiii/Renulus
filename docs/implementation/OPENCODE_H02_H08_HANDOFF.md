@@ -124,11 +124,13 @@ Python guard correction, each at its declared preparation scope. Harness
 TypeScript exits 0 on the integrated composition; five affected Python sources
 parse and `git diff --check` passes.
 
-Node gateway source `ccfd4de6` remains unintegrated while its independent Spec
-P2 is repaired: safe authentication/quota/model Domain failures are converted
-to generic native invalid-request errors. Python invalidation remains present.
-Arendt owns the narrow typed/sanitized error repair; pre-filter route/capability
-preparation and exact final-body accounting remain integration work.
+Node gateway source `ccfd4de6` and its typed safe-error repair `307a43d7` are
+integrated as `dabefeef` and `351e674e`. The parent receipt
+`providers/node-gateway/receipts/p2-integrated01.xml` has **26 passed**, zero
+failed/skipped/cancelled, 10.88 seconds. Safe authentication/quota/model
+classifications remain visible to the native caller; unknown errors deny.
+One-plan pre-filter composition and production exact-body accounting remain
+integration gates. This bounded run does not establish H03 account acceptance.
 
 The immediate critical path is H03 Node gateway composition/final route and
 capability binding, then H04 real candidate/restart activation controller/API and
@@ -167,6 +169,38 @@ exits 0. Counts describe separate runs. Independent Standards and Spec reviews
 of the two source/test paths report zero material findings, with both hashes
 unchanged through review. No production gateway/account/image acceptance is
 claimed. All H02–H08 acceptance and migrated automatic capture gates remain open.
+
+### Manifest and deployment proof — October 11
+
+Parent `bf1527c3` consumes worker `a7a1079f`: injected trusted deployment
+preparation and exact serialized-body proof. `learning/deployment-integrated01.xml`
+has **70 passed**, zero skips, 2.27 seconds. Evidence and token accounting are
+explicitly synthetic; absent verified account limits/capability/counter evidence
+deny. An independent Spec review found a hidden-context-control P1 in the proof
+module (previous-response/conversation controls outside its local manifest);
+the owner is reproducing and repairing it. Standards reported zero additional
+material findings. A suggested text-fragment-boundary P2 was withdrawn after
+checking the explicit frozen v1 contract, which permits adjacent text joining.
+
+Parent `39381910` consumes worker `a8d137bb`: coherent activation snapshot and
+atomic admission seal with exact effective/requested/epoch checks and actual
+owner pins. Independent Standards and Spec review each report zero material
+findings in this bounded authority slice. Actual ingress/process settlement,
+candidate/live registry replacement and controller/UI remain separate gates.
+
+`captureNativeManifest` records ordered system, messages, inline image identities
+and ordinary tool pairs without inventing authority or token counts. Array
+serialization callbacks reproduced a failure in `native-manifest-array-red01.xml`;
+`native-manifest-array-green01.xml` passes after descriptor/prototype validation.
+The effective Responses metadata namespace reproduced in metadata-red02 and
+passes metadata-green01. Metadata-red01 is a fixture index error, not behavioral
+evidence. Explicit null detail denies consistently with the native decoder.
+`learning/native-manifest-final02.xml` has **17 passed**, zero failed/skipped/
+cancelled, 1.28 seconds; TypeScript exits 0. Independent focused Spec closure
+reports zero residual material findings; Standards closure is pending. Earlier
+module-absence and fixture setup receipts remain separately qualified. The v1
+manifest still denies system-role messages, opaque context, remote media and
+unproven native tools. Production learner context must use ordered system parts.
 
 Parent consumed native tools (`ce85b7c5`), saved bridge (`1631e767`),
 configuration authority (`a85e1ee0`), controlled Library SDK composition
