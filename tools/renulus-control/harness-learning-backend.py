@@ -382,13 +382,16 @@ async def _registry_hash(services, lease, options):
             lease.require_predecessor(lease.predecessor)
             if asyncio.get_running_loop().time() >= deadline:
                 raise _invalid()
-            return observed['registry_hash']
     except ApiError:
         raise
     except Exception:
         raise _invalid() from None
     finally:
         await drain()
+    lease.require_predecessor(lease.predecessor)
+    if asyncio.get_running_loop().time() >= deadline:
+        raise _invalid()
+    return observed['registry_hash']
 
 
 def create_fixture_app(file: Path, digest: str, *, profile: Path, helper_assets: Path, token: str) -> FastAPI:

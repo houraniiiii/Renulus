@@ -158,6 +158,19 @@ def test_expired_inspection_release_cannot_publish_initial_policy(tmp_path):
     assert 'INSPECTION_DENIED' in completed.stdout
 
 
+def test_expired_inspection_cleanup_cannot_publish_initial_policy(tmp_path):
+    profile, file, _, data = document(tmp_path)
+    assets = Path('C:/Renulus/dev/helper-assets').resolve()
+    environment = {key: os.environ[key] for key in ('SYSTEMROOT', 'SystemRoot', 'WINDIR') if key in os.environ}
+    environment['PYTHONPATH'] = os.pathsep.join((str(SOURCE / 'runtime'), str(SOURCE / 'upstream/hermes')))
+    environment['TEMP'] = environment['TMP'] = str(tmp_path)
+    completed = subprocess.run([sys.executable, str(Path(__file__)), '--cleanup-deadline-child',
+        str(file), write_document(file, data), str(profile), str(assets)], env=environment,
+        capture_output=True, text=True, timeout=90)
+    assert completed.returncode == 0, completed.stderr
+    assert 'CLEANUP_DEADLINE_DENIED' in completed.stdout
+
+
 def test_missing_session_token_denies_before_owned_profile_creation(tmp_path):
     profile, file, assets, data = document(tmp_path)
     environment = {key: os.environ[key] for key in ('SYSTEMROOT', 'SystemRoot', 'WINDIR') if key in os.environ}
@@ -199,6 +212,58 @@ async def child_expired_inspection(file, digest, profile, assets):
     assert app.state.services.shutdown_status()['state'] == 'settled'
     assert app.state.learning_fixture.observations()['http_requests'] == 0
     print('INSPECTION_DENIED', flush=True)
+
+
+async def child_expired_cleanup(file, digest, profile, assets):
+    import asyncio
+    from renulus.runtime import harness_process
+    loop = asyncio.get_running_loop()
+    clock, elapsed = loop.time, 0
+    loop.time = lambda: clock() + elapsed
+    cleanup_entered, cleanup_allowed = asyncio.Event(), asyncio.Event()
+    actual_settled = False
+    actual = harness_process.ManagedHarnessProcess
+
+    class ExpiredCleanup(actual):
+        async def close(self, timeout):
+            if not cleanup_entered.is_set():
+                cleanup_entered.set()
+                await cleanup_allowed.wait()
+            return await super().close(timeout)
+
+        async def settlement(self, timeout):
+            nonlocal elapsed, actual_settled
+            observed = await super().settlement(timeout)
+            if observed['state'] == 'settled':
+                actual_settled = True
+                elapsed = 46
+            return observed
+
+    harness_process.ManagedHarnessProcess = ExpiredCleanup
+    app = module().create_fixture_app(file, digest, profile=profile, helper_assets=assets,
+        token='synthetic-only-session')
+
+    async def startup():
+        async with app.router.lifespan_context(app):
+            raise AssertionError('Expired actual cleanup admitted startup')
+
+    owned = asyncio.create_task(startup())
+    await asyncio.wait_for(cleanup_entered.wait(), 60)
+    assert not owned.done() and actual_settled is False
+    status = app.state.harness_configuration_authority.activation_snapshot()
+    assert status['effective'] is status['requested'] is status['activating'] is None
+    assert status['admission_open'] is False
+    cleanup_allowed.set()
+    with pytest.raises(ApiError) as failed:
+        await owned
+    assert failed.value.code == 'harness_learning_fixture_invalid'
+    assert actual_settled is True
+    status = app.state.harness_configuration_authority.activation_snapshot()
+    assert status['effective'] is status['requested'] is status['activating'] is None
+    assert status['admission_open'] is False
+    assert app.state.services.shutdown_status()['state'] == 'settled'
+    assert app.state.learning_fixture.observations()['http_requests'] == 0
+    print('CLEANUP_DEADLINE_DENIED', flush=True)
 
 
 async def child_roundtrip(file, digest, profile, assets, *, reopen=False):
@@ -304,6 +369,9 @@ if __name__ == '__main__':
         assert failed.value.code == 'harness_learning_fixture_invalid'
     elif sys.argv[1] == '--deadline-child':
         asyncio.run(child_expired_inspection(Path(sys.argv[2]), sys.argv[3],
+            Path(sys.argv[4]), Path(sys.argv[5])))
+    elif sys.argv[1] == '--cleanup-deadline-child':
+        asyncio.run(child_expired_cleanup(Path(sys.argv[2]), sys.argv[3],
             Path(sys.argv[4]), Path(sys.argv[5])))
     else:
         assert sys.argv[1] in ('--fixture-child', '--reopen-child')
