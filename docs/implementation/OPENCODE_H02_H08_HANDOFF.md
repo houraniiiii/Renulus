@@ -17,7 +17,7 @@ installation, push or downstream-ticket expansion is authorized.
 
 ### Dependency readiness
 
-Current continuation: parent `62e812c2`. The reviewed child-learning routing
+Current continuation: parent `499cb3c8`. The reviewed child-learning routing
 helper `abdad45b` is integrated as `f0e433d6`; supplied-transaction policy
 settlement `dd75d5eb` is integrated as `294b8218`. Both independent axes are
 clear, with original62-case helper and12-case settlement evidence retained;
@@ -194,6 +194,29 @@ Domain transport remains unchanged. Sartre may consume only these
 reviewed prerequisites while preserving Owner WIP; the connected test remains
 paused until the supplied-connection repair and its reviews are clear. No
 unchanged suite was rerun for either integration.
+
+The guard follow-on `e0a112b3` is now integrated as `499cb3c8`, after independent
+Standards and Spec reviews each reported zero findings. Its13 focused cases
+passed in4.140s through real Domain/SQLite/Library/journal ports with synthetic
+CPU/index/native boundaries. Source recording and citation validation remain
+transactional; ordinary Library guards reuse the supplied connection with an
+owned read snapshot, and Children preserves the original callback token. No
+separate dynamic SQLite-busy red is claimed. Sartre consumed only the published
+repairs and removed the Owner's temporary callback wrapper.
+
+The single authorized connected rerun `G:/rh07a/e/children-positive07.xml`
+failed once in31.109s. Nullable foreground observation now succeeds, but the
+child still stops after model preparation and before manifest registration;
+no child HTTP send or Library retrieval occurred. The native fallback report
+contains no text response, and report consumption correctly refuses the
+unconfirmed plan with `model_registry_publication_pending`. The subsequent root
+continuation's strict fixture model/ordinal failure is secondary. No initiating
+cause is assigned from that symptom. All owned cleanup assertions completed.
+Sartre is authorized only to inspect the retained synthetic child's native
+error through public reads (fresh owned process if needed, recovery held), with
+no prompt, model dispatch, retry, source repair or fixture change. Owner/test
+remain two-file WIP on local `817ebbdd`; Stop-negative coverage remains unopened.
+No positive child flow, M5 publication or H07 acceptance is claimed.
 
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
