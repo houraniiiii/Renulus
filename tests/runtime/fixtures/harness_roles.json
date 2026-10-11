@@ -1,0 +1,15 @@
+[
+  {"purpose":"explain","domain":"CKD","consumer":"learn/service.py","dispatches":12},
+  {"purpose":"case-discuss","domain":"dialysis","consumer":"cases/streaming.py","dispatches":12},
+  {"purpose":"case-image-discuss","domain":"transplantation","consumer":"cases/streaming.py","dispatches":12},
+  {"purpose":"generated-practice","domain":"glomerular disease","consumer":"assessment/generation_service.py","dispatches":12},
+  {"purpose":"fictional-test","domain":"electrolytes","consumer":"assessment/fictionalisation.py","dispatches":12},
+  {"purpose":"test-import","domain":"AKI","consumer":"assessment/import_service.py","dispatches":12},
+  {"purpose":"memory-extraction","domain":"hypertension","consumer":"memory/providers.py","dispatches":1},
+  {"purpose":"daily_suggestions","domain":"kidney transplantation","consumer":"study/home_service.py","dispatches":1},
+  {"purpose":"evidence-review","domain":"glomerular disease","consumer":"planned H07","dispatches":12},
+  {"purpose":"compaction","domain":"CKD and dialysis","consumer":"runtime/manager.py; planned H10","dispatches":1},
+  {"purpose":"summary","domain":"AKI","consumer":"planned H10/H11","dispatches":1},
+  {"purpose":"test-result-narrative","domain":"electrolytes","consumer":"planned H14","dispatches":1},
+  {"purpose":"updates-digest","domain":"CKD and transplantation","consumer":"planned H16","dispatches":1}
+]
