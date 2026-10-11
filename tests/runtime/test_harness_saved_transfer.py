@@ -9,7 +9,7 @@ import pytest
 
 from renulus.contracts import ApiError
 from renulus.learn.harness_migration import NativeReadback, TransferRequest
-from renulus.runtime.harness_process import NativeProcessIdentity
+from renulus.runtime.harness_process import HarnessProcessError, NativeProcessIdentity
 from renulus.runtime.harness_saved_transfer import HarnessSavedTransfer
 
 
@@ -139,6 +139,44 @@ class ControlledProcess:
                 self.cancelled.append("release")
                 raise
         return self.release_result
+
+
+class ReceiptRetiringProcess(ControlledProcess):
+    """Acknowledged retirement erases same-operation terminal process receipts."""
+    def __init__(self):
+        super().__init__()
+        self.live = True
+        self.removed = []
+        self.retirement_published = asyncio.Event()
+
+    def native_identity(self):
+        if not self.live:
+            raise HarnessProcessError("Synthetic transport disconnected.")
+        return super().native_identity()
+
+    async def request(self, command, payload, operation_id, attempt_id, timeout):
+        response = await super().request(command, payload, operation_id, attempt_id, timeout)
+        if (command == "operation.retire" and response["outcome"] == "committed_reference"
+                and response["result"] == {"state": "retired"}):
+            for entry in self.requests:
+                request_id = entry["request_id"]
+                receipt = self.replies.get(request_id)
+                if (entry["operation_id"] == operation_id
+                        and receipt is not None and receipt["outcome"] != "accepted_pending"):
+                    self.replies.pop(request_id)
+                    self.terminals.pop(request_id, None)
+                    self.removed.append(request_id)
+            self.retirement_published.set()
+        return response
+
+    async def release_observation(self, request_id):
+        released = await super().release_observation(request_id)
+        if request_id not in self.replies:
+            return False
+        if released:
+            self.replies.pop(request_id)
+            self.terminals.pop(request_id, None)
+        return released
 
 
 @pytest.mark.asyncio
@@ -732,3 +770,136 @@ async def test_status_does_not_count_completed_uncertain_receipts_as_active_task
     assert [item["command"] for item in process.requests].count("session.import") == 1
     await adapter.close()
     assert adapter.status() == {"accepting": False, "active": 0}
+
+
+@pytest.mark.asyncio
+async def test_acknowledged_retirement_settles_busy_release_after_terminal_receipt_removal():
+    process = ReceiptRetiringProcess()
+    source = document()
+    request = request_for(source)
+    adapter = HarnessSavedTransfer(process, observation_timeout=0.03)
+    await adapter.stage(request, document=source)
+    await adapter.commit(request)
+    process.release_result = False
+    drain = None
+    try:
+        with pytest.raises(ApiError) as expired:
+            await adapter.inspect(request)
+        assert expired.value.code == "harness_migration_observation_timeout"
+        inspection_id = process.requests[-1]["request_id"]
+        assert adapter.status() == {"accepting": True, "active": 1}
+        assert await adapter.retire(request) == "retired"
+        assert inspection_id in process.removed
+        assert await process.query_result(inspection_id) is None
+        process.release_result = True
+        assert await process.release_observation(inspection_id) is False
+        adapter.seal()
+        drain = asyncio.create_task(adapter.settled())
+        await asyncio.wait_for(asyncio.shield(drain), 0.15)
+        assert adapter.status() == {"accepting": False, "active": 0}
+        assert [item["command"] for item in process.requests].count("session.import.inspect") == 1
+        assert [item["command"] for item in process.requests].count("operation.retire") == 1
+        assert set(process.releases) == {inspection_id}
+        assert process.cancelled == []
+    finally:
+        process.live = False
+        if drain is not None:
+            await asyncio.wait_for(drain, 1)
+        await asyncio.wait_for(adapter.close(), 1)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("retirement", ["pending", "other_operation", "fault"])
+async def test_busy_release_requires_exact_successful_retirement_of_its_own_bundle(retirement):
+    process = ReceiptRetiringProcess()
+    source = document()
+    request = request_for(source)
+    adapter = HarnessSavedTransfer(process, observation_timeout=0.03)
+    await adapter.stage(request, document=source)
+    await adapter.commit(request)
+    process.release_result = False
+    drain = None
+    try:
+        with pytest.raises(ApiError) as expired:
+            await adapter.inspect(request)
+        assert expired.value.code == "harness_migration_observation_timeout"
+        inspection_id = process.requests[-1]["request_id"]
+        if retirement == "other_operation":
+            other = replace(request, migration_id="migration_other")
+            assert await adapter.retire(other) == "retired"
+        else:
+            def incomplete(command, reply):
+                if command == "operation.retire":
+                    if retirement == "pending":
+                        reply["result"] = {"state": "pending"}
+                    else:
+                        reply = {**reply, "outcome": "uncertain_after_disconnect",
+                                 "error": {"code": "transfer_native_failed", "message": "Synthetic retirement fault."}}
+                return reply
+            process.transform = incomplete
+            if retirement == "pending":
+                assert await adapter.retire(request) == "pending"
+            else:
+                with pytest.raises(ApiError) as failed:
+                    await adapter.retire(request)
+                assert failed.value.code == "transfer_native_failed"
+        drain = asyncio.create_task(adapter.settled())
+        with pytest.raises(TimeoutError):
+            await asyncio.wait_for(asyncio.shield(drain), 0.03)
+        assert adapter.status() == {"accepting": True, "active": 1}
+        assert inspection_id not in process.removed
+        process.release_result = True
+        assert await adapter.inspect(request) == NativeReadback(request, ALIASES, 2, 1, 1, "settled")
+        await asyncio.wait_for(drain, 1)
+        assert adapter.status() == {"accepting": True, "active": 0}
+        assert [item["command"] for item in process.requests].count("session.import.inspect") == 1
+    finally:
+        process.release_result = True
+        if drain is not None:
+            await asyncio.wait_for(drain, 1)
+        await asyncio.wait_for(adapter.close(), 1)
+    assert process.cancelled == []
+
+
+@pytest.mark.asyncio
+async def test_cancelled_retirement_observer_keeps_exact_ack_and_inflight_release_ownership():
+    process = ReceiptRetiringProcess()
+    source = document()
+    request = request_for(source)
+    adapter = HarnessSavedTransfer(process, observation_timeout=0.2)
+    await adapter.stage(request, document=source)
+    await adapter.commit(request)
+    process.release_gate = asyncio.Event()
+    inspection = asyncio.create_task(adapter.inspect(request))
+    retiring = None
+    drain = None
+    try:
+        await asyncio.wait_for(process.release_entered.wait(), 1)
+        process.hold_command = "operation.retire"
+        retiring = asyncio.create_task(adapter.retire(request))
+        await asyncio.wait_for(process.request_entered.wait(), 1)
+        assert adapter.status() == {"accepting": True, "active": 2}
+        retiring.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await retiring
+        process.request_gate.set()
+        await asyncio.wait_for(process.retirement_published.wait(), 1)
+        assert adapter.status() == {"accepting": True, "active": 1}
+        drain = asyncio.create_task(adapter.settled())
+        with pytest.raises(TimeoutError):
+            await asyncio.wait_for(asyncio.shield(drain), 0.03)
+        assert process.cancelled == []
+        process.release_gate.set()
+        assert await asyncio.wait_for(inspection, 1) == NativeReadback(request, ALIASES, 2, 1, 1, "settled")
+        await asyncio.wait_for(drain, 1)
+        assert await adapter.retire(request) == "retired"
+        assert [item["command"] for item in process.requests].count("operation.retire") == 1
+        assert adapter.status() == {"accepting": True, "active": 0}
+    finally:
+        process.request_gate.set()
+        process.release_gate.set()
+        await asyncio.gather(inspection, *([retiring] if retiring is not None else []), return_exceptions=True)
+        if drain is not None:
+            await asyncio.wait_for(drain, 1)
+        await asyncio.wait_for(adapter.close(), 1)
+    assert process.cancelled == []

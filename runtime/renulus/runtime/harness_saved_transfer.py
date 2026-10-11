@@ -46,6 +46,7 @@ class _Bundle:
     part_bytes: tuple[int, ...]
     staged: bool = False
     committed: bool = False
+    retirement_acknowledged: bool = False
 
 
 @dataclass
@@ -251,7 +252,9 @@ class HarnessSavedTransfer:
             self._identity(request, expected=identity)
         if command == "session.import.inspect" and checked.outcome in (
                 "committed_reference", "rejected_before_admission", "cancelled_settled"):
-            while True:
+            # Only this bundle's authenticated retirement can supersede a
+            # terminal read release. An in-flight release remains owned.
+            while not bundle.retirement_acknowledged:
                 self._identity(request, expected=identity)
                 released = await self.transport.release_observation(expected.request_id)
                 self._identity(request, expected=identity)
@@ -270,6 +273,8 @@ class HarnessSavedTransfer:
             self._readback(bundle, result, absent=command == "session.import.inspect")
         elif type(result) is not dict or set(result) != {"state"} or result["state"] not in ("pending", "retired"):
             raise ApiError("harness_migration_retirement", "Native operation retirement is unavailable.", 409)
+        elif result["state"] == "retired":
+            bundle.retirement_acknowledged = True
         return result
 
     async def stage(self, request: TransferRequest, *, document: bytes) -> None:
