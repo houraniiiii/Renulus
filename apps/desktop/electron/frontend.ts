@@ -32,6 +32,11 @@ export async function startFrontend(dist: string, backendPort: number, token: st
           const value = result.headers[name];
           if (value !== undefined) apiHeaders[name] = value;
         }
+        // Preserve the upstream byte count only for the unchanged raw-byte pipe below.
+        const length = result.headers['content-length'];
+        if (typeof length === 'string' && /^[0-9]+$/.test(length) && Number.isSafeInteger(Number(length))) {
+          apiHeaders['Content-Length'] = length;
+        }
         response.writeHead(result.statusCode ?? 502, apiHeaders);
         result.on('error', () => response.destroy());
         result.pipe(response);

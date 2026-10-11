@@ -51,4 +51,39 @@ describe('native same-origin API boundary', () => {
     const response = await fetch(app.origin + '/api/v1/original', { headers: { 'x-renulus-token': 'synthetic-session' } });
     expect(response.headers.get('content-security-policy')).toBe("default-src 'none'; sandbox");
   });
+  it('preserves upstream Settings lengths and raw bytes without lengthening streams or widening headers', async () => {
+    await mkdir('G:/rn-h04/proxy-length', { recursive: true });
+    const dist = await mkdtemp('G:/rn-h04/proxy-length/frontend-'); dirs.push(dist);
+    const settings = Buffer.from(JSON.stringify({ requested: 'a'.repeat(64), effective: 'b'.repeat(64),
+      failed: null, admission_open: true }));
+    const refusal = Buffer.from(JSON.stringify({ error: { code: 'harness_configuration_busy' } }));
+    const stream = Buffer.from('data: {"type":"completed"}\n\n');
+    const backend = createServer((request, response) => {
+      if (request.url === '/api/v1/stream') {
+        response.writeHead(200, { 'Content-Type': 'text/event-stream' });
+        response.write(stream); response.end();
+        return;
+      }
+      const bytes = request.method === 'POST' ? refusal : settings;
+      response.writeHead(request.method === 'POST' ? 409 : 200, {
+        'Content-Type': 'application/json', 'Content-Length': String(bytes.length),
+        'X-Synthetic-Do-Not-Forward': 'synthetic-only' });
+      response.end(bytes);
+    }); servers.push(backend);
+    await new Promise<void>(resolve => backend.listen(0, '127.0.0.1', resolve));
+    const app = await startFrontend(dist, (backend.address() as { port: number }).port, 'synthetic-session');
+    servers.push(app.server);
+    for (const [method, status, bytes] of [['GET', 200, settings], ['POST', 409, refusal]] as const) {
+      const response = await fetch(app.origin + '/api/v1/runtime/harness/configuration', {
+        method, headers: { 'x-renulus-token': 'synthetic-session' } });
+      expect(response.status).toBe(status);
+      expect(response.headers.get('content-length')).toBe(String(bytes.length));
+      expect(response.headers.get('x-synthetic-do-not-forward')).toBeNull();
+      expect(Buffer.from(await response.arrayBuffer())).toEqual(bytes);
+    }
+    const streamed = await fetch(app.origin + '/api/v1/stream', { headers: { 'x-renulus-token': 'synthetic-session' } });
+    expect(streamed.headers.get('content-length')).toBeNull();
+    expect(streamed.headers.get('content-type')).toBe('text/event-stream');
+    expect(Buffer.from(await streamed.arrayBuffer())).toEqual(stream);
+  });
 });
