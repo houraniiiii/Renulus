@@ -56,6 +56,10 @@ class MemoryService:
         """Retained visible history and eligible model context are distinct."""
         return self.repository.lineage.eligible_history(messages, project_id=project_id)
 
+    def eligible_answer_references_in(self, conn, references, *, project_id=None):
+        """Local completed-reference admission for trusted conversation callbacks."""
+        return self.repository.lineage.eligible_references_in(conn, references, project_id=project_id)
+
     def add(self, request, *, project_id=None):
         with self._canonical_mutation():
             result = self.repository.add(request, project_id=project_id)

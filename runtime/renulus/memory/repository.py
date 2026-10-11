@@ -1,5 +1,6 @@
 """Canonical learner facts, provenance, revisions and a reference-only outbox."""
 import json
+import hashlib
 
 from renulus.contracts import ApiError, ContextScope, Scope, durable_id
 from renulus.design_c_contracts import Identity
@@ -357,6 +358,10 @@ class MemoryRepository:
         require_eligible(scope)
         with self.db.transaction() as conn:
             material = self.material(evidence_id, scope, conn=conn)
+            if automatic and material.get('_answer') and 'runtime' in material['_answer'][1]['answer_reference']:
+                # H05 connected resolver/host acceptance has not activated
+                # migrated automatic capture. Explicit capture uses this seam.
+                return None
             if conn.execute('SELECT 1 FROM memory_suppression WHERE source_key=?',
                             ('evidence:' + evidence_id,)).fetchone():
                 raise ApiError('memory_capture_suppressed', 'This source was removed or corrected in memory', 409)
@@ -555,6 +560,9 @@ class MemoryRepository:
         return self.job(job['id'])
 
     def commit_capture(self, job, material, texts):
+        # Hash resolved immutable bytes before entering the canonical write.
+        answer_digest = (hashlib.sha256(material['text'].encode('utf-8')).hexdigest()
+                         if material.get('_answer') else None)
         with self.db.transaction() as conn:
             # Re-evaluate producer revision/scope and cancellation inside the commit transaction.
             code = self._capture_error_in(conn, job)
@@ -563,12 +571,18 @@ class MemoryRepository:
                 return []
             if material.get('_answer'):
                 reference = material['_answer'][1]['answer_reference']
-                # Legacy bytes have no immutable host store yet. A local SQL
-                # equality recheck fences mutation without resolving remotely
-                # or returning a transcript inside the canonical write.
-                same = conn.execute("SELECT content=? FROM learn_messages WHERE id=?",
-                    (material['text'], reference['message_id'])).fetchone()
-                if same is None or not same[0]:
+                if 'runtime' in reference:
+                    current = self.material(job['evidence_id'], ContextScope.model_validate_json(job['scope']),
+                                            conn=conn, resolve_answer=False)
+                    same = (current['_answer'][1]['answer_reference'] == reference and
+                            current['lineage'] == material['lineage'] and reference['sha256'] == answer_digest)
+                else:
+                    # Legacy bytes use a local equality recheck without
+                    # resolving remotely or returning transcript content.
+                    row = conn.execute("SELECT content=? FROM learn_messages WHERE id=?",
+                        (material['text'], reference['message_id'])).fetchone()
+                    same = row is not None and row[0]
+                if not same:
                     self._cancel_stale_in(conn, job, 'memory_answer_version')
                     return []
             source = conn.execute('SELECT kind FROM learning_evidence WHERE id=?', (job['evidence_id'],)).fetchone()

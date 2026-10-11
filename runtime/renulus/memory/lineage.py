@@ -182,13 +182,16 @@ class AnswerLineage:
         if project_id is not None:
             Identity(type="project", id=project_id)
         manifest = AnswerInputs(inputs=inputs, dependencies=dependencies)
-        manifest = self.expand_in(conn, manifest, project_id=project_id)
         row = conn.execute("SELECT * FROM learning_evidence WHERE id=?", (evidence_id,)).fetchone()
         if row is None or row["kind"] != "study-answer":
             raise ApiError("memory_answer_unavailable", "Publish an eligible completed answer first", 409)
         payload = json.loads(row["payload_json"])
         if payload.get("scope", {}).get("kind") != "study":
             raise ApiError("memory_scope_excluded", "Answer capture requires ordinary Study scope", 409)
+        reference = answer_reference_in(conn, row, payload, ContextScope.model_validate(payload['scope']), publication=True)
+        if 'runtime' in reference and manifest != AnswerInputs(inputs=reference['inputs'], dependencies=reference['dependencies']):
+            raise ApiError('memory_lineage_conflict', 'Native publication must retain its exact consumed input closure', 409)
+        manifest = self.expand_in(conn, manifest, project_id=project_id)
         self.check_inputs_in(conn, manifest, project_id=project_id)
         publication = canonical_digest({"evidence": dict(row), "manifest": manifest.model_dump(mode="json"),
                                         "project_id": project_id})
@@ -272,6 +275,29 @@ class AnswerLineage:
                              project_id=row["project_id"], for_support=for_support)
         return dict(row)
 
+    def eligible_references_in(self, conn, references, *, project_id=None):
+        """Completed immutable references become evidence pins, with no byte IO."""
+        if not isinstance(references, (tuple, list)) or len(references) > 100:
+            raise ApiError('memory_support_budget', 'History admission needs a bounded reference collection', 409)
+        pins = []
+        for reference in references:
+            if not isinstance(reference, dict) or not isinstance(reference.get('run_id'), str):
+                continue
+            evidence_id = 'learn-answer:' + reference['run_id']
+            try:
+                lineage = self.check_in(conn, evidence_id)
+                evidence = conn.execute('SELECT payload_json FROM learning_evidence WHERE id=?', (evidence_id,)).fetchone()
+                if (json.loads(evidence['payload_json'])['answer_reference'] != reference or
+                        lineage['project_id'] not in (None, project_id)):
+                    continue
+            except ApiError as error:
+                if error.code not in INELIGIBLE_LINEAGE_CODES:
+                    raise
+                continue
+            pins.append(EligibleInput(kind='committed_evidence', dependency=Dependency(
+                target=Identity(type='learning_evidence', id=evidence_id), expected_revision=lineage['publication_digest'])))
+        return tuple(dict.fromkeys(pins))
+
     def eligible_history(self, messages, *, project_id=None):
         filtered, inputs = [], []
         with self.db.transaction() as conn:
@@ -284,6 +310,10 @@ class AnswerLineage:
                     lineage = self.check_in(conn, identifier)
                     if lineage["project_id"] not in (None, project_id):
                         continue
+                    evidence = conn.execute('SELECT payload_json FROM learning_evidence WHERE id=?', (identifier,)).fetchone()
+                    reference = json.loads(evidence['payload_json'])['answer_reference']
+                    if message.get('id') not in reference.get('message_ids', [reference.get('message_id')]):
+                        continue
                 except ApiError as error:
                     if error.code not in INELIGIBLE_LINEAGE_CODES:
                         raise
@@ -292,4 +322,4 @@ class AnswerLineage:
                 inputs.append(EligibleInput(kind="committed_evidence", dependency=Dependency(
                     target=Identity(type="learning_evidence", id=identifier),
                     expected_revision=lineage["publication_digest"])))
-        return filtered, tuple(inputs)
+        return filtered, tuple(dict.fromkeys(inputs))
