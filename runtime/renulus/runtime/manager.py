@@ -5,7 +5,7 @@ import asyncio
 from collections import deque
 from contextlib import aclosing, suppress
 from contextvars import ContextVar
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import time
 from typing import TYPE_CHECKING, AsyncIterator
 from uuid import NAMESPACE_URL, uuid4, uuid5
@@ -16,8 +16,9 @@ from renulus.contracts import ApiError, ContextScope, Event, durable_id
 from .context import CONTEXT_BUDGET, OUTPUT_RESERVATION, SUMMARY_MAX_CHARS, HermesContextAdapter
 from .hermes import HermesSubscriptionTransport
 from .inputs import has_images
-from .policy import ALLOWED_MODELS, BASE_URLS, CODEX_IMAGE_MODELS, learning_usage, rejection_kind, require_learning_route, require_provider, require_run_id, response_model_identity, safe_error, validate_messages
+from .policy import ALLOWED_MODELS, BASE_URLS, CODEX_IMAGE_MODELS, learning_usage, rejection_kind, require_learning_route, require_provider, require_run_id, response_model_identity, safe_error, stream_failure, validate_messages
 from .protected import ConnectionStore
+from .provider_adapter import SubscriptionRoute, subscription_route
 
 if TYPE_CHECKING:
     from renulus.storage import AppPaths
@@ -51,6 +52,8 @@ class ProviderManager:
         self._completion_history: deque[dict] = deque(maxlen=32)
         self._credential_locks = {name: asyncio.Lock() for name in ALLOWED_MODELS}
         self._connection_versions = {name: 0 for name in ALLOWED_MODELS}
+        self._credential_epochs = {name: 0 for name in ALLOWED_MODELS}
+        self._credential_refs = {name: str(uuid4()) for name in ALLOWED_MODELS}
         self._auth = None
         self._context = None
 
@@ -92,12 +95,14 @@ class ProviderManager:
         observed = self._capabilities.get((provider, model), {})
         connected = provider in self._settings["connections"]
         documented = provider == "codex" and model in CODEX_IMAGE_MODELS
-        fallback = "supported" if documented else "unknown"
+        support = "supported" if documented else "unknown"
+        access_invalid = provider in self._catalog_errors
+        fallback = "unknown" if access_invalid else support
         evidence = "documented_model" if documented else "none"
         if unavailable:
             availability = "account_unsupported"
         else:
-            availability = "available" if connected else "unknown"
+            availability = "available" if connected and not access_invalid else "unknown"
         return {"id": model,
                 "availability": availability,
                 "catalogue_listed": None if catalog is None else model in catalog,
@@ -105,9 +110,12 @@ class ProviderManager:
                 "image_input": "account_unsupported" if unavailable else observed.get("image", fallback),
                 "capability_evidence": {"text": observed.get("text_evidence", evidence),
                                         "image": observed.get("image_evidence", evidence)},
+                "documented_support": {"text": support, "image": support},
+                "credential_epoch": self._credential_epochs[provider],
                 "image_interpretation_verified": False}
 
     def _clear_capabilities(self, provider: str) -> None:
+        self._credential_epochs[provider] += 1
         self._capabilities = {key: value for key, value in self._capabilities.items() if key[0] != provider}
         self._unsupported_models = {key for key in self._unsupported_models if key[0] != provider}
 
@@ -225,6 +233,7 @@ class ProviderManager:
                             tokens = response.json()
                         self._require_connection_version(provider, version)
                         validated = validate_plan_token(tokens, previous_scopes=record.get("scopes", []))
+                        self._clear_capabilities(provider)
                         record.update(validated, refresh_token=tokens.get("refresh_token", record["refresh_token"]))
                         self._save()
                     except Exception as error:
@@ -233,6 +242,8 @@ class ProviderManager:
                         self._catalogs.pop(provider, None)
                         self._catalog_errors[provider] = ("authentication_required" if public.code in {
                             "invalid_token_response", "plan_permission_required"} else public.code)
+                        if self._catalog_errors[provider] == "authentication_required":
+                            self._clear_capabilities(provider)
                         raise public from None
         return record["access_token"]
 
@@ -252,7 +263,10 @@ class ProviderManager:
             public = safe_error(error)
             self._catalogs.pop(provider, None)
             if provider in self._settings["connections"]:
-                self._catalog_errors[provider] = public.code
+                self._catalog_errors[provider] = ("authentication_required" if public.code in {
+                    "invalid_token_response", "plan_permission_required"} else public.code)
+                if self._catalog_errors[provider] == "authentication_required":
+                    self._clear_capabilities(provider)
             else:
                 self._catalog_errors.pop(provider, None)
             raise public from None
@@ -316,6 +330,8 @@ class ProviderManager:
         require_learning_route(provider)
         if provider not in self._settings["connections"]:
             raise ApiError("connection_required", "Connect your selected subscription in Renulus.", 409)
+        if self._catalog_errors.get(provider) == "authentication_required":
+            raise ApiError("authentication_required", "Reconnect or explicitly refresh the selected subscription.", 401, True)
         # A display catalogue can lag behind models accepted by inference.
         # Preserve an explicit or saved choice even when it is not listed.
         # Only Automatic may choose by catalogue order; failures never fall back.
@@ -334,6 +350,90 @@ class ProviderManager:
             namespace = uuid5(NAMESPACE_URL, "Renulus.profile:" + self._settings["host_id"])
             return str(uuid5(namespace, scope.kind.value + ":" + scope.entity_id))
         return str(uuid4())
+
+    async def prepare_harness_route(self, model: str | None = None) -> SubscriptionRoute:
+        """Prepare the selected route; no inference or implicit catalogue probe."""
+        provider, chosen = self._route(model)
+        version = self._connection_versions[provider]
+        await self._access_token(provider)
+        self._require_connection_version(provider, version)
+        if self._settings["selected_provider"] != provider:
+            raise ApiError("connection_changed", "The selected connection changed during preparation.", 409, True)
+        return subscription_route(provider, chosen, credential_ref=self._credential_refs[provider],
+            credential_epoch=self._credential_epochs[provider], catalogue=self._catalogs.get(provider))
+
+    def _harness_route_current(self, route: SubscriptionRoute) -> bool:
+        if not isinstance(route, SubscriptionRoute) or route.provider_id not in ALLOWED_MODELS:
+            return False
+        provider = route.provider_id
+        return (self._settings["selected_provider"] == provider
+            and provider in self._settings["connections"]
+            and route.catalog_model_id in ALLOWED_MODELS[provider]
+            # Catalogue visibility is advisory, not part of deployment identity.
+            and replace(route, catalogue_listed=None) == subscription_route(provider, route.catalog_model_id,
+                credential_ref=self._credential_refs[provider],
+                credential_epoch=self._credential_epochs[provider], catalogue=None))
+
+    def harness_capabilities(self, route: SubscriptionRoute) -> dict:
+        """Current evidence for the parent selector, bound to one prepared route."""
+        if not self._harness_route_current(route):
+            raise ApiError("connection_changed", "Prepare the current connection before resolving capabilities.", 409, True)
+        status = self._model_status(route.provider_id, route.catalog_model_id, self._catalogs.get(route.provider_id))
+        observed = self._capabilities.get((route.provider_id, route.catalog_model_id), {})
+        return {**status, "route": route.descriptor(),
+            "tool_input": "account_unsupported" if status["availability"] == "account_unsupported" else observed.get("tools", "unknown"),
+            "documented_support": {**status["documented_support"], "tools": "unknown"},
+            "capability_evidence": {**status["capability_evidence"], "tools": observed.get("tools_evidence", "none")}}
+
+    async def credential_for_harness(self, route: SubscriptionRoute) -> str:
+        """Trusted parent dispatch only; never expose this through domain/UI status."""
+        self.require_harness_route(route)
+        token = await self._access_token(route.provider_id)
+        self.require_harness_route(route)
+        return token
+
+    def require_harness_route(self, route: SubscriptionRoute) -> None:
+        """Synchronous final IO/reply check; no refresh, probes or admission grant."""
+        if not self._harness_route_current(route):
+            raise ApiError("connection_changed", "Prepare the current connection before dispatch.", 409, True)
+        self._route(route.catalog_model_id)
+
+    def observe_harness_result(self, route: SubscriptionRoute, *, code: str,
+                               images: bool = False, tools: bool = False) -> None:
+        """Trusted dispatch outcomes only; ignore observations from old epochs."""
+        if not self._harness_route_current(route):
+            return
+        if code == "authentication_required":
+            self._catalogs.pop(route.provider_id, None)
+            self._catalog_errors[route.provider_id] = code
+            self._clear_capabilities(route.provider_id)
+        elif code == "completed":
+            self._observe_completion(route.provider_id, route.catalog_model_id, images=images)
+            if tools:
+                self._capabilities[(route.provider_id, route.catalog_model_id)].update(
+                    tools="supported", tools_evidence="completed_request")
+        elif code in {"unsupported_image_input", "image_input_not_supported",
+                      "unsupported_input_modality", "unsupported_modality"} and images:
+            self._capabilities.setdefault((route.provider_id, route.catalog_model_id), {}).update(
+                image="account_unsupported", image_evidence="rejected_request")
+        elif code in {"model_not_found", "model_access_denied", "account_model_unsupported"}:
+            self._unsupported_models.add((route.provider_id, route.catalog_model_id))
+
+    def observe_harness_error(self, route: SubscriptionRoute, error: Exception, *,
+                              images: bool = False) -> ApiError:
+        """Return a redacted transport error and record only known account evidence."""
+        public = safe_error(error)
+        rejected = rejection_kind(error, images=images)
+        code = "model_access_denied" if rejected == "model" else "unsupported_image_input" if rejected == "image" else public.code
+        self.observe_harness_result(route, code=code, images=images)
+        return public
+
+    def observe_harness_stream_error(self, route: SubscriptionRoute, code: str | None, *,
+                                     images: bool = False) -> ApiError:
+        """Known SSE machine codes only; provider prose/payloads are never retained."""
+        public = stream_failure(code)
+        self.observe_harness_result(route, code=public.code, images=images)
+        return public
 
     async def compact(self, messages: list[dict], *, scope: ContextScope, run_id: str,
                       model: str | None = None, system: str | None = None, force: bool = True) -> dict:
@@ -425,6 +525,7 @@ class ProviderManager:
         iterator = None
         provider = chosen = None
         version = None
+        credential_epoch = None
         session_id = None
         images = has_images(messages)
         try:
@@ -447,6 +548,7 @@ class ProviderManager:
                 return
             finally:
                 run.pending = None
+            credential_epoch = self._credential_epochs[provider]
             if run.stopped.is_set():
                 yield event("cancelled")
                 return
@@ -513,6 +615,8 @@ class ProviderManager:
                 if run.stopped.is_set():
                     break
                 if item["type"] == "completed":
+                    if credential_epoch != self._credential_epochs[provider]:
+                        raise ApiError("connection_changed", "The credential changed during the request.", 409, True)
                     reported = response_model_identity(item.get("response_model"))
                     # Process-local route evidence for callers of stream(), which
                     # intentionally yields text only. Never retain request content
@@ -536,7 +640,8 @@ class ProviderManager:
             if run.stopped.is_set():
                 yield event("cancelled")
                 return
-            if provider and version != self._connection_versions[provider]:
+            if provider and (version != self._connection_versions[provider] or
+                    (credential_epoch is not None and credential_epoch != self._credential_epochs[provider])):
                 yield event("error", code="connection_changed",
                             message="The connection changed during the request. Retry with the current connection.",
                             retryable=True, status=409)

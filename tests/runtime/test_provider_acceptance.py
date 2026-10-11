@@ -408,9 +408,36 @@ async def test_transient_refresh_failure_preserves_rotating_token_and_is_retryab
     assert status["selected_provider"] == "codex" and status["connections"][0]["status"] == "connected"
     assert manager._settings["connections"]["codex"]["refresh_token"] == "synthetic-rotated-refresh"
     assert ProviderManager(app_paths)._settings["connections"]["codex"]["access_token"] == "synthetic-rotated-token"
-    assert status["connections"][0]["models"][0]["text_input"] == "unknown"
-    assert status["connections"][0]["models"][1]["availability"] == "unavailable"
+    # A display catalogue is advisory. Refresh is access evidence, not a new
+    # modality observation, and does not erase the selected documented support.
+    assert status["connections"][0]["models"][0]["text_input"] == "supported"
+    assert status["connections"][0]["models"][0]["capability_evidence"]["text"] == "documented_model"
+    assert status["connections"][0]["models"][1]["availability"] == "available"
+    assert status["connections"][0]["models"][1]["catalogue_listed"] is False
     assert len(calls) == 3 and all(not request.url.path.endswith("/responses") for request in calls)
+
+
+@pytest.mark.asyncio
+async def test_auth_failure_stales_account_evidence_but_preserves_documented_modality(app_paths):
+    calls = []
+
+    def serve(request):
+        calls.append(request.url.path)
+        return httpx.Response(401, json={"error": {"message": "Synthetic denied"}})
+
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(serve))
+    seed_codex(manager)
+    before = manager.connections()["connections"][0]["models"][0]
+    flow = await collect(manager, "auth-epoch")
+    after = manager.connections()["connections"][0]["models"][0]
+    assert flow[-1].payload["code"] == "authentication_required"
+    assert after["availability"] == after["text_input"] == after["image_input"] == "unknown"
+    assert after["documented_support"] == {"text": "supported", "image": "supported"}
+    assert after["credential_epoch"] > before["credential_epoch"]
+    again = await collect(manager, "no-auth-retry")
+    assert again[-1].payload["code"] == "authentication_required"
+    assert calls == ["/v1/responses"]
+    assert manager.connections()["selected_provider"] == "codex"
 
 
 @pytest.mark.asyncio
