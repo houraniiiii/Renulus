@@ -246,6 +246,7 @@ export async function createGatewayAdapter(options: GatewayAdapterOptions): Prom
   const checkPrimary = (entry: Entry, request: LLMRequest, settings: StreamOptions) => {
     const route = entry.plan.route;
     const headers = new Set(["x-opencode-session-id", "x-session-affinity", "x-session-id",
+      "x-opencode-parent-session-id", "x-parent-session-id",
       "user-agent", "x-opencode-project", "x-opencode-session", "x-opencode-client"]);
     if (!settingsAllowed(settings) || request.model.id !== route.wire_model_id || request.model.provider !== route.provider_id
         || request.model.route.protocol !== route.protocol

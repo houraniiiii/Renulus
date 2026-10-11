@@ -393,6 +393,62 @@ test("prepareStateless interruption retains acquisition and manifest finalizatio
   }
 });
 
+test("actual native child parent correlation headers are accepted then stripped before model.dispatch", async () => {
+  const { Layer, ManagedRuntime } = await import("effect");
+  const { Message } = await import("@opencode/ai");
+  const { LayerNode } = await import("@opencode/util/effect/layer-node");
+  const { SessionModelRequest } = await import("@opencode/core/session/model-request");
+  const { SessionModelTransport } = await import("@opencode/core/session/model-transport");
+  const { PluginHooks } = await import("@opencode/core/plugin/hooks");
+  const parentId = "synthetic-parent-correlation-canary";
+  for (const model of ["mimo-v2.6-pro", "gpt-6.1-sol"]) {
+    const wire = channel(() => result(sse(model)));
+    let selections = 0, registrations = 0;
+    const adapter = await createGatewayAdapter({ domain: wire.domain,
+      beforePrepare: () => Effect.sync(() => {
+        selections++;
+        return plan(model, { request_kind: "child", role: { ...plan(model).role, purpose: "evidence-review" } });
+      }),
+      registerManifest: (trusted, unfiltered) => Effect.sync(() => {
+        registrations++;
+        assert.equal(trusted.request_kind, "child");
+        assert.equal(unfiltered.http.headers["x-opencode-parent-session-id"], parentId);
+        assert.equal(unfiltered.http.headers["x-parent-session-id"], parentId);
+      }), validateImages: () => Effect.die(new Error("Unexpected image validation")),
+    });
+    const runtime = ManagedRuntime.make(SessionModelRequest.layer.pipe(Layer.provideMerge(Layer.mergeAll(
+      LayerNode.compile(PluginHooks.node), Layer.succeed(SessionModelTransport.Service, {
+        bind: () => { throw new Error("Synthetic WebSocket refused"); }, close: () => Effect.void, closeAll: Effect.void,
+      }),
+    ))));
+    try {
+      const primary = await Effect.runPromise(adapter.preparePrimary(binding, currentResolved()));
+      const prepared = await runtime.runPromise(Effect.gen(function* () {
+        const service = yield* SessionModelRequest.Service;
+        return yield* service.primary({ session: { id: binding.session_id, parentID: parentId, projectID: "synthetic-project" },
+          agent: "evidence-review", model: primary.resolved, system: [],
+          messages: [Message.user("Synthetic child evidence review")], webSocket: "session" });
+      }).pipe(Effect.scoped));
+      assert.equal(prepared.request.http.headers["x-opencode-parent-session-id"], parentId);
+      assert.equal(prepared.request.http.headers["x-parent-session-id"], parentId);
+      const final = await Effect.runPromise(primary.prepare(prepared.request, prepared.options, prepared.request));
+      assert.equal((await Effect.runPromise(adapter.client.generate(final))).text, "Synthetic safe teaching");
+      assert.equal(selections, 1); assert.equal(registrations, 1); assert.equal(wire.frames.length, 1);
+      const frame = wire.frames[0];
+      assert.equal(frame.command, "model.dispatch");
+      assert.deepEqual(Object.keys(frame.payload).sort(), ["dispatch_id", "serialized_request"]);
+      const http = frame.payload.serialized_request;
+      assert.deepEqual(http.headers, { "content-type": "application/json",
+        "content-length": String(Buffer.from(http.body_base64, "base64").length), "user-agent": "Renulus/0.1.0",
+        ...(model.startsWith("gpt-") ? {} : { "x-opencode-session": binding.session_id }) });
+      assert.equal(JSON.stringify(frame.payload).includes(parentId), false);
+      const body = JSON.parse(Buffer.from(http.body_base64, "base64"));
+      assert.equal(body.model, model);
+      assert.deepEqual(adapter.receipt(final), { dispatch_id: "synthetic-dispatch", permit_id: "synthetic-permit" });
+    } finally { await adapter.close(); await runtime.dispose(); }
+  }
+});
+
 test("preparePrimary accepts a trusted first child plan through one native request and its bound receipt", async () => {
   for (const model of ["mimo-v2.6-pro", "gpt-6.1-sol"]) {
     const wire = channel(() => result(sse(model)));
@@ -504,6 +560,9 @@ test("preparePrimary rejects final route output and custom HTTP changes before m
     request => LLMRequest.update(request, { model: LanguageModel.update(request.model, { route: request.model.route.with({ endpoint: { baseURL: "https://synthetic.invalid" } }) }) }),
     request => LLMRequest.update(request, { generation: new GenerationOptions({ maxTokens: 65 }) }),
     request => LLMRequest.update(request, { http: new HttpOptions({ headers: { authorization: "synthetic-unowned-credential" } }) }),
+    request => LLMRequest.update(request, { http: new HttpOptions({ headers: {
+      "x-opencode-parent-session-id": "synthetic-parent", "x-parent-session-id": "synthetic-parent",
+      "x-parent-authority": "synthetic-unowned-authority" } }) }),
     request => LLMRequest.update(request, { http: new HttpOptions({ query: { fallback: "yes" } }) }),
     request => LLMRequest.update(request, { http: new HttpOptions({ body: { model: "fallback-model" } }) }),
   ]) {
@@ -1226,7 +1285,12 @@ test("custom HTTP or WS at preparation or consumption cannot escape the trusted 
       await assert.rejects(Effect.runPromise(adapter.client.generate(prepared)));
     }
     const { HttpOptions } = await import("@opencode/ai");
-    for (const http of [{ headers: { authorization: "synthetic-auth-canary" } }, { body: { model: "fallback-model" } }, { query: { redirect: "yes" } }]) {
+    for (const http of [{ headers: { authorization: "synthetic-auth-canary" } },
+      { headers: { "x-opencode-parent-session-id": "synthetic-parent", "x-parent-session-id": "synthetic-parent",
+        authorization: "synthetic-auth-canary" } },
+      { headers: { "x-opencode-parent-session-id": "synthetic-parent", "x-parent-session-id": "synthetic-parent",
+        "x-parent-authority": "synthetic-unowned-authority" } },
+      { body: { model: "fallback-model" } }, { query: { redirect: "yes" } }]) {
       const prepared = await Effect.runPromise(adapter.prepare(binding, request({ http: new HttpOptions(http) })));
       await assert.rejects(Effect.runPromise(adapter.client.generate(prepared)));
     }

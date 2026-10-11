@@ -201,6 +201,7 @@ export async function createSubscriptionAdapter(options: SubscriptionAdapterOpti
       if (settings?.http || settings?.webSocket) throw denied();
       if (request.http?.body || request.http?.query) throw denied();
       const upstreamHeaders = new Set(["x-opencode-session-id", "x-session-affinity", "x-session-id",
+        "x-opencode-parent-session-id", "x-parent-session-id",
         "user-agent", "x-opencode-project", "x-opencode-session", "x-opencode-client"]);
       if (Object.keys(request.http?.headers ?? {}).some(name => !upstreamHeaders.has(name.toLowerCase()))) throw denied();
       if (request.model.id !== route.catalog_model_id || request.model.provider !== route.provider_id
