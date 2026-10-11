@@ -17,7 +17,7 @@ installation, push or downstream-ticket expansion is authorized.
 
 ### Dependency readiness
 
-Current continuation: parent `1221f7a9`. The reviewed child-learning routing
+Current continuation: parent `281d9955`. The reviewed child-learning routing
 helper `abdad45b` is integrated as `f0e433d6`; supplied-transaction policy
 settlement `dd75d5eb` is integrated as `294b8218`. Both independent axes are
 clear, with original62-case helper and12-case settlement evidence retained;
@@ -27,16 +27,27 @@ after both independent review axes reported zero findings. Its supplied-conn
 rollback and checks the final publication closure; the original46-case receipt
 is retained. These ports do not enable native children.
 
-A new actual cited native/Library/M5 composition check is not yet green.
+A new actual cited native/Library/M5 composition check is now green:
+`memory/h07-consumed-transaction/receipts/cited-short05.xml` has one pass/21.901s,
+zero failures/errors/skips. Runtime bytes are unchanged; only the basetemp was
+shortened to `G:/rhcit05`. The public callback diagnostic test amendment is
+integrated as `281d9955` after independent Standards0/Spec0, and preserves all
+original citation/Memory/native transcript/publication/two-dispatch assertions.
+
+The earlier failures remain fixture-layout qualifications, not Bridge reds.
 `memory/h07-consumed-transaction/receipts/cited-integrated02.xml` records one
 failure/40.85s with `harness_execution_failed`. Diagnostic03 repeats the failure
 with ample free space and G: temp paths (one failure/22.61s): actual input
 admission succeeds, then `learning.context` returns `domain_handler_error`.
 Diagnostic04 (one failure/17.99s) captures `PermissionError` from Memory's
-reindex cleanup after engine construction fails; the initiating exception is
-still being isolated. No assistant or answer publication is committed. This
-does not establish a Bridge defect. Russell owns the narrow Memory diagnosis.
-The transparent test observer/source snapshot and original states are retained.
+reindex cleanup. A controlled public Library-first Memory tracer then isolated
+the initiating SQLite `CREATE TABLE` OperationalError: a250-character database
+path/258-character journal passes, while adding four characters fails during
+construction and cleanup masks the cause. Both use unchanged production bytes.
+Exact receipts/exception-chain qualification are in
+memory/reindex-construction/HANDOFF.md; its local diagnostic-only `fe0c7f15`
+commit is not integrated. No engine repair or universal ownership defect is
+claimed. The transparent observer/source snapshot and failed states remain.
 `cited-integrated01` failed before construction because the helper-assets
 environment was absent; that receipt is a setup qualification. Do not repeat
 the46-case local suite or upgrade the failed native checks to passes.
@@ -76,8 +87,9 @@ retained Library source, one synthetic generation, saved draft and settled
 Services shutdown; the process exited0. The JSON receipt is
 saved-migration/hidden-archive-repaired-seed.json and the new conversation is
 thread_fcb7b9bdd22f484389d85c4b501e5f56. The earlier failed seed is unchanged.
-Russell is isolating the cited failure through a focused public Memory
-construction tracer; no further native or broad engine suite is authorized.
+The separate cited failure is closed as fixture path length by the controlled
+tracer and short-path native pass above. Memory production leases are released;
+no further native or broad engine suite is authorized for this diagnosis.
 All new profiles/receipts use G:;
 pause writes if C: falls below200MiB. H06 acceptance and H08 implementation
 remain gated; native assembly `969ac780` stays frozen and unintegrated.
@@ -107,6 +119,19 @@ Native child assembly969ac780 is READY but not integrated; the Python routing
 helper is now integrated as recorded above. Both native assembly review axes are clear. Keep the
 current two-Library-tool registry until H06 evidence is committed/reviewed;
 H07 composition must observe a new immutable final registry artifact.
+
+Reserved family-control transport preparation is active only in Ohm's isolated
+`codex/oc-h07-family-controls` lane, consuming published969 as a prerequisite.
+Its four-path lease is process/IPC plus the dedicated Python test and native
+fixture. It does not activate children in this H06 integration checkout.
+Sartre's read-only Owner assembly check confirms the existing Python ports are
+sufficient: cache root authority and learner text before transaction callbacks;
+route child callbacks/model resolution before root-only guards; consume and
+recheck child closure in the root publication transaction; seal before waits;
+observe native/Domain/Registry settlement before leaf-first `settle_run_in`;
+release Registry bindings only after that transaction commits. Reopened journal
+rows remain observations, not restored grants. Actual family controls and the
+connected child/Stop/restart proofs remain required before H07 acceptance.
 
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
