@@ -88,8 +88,28 @@ shutdown, busy read-release leaks receipts) and two Standards P2s (late
 authenticated admission rejection stays uncertain, cleanup controls lose attempt
 identity). All five are source-derived, pending public reproduction and repair;
 the assembly is published as preparation only and the actual-engine tracer
-must wait for closure. The separate initiating-timeout repair ce04e638, integrated
+must wait for closure. Native attempt repair c286ecd5 is integrated asacc9e42a
+(public wrong-attempt red1→green1, affected6 passed, TypeScript exit0). The four
+Python findings have public red→green receipts below and await focused independent
+re-review. The separate initiating-timeout repair ce04e638, integrated
 as0df89c85, has zero residual findings on both axes.
+
+| Cleanup receipt | Result | Qualified behavior |
+| --- | --- | --- |
+| observe-red01.xml / observe-green01.xml | 1 failed + 1 bounded teardown error / 1 passed, 6.59s | A status timeout cannot poison the shared drain; failed cleanup remains owned in the red |
+| rejection-red01.xml / rejection-green01.xml | 1 failed / 1 passed, 6.51s | Final authenticated pre-admission rejection needs no native invocation drain |
+| read-release-red01.xml / read-release-green01.xml | 1 failed / 1 passed, 6.60s | Busy release reuses one retained read instead of producing3 receipts |
+| shutdown-red01.xml / shutdown-green01.xml | 1 failed / 1 passed, 6.32s | Public Services shutdown initiates native close while the producer awaits exit proof |
+| cleanup-affected01.xml | 27 passed, 86.48s | Final capture file plus affected saved admission/current/model-owner tests; one inherited TestClient warning |
+
+Settings Home refusal repair67c0c677 is integrated as8b9345c4. Its actual managed
+lifespan public trace reproduces authentication/Stage409 before repair (1 failed,
+17.79s), then provider-unavailable with stable credentials and successful Stage
+requested48/2 while effective64/default remains (1 passed,15.35s). No successful
+inference occurs; both runs deselect the16 unchanged cases. Hidden activation
+still needs a repaired fresh synthetic journey. Source investigation found that
+the desktop API proxy omits Content-Length, causing the bounded passive full-hash
+recorder to refuse body reads; the narrow proxy test/repair is separately leased.
 
 ### Managed startup assembly and retained coordinator review
 

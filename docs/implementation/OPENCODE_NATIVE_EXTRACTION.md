@@ -40,10 +40,17 @@ receipt to its consumed confirmed permit. M5 still checks the exact source
 publication, answer digest, attempt, scope and support closure.
 
 `model.extract.status`, `model.extract.cancel` and `model.extract.release` take
-empty payloads and derive their identity from the authenticated frame. Status
+empty payloads and derive operation and attempt from the authenticated frame.
+Controls must match the immutable admitted attempt before revealing state,
+signalling cancellation or deleting a record. Status
 reports active, settled or unavailable. Cancel signals interruption and retains
 the invocation until finalizers settle. Release refuses active work. These
 commands use reserved control capacity, and status is a bounded observation.
+Pending and terminal observation identities remain retained across timeout or
+busy release; a new status read begins only after the previous release succeeds.
+Read expiry cannot terminate the independently retained cleanup drain. A final
+authenticated rejection after a pending acknowledgement proves no native
+invocation, while an unknown acknowledgement continues to require actual proof.
 
 CPU completion, native invocation settlement, scoped Domain settlement and
 registry worker settlement are independent proofs. Cancellation or timeout does
@@ -52,6 +59,10 @@ generation finalizers before releasing the canonical extraction pin/registry
 receipt. Native host close seals/cancels extraction, joins it, then disposes the
 store owner. A configuration root seal must also refuse a prepared capture,
 including its interval before canonical generation admission.
+Profile stopping seals and starts the retained Owner cleanup before producer
+joins; native close starts while Memory/CPU ownership is still retained. This
+breaks the dependency cycle when unavailable invocation status requires process
+exit as the proof source. Dependency release still waits for actual settlement.
 
 The connected tracer must create a genuinely saved answer. Its positive run
 therefore has one setup send and exactly one incremental extraction send,

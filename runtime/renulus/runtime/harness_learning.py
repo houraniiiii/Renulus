@@ -104,6 +104,7 @@ class HarnessLearningOwner:
         if self.memory is not None and self.model_registry is not None:
             self.memory.bind_committed_answer_extractor(self.memory_captures.prepare)
         self.services.on_startup.append(self.start)
+        self.services.on_stopping.append(self.begin_shutdown)
         self.services.on_shutdown_dependencies.append(self.close)
 
     async def start(self):
@@ -218,10 +219,14 @@ class HarnessLearningOwner:
             raise ApiError('harness_owner_conflict', 'The native process identity does not match.', 409)
         self.profile_owner.register_native(identity.pid, generation=identity.generation)
 
-    async def close(self):
+    def begin_shutdown(self):
+        """Seal and start retained cleanup before producer joins need native exit."""
         self._closing = True
         if self._close_task is None:
             self._close_task = asyncio.create_task(self._close(), name='renulus-learning-harness-close')
+
+    async def close(self):
+        self.begin_shutdown()
         await asyncio.shield(self._close_task)
 
     async def _close(self):

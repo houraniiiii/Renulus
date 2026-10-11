@@ -34,6 +34,7 @@ class _Capture:
     native_required: bool = False
     receipt: dict | None = None
     settled: bool = False
+    observations: dict = field(default_factory=dict)
     released: asyncio.Event = field(default_factory=asyncio.Event)
 
 
@@ -175,6 +176,7 @@ class HarnessMemoryCaptures:
             response = await record.process.query_result(response['request_id'])
             if response is None:
                 raise ApiError('memory_extraction_uncertain', _MESSAGE, 503, True)
+        record.native_required = response['outcome'] != 'rejected_before_admission'
         if response['outcome'] != 'committed_reference':
             raise ApiError('memory_extraction_uncertain', _MESSAGE, 503, True)
         result = response.get('result')
@@ -204,15 +206,21 @@ class HarnessMemoryCaptures:
     async def _observe(self, record, command):
         loop = asyncio.get_running_loop()
         async with asyncio.timeout_at(loop.time() + 5):
-            response = await record.process.request(command, {}, record.binding.operation_id,
-                record.binding.attempt_id, 5)
+            response = record.observations.get(command)
+            if response is None:
+                response = await record.process.request(command, {}, record.binding.operation_id,
+                    record.binding.attempt_id, 5)
+                record.observations[command] = response
             while response['outcome'] == 'accepted_pending':
                 await asyncio.sleep(.02)
                 response = await record.process.query_result(response['request_id'])
                 if response is None:
                     raise ApiError('memory_settlement_pending', _MESSAGE, 503, True)
+                record.observations[command] = response
             if command == 'model.extract.status':
-                await record.process.release_observation(response['request_id'])
+                while not await record.process.release_observation(response['request_id']):
+                    await asyncio.sleep(.02)
+            record.observations.pop(command, None)
             if response['outcome'] != 'committed_reference':
                 raise ApiError('memory_settlement_pending', _MESSAGE, 503, True)
             return response['result']
@@ -222,19 +230,25 @@ class HarnessMemoryCaptures:
             await asyncio.gather(asyncio.shield(record.generation), return_exceptions=True)
         native_settled = not record.native_required
         while True:
-            if not native_settled:
-                if (await record.process.settlement(0))['state'] == 'settled':
-                    native_settled = True
-                else:
-                    native_settled = (await self._observe(record, 'model.extract.status')).get('state') == 'settled'
-            registry_status = record.registry.status(record.binding) if record.registry is not None else None
-            if (native_settled and record.process.domain_status(operation_id=record.binding.operation_id)['active'] == 0
-                    and (registry_status is None or registry_status.owned == 0)):
-                break
+            try:
+                if not native_settled:
+                    if (await record.process.settlement(0))['state'] == 'settled':
+                        native_settled = True
+                    else:
+                        native_settled = (await self._observe(record, 'model.extract.status')).get('state') == 'settled'
+                registry_status = record.registry.status(record.binding) if record.registry is not None else None
+                if (native_settled and record.process.domain_status(operation_id=record.binding.operation_id)['active'] == 0
+                        and (registry_status is None or registry_status.owned == 0)):
+                    if record.native_required and (await record.process.settlement(0))['state'] != 'settled':
+                        if (await self._observe(record, 'model.extract.release')).get('released') is not True:
+                            raise ApiError('memory_settlement_pending', _MESSAGE, 503, True)
+                    break
+            except TimeoutError:
+                pass  # The bounded read expired; this retained drain still owns cleanup.
+            except ApiError as error:
+                if error.code != 'memory_settlement_pending':
+                    raise
             await asyncio.sleep(.02)
-        if record.native_required and (await record.process.settlement(0))['state'] != 'settled':
-            if (await self._observe(record, 'model.extract.release')).get('released') is not True:
-                raise ApiError('memory_settlement_pending', _MESSAGE, 503, True)
         if record.cancel_control is not None:
             await asyncio.gather(asyncio.shield(record.cancel_control), return_exceptions=True)
         record.settled = True
@@ -245,4 +259,8 @@ class HarnessMemoryCaptures:
             self._cancel(record)
         if records:
             self.owner.memory.begin_shutdown()
-            await asyncio.gather(*(record.released.wait() for record in records))
+            # Native close is also a proof source when a lost-ack invocation
+            # cannot be observed. Start it while CPU/Memory owners are retained.
+            native_close = asyncio.create_task(self.owner.process.close(0),
+                name='renulus-memory-native-close')
+            await asyncio.gather(native_close, *(record.released.wait() for record in records))

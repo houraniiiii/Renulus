@@ -69,7 +69,9 @@ async def capture_owner(tmp_path):
     owner = HarnessLearningOwner(services, config, configuration_id=version,
         configuration_authority=authority, memory=services.get('memory'), model_registry_factory=factory)
     yield owner, authority, version
-    await owner.close()
+    # A broken cleanup regression must produce a bounded red receipt. It may
+    # not pretend settlement or tear down dependencies while the owner is held.
+    await asyncio.wait_for(owner.close(), 1)
     await services.get('memory').close()
     services.get('helpers').startup.close()
     await manager.close()
@@ -107,6 +109,9 @@ class ScriptedExtractionProcess(ManagedHarnessProcess):
         self.owner = owner
         self.commands = []
         self.completed = False
+
+    async def release_observation(self, request_id):
+        return True  # This public process seam has no actual IPC receipt store.
 
     async def request(self, command, payload, operation_id, attempt_id, timeout):
         self.commands.append(command)
@@ -234,6 +239,192 @@ class LostExtractionAck(HeldExtractionProcess):
         if command == 'model.extract.status':
             self.completed = self.gate.is_set()
         return await super().request(command, payload, operation_id, attempt_id, timeout)
+
+
+class TimedStatusOnce(LostExtractionAck):
+    def __init__(self, owner):
+        super().__init__(owner)
+        self.timed_out = asyncio.Event()
+
+    async def request(self, command, payload, operation_id, attempt_id, timeout):
+        if command == "model.extract.status" and not self.timed_out.is_set():
+            self.timed_out.set()
+            raise TimeoutError("Synthetic bounded status observation expired")
+        return await super().request(command, payload, operation_id, attempt_id, timeout)
+
+
+async def test_expired_status_observation_preserves_a_recoverable_settlement_owner(capture_owner):
+    owner, authority, version = capture_owner
+    process = TimedStatusOnce(owner)
+    seal = owner.seal_new_runs(expected_effective=version)
+    owner.replace_process(process, configuration_id=version, seal=seal)
+    seal.release()
+    capture = owner.memory_captures.prepare(source(), current=lambda *, conn=None: None)
+    await asyncio.gather(capture.generate((("system", "Extract facts."), ("user", "Synthetic answer."))),
+        return_exceptions=True)
+    settling = asyncio.create_task(capture.settle())
+    try:
+        await asyncio.wait_for(process.timed_out.wait(), 1)
+        await asyncio.sleep(.04)
+        assert not settling.done(), "A read timeout must not permanently poison the cleanup owner"
+        assert authority.activation_snapshot()["pinned_runs"]
+        process.gate.set()
+        await asyncio.wait_for(asyncio.shield(settling), 1)
+        capture.release()
+        assert authority.activation_snapshot()["pinned_runs"] == []
+    finally:
+        process.gate.set()
+        await asyncio.gather(settling, return_exceptions=True)
+        if owner.memory_captures.retained():
+            await capture.settle()
+            capture.release()
+
+
+class LateRejectedExtraction(HeldExtractionProcess):
+    def __init__(self, owner):
+        super().__init__(owner)
+        self.exited = False
+
+    async def request(self, command, payload, operation_id, attempt_id, timeout):
+        self.commands.append(command)
+        if command == "model.extract":
+            return {"outcome": "accepted_pending", "request_id": "synthetic-late-rejection"}
+        if command == "model.extract.status":
+            return {"outcome": "committed_reference", "request_id": uuid4().hex,
+                "result": {"state": "unavailable"}}
+        if command == "model.extract.cancel":
+            return {"outcome": "committed_reference", "request_id": uuid4().hex,
+                "result": {"state": "unavailable"}}
+        raise AssertionError(command)
+
+    async def query_result(self, request_id):
+        assert request_id == "synthetic-late-rejection"
+        return {"outcome": "rejected_before_admission", "request_id": request_id,
+            "error": {"code": "harness_policy_blocked"}}
+
+    async def settlement(self, timeout):
+        return {"state": "settled" if self.exited else "pending"}
+
+
+async def test_late_authenticated_admission_rejection_needs_no_native_invocation_drain(capture_owner):
+    owner, authority, version = capture_owner
+    process = LateRejectedExtraction(owner)
+    seal = owner.seal_new_runs(expected_effective=version)
+    owner.replace_process(process, configuration_id=version, seal=seal)
+    seal.release()
+    capture = owner.memory_captures.prepare(source(), current=lambda *, conn=None: None)
+    await asyncio.gather(capture.generate((("system", "Extract facts."), ("user", "Synthetic answer."))),
+        return_exceptions=True)
+    settling = asyncio.create_task(capture.settle())
+    try:
+        done, _ = await asyncio.wait({settling}, timeout=.08)
+        assert done, "The final authenticated pre-admission rejection proves no native invocation"
+        await settling
+        capture.release()
+        assert authority.activation_snapshot()["pinned_runs"] == []
+        assert process.commands == ["model.extract"]
+    finally:
+        process.exited = True
+        await asyncio.wait_for(asyncio.shield(settling), 1)
+        if owner.memory_captures.retained():
+            capture.release()
+
+
+class BusyReadRelease(LostExtractionAck):
+    def __init__(self, owner):
+        super().__init__(owner)
+        self.release_gate = asyncio.Event()
+        self.read_entered = asyncio.Event()
+        self.reads = []
+        self.release_ids = []
+
+    async def request(self, command, payload, operation_id, attempt_id, timeout):
+        response = await super().request(command, payload, operation_id, attempt_id, timeout)
+        if command == "model.extract.status":
+            self.reads.append(response["request_id"])
+            self.read_entered.set()
+        return response
+
+    async def release_observation(self, request_id):
+        self.release_ids.append(request_id)
+        return self.release_gate.is_set()
+
+
+async def test_busy_read_release_reuses_one_retained_observation_before_polling_again(capture_owner):
+    owner, authority, version = capture_owner
+    process = BusyReadRelease(owner)
+    seal = owner.seal_new_runs(expected_effective=version)
+    owner.replace_process(process, configuration_id=version, seal=seal)
+    seal.release()
+    capture = owner.memory_captures.prepare(source(), current=lambda *, conn=None: None)
+    await asyncio.gather(capture.generate((("system", "Extract facts."), ("user", "Synthetic answer."))),
+        return_exceptions=True)
+    settling = asyncio.create_task(capture.settle())
+    try:
+        await asyncio.wait_for(process.read_entered.wait(), 1)
+        await asyncio.sleep(.065)
+        assert len(process.reads) == 1, "Busy release must not leak new terminal control receipts"
+        assert set(process.release_ids) == set(process.reads)
+        assert not settling.done()
+        process.gate.set()
+        process.release_gate.set()
+        await asyncio.wait_for(asyncio.shield(settling), 1)
+        capture.release()
+        assert authority.activation_snapshot()["pinned_runs"] == []
+    finally:
+        process.gate.set()
+        process.release_gate.set()
+        await asyncio.wait_for(asyncio.shield(settling), 1)
+        if owner.memory_captures.retained():
+            capture.release()
+
+
+class ShutdownOnlySettles(LateRejectedExtraction):
+    def __init__(self, owner):
+        super().__init__(owner)
+        self.close_entered = asyncio.Event()
+
+    async def request(self, command, payload, operation_id, attempt_id, timeout):
+        if command == "model.extract":
+            self.commands.append(command)
+            raise OSError("Synthetic lost acknowledgement with no observable invocation")
+        return await super().request(command, payload, operation_id, attempt_id, timeout)
+
+    async def close(self, timeout=5):
+        self.close_entered.set()
+        self.exited = True
+        return {"state": "closed"}
+
+
+async def test_profile_shutdown_initiates_native_close_while_capture_producer_needs_exit_proof(capture_owner):
+    owner, authority, version = capture_owner
+    process = ShutdownOnlySettles(owner)
+    seal = owner.seal_new_runs(expected_effective=version)
+    owner.replace_process(process, configuration_id=version, seal=seal)
+    seal.release()
+    owner.install()
+    capture = owner.memory_captures.prepare(source(), current=lambda *, conn=None: None)
+    await asyncio.gather(capture.generate((("system", "Extract facts."), ("user", "Synthetic answer."))),
+        return_exceptions=True)
+
+    async def finish_capture_producer():
+        # Explicit synthetic producer finalizer; native exit remains a separate
+        # public process proof and canonical release follows it.
+        await capture.settle()
+        capture.release()
+
+    owner.services.on_shutdown.append(finish_capture_producer)
+    shutdown = asyncio.create_task(owner.services.shutdown())
+    try:
+        await asyncio.sleep(.08)
+        assert process.close_entered.is_set(), "Shutdown must initiate the proof needed by its retained producer"
+        await asyncio.wait_for(asyncio.shield(shutdown), 1)
+        assert owner.memory_captures.retained() == 0
+        assert authority.activation_snapshot()["pinned_runs"] == []
+        assert process.commands.count("model.extract") == 1
+    finally:
+        await process.close(0)
+        await asyncio.wait_for(asyncio.shield(shutdown), 1)
 
 
 async def test_lost_extract_ack_keeps_possible_native_invocation_owned_without_resending(capture_owner):
