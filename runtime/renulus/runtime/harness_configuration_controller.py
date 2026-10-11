@@ -43,7 +43,12 @@ class ConfigurationLifecycle(Protocol):
         """Return/raise only after isolated closed inspection AND candidate settlement."""
         ...
 
-    async def seal_new_runs(self, *, expected_effective: str | None) -> NewRunSeal: ...
+    async def seal_new_runs(self, *, expected_effective: str | None) -> NewRunSeal:
+        """Failure-atomic: exceptions leave ingress and ownership unchanged.
+
+        After acquisition, return its seal without awaiting or doing fallible work.
+        """
+        ...
 
     async def stop_and_settle(self, seal: NewRunSeal) -> RestartBoundary:
         """Idempotent per seal, including a partially started fresh owner."""
@@ -64,10 +69,18 @@ def _failed_probe(candidate: Candidate) -> CandidateHealth:
     raise RuntimeError("The isolated candidate probe failed.")
 
 
+def _lifecycle_error(error: Exception) -> ApiError:
+    if isinstance(error, ApiError):
+        return error
+    return ApiError("harness_configuration_lifecycle_failed",
+        "The managed configuration lifecycle did not finish safely.", 503, True)
+
+
 class HarnessConfigurationController:
     """One profile-owned instance; cancelled observers do not abandon mutations.
 
-    Post-close failures retain the seal and canonical pointers. Managed startup
+    After canonical admission closes, failures retain the seal and pointers.
+    A seal acquisition error retains an unresolved ownership fence. Managed startup
     reconciliation or a future settled CAS rollback belongs to the parent; this
     instance refuses subsequent mutations while recovery is required.
     """
@@ -77,16 +90,49 @@ class HarnessConfigurationController:
         self.provider = provider
         self.lifecycle = lifecycle
         self._seal: NewRunSeal | None = None
+        self._acquisition_unresolved = False
         self._mutation_lock = asyncio.Lock()
         self._mutations: set[asyncio.Task] = set()
+        self._closing = False
+        self._close_task: asyncio.Task | None = None
+
+    async def close(self) -> None:
+        """Seal mutations and drain owned tasks/finalizers before dependencies close.
+
+        Waiters share one barrier; cancellation propagates only after it finishes.
+        The parent owns native settlement and any unresolved acquisition.
+        """
+        self._closing = True
+        if self._close_task is None:
+            self._close_task = asyncio.create_task(self._drain_mutations(tuple(self._mutations)))
+        cancelled = False
+        while not self._close_task.done():
+            try:
+                await asyncio.shield(self._close_task)
+            except asyncio.CancelledError:
+                cancelled = True
+        self._close_task.result()
+        if cancelled:
+            raise asyncio.CancelledError
+
+    async def _drain_mutations(self, mutations: tuple[asyncio.Task, ...]) -> None:
+        if mutations:
+            await asyncio.gather(*mutations, return_exceptions=True)
+
+    def _require_running(self):
+        if self._closing:
+            raise ApiError("runtime_stopping",
+                "Renulus is closing this profile. Wait for local work to finish", 503, True)
 
     async def activate(self, version: str) -> dict:
         return await self._mutate(lambda: self._activate(version))
 
     async def _mutate(self, operation: Callable[[], Awaitable[dict]]) -> dict:
+        self._require_running()
         async def own_mutation():
             async with self._mutation_lock:
-                if self._seal is not None:
+                self._require_running()
+                if self._seal is not None or self._acquisition_unresolved:
                     raise ApiError("harness_configuration_recovery_required",
                         "Configuration admission is sealed pending managed recovery.", 503, True)
                 return await operation()
@@ -101,6 +147,17 @@ class HarnessConfigurationController:
         if not task.cancelled():
             task.exception()  # Retrieve failures even when the HTTP observer has gone.
 
+    async def _acquire_seal(self, expected_effective: str | None) -> NewRunSeal:
+        self._acquisition_unresolved = True
+        try:
+            seal = await self.lifecycle.seal_new_runs(expected_effective=expected_effective)
+        except Exception as error:
+            # No returned handle: retain a recovery fence, never invent release/settlement.
+            raise _lifecycle_error(error) from None
+        self._seal = seal
+        self._acquisition_unresolved = False
+        return seal
+
     async def _activate(self, version: str) -> dict:
         expected = self.authority.activation_snapshot()
         if (expected["requested"] != version or expected["effective"] == version or expected["activating"]
@@ -108,8 +165,7 @@ class HarnessConfigurationController:
             raise ApiError("activation_conflict",
                 "Activate the requested version from a healthy effective configuration.", 409, True)
         self.provider.require_configuration_connection(expected["requested_configuration"].connection)
-        seal = await self.lifecycle.seal_new_runs(expected_effective=expected["effective"])
-        self._seal = seal
+        seal = await self._acquire_seal(expected["effective"])
         closed = False
         starting = False
         try:
@@ -159,10 +215,9 @@ class HarnessConfigurationController:
                     await self.lifecycle.stop_and_settle(seal)
                 except BaseException:
                     pass  # Retain seal/pointers even if the parent cannot prove settlement.
-            if not isinstance(error, Exception) or isinstance(error, ApiError):
+            if not isinstance(error, Exception):
                 raise
-            raise ApiError("harness_configuration_lifecycle_failed",
-                "The managed configuration lifecycle did not finish safely.", 503, True) from None
+            raise _lifecycle_error(error) from None
         finally:
             if not closed:
                 seal.release()

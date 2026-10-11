@@ -679,3 +679,179 @@ async def test_owner_shutdown_signal_is_preserved_while_admission_remains_closed
     assert error.value is signal
     assert authority.activation_snapshot()["admission_open"] is False
     assert lifecycle.roots_open is False
+
+
+class HeldFinalizerLifecycle(SyntheticLifecycle):
+    """Hold the owned activation's cleanup, after its HTTP observer exits."""
+    def __init__(self, authority):
+        super().__init__(authority)
+        self.stop_count = 0
+        self.finalizer_started = asyncio.Event()
+        self.finalizer_release = asyncio.Event()
+        self.finalizer_settled = asyncio.Event()
+        self.finalizer_cancelled = asyncio.Event()
+        self.on_start = lambda value: RegistryHealth(configuration_version=value.version,
+            grant_epoch=value.grant_epoch, registry_hash=value.spec.registry_hash, healthy=False)
+
+    async def stop_and_settle(self, seal):
+        self.stop_count += 1
+        if self.stop_count == 2:
+            self.finalizer_started.set()
+            try:
+                await self.finalizer_release.wait()
+            except asyncio.CancelledError:
+                self.finalizer_cancelled.set()
+                raise
+        boundary = await super().stop_and_settle(seal)
+        if self.stop_count == 2:
+            self.finalizer_settled.set()
+        return boundary
+
+
+@pytest.mark.asyncio
+async def test_close_drains_held_finalizer_after_cancelled_observer_and_seals_mutations(configured):
+    authority, spec, _, provider, _ = configured
+    candidate = authority.stage(spec.model_copy(update={"roles": (RolePolicy(purpose="summary"),)}))
+    lifecycle = HeldFinalizerLifecycle(authority)
+    controller = HarnessConfigurationController(authority, provider, lifecycle)
+    observer = asyncio.create_task(controller.activate(candidate))
+    close_waiter = None
+    try:
+        await asyncio.wait_for(lifecycle.finalizer_started.wait(), 2)
+        observer.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await observer
+        before = await controller.snapshot()
+        close_waiter = asyncio.create_task(controller.close())
+        await asyncio.sleep(0)
+        assert not close_waiter.done()
+        assert not lifecycle.finalizer_settled.is_set()
+        assert not lifecycle.finalizer_cancelled.is_set()
+        assert await asyncio.wait_for(controller.snapshot(), 2) == before
+        for operation in (controller.stage_roles((RolePolicy(purpose="explain"),)),
+                          controller.activate(candidate)):
+            with pytest.raises(ApiError) as error:
+                await asyncio.wait_for(operation, 2)
+            assert (error.value.code, error.value.status, error.value.retryable) == (
+                "runtime_stopping", 503, True)
+        assert not close_waiter.done()
+    finally:
+        lifecycle.finalizer_release.set()
+        await asyncio.wait_for(lifecycle.finalizer_settled.wait(), 2)
+        if close_waiter is not None:
+            assert await asyncio.wait_for(close_waiter, 2) is None
+    assert await controller.snapshot() == before
+    assert lifecycle.roots_open is False
+
+
+@pytest.mark.asyncio
+async def test_close_waiter_cancellation_cannot_finish_before_finalizer_settlement(configured):
+    authority, spec, _, provider, _ = configured
+    candidate = authority.stage(spec.model_copy(update={"roles": (RolePolicy(purpose="summary"),)}))
+    lifecycle = HeldFinalizerLifecycle(authority)
+    controller = HarnessConfigurationController(authority, provider, lifecycle)
+    observer = asyncio.create_task(controller.activate(candidate))
+    waiters = []
+    try:
+        await asyncio.wait_for(lifecycle.finalizer_started.wait(), 2)
+        observer.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await observer
+        waiters = [asyncio.create_task(controller.close()) for _ in range(2)]
+        await asyncio.sleep(0)
+        waiters[0].cancel()
+        await asyncio.sleep(0)
+        assert not waiters[0].done()
+        assert not waiters[1].done()
+        assert not lifecycle.finalizer_cancelled.is_set()
+        assert not lifecycle.finalizer_settled.is_set()
+        assert (await controller.snapshot())["admission_open"] is False
+    finally:
+        lifecycle.finalizer_release.set()
+        await asyncio.wait_for(lifecycle.finalizer_settled.wait(), 2)
+        results = await asyncio.wait_for(asyncio.gather(*waiters, return_exceptions=True), 2)
+    assert isinstance(results[0], asyncio.CancelledError)
+    assert results[1] is None
+    assert await controller.close() is None
+    assert not lifecycle.finalizer_cancelled.is_set()
+
+
+@pytest.mark.asyncio
+async def test_failed_seal_acquisition_sanitizes_and_retains_unknown_gate_recovery_fence(configured):
+    authority, spec, _, provider, _ = configured
+    candidate = authority.stage(spec.model_copy(update={"roles": (RolePolicy(purpose="summary"),)}))
+    lifecycle = SyntheticLifecycle(authority)
+    def failed_acquisition():
+        # Deliberately violate failure-atomic acquisition; no handle reaches the controller.
+        raise RuntimeError("SYNTHETIC-PRIVATE-ACQUISITION-CANARY")
+    lifecycle.on_seal = failed_acquisition
+    controller = HarnessConfigurationController(authority, provider, lifecycle)
+    before = await controller.snapshot()
+    with pytest.raises(ApiError) as error:
+        await controller.activate(candidate)
+    assert (error.value.code, error.value.status, error.value.retryable) == (
+        "harness_configuration_lifecycle_failed", 503, True)
+    assert "CANARY" not in error.value.message
+    assert await controller.snapshot() == before
+    for operation in (controller.stage_roles((RolePolicy(purpose="explain"),)),
+                      controller.activate(candidate)):
+        with pytest.raises(ApiError) as blocked:
+            await operation
+        assert (blocked.value.code, blocked.value.status, blocked.value.retryable) == (
+            "harness_configuration_recovery_required", 503, True)
+    assert lifecycle.events == ["seal"]
+    assert lifecycle.roots_open is False
+    assert not lifecycle.seals[0].released
+    assert await controller.close() is None
+    assert await controller.snapshot() == before
+    assert lifecycle.events == ["seal"]
+
+
+@pytest.mark.asyncio
+async def test_close_rejects_queued_stage_but_allows_running_activation_to_finish(configured):
+    authority, spec, _, provider, _ = configured
+    candidate = authority.stage(spec.model_copy(update={"roles": (RolePolicy(purpose="explain",
+        output_tokens=1024),)}))
+    lifecycle = SyntheticLifecycle(authority)
+    lifecycle.inspect_gate = asyncio.Event()
+    controller = HarnessConfigurationController(authority, provider, lifecycle)
+    observer = asyncio.create_task(controller.activate(candidate))
+    tasks = [observer]
+    try:
+        await asyncio.wait_for(lifecycle.inspect_started.wait(), 2)
+        queued = asyncio.create_task(controller.stage_roles((RolePolicy(purpose="summary"),)))
+        tasks.append(queued)
+        await asyncio.sleep(0)
+        assert not queued.done()
+        before = await controller.snapshot()
+        closer = asyncio.create_task(controller.close())
+        tasks.append(closer)
+        await asyncio.sleep(0)
+        assert not closer.done()
+        assert await controller.snapshot() == before
+    finally:
+        lifecycle.inspect_gate.set()
+        results = await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), 2)
+    assert results[0]["effective"] == candidate
+    assert isinstance(results[1], ApiError)
+    assert (results[1].code, results[1].status, results[1].retryable) == (
+        "runtime_stopping", 503, True)
+    assert results[2] is None
+    snapshot = await controller.snapshot()
+    assert snapshot["requested"] == snapshot["effective"] == candidate
+    assert snapshot["admission_open"] is True
+    assert lifecycle.events == ["seal", "inspect-settled", "stop-settled", "start-gated", "release"]
+
+
+@pytest.mark.asyncio
+async def test_close_without_owned_mutations_is_idempotent_and_preserves_snapshot(configured):
+    authority, _, _, _, controller = configured
+    before = await controller.snapshot()
+    assert await controller.close() is None
+    assert await controller.close() is None
+    assert await controller.snapshot() == before
+    with pytest.raises(ApiError) as error:
+        await controller.stage_roles((RolePolicy(purpose="summary"),))
+    assert (error.value.code, error.value.status, error.value.retryable) == (
+        "runtime_stopping", 503, True)
+    assert authority.status()["admission_open"] is True
