@@ -150,6 +150,34 @@ async def test_public_http_saved_migration_preserves_legacy_facade_and_strict_re
         assert counter.calls == observer.calls == transports == admissions == []
 
 
+async def test_stale_completed_migration_does_not_block_a_valid_saved_send(tmp_path, offline, monkeypatch):
+    identifier, public, draft, original = await saved_legacy(tmp_path)
+    apps = []
+    original_create = model_fixture.create_app
+    def observed_app(*args, **kwargs):
+        app = original_create(*args, **kwargs)
+        apps.append(app)
+        return app
+    monkeypatch.setattr(model_fixture, 'create_app', observed_app)
+    async with learning_models(tmp_path) as (services, owner, authority, registries, transports,
+            admissions, counter, observer):
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=apps[-1]), base_url='http://testserver') as client:
+            url = '/api/v1/conversations/learning/' + identifier
+            migrated = await client.post(url + '/migrate', json={'expected_revision': public['revision']})
+            assert migrated.status_code == 200 and migrated.json()['retirement'] == 'retired'
+            stale = await client.post(url + '/migrate', json={'expected_revision': public['revision'] - 1})
+            assert stale.status_code == 409 and stale.json()['error']['code'] == 'conversation_revision_conflict'
+            counter.release.set()
+            observer.release.set()
+            async with asyncio.timeout(40):
+                sent = await client.post(url + '/messages', json={'expected_revision': public['revision'],
+                    'text': PROMPT, 'request_id': 'after-stale-migration'})
+            assert sent.status_code == 200, sent.text
+            events = [json.loads(line.split('data: ', 1)[1]) for line in sent.text.splitlines() if line.startswith('data: ')]
+            assert events[-1]['type'] == 'completed', events[-1]
+        assert len(counter.calls) == len(observer.calls) == 1
+
+
 async def test_transfer_observation_timeout_keeps_root_gate_until_exact_reconciliation(tmp_path, offline):
     identifier, public, draft, original = await saved_legacy(tmp_path)
     async with learning_models(tmp_path) as (services, owner, authority, registries, transports,

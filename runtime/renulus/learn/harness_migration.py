@@ -172,7 +172,8 @@ class HarnessSavedMigration:
         self.transfer = transfer
         self.check_active_in = check_active_in
 
-    async def migrate_saved(self, thread_id: str, *, expected_revision: int) -> MigrationResult:
+    async def migrate_saved(self, thread_id: str, *, expected_revision: int,
+                            on_prepared: Callable[[], None] | None = None) -> MigrationResult:
         with self.db.transaction() as conn:
             snapshot = self.snapshot_in(conn, thread_id, expected_revision=expected_revision)
             self.check_current_in(conn, snapshot)
@@ -189,6 +190,10 @@ class HarnessSavedMigration:
                     self.check_active_in(conn, record)
                 else:
                     self._same_source(record, candidate)
+        # The caller may release a fresh ingress seal when validation refuses
+        # before this point. A prepared journal still owns transfer/recovery.
+        if on_prepared is not None:
+            on_prepared()
         return await self._resume(record)
 
     async def reconcile_migration(self, migration_id: str) -> MigrationResult:

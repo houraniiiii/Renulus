@@ -215,3 +215,19 @@ still retained. Its focused 12-pass receipt is separate from the six-case Owner
 run. Maximum-transfer capacity, a real orphaned legacy crash and the hidden
 desktop migration journey remain open; native child assembly has not changed
 the two-tool registry used by these receipts.
+
+Independent Standards review of b9fda107 reports zero findings. Spec found a
+P2: an invalid repeated migration could retain a fresh root seal after an
+already completed transfer. stale-seal-red01.xml reproduces the following
+valid Send409busy (1 failure,14.04s). The coordinator now marks preparation
+only after canonical validation/reservation commits, before transfer IO. The
+Owner releases only a fresh seal on refusal before that marker; existing
+uncertain-transfer seals and owners remain retained. stale-seal-green03.xml
+has1 pass,15.62s, and green02 separately proves the original retained-transfer
+guard (1 pass,22.049s). green02's other case failed candidate readiness before
+the Owner ran (49.688s), and is not a production guard result.
+
+The first green01 attempt omitted its existing synthetic counter/HTTP release
+gates and was aborted; its exact synthetic descendants were terminated and
+no clean-settlement result is claimed. The bounded corrected test uses both
+public release gates. Receipt qualifications and the aborted state are retained.

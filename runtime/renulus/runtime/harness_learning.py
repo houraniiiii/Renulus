@@ -116,7 +116,8 @@ class HarnessLearningOwner:
     async def _migrate_saved(self, thread_id, expected_revision):
         if self._closing:
             raise ApiError('runtime_stopping', 'The learning runtime is closing.', 503, True)
-        if self._migration_seal is None:
+        fresh_seal = self._migration_seal is None
+        if fresh_seal:
             seal = self.seal_new_runs(expected_effective=self.configuration_id)
             self._migration_seal, self._migration_thread = seal, thread_id
         else:
@@ -124,15 +125,19 @@ class HarnessLearningOwner:
             self.require_root_seal(seal)
             if self._migration_thread != thread_id:
                 raise ApiError('harness_configuration_busy', 'Reconcile the retained saved migration first.', 409, True)
-        retired = False
+        retired = prepared = False
+        def on_prepared():
+            nonlocal prepared
+            prepared = True
         try:
-            result = await self.saved_migration.migrate_saved(thread_id, expected_revision=expected_revision)
+            result = await self.saved_migration.migrate_saved(thread_id, expected_revision=expected_revision,
+                on_prepared=on_prepared)
             retired = result.state == 'active' and result.retirement == 'retired'
             return result
         finally:
             with self.db.transaction() as conn:
                 record = self.repo.migration_journal.find_in(conn, thread_id=thread_id)
-            if not self.saved_transfer.status()['active'] and (retired or record is None):
+            if not self.saved_transfer.status()['active'] and (retired or record is None or fresh_seal and not prepared):
                 seal.release()
                 if self._migration_seal is seal:
                     self._migration_seal = self._migration_thread = None
