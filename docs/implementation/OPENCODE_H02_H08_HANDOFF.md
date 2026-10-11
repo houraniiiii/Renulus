@@ -218,6 +218,20 @@ no prompt, model dispatch, retry, source repair or fixture change. Owner/test
 remain two-file WIP on local `817ebbdd`; Stop-negative coverage remains unopened.
 No positive child flow, M5 publication or H07 acceptance is claimed.
 
+Retained public readback `G:/rh07a/e/positive07-native-read01.json` observes the
+child as failed/settled with `provider.invalid-request`, agent evidence-review,
+and its exact parent/session/input identities. It made one get and one messages
+read, no prompt/model/recovery request, remained policy-blocked, then closed
+with actual process/pipe settlement and Domain active0. The sanitized error
+does not identify a specific predicate dynamically. Source inspection confirms
+that pinned native model-request adds `x-opencode-parent-session-id` and
+`x-parent-session-id` for children, while both gateway checkPrimary and provider
+adapter preparation reject those names. Arendt owns the narrow three-path
+compatibility regression/repair: recognize only those native correlation
+headers, preserve the existing strip/reconstruction before Python dispatch,
+and leave Python's outbound header allowlist and all authority unchanged.
+No further connected rerun or Owner edits are released pending that repair.
+
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
 expectation-disposition reviews clear. H06–H08 remain open. Required unmet
