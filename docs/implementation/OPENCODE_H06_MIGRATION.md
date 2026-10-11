@@ -108,6 +108,15 @@ remain open. Account/TLS/package scopes are unchanged.
 
 ## Native logical transfer port
 
+The canonical HarnessSavedHistory adapter reads original saved Learn rows and
+terminal outcomes in its caller's transaction, preserving exact IDs, text,
+citations and timestamps. Its current check pins owner/draft/project revisions,
+policy, context epoch, deletion frontier and the active paired manifest.
+snapshot-red01.xml records the missing-module red; snapshot-green01.xml records
+one pass,5.897s through genuine public legacy publication and draft invalidation.
+Independent Standards and Spec reviews of both held source files have zero
+material findings. Native transfer and continuation acceptance remain open.
+
 Sartre owns the new native session-transfer module; Ohm owns the canonical
 migration state machine. Trusted TransferFrame carries profileId/storeId/
 generation/operationId/attemptId separately from model payloads. Commands:
