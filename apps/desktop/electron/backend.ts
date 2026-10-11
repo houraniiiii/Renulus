@@ -6,6 +6,7 @@ import { backendEnvironment, type DesktopProfile } from './profile';
 import { stopBackendChild, waitForBackendExit } from './upstream/backend-child';
 import { runBackendStartStep } from './upstream/backend-start-cancellation';
 import { validateHarnessSettingsFixture, type HarnessSettingsFixtureLaunch } from './harness-settings-fixture';
+import { validateHarnessLearningFixture, type HarnessLearningFixtureLaunch } from './harness-learning-fixture';
 
 export interface ManagedBackend { port: number; child: ChildProcess | null; owned: boolean; stop(): Promise<void> }
 export async function freeLoopbackPort(): Promise<number> {
@@ -16,9 +17,11 @@ export async function freeLoopbackPort(): Promise<number> {
   return port;
 }
 
-export async function startBackend(options: { profile: DesktopProfile; token: string; workspace: string; resources: string; packaged: boolean; signal: AbortSignal; settingsFixture?: HarnessSettingsFixtureLaunch; onOwnedChild?: (backend: ManagedBackend) => void }): Promise<ManagedBackend> {
+export async function startBackend(options: { profile: DesktopProfile; token: string; workspace: string; resources: string; packaged: boolean; signal: AbortSignal; settingsFixture?: HarnessSettingsFixtureLaunch; learningFixture?: HarnessLearningFixtureLaunch; onOwnedChild?: (backend: ManagedBackend) => void }): Promise<ManagedBackend> {
   const { profile, token, workspace, resources, packaged, signal } = options;
   signal.throwIfAborted();
+  if (options.learningFixture !== undefined && options.settingsFixture !== undefined) throw new Error('Settings and learning fixtures are mutually exclusive.');
+  if (options.learningFixture !== undefined) validateHarnessLearningFixture(options.learningFixture, profile, workspace, packaged);
   if (options.settingsFixture) validateHarnessSettingsFixture(options.settingsFixture, profile, workspace, packaged);
   if (!packaged && process.env.RENULUS_BACKEND_URL) {
     const url = new URL(process.env.RENULUS_BACKEND_URL);
@@ -38,8 +41,8 @@ export async function startBackend(options: { profile: DesktopProfile; token: st
   const command = packaged ? path.join(bundleRoot, 'python', 'python.exe') : python;
   if (!path.isAbsolute(command) || !existsSync(command)) throw new Error('The Renulus Python runtime is not available. Set RENULUS_PYTHON for development.');
   const port = await runBackendStartStep(signal, freeLoopbackPort);
-  const fixture = options.settingsFixture;
-  const args = [...(fixture ? [path.join(workspace, 'tools/renulus-control/harness-settings-backend.py')]
+  const fixture = options.learningFixture ?? options.settingsFixture;
+  const args = [...(fixture ? [path.join(workspace, 'tools/renulus-control', options.learningFixture ? 'harness-learning-backend.py' : 'harness-settings-backend.py')]
     : packaged ? ['-I', '-B', '-X', 'utf8', path.join(bundleRoot, 'bootstrap.py')] : ['-m', 'renulus.server']),
     '--profile', profile.root, '--port', String(port), ...(packaged ? ['--source-root', bundleRoot] : []),
     ...(fixture ? ['--harness-startup', fixture.startupDocument, '--harness-startup-sha256', fixture.startupSha256, '--helper-assets', fixture.helperAssets] : [])];

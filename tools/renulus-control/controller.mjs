@@ -31,23 +31,26 @@ function absolute(value, label) {
   return path.resolve(value);
 }
 export function parseCli(argv) {
-  const names = { '--repo': 'repo', '--python': 'python', '--executable': 'executable', '--state-root': 'stateRoot', '--helper-assets': 'helperAssets', '--fixture-root': 'fixtureRoot', '--harness-settings-fixture': 'harnessSettingsFixture' };
+  const names = { '--repo': 'repo', '--python': 'python', '--executable': 'executable', '--state-root': 'stateRoot', '--helper-assets': 'helperAssets', '--fixture-root': 'fixtureRoot', '--harness-settings-fixture': 'harnessSettingsFixture', '--harness-learning-fixture': 'harnessLearningFixture' };
   const result = { stateRoot: path.join(os.tmpdir(), 'rn-c') };
   for (let i = 0; i < argv.length; i += 2) {
     const key = names[argv[i]];
     check(key && i + 1 < argv.length && !argv[i + 1].startsWith('--') && !Object.hasOwn(result, key === 'stateRoot' ? '_stateRoot' : key), 'invalid_cli', 'Use --repo, --python, and optional --executable, --state-root, --helper-assets, --fixture-root once each.');
-    result[key] = key === 'harnessSettingsFixture' ? argv[i + 1] : key === 'fixtureRoot' ? fixtureRootPath(argv[i + 1]) : absolute(argv[i + 1], argv[i]);
+    result[key] = ['harnessSettingsFixture', 'harnessLearningFixture'].includes(key) ? argv[i + 1] : key === 'fixtureRoot' ? fixtureRootPath(argv[i + 1]) : absolute(argv[i + 1], argv[i]);
     if (key === 'stateRoot') result._stateRoot = true;
   }
   delete result._stateRoot;
   check(result.repo && (result.python || result.executable), 'invalid_cli', '--repo and either --python (source mode) or --executable (packaged mode) are required absolute paths.');
-  settingsFixtureConfiguration(result);
+  harnessFixtureConfiguration(result);
   return result;
 }
 
-function settingsFixtureConfiguration(config) {
-  if (config.harnessSettingsFixture === undefined) return;
-  check(config.harnessSettingsFixture === 'v1' && config.python && config.helperAssets && !config.executable, 'invalid_cli', 'The fixed --harness-settings-fixture v1 requires source --python and --helper-assets.');
+function harnessFixtureConfiguration(config) {
+  check(config.harnessSettingsFixture === undefined || config.harnessLearningFixture === undefined, 'invalid_cli', 'Settings and learning fixtures are mutually exclusive.');
+  for (const [key, flag] of [['harnessSettingsFixture', '--harness-settings-fixture'], ['harnessLearningFixture', '--harness-learning-fixture']]) {
+    if (config[key] === undefined) continue;
+    check(config[key] === 'v1' && config.python && config.helperAssets && !config.executable, 'invalid_cli', 'The fixed ' + flag + ' v1 requires source --python and --helper-assets.');
+  }
 }
 
 // This is an allowlist, deliberately not a copy of the invoking account's environment.
@@ -58,6 +61,7 @@ export function isolatedEnvironment(inherited, config, session) {
   return { ...result, PATH: path.join(systemRoot, 'System32'), TEMP: session.temporary, TMP: session.temporary,
     RENULUS_BACKGROUND_TEST: '1', RENULUS_BACKGROUND_OWNER_PID: String(process.pid), RENULUS_PROFILE: session.profile, ...(config.python ? { RENULUS_PYTHON: config.python } : {}),
     ...(session.settingsFixture ? { RENULUS_BACKGROUND_HARNESS_SETTINGS: JSON.stringify(session.settingsFixture) } : {}),
+    ...(session.learningFixture ? { RENULUS_BACKGROUND_HARNESS_LEARNING: JSON.stringify(session.learningFixture) } : {}),
     HF_HUB_OFFLINE: '1', TRANSFORMERS_OFFLINE: '1', HF_HUB_DISABLE_TELEMETRY: '1', DO_NOT_TRACK: '1' };
 }
 
@@ -474,7 +478,7 @@ export class RenulusController {
     check(config.python || config.executable, 'invalid_cli', 'Source mode requires --python; packaged mode uses its fixed bundled interpreter.');
     for (const key of ['executable', 'helperAssets']) if (config[key]) this.config[key] = absolute(config[key], '--' + key);
     if (config.fixtureRoot !== undefined) this.config.fixtureRoot = fixtureRootPath(config.fixtureRoot);
-    settingsFixtureConfiguration(this.config);
+    harnessFixtureConfiguration(this.config);
     this.launch = dependencies.launch ?? defaultLaunch;
     this.preflight = dependencies.preflight ?? launchContract;
     this.inspect = dependencies.inspect ?? inspectProcesses;
@@ -498,10 +502,10 @@ export class RenulusController {
   }
   async prepare(signal) {
     if (this.session) return;
-    if (this.config.harnessSettingsFixture) {
-      check(process.versions.node === '26.4.0', 'fixture_runtime', 'The Settings fixture requires the reviewed Node 26.4.0 controller runtime.');
+    if (this.config.harnessSettingsFixture || this.config.harnessLearningFixture) {
+      check(process.versions.node === '26.4.0', 'fixture_runtime', 'Fixed harness fixtures require the reviewed Node 26.4.0 controller runtime.');
       await noLinks(this.config.helperAssets);
-      check((await lstat(this.config.helperAssets)).isDirectory(), 'helper_assets_missing', 'Settings fixture helper assets must be an existing reviewed directory.');
+      check((await lstat(this.config.helperAssets)).isDirectory(), 'helper_assets_missing', 'Fixed harness fixture helper assets must be an existing reviewed directory.');
     }
     if (this.config.fixtureRoot) this.fixtureCatalog = await loadFixtureCatalog(this.config, signal);
     const stateRoot = this.config.stateRoot;
@@ -526,8 +530,8 @@ export class RenulusController {
     this.session = { directory, profile: path.join(directory, 'p'), temporary: path.join(directory, 't'), outputs: path.join(directory, 'out') };
     for (const child of [this.session.profile, this.session.temporary, this.session.outputs]) await mkdir(child);
     await writeFile(path.join(directory, 'session.json'), JSON.stringify({ format: 'renulus-control-session-v1', syntheticOnly: true, profile: this.session.profile }), { flag: 'wx' });
-    this.session.desktop = this.config.harnessSettingsFixture ? path.join(directory, 'd') : path.join(this.session.profile, 'desktop');
-    if (this.config.helperAssets && !this.config.harnessSettingsFixture) this.helpers = await seedHelpers(this.config.repo, this.config.helperAssets, this.session.profile, signal);
+    this.session.desktop = this.config.harnessSettingsFixture || this.config.harnessLearningFixture ? path.join(directory, 'd') : path.join(this.session.profile, 'desktop');
+    if (this.config.helperAssets && !this.config.harnessSettingsFixture && !this.config.harnessLearningFixture) this.helpers = await seedHelpers(this.config.repo, this.config.helperAssets, this.session.profile, signal);
     this.log('session', 'Created a fresh owned synthetic profile.');
   }
   run(name, args = {}, { signal } = {}) {
@@ -700,9 +704,9 @@ export class RenulusController {
     this.fault = null; this.origin = null;
     await budget.wait(this.prepare(budget.signal));
     const contract = await budget.wait(this.preflight(this.config));
-    if (this.config.harnessSettingsFixture) {
+    if (this.config.harnessSettingsFixture || this.config.harnessLearningFixture) {
       const session = this.session, number = this.startupDocuments.length + 1;
-      const identity = 'synthetic-settings-' + path.basename(session.directory);
+      const identity = (this.config.harnessLearningFixture ? 'synthetic-learning-' : 'synthetic-settings-') + path.basename(session.directory);
       const document = { version: 1, process: { node_executable: process.execPath,
         host_entry: path.join(this.config.repo, 'packages/harness/src/main.mjs'),
         profile_root: session.profile, profile_id: identity, store_id: identity + '-runtime',
@@ -712,9 +716,11 @@ export class RenulusController {
         attempt_timeout: 45, initialize_new: number === 1 };
       const raw = JSON.stringify(document), startupDocument = path.join(session.outputs, 'startup-' + number + '.json');
       await budget.wait(writeFile(startupDocument, raw, { flag: 'wx' }));
-      session.settingsFixture = Object.freeze({ kind: 'harness-settings-synthetic-v1', startupDocument,
+      const fixture = Object.freeze({ kind: this.config.harnessLearningFixture ? 'harness-learning-synthetic-v1' : 'harness-settings-synthetic-v1', startupDocument,
         startupSha256: createHash('sha256').update(raw).digest('hex'), helperAssets: this.config.helperAssets });
-      this.startupDocuments.push({ path: startupDocument, sha256: session.settingsFixture.startupSha256 });
+      if (this.config.harnessLearningFixture) session.learningFixture = fixture;
+      else session.settingsFixture = fixture;
+      this.startupDocuments.push({ path: startupDocument, sha256: fixture.startupSha256 });
     }
     this.env = isolatedEnvironment(process.env, this.config, this.session);
     const started = Date.now();

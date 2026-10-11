@@ -6,6 +6,7 @@ import path from 'node:path';
 import { allowedAuthorizationUrl, allowedSourceUrl, resolveProfile, type DesktopProfile } from './profile';
 import { startBackend, type ManagedBackend } from './backend';
 import { resolveHarnessSettingsFixture, type HarnessSettingsFixtureLaunch } from './harness-settings-fixture';
+import { resolveHarnessLearningFixture, type HarnessLearningFixtureLaunch } from './harness-learning-fixture';
 import { startFrontend } from './frontend';
 import { createStartupWindow } from './startup-window';
 import { isBuiltinPdfResource } from './pdf-resources';
@@ -38,12 +39,14 @@ async function openExternal(url: string, target: 'source' | 'authorization') {
 }
 let profile: DesktopProfile;
 let settingsFixture: HarnessSettingsFixtureLaunch | undefined;
+let learningFixture: HarnessLearningFixtureLaunch | undefined;
 try {
   if (backgroundTest && (!process.env.RENULUS_PROFILE || !path.isAbsolute(process.env.RENULUS_PROFILE))) throw new Error('Background tests require an explicit absolute synthetic RENULUS_PROFILE.');
   if (backgroundTest && process.env.RENULUS_BACKEND_URL) throw new Error('Background tests must launch their own managed backend.');
   if (backgroundOwner !== undefined && (!Number.isSafeInteger(backgroundOwner) || backgroundOwner <= 0 || backgroundOwner === process.pid)) throw new Error('The background owner must be a valid controller process.');
   profile = resolveProfile(process.env.RENULUS_PROFILE, app.isPackaged, process.env.LOCALAPPDATA);
   ({ profile, settingsFixture } = resolveHarnessSettingsFixture(profile, app.isPackaged, workspace));
+  ({ profile, learningFixture } = resolveHarnessLearningFixture(profile, app.isPackaged, workspace));
 }
 catch (error) { reportNativeError('Renulus could not start', (error as Error).message); app.exit(1); throw error; }
 mkdirSync(profile.desktop, { recursive: true }); mkdirSync(profile.session, { recursive: true });
@@ -186,7 +189,7 @@ if (ownsInstance) void app.whenReady().then(async () => {
     openingWindow = createStartupWindow(profile.instance, path.join(__dirname, '../dist/renulus.ico'), lifetime.signal, backgroundTest);
     const openingOwner = openingWindow;
     openingOwner.on('closed', () => { if (openingWindow === openingOwner) openingWindow = null; });
-    backend = await startBackend({ profile, token, workspace, resources: process.resourcesPath, packaged: app.isPackaged, signal: lifetime.signal, settingsFixture, onOwnedChild: handle => { backend = handle; } });
+    backend = await startBackend({ profile, token, workspace, resources: process.resourcesPath, packaged: app.isPackaged, signal: lifetime.signal, settingsFixture, learningFixture, onOwnedChild: handle => { backend = handle; } });
     lifetime.signal.throwIfAborted();
     frontend = await startFrontend(path.join(__dirname, '../dist'), backend.port, token);
     lifetime.signal.throwIfAborted(); createWindow();
