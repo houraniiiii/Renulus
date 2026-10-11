@@ -35,8 +35,12 @@ finalizer. Only a synchronous stop signal is registered with Services. Its
 independently read `library/bootstrap-close/final-green06.xml` records12
 passes,41 deselected, zero failures/errors/skips,73.211 seconds. Those cases
 use actual dedicated Windows issuers/Authority/Services and synthetic native
-ports. Independent focused closure review remains pending. The unchanged
-44-case cohort was not repeated.
+ports. Independent focused Standards and Spec reviews close that original
+drain P2. Spec found a separate error-classification P2: production runtime
+cleanup signals Services stopping, and the post-cleanup freshness check can
+replace the initiating startup failure with runtime_stopping. Sartre owns a
+bounded public red/repair in the same coordinator/test paths. Connected startup
+is held for this closure; the unchanged44-case cohort was not repeated.
 
 Parent entry shutdown now awaits that public close edge before Services
 dependencies, retaining the serving loop through repeated observer cancellation.
@@ -83,13 +87,19 @@ zero failures/errors/skips,186.881 seconds, including actual zero-inference
 SDK isolated inspection, gated live startup, generation reuse and settlement.
 Standards review reports zero material findings. Spec found one P2: an optional
 registry factory could return a registry backed by a second ProviderManager.
-Arendt owns the two-file public red/identity-guard repair; no factory path is
-treated as accepted while that finding remains open. The adapter composes
-existing Owner/Memory/controller/lifecycle; it supplies no deployment evidence.
+The coherent two-file repair `68ae161c` is integrated as `7877f166`, retains
+the typed product before validating its captured-manager identity and closes
+rejected products through the existing partial drain. Public manager-red01 has
+1 failure in9.807s, manager-green01 has1 pass in5.885s, and the affected
+manager-affected-green01.xml has5 passes, zero failures/errors/skips,43.342s,
+including actual SDK lifecycle. Independent focused Spec re-review closes
+that P2. The original26-pass run predates this guard; it was not repeated. The
+adapter composes existing Owner/Memory/controller/lifecycle and supplies no
+deployment evidence.
 
 Entry `b8327836..75128590` independently passed both review axes, apart from
-the separately tracked coordinator drain. Dynamic lanes: Arendt owns only the
-adapter factory repair; Turing retains the distinct test-only actual
+the separately tracked coordinator drain. Dynamic lanes: Arendt resumes a
+source-only H05 separately admitted extraction-port proposal; Turing retains the distinct test-only actual
 initial/reopen journey pending published close/join and review closure. Ohm
 owns the fixed source-only hidden Settings launch extension: literal v1
 selector, sibling desktop state and reviewed helper provisioning after issuer
