@@ -3,12 +3,14 @@
 from dataclasses import dataclass, replace
 import asyncio
 import inspect
+import json
 from contextlib import closing
 from threading import Event
 from typing import Callable
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from renulus.contracts import ApiError, ContextScope, Scope
+from renulus.design_c_contracts import Identity, canonical_digest
 from renulus.storage.assessment_policy import require_assistance
 from renulus.storage.invalidation import context_epoch_in
 
@@ -149,6 +151,43 @@ class HarnessLibrary:
             raise ApiError("harness_publication_transaction_required", "Validate evidence in the publication transaction", 409)
         self._check(authority, conn)
         self._require_evidence(passages, authority, conn=conn)
+
+    def resolve_dependency(self, conn, identity: Identity, *, authority: LibraryAuthority) -> str | None:
+        """Resolve a library_revision in the caller's canonical snapshot.
+
+        This composes into an owner's dependency resolver, so it deliberately
+        does not recurse through guard or record_dependencies. No body, original,
+        index or engine work occurs; None means unavailable in this host scope.
+        """
+        if (identity.type != "library_revision" or _local(authority.cancelled)
+                or authority.revision_ids is not None and identity.id not in authority.revision_ids):
+            return None
+        require_assistance(conn, expected_revision=authority.policy_revision)
+        if context_epoch_in(conn) != authority.context_epoch:
+            return None
+        row = conn.execute("SELECT r.id,r.document_id,r.sha256,r.metadata_json,r.rights_json,d.title,d.source_id "
+            "FROM knowledge_revisions r JOIN knowledge_documents d ON d.active_revision=r.id "
+            "WHERE r.id=? AND r.status='ready' AND d.deleted_at IS NULL AND d.reserved=0 "
+            "AND d.scope_kind='personal-library' AND (d.scope_entity IS NULL OR d.scope_entity=?)",
+            (identity.id, authority.scope.entity_id)).fetchone()
+        if row is None:
+            return None
+        passage = conn.execute("SELECT p.id,p.locators_json FROM knowledge_passages p WHERE p.revision_id=? "
+            "AND NOT EXISTS (SELECT 1 FROM json_each(p.locators_json) l JOIN "
+            "json_each(?, '$.excluded_pages') x ON json_extract(l.value, '$.page')=x.value) "
+            "ORDER BY p.ordinal LIMIT 1", (identity.id, row["metadata_json"])).fetchone()
+        if passage is None:
+            return None
+        checked = self.repository.check_evidence([{"id": passage["id"],
+            "document_id": row["document_id"], "document_revision": identity.id}],
+            scope=authority.scope, topic_id=authority.topic_id, current_only=authority.current_only, conn=conn)
+        if checked["eligible_ids"] != [passage["id"]] or _local(authority.cancelled):
+            return None
+        return canonical_digest({"identity": identity.model_dump(mode="json"),
+            "document_id": row["document_id"], "sha256": row["sha256"], "title": row["title"],
+            "source_id": row["source_id"], "metadata": json.loads(row["metadata_json"]),
+            "rights": json.loads(row["rights_json"]), "passage_id": passage["id"],
+            "locators": json.loads(passage["locators_json"])})
 
     async def execute(self, command, arguments, authority):
         method = {"library.retrieve": self.retrieve, "library.citation": self.open_citation}.get(command)

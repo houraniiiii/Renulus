@@ -17,7 +17,7 @@ from renulus.services import Services
 from renulus.storage import AppPaths, Database
 from renulus.runtime.harness_library import HarnessLibrary, LibraryAuthority
 from renulus.assessment.attempt_models import HelpRequest, SaveDraft, StartAttempt
-from renulus.design_c_contracts import QuestionSnapshot, SavedTestVersion
+from renulus.design_c_contracts import Identity, QuestionSnapshot, SavedTestVersion
 from renulus.server import create_app
 from renulus.storage import utc_now
 from renulus.storage.study_help import StudyHelpContext, require_context_in
@@ -411,3 +411,26 @@ def test_cancelled_publication_and_missing_transaction_are_refused(library):
         with repo.db.connect() as conn:
             adapter.validate_publication([], authority(), conn=conn)
     assert caught.value.code == "harness_publication_transaction_required"
+
+
+def test_library_revision_dependency_resolver_is_local_and_revocation_sensitive(library, monkeypatch):
+    repo, adapter = library
+    doi = "10.1234/h02-local-dependency"
+    source = note(repo, "Synthetic transplant source for a canonical local dependency token.",
+        metadata=SourceMetadata(source_id="L02", doi=doi))
+    def forbidden(*args, **kwargs):
+        raise AssertionError("A local dependency resolver cannot recurse into runs or do engine/file work")
+    trusted = authority(source["revision_id"], guard=forbidden, record_dependencies=forbidden)
+    for owner, name in [(repo, "retrieve"), (repo, "original"), (repo, "citation"),
+                        (repo.embedder, "embed"), (repo.index, "search")]:
+        monkeypatch.setattr(owner, name, forbidden)
+    identity = Identity(type="library_revision", id=source["revision_id"])
+    with repo.db.transaction() as conn:
+        token = adapter.resolve_dependency(conn, identity, authority=trusted)
+        assert isinstance(token, str) and len(token) == 64
+        assert adapter.resolve_dependency(conn, identity, authority=trusted) == token
+        assert adapter.resolve_dependency(conn, identity, authority=authority()) is None
+        assert adapter.resolve_dependency(conn, Identity(type="goal", id="unrelated"), authority=trusted) is None
+    repo.update_source_status(status_event(doi, retracted=True))
+    with repo.db.transaction() as conn:
+        assert adapter.resolve_dependency(conn, identity, authority=trusted) is None
