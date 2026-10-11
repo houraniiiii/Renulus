@@ -12,7 +12,7 @@ import { SessionRestart } from "@opencode/core/session/execution/restart";
 import { SessionExecution } from "@opencode/core/session/execution";
 import { SessionStore } from "@opencode/core/session/store";
 import { Job } from "@opencode/core/job";
-import { createSessionTransfer, type TransferFrame, type TransferCommand, type StagePayload, type ImportTarget } from "./session-transfer.ts";
+import { createSessionTransfer, nativeSessionId, type TransferFrame, type TransferCommand, type StagePayload, type ImportTarget } from "./session-transfer.ts";
 import { SessionModelRequest } from "@opencode/core/session/model-request";
 import { SessionRunnerModel } from "@opencode/core/session/runner/model";
 import { SessionContext as NativeSessionContext } from "@opencode/core/session/context";
@@ -531,6 +531,31 @@ export async function openHarness(options: HarnessOptions) {
         // A lost acknowledgement stays uncertain and must never mint a new input.
         await options.admitInput?.(binding);
         requireReady();
+        if (options.admitInput) {
+          const sessionID = Session.ID.make(input.sessionId);
+          const current = await run(sdk.sessions.get({ sessionID }));
+          requireReady();
+          const metadata = current.metadata;
+          if (metadata?.legacyConversationId !== undefined || metadata?.bundleDigest !== undefined) {
+            if (Object.keys(metadata).sort().join(",") !== "bundleDigest,legacyConversationId,lineage,operationId,renulusProfile,renulusStore" ||
+                metadata.renulusProfile !== options.profileId || metadata.renulusStore !== options.storeId ||
+                typeof metadata.legacyConversationId !== "string" || !metadata.legacyConversationId ||
+                typeof metadata.bundleDigest !== "string" || !/^[a-f0-9]{64}$/.test(metadata.bundleDigest) ||
+                typeof metadata.operationId !== "string" || !metadata.operationId || metadata.lineage !== "unknown" ||
+                nativeSessionId(options.profileId, options.storeId, metadata.legacyConversationId) !== input.sessionId ||
+                current.parentID !== undefined || current.fork !== undefined || current.location.directory !== workspace)
+              throw new Error("native_migrated_identity_conflict");
+            // Import remains inert. Only an authenticated new root admission
+            // selects the learning agent and replaces its session deny fence.
+            await run(sdk.sessions.switchAgent({ sessionID, agent: Agent.ID.make("renulus") }));
+            requireReady();
+            await run(sdk.sessions.update({ sessionID, permissions: [
+              { action: "*", resource: "*", effect: "deny" },
+              ...(options.library ? [{ action: "renulus.library", resource: "*", effect: "allow" as const }] : []),
+            ] }));
+            requireReady();
+          }
+        }
         bindings.set(input.sessionId, binding);
         const item = await run(sdk.sessions.prompt({
           sessionID: Session.ID.make(input.sessionId), id: inputId, text: input.text, files,
