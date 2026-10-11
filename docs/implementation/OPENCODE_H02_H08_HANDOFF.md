@@ -17,7 +17,7 @@ installation, push or downstream-ticket expansion is authorized.
 
 ### Dependency readiness
 
-Current continuation: parent `281d9955`. The reviewed child-learning routing
+Current continuation: parent `cebda1fc`. The reviewed child-learning routing
 helper `abdad45b` is integrated as `f0e433d6`; supplied-transaction policy
 settlement `dd75d5eb` is integrated as `294b8218`. Both independent axes are
 clear, with original62-case helper and12-case settlement evidence retained;
@@ -120,10 +120,21 @@ helper is now integrated as recorded above. Both native assembly review axes are
 current two-Library-tool registry until H06 evidence is committed/reviewed;
 H07 composition must observe a new immutable final registry artifact.
 
-Reserved family-control transport preparation is active only in Ohm's isolated
+Reserved family-control transport `490595cc` is ready in Ohm's isolated
 `codex/oc-h07-family-controls` lane, consuming published969 as a prerequisite.
-Its four-path lease is process/IPC plus the dedicated Python test and native
-fixture. It does not activate children in this H06 integration checkout.
+Its four paths are process/IPC plus the dedicated Python test and native
+fixture. The recorded34-case actual-pipe suite passed in22.434s; all four
+committed source hashes match handoff490595cc.json under
+G:/Renulus-agent-scratch/oc-h02-h08/h07-family-controls/.
+Independent Standards found one P2 in the new raw-peer fixture's system-home
+environment overrides. Tests-only follow-on `958fe61b` removes those overrides;
+the13 affected raw-peer cases passed once in7.813s. Independent Standards closes
+that P2 with zero residual findings; independent Spec reports zero material
+findings on490. The34-case and13-case receipts overlap and are not summed.
+Neither native969 nor this
+transport commit is integrated here, and no unchanged suite was repeated.
+The fixture's family jobs/publication gates are synthetic; these results do
+not prove the connected Python/native family settlement contract.
 Sartre's read-only Owner assembly check confirms the existing Python ports are
 sufficient: cache root authority and learner text before transaction callbacks;
 route child callbacks/model resolution before root-only guards; consume and
@@ -132,6 +143,12 @@ observe native/Domain/Registry settlement before leaf-first `settle_run_in`;
 release Registry bindings only after that transaction commits. Reopened journal
 rows remain observations, not restored grants. Actual family controls and the
 connected child/Stop/restart proofs remain required before H07 acceptance.
+Sartre now owns the isolated `harness_learning.py` assembly and new
+`test_harness_learning_children.py` lease, starting at publishedcebda1fc with
+only native969 and transport490/958 as additional prerequisites. Its production-
+main tracer must inspect a new registry hash, consume real Library references
+and use the existing root publisher. The original H06 integration registry is
+unchanged. No native/helper/schema/Services edits or broad reruns are leased.
 
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
