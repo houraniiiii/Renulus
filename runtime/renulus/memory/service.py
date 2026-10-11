@@ -1,5 +1,6 @@
 """Durable capture/recovery and rebuildable, revision-filtered learner recall."""
 import asyncio
+import hashlib
 from concurrent.futures import Future
 from contextlib import closing, contextmanager
 from contextvars import copy_context
@@ -12,6 +13,8 @@ from renulus.contracts import ApiError, ContextScope, durable_id
 from .engine import Mem0Index, bootstrap, embedding_config
 from .models import require_eligible
 from .repository import MemoryRepository
+from .lineage import AnswerInputs
+from .study_answers import MAX_ANSWER_CHARS, answer_text
 
 
 class MemoryService:
@@ -41,9 +44,21 @@ class MemoryService:
         if self._loop and not self._loop.is_closed():
             self._loop.call_soon_threadsafe(self._wake.set)
 
-    def add(self, request):
+    def publish_answer_lineage_in(self, conn, evidence_id, *, inputs, dependencies=(), project_id=None):
+        return self.repository.lineage.publish_in(conn, evidence_id, inputs=inputs,
+            dependencies=dependencies, project_id=project_id)
+
+    def register_dependency_resolver(self, target_type, resolver):
+        """Bind a local canonical validator; prebind registry on profile reopen."""
+        self.repository.lineage.register_resolver(target_type, resolver)
+
+    def eligible_history(self, messages, *, project_id=None):
+        """Retained visible history and eligible model context are distinct."""
+        return self.repository.lineage.eligible_history(messages, project_id=project_id)
+
+    def add(self, request, *, project_id=None):
         with self._canonical_mutation():
-            result = self.repository.add(request)
+            result = self.repository.add(request, project_id=project_id)
         self.notify()
         return result
 
@@ -190,6 +205,29 @@ class MemoryService:
             admitted = not self._stopping and not self.services.stopping and job['id'] in self._active_runs
         return admitted and self.repository.current(job)
 
+    async def resolve_material(self, job):
+        """Resolve immutable bytes with the loop/reply pump and writers free."""
+        scope = ContextScope.model_validate_json(job['scope'])
+        material = self.repository.material(job['evidence_id'], scope, resolve_answer=False)
+        if not material.get('_answer'):
+            return material
+        evidence, payload = material['_answer']
+        resolver = self.services.registry.get('completed_answer_resolver')
+        if resolver is None:
+            material['text'] = await self._in_thread(answer_text, self.db, evidence, payload, scope)
+        else:
+            resolved = await resolver.resolve_completed_answer(payload['answer_reference'])
+            text = resolved['text']
+            if (not isinstance(text, str) or not 0 < len(text) <= MAX_ANSWER_CHARS or not text.strip() or
+                    hashlib.sha256(text.encode()).hexdigest() != resolved['digest'] or
+                    resolved['digest'] != payload['answer_reference']['sha256'] or
+                    resolved['publication_digest'] != material['lineage']['publication_digest'] or
+                    AnswerInputs.model_validate(resolved['input']) !=
+                    AnswerInputs.model_validate_json(material['lineage']['manifest_json'])):
+                raise ApiError('memory_answer_version', 'The resolved answer has changed or unverified support', 409)
+            material['text'] = text
+        return material
+
     async def _in_thread(self, function, *args):
         # A coroutine's cancellation is not executor-thread settlement. The
         # lease is released by the thread only after the function's finalizers.
@@ -253,8 +291,7 @@ class MemoryService:
                     if not self.repository.current(job):
                         self.repository.cancel_stale(job)
                         continue
-                    scope = ContextScope.model_validate_json(job['scope'])
-                    material = self.repository.material(job['evidence_id'], scope)
+                    material = await self.resolve_material(job)
                     # Structured assessment/interest records need no generated
                     # claim. General points use real Mem0 extraction through F0.
                     if material['infer']:
@@ -311,6 +348,7 @@ class MemoryService:
     def _reindex(self):
         with self._lock:
             self._require_open()
+            self.repository.reconcile_deletions()
             old = self.db.fetch_one('SELECT * FROM memory_index_state WHERE singleton=1')
             generation, engine = durable_id('generation'), None
             path = self.root / generation
@@ -354,8 +392,9 @@ class MemoryService:
                     raise
                 raise ApiError(code, 'The memory index could not be rebuilt. Retry after checking the offline helpers', 503, True) from None
 
-    def retrieve(self, query, *, scope: ContextScope, limit=10, budget_chars=4000, topic_id=None):
+    def retrieve(self, query, *, scope: ContextScope, limit=10, budget_chars=4000, topic_id=None, project_id=None):
         require_eligible(scope)
+        self.repository.reconcile_deletions()
         with self._lock:
             self._require_open()
             state = self.db.fetch_one('SELECT * FROM memory_index_state WHERE singleton=1')
@@ -378,6 +417,8 @@ class MemoryService:
                             (entry['id'],)).fetchone() or (topic_id and entry['topic_id'] not in (None, topic_id)):
                         continue
                     record = self.repository._view(dict(entry))
+                    if record['project_id'] not in (None, project_id):
+                        continue
                     # Derived model text never replaces the canonical revision.
                     line = f"[{record['id']} r{record['revision']}] {record['text']}\n"
                     if len(context) + len(line) > budget_chars:

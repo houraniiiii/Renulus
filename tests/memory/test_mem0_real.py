@@ -10,12 +10,15 @@ import os
 from pathlib import Path
 import shutil
 import socket
+from types import SimpleNamespace
 
 import pytest
 
 from renulus.contracts import ApiError, ContextScope, Scope
 from renulus.memory.models import ManualFact
 from renulus.memory.service import MemoryService
+from renulus.learn.service import LearnService
+from renulus.design_c_contracts import Dependency, EligibleInput, Identity
 from renulus.runtime.helpers import HelperAssets
 
 from .conftest import evidence
@@ -43,7 +46,9 @@ def real_memory(services, monkeypatch):
     manifest = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))
     # Only the embedding group is needed here. Preserve the central manifest,
     # verify its source and copy once; never load Docling or provision assets.
-    paths = type(services.paths)(root.parent, services.paths.source_root)
+    # The shared public asset directory need not be named "helpers". Validate
+    # that explicitly selected root before copying the embedding group.
+    paths = SimpleNamespace(helpers=root, cache=services.paths.cache, source_root=services.paths.source_root)
     HelperAssets(paths).embedding_config()
     for record in manifest['groups']['embedding']['files']:
         target = services.paths.helpers / record['path']
@@ -154,3 +159,58 @@ async def test_actual_mem0_extraction_uses_only_mocked_scoped_provider(real_memo
         assert error.value.code == 'memory_capture_suppressed'
     finally:
         await real_memory.close()
+
+
+@pytest.mark.asyncio
+async def test_actual_cpu_engine_support_revocation_after_edit_delete_reindex_reopen(real_memory, services):
+    memory = real_memory
+    services.db.apply_migration('learn-real-lineage-test',
+        (services.paths.source_root / 'runtime/renulus/learn/schema.sql').read_text(encoding='utf-8'))
+    learn = LearnService(services)
+    services.registry['learn'] = learn
+    old_point = 'SYNTHETIC_LINEAGE_POINT_9012 Compare glomerular mechanisms.'
+    current_point = 'SYNTHETIC_LINEAGE_POINT_9013 Review dialysis mechanisms.'
+    class SyntheticProvider:
+        point = old_point
+        async def stream(self, messages, **kwargs):
+            yield json.dumps({'memory': [{'text': self.point}]}) if kwargs['purpose'] == 'memory-extraction' else self.point
+        async def cancel(self, identifier):
+            return True
+    provider = SyntheticProvider()
+    services.registry['provider'] = provider
+    scope = ContextScope(kind=Scope.STUDY)
+    async def publish(root, key):
+        _, run = learn.prepare(root['text'], scope, None, 'glomerular', 'direct', key)
+        pin = EligibleInput(kind='memory', dependency=Dependency(target=Identity(
+            type='memory_revision', id=f"{root['id']}:{root['revision']}"), expected_revision=str(root['revision'])))
+        # Explicit synthetic trusted publication at the real Learn transaction.
+        # Production consumed-input collection remains the parent's integration.
+        run.publication = lambda conn: memory.publish_answer_lineage_in(conn, 'learn-answer:' + run.id, inputs=(pin,))
+        flow = [event async for event in learn.answer(run, root['text'], 'direct', 'glomerular')]
+        assert flow[-1].type == 'completed'
+        await memory.process_pending()
+    try:
+        root = memory.add(ManualFact(text='Synthetic glomerular study preference.', topic_id='glomerular',
+            scope=scope, idempotency_key='cpu-root'))
+        await publish(root, 'cpu-answer-old')
+        assert old_point in [row['text'] for row in memory.repository.list()]
+        assert memory._engine.memory.embedding_model.delegate.model.__class__.__module__.startswith('fastembed')
+        root = memory.edit(root['id'], 'Synthetic corrected dialysis preference.', 1)
+        memory.reindex()
+        assert old_point not in [row['text'] for row in memory.retrieve(old_point, scope=scope)['records']]
+        assert_absent(memory.root, b'SYNTHETIC_LINEAGE_POINT_9012')
+        provider.point = current_point
+        await publish(root, 'cpu-answer-current')
+        assert current_point in [row['text'] for row in memory.repository.list()]
+        memory.delete(root['id'], 2)
+        memory.reindex()
+        assert_absent(memory.root, b'SYNTHETIC_LINEAGE_POINT_9013')
+        await memory.close()
+        memory = MemoryService(services)
+        services.registry['memory'] = memory
+        await memory.process_pending(retry=True)
+        memory.reindex()
+        for point in (old_point, current_point):
+            assert point not in [row['text'] for row in memory.retrieve(point, scope=scope)['records']]
+    finally:
+        await memory.close()

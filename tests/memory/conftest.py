@@ -18,6 +18,8 @@ def services(tmp_path):
     # Only the test harness applies DDL; production registration does not.
     services.db.apply_migration('memory-001',
         (SOURCE_ROOT / 'runtime/renulus/memory/schema.sql').read_text(encoding='utf-8'))
+    services.db.apply_migration('memory-002',
+        (SOURCE_ROOT / 'runtime/renulus/memory/migrations/002.sql').read_text(encoding='utf-8'))
     return services
 
 

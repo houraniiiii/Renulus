@@ -93,6 +93,12 @@ async def explain(learn, control, topic='ckd', key='ordinary-1', scope=None):
         None, topic, 'direct', key)
     if replay:
         return replay, []
+    # Synthetic trusted publisher for this controlled producer fixture. These
+    # independent replies have an explicit empty input manifest, not unknown
+    # historical lineage. Production publication is the integrating owner's hook.
+    if hasattr(learn.services.registry['memory'], 'publish_answer_lineage_in') and run.thread_id:
+        run.publication = lambda conn: learn.services.registry['memory'].publish_answer_lineage_in(
+            conn, 'learn-answer:' + run.id, inputs=())
     flow = [event async for event in learn.answer(run, question, 'direct', topic)]
     return run, flow
 
@@ -279,6 +285,7 @@ async def test_long_completed_reply_reaches_mem0_intact_without_embedding_whole_
     try:
         question = 'USER_PROMPT_NEVER_MEMORY: Explain a longer ordinary study topic'
         _, run = learn.prepare(question, ContextScope(kind=Scope.STUDY), None, 'ckd', 'direct', 'long-reply')
+        run.publication = lambda conn: memory.publish_answer_lineage_in(conn, 'learn-answer:' + run.id, inputs=())
         flow = [event async for event in learn.answer(run, question, 'direct', 'ckd')]
         assert flow[-1].type == 'completed'
         await memory.process_pending()

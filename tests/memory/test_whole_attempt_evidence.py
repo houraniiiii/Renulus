@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 import pytest
 
 from renulus.contracts import ApiError, ContextScope, Scope
-from renulus.design_c_contracts import SavedTestVersion
+from renulus.design_c_contracts import Dependency, EligibleInput, Identity, SavedTestVersion
 from renulus.memory.models import digest
 from renulus.memory.service import MemoryService
 from renulus.server import create_app
@@ -135,6 +135,14 @@ async def ordinary_answer(services, key):
     learn = services.get('learn')
     question = 'SYNTHETIC C5 ordinary learning: explain albuminuria and eGFR.'
     _, run = learn.prepare(question, ContextScope(kind=Scope.STUDY), None, 'ckd', 'direct', key)
+    memory = services.get('memory')
+    # Synthetic trusted publication for this offline provider fixture. Pin the
+    # actual canonical recall records; the parent owns production collection.
+    records = memory.retrieve(question, scope=run.scope, topic_id='ckd')['records']
+    inputs = tuple(EligibleInput(kind='memory', dependency=Dependency(target=Identity(
+        type='memory_revision', id=f"{record['id']}:{record['revision']}"),
+        expected_revision=str(record['revision']))) for record in records)
+    run.publication = lambda conn: memory.publish_answer_lineage_in(conn, 'learn-answer:' + run.id, inputs=inputs)
     events = [event async for event in learn.answer(run, question, 'direct', 'ckd')]
     assert events[-1].type == 'completed', [(event.type, event.data) for event in events]
     return 'learn-answer:' + run.id, ContextScope(kind=Scope.STUDY, entity_id=run.thread_id)
@@ -151,17 +159,17 @@ async def test_restore_blocks_ordinary_worker_until_explicit_capture_and_allows_
         assert repository.material(evidence_id, scope)['infer'] is True
         queued = repository.enqueue(evidence_id, scope) if history != 'no-job' else None
         before = len(calls)
-        async with memory._process_lock:
-            await memory.start()
-            await asyncio.sleep(0)
-            services.get('data_recovery').restore_json(export_records(services), confirm_backup_date=True)
-            assert len(calls) == before
-            if queued:
-                interrupted = repository.job(queued['id'])
-                assert (interrupted['state'], interrupted['error_code']) == ('cancelled', 'restore_interrupted')
-            marker = services.db.fetch_one('SELECT value FROM preferences WHERE key=?',
-                (MEMORY_RESTORE_CAPTURE_PREFIX + evidence_id,))
-            assert marker is not None
+        # Restore before starting a processor. H24 intentionally treats even a
+        # processor waiting for another turn as admitted work, not quiescence.
+        services.get('data_recovery').restore_json(export_records(services), confirm_backup_date=True)
+        assert len(calls) == before
+        if queued:
+            interrupted = repository.job(queued['id'])
+            assert (interrupted['state'], interrupted['error_code']) == ('cancelled', 'restore_interrupted')
+        marker = services.db.fetch_one('SELECT value FROM preferences WHERE key=?',
+            (MEMORY_RESTORE_CAPTURE_PREFIX + evidence_id,))
+        assert marker is not None
+        await memory.start()
         if history == 'restart':
             await memory.close()
             memory = MemoryService(services)
@@ -192,10 +200,15 @@ async def test_restore_blocks_ordinary_worker_until_explicit_capture_and_allows_
             assert refused.status_code == 409 and refused.json()['error']['code'] == 'memory_evidence_scope'
             assert services.db.fetch_one('SELECT value FROM preferences WHERE key=?',
                 (MEMORY_RESTORE_CAPTURE_PREFIX + evidence_id,)) == marker
-        response = client.post('/api/v1/memory/captures', json={
-            'evidence_id': evidence_id, 'scope': scope.model_dump(mode='json')})
-        assert response.status_code == 202, response.text
-        explicit = response.json()
+        if history == 'restart':
+            # The existing router owns the closed instance. This case exercises
+            # public capture on the reopened owner; the other cases cover HTTP.
+            explicit = memory.enqueue(evidence_id, scope)
+        else:
+            response = client.post('/api/v1/memory/captures', json={
+                'evidence_id': evidence_id, 'scope': scope.model_dump(mode='json')})
+            assert response.status_code == 202, response.text
+            explicit = response.json()
         assert explicit['state'] == 'queued'
         assert services.db.fetch_one('SELECT value FROM preferences WHERE key=?',
             (MEMORY_RESTORE_CAPTURE_PREFIX + evidence_id,)) is None

@@ -2,15 +2,22 @@
 import json
 
 from renulus.contracts import ApiError, ContextScope, Scope, durable_id
+from renulus.design_c_contracts import Identity
 from renulus.storage import utc_now
 from renulus.storage.assessment_policy import policy_snapshot, require_assistance
 from renulus.storage.invalidation import MEMORY_RESTORE_CAPTURE_PREFIX, context_epoch_in
 
 from .models import ManualFact, clean_text, digest, require_eligible
-from .study_answers import answer_text
+from .study_answers import answer_text, answer_reference_in
+from .lineage import AnswerInputs, AnswerLineage, INELIGIBLE_LINEAGE_CODES
 
 
 BOUNDARY_CANCELLATIONS = ('boundary_policy_changed', 'boundary_context_changed', 'restore_interrupted')
+CAPTURE_REFUSAL_CODES = INELIGIBLE_LINEAGE_CODES | frozenset({
+    'assistance_restricted', 'assistance_changed', 'memory_evidence_ineligible',
+    'memory_evidence_invalid', 'memory_evidence_scope', 'memory_evidence_empty',
+    'memory_evidence_missing', 'invalid_memory_text',
+})
 
 
 def capture_fingerprint(conn, source_revision):
@@ -34,6 +41,8 @@ def fingerprint_parts(value):
 class MemoryRepository:
     def __init__(self, services):
         self.services, self.db = services, services.db
+        # Bind trusted local dependency adapters before opening restored memory.
+        self.lineage = AnswerLineage(self.db, services.registry.setdefault('memory_dependency_resolvers', {}))
         self.db.execute(
             "UPDATE memory_jobs SET state='queued',updated_at=? WHERE state='running'",
             (utc_now(),))
@@ -49,7 +58,8 @@ class MemoryRepository:
             for row in rows:
                 self._suppress(conn, row['id'])
                 conn.execute('DELETE FROM memory_facts WHERE id=?', (row['id'],))
-            if rows:
+            revoked = self.lineage.revoke_in(conn, self._suppress)
+            if rows or revoked:
                 self.invalidate(conn)
 
     def _fact(self, conn, identifier):
@@ -63,6 +73,9 @@ class MemoryRepository:
     def _view(self, row):
         result = dict(row)
         result.pop('text_hash', None)
+        ownership = self.db.fetch_one('SELECT project_id FROM memory_support_groups WHERE record_id=? LIMIT 1', (row['id'],))
+        result['project_id'] = ownership['project_id'] if ownership else None
+        result['visibility'] = 'project' if result['project_id'] else 'profile-global'
         entry = self.db.fetch_one(
             'SELECT e.revision,s.state FROM memory_index_entries e CROSS JOIN memory_index_state s '
             'WHERE e.record_id=? AND e.generation=s.generation', (row['id'],))
@@ -90,12 +103,13 @@ class MemoryRepository:
         conn.execute("UPDATE memory_index_state SET epoch=epoch+1,state='dirty',error_code=NULL "
                      'WHERE singleton=1')
 
-    def _insert(self, conn, text, kind, topic, scope, source_kind, source_id, source_key):
+    def _insert(self, conn, text, kind, topic, scope, source_kind, source_id, source_key, *, project_id=None):
         text = clean_text(text)
         text_hash = digest(' '.join(text.casefold().split()))
         existing = conn.execute(
-            'SELECT * FROM memory_facts WHERE text_hash=? AND kind=? AND topic_id IS ?',
-            (text_hash, kind, topic)).fetchone()
+            'SELECT * FROM memory_facts f WHERE text_hash=? AND kind=? AND topic_id IS ? '
+            "AND COALESCE((SELECT project_id FROM memory_support_groups g WHERE g.record_id=f.id LIMIT 1),'')=?",
+            (text_hash, kind, topic, project_id or '')).fetchone()
         if existing and not conn.execute(
                 "SELECT 1 FROM deletion_ledger WHERE entity_type='memory_fact' AND entity_id=?",
                 (existing['id'],)).fetchone():
@@ -111,12 +125,15 @@ class MemoryRepository:
         conn.execute('INSERT OR IGNORE INTO memory_sources VALUES(?,?)', (source_key, identifier))
         return identifier
 
-    def add(self, request: ManualFact):
+    def add(self, request: ManualFact, *, project_id=None):
         require_eligible(request.scope)
         if request.scope.kind != Scope.STUDY:
             raise ApiError('manual_memory_scope', 'Manual learner notes use ordinary study scope', 409)
         text = clean_text(request.text)
-        request_hash = digest(request.model_dump(mode='json', exclude={'idempotency_key'}))
+        if project_id is not None:
+            Identity(type='project', id=project_id)
+        request_data = request.model_dump(mode='json', exclude={'idempotency_key'})
+        request_hash = digest(request_data if project_id is None else {'request': request_data, 'project_id': project_id})
         with self.db.transaction() as conn:
             previous = conn.execute('SELECT * FROM memory_requests WHERE idempotency_key=?',
                                     (request.idempotency_key,)).fetchone()
@@ -126,7 +143,8 @@ class MemoryRepository:
                 row = self._fact(conn, previous['record_id'])
                 return self._view(row)
             identifier = self._insert(conn, text, request.kind, request.topic_id, 'study', 'manual',
-                                      None, 'manual:' + request.idempotency_key)
+                                      None, 'manual:' + request.idempotency_key, project_id=project_id)
+            self.lineage.add_support_in(conn, identifier, 'manual:' + request.idempotency_key, project_id=project_id)
             conn.execute('INSERT INTO memory_requests VALUES(?,?,?)',
                          (request.idempotency_key, request_hash, identifier))
         return self.get(identifier)
@@ -151,12 +169,17 @@ class MemoryRepository:
             if old['text'] == text:
                 return self._view(old)
             revision = old['revision'] + 1
+            ownership = conn.execute('SELECT project_id FROM memory_support_groups WHERE record_id=? LIMIT 1', (identifier,)).fetchone()
+            project_id = ownership[0] if ownership else None
             # A correction owns this record; the old source cannot regenerate it.
             self._suppress(conn, identifier)
+            conn.execute("UPDATE memory_support_groups SET state='revoked' WHERE record_id=?", (identifier,))
             conn.execute('UPDATE memory_facts SET text=?,text_hash=?,revision=?,updated_at=? WHERE id=?',
                          (text, digest(' '.join(text.casefold().split())), revision, now, identifier))
             conn.execute('INSERT INTO memory_history VALUES(?,?,?,?,?)',
                          (identifier, revision, text, 'edited', now))
+            self.lineage.add_support_in(conn, identifier, f'edited:{identifier}:{revision}', project_id=project_id)
+            self.lineage.revoke_in(conn, self._suppress)
             self.invalidate(conn)
         return self.get(identifier)
 
@@ -173,6 +196,7 @@ class MemoryRepository:
             self._suppress(conn, identifier)
             self.db.mark_deleted('memory_fact', identifier, conn)
             conn.execute('DELETE FROM memory_facts WHERE id=?', (identifier,))
+            self.lineage.revoke_in(conn, self._suppress)
             self.invalidate(conn)
         return {'deleted': True}
 
@@ -229,11 +253,15 @@ class MemoryRepository:
                 'assessment': {field: payload[field] for field in ('mode', 'origin', 'review_quality', 'reviewed',
                     'bank_cohort_eligible', 'assisted', 'repeat', 'score_bucket', 'outcome', 'correct')}}
 
-    def material(self, evidence_id, scope: ContextScope, *, conn=None):
+    def material(self, evidence_id, scope: ContextScope, *, conn=None, resolve_answer=True):
         require_eligible(scope)
         if conn is None:
             with self.db.transaction() as current:
-                return self.material(evidence_id, scope, conn=current)
+                material = self.material(evidence_id, scope, conn=current, resolve_answer=False)
+            if resolve_answer and material.get('_answer'):
+                evidence, payload = material['_answer']
+                material['text'] = answer_text(self.db, evidence, payload, scope)
+            return material
         require_assistance(conn)
         select = lambda sql, args: conn.execute(sql, args).fetchone()
         if select('SELECT 1 FROM memory_suppression WHERE source_key=?', ('evidence:' + evidence_id,)):
@@ -302,7 +330,9 @@ class MemoryRepository:
         elif row['kind'] == 'study-answer':
             if declared is None:
                 raise ApiError('memory_evidence_invalid', 'Study answers need their original classified scope', 409)
-            text, kind, infer = answer_text(self.db, row, payload, scope), 'learning-point', True
+            answer_reference_in(conn, row, payload, scope)
+            self.lineage.check_in(conn, evidence_id)
+            text, kind, infer = '', 'learning-point', True
         elif row['kind'] == 'learning-point':
             if (declared is None or payload.get('general_learning') is not True or
                     set(payload) - {'scope', 'general_learning', 'text'}):
@@ -311,8 +341,12 @@ class MemoryRepository:
         else:
             raise ApiError('memory_evidence_ineligible', 'This evidence type is not eligible for learner memory', 409)
         source_revision = digest({key: row[key] for key in ('id', 'kind', 'topic_id', 'entity_id', 'payload_json')})
-        return {'text': text, 'kind': kind, 'topic_id': topic, 'infer': infer,
+        material = {'text': text, 'kind': kind, 'topic_id': topic, 'infer': infer,
                 'fingerprint': capture_fingerprint(conn, source_revision), 'scope': scope, 'entity_id': row['entity_id']}
+        if row['kind'] == 'study-answer':
+            material['_answer'] = (dict(row), payload)
+            material['lineage'] = self.lineage.check_in(conn, evidence_id)
+        return material
 
     @staticmethod
     def _restore_capture_required_in(conn, evidence_id, material):
@@ -394,6 +428,9 @@ class MemoryRepository:
 
     def scan(self):
         # Immutable producer records are the queue input, never a raw transcript.
+        # Local source/history adapters can revoke dependencies independently
+        # of a Memory edit. Retire support before any boundary can requeue it.
+        self.reconcile_deletions()
         with self.db.transaction() as conn:
             if not policy_snapshot(conn)['assistance_allowed']:
                 return
@@ -432,6 +469,8 @@ class MemoryRepository:
                     if self.enqueue(row['id'], scope, automatic=True) is not None:
                         queued += 1
                 except ApiError as error:
+                    if error.code not in CAPTURE_REFUSAL_CODES:
+                        raise
                     # A permanent invalidation closes recovery; another policy
                     # boundary merely waits for the next safe scan.
                     self._retire_invalid_recovery(row['id'], error.code)
@@ -472,6 +511,8 @@ class MemoryRepository:
                 return 'restore_interrupted'
             current = material['fingerprint']
         except ApiError as error:
+            if error.code not in CAPTURE_REFUSAL_CODES:
+                raise
             return error.code
         except (ValueError, TypeError, KeyError):
             return 'memory_evidence_invalid'
@@ -520,6 +561,16 @@ class MemoryRepository:
             if code is not None:
                 self._cancel_stale_in(conn, job, code)
                 return []
+            if material.get('_answer'):
+                reference = material['_answer'][1]['answer_reference']
+                # Legacy bytes have no immutable host store yet. A local SQL
+                # equality recheck fences mutation without resolving remotely
+                # or returning a transcript inside the canonical write.
+                same = conn.execute("SELECT content=? FROM learn_messages WHERE id=?",
+                    (material['text'], reference['message_id'])).fetchone()
+                if same is None or not same[0]:
+                    self._cancel_stale_in(conn, job, 'memory_answer_version')
+                    return []
             source = conn.execute('SELECT kind FROM learning_evidence WHERE id=?', (job['evidence_id'],)).fetchone()
             if source and source['kind'] == 'assessment-test-answer':
                 # Structured commitments never accept generated or caller-supplied
@@ -528,9 +579,14 @@ class MemoryRepository:
                 texts = [material['text']]
             identifiers = []
             for text in texts:
-                identifiers.append(self._insert(conn, text, material['kind'], material['topic_id'],
+                lineage = material.get('lineage')
+                identifier = self._insert(conn, text, material['kind'], material['topic_id'],
                     material['scope'].kind.value, 'learning-evidence', job['evidence_id'],
-                    'evidence:' + job['evidence_id']))
+                    'evidence:' + job['evidence_id'], project_id=lineage['project_id'] if lineage else None)
+                self.lineage.add_support_in(conn, identifier, 'evidence:' + job['evidence_id'],
+                    manifest=AnswerInputs.model_validate_json(lineage['manifest_json']) if lineage else None,
+                    project_id=lineage['project_id'] if lineage else None, kind='generated' if lineage else 'activity')
+                identifiers.append(identifier)
             conn.execute("UPDATE memory_jobs SET state='completed',updated_at=? WHERE id=?",
                          (utc_now(), job['id']))
         return identifiers

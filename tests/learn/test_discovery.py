@@ -9,6 +9,8 @@ import httpx
 import pytest
 
 from renulus.contracts import ApiError, ContextScope, Scope
+from renulus.memory.models import ManualFact
+from renulus.memory.repository import MemoryRepository
 from renulus.retrieval.service import RetrievalService
 from renulus.server import create_app
 
@@ -206,9 +208,13 @@ async def test_discovery_failures_allow_an_honest_completed_explanation(build, f
             raise httpx.ConnectError("SYNTHETIC_ERROR_DETAIL_NOT_EXPOSED", request=request)
         return httpx.Response(429 if failure == "limit" else 200, json={"unexpected": []})
     _, services, provider, _, requests = build(handler)
+    # Real canonical identity/revision for the controlled retrieval result.
+    # MemoryContext must continue checking it at answer publication.
+    fact = MemoryRepository(services).add(ManualFact(text="Synthetic learner preference",
+        kind="preference", scope=ContextScope(kind=Scope.STUDY), idempotency_key="discovery-preference"))
     class Memory:
         def retrieve(self, *args, **kwargs):
-            return {"context": "Synthetic learner preference", "records": [{"id": "one"}]}
+            return {"context": fact["text"], "records": [fact]}
         def notify(self):
             assert services.db.fetch_one("SELECT state FROM learn_runs WHERE id=?", (run.id,))["state"] == "completed"
             raise RuntimeError("Synthetic capture notification failure")
