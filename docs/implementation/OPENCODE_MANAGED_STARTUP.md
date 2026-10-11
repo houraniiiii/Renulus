@@ -86,3 +86,11 @@ App state exposes `harness_bootstrap`, `harness_configuration_authority`,
 observations. These are not renderer payloads or alternative configuration
 authorities. Process/finalizer lifetime and actual native settlement must be
 verified before this development entry can establish H04 startup acceptance.
+
+The actual no-factory initial/reopen journey is now recorded in the H02–H08
+handoff: one test covers two dedicated Windows child issuers, production Node
+main/SDK inspection and activation, canonical admission before ordinary startup
+callbacks, persisted configuration and actual normal settlement. Its account
+catalogue is synthetic. It establishes the positive public Python serving-loop
+assembly path; failure/cancellation recovery, CLI/uvicorn, hidden desktop and
+matching account/deployment acceptance remain separately open.

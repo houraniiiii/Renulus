@@ -39,8 +39,10 @@ ports. Independent focused Standards and Spec reviews close that original
 drain P2. Spec found a separate error-classification P2: production runtime
 cleanup signals Services stopping, and the post-cleanup freshness check can
 replace the initiating startup failure with runtime_stopping. Sartre owns a
-bounded public red/repair in the same coordinator/test paths. Connected startup
-is held for this closure; the unchanged44-case cohort was not repeated.
+bounded public red/repair in the same coordinator/test paths. Startup failure
+acceptance is held for this closure; the unchanged44-case cohort was not repeated.
+The independent positive initial/reopen journey below covers the unaffected
+no-factory happy path.
 
 Parent entry shutdown now awaits that public close edge before Services
 dependencies, retaining the serving loop through repeated observer cancellation.
@@ -99,14 +101,46 @@ deployment evidence.
 
 Entry `b8327836..75128590` independently passed both review axes, apart from
 the separately tracked coordinator drain. Dynamic lanes: Arendt resumes a
-source-only H05 separately admitted extraction-port proposal; Turing retains the distinct test-only actual
-initial/reopen journey pending published close/join and review closure. Ohm
+source-only H05 separately admitted extraction-port proposal; Turing completed
+the distinct test-only actual initial/reopen journey after published close/join
+and focused review closure. Ohm
 owns the fixed source-only hidden Settings launch extension: literal v1
 selector, sibling desktop state and reviewed helper provisioning after issuer
 acquisition. No hidden managed launch has run. Russell/Nietzsche review exact
 bounded commits; parent owns shared lifespan/CLI assembly, integration and
 evidence. All H02–H08 acceptance remains open; migrated automatic memory
 capture remains off.
+
+### Actual managed initial launch and reopen
+
+Test-only worker `0b177096c81c8adc8aeb9bc322ad8472a8605d64` is integrated
+as `8398dcde`. Its independently read `G:/Renulus/scratch/oc-managed-startup/
+receipts/connected-positive02.xml` records exactly1 test,0 failures/errors/skips,
+30.869 seconds. It covers two dedicated owned Python children using the original
+managed app, canonical SQLite authority, captured ProviderManager and production
+Node main/actual SDK. The real isolated artifact inspector closes and settles;
+the coordinator inspects and activates the live generation, opening canonical
+admission before the first ordinary callback on the serving loop. Reopen proves
+the settled predecessor, a fresh issuer/native generation, identical effective
+version/registry hash/launch hash/epoch, and zero repeat catalogue requests. Both
+lifespans finish with actual native/Domain/Services settlement and zero sessions
+or pinned runs. The original connection API observes the same manager.
+
+The sole synthetic external boundary is account catalogue HTTP:1 initial GET,
+0 on reopen. No model registry factory, deployment evidence, counter, prompt,
+inference, engine instance, uvicorn socket or desktop is exercised. This positive
+path does not close the independently open startup-failure classification P2 or
+any H02–H08 ticket acceptance. The exact source point includes published entry
+`75128590`, adapter `1e154ad2`, close `00fa2b4b`, join `9139b86e` and manager
+guard `68ae161c`; the subsequent failure repair was not used.
+
+Retained `entry-red01.xml` has1 missing-entry failure in2.120s before child
+issuer/application creation. `connected-positive01.xml` has1 fixture failure
+in19.751s: the fixture HTTP Host was rejected by the existing local boundary;
+initial native/ordinary-callback assertions had already passed, but reopen was
+not reached. Only the fixture base URL and safe status diagnostic changed for
+positive02. No prior cohort was repeated. Exact commands and qualifications are
+in `G:/Renulus/scratch/oc-managed-startup/HANDOFF.md`.
 
 ### Saved inline image port and ready connected lanes
 
