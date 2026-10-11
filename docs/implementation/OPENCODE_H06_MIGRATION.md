@@ -47,7 +47,33 @@ zero material findings. Spec review found one P2: changing a retired creation
 request to temporary:true bypassed the durable tombstone. The exact public
 reopen replay reproduced201 instead of410 in temporary-red01.xml (1 failure,
 8.11s). The guard now runs before the temporary branch; temporary-green01.xml
-records1 pass,6.93s. Focused independent closure of this repair is pending.
+records1 pass,6.93s. Focused independent Spec and Standards reviews close
+this repair with zero remaining findings.
+
+## Canonical migration journal and purge metadata
+
+Learn004 now stores frozen migration references and owner-independent native
+purge obligations. HarnessMigrationJournal uses the supplied canonical
+transaction for reservation, one import claim and exact mapping/readback
+activation. A local savepoint rolls back both reservation writes even when the
+caller catches a session conflict and commits its surrounding transaction.
+Activation validates the complete mapping contract and engine cohort against
+the paired manifest. Legacy message bytes are not stored in the journal.
+
+Conversation owner deletion captures profile/store/session and originating
+operation/attempt before cascading mappings/answers. Purge rows have no owner
+FK, payload, source digest, manifest or transcript references, and survive
+canonical export/reopen. Native removal must run after actual owner settlement
+outside canonical transactions; metadata alone does not prove removal.
+
+Native-deletion receipt directory:
+G:/Renulus-agent-scratch/oc-h02-h08/native-deletion/receipts/.
+journal-red04.xml records two meaningful failures (partial reservation and wrong
+engine cohort),8.29s. journal-green04.xml records four passes,16.46s, covering
+rollback/activation/reopen, durable purge coordinates and both repairs.
+The actual production-main deletion tracer red01.xml still fails: canonical
+deletion succeeds but session.find retains the native transcript (1fail,16.97s).
+The native purge and connected migration/continuation paths remain open.
 
 ## Native logical transfer port
 

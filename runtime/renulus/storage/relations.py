@@ -32,6 +32,9 @@ PARENTS = {
     "learn_runs": (own("learn_threads", "thread_id"),),
     "learn_harness_mappings": (own("learn_threads", "thread_id"),),
     "learn_harness_answers": (own("learn_runs", "run_id"), own("learn_threads", "thread_id")),
+    "learn_harness_migrations": (own("learn_threads", "thread_id"),),
+    # Native cleanup coordinates must survive owner removal until actual purge.
+    "learn_harness_purges": (),
     "learn_conversations": (own("learn_threads", "thread_id"),),
     "case_conversations": (own("case_sessions", "case_id"),),
     "case_attachments": (own("case_sessions", "case_id"),),

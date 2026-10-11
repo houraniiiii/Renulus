@@ -15,6 +15,7 @@ from renulus.storage.invalidation import bump_context_epoch
 from renulus.storage.attachment_cleanup import enqueue_in, drain
 
 from .conversation_models import Mutation, NewConversation
+from .harness_migration_journal import HarnessMigrationJournal
 
 
 OWNERS = {"learning": ("learn_threads", "learn_conversations", "thread_id", "learn_thread"),
@@ -79,6 +80,7 @@ class ConversationRepository:
     def __init__(self, services):
         self.services, self.db = services, services.db
         self.learn, self.cases = services.get("learn"), services.get("cases")
+        self.migration_journal = HarnessMigrationJournal(self.db)
         self._lock = RLock()
         self._temporary = {}
         self._temporary_commands = {}
@@ -410,6 +412,8 @@ class ConversationRepository:
         return result
 
     def owner_removed(self, conn, kind, identifier):
+        if kind == 'learning':
+            self.migration_journal.capture_owner_in(conn, identifier)
         retire_owner_commands_in(conn, self._owner(kind)[3], identifier)
         attachments = self.services.registry.get('chat_attachments')
         if attachments is not None:
