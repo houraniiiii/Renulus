@@ -57,9 +57,9 @@ class ShutdownRequest(_Input):
     timeout_seconds: float = Field(default=5, gt=0, le=30, allow_inf_nan=False)
 
 
-def register(services: Services) -> ProviderManager:
+def register(services: Services, *, http_transport=None) -> ProviderManager:
     if "provider" not in services.registry:
-        services.registry["provider"] = ProviderManager(services.paths)
+        services.registry["provider"] = ProviderManager(services.paths, http_transport=http_transport)
         manager = services.registry["provider"]
         services.on_shutdown_dependencies.append(manager.close)
         async def cancel_requests():
@@ -77,8 +77,8 @@ def register(services: Services) -> ProviderManager:
     return services.registry["provider"]
 
 
-def create_router(services: Services) -> APIRouter:
-    manager = register(services)
+def create_router(services: Services, *, http_transport=None) -> APIRouter:
+    manager = register(services, http_transport=http_transport)
 
     router = APIRouter()
     connections = APIRouter(prefix="/connections", tags=["connections"])

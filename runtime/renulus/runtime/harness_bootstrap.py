@@ -83,7 +83,8 @@ class HarnessBootstrap:
             raise ApiError("harness_bootstrap_conflict", "The bootstrap profile owner does not match.", 409)
         profile_owner.require_predecessor(profile_owner.predecessor)
 
-    def create_app(self, *, token: str | None = None, source_root: Path | None = None) -> FastAPI:
+    def create_app(self, *, token: str | None = None, source_root: Path | None = None,
+                   provider_http_transport=None) -> FastAPI:
         global _APPLICATION_OWNER
         self._require_owner()
         if self._creation_started or _APPLICATION_OWNER is not None:
@@ -92,7 +93,8 @@ class HarnessBootstrap:
         _APPLICATION_OWNER = self.profile_owner
         from renulus.server import create_app
         try:
-            self._app = create_app(self.scope.root, token=token, source_root=source_root)
+            self._app = create_app(self.scope.root, token=token, source_root=source_root,
+                provider_http_transport=provider_http_transport)
             self._services = self._app.state.services
             return self._app
         except Exception as error:

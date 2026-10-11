@@ -86,7 +86,8 @@ class _RequestOwnership:
             raise  # Only the observer leaves; Services still owns the handler.
 
 
-def create_app(profile: str | Path, token: str | None = None, source_root=None) -> FastAPI:
+def create_app(profile: str | Path, token: str | None = None, source_root=None, *,
+               provider_http_transport=None) -> FastAPI:
     paths = AppPaths.create(profile, source_root)
     # Check the complete installed migration inventory before repositories or
     # startup hooks can write feature records. The ledger is also a compatibility
@@ -285,7 +286,8 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
                     raise RuntimeError(f"Use a numbered additive migration after 001: {migration.name}")
                 services.db.apply_migration(f"{name}-{migration.stem}", migration.read_text(encoding="utf-8"))
         module = importlib.import_module(f"renulus.{name}.api")
-        router = module.create_router(services)
+        router = (module.create_router(services, http_transport=provider_http_transport)
+            if name == 'runtime' else module.create_router(services))
         if name == "knowledge":
             # Retained support is reconciled when Memory opens, so its local
             # source resolver must exist before that module is constructed.
@@ -318,12 +320,21 @@ def main():
     parser.add_argument("--profile", required=True, help="Explicit isolated writable profile")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--source-root")
+    parser.add_argument("--harness-startup", type=Path,
+        help="Explicit managed harness startup metadata; normal startup remains the default")
     args = parser.parse_args()
     import uvicorn
     token = os.environ.get("RENULUS_SESSION_TOKEN")
     if not token:
         raise SystemExit("RENULUS_SESSION_TOKEN is required for standalone startup")
-    uvicorn.run(create_app(args.profile, token, args.source_root), host="127.0.0.1",
+    if args.harness_startup is None:
+        app = create_app(args.profile, token, args.source_root)
+    else:
+        from .runtime.harness_startup import create_managed_app, load_startup_options
+        options = load_startup_options(args.harness_startup, profile=Path(args.profile))
+        app = create_managed_app(options, token=token,
+            source_root=Path(args.source_root) if args.source_root else None)
+    uvicorn.run(app, host="127.0.0.1",
                 port=args.port, access_log=False, log_level="warning")
 
 
