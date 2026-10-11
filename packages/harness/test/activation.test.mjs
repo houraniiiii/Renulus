@@ -32,7 +32,11 @@ test("validated native/domain stores activate and reopen without generation", as
   let host;
   try {
     host = await openHarness({ ...options, model });
-    const activated = await host.activateStores();
+    const selection = host.activateStores();
+    const closing = host.close();
+    const activated = await selection;
+    assert.equal((await closing).state, "closed");
+    host = await openHarness({ ...options, model });
     assert.equal(activated.state, "active");
     assert.equal(activated.domain_store.validation, "valid");
     assert.equal(activated.runtime_store.validation, "valid");

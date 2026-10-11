@@ -13,6 +13,32 @@ The immutable planning snapshot, other checkouts, installed launcher and private
 profile/credentials remain protected. No incidental live provider usage, release,
 installation, push or downstream-ticket expansion is authorized.
 
+## Resumed integration — October 11
+
+Parent consumed native tools (`ce85b7c5`), saved bridge (`1631e767`),
+configuration authority (`a85e1ee0`), controlled Library SDK composition
+(`63dde885`), pre-dispatch native input binding (`a884ef17`), failed-store
+admission fence/read-only recovery lookup (`def4b12b`), Python Library adapter
+(`12a88d79`) and local revision resolver (`845c1f0c`). These are preparation,
+not H02–H08 acceptance. LearnService project pin and shared relation registration
+remain integration work.
+
+Independent standards review found activation missing from close's drain.
+Controlled lower storage delay with actual SDK/SQLite/ownership reproduced
+close returning closed before activation completed (`activation/review-drain-red02.xml`).
+Activation now registers its existing writer lease before its first await,
+retaining ownership through success/failure and close.
+`activation/review-drain-green02.xml`: 13 passed; TypeScript exited 0.
+`review-drain-red01.xml` did not reproduce the race. The first green attempt
+failed only on an incorrect expected ownership error string; its receipt is
+retained. Memory/conversation/configuration review fixes remain open in their lanes.
+
+Runtime migration 004 is reserved for stable dispatch-purpose accounting;
+002 configuration and 003 paired stores are immutable applied predecessors.
+Native publication stages exact reference-only JSON in the submitted receipt
+inside the same canonical transaction before memory lineage publication,
+then marks completed atomically. Public resolution/history requires completed.
+
 ## Goal and continuation
 
 The active goal is to implement and verify every required H02–H08 criterion.

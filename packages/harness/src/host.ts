@@ -200,14 +200,21 @@ export async function openHarness(options: HarnessOptions) {
       if (!["policy_blocked", "ready", "store_activation_failed"].includes(phase)) throw new Error("harness_policy_blocked");
       const prior = phase;
       phase = "store_validating";
+      const writesActive = admittedWrites.size > 0;
+      let settled!: () => void;
+      const lease = new Promise<void>(resolve => { settled = resolve; });
+      admittedWrites.add(lease);
       try {
-        if (admittedWrites.size || (await run(execution.active)).size) throw new Error("store_activation_requires_quiescence");
+        if (writesActive || (await run(execution.active)).size) throw new Error("store_activation_requires_quiescence");
         const selected = await activateStores(options);
         if (phase === "store_validating") phase = prior === "store_activation_failed" ? "policy_blocked" : prior;
         return selected;
       } catch (error) {
         if (phase === "store_validating") phase = "store_activation_failed";
         throw error;
+      } finally {
+        admittedWrites.delete(lease);
+        settled();
       }
     },
     async activate(id: string) {
