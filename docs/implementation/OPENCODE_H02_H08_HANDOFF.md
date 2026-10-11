@@ -347,6 +347,28 @@ Russell is separately tracing only the published Library/Children/native bridge
 sources, without tests or edits, to determine whether the unresolved positive09
 tool failure needs the already authorized safe callback diagnostics.
 
+The second focused cleanup cycle also passes: `family-exit-red01.xml` records
+one failure/20.627s, while unchanged `family-exit-green01.xml` has one pass/17.791s.
+One host-accepted Stop has a synthetic uncertain observer result; the live peer
+does not release its pin. Actual process exit0 and separate Domain/Registry zero
+then permit canonical settlement, with no Stop resend. These are synthetic
+transport faults around an actual production-main process, not crash acceptance.
+
+Independent Spec and Standards re-review of Owner50b0dde8/test2246093e each find
+one residual P2: if the peer exits while observation release is busy, the retained
+release loop never returns to the actual-process settlement check. The added
+combined case remains stuck in cleanup without a completed XML, so it is not
+reported as a dynamic red. The exact owned runner will be identified and its
+child state checked before termination; that action is a test-cleanup limit,
+not canonical/native settlement evidence. The same two-file lease is released
+for a bounded reproduction and repair. Only the three affected cleanup paths
+may run afterward; the four-send positive remains paused.
+
+Russell's source-only Library diagnosis found no concrete mismatch among the
+published Children, routing helper and native bridge ports. The safe callback
+observer is therefore needed to locate the initiating positive09 refusal;
+generic native error projection alone cannot establish the Python cause.
+
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
 expectation-disposition reviews clear. H06–H08 remain open. Required unmet
