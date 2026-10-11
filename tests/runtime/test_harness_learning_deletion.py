@@ -58,6 +58,8 @@ async def test_deleted_saved_owner_purges_native_session_without_another_dispatc
             repo.create(NewConversation(), "native-delete-create")
         assert replay.value.code == "command_terminal_unavailable"
         assert len(observer.calls) == 1
+
+
         assert authority.run(run_id)["spent_dispatches"] == 1
         assert owner.process.domain_status()["active"] == 0
         if route == 'conversation':
@@ -127,3 +129,45 @@ async def test_cancelled_delete_observer_keeps_new_runs_sealed_until_actual_clea
         await owner.purge_native_owners()
         assert (await command(owner.process, 'session.find', operation=entry['run'].id))['sessions'] == []
         assert len(observer.calls) == 1
+
+
+async def test_failed_native_purge_does_not_skip_unrelated_execution_shutdown(tmp_path, offline):
+    async with learning_models(tmp_path) as (services, owner, authority, registries, transports,
+            admissions, counter, observer):
+        repo = services.get('conversations')
+        first = repo.create(NewConversation(), 'purge-shutdown-first')
+        second = repo.create(NewConversation(), 'purge-shutdown-second')
+        entry, receipt = repo.streaming.begin('learning', first['identity']['id'], Send(
+            expected_revision=first['revision'], text=PROMPT, request_id='purge-shutdown-completed'))
+        counter.release.set()
+        observer.release.set()
+        assert (await collect_events(repo, entry, receipt))[-1]['type'] == 'completed'
+        observer.entered.clear()
+        observer.release.clear()
+        running, run_receipt = repo.streaming.begin('learning', second['identity']['id'], Send(
+            expected_revision=second['revision'], text=PROMPT, request_id='purge-shutdown-active'))
+        events = asyncio.create_task(collect_events(repo, running, run_receipt))
+        try:
+            await asyncio.wait_for(observer.entered.wait(), 15)
+            with pytest.raises(ApiError) as pending:
+                await repo.delete('learning', first['identity']['id'], Mutation(
+                    expected_revision=repo.get('learning', first['identity']['id'])['revision']),
+                    'purge-shutdown-delete')
+            assert pending.value.code == 'harness_purge_pending'
+            assert len(repo.migration_journal.pending_purges()) == 1
+            await asyncio.wait_for(owner.close(), 15)
+            assert (await owner.process.settlement(0))['state'] == 'settled'
+            assert owner.process.domain_status()['active'] == 0
+            assert registries[-1].status().owned == 0
+            assert authority.run(running['run'].id)['state'] == 'settled'
+            assert len(repo.migration_journal.pending_purges()) == 1
+            with pytest.raises(ApiError) as stopping:
+                repo.streaming.begin('learning', second['identity']['id'], Send(
+                    expected_revision=repo.get('learning', second['identity']['id'])['revision'],
+                    text=PROMPT, request_id='purge-shutdown-no-reopen'))
+            assert stopping.value.code == 'runtime_stopping'
+            await owner.close()
+        finally:
+            observer.release.set()
+            await owner.process.close(10)
+            await asyncio.gather(events, return_exceptions=True)

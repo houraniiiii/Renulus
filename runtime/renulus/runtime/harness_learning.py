@@ -242,9 +242,13 @@ class HarnessLearningOwner:
         if self._starting is not None:
             await asyncio.gather(asyncio.shield(self._starting), return_exceptions=True)
         if self._deletions:
-            await asyncio.gather(*(asyncio.shield(task) for task in tuple(self._deletions)))
+            await asyncio.gather(*(asyncio.shield(task) for task in tuple(self._deletions)),
+                return_exceptions=True)
         if self._purges:
-            await asyncio.gather(*(asyncio.shield(task) for task in tuple(self._purges.values())))
+            # A terminal purge failure leaves its durable obligation and gate
+            # intact, but cannot prevent cancellation and native shutdown.
+            await asyncio.gather(*(asyncio.shield(task) for task in tuple(self._purges.values())),
+                return_exceptions=True)
         for entry in tuple(self.repo.streaming.active.values()):
             if entry.get('harness_revisions') is not None:
                 entry['run'].cancelled.set()

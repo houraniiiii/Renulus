@@ -106,6 +106,15 @@ request, holding its result observation; it does not claim a held native
 resource finalizer. Lost-purge-ack and migration/continuation acceptance
 remain open. Account/TLS/package scopes are unchanged.
 
+Independent Spec review found that a cached terminal purge failure prevented
+Owner.close from reaching unrelated native work. shutdown-red01.xml reproduced
+that failure with a second actual production-main execution held at loopback
+HTTP (1failure,17.02s). Close now joins deletion/purge outcomes without letting
+their errors skip cancellation or actual process/Domain/Registry settlement.
+The durable pending purge and ingress seal remain intact; shutdown-green01.xml
+has1pass,17.12s and verifies repeated close, canonical settlement and no admission
+reopening. This does not erase the purge obligation or prove lost-ack recovery.
+
 ## Native logical transfer port
 
 The canonical HarnessSavedHistory adapter reads original saved Learn rows and
