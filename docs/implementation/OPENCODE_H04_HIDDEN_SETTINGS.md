@@ -81,9 +81,10 @@ recorder repair is in its own tooling lane. One attempted Control+Home was
 rejected by the controller key allowlist and changed no application state.
 
 Actual failed-candidate recovery and issuer interruption across canonical
-selection/admission still need connected proof. Production token/limit/account
-evidence and matching-account/package gates remain distinct. H02–H08 are all
-open; migrated automatic capture remains disabled.
+selection/admission are now proved at the specific points documented below.
+Other failure phases and production token/limit/account evidence remain open;
+matching-account/package gates stay distinct. H02–H08 are all open; migrated
+automatic capture remains disabled.
 
 ## Passive Chromium metadata follow-up
 
@@ -114,6 +115,29 @@ The subsequently integrated interrupted-startup testb2a769cf supplies one actual
 idle crash/reopen point (1 passed/37.259s), with effective A/requested and failed
 B/activation_interrupted under preserved tools revocation. It does not replace
 other failure-phase, busy-run or full-ticket acceptance.
+
+## Actual failed candidate and normal reopen
+
+Worker03024efe, integrated asc2819597, adds one actual managed-app/native
+candidate tracer. Public Authority stages immutable B whose expected registry
+hash deliberately differs from A. The original isolated inspector returns its
+actual healthy native registry only after candidate exit and settlement. The
+controller refuses B with registry_mismatch/409/retryable=true before A stop or
+canonical selection. Live A retains its PID, creation FILETIME, generation,
+ready control and open admission; public root-seal reacquisition succeeds.
+
+Normal original managed close/reopen preserves effective A/requested and failed
+B/registry_mismatch, tools revocation at epoch1, and registry/launch hashes.
+Native, Domain, Services, issuer and pipe settlement are observed, with zero
+pins, active sessions or provider completions. Independent Spec and Standards
+reviews each report zero material findings in this exact test scope.
+
+The saved trace02.xml has1 pass/42.012s, zero failures/errors/skips, under
+G:/Renulus/scratch/oc-h02-h08/providers/configuration-failed-startup/receipts/.
+Retained trace01 is a launcher-PID fixture error (1 failure/0.78s); it is not a
+production red or a repair claim. This proves a pre-selection registry mismatch,
+not post-selection startup failure, every crash phase, inference/account or
+package acceptance. H04 remains open with its H03 dependency.
 
 ## Screenshot fingerprints
 

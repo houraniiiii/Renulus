@@ -26,7 +26,7 @@ lower in the historical ledger.
 | --- | --- | --- |
 | H02 | Actual saved native Library retrieval, canonical cited M5 publication, native mapping/reconciliation and store activation | Connected desktop retrieval/citation opening and remaining exposure/failure acceptance |
 | H03 | Actual production-main text/tool/image loopback dispatch, strict final deployment proof, canonical permits and selected provider identity | Qualified production tokenizer/framing bundle and revision-bound account limits/capabilities are not registered; matching-account tool/image gate remains separate before cutover |
-| H04 | Canonical authority/API, actual candidate/live lifecycle, managed initial/reopen, hidden Settings stage/activate/reopen, actual interrupted activation reconciliation and ordinary settlement | Criterion/readiness closure with H03 dependency; other crash phases and account/package scope remain distinct |
+| H04 | Canonical authority/API, actual candidate/live lifecycle, managed initial/reopen, hidden Settings stage/activate/reopen, actual interrupted activation and failed-candidate reconciliation with ordinary settlement | Criterion/readiness closure with H03 dependency; other failure phases and account/package scope remain distinct |
 | H05 | Persistent lineage, legacy real hooks, four recapture regressions, reviewed actual Mem0/Qdrant/FastEmbed native extraction and held-source-revocation/reopen proof | Remaining capture acceptance and H04 dependency; automatic migrated capture remains OFF in integration |
 | H06 | Actual supported SDK import/export/remove capability with zero inference | Existing conversation migration, one transcript owner, native purge and canonical deletion/replay integration after H05 |
 | H07 | Actual native child/permission snapshot and narrowed-epoch seam preparation | Bounded delegated evidence review, inherited authority and actual family cancellation/settlement after H05 |
@@ -168,17 +168,35 @@ report zero material findings in this exact test scope; the final source and
 receipt fingerprints match the reviewed bytes. No H05 acceptance or automatic
 capture is granted.
 
-Current directed lanes: Sartre implements the distinct H02 desktop fixture
-backend in two dedicated new files; Ohm owns its fixed learning launch envelope
-and control route. Arendt prepares the actual non-crash H04 candidate failure
-tracer after the interrupted-startup proof landed. Russell traces production
-tokenizer and framing evidence in local pinned sources. Nietzsche is available
-for independent Standards review. Turing prepares automatic native capture in
-an isolated branch; its narrow refusal-removal patch is not enabled in the
-integration checkout. Recorder, interruption and explicit native extraction
-scopes have independent Spec and Standards closure. The parent owns
-shared integration and durable evidence. No H06/H07 implementation is released
-before real H05 acceptance, and H08 still requires accepted H04/H06.
+Current directed lanes: Sartre's distinct H02 desktop fixture backend is ready
+at697d4bb1 in two dedicated new files; Russell and Nietzsche independently
+review its Spec and Standards axes before parent integration. Ohm's fixed
+learning launch is integrated. Arendt's H03/H04 criterion map is integrated
+as727f358b and updated with the already integrated non-crash failure tracer.
+The production-counter audit is integrated; no qualified accounting bundle is
+registered. Turing preserves the clean isolated automatic-capture branch at
+a6c5fe4c; its refusal-removal patch is not enabled here. Recorder, interruption,
+explicit native extraction and isolated automatic-preparation scopes have
+independent Spec and Standards closure. The parent owns the first hidden H02
+Library journey, shared integration and durable evidence. No H06/H07
+implementation is released before real H05 acceptance, and H08 still requires
+accepted H04/H06.
+
+The actual non-crash candidate/reopen test03024efe is integrated asc2819597.
+Its single trace02 case passed42.012s: original isolated inspection/settlement
+refuses deliberately mismatched immutable B with registry_mismatch before A
+stop/CAS; A remains live/open and ordinary managed successor revalidates A while
+preserving requested/failed B and current revocations. Both review axes are
+clear. Its trace01 launcher-PID fixture error is retained separately.
+
+Fixed learning launch worker e31f8ec7 is integrated as790cf703 after both review
+axes reported zero material issues. Distinct source-only v1 routing retains the
+45s/65536-byte/one-data/one-Domain contract and Settings exclusion. Separate
+worker runs passed7 Node,5 ordinary-controller and63 Electron cases. Parent
+desktop typecheck and native-entry build each exited0; built main SHA-256 is
+3eaa7db00ee21ffee89ed1aef0c91e29143280f05fad09db161d72ea82c36fa8.
+Receipts are inG:/Renulus-agent-scratch/oc-h02-h08/learning-desktop/parent-build01/.
+The fixed Python learning backend and actual hidden journey are still pending.
 
 The source-only [counter-evidence audit](../research/2026-10-11-h03-counter-evidence-readiness.md),
 worker989dd0d3 integrated as090f145d, found no adopted production generative
