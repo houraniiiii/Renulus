@@ -42,7 +42,12 @@ Receipts under G:/Renulus-agent-scratch/oc-h02-h08/command-retirement/:
 
 These runs overlap. No aggregate count, native deletion, engine, account or
 full paired restore acceptance is claimed. The inherited TestClient warning
-remains unrelated. Independent review of this bounded parent patch is pending.
+remains unrelated. Independent Standards review of e467693e..17acab88 reports
+zero material findings. Spec review found one P2: changing a retired creation
+request to temporary:true bypassed the durable tombstone. The exact public
+reopen replay reproduced201 instead of410 in temporary-red01.xml (1 failure,
+8.11s). The guard now runs before the temporary branch; temporary-green01.xml
+records1 pass,6.93s. Focused independent closure of this repair is pending.
 
 ## Native logical transfer port
 

@@ -125,6 +125,7 @@ class ConversationRepository:
         created_case = None
         with self._lock, self.cases._lock, self.db.transaction() as conn:
             require_assistance(conn)
+            require_command_current(conn, 'conversation_commands', idempotency_key)
             if request.temporary:
                 digest = canonical_digest(request.model_dump(mode="json"))
                 previous = self._temporary_commands.get(idempotency_key) if idempotency_key else None

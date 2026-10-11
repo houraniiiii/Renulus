@@ -47,6 +47,8 @@ def test_deleted_saved_owner_scrubs_creation_and_draft_receipts_and_replay(tmp_p
                 headers={'Idempotency-Key': create_key}),
             client.post('/api/v1/conversations', json={'title': 'Different deleted request'},
                 headers={'Idempotency-Key': create_key}),
+            client.post('/api/v1/conversations', json={'title': 'Temporary retired replay', 'temporary': True},
+                headers={'Idempotency-Key': create_key}),
             client.put(route + '/draft', json=draft,
                 headers={'Idempotency-Key': draft_key}),
             client.delete(route, params={'expected_revision': saved.json()['conversation_revision']},
