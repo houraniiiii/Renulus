@@ -259,6 +259,20 @@ without another process launch or rerun. A source candidate is native Chat's
 empty `reasoning_content` field on DeepSeek assistant replay, which the strict
 v1 wire validator does not recognize; this is not yet a payload-confirmed cause.
 
+Read-only canonical diagnosis now confirms the root primary and first child
+dispatch each have a confirmed permit. The child journal retains one real
+Library source dependency with two locators. The child tool-continuation fails
+proof before any permit or HTTP send; the subsequent root continuation is the
+third actual HTTP request and becomes uncertain on the strict fixture mismatch.
+The exact failing manifest/envelope were not retained, so the empty-field
+serializer/parser incompatibility remains source-confirmed and correlated,
+not a recovered byte-for-byte diagnosis. The retained canonical database hash
+is unchanged after read-only/query-only inspection. Turing owns only Deployment
+and its dedicated tests for a public proof regression and an empty-string-only
+Chat assistant compatibility fix; opaque/nonempty reasoning stays denied and
+the counter/proof must retain the unchanged raw bytes. Owner/test stay frozen
+pending that published repair and both independent reviews.
+
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
 expectation-disposition reviews clear. H06–H08 remain open. Required unmet
