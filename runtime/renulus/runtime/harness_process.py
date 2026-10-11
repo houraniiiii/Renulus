@@ -130,6 +130,7 @@ class ManagedHarnessProcess:
         self._close_request_id: str | None = None
         self._started = False
         self._spawn: asyncio.Task | None = None
+        self._observation_release_pending = False
 
     async def start(self, config: HarnessProcessConfig) -> dict:
         if self._started:
@@ -200,7 +201,8 @@ class ManagedHarnessProcess:
         self._ready = asyncio.get_running_loop().create_future()
         self._ready.add_done_callback(_observe_exception)
         self._outbound: asyncio.PriorityQueue = asyncio.PriorityQueue(
-            maxsize=config.max_inflight + config.max_control_inflight + config.max_domain_inflight + 2)
+            # One bounded release publication cannot consume command/close slots.
+            maxsize=config.max_inflight + config.max_control_inflight + config.max_domain_inflight + 3)
         self._domains = DomainCallbacks(self._identity, self._domain_authority, self._send_domain,
             max_inflight=config.max_domain_inflight, max_records=config.max_domain_result_records,
             max_bytes=config.max_domain_result_bytes, max_frame=config.max_frame_bytes)
@@ -327,6 +329,7 @@ class ManagedHarnessProcess:
         True acknowledges local pipe publication, not native settlement. Native
         IPC retains any active command/reply until its own finalizers settle.
         Cancellation of an observer leaves this publication owned.
+        A busy release allowance returns False and retains the receipt.
         """
         if type(request_id) is not str:
             return False
@@ -337,6 +340,9 @@ class ManagedHarnessProcess:
                 or self._disconnected or self._process is None or self._process.returncode is not None):
             return False
         if record.releasing is None:
+            if self._observation_release_pending:
+                return False
+            self._observation_release_pending = True
             record.releasing = asyncio.create_task(self._release_observation(request_id, record))
             record.releasing.add_done_callback(_observe_exception)
         return await asyncio.shield(record.releasing)
@@ -353,6 +359,8 @@ class ManagedHarnessProcess:
         except (asyncio.QueueFull, ConnectionError, OSError):
             record.releasing = None
             return False
+        finally:
+            self._observation_release_pending = False
         if self._requests.get(request_id) is record:
             del self._requests[request_id]
         return True

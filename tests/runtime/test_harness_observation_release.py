@@ -166,3 +166,58 @@ async def test_release_without_a_live_pipe_preserves_the_observed_receipt(tmp_pa
     assert (await process.close(3))["state"] == "closed"
     assert not await process.release_observation(receipt["request_id"])
     assert (await process.query_result(receipt["request_id"]))["result"] == receipt["result"]
+
+
+async def test_release_burst_under_held_stdin_preserves_control_close_and_unsent_receipts(tmp_path):
+    gate = tmp_path / "stdin-released"
+    fixture = FIXTURE.with_name("observation-release-stdin-host.mjs")
+    process = ManagedHarnessProcess()
+    await process.start(HarnessProcessConfig(node_executable=NODE, host_entry=fixture,
+        profile_root=tmp_path / "profile", profile_id="synthetic-profile",
+        store_id="synthetic-runtime", domain_store_id="synthetic-domain",
+        domain_path="state/renulus.sqlite", max_result_records=64,
+        boot_settings={"fixture_gate_file": str(gate), "ipc": {"max_result_records": 64}}))
+    releases = []
+    try:
+        receipts = [await process.request("session.get", {"session_id": "native-session"},
+            "read-" + str(index), "1", 2) for index in range(24)]
+        assert all(receipt["outcome"] == "committed_reference" for receipt in receipts)
+        prompt = await process.request("session.prompt", {"configuration_id": "synthetic",
+            "session_id": "native-session", "text": "held synthetic inference"},
+            "learning", "1", .02)
+        assert prompt["outcome"] == "accepted_pending"
+        held = await process.request("session.get", {"session_id": "hold-stdin"}, "hold", "1", 2)
+        assert held["result"]["session"]["inputHeld"] is True
+        large = await process.request("session.get", {"session_id": "x" * 900000}, "large", "1", 0)
+        async with asyncio.timeout(2):
+            while (await process.query_result(large["request_id"]))["admission"] != "sent_unacknowledged":
+                await asyncio.sleep(.001)
+        queued = await process.request("session.get", {"session_id": "native-session"}, "queued", "1", 0)
+        await asyncio.sleep(.01)
+        assert (await process.query_result(queued["request_id"]))["admission"] == "transport_queued"
+        # The pipe is held, with ordinary command admission still available.
+        releases = [asyncio.create_task(process.release_observation(receipt["request_id"]))
+                    for receipt in receipts]
+        await asyncio.wait(releases, timeout=.03)
+        refused = [index for index, task in enumerate(releases) if task.done() and task.result() is False]
+        assert refused
+        for index in refused:
+            assert await process.query_result(receipts[index]["request_id"]) == receipts[index]
+        status = await process.request("host.status", {}, "status", "1", 0)
+        cancel = await process.request("session.cancel", {"session_id": "native-session"}, "cancel", "1", 0)
+        assert status["outcome"] == cancel["outcome"] == "accepted_pending"
+        assert (await process.close(.03))["state"] == "blocked"
+        assert (await process.settlement(0))["state"] == "pending"
+        gate.write_text("release", encoding="utf-8")
+        await asyncio.wait_for(asyncio.gather(*releases), 3)
+        assert (await terminal(process, status["request_id"]))["result"]["dispatches"] == 1
+        assert (await terminal(process, cancel["request_id"]))["outcome"] == "cancelled_settled"
+        assert (await terminal(process, prompt["request_id"]))["outcome"] == "committed_reference"
+        assert (await process.close(3))["state"] == "closed"
+        for index in refused:
+            assert await process.query_result(receipts[index]["request_id"]) == receipts[index]
+    finally:
+        gate.write_text("release", encoding="utf-8")
+        if releases:
+            await asyncio.wait_for(asyncio.gather(*releases, return_exceptions=True), 3)
+        assert (await process.close(3))["state"] == "closed"
