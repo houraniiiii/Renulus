@@ -93,6 +93,7 @@ function imageFiles(value: unknown): { uri: string }[] | undefined {
 export async function openHarness(options: HarnessOptions) {
   const selection = await verifyPreparedProfile(options);
   if (selection.state === "active") validateStores(options);
+  let storesActive = selection.state === "active";
   const root = path.resolve(options.root);
   const state = path.join(root, "state", "harness");
   const workspace = path.join(root, "harness-workspace");
@@ -353,7 +354,7 @@ export async function openHarness(options: HarnessOptions) {
   };
   return {
     async inspect() {
-      if (phase !== "policy_blocked" || selection.state !== "prepared" || admittedWrites.size) {
+      if (phase !== "policy_blocked" || admittedWrites.size) {
         throw new Error("harness_candidate_inspection_blocked");
       }
       phase = "candidate_inspecting";
@@ -385,7 +386,7 @@ export async function openHarness(options: HarnessOptions) {
             .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
             .map(([key, item]) => [key, canonical(item)])) : value;
         return { state: "policy_blocked", generation_open: false, recovery_open: false,
-          package_acquisition_open: false, mcp_startup_open: false, live_store_writer: false, registry,
+          package_acquisition_open: false, mcp_startup_open: false, live_store_writer: storesActive, registry,
           registry_hash: createHash("sha256").update(JSON.stringify(canonical(registry))).digest("hex") };
       } finally {
         try { if (probe) await run(sdk.sessions.remove({ sessionID: probe.id })); }
@@ -435,6 +436,7 @@ export async function openHarness(options: HarnessOptions) {
       try {
         if (writesActive || (await run(execution.active)).size) throw new Error("store_activation_requires_quiescence");
         const selected = await activateStores(options);
+        storesActive = selected.state === "active";
         if (phase === "store_validating") phase = prior === "store_activation_failed" ? "policy_blocked" : prior;
         return selected;
       } catch (error) {

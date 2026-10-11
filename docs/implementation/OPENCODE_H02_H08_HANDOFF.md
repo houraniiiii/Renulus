@@ -178,7 +178,10 @@ has **70 passed**, zero skips, 2.27 seconds. Evidence and token accounting are
 explicitly synthetic; absent verified account limits/capability/counter evidence
 deny. An independent Spec review found a hidden-context-control P1 in the proof
 module (previous-response/conversation controls outside its local manifest);
-the owner is reproducing and repairing it. Standards reported zero additional
+parent `f1582dbc` consumes worker `307408c8` to deny unrepresented top-level
+controls before counting. `learning/deployment-context-integrated01.xml` has
+**96 passed**, 2.49 seconds. Focused independent Spec inspection closes the
+P1 with zero residual findings. Standards reported zero additional
 material findings. A suggested text-fragment-boundary P2 was withdrawn after
 checking the explicit frozen v1 contract, which permits adjacent text joining.
 
@@ -232,6 +235,43 @@ skipped/cancelled, 6.58 seconds; TypeScript exits 0. The IPC safe rejection list
 also preserves recovery_admission_unavailable without releasing retained claims.
 Actual authenticated deployment/final HTTP accounting and account acceptance
 remain open, as do full H02–H08 acceptance and hidden desktop verification.
+
+### Protected identity and one-plan gateway — October 11
+
+Parent `8bbe965bc237537400f2523f89a24613669da3a1` consumes worker
+`4004d2d4`: protected connection references, nonnegative credential epochs and
+authentication-required state persist inside the existing atomic DPAPI payload.
+Reopen retains current identity; rotation/reconnect and account invalidation
+narrow it. `learning/connection-identity-integrated01.xml` has **39 passed**,
+5.94 seconds. Independent Spec inspection identifies a candidate stale-catalogue
+error publication gap; the provider owner is reproducing the 401/503 race. This
+preparation does not establish current account access.
+
+Parent `dd7247ff174980655afc0e826bf3cd8e5f11516c` consumes worker `997ba952`.
+Gateway `preparePrimary(binding, resolved)` now supplies the host one resolved
+model and one preparation function. That function registers the trusted native
+manifest once from the pre-filter context and reuses its plan/adapter/dispatch
+identity at final serialization. `providers/node-gateway/receipts/primary-
+integrated01.xml` has **37 passed**, zero failures/errors/skips. The earlier
+`learning/primary-affected02.xml` has **18 passed**, zero failures/errors/skips.
+These are separate Node runs. Independent Spec closes the earlier typed-error
+P2; fresh one-plan and provider reviews remain bounded, separate reviews.
+
+### Gated active-profile registry — October 11
+
+The public inspector now accepts a quiescent policy-blocked owner of the active
+paired profile for final live-registry observation. It still rejects generation
+and held executions. Its `live_store_writer` flag follows actual store activation
+in the same generation and is true on active-profile reopen; isolated prepared
+candidate inspection remains false. The native probe session is removed before
+the inspection lease settles. This is observation, not configuration activation.
+
+`configuration/gated-registry-red01.xml` has one failure demonstrating the false
+writer flag after actual paired activation. `gated-registry-green01.xml` has
+**2 passed**, 19.84 seconds: isolated candidate and fresh active-profile registry
+with exact Library schemas/hash, closed generation and zero model calls. Harness
+TypeScript exits 0. Actual controller/lifecycle assembly and hidden Settings
+acceptance remain open.
 
 Parent consumed native tools (`ce85b7c5`), saved bridge (`1631e767`),
 configuration authority (`a85e1ee0`), controlled Library SDK composition
