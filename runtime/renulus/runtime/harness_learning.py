@@ -16,6 +16,7 @@ from .harness_configuration_controller import RegistryHealth
 from .harness_domain import DomainCancellation, DomainCancelled, DomainGrant
 from .harness_library import HarnessLibrary, LibraryAuthority
 from .harness_model_registry import HarnessModelRegistry, ModelRunAuthority
+from .harness_memory_capture import HarnessMemoryCaptures
 from .harness_process import ManagedHarnessProcess, NativeProcessIdentity, OBSERVATION_COMMANDS
 from .harness_profile import load_harness_profile
 from .harness_profile_owner import ProfileOwnerLease, ProfileOwnerScope
@@ -60,6 +61,7 @@ class HarnessLearningOwner:
         self._settlements = {}
         self.model_registry_factory = model_registry_factory
         self.model_registry = self._make_model_registry()
+        self.memory_captures = HarnessMemoryCaptures(self)
         self.bridge = HarnessLearningBridge(self.repo, self.process,
             active_manifest=self.manifest, configuration_id=configuration_id,
             publish_answer_in=self.publish_answer_in, check_run_dependencies_in=self.check_run_dependencies_in,
@@ -99,6 +101,8 @@ class HarnessLearningOwner:
         self.services.registry['harness_learning'] = self
         self.services.registry['harness_library'] = self.library
         self.services.registry['completed_answer_resolver'] = self
+        if self.memory is not None and self.model_registry is not None:
+            self.memory.bind_committed_answer_extractor(self.memory_captures.prepare)
         self.services.on_startup.append(self.start)
         self.services.on_shutdown_dependencies.append(self.close)
 
@@ -228,6 +232,7 @@ class HarnessLearningOwner:
                 entry['run'].cancelled.set()
                 self.cancel_run(entry)
                 await self.settle_run(entry, timeout=0)
+        await self.memory_captures.close()
         if self.model_registry is not None:
             await self.model_registry.close(0)
         while (await self.process.close(1))['state'] != 'closed':
@@ -350,7 +355,7 @@ class HarnessLearningOwner:
             with self.db.transaction() as conn:
                 if self._root_seal is not None or self.configuration_id != expected_effective:
                     raise ApiError('activation_conflict', 'The live configuration changed.', 409, True)
-                if (any(entry.get('harness_revisions') is not None
+                if (self.memory_captures.retained() or any(entry.get('harness_revisions') is not None
                         for entry in tuple(self.repo.streaming.active.values())) or conn.execute(
                     "SELECT 1 FROM learn_harness_answers a JOIN learn_runs r ON r.id=a.run_id "
                     "WHERE r.state IS NULL OR r.state='running' OR a.state IS NULL "
@@ -372,7 +377,7 @@ class HarnessLearningOwner:
         self.require_root_seal(seal)
         if self._closing:
             raise ApiError('runtime_stopping', 'The learning runtime is closing.', 503, True)
-        if self._settlements or (self.model_registry is not None and (
+        if self.memory_captures.retained() or self._settlements or (self.model_registry is not None and (
                 self.model_registry.status().owned or self.model_registry.status().runs)):
             raise ApiError('harness_settlement_pending', 'The previous model owner is still retained.', 409, True)
         registry = self._make_model_registry(previous=self.model_registry)
@@ -404,6 +409,9 @@ class HarnessLearningOwner:
 
     def resolve_model_run(self, binding):
         """Trusted local pins exist only after native input admission."""
+        capture = self.memory_captures.resolve_model_run(binding)
+        if capture is not None:
+            return capture
         if self.configuration_authority is None or self.bindings.get(binding.operation_id) != binding:
             return None
         entry = self._entry(binding)

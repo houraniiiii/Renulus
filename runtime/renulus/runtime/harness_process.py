@@ -17,11 +17,12 @@ from renulus.harness_contracts import HarnessCommandIdentity, validate_command_o
 
 
 PROTOCOL = "renulus-harness/1"
-CONTROLS = frozenset({"host.status", "session.cancel", "host.close"})
+CONTROLS = frozenset({"host.status", "session.cancel", "host.close",
+                      "model.extract.status", "model.extract.cancel", "model.extract.release"})
 COMMANDS = CONTROLS | {"host.inspect", "host.activate", "host.stores.activate", "host.recover", "session.create", "session.prompt",
-                       "session.get", "session.messages", "session.find"}
+                       "session.get", "session.messages", "session.find", "model.extract"}
 OBSERVATION_COMMANDS = frozenset({"session.get", "session.messages", "session.find",
-                                  "host.status", "host.inspect"})
+                                  "host.status", "host.inspect", "model.extract.status"})
 OBSERVATION_OUTCOMES = frozenset({"committed_reference", "rejected_before_admission",
                                  "cancelled_settled"})
 

@@ -2,6 +2,7 @@ import path from "node:path";
 import { createHash, timingSafeEqual } from "node:crypto";
 import type { openHarness } from "./host.ts";
 import { DomainClient } from "./domain-ipc.ts";
+import type { ExtractionInput, ExtractionReply } from "./extraction-host.ts";
 
 export interface HarnessBoot {
   protocol: "renulus-harness/1";
@@ -17,14 +18,19 @@ export interface HarnessBoot {
     max_domain_result_records?: number; max_domain_result_bytes?: number };
 }
 
-type Host = Awaited<ReturnType<typeof openHarness>>;
+type Host = Awaited<ReturnType<typeof openHarness>> & {
+  extract?: (input: ExtractionInput) => Promise<ExtractionReply>;
+  extractionStatus?: (operationId: string) => { state: string };
+  cancelExtraction?: (operationId: string) => Promise<{ state: string }>;
+  releaseExtraction?: (operationId: string) => { released: boolean };
+};
 type Request = Record<string, unknown> & {
   operation_id: string; attempt_id: string; request_id: string;
   command: string; payload: Record<string, unknown>;
 };
 const identityKeys = ["protocol", "profile_id", "store_id", "generation", "token"] as const;
-const controls = new Set(["host.status", "session.cancel"]);
-const observations = new Set(["session.get", "session.messages", "session.find", "host.status", "host.inspect"]);
+const controls = new Set(["host.status", "session.cancel", "model.extract.status", "model.extract.cancel", "model.extract.release"]);
+const observations = new Set(["session.get", "session.messages", "session.find", "host.status", "host.inspect", "model.extract.status"]);
 const observationOutcomes = new Set(["committed_reference", "rejected_before_admission", "cancelled_settled"]);
 type Lane = "data" | "control" | "close";
 type RecordEntry = { lane: Lane; command: string; digest: string; size: number; overhead: number;
@@ -197,6 +203,27 @@ export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainCl
             sessionId: text(request.payload, "session_id"), operationId: request.operation_id,
             attemptId: request.attempt_id, text: text(request.payload, "text"), images: request.payload.images,
           }); break;
+        case "model.extract": {
+          if (!host.extract) throw new Error("memory_extraction_unavailable");
+          const binding = request.payload.binding;
+          if (!object(binding) || Object.keys(binding).sort().join(',') !== 'attempt_id,cancellation_id,input_id,operation_id,session_id' ||
+              !Object.values(binding).every(identifier) || binding.operation_id !== request.operation_id ||
+              binding.attempt_id !== request.attempt_id || binding.cancellation_id !== request.operation_id ||
+              Object.keys(request.payload).sort().join(',') !== 'binding,configuration_id,system,user') throw new Error("invalid_payload");
+          result = await host.extract(request.payload as unknown as ExtractionInput); break;
+        }
+        case "model.extract.status":
+          if (Object.keys(request.payload).length) throw new Error("invalid_payload");
+          if (!host.extractionStatus) throw new Error("memory_extraction_unavailable");
+          result = host.extractionStatus(request.operation_id); break;
+        case "model.extract.cancel":
+          if (Object.keys(request.payload).length) throw new Error("invalid_payload");
+          if (!host.cancelExtraction) throw new Error("memory_extraction_unavailable");
+          result = await host.cancelExtraction(request.operation_id); break;
+        case "model.extract.release":
+          if (Object.keys(request.payload).length) throw new Error("invalid_payload");
+          if (!host.releaseExtraction) throw new Error("memory_extraction_unavailable");
+          result = host.releaseExtraction(request.operation_id); break;
         case "session.get": {
           const observed = await host.observe(text(request.payload, "session_id"));
           result = { session: observed.session, execution: observed.execution }; break;
@@ -221,7 +248,9 @@ export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainCl
       const rejected = ["invalid_payload", "invalid_images", "invalid_observation_page", "unknown_command", "harness_policy_blocked", "host_closing", "harness_closing", "configuration_requires_new_generation", "configuration_mismatch", "recovery_required", "recovery_admission_mismatch", "recovery_admission_unavailable", "recovery_requires_quiescence",
         "store_activation_requires_quiescence", "harness_store_invalid", "harness_domain_schema_mismatch",
         "harness_store_schema_mismatch", "harness_runtime_schema_mismatch", "harness_store_identity_mismatch",
-        "harness_manifest_mismatch", "harness_selection_changed", "harness_session_identity_conflict"].includes(code);
+        "harness_manifest_mismatch", "harness_selection_changed", "harness_session_identity_conflict",
+        "memory_extraction_identity_conflict", "memory_extraction_capacity", "memory_extraction_unavailable",
+        "memory_extraction_active"].includes(code);
       await reply(request, rejected ? "rejected_before_admission" : "uncertain_after_disconnect", { error: { code: rejected ? code : "host_error" } });
     }
   };

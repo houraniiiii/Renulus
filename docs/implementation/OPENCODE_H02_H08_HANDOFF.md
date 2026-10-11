@@ -32,9 +32,64 @@ lower in the historical ledger.
 | H07 | Actual native child/permission snapshot and narrowed-epoch seam preparation | Bounded delegated evidence review, inherited authority and actual family cancellation/settlement after H05 |
 | H08 | Existing instructions/skills and pinned native hooks are source inputs | Versioned instruction/skill activation and connected task use after accepted H04/H06 |
 
-The current independent lanes are the fixed hidden Settings fixture, focused
-startup review, and complementary source-only native/Python memory-extraction
-port proposals. Parent retains shared integration/commit authority.
+The fixed hidden Settings fixture is integrated at `2e166120`; the observation
+deadline repair (`fbec9d46`) and frozen connection compatibility repair
+(`44058e0a`) have independent Spec and Standards closure, zero residual findings.
+The existing-dependency renderer, Electron and TypeScript builds passed before
+those Python-only repairs. The first hidden journey loaded the actual effective
+revision and opened/edited Explain by keyboard, but staging returned409
+"Prepare the current connection before dispatch." Requested/effective pointers
+remained equal. This failure is under focused investigation; activation/reopen
+acceptance is not claimed. Its owned profile and screenshots are retained under
+`G:/rn-h04/c/s-da67689d/`; it closed normally. No account actions or live
+provider calls occurred. Source investigation traced automatic Home suggestions
+to the fixture-only403 refusal, which invalidated the cached credential epoch.
+Its focused public reproducer/503 availability repair remains pending; no
+successful inference or changed activation is claimed.
+
+### Stateless committed-answer extraction assembly
+
+The parent composes the integrated stateless adapter/standalone Registry and
+Memory CaptureBinding through production main, authenticated IPC and the same
+Services/Provider/Authority. The contract is
+[native extraction](OPENCODE_NATIVE_EXTRACTION.md). The capture factory owns
+the prepared CPU interval before canonical admission; a configuration seal or
+process replacement refuses it. Generation admits a separate text-only
+memory-extraction root with one primary dispatch and no native transcript.
+Final Memory insertion reuses the supplied SQLite connection for exact source
+and consumed-permit checks; release follows independently proved CPU/native/
+Domain/Registry settlement and a durable Memory outcome, including rejection.
+Migrated automatic capture remains OFF.
+
+Parent receipts under
+`G:/Renulus-agent-scratch/oc-h02-h08/native-extraction-owner/receipts/`:
+
+| Run | Exact result | Qualification |
+| --- | --- | --- |
+| owner-green01.xml | 5 passed | Stateless native wrapper; controlled host/finalizer seam |
+| gateway-green01.xml | 2 passed | Real native stateless adapter/glue; synthetic authenticated callbacks |
+| process01.xml | 46 passed, 8.816s | Existing transport regression after reserved extraction controls |
+| prepared-red01.xml / prepared-green01.xml | 1 failed / 1 passed | Prepared capture blocks replacement until durable release |
+| capture-red02.xml / capture-green04.xml | 1 failed / 1 passed, 1 deselected | Separate canonical generation/receipt; intermediate failed-green filenames retained as ID/fixture corrections |
+| cancel-red01.xml / cancel-green01.xml | 1 failed / 1 passed, 2 deselected | Reserved Stop signals while finalizer and canonical pin remain owned |
+| ack-red01.xml / ack-green01.xml | 1 failed / 1 passed, 3 deselected | Lost acknowledgement cannot prove native absence and never resends |
+| capture-final01.xml | 6 passed, 22.831s | Adds same-conn revocation/internal-error publication checks and release after durable rejection |
+| owner-affected01.xml | 17 passed, 58.47s | Affected saved admission, current authority and actual owner settlement tests |
+
+These are separate runs, with synthetic account/count/HTTP/process/source-current
+boundaries explicitly retained. They do not prove actual Mem0 extraction through
+production main. The real-engine worker has a sole reserved tracer path and
+consumes only published assembly commits. Parent assembly is independently
+reviewed before that connected tracer runs.
+
+Independent frozen assembly review against44058e0a found three Spec P2s
+(observation timeout poisons settlement, unavailable status prevents initiating
+shutdown, busy read-release leaks receipts) and two Standards P2s (late
+authenticated admission rejection stays uncertain, cleanup controls lose attempt
+identity). All five are source-derived, pending public reproduction and repair;
+the assembly is published as preparation only and the actual-engine tracer
+must wait for closure. The separate initiating-timeout repair ce04e638, integrated
+as0df89c85, has zero residual findings on both axes.
 
 ### Managed startup assembly and retained coordinator review
 
