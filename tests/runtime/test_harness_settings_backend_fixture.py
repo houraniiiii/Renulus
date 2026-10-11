@@ -473,3 +473,133 @@ asyncio.run(run())
     assert completed.returncode == 0, completed.stderr
     assert json.loads(completed.stdout) == {'connection': 'opencode-go',
         'immutable_artifact_readable': True, 'settled': True}
+
+
+def test_failed_home_suggestions_preserve_connection_for_explain_settings_stage(tmp_path):
+    """Actual managed lifespan/HTTP; catalogue-only MockTransport and synthetic helpers."""
+    import renulus
+    assets, fixture_source = helper_bundle(tmp_path)
+    native = fixture_source / 'packages/harness'
+    published_native = Path(renulus.__file__).parents[2] / 'packages/harness'
+    shutil.copytree(published_native / 'src', native / 'src')
+    shutil.copyfile(published_native / 'package.json', native / 'package.json')
+    for link, dependency in ((native / 'node_modules', SOURCE / 'packages/harness/node_modules'),
+                             (fixture_source / 'upstream/hermes', SOURCE / 'upstream/hermes')):
+        link.parent.mkdir(parents=True, exist_ok=True)
+        dependency_path = str(dependency.resolve()).replace("'", "''")
+        link_path = str(link).replace("'", "''")
+        linked = subprocess.run(['C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe',
+            '-NoProfile', '-NonInteractive', '-Command',
+            f"New-Item -ItemType Junction -Path '{link_path}' -Target '{dependency_path}' | Out-Null"],
+            capture_output=True, text=True, timeout=10)
+        assert linked.returncode == 0, linked.stderr
+    entry = fixture_source / 'tools/renulus-control/harness-settings-backend.py'
+    entry.parent.mkdir(parents=True)
+    shutil.copyfile(ENTRY, entry)
+    profile, file, _, data = document(tmp_path / 'launch')
+    data['process']['host_entry'] = str(native / 'src/main.mjs')
+    digest = write_document(file, data)
+    code = '''
+import asyncio, importlib.util, json, sys
+from pathlib import Path
+import httpx
+spec = importlib.util.spec_from_file_location('fixed_settings_fixture', sys.argv[1])
+fixture = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(fixture)
+app = fixture.create_fixture_app(Path(sys.argv[2]), sys.argv[3], profile=Path(sys.argv[4]),
+    helper_assets=Path(sys.argv[5]), token='synthetic-only-session')
+
+class SettingsTraceObserved(Exception):
+    pass
+
+async def run():
+    services = app.state.services
+
+    async def observe_home_then_settings():
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),
+                base_url='http://127.0.0.1:18777',
+                headers={'x-renulus-token': 'synthetic-only-session'}) as client:
+            settings_path = '/api/v1/runtime/harness/configuration'
+            initial_response = await client.get(settings_path)
+            assert initial_response.status_code == 200, initial_response.text
+            initial = initial_response.json()
+            assert initial['requested'] == initial['effective'] and initial['admission_open']
+            connected = await client.get('/api/v1/connections')
+            assert connected.status_code == 200, connected.text
+            initial_go = next(row for row in connected.json()['connections'] if row['provider'] == 'opencode-go')
+            assert initial_go['status'] == 'connected', initial_go
+            home = await client.get('/api/v1/home')
+            assert home.status_code == 200 and home.json()['assistance_allowed'], home.text
+            refresh = await client.post('/api/v1/home/suggestions/refresh',
+                headers={'Idempotency-Key': 'synthetic-settings-home-refresh'})
+            assert refresh.status_code == 202, refresh.text
+            job_id = refresh.json()['job_id']
+            async with asyncio.timeout(15):
+                while True:
+                    home = await client.get('/api/v1/home')
+                    assert home.status_code == 200, home.text
+                    state = home.json()
+                    if state['job'] and state['job']['id'] == job_id and state['job']['state'] == 'failed':
+                        break
+                    await asyncio.sleep(.02)
+            connection_response = await client.get('/api/v1/connections')
+            assert connection_response.status_code == 200, connection_response.text
+            connections = connection_response.json()
+            go = next(row for row in connections['connections'] if row['provider'] == 'opencode-go')
+            roles = initial['configuration']['roles']
+            explain = next(role for role in roles if role['purpose'] == 'explain')
+            assert explain['output_tokens'] == 64 and explain['dispatch_limit'] is None
+            explain.update(output_tokens=48, dispatch_limit=2)
+            staged = await client.post(settings_path, json={'roles': roles})
+            final_response = await client.get(settings_path)
+            assert final_response.status_code == 200, final_response.text
+            final = final_response.json()
+            runtime = await client.get('/api/v1/runtime/status')
+            assert runtime.status_code == 200, runtime.text
+            observed = {'job': state['job'], 'suggestions': state['suggestions'],
+                'connection_status': go['status'], 'stage_status': staged.status_code,
+                'stage_error': staged.json().get('error'), 'requested': final['requested'],
+                'effective': final['effective'], 'admission_open': final['admission_open'],
+                'active_runs': runtime.json()['active_runs'],
+                'completed_requests': runtime.json()['completed_requests']}
+            print(json.dumps(observed), flush=True)
+            # Assert Stage first so red captures the reported 409 after the exact
+            # failed Home job, rather than stopping at an earlier auth symptom.
+            assert staged.status_code == 200, staged.text
+            assert state['job']['error_code'] == 'provider_unavailable', state['job']
+            assert state['suggestions'] is None
+            assert go['status'] == 'connected' and connections['selected_provider'] == 'opencode-go'
+            assert go['models'] == initial_go['models']
+            assert runtime.json()['active_runs'] == [] and runtime.json()['completed_requests'] == []
+            assert final['effective'] == initial['effective'] and final['admission_open']
+            assert final['requested'] == staged.json()['version'] != initial['effective']
+            requested = next(role for role in final['requested_configuration']['roles'] if role['purpose'] == 'explain')
+            effective = next(role for role in final['configuration']['roles'] if role['purpose'] == 'explain')
+            assert (requested['output_tokens'], requested['dispatch_limit']) == (48, 2)
+            assert (effective['output_tokens'], effective['dispatch_limit']) == (64, None)
+        raise SettingsTraceObserved
+
+    # The actual managed bootstrap has completed. Stop before tiny synthetic
+    # helper bytes can be mistaken for warmup/serving or hidden UI acceptance.
+    services.on_startup.insert(0, observe_home_then_settings)
+    try:
+        async with app.router.lifespan_context(app):
+            raise AssertionError('Bounded Settings trace unexpectedly entered serving')
+    except SettingsTraceObserved:
+        pass
+    assert (await services.shutdown(timeout=0))['state'] == 'settled'
+    assert services.stopping
+    print(json.dumps({'settled': True}))
+
+asyncio.run(run())
+'''
+    environment = {key: os.environ[key] for key in ('SYSTEMROOT', 'SystemRoot', 'WINDIR') if key in os.environ}
+    environment['PYTHONPATH'] = os.pathsep.join((str(Path(renulus.__file__).parents[1]), str(SOURCE / 'upstream/hermes')))
+    completed = subprocess.run([sys.executable, '-c', code, str(entry), str(file), digest,
+        str(profile), str(assets)], env=environment, capture_output=True, text=True, timeout=85)
+    (tmp_path / 'home-settings.stdout.txt').write_text(completed.stdout, encoding='utf-8')
+    (tmp_path / 'home-settings.stderr.txt').write_text(completed.stderr, encoding='utf-8')
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    observations = [json.loads(line) for line in completed.stdout.splitlines()]
+    assert observations[0]['stage_status'] == 200
+    assert observations[1] == {'settled': True}

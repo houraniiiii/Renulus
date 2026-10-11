@@ -197,7 +197,7 @@ def create_fixture_app(file: Path, digest: str, *, profile: Path, helper_assets:
 
     def catalogue(request):
         if request.method != 'GET' or not request.url.path.endswith('/models'):
-            return httpx.Response(403, json={'error': {'code': 'synthetic_catalogue_only'}})
+            return httpx.Response(503, json={'error': {'code': 'synthetic_catalogue_only'}})
         return httpx.Response(200, json={'data': [{'id': 'mimo-v2.6-pro'}, {'id': 'deepseek-v4.1-flash'}]})
 
     async def prepare(app, lease, authority, store):
