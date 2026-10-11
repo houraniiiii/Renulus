@@ -292,6 +292,18 @@ def _wire_parts(content, role, responses):
 
 
 def _wire_manifest(payload, responses):
+    # Close the body boundary independently of Gateway: opaque history pointers
+    # and provider compaction can add inputs absent from NativeManifest v1.
+    common = {"model", "stream", "tools", "tool_choice", "temperature", "top_p",
+              "frequency_penalty", "presence_penalty", "store", "stream_options",
+              "parallel_tool_calls", "top_logprobs", "reasoning"}
+    specific = ({"input", "instructions", "max_output_tokens", "text", "truncation",
+                 "safety_identifier", "prompt_cache_key", "include", "max_tool_calls", "service_tier"}
+                if responses else {"messages", "max_completion_tokens", "seed", "stop",
+                                   "response_format", "reasoning_effort", "logprobs"})
+    _fields(payload, ("model", "stream"), common | specific)
+    if "truncation" in payload and payload["truncation"] != "disabled":
+        _deny("deployment_manifest_mismatch")
     events, schemas = [], []
     messages = payload.get("input" if responses else "messages")
     if not isinstance(messages, list):

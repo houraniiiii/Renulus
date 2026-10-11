@@ -336,6 +336,73 @@ async def test_both_native_protocols_preserve_tool_replay_and_json_semantics(adm
 
 
 @pytest.mark.parametrize("provider", ["codex", "opencode-go"])
+@pytest.mark.parametrize("control,value", [
+    ("previous_response_id", "PRIVATE hidden-history-canary"),
+    ("previous_response_id", None),
+    ("conversation", {"id": "PRIVATE conversation-canary"}),
+    ("conversation", None),
+    ("context_management", [{"type": "compaction", "compact_threshold": 1}]),
+    ("context_management", []),
+    ("truncation", "auto"),
+    ("truncation", "unknown"),
+    ("truncation", True),
+    ("truncation", None),
+    ("thread_id", "PRIVATE hidden-thread-canary"),
+    ("unreviewed_context_control", {"encrypted_content": "PRIVATE opaque-canary"}),
+])
+async def test_proof_denies_hidden_context_controls_before_counter(admitted, provider, control, value):
+    original, binding, manifest, payload, request, _ = replay_case(admitted, provider)
+    counted = []
+    initial = await original.prepare(binding, required_capabilities=("text", "tools", "image"))
+    evidence = initial.evidence
+
+    async def counter(body, snapshot):
+        counted.append(body)
+        return await evidence.counter(body, snapshot)
+
+    # The public evidence injection observes whether accounting was reached.
+    guarded_evidence = replace(evidence, counter=counter)
+    module = HarnessDeployment(resolve=original.resolve, evidence=lambda _: guarded_evidence,
+                               check_current=lambda _: None, max_request_bytes=16384)
+    preparation = await module.prepare(binding, required_capabilities=("text", "tools", "image"))
+    changed = {**payload, control: value}
+    request = {**request, "body_base64": base64.b64encode(json.dumps(changed).encode()).decode()}
+    with pytest.raises(ApiError) as caught:
+        await module.prove(preparation, step_id="step-1", request_kind="primary",
+                           serialized_request=request, manifest=manifest)
+    assert caught.value.code == "deployment_manifest_mismatch"
+    assert "PRIVATE" not in str(caught.value)
+    assert not counted
+
+
+@pytest.mark.parametrize("provider", ["codex", "opencode-go"])
+async def test_proof_counts_exact_body_with_reviewed_route_framing(admitted, provider):
+    original, binding, manifest, payload, request, _ = replay_case(admitted, provider)
+    initial = await original.prepare(binding, required_capabilities=("text", "tools", "image"))
+    evidence = initial.evidence
+    counted = []
+
+    async def counter(body, snapshot):
+        counted.append((body, snapshot))
+        return await evidence.counter(body, snapshot)
+
+    guarded_evidence = replace(evidence, counter=counter)
+    module = HarnessDeployment(resolve=original.resolve, evidence=lambda _: guarded_evidence,
+                               check_current=lambda _: None, max_request_bytes=16384)
+    preparation = await module.prepare(binding, required_capabilities=("text", "tools", "image"))
+    payload.update({"store": False, "temperature": 0, "stream_options":
+        {"include_obfuscation": False} if provider == "codex" else {"include_usage": True}})
+    if provider == "codex":
+        payload["truncation"] = "disabled"
+    body = json.dumps(payload, indent=3).encode()
+    request = {**request, "body_base64": base64.b64encode(body).decode()}
+    proof = await module.prove(preparation, step_id="step-1", request_kind="primary",
+                               serialized_request=request, manifest=manifest)
+    assert counted == [(body, manifest)]
+    assert proof.body == body and proof.input_tokens == 57
+
+
+@pytest.mark.parametrize("provider", ["codex", "opencode-go"])
 @pytest.mark.parametrize("mutation", ["tool_result", "tool_id", "arguments", "schema", "image_hash", "image_detail"])
 async def test_native_replay_proof_rejects_changed_refs_schemas_and_image_identity(admitted, provider, mutation):
     module, binding, manifest, payload, request, _ = replay_case(admitted, provider)
