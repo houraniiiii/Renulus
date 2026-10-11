@@ -135,3 +135,13 @@ grant epoch/final registry hash; actual stopped-owner proof remains parent-owned
 Durable attempts reserve before dispatch and retain uncertain debits. Revocation
 overlay and require_current can share parent publication transactions. Restore
 must account for immutable-version SQL triggers; H18 remains downstream.
+
+The legacy Learn writer guard reproduced both pending/committed mapping failures
+in `conversations/parent-owner-red.xml` (2 failed).
+`conversations/parent-owner-green.xml` passes 13 cases including existing Learn
+persistence/cancellation/recall regression (one inherited TestClient deprecation
+warning). It checks ownership before admission/replay and again at write commit;
+any reserved mapping blocks a second legacy transcript. This is a synthetic owner
+fixture, not native mapping acceptance. Shared ownership-only restore relations
+for reference/lineage tables are prepared; no generic truth-support cascade or
+H18 paired recovery acceptance is claimed.

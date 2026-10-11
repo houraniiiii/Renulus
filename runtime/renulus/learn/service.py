@@ -88,6 +88,7 @@ class LearnService:
 
     def prepare(self, question, scope, thread_id, topic_id, style, idempotency_key, *, case_handoff_id=None, conn=None):
         with nullcontext(conn) if conn is not None else closing(self.db.connect()) as snapshot:
+            self._require_legacy_owner_in(snapshot, thread_id)
             policy_revision = require_assistance(snapshot)
             context_epoch = context_epoch_in(snapshot)
         persistent = scope.kind == Scope.STUDY
@@ -124,6 +125,7 @@ class LearnService:
         if persistent:
             now = utc_now()
             with nullcontext(conn) if conn is not None else self.db.transaction() as conn:
+                self._require_legacy_owner_in(conn, thread_id)
                 self.check_run(run, conn=conn)
                 if self.db.is_deleted("learn_thread", thread_id):
                     raise ApiError("thread_deleted", "This study thread has been deleted", 409)
@@ -134,6 +136,18 @@ class LearnService:
                 conn.execute("UPDATE learn_threads SET updated_at=?,teaching_style=? WHERE id=?",
                              (now, style, thread_id))
         return None, run
+
+    @staticmethod
+    def _require_legacy_owner_in(conn, thread_id):
+        if not thread_id:
+            return
+        installed = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='learn_harness_mappings'").fetchone()
+        if installed and conn.execute("SELECT 1 FROM learn_harness_mappings WHERE thread_id=?",
+                (thread_id,)).fetchone():
+            # A pending native creation already owns the thread. An uncertain
+            # acknowledgement cannot authorize a second writable transcript.
+            raise ApiError("harness_owned_thread",
+                "Continue this saved chat through its current conversation owner", 409)
 
     def check_run(self, run, *, conn=None):
         with nullcontext(conn) if conn is not None else closing(self.db.connect()) as snapshot:
