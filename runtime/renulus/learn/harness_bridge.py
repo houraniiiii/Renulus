@@ -56,11 +56,16 @@ class CompletedAnswer:
 
 class HarnessLearningBridge:
     def __init__(self, repository, transport, *, active_manifest, configuration_id,
-                 publish_answer_in=None, check_dependencies_in=None, poll_interval=0.05):
+                 publish_answer_in=None, check_dependencies_in=None, check_run_dependencies_in=None,
+                 eligible_history_in=None, context_filtering=False, poll_interval=0.05):
         self.repo, self.db, self.transport = repository, repository.db, transport
         self.active_manifest, self.configuration_id = active_manifest, configuration_id
         self.publish_answer_in = publish_answer_in
         self.check_dependencies_in = check_dependencies_in
+        self.check_run_dependencies_in = check_run_dependencies_in
+        self.eligible_history_in = eligible_history_in
+        # Trusted assembly asserts that the native per-model hook is installed.
+        self.context_filtering = context_filtering
         self.poll_interval = poll_interval
         self._consumed = {}
         self._reconciling = {}
@@ -80,19 +85,12 @@ class HarnessLearningBridge:
         if conn.execute('SELECT 1 FROM learn_messages WHERE thread_id=? LIMIT 1', (identifier,)).fetchone():
             raise ApiError('harness_history_requires_migration',
                 'This saved history needs its verified migration before native continuation.', 409)
-        inherited_inputs, inherited_dependencies = [], []
-        for previous in conn.execute('SELECT * FROM learn_harness_answers WHERE thread_id=?', (identifier,)):
-            if previous['state'] != 'completed' or self.check_dependencies_in is None or self.publish_answer_in is None:
+        for previous in conn.execute('SELECT state FROM learn_harness_answers WHERE thread_id=?', (identifier,)):
+            if (previous['state'] != 'completed' or self.publish_answer_in is None or
+                    not (self.check_run_dependencies_in or self.check_dependencies_in) or
+                    self.eligible_history_in is None or not self.context_filtering):
                 raise ApiError('harness_history_requires_lineage',
                     'The retained native history needs verified publication lineage before continuation.', 409)
-            reference = json.loads(previous['reference_json'])
-            inherited_inputs.append(EligibleInput(kind='committed_evidence', dependency=Dependency(
-                target={'type': 'learning_evidence', 'id': 'learn-answer:' + previous['run_id']},
-                expected_revision=previous['publication_digest'])))
-            inherited_inputs.extend(EligibleInput.model_validate(item) for item in reference['inputs'])
-            inherited_dependencies.extend(Dependency.model_validate(item) for item in reference['dependencies'])
-        if inherited_inputs or inherited_dependencies:
-            self.check_dependencies_in(conn, inputs=tuple(inherited_inputs), dependencies=tuple(inherited_dependencies))
         run = ActiveRun(durable_id('run'), identifier, ContextScope(kind=Scope.STUDY, entity_id=identifier))
         run.policy_revision, run.context_epoch = require_assistance(conn), context_epoch_in(conn)
         now = utc_now()
@@ -101,8 +99,18 @@ class HarnessLearningBridge:
         conn.execute('INSERT INTO learn_harness_answers(run_id,thread_id,request_digest,state) VALUES(?,?,?,?)',
             (run.id, identifier, canonical_digest(request.model_dump(mode='json')), 'reserved'))
         self.repo.learn.active[run.id] = run
-        self._consumed[run.id] = (tuple(inherited_inputs), tuple(inherited_dependencies), '[]')
+        self._consumed[run.id] = ((), (), '[]')
         return run
+
+    def _check_dependencies(self, conn, run_id, inputs, dependencies):
+        if not inputs and not dependencies:
+            return
+        if self.check_run_dependencies_in is not None:
+            self.check_run_dependencies_in(conn, run_id=run_id, inputs=inputs, dependencies=dependencies)
+        elif self.check_dependencies_in is not None:
+            self.check_dependencies_in(conn, inputs=inputs, dependencies=dependencies)
+        else:
+            raise ApiError('harness_dependencies_unavailable', 'Learning dependencies need local validation.', 409)
 
     def check(self, run_id, *, conn=None):
         entry = self.repo.streaming.active.get(run_id)
@@ -116,10 +124,55 @@ class HarnessLearningBridge:
             if summary['lifecycle'] != 'active' or (summary['revision'], metadata['draft_revision']) != entry['harness_revisions']:
                 raise ApiError('conversation_revision_conflict', 'The conversation or draft changed. Retry this request.', 409, True)
             consumed = self._consumed.get(run_id, ((), (), '[]'))
-            if consumed[0] or consumed[1]:
-                if self.check_dependencies_in is None:
-                    raise ApiError('harness_dependencies_unavailable', 'Learning dependencies need local validation.', 409)
-                self.check_dependencies_in(current, inputs=consumed[0], dependencies=consumed[1])
+            self._check_dependencies(current, run_id, consumed[0], consumed[1])
+
+    def select_context(self, run_id, *, messages):
+        """Local native hook: select identities and consume only trusted eligible history."""
+        if not self.context_filtering or self.eligible_history_in is None:
+            raise ApiError('harness_history_requires_lineage', 'Native history filtering is unavailable.', 409)
+        entry = self.repo.streaming.active.get(run_id)
+        with self.db.transaction() as conn:
+            self.check(run_id, conn=conn)
+            row = conn.execute('SELECT input_id FROM learn_harness_answers WHERE run_id=?', (run_id,)).fetchone()
+            current_id = row['input_id']
+            if not isinstance(messages, list) or any(not isinstance(item, dict) for item in messages):
+                raise ApiError('harness_context_conflict', 'The native context descriptors are invalid.', 409)
+            descriptors = [(item.get('id'), item.get('role')) for item in messages
+                if isinstance(item.get('id'), str) and item['id'] and item.get('role') in ('user', 'assistant', 'tool')]
+            positions = [index for index, (identifier, role) in enumerate(descriptors) if identifier == current_id]
+            if len(positions) != 1 or descriptors[positions[0]][1] != 'user':
+                raise ApiError('harness_input_conflict', 'The pinned current native input is absent or changed.', 409)
+            boundary = positions[0]
+            suffix = descriptors[boundary:]
+            if any(role == 'user' and identifier != current_id for identifier, role in suffix):
+                raise ApiError('harness_context_conflict', 'The current native turn changed.', 409)
+            references = tuple({**json.loads(previous['reference_json']), 'publication_digest': previous['publication_digest']}
+                for previous in conn.execute("SELECT reference_json,publication_digest FROM learn_harness_answers "
+                    "WHERE thread_id=? AND state='completed' AND run_id!=?", (entry['id'], run_id)))
+            project = entry.get('project')
+            pins = self.eligible_history_in(conn, references=references,
+                project_id=project['project_id'] if project else None)
+            by_evidence = {'learn-answer:' + reference['run_id']: reference for reference in references}
+            prior_roles = {}
+            for identifier, role in descriptors[:boundary]:
+                prior_roles.setdefault(identifier, set()).add(role)
+            allowed, inputs, dependencies = set(identifier for identifier, _ in suffix), [], []
+            for value in pins:
+                pin = EligibleInput.model_validate(value)
+                reference = by_evidence.get(pin.dependency.target.id)
+                if (pin.kind != 'committed_evidence' or pin.dependency.target.type != 'learning_evidence' or
+                        reference is None or pin.dependency.expected_revision != reference['publication_digest']):
+                    raise ApiError('harness_context_conflict', 'History eligibility returned an unbound receipt.', 409)
+                if (prior_roles.get(reference['input_id']) != {'user'} or not reference['message_ids'] or
+                        any(not prior_roles.get(identifier) or not prior_roles[identifier] <= {'assistant', 'tool'}
+                            for identifier in reference['message_ids'])):
+                    continue
+                allowed.update((reference['input_id'], *reference['message_ids']))
+                inputs.append(pin)
+                inputs.extend(EligibleInput.model_validate(item) for item in reference['inputs'])
+                dependencies.extend(Dependency.model_validate(item) for item in reference['dependencies'])
+        self.record_consumed(run_id, inputs=inputs, dependencies=dependencies)
+        return list(dict.fromkeys(identifier for identifier, _ in descriptors if identifier in allowed))
 
     def record_consumed(self, run_id, *, inputs=(), dependencies=(), citations=()):
         """Trusted domain callback only; model/tool argument text is never lineage."""
@@ -470,10 +523,7 @@ class HarnessLearningBridge:
             raise ApiError('harness_reconciliation_stale', 'The original learning admission changed.', 409)
         inputs = tuple(EligibleInput.model_validate(item) for item in snapshot['inputs'])
         dependencies = tuple(Dependency.model_validate(item) for item in snapshot['dependencies'])
-        if inputs or dependencies:
-            if self.check_dependencies_in is None:
-                raise ApiError('harness_dependencies_unavailable', 'Learning dependencies need local validation.', 409)
-            self.check_dependencies_in(conn, inputs=inputs, dependencies=dependencies)
+        self._check_dependencies(conn, run_id, inputs, dependencies)
         return dict(row), snapshot, dict(command), receipt, summary, project, inputs, dependencies
 
     async def reconcile_pending(self, identifier):

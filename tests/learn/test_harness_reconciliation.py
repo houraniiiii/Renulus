@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
 """Saved public observation reconciles effects; it never repeats native work."""
+import asyncio
 import json
 import pytest
 from fastapi.testclient import TestClient
@@ -161,9 +162,10 @@ async def test_reopened_recovery_retains_trusted_closure_and_rolls_back_failed_p
         target={'type': 'memory_revision', 'id': 'synthetic-fact:2'}, expected_revision='2'))
     source = Dependency(target={'type': 'library_revision', 'id': 'synthetic-source'}, expected_revision='1')
     citation = {'passage_id': 'synthetic-passage', 'text': 'Native-only synthetic tool bytes.'}
-    def validate(conn, **closure):
+    def validate(conn, *, run_id, **closure):
         assert conn.in_transaction and closure['inputs'] == (memory,)
-    bridge.check_dependencies_in = validate
+        assert run_id == receipt['run_id']
+    bridge.check_run_dependencies_in = validate
     def admitted(run_id, input_id):
         bridge.bind_input(run_id, session_id='ses_synthetic', input_id=input_id)
         bridge.record_consumed(run_id, inputs=(memory,), dependencies=(source,), citations=(citation,))
@@ -187,7 +189,7 @@ async def test_reopened_recovery_retains_trusted_closure_and_rolls_back_failed_p
             raise ApiError('synthetic_publication_unavailable', 'Synthetic local publication failed.', 409)
         published.append(answer)
         return 'c' * 64
-    repo, recovered = install(reopened, transport, check_dependencies_in=validate, publish_answer_in=publish)
+    repo, recovered = install(reopened, transport, check_run_dependencies_in=validate, publish_answer_in=publish)
     with pytest.raises(ApiError) as rejected:
         await recovered.messages(identifier)
     assert rejected.value.code == 'synthetic_publication_unavailable'
@@ -195,7 +197,6 @@ async def test_reopened_recovery_retains_trusted_closure_and_rolls_back_failed_p
     assert repo.get('learning', identifier)['title'] == chat['title']
     assert repo.draft('learning', identifier)['text'] == request.text
     fail = False
-    import asyncio
     histories = await asyncio.gather(recovered.messages(identifier), recovered.messages(identifier))
     assert [item['id'] for item in histories[0]['items']] == ['msg_user', 'msg_answer']
     assert histories[0] == histories[1]
