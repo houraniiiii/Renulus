@@ -12,7 +12,7 @@ from renulus.storage.assessment_policy import policy_snapshot
 from renulus.storage.publication import record_interrupted_conversation
 from renulus.cases.models import DiscussCase
 from renulus.cases.streaming import discuss, sse
-from .conversation_repository import command, require_assistance
+from .conversation_repository import command, require_assistance, require_command_current
 
 
 class ConversationStreams:
@@ -170,6 +170,7 @@ class ConversationStreams:
         with repo._lock, repo.cases._lock:
             try:
                 with repo.cases.defer_context_invalidation(), repo.db.transaction() as conn:
+                    require_command_current(conn, 'conversation_commands', key)
                     policy = require_assistance(conn)
                     summary,row = repo._get(conn,kind,identifier)
                     saved = summary['retention']=='saved'

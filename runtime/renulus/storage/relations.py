@@ -94,6 +94,7 @@ PARENTS = {
 # Existing deletion producers and supported historical aliases. An unknown
 # ledger type is preserved but cannot match a different record namespace.
 TOMBSTONES = {
+    "conversation_command": "conversation_commands",
     "learn_thread": "learn_threads", "learn_message": "learn_messages", "learn_run": "learn_runs",
     "case": "case_sessions", "case_attachment": "case_attachments",
     "memory_fact": "memory_facts", "learning_evidence": "learning_evidence",

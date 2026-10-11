@@ -26,11 +26,38 @@ def require_assistance(conn, expected_revision=None):
     return check(conn, expected_revision=expected_revision)
 
 
+def require_command_current(conn, table, key):
+    if key is not None and conn.execute(
+            'SELECT 1 FROM learn_command_tombstones WHERE ledger=? AND idempotency_key=?',
+            (table, key)).fetchone():
+        raise ApiError('command_terminal_unavailable',
+            'This operation is no longer available.', 410)
+
+
+def retire_owner_commands_in(conn, target_type, identifier):
+    """Creation targets new; its result is the explicit owner binding."""
+    rows = conn.execute(
+        "SELECT idempotency_key FROM conversation_commands WHERE "
+        "(target_type=? AND target_id=?) OR "
+        "(json_extract(result_json,'$.identity.type')=? AND json_extract(result_json,'$.identity.id')=?) OR "
+        "(json_extract(result_json,'$.conversation.identity.type')=? AND "
+        "json_extract(result_json,'$.conversation.identity.id')=?)",
+        (target_type, identifier, target_type, identifier, target_type, identifier)).fetchall()
+    for row in rows:
+        key = row['idempotency_key']
+        conn.execute('INSERT OR IGNORE INTO learn_command_tombstones VALUES(?,?,?)',
+            ('conversation_commands', key, utc_now()))
+        conn.execute("INSERT OR IGNORE INTO deletion_ledger VALUES('conversation_command',?,?)",
+            (key, utc_now()))
+        conn.execute('DELETE FROM conversation_commands WHERE idempotency_key=?', (key,))
+
+
 def command(conn, table, key, operation, target_type, target_id, request, action):
     """Two installed ledgers share this small saved-only transaction boundary."""
-    require_assistance(conn)  # A stored result never bypasses present policy.
     if table not in ("conversation_commands", "study_project_commands"):
         raise ValueError("Unregistered command owner")
+    require_command_current(conn, table, key)
+    require_assistance(conn)  # A stored result never bypasses present policy.
     if key is None:
         return action()
     if not 8 <= len(key) <= 128:
@@ -170,6 +197,7 @@ class ConversationRepository:
 
     def save_draft(self, kind, identifier, request: ConversationDraft, idempotency_key=None):
         with self._lock, self.cases._lock, self.db.transaction() as conn:
+            require_command_current(conn, 'conversation_commands', idempotency_key)
             require_assistance(conn)
             summary, row = self._get(conn, kind, identifier)
             if summary["retention"] == "temporary":
@@ -336,6 +364,8 @@ class ConversationRepository:
 
     async def delete(self, kind, identifier, request: Mutation, idempotency_key=None):
         self._owner(kind)
+        with self.db.transaction() as conn:
+            require_command_current(conn, 'conversation_commands', idempotency_key)
         # Stop local runs before deleting their canonical authority. No provider
         # is called in a SQLite transaction or while a synchronous lock is held.
         if kind == "learning":
@@ -364,6 +394,7 @@ class ConversationRepository:
                 result = self._volatile_command(idempotency_key, "delete", kind, identifier, request, remove)
             else:
                 result = command(conn, "conversation_commands", idempotency_key, "delete", self._owner(kind)[3], identifier, request, remove)
+                retire_owner_commands_in(conn, self._owner(kind)[3], identifier)
         with self._lock, self.cases._lock:
             if kind == 'case' and not temporary:
                 session = self.cases._sessions.pop(identifier, None)
@@ -378,6 +409,7 @@ class ConversationRepository:
         return result
 
     def owner_removed(self, conn, kind, identifier):
+        retire_owner_commands_in(conn, self._owner(kind)[3], identifier)
         attachments = self.services.registry.get('chat_attachments')
         if attachments is not None:
             enqueue_in(conn, attachments.delete_chat_in(conn, kind, identifier))
