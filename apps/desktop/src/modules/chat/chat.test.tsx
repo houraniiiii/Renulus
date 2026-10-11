@@ -232,6 +232,65 @@ describe('Chat volatile handoffs',()=>{
     expect(calls.send.mock.calls[0][4]).toEqual(context);
     expect((screen.getByLabelText('Your case question') as HTMLTextAreaElement).value).toBe('Keep this separate draft');
   });
+  it('flushes an immediate Archive once and retains the draft after Restore and remount',async()=>{
+    setup();
+    const reference={target:{type:'library_revision' as const,id:'draft-source'}};
+    let current:ConversationSummary={...chat};
+    let stored={text:'',content_refs:[reference],revision:0};
+    const mutations:{method:string;path:string;body:unknown}[]=[];
+    let releaseWrite:()=>void=()=>{};
+    const draftGate=new Promise<void>(resolve=>{releaseWrite=resolve;});
+    calls.api.mockImplementation(async(path:string,options?:{method?:string;body?:{expected_revision:number;text?:string;content_refs?:typeof stored.content_refs}})=>{
+      if(options?.method){
+        mutations.push({method:options.method,path,body:options.body});
+        if(options.body?.expected_revision!==current.revision)throw new ApiError('Synthetic stale revision',409,'revision_conflict');
+        if(path.endsWith('/draft')&&options.method==='PUT'){
+          await draftGate;
+          stored={text:options.body.text!,content_refs:options.body.content_refs!,revision:stored.revision+1};
+          current={...current,revision:current.revision+1};
+          return {...stored,conversation_revision:current.revision};
+        }
+        if(path.endsWith('/archive')||path.endsWith('/restore')){
+          current={...current,revision:current.revision+1,lifecycle:path.endsWith('/archive')?'archived':'active'};
+          return current;
+        }
+        throw new Error('Unexpected synthetic mutation');
+      }
+      if(path.endsWith('/draft'))return {...stored,conversation_revision:current.revision};
+      if(path.endsWith('/messages')||path.endsWith('/runs')||path.includes('/study/projects'))return {items:[],next_cursor:null};
+      return current;
+    });
+    const view=render(frame(<Chat identity={chat.identity}/>));
+    const composer=await screen.findByLabelText('Message Renulus');
+    vi.useFakeTimers({toFake:['setTimeout','clearTimeout']});
+    try{
+      fireEvent.change(composer,{target:{value:'Retain this edited CKD draft'}});
+      await act(async()=>fireEvent.click(screen.getByRole('button',{name:'Archive'})));
+      await act(async()=>{await vi.advanceTimersByTimeAsync(450);});
+      expect(mutations).toEqual([{method:'PUT',path:'/conversations/learning/saved-chat/draft',body:{expected_revision:1,text:'Retain this edited CKD draft',content_refs:[reference]}}]);
+      expect((composer as HTMLTextAreaElement).disabled).toBe(true);
+      expect((screen.getByRole('button',{name:'Archive'}) as HTMLButtonElement).disabled).toBe(true);
+      await act(async()=>{releaseWrite();await draftGate;});
+      expect(screen.getByRole('button',{name:'Restore'})).toBeTruthy();
+      await act(async()=>{await vi.advanceTimersByTimeAsync(450);});
+      await act(async()=>fireEvent.click(screen.getByRole('button',{name:'Restore'})));
+      await act(async()=>{await vi.advanceTimersByTimeAsync(450);});
+      expect(mutations).toEqual([
+        {method:'PUT',path:'/conversations/learning/saved-chat/draft',body:{expected_revision:1,text:'Retain this edited CKD draft',content_refs:[reference]}},
+        {method:'POST',path:'/conversations/learning/saved-chat/archive',body:{expected_revision:2}},
+        {method:'POST',path:'/conversations/learning/saved-chat/restore',body:{expected_revision:3}},
+      ]);
+      expect(screen.queryByText('Synthetic stale revision')).toBeNull();
+    }finally{
+      await act(async()=>{releaseWrite();await draftGate;});
+      view.unmount();vi.useRealTimers();
+    }
+    render(frame(<Chat identity={chat.identity}/>));
+    expect((await screen.findByLabelText('Message Renulus') as HTMLTextAreaElement).value).toBe('Retain this edited CKD draft');
+    expect(screen.getByRole('button',{name:'Remove source 1'})).toBeTruthy();
+    expect(calls.send).not.toHaveBeenCalled();
+  });
+
   it('flushes a new temporary draft before Save and replays the same command after a lost acknowledgement',async()=>{
     setup();let attempts=0;
     const temporary={...chat,retention:'temporary' as const};

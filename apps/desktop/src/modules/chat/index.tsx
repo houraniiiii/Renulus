@@ -50,6 +50,7 @@ export default function ChatPage(props: ChatPageProps) {
   const [loading,setLoading] = useState(true);
   const [loadRevision,setLoadRevision] = useState(0);
   const [busy,setBusy] = useState(false);
+  const [archiving,setArchiving] = useState(false);
   const [recovering,setRecovering] = useState(false);
   const [title,setTitle] = useState('');
   const [projects,setProjects] = useState<ProjectSummary[]>([]);
@@ -65,6 +66,7 @@ export default function ChatPage(props: ChatPageProps) {
   const activeRun = useRef<string|undefined>(undefined);
   const visibleRun = useRef<string|undefined>(undefined);
   const draftWrite = useRef<Promise<void>>(Promise.resolve());
+  const draftTimer = useRef<ReturnType<typeof setTimeout>|undefined>(undefined);
   const persisted = useRef('');
   const consumed = useRef(new Set<string>());
   const saveCommand = useRef<{identity:string;key:string;body:{expected_revision:number}}|undefined>(undefined);
@@ -79,7 +81,7 @@ export default function ChatPage(props: ChatPageProps) {
   useEffect(() => {
     const version=++epoch.current, controller=new AbortController();
     if(reopenDraft.current?.identity!==incomingKey||reopenDraft.current.helpKey!==helpKey)reopenDraft.current=undefined;
-    setLoading(true);setError(undefined);setMessages([]);setPartial('');setBusy(false);setRecovering(false);setStatus('');
+    setLoading(true);setError(undefined);setMessages([]);setPartial('');setBusy(false);setArchiving(false);setRecovering(false);setStatus('');
     activeRun.current=undefined;visibleRun.current=undefined;
     chatRef.current=undefined;setChat(undefined);setRefs([]);setText('');persisted.current='';
     async function load() {
@@ -171,11 +173,12 @@ export default function ChatPage(props: ChatPageProps) {
 
   useEffect(()=>{if(confirmDelete)dialog.current?.showModal();},[confirmDelete]);
   useEffect(()=>{
-    if(loading||busy||!chat||chat.lifecycle!=='active')return;
+    if(loading||busy||archiving||!chat||chat.lifecycle!=='active')return;
     const value=signature(text,refs);
     if(value===persisted.current)return;
     const version=epoch.current;
     const timer=setTimeout(()=>{
+      if(draftTimer.current===timer)draftTimer.current=undefined;
       draftWrite.current=draftWrite.current.then(async()=>{
         const current=chatRef.current;
         if(!current||epoch.current!==version)return;
@@ -186,8 +189,9 @@ export default function ChatPage(props: ChatPageProps) {
         }catch(caught){if(epoch.current===version)setError(caught);}
       });
     },400);
-    return()=>clearTimeout(timer);
-  },[text,refs,loading,busy,chat?.revision,chat?.lifecycle,helpKey]);
+    draftTimer.current=timer;
+    return()=>{clearTimeout(timer);if(draftTimer.current===timer)draftTimer.current=undefined;};
+  },[text,refs,loading,busy,archiving,chat?.revision,chat?.lifecycle,helpKey]);
 
   useEffect(()=>{
     const intent=props.passageIntent;
@@ -212,6 +216,7 @@ export default function ChatPage(props: ChatPageProps) {
     if(epoch.current===version){setMessages(page.items);setCursor(page.next_cursor);}
   }
   async function flushDraft() {
+    clearTimeout(draftTimer.current);draftTimer.current=undefined;
     const version=epoch.current;
     await draftWrite.current;
     const current=chatRef.current;
@@ -225,7 +230,7 @@ export default function ChatPage(props: ChatPageProps) {
     persisted.current=value;accept(updated);return updated;
   }
   async function send(value=textRef.current,requestId:string=crypto.randomUUID(),imageIntent?:CaseImageIntent) {
-    if(!value.trim()||busy||!chatRef.current)return;
+    if(!value.trim()||busy||archiving||!chatRef.current)return;
     const version=epoch.current,controller=new AbortController();streamAbort.current=controller;
     setBusy(true);setError(undefined);setPartial('');setStatus('Sending');
     await draftWrite.current;
@@ -264,14 +269,15 @@ export default function ChatPage(props: ChatPageProps) {
     try{await api(conversationPath(current)+'/runs/'+run+'/cancel',{method:'POST'});}catch(caught){setError(caught);}
   }
   async function mutate(action:'rename'|'archive'|'restore'|'save'|'project',body:Record<string,unknown>={}) {
-    const current=chatRef.current;if(!current||busy)return;
+    const current=chatRef.current;if(!current||busy||archiving)return;
     const version=epoch.current;
+    if(action==='archive')setArchiving(true);
     try {
-      await draftWrite.current;
-      if(version!==epoch.current||!chatRef.current)return;
-      const identity=chatRef.current.kind+':'+chatRef.current.identity.id;
+      const identity=current.kind+':'+current.identity.id;
       if(saveCommand.current?.identity!==identity)saveCommand.current=undefined;
-      const latest=action==='save'&&!saveCommand.current?await flushDraft():chatRef.current;
+      let latest:ConversationSummary|undefined;
+      if(action==='archive'||action==='save'&&!saveCommand.current)latest=await flushDraft();
+      else {await draftWrite.current;latest=chatRef.current;}
       if(!latest||version!==epoch.current)return;
       if(action==='save')saveCommand.current??={identity,key:crypto.randomUUID(),body:{expected_revision:latest.revision}};
       const path=conversationPath(latest)+(action==='rename'?'':'/'+action);
@@ -281,6 +287,7 @@ export default function ChatPage(props: ChatPageProps) {
       if(version!==epoch.current)return;
       accept(result);callback.current.onConversation?.(result);setError(undefined);
     }catch(caught){if(version===epoch.current)setError(caught,()=>void mutate(action,body));}
+    finally{if(action==='archive'&&version===epoch.current)setArchiving(false);}
   }
   async function remove() {
     const current=chatRef.current;if(!current)return;
@@ -299,15 +306,15 @@ export default function ChatPage(props: ChatPageProps) {
   if(loading)return <LoadingState label="Opening conversation"/>;
   if(!chat&&incoming&&error)return <section className="chat-page"><ErrorState error={error} title="Conversation could not be opened" onRetry={()=>setLoadRevision(value=>value+1)}/></section>;
   if(!chat)return <section className="chat-page"><h1>Start a conversation</h1><p>Saved chats keep your discussion and draft for next time.</p><div className="actions"><Button onClick={()=>void fresh(false)}>Start saved chat</Button><Button variant="secondary" onClick={()=>void fresh(true)}>Start temporary chat</Button></div>{Boolean(error)&&<ErrorState error={error}/>}</section>;
-  const disabled=busy||chat.lifecycle==='archived';
+  const disabled=busy||archiving||chat.lifecycle==='archived';
   return <section className="chat-page" aria-label="Conversation">
-    <header className="chat-heading"><div><p className="chat-eyebrow">{chat.kind==='case'?'Case discussion':'Learning conversation'}</p><h1>{chat.title}</h1></div><div className="chat-tools"><Badge tone={chat.retention==='temporary'?'warning':'neutral'}>{chat.retention==='temporary'?'Temporary':chat.lifecycle==='archived'?'Archived':'Saved'}</Badge><details><summary>Manage</summary><div className="chat-management"><Input label="Conversation title" value={title} onChange={event=>setTitle(event.target.value)} maxLength={120}/><Button variant="secondary" disabled={busy||!title.trim()} onClick={()=>void mutate('rename',{title:title.trim()})}>Rename</Button>{chat.retention==='temporary'?<Button disabled={busy} onClick={()=>void mutate('save')}>Save conversation</Button>:<Button variant="ghost" disabled={busy} onClick={()=>void mutate(chat.lifecycle==='archived'?'restore':'archive')}><Archive size={16}/>{chat.lifecycle==='archived'?'Restore':'Archive'}</Button>}<Select label="Project" disabled={busy||chat.retention==='temporary'} value={chat.project_id??''} onChange={event=>void mutate('project',{project_id:event.target.value||null})}><option value="">Unassigned</option>{projects.map(project=><option key={project.id} value={project.id}>{project.title}</option>)}</Select><Button variant="danger" disabled={busy} onClick={()=>setConfirmDelete(true)}><Trash2 size={16}/>Delete conversation</Button></div></details></div></header>
+    <header className="chat-heading"><div><p className="chat-eyebrow">{chat.kind==='case'?'Case discussion':'Learning conversation'}</p><h1>{chat.title}</h1></div><div className="chat-tools"><Badge tone={chat.retention==='temporary'?'warning':'neutral'}>{chat.retention==='temporary'?'Temporary':chat.lifecycle==='archived'?'Archived':'Saved'}</Badge><details><summary>Manage</summary><div className="chat-management"><Input label="Conversation title" value={title} onChange={event=>setTitle(event.target.value)} maxLength={120}/><Button variant="secondary" disabled={busy||archiving||!title.trim()} onClick={()=>void mutate('rename',{title:title.trim()})}>Rename</Button>{chat.retention==='temporary'?<Button disabled={busy||archiving} onClick={()=>void mutate('save')}>Save conversation</Button>:<Button variant="ghost" disabled={busy||archiving} onClick={()=>void mutate(chat.lifecycle==='archived'?'restore':'archive')}><Archive size={16}/>{chat.lifecycle==='archived'?'Restore':'Archive'}</Button>}<Select label="Project" disabled={busy||archiving||chat.retention==='temporary'} value={chat.project_id??''} onChange={event=>void mutate('project',{project_id:event.target.value||null})}><option value="">Unassigned</option>{projects.map(project=><option key={project.id} value={project.id}>{project.title}</option>)}</Select><Button variant="danger" disabled={busy||archiving} onClick={()=>setConfirmDelete(true)}><Trash2 size={16}/>Delete conversation</Button></div></details></div></header>
     {chat.retention==='temporary'&&<Notice tone="warning">This conversation stays temporary until you choose Save. Closing Renulus discards it.</Notice>}
     {chat.lifecycle==='archived'&&<Notice>Archived conversations keep their history and draft. Restore to continue.</Notice>}
     {chat.kind==='case'&&<CaseContext studyHelpContext={props.studyHelpContext} conversation={chat} disabled={disabled} beforeChange={flushDraft} onDiscussImage={async(image_preview_id,case_revision,model,question)=>{try{const latest=await flushDraft();if(latest)await send(question,crypto.randomUUID(),{image_preview_id,case_revision,model});}catch(caught){setError(caught);}}} onChanged={value=>{accept(value);callback.current.onConversation?.(value);if(value.retention==='saved')changed();}} onStartTeaching={async teaching_case_id=>{const value=await createConversation({kind:'case',teaching_case_id,temporary:chat.retention==='temporary',project_id:chat.project_id},undefined,undefined,props.studyHelpContext);callback.current.onConversation?.(value);if(value.retention==='saved')changed();}}/>}
     <div className="chat-transcript" aria-label="Message history">{messages.map(message=><article className={'chat-message chat-message-'+message.role} key={message.id}><p className="chat-role">{message.role==='user'?'You':'Renulus'}</p><div className="chat-message-text">{message.content}</div>{message.content_refs?.length>0&&<div className="chat-references">{message.content_refs.map((reference,index)=><Button key={index} variant="ghost" onClick={()=>workspace.open(reference)}>Open source {index+1}</Button>)}</div>}</article>)}{cursor&&<Button variant="secondary" onClick={()=>void more()}>Load more history</Button>}{partial&&!messages.some(message=>message.run_id===visibleRun.current&&message.role==='assistant')&&<article className="chat-message chat-message-assistant"><p className="chat-role">Renulus {busy?'Â· responding':''}</p><div className="chat-message-text">{partial}</div></article>}{messages.length===0&&!partial&&<div className="chat-empty"><h2>What would you like to understand?</h2><p>{chat.kind==='case'?'Discuss a case, ask for missing information, or work through a teaching case.':'Ask a nephrology question. Choose guided teaching when you would like to work through it step by step.'}</p></div>}</div>
     {Boolean(error)&&<ErrorState error={error} title="Conversation needs attention" onRetry={failure?.retry}/>}
-    <form className="chat-composer" onSubmit={(event:FormEvent)=>{event.preventDefault();void send();}}><Textarea label={chat.kind==='case'?'Your case question':'Message Renulus'} value={text} onChange={event=>setText(event.target.value)} rows={3} maxLength={16000} disabled={disabled}/>{refs.length>0&&<div className="chat-reference-chips">{refs.map((reference,index)=><span key={index}><Button variant="ghost" onClick={()=>workspace.open(reference)}>Source {index+1}</Button><IconButton label={'Remove source '+(index+1)} disabled={busy} onClick={()=>setRefs(previous=>previous.filter((_,i)=>i!==index))}><X size={14}/></IconButton></span>)}</div>}<div className="chat-composer-footer"><div className="chat-composer-options"><IconButton label="Attach file" disabled={disabled} onClick={()=>setAttachmentsOpen(value=>!value)}><Paperclip size={18}/></IconButton><Select label="Teaching" value={style} onChange={event=>setStyle(event.target.value as 'direct'|'guided')} disabled={disabled}><option value="direct">Direct</option><option value="guided">Guided</option></Select></div><span className="chat-status" role="status">{status}</span>{busy?<Button variant="secondary" onClick={()=>void stop()}><Square size={16}/>Stop</Button>:<Button type="submit" disabled={disabled||!text.trim()}><ArrowUp size={17}/>Send</Button>}</div></form>
+    <form className="chat-composer" onSubmit={(event:FormEvent)=>{event.preventDefault();void send();}}><Textarea label={chat.kind==='case'?'Your case question':'Message Renulus'} value={text} onChange={event=>setText(event.target.value)} rows={3} maxLength={16000} disabled={disabled}/>{refs.length>0&&<div className="chat-reference-chips">{refs.map((reference,index)=><span key={index}><Button variant="ghost" onClick={()=>workspace.open(reference)}>Source {index+1}</Button><IconButton label={'Remove source '+(index+1)} disabled={busy||archiving} onClick={()=>setRefs(previous=>previous.filter((_,i)=>i!==index))}><X size={14}/></IconButton></span>)}</div>}<div className="chat-composer-footer"><div className="chat-composer-options"><IconButton label="Attach file" disabled={disabled} onClick={()=>setAttachmentsOpen(value=>!value)}><Paperclip size={18}/></IconButton><Select label="Teaching" value={style} onChange={event=>setStyle(event.target.value as 'direct'|'guided')} disabled={disabled}><option value="direct">Direct</option><option value="guided">Guided</option></Select></div><span className="chat-status" role="status">{status}</span>{busy?<Button variant="secondary" onClick={()=>void stop()}><Square size={16}/>Stop</Button>:<Button type="submit" disabled={disabled||!text.trim()}><ArrowUp size={17}/>Send</Button>}</div></form>
     <ChatAttachments studyHelpContext={props.studyHelpContext} key={incomingKey} conversation={chat} open={attachmentsOpen} onOpenChange={setAttachmentsOpen} disabled={disabled} intent={props.attachmentIntent} onConsumed={props.onAttachmentIntentConsumed} beforeAttach={flushDraft} onChanged={value=>{accept(value);if(value.retention==='saved')changed();}}/>
     <CreateChatTest studyHelpContext={props.studyHelpContext} key={'test:'+incomingKey} conversation={chat} disabled={disabled} prepare={flushDraft}/>
     {chat.kind==='case'&&<CaseHandoffActions studyHelpContext={props.studyHelpContext} conversation={chat} question={text} disabled={disabled} prepare={flushDraft}/>}
