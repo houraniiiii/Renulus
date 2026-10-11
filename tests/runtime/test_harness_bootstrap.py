@@ -169,6 +169,69 @@ def test_observer_cancellation_preserves_start_and_cleanup_ownership(tmp_path, p
         assert result["events"] == ["candidate", "closing", "closed"]
 
 
+def test_close_seals_cancelled_start_and_drains_held_inspection_and_finalizer(tmp_path):
+    result = run_owned("initial-close-held", tmp_path / "profile")
+    assert result == {"observer_cancelled": True, "new_start_code": "runtime_stopping",
+        "repeat_start_code": "runtime_stopping", "drain_pending_candidate": True,
+        "drain_pending_finalizer": True, "effective_after_candidate": None,
+        "admission_open": False, "events": ["candidate", "candidate-settled", "closing", "closed"]}
+
+
+def test_close_seals_held_live_start_before_canonical_admission(tmp_path):
+    result = run_owned("initial-close-live", tmp_path / "profile")
+    assert result["new_start_code"] == result["repeat_start_code"] == "runtime_stopping"
+    assert result["drain_pending_candidate"] and result["drain_pending_finalizer"]
+    assert result["effective_after_candidate"] is not None and not result["admission_open"]
+    assert result["events"] == ["candidate", "candidate-settled", "live", "closing", "closed"]
+
+
+def test_close_observer_cancellation_keeps_one_shared_runtime_drain(tmp_path):
+    result = run_owned("initial-close-observer", tmp_path / "profile")
+    assert result["close_observer_cancelled"] is True
+    assert result["drain_pending_candidate"] and result["drain_pending_finalizer"]
+    assert result["admission_open"] is False
+    assert result["events"] == ["candidate", "candidate-settled", "closing", "closed"]
+
+
+def test_pending_start_observer_reports_stopping_after_owned_settlement(tmp_path):
+    result = run_owned("initial-close-pending", tmp_path / "profile")
+    assert result["observer_cancelled"] is False
+    assert result["pending_start_code"] == "runtime_stopping"
+    assert result["admission_open"] is False
+    assert result["events"] == ["candidate", "candidate-settled", "closing", "closed"]
+
+
+def test_successful_start_close_drains_runtime_before_services_dependencies_once(tmp_path):
+    result = run_owned("initial-close-success", tmp_path / "profile")
+    assert result["start_code"] == "runtime_stopping"
+    assert result["shutdown_state"] == "settled"
+    assert result["events"] == ["candidate", "candidate-settled", "live", "closing",
+        "dependencies-closed", "closed"]
+
+
+@pytest.mark.parametrize("phase", ["settled", "queued"])
+def test_ordinary_services_shutdown_seals_start_before_external_coordinator_drain(tmp_path, phase):
+    result = run_owned("initial-services-stop-" + phase, tmp_path / "profile")
+    assert result == {"start_code": "runtime_stopping", "stale_health": False,
+        "shutdown_state": "settled", "events": ["candidate", "candidate-settled", "live",
+            "dependencies-closed", "closing", "closed"]}
+
+
+def test_close_before_application_creation_seals_provisioning(tmp_path):
+    result = run_owned("close-before-app", tmp_path / "profile")
+    assert result == {"code": "runtime_stopping", "mutated": False}
+
+
+def test_close_reuses_classified_pending_finalizer_without_retry_or_healthy_result(tmp_path):
+    result = run_owned("initial-close-failed", tmp_path / "profile")
+    assert result["start_error"] == "harness_configuration_settlement_pending"
+    assert result["close_errors"] == ["harness_configuration_settlement_pending"] * 2
+    assert result["repeat_start_code"] == "runtime_stopping"
+    assert result["admission_open"] is False
+    assert "SYNTHETIC-SECRET" not in result["error_text"]
+    assert result["events"] == ["candidate", "candidate-settled", "live", "closing", "cleanup-pending"]
+
+
 @pytest.mark.parametrize("phase", ["candidate", "live"])
 @pytest.mark.parametrize("change, expected", [("connection", "connection_changed"),
     ("requested", "activation_conflict"), ("epoch", "activation_conflict"),
@@ -278,18 +341,20 @@ def selected_context(scope, lease):
         capabilities=("text", "tools"), context=ContextPolicy(requested_window_tokens=8192),
         attempts=AttemptPolicy(), children=ChildPolicy())
     store.save(inputs)
-    return bootstrap, authority, provider, store, inputs, finish_spec(inputs, "a" * 64)
+    return bootstrap, authority, provider, store, inputs, finish_spec(inputs, "a" * 64), services
 
 
 class SyntheticRuntime:
     """The external native lifecycle port is synthetic, with explicit closed observations."""
-    def __init__(self, authority, mode=None, hook=None):
+    def __init__(self, authority, mode=None, hook=None, shutdown=None):
         self.authority = authority
         self.events = []
         self.candidate = None
         self.mode = mode or ""
         self.hook = hook
+        self.shutdown = shutdown
         self.entered, self.release = asyncio.Event(), asyncio.Event()
+        self.close_entered, self.close_release = asyncio.Event(), asyncio.Event()
 
     async def inspect_candidate(self, candidate):
         from renulus.runtime.harness_configuration import CandidateHealth
@@ -297,7 +362,7 @@ class SyntheticRuntime:
         self.candidate = candidate
         self.events.append("candidate")
         await asyncio.sleep(0)
-        if self.mode == "cancel-candidate":
+        if self.mode in {"cancel-candidate", "close-held-candidate"}:
             self.entered.set()
             await self.release.wait()
         if self.mode in {"fault", "cancel-cleanup"}:
@@ -320,6 +385,9 @@ class SyntheticRuntime:
         assert snapshot["grant_epoch"] == candidate.grant_epoch
         self.events.append("live")
         await asyncio.sleep(0)
+        if self.mode == "close-held-live":
+            self.entered.set()
+            await self.release.wait()
         if self.hook:
             await self.hook("live")
         if self.mode.startswith("native-held"):
@@ -343,6 +411,11 @@ class SyntheticRuntime:
         if self.mode == "cancel-cleanup":
             self.entered.set()
             await self.release.wait()
+        if self.mode in {"close-held-candidate", "close-held-live"}:
+            self.close_entered.set()
+            await self.close_release.wait()
+        if self.shutdown is not None:
+            await self.shutdown()
         if self.mode == "native-held-cleanup-pending":
             from renulus.contracts import ApiError
             self.events.append("cleanup-pending")
@@ -357,6 +430,16 @@ async def scenario(case, root, metadata=None):
     )
     scope = ProfileOwnerScope(root, "synthetic-profile", "synthetic-domain", "synthetic-runtime")
     lease = acquire_profile_owner(scope, initialize_new=not case.startswith("reopen-"))
+    if case == "close-before-app":
+        bootstrap = HarnessBootstrap(scope, profile_owner=lease)
+        await bootstrap.close()
+        await bootstrap.close()
+        try:
+            bootstrap.create_app(source_root=REPO)
+            code = None
+        except Exception as error:
+            code = getattr(error, "code", type(error).__name__)
+        return {"code": code, "mutated": (root / "state").exists()}
     if case == "create-fault":
         import traceback
         bootstrap = HarnessBootstrap(scope, profile_owner=lease)
@@ -442,8 +525,14 @@ async def scenario(case, root, metadata=None):
     if case.startswith("initial") or case in {"seed-existing", "reopen-existing", "seed-pins",
                                              "reopen-pins", "reopen-existing-initial", "reopen-no-account",
                                              "reopen-current-pins"}:
-        bootstrap, authority, provider, store, inputs, spec = selected_context(scope, lease)
+        bootstrap, authority, provider, store, inputs, spec, services = selected_context(scope, lease)
         mode = "fault" if case == "initial-fault" else case.removeprefix("initial-")
+        if case in {"initial-close-held", "initial-close-observer", "initial-close-pending"}:
+            mode = "close-held-candidate"
+        elif case == "initial-close-live":
+            mode = "close-held-live"
+        elif case == "initial-close-failed":
+            mode = "native-held-cleanup-pending"
         async def interleave(phase):
             if not case.startswith("initial-race-"):
                 return
@@ -459,7 +548,10 @@ async def scenario(case, root, metadata=None):
                 authority.revoke("text")
             elif change == "artifact":
                 (root.parent / "artifacts" / (inputs.sha256 + ".json")).write_bytes(b"synthetic tampering")
-        runtime = SyntheticRuntime(authority, mode=mode, hook=interleave)
+        runtime = SyntheticRuntime(authority, mode=mode, hook=interleave,
+            shutdown=services.finish_shutdown if case == "initial-close-success" or case.startswith("initial-services-stop-") else None)
+        if case == "initial-close-success" or case.startswith("initial-services-stop-"):
+            services.on_shutdown_dependencies.append(lambda: runtime.events.append("dependencies-closed"))
         if case == "reopen-no-account":
             await provider.disconnect("opencode-go")
         if case.startswith("initial-pre-deny-"):
@@ -476,6 +568,61 @@ async def scenario(case, root, metadata=None):
         arguments = dict(authority=authority, provider=provider, launch_store=store,
             assemble_runtime=assemble, initial_spec=None if case in {"reopen-existing",
                 "reopen-pins", "reopen-no-account", "reopen-current-pins"} else spec)
+        if case in {"initial-close-held", "initial-close-live", "initial-close-observer", "initial-close-pending"}:
+            observer = asyncio.create_task(bootstrap.start(**arguments))
+            await runtime.entered.wait()
+            cancelled = False
+            if case != "initial-close-pending":
+                observer.cancel()
+                try:
+                    await observer
+                except asyncio.CancelledError:
+                    cancelled = True
+            try:
+                draining = asyncio.create_task(bootstrap.close())
+                await asyncio.sleep(0)
+                close_cancelled = False
+                if case == "initial-close-observer":
+                    draining.cancel()
+                    try:
+                        await draining
+                    except asyncio.CancelledError:
+                        close_cancelled = True
+                    draining = asyncio.create_task(bootstrap.close())
+                    await asyncio.sleep(0)
+                async def start_code():
+                    try:
+                        await asyncio.wait_for(bootstrap.start(**arguments), timeout=0.2)
+                    except Exception as error:
+                        return getattr(error, "code", type(error).__name__)
+                    return None
+                new_code = await start_code()
+                candidate_pending = not draining.done()
+                runtime.release.set()
+                await asyncio.wait_for(runtime.close_entered.wait(), timeout=5)
+                finalizer_pending = not draining.done()
+                effective = authority.status()["effective"]
+                pending_code = None
+                if case == "initial-close-pending":
+                    try:
+                        await asyncio.wait_for(observer, timeout=0.2)
+                    except Exception as error:
+                        pending_code = getattr(error, "code", type(error).__name__)
+                runtime.close_release.set()
+                await draining
+                await bootstrap.close()
+                projected = {"observer_cancelled": cancelled, "new_start_code": new_code,
+                    "repeat_start_code": await start_code(), "drain_pending_candidate": candidate_pending,
+                    "drain_pending_finalizer": finalizer_pending, "effective_after_candidate": effective,
+                    "admission_open": authority.status()["admission_open"], "events": runtime.events}
+                if case == "initial-close-observer":
+                    projected["close_observer_cancelled"] = close_cancelled
+                if case == "initial-close-pending":
+                    projected["pending_start_code"] = pending_code
+                return projected
+            finally:
+                runtime.release.set()
+                runtime.close_release.set()
         if case.startswith("initial-cancel-"):
             observer = asyncio.create_task(bootstrap.start(**arguments))
             await runtime.entered.wait()
@@ -502,6 +649,23 @@ async def scenario(case, root, metadata=None):
             result = await bootstrap.start(**arguments)
         except Exception as error:
             import traceback
+            if case == "initial-close-failed":
+                start_error = getattr(error, "code", type(error).__name__)
+                close_errors, errors = [], []
+                for _ in range(2):
+                    try:
+                        await bootstrap.close()
+                    except Exception as closing_error:
+                        close_errors.append(getattr(closing_error, "code", type(closing_error).__name__))
+                        errors.extend(traceback.format_exception(closing_error))
+                try:
+                    await bootstrap.start(**arguments)
+                    repeat_code = None
+                except Exception as stopped:
+                    repeat_code = getattr(stopped, "code", type(stopped).__name__)
+                return {"start_error": start_error, "close_errors": close_errors,
+                    "repeat_start_code": repeat_code, "error_text": "".join(errors),
+                    "admission_open": authority.status()["admission_open"], "events": runtime.events}
             return {"code": getattr(error, "code", type(error).__name__),
                 "error_text": "".join(traceback.format_exception(error)),
                 "admission_open": authority.status()["admission_open"], "events": runtime.events,
@@ -515,6 +679,33 @@ async def scenario(case, root, metadata=None):
                 return {"code": None, "events": runtime.events}
             except Exception as error:
                 return {"code": getattr(error, "code", type(error).__name__), "events": runtime.events}
+        if case == "initial-close-success" or case.startswith("initial-services-stop-"):
+            stale_health = False
+            if case.startswith("initial-services-stop-"):
+                shutdown = asyncio.create_task(services.finish_shutdown())
+                if case.endswith("queued"):
+                    await asyncio.sleep(0)
+                    assert services.stopping
+                else:
+                    await shutdown
+                try:
+                    stale_health = (await bootstrap.start(**arguments)).admission_open
+                    ordinary_code = None
+                except Exception as error:
+                    ordinary_code = getattr(error, "code", type(error).__name__)
+                await shutdown
+            await bootstrap.close()
+            await bootstrap.close()
+            try:
+                await bootstrap.start(**arguments)
+                code = None
+            except Exception as error:
+                code = getattr(error, "code", type(error).__name__)
+            projected = {"start_code": code, "shutdown_state": services.shutdown_status()["state"],
+                "events": runtime.events}
+            if case.startswith("initial-services-stop-"):
+                projected.update(start_code=ordinary_code, stale_health=stale_health)
+            return projected
         if case in {"initial-current-pins", "reopen-current-pins"}:
             from renulus.runtime.harness_configuration import ConfigurationAuthority, RouteLimits
             from renulus.runtime.manager import ProviderManager

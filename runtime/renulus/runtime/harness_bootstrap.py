@@ -61,6 +61,8 @@ class HarnessBootstrap:
     exceptions before return must leave no unowned partial runtime. Successful
     runtimes remain app-owned. Startup failures await the adapter's finalizer.
     The actual issuer can provision only one app in its process lifetime.
+    Parent lifespan awaits close before Services.finish_shutdown; registering
+    close as a Services shutdown hook could make an adapter join itself.
     """
     def __init__(self, scope: ProfileOwnerScope, *, profile_owner: ProfileOwnerLease):
         self.scope = scope
@@ -73,6 +75,8 @@ class HarnessBootstrap:
         self._runtime = None
         self._observation = None
         self._closing = None
+        self._stopping = False
+        self._draining = None
 
     def _require_owner(self):
         if current_thread() is not main_thread():
@@ -87,6 +91,7 @@ class HarnessBootstrap:
                    provider_http_transport=None) -> FastAPI:
         global _APPLICATION_OWNER
         self._require_owner()
+        self._require_startable()
         if self._creation_started or _APPLICATION_OWNER is not None:
             raise ApiError("harness_bootstrap_conflict", "Application creation was already attempted.", 409)
         self._creation_started = True
@@ -96,6 +101,7 @@ class HarnessBootstrap:
             self._app = create_app(self.scope.root, token=token, source_root=source_root,
                 provider_http_transport=provider_http_transport)
             self._services = self._app.state.services
+            self._services.on_stopping.append(self._seal)
             return self._app
         except Exception as error:
             raise _safe_failure(error) from None
@@ -131,12 +137,51 @@ class HarnessBootstrap:
 
     def _require_binding(self, authority, provider):
         self._require_owner()
+        self._require_startable()
         if (self._app is None or self._app.state.services is not self._services
                 or authority.db is not self._services.db
                 or provider.paths is not self._services.paths
                 or self._services.paths.root != self.scope.root
                 or authority.db.path != self.scope.root / "state/renulus.sqlite3"):
             raise ApiError("harness_bootstrap_conflict", "Bootstrap must use this application's canonical services.", 409)
+
+    def _require_startable(self):
+        if self._stopping or (self._app is not None and self._services.stopping):
+            raise ApiError("runtime_stopping", "The harness bootstrap is closing.", 503, True)
+
+    def _seal(self) -> None:
+        """Services stopping signal only: no task, wait, cleanup or join."""
+        self._stopping = True
+
+    async def close(self) -> None:
+        """Seal before waiting; observers share a retained startup/runtime drain."""
+        self._require_owner()
+        self._seal()
+        if self._draining is None:
+            self._draining = asyncio.create_task(self._drain(), name="renulus-bootstrap-drain")
+            self._draining.add_done_callback(lambda task: None if task.cancelled() else task.exception())
+        await asyncio.shield(self._draining)
+
+    async def _drain(self):
+        if self._starting is not None:
+            await asyncio.gather(asyncio.shield(self._starting), return_exceptions=True)
+        try:
+            await self._close_runtime()
+        except BaseException as error:
+            raise _safe_failure(error, cleanup=True) from None
+
+    async def _close_runtime(self):
+        if self._runtime is None:
+            return
+        if self._closing is None:
+            self._closing = asyncio.create_task(self._runtime.close(), name="renulus-bootstrap-cleanup")
+            self._closing.add_done_callback(lambda task: None if task.cancelled() else task.exception())
+        while not self._closing.done():
+            try:
+                await asyncio.shield(self._closing)
+            except asyncio.CancelledError:
+                continue  # Actual cleanup remains owned, including during loop shutdown.
+        self._closing.result()
 
     def _boundary(self):
         # The issuer proves predecessor Python/native/job termination or explicit
@@ -203,15 +248,12 @@ class HarnessBootstrap:
         try:
             return await self._start(authority, provider, launch_store, assemble_runtime, initial_spec)
         except BaseException as error:
+            if self._draining is not None:
+                # The public drain joins this task before runtime/Services cleanup.
+                raise ApiError("runtime_stopping", "The harness bootstrap is closing.", 503, True) from None
             if self._runtime is not None:
                 try:
-                    self._closing = asyncio.create_task(self._runtime.close(), name="renulus-bootstrap-cleanup")
-                    while not self._closing.done():
-                        try:
-                            await asyncio.shield(self._closing)
-                        except asyncio.CancelledError:
-                            continue  # The cleanup owner remains retained until actual settlement.
-                    self._closing.result()
+                    await self._close_runtime()
                 except BaseException as cleanup_error:
                     raise _safe_failure(cleanup_error, cleanup=True) from None
                 try:
