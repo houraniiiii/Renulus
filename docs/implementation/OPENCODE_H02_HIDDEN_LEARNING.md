@@ -1,6 +1,6 @@
 # H02 hidden Library learning journey
 
-October 11, 2026. Integration checkpoint `7fe6761a`; H02 remains open. The
+October 11, 2026. Integration checkpoints `7fe6761a` through `314eb932`; local H02 acceptance is verified by the repaired journey and retained core evidence. The
 parent used the hidden app-scoped controller and its owned synthetic profile. No OS input,
 foreground operation, renderer evaluation or live subscription is involved.
 
@@ -73,11 +73,52 @@ capture-0002.png records the failed saved turn. receipt.json/logs.ndjson retain
 startup, upload and shutdown. Explicit renulus_close was normal from
 17:03:39.565Z to17:03:40.464Z, with no forced/remaining PIDs and faultnull.
 
-Resolve the first callback failure before the next owned journey. Green must
-show real retrieval, cited completion/publication, original reader, and
-same-profile reopen without another Send. Preserve this failed profile.
+The public file-permission reproducer00dd21d1, integrated as314eb932, resolves
+the first callback cause. With model_input=true/derivation=false, the actual
+file is Available and directly retrievable, but HarnessLibrary.execute refuses
+harness_sources_changed before cited publication. Explicit derivation=true
+completes the same saved answer with canonical passage/revision/locators and
+identical original PDF bytes. Separate receipts denied03.xml (1 pass/48.117s)
+and derived01.xml (1 pass/47.585s) are under
+G:/Renulus-agent-scratch/oc-h02-h08/library/file-permissions/receipts/. Earlier
+denied01/02 are fixture setup failures; neither profile replaces the UI proof.
+Both independent review axes report zero material findings.
 
-The upload passed; saved explanation/citation/reopen acceptance remains open. Account capabilities,
+UI repair3bd71abd adds a separate default-off, new-file permission for derived
+explanations, notes and practice. It preserves existing rights, replacement
+terms, failed retry identity and explicit consent. Both independent axes are
+clear; affected component final01 has5 passes/34 skipped (3.81s), desktop
+TypeScript and renderer build each exit0. No backend eligibility guard changes.
+
+The fresh profileG:/rh02g/c/s-44c0aab2/p initially started34.318s, then a parent
+wait for heading Library timed out: the real heading is Your library. The
+controller closed normally in0.676s with no forced/remaining PIDs and faultnull.
+This is a verification locator error, before import or generation. Reopening
+the unused profile took25.809s. The correct heading and both explicit
+permissions are observed in capture-0001.png. The declared PDF is Available R02
+with all unfinished/error counts0. A single saved Send is now being observed.
+
+The repaired journey completes one saved Explain with the imported passage.
+The actual answer opens the Workspace's Synthetic CKD study reader: physical
+page1 of1, original PDF rendering and the full extracted paragraph containing
+renal-study-delta-47. Capture-0002.png records the answer; capture-0003.png
+records the answer and original reader. The same-profile restart closes normally
+in0.751s and becomes ready in29.411s. The retained thread
+thread_975af1f116d640eb985ac2244343af12 reopens with the same user/assistant
+history and citation, without another Send. Capture-0004.png records reopened
+answer and original reader. A region-role wait was refused by the controller's
+bounded locator schema; subsequent ordinary snapshots and clicks prove the
+reopened state. This is a verification request error, not an app failure.
+
+Final explicit close at17:29:20.000Z–17:29:20.730Z is normal, with no forced or
+remaining PIDs and faultnull. All windows stayed hidden. Receipt and logs remain
+underG:/rh02g/c/s-44c0aab2/out/. The original failed profile is unchanged.
+This closes the observed desktop blocker when combined with the public
+permission/canonical-publication tests and retained H02 core proofs; it does
+not add an unrun every-phase UI matrix to the ticket.
+
+Account capabilities,
 limits and inclusive counts in this fixture are synthetic and cannot establish
 production counter, TLS/live-account or installed/package acceptance. Automatic
-native capture remains disabled in integration.
+native capture remained disabled during this journey; reviewed cutover3026e3ca/
+67321f02 subsequently enables only committed eligible receipts.

@@ -1,6 +1,6 @@
 # H04 — Adjust roles and configuration with visible activation
 
-**Status:** authorised implementation in progress. Authority/API, actual managed bootstrap/reopen and hidden Settings stage/activate/reopen evidence is recorded in the [H02–H08 ledger](../../../implementation/OPENCODE_H02_H08_HANDOFF.md) and [desktop journey](../../../implementation/OPENCODE_H04_HIDDEN_SETTINGS.md). Required connected failure/crash reconciliation remains open; H04 is not accepted.
+**Status:** local acceptance verified on 2026-10-11. Authority/budgets, actual managed bootstrap/reopen, hidden Settings stage/activate/reopen and actual failure/crash reconciliation are mapped in the [acceptance record](../../../implementation/OPENCODE_H03_H04_ACCEPTANCE_MAP.md) and [desktop journey](../../../implementation/OPENCODE_H04_HIDDEN_SETTINGS.md). Native auxiliary enablement, account and package gates retain their separate scope.
 
 **Spec:** [S1](../specs/01-harness-control.md)
 
@@ -18,14 +18,14 @@ Current connection/catalog owner and Settings; add one versioned activation boun
 
 ## Acceptance criteria
 
-- [ ] Stage immutable inputs, hashes, credential references and purpose/context/attempt policies; show requested versus effective revision.
-- [ ] Validate a candidate with generation/recovery/package acquisition/external MCP startup closed and no second live-store writer.
-- [ ] Activate only the effective healthy registry after all transforms; crashed/failed activation reconciles to a known state.
-- [ ] Existing runs retain pinned versions; explicit migration widens access only deliberately, while revocations immediately narrow all affected work.
-- [ ] Exercise title/repair/transport/recovery attempts through a shared durable budget; deterministic degradation and configured retries remain distinct.
-- [ ] Begin with restart-based activation; busy-run changes retain the pinned version or use explicit cancellation/migration. Reuse the existing connection catalog and expose no parallel selector.
-- [ ] Use the plan's explicitly proposed numeric dispatch/output/child bounds; distinguish tool-continuation steps from retries. Disabled roles precede overrides; Automatic follows allowlist order filtered by catalogue membership, then the first allowed ID.
-- [ ] F0 plus each consuming domain owner records role-fixture comparisons before specialized defaults; inheritance is not a model-quality ranking.
+- [x] Stage immutable inputs, hashes, credential references and purpose/context/attempt policies; show requested versus effective revision.
+- [x] Validate a candidate with generation/recovery/package acquisition/external MCP startup closed and no second live-store writer.
+- [x] Activate only the effective healthy registry after all transforms; crashed/failed activation reconciles to a known state.
+- [x] Existing runs retain pinned versions; explicit migration widens access only deliberately, while revocations immediately narrow all affected work.
+- [x] Exercise title/repair/transport/recovery attempts through a shared durable budget; deterministic degradation and configured retries remain distinct.
+- [x] Begin with restart-based activation; busy-run changes retain the pinned version or use explicit cancellation/migration. Reuse the existing connection catalog and expose no parallel selector.
+- [x] Use the plan's explicitly proposed numeric dispatch/output/child bounds; distinguish tool-continuation steps from retries. Disabled roles precede overrides; Automatic follows allowlist order filtered by catalogue membership, then the first allowed ID.
+- [x] F0 plus each consuming domain owner records role-fixture comparisons before specialized defaults; inheritance is not a model-quality ranking.
 
 ## Blocked by
 

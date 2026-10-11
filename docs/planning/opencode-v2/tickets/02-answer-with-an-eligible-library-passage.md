@@ -1,6 +1,6 @@
 # H02 — Answer with an eligible Library passage
 
-**Status:** authorised implementation in progress. Local SDK/Library/publication evidence is recorded in the [H02–H08 ledger](../../../implementation/OPENCODE_H02_H08_HANDOFF.md); connected desktop acceptance remains open.
+**Status:** local acceptance verified on 2026-10-11. Actual SDK/Library/publication and repaired hidden desktop cited-turn/original-reader/same-profile-reopen evidence is recorded in the [H02–H08 ledger](../../../implementation/OPENCODE_H02_H08_HANDOFF.md) and [journey](../../../implementation/OPENCODE_H02_HIDDEN_LEARNING.md). Account/package cutover remains separate.
 
 **Spec:** [S1](../specs/01-harness-control.md), [S2](../specs/02-memory-context.md)
 
@@ -18,13 +18,13 @@ Existing Library, retrieval and passage-opening APIs plus the landed conversatio
 
 ## Acceptance criteria
 
-- [ ] Retain the existing Python Library/rights/index implementations; direct listing/import still works without an agent turn.
-- [ ] Before the first saved mapping, validate the actual canonical schema-2 store and native runtime store against H01's prepared manifest, select the initial active generation under the existing writer/admission barrier, and support reopening that validated selection. Failed validation or interrupted activation must remain non-admitted and reconcile without generation. H01's prepared file alone is not an active-store proof. This initial activation belongs here; H06 migrates legacy conversations and H18 later proves complete paired backup/restore.
-- [ ] Tool calls carry host-derived scope, revision and cancellation data; changed eligibility before read or publication blocks the result.
-- [ ] Persist one completed-answer/publication receipt and stable engine mapping, with digest conflict detection and lost-ack reconciliation.
-- [ ] Expose progress, tool activity and terminal result through one event mapping; a client disconnect does not invent cancellation or repeat the effect.
-- [ ] Keep migrated automatic memory capture disabled until H05 provides its dependency contract.
-- [ ] Enforce current active-Test/Study exposure and publication guards at initial admission and callbacks; stale policy/context/draft revisions cannot disclose late assistance.
+- [x] Retain the existing Python Library/rights/index implementations; direct listing/import still works without an agent turn.
+- [x] Before the first saved mapping, validate the actual canonical schema-2 store and native runtime store against H01's prepared manifest, select the initial active generation under the existing writer/admission barrier, and support reopening that validated selection. Failed validation or interrupted activation must remain non-admitted and reconcile without generation. H01's prepared file alone is not an active-store proof. This initial activation belongs here; H06 migrates legacy conversations and H18 later proves complete paired backup/restore.
+- [x] Tool calls carry host-derived scope, revision and cancellation data; changed eligibility before read or publication blocks the result.
+- [x] Persist one completed-answer/publication receipt and stable engine mapping, with digest conflict detection and lost-ack reconciliation.
+- [x] Expose progress, tool activity and terminal result through one event mapping; a client disconnect does not invent cancellation or repeat the effect.
+- [x] Keep migrated automatic memory capture disabled until H05 provides its dependency contract.
+- [x] Enforce current active-Test/Study exposure and publication guards at initial admission and callbacks; stale policy/context/draft revisions cannot disclose late assistance.
 
 ## Blocked by
 

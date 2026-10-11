@@ -103,7 +103,7 @@ DC21/H20 release gates and the immutable snapshot remain unchanged.
 | Review | User and assistant lead review and validation using concrete evidence; no external-panel prerequisite. |
 | Brand | C — Renal flow, with the selected teal treatment; modern medical, calm, precise and approachable, with a subtle renal reference. |
 | Separation | Preserve the inherited clinical MVP and batch/research project outside the active repository. The normal desktop launcher opens Renulus; the optional legacy reference launcher stays separate. |
-| Current scope | The first OpenCode foundation tickets H01/H24 have local acceptance from the completed Design C handoff `c2bd8964`. H02 is planned next; remaining tickets stay planned. Preserve the connected UI and Python domain owners. DC21 final default delivery remains deferred to H20. |
+| Current scope | The authorised H02–H08 batch consumes H01/H24 and the completed Design C handoff `c2bd8964`. H02–H05 have local acceptance, including the repaired hidden cited Library turn, Settings/failure/crash proofs, actual native extraction and independently reviewed automatic cutover3026e3ca/67321f02. H06/H07 are dependency-ready for bounded implementation; H08 requires H06. Preserve the connected UI/Python domain owners. Account/production route evidence and DC21 final default delivery retain their H20 cutover gate. |
 | Historical implementation heartbeat | The October 5 owner instruction selected one 20-minute heartbeat for that implementation run; its 15- and 30-minute predecessors are historical. This record does not create or reactivate an automation for the C handoff. |
 
 ## Unresolved work

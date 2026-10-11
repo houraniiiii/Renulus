@@ -1,6 +1,6 @@
 # H05 — Complete a learning turn whose memory stays corrected
 
-**Status:** authorised implementation in progress. Owner/lineage and actual-engine preparation evidence is recorded in the [H02–H08 ledger](../../../implementation/OPENCODE_H02_H08_HANDOFF.md); full connected acceptance remains open and migrated automatic capture stays disabled.
+**Status:** local acceptance verified. The [acceptance map](../../../implementation/OPENCODE_H02_H05_ACCEPTANCE_MAP.md) records completed native resolution, public correction/deletion regressions, actual engines, one-slot stateless extraction and reviewed automatic cutover3026e3ca/67321f02. H02/H04/H24 dependencies have local closure. Production accounting/account evidence and package cutover remain separate enablement gates; actual child producers and full paired restore retain H07/H18 ownership.
 
 **Spec:** [S2](../specs/02-memory-context.md)
 
@@ -18,14 +18,14 @@ Current memory/2 records, typed relations, publication guards and restored-memor
 
 ## Acceptance criteria
 
-- [ ] Resolve completed answers by store/profile/message identities, accepted completion, canonical text digest and publication receipt.
-- [ ] Persist dependencies on memory/source revisions, historical messages, tools and summaries; exclude unknown legacy lineage from automatic recapture.
-- [ ] Reproduce and close all four queued/completed-capture edit/delete regressions through the public learning/memory interface.
-- [ ] Define global/project visibility and scope-aware deduplication; distinguish generated teaching from learner observations and reviewed assessment evidence.
-- [ ] Run actual Mem0/Qdrant/FastEmbed correction, deletion, reindex and reopen with synthetic profiles; no second memory worker per child.
-- [ ] Extend existing Dependency/EligibleInput, publication and restore barriers. One M5/integration owner controls support lineage; echo support cannot become independent by acquiring a new answer ID.
-- [ ] Preserve existing profile-global facts and temporary/saved-case exclusion; explicitly project-owned additions use scoped identity. Dependency revocation stays terminal across scan/requeue.
-- [ ] Resolve immutable answer bytes outside all canonical transactions/physical thread locks; commit rechecks local dependency/publication records. Prove the extraction round trip with one host slot and a live IPC pump.
+- [x] Resolve completed answers by store/profile/message identities, accepted completion, canonical text digest and publication receipt.
+- [x] Persist dependencies on memory/source revisions, historical messages, tools and summaries; exclude unknown legacy lineage from automatic recapture.
+- [x] Reproduce and close all four queued/completed-capture edit/delete regressions through the public learning/memory interface.
+- [x] Define global/project visibility and scope-aware deduplication; distinguish generated teaching from learner observations and reviewed assessment evidence.
+- [x] Run actual Mem0/Qdrant/FastEmbed correction, deletion, reindex and reopen with synthetic profiles; no second memory worker per child.
+- [x] Extend existing Dependency/EligibleInput, publication and restore barriers. One M5/integration owner controls support lineage; echo support cannot become independent by acquiring a new answer ID.
+- [x] Preserve existing profile-global facts and temporary/saved-case exclusion; explicitly project-owned additions use scoped identity. Dependency revocation stays terminal across scan/requeue.
+- [x] Resolve immutable answer bytes outside all canonical transactions/physical thread locks; commit rechecks local dependency/publication records. Prove the extraction round trip with one host slot and a live IPC pump.
 
 ## Blocked by
 

@@ -1,6 +1,6 @@
 # H06 — Migrate and delete one saved conversation through a single owner
 
-**Status:** implementation authorised; source-grounded migration preparation is recorded in the [H02–H08 ledger](../../../implementation/OPENCODE_H02_H08_HANDOFF.md). Connected implementation and acceptance remain gated on H05.
+**Status:** bounded implementation released after local H02/H05 acceptance. The [H02–H08 ledger](../../../implementation/OPENCODE_H02_H08_HANDOFF.md) records canonical/native migration leases; connected migration/deletion acceptance remains open. Temporary execution and cross-store Save remain H21.
 
 **Spec:** [S2](../specs/02-memory-context.md), [S3](../specs/03-workflows-migration.md)
 

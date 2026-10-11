@@ -1,6 +1,6 @@
 # H03 — Use the selected subscription for tools and images
 
-**Status:** authorised implementation in progress. Routing, image and deployment preparation have bounded evidence in the [H02–H08 ledger](../../../implementation/OPENCODE_H02_H08_HANDOFF.md); connected production assembly and matching account gates remain open.
+**Status:** local acceptance verified on 2026-10-11. Connected production-main routing, image/tool turns, stateless extraction, final deployment enforcement and missing-admission denial are mapped in the [acceptance record](../../../implementation/OPENCODE_H03_H04_ACCEPTANCE_MAP.md). Account evidence/counter accuracy and matching account/tool/image acceptance remain required before normal cutover; none is promoted by counting synthetic transport.
 
 **Spec:** [S1](../specs/01-harness-control.md)
 
@@ -18,12 +18,12 @@ Current ProviderManager protected connections, selected defaults, allowlists and
 
 ## Acceptance criteria
 
-- [ ] Preserve current protected connection references, explicit selected defaults and exact allowlists; do not import ambient OpenCode credentials.
-- [ ] Validate catalog versus wire model/protocol/endpoint identity, tool-call/result pairs, image MIME and required input compatibility.
-- [ ] All primary/session/stateless/auxiliary/child transport paths deny missing admission; final HTTP and WebSocket paths cannot bypass the policy.
-- [ ] Mocked 401 invalidates account-dependent availability/observations without misreporting modality; fix the retained baseline discrepancy.
-- [ ] Synthetic transport tests prove routing only; matching account/tool/image acceptance is separately recorded before normal cutover, with no implicit provider switch.
-- [ ] Every request kind has a final enforced output/input/window bound; hooks cannot remove it. Synthetic credential canaries never enter transcripts, receipts or diagnostics.
+- [x] Preserve current protected connection references, explicit selected defaults and exact allowlists; do not import ambient OpenCode credentials.
+- [x] Validate catalog versus wire model/protocol/endpoint identity, tool-call/result pairs, image MIME and required input compatibility.
+- [x] All primary/session/stateless/auxiliary/child transport paths deny missing admission; final HTTP and WebSocket paths cannot bypass the policy.
+- [x] Mocked 401 invalidates account-dependent availability/observations without misreporting modality; fix the retained baseline discrepancy.
+- [x] Synthetic transport tests prove routing only; matching account/tool/image acceptance is separately recorded before normal cutover, with no implicit provider switch.
+- [x] Every request kind has a final enforced output/input/window bound; hooks cannot remove it. Synthetic credential canaries never enter transcripts, receipts or diagnostics.
 
 ## Blocked by
 

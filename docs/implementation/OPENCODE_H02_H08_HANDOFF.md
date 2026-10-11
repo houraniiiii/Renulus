@@ -17,17 +17,19 @@ installation, push or downstream-ticket expansion is authorized.
 
 ### Dependency readiness
 
-No ticket in this batch is accepted. Positive source/runtime proofs and required
-unmet acceptance remain distinct; matching-account and installed/package gates
+H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
+with automatic cutover3026e3ca/67321f02 integrated and both final independent
+expectation-disposition reviews clear. H06–H08 remain open. Required unmet
+acceptance stays explicit; matching-account and installed/package gates
 retain their downstream scope. This table supersedes older critical-path notes
 lower in the historical ledger.
 
 | Ticket | Verified preparation/connected scope | Required next closure |
 | --- | --- | --- |
-| H02 | Actual saved native Library retrieval, canonical cited M5 publication, native mapping/reconciliation and store activation | Connected desktop retrieval/citation opening and remaining exposure/failure acceptance |
-| H03 | Actual production-main text/tool/image loopback dispatch, strict final deployment proof, canonical permits and selected provider identity | Local criterion closure after H02; production accounting/account evidence remains required before real-route enablement and matching-account cutover |
-| H04 | Canonical authority/API, actual candidate/live lifecycle, managed initial/reopen, hidden Settings stage/activate/reopen, actual interrupted activation and failed-candidate reconciliation with ordinary settlement | Named summary-repair durable-budget exercise assigned to Nietzsche; H03 dependency and account/package scope remain distinct |
-| H05 | Persistent lineage, legacy real hooks, four recapture regressions, reviewed actual Mem0/Qdrant/FastEmbed native extraction and held-source-revocation/reopen proof; read-only core adjudication finds no additional intrinsic gap | H02/H04 dependency closure and automatic-capture integration/OFF-expectation disposition; automatic capture remains OFF here |
+| H02 | Local acceptance verified: actual saved native Library/M5 publication, mapping/reconciliation/store activation and repaired hidden PDF cited-turn/reader/reopen | No intrinsic local criterion remains; account/package cutover stays separate |
+| H03 | Local acceptance verified: production-main text/tool/image/stateless loopback dispatch, strict final proof, canonical permits/selected identity and denial across unadmitted paths | Production accounting/account evidence before real-route enablement and matching-account cutover |
+| H04 | Local acceptance verified: authority/API/budgets, candidate/live lifecycle, managed initial/reopen, hidden Settings and actual failure/crash reconciliation; named repair-budgetB3 reviewed clear | Account/package scope and later native auxiliary enablement remain distinct |
+| H05 | Local acceptance verified: persistent lineage, four public recapture regressions, actual Mem0/Qdrant/FastEmbed native extraction/held-source-revocation/reopen; reviewed automatic cutover3026e3ca/67321f02 | No intrinsic local criterion remains; actual child producers and full paired restore retain H07/H18 ownership |
 | H06 | Actual supported SDK import/export/remove capability with zero inference | Existing conversation migration, one transcript owner, native purge and canonical deletion/replay integration after H05 |
 | H07 | Actual native child/permission snapshot and narrowed-epoch seam preparation | Bounded delegated evidence review, inherited authority and actual family cancellation/settlement after H05 |
 | H08 | Existing instructions/skills and pinned native hooks are source inputs | Versioned instruction/skill activation and connected task use after accepted H04/H06 |
@@ -168,7 +170,7 @@ report zero material findings in this exact test scope; the final source and
 receipt fingerprints match the reviewed bytes. No H05 acceptance or automatic
 capture is granted.
 
-Current directed lanes: Sartre's H02 desktop fixture backend697d4bb1 is
+Historical directed lanes before the local closure checkpoint: Sartre's H02 desktop fixture backend697d4bb1 is
 integrated as56681890; deadline05561395 and home-variable7fe6761a repairs
 have independent closure on both axes. Explicit Library collection-root
 prerequisite5c45a80d is independently clear. The first actual hidden PDF import
@@ -192,6 +194,73 @@ refuses deliberately mismatched immutable B with registry_mismatch before A
 stop/CAS; A remains live/open and ordinary managed successor revalidates A while
 preserving requested/failed B and current revocations. Both review axes are
 clear. Its trace01 launcher-PID fixture error is retained separately.
+
+### Local H02–H05 closure checkpoint
+
+Permission reproducer00dd21d1 is integrated as314eb932: exact desktop file
+rights permit retrieval but refuse derived explanation with harness_sources_changed;
+explicit derivation permission completes the cited answer and exact original
+bytes. Separate denied03/derived01 receipts each pass (48.117s/47.585s); both
+independent review axes are clear. UI3bd71abd supplies that separate default-off
+permission without changing old rights or backend guards. Its affected five
+component checks, TypeScript and renderer build pass; both reviews are clear.
+
+The repaired hidden journeyG:/rh02g/c/s-44c0aab2/out/ imports the declared PDF
+to Available R02, completes one saved cited Explain, opens the real PDF page,
+and reopens the same thread/citation after normal restart without another Send.
+The first unused launch's wrong-heading wait is retained as a verification
+locator error and closes normally. The reopened journey starts25.809s; saved
+restart readiness29.411s. Restart close0.751s and final close0.730s are normal,
+with no forced/remaining PIDs and faultnull. Four screenshots retain consent,
+answer and original reader before/after reopen. The original failed profile is
+untouched. Read [the exact journey](OPENCODE_H02_HIDDEN_LEARNING.md).
+
+H04 named repair-budget821d57d9 is integrated asaa3190ca: three public Authority
+cases exercise summary-repair stable purpose, joint root/purpose exhaustion,
+continuation versus retry and durable reopen. ReceiptB3 has3 passes,0 failures/
+errors/skips (1.598s JUnit/1.64s console); Authority is unchanged and both
+independent review axes report zero findings. The criterion maps now record
+local H02–H04 acceptance without inventing extra UI/crash matrices or treating
+production account/tokenizer evidence as a separate local criterion.
+
+Reviewed automatic preparationa6c5fe4c is deliberately integrated as3026e3ca
+after dependency readiness. Only the four-line native automatic refusal is
+removed; existing restore/scope/idempotency/suppression/support guards remain.
+Actual-engine U2 has2 passes/39.834s with setup1+extraction1, duplicates0,
+incomplete/corrected sources0 and extracted-point suppression/correction0
+further effects. The unchanged engine files were not repeated. Old OFF
+expectation is replaced in67321f02 by submitted-unstagedscan0/committedscan1 exactscope/
+queuedattempt0/duplicate suppression; cutover01 has1 pass/0.396s, no SDK/engine
+execution. Independent Standards (Russell) and Spec (Sartre) reviews report
+zero material findings in this disposition. The adjacent unchanged test covers
+staged-but-unfinished refusal. H05 now has local acceptance; H06/H07 are
+dependency-ready for bounded implementation, while H08 still requires H06.
+
+### H06/H07 implementation leases after local H05 closure
+
+The following leases supersede the historical lane scopes below. Workers reuse
+their existing checkouts from published67321f02. No new agents, private profiles
+or native core edits are authorized. H06/H07 acceptance remains open.
+
+| Worker | Exclusive current write scope | Contract / integration owner |
+| --- | --- | --- |
+| Ohm | New learn/harness_migration.py and dedicated migration tests | Canonical migration state machine; parent owns Learn004, journal, bridge/API and deletion assembly |
+| Sartre | New native session-transfer.ts and dedicated transfer tests/fixture | Supported SDK logical staging/import/exact readback/remove/retirement; parent owns host/IPC wiring |
+| Nietzsche | ConfigurationAuthority begin_child_in and own_spent_dispatches projection; new dedicated child-policy tests and bounded doc update | Supplied-connection canonical child admission; applied migrations unchanged |
+| Arendt | ModelRegistry narrow evidence-review child admission and dedicated child-registry tests | First kind child, confirmed continuations, inherited canonical pins/shared budget; consumes Nietzsche prerequisite |
+| Russell | New harness_children.py and dedicated family-authority tests | Trusted Owner parent/current/Library and supplied-conn journal ports; parent owns schema and assembly |
+| Turing2 | New native child-authority.ts and dedicated native tests/fixtures | Upstream children, permission/replay/notification fences and actual finalizer ownership; parent owns host/IPC/entry wiring |
+
+Integration reserves learn-004-harness-migration.sql for migration/deletion
+metadata and runtime-005-harness-children.sql for family metadata; workers
+publish exact port/column proposals before schema-dependent implementation.
+Stable native input IDs, cancellation lineage and process/store identity come
+from trusted execution context. All remote waits remain outside canonical
+transactions and physical owner locks. Job terminal status is not finalizer
+proof; bounded Stop keeps ownership until all actual family work settles.
+H08 implementation remains gated on accepted H06, while its source proposal
+is retained. Temporary execution/cross-store Save and complete paired restore
+retain H21/H18 ownership.
 
 Fixed learning launch worker e31f8ec7 is integrated as790cf703 after both review
 axes reported zero material issues. Distinct source-only v1 routing retains the

@@ -1,6 +1,6 @@
 # H07 — Delegate a bounded evidence review and stop its children
 
-**Status:** implementation authorised; source-grounded child-contract preparation is recorded in the [H02–H08 ledger](../../../implementation/OPENCODE_H02_H08_HANDOFF.md). Connected implementation and acceptance remain gated on H05.
+**Status:** bounded implementation released after local H02/H04/H05 acceptance. The [H02–H08 ledger](../../../implementation/OPENCODE_H02_H08_HANDOFF.md) records canonical policy, registry, Python family and native child ownership leases. Connected child/Stop/restart acceptance remains open.
 
 **Spec:** [S1](../specs/01-harness-control.md), [S3](../specs/03-workflows-migration.md)
 

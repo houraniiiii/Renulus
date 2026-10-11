@@ -1,7 +1,7 @@
 # H03/H04 acceptance map
 
 October 11, 2026. Initial map source: `090f145dffb023f4dc776e33ef159a0264861c3d`; parent checkpoint `727f358b` also includes the independently reviewed F1 tracer as `c2819597`.
-Rows follow the acceptance bullets of [H03](../planning/opencode-v2/tickets/03-use-the-selected-subscription-for-tools-and-images.md) and [H04](../planning/opencode-v2/tickets/04-adjust-roles-and-configuration-with-visible-activation.md), in order. This source/receipt map changes no ticket status. Both tickets, native bootstrap and hidden Settings remain unaccepted pending dependency/readiness closure. H02's hidden Library/citation journey remains parent-owned. “None identified” means no additional local gap in the cited bounded proof.
+Rows follow the acceptance bullets of [H03](../planning/opencode-v2/tickets/03-use-the-selected-subscription-for-tools-and-images.md) and [H04](../planning/opencode-v2/tickets/04-adjust-roles-and-configuration-with-visible-activation.md), in order. H02's repaired hidden cited turn/reader/reopen closes the dependency; named repair-budget evidenceB3 closes H04's final local gap. H03/H04 local acceptance is verified from this composite, including actual managed bootstrap and hidden Settings. Production route evidence and matching account/tool/image acceptance remain required before normal cutover. “None identified” means no additional local gap in the cited bounded proof.
 
 ## H03
 
@@ -18,11 +18,11 @@ Rows follow the acceptance bullets of [H03](../planning/opencode-v2/tickets/03-u
 
 | Bullet | Implementation / public test / receipt | Connected scope proved | Material remaining requirement |
 | --- | --- | --- | --- |
-| 1. Immutable hashes/references/purpose/context/attempt inputs; requested/effective | [harness_launch.py](../../runtime/renulus/runtime/harness_launch.py), [harness_configuration_controller.py](../../runtime/renulus/runtime/harness_configuration_controller.py); [test_role_edit_freezes_a_new_artifact_with_the_same_boot_payload](../../tests/runtime/test_harness_configuration_launch.py); F80/U | Role staging freezes a new artifact; hidden UI observes requested then effective. | H03 evidence/dependency closure. |
+| 1. Immutable hashes/references/purpose/context/attempt inputs; requested/effective | [harness_launch.py](../../runtime/renulus/runtime/harness_launch.py), [harness_configuration_controller.py](../../runtime/renulus/runtime/harness_configuration_controller.py); [test_role_edit_freezes_a_new_artifact_with_the_same_boot_payload](../../tests/runtime/test_harness_configuration_launch.py); F80/U | Role staging freezes a new artifact; hidden UI observes requested then effective. | H03 dependency has local closure; real-route enablement retains separate account/evidence gates. |
 | 2. Candidate generation/recovery/package/MCP closed; isolated writer | [harness_configuration_lifecycle.py](../../runtime/renulus/runtime/harness_configuration_lifecycle.py); [test_native_candidate_inspects_final_registry_without_opening_generation](../../tests/runtime/test_harness_configuration_probe.py); Q2/F1 | Actual candidate inspection has closed effects, separate store and settled native owner. | None identified. |
 | 3. Healthy final registry; failed/crashed activation reconciliation | [harness_bootstrap_runtime.py](../../runtime/renulus/runtime/harness_bootstrap_runtime.py), [harness_configuration_controller.py](../../runtime/renulus/runtime/harness_configuration_controller.py); [test_managed_startup_initial_and_reopen_use_actual_profile_owner](../../tests/runtime/test_harness_managed_startup.py), [test_interrupted_selected_configuration_reopens_actual_healthy_predecessor](../../tests/runtime/test_harness_configuration_interrupted_startup.py); B1/X1/F1 | Actual initial/reopen; healthy-B pre-admission crash restores A; adversarial expected-hash mismatch preserves live A and reopens. | Both F1 review axes are clear and integrated; proofs cover these points, not every failure phase. |
 | 4. Pinned runs; deliberate widening; immediate revocation | [harness_configuration.py](../../runtime/renulus/runtime/harness_configuration.py); [test_busy_run_keeps_immutable_policy_and_revocation_narrows_it_after_reopen](../../tests/runtime/test_harness_configuration.py); C122/X1/F1 | Canonical pinned policy/current lineage; actual reopen preserves tools revocation. | No implicit migration; actual deliberate widening is not claimed. |
-| 5. Durable title/repair/transport/recovery budget; degradation versus retry | [harness_configuration.py](../../runtime/renulus/runtime/harness_configuration.py); [test_relabelled_retry_keeps_original_purpose_budget](../../tests/runtime/test_harness_configuration.py); C122 | Canonical synthetic attempts retain purpose, spend once; uncertain sends cannot replay; zero-title degradation/free-precompaction denial. | Exact summary-repair stable-purpose/joint-budget/exhaustion exercise is not yet recorded; bounded public Authority tests assigned. This does not require enabling native auxiliaries. |
+| 5. Durable title/repair/transport/recovery budget; degradation versus retry | [harness_configuration.py](../../runtime/renulus/runtime/harness_configuration.py); [test_relabelled_retry_keeps_original_purpose_budget](../../tests/runtime/test_harness_configuration.py), [repair-budget cases](../../tests/runtime/test_harness_configuration_repair_budget.py); C122/B3 | Canonical synthetic attempts retain purpose, spend once; uncertain sends cannot replay; zero-title degradation/free-precompaction denial. Summary repair retains compaction purpose, jointly exhausts purpose/root budgets, and survives reopen and retry relabelling. | No intrinsic local gap remains in this bullet. Native auxiliary generation is not enabled by the accounting tests. |
 | 6. Restart/busy version or explicit cancellation/migration; one catalogue | [harness_configuration_controller.py](../../runtime/renulus/runtime/harness_configuration_controller.py); [test_reserved_saved_run_keeps_root_acquisition_failure_atomic](../../tests/runtime/test_harness_configuration_lifecycle.py), [hidden Settings](OPENCODE_H04_HIDDEN_SETTINGS.md); L6/U | Actual idle restart and reserved-run refusal; canonical selector survives stage/activate/reopen. | None identified within restart/pinned behavior. |
 | 7. Proposed bounds; continuation/retry; disabled precedence; Automatic order | [harness_configuration.py](../../runtime/renulus/runtime/harness_configuration.py); [test_continuation_retry_jointly_spends_root_and_purpose_limits](../../tests/runtime/test_harness_configuration.py), [test_disabled_role_cannot_be_revived_by_an_allowed_operation_override](../../tests/runtime/test_harness_configuration.py), [test_automatic_uses_allowlist_order_filtered_by_catalogue_membership](../../tests/runtime/test_harness_configuration.py), [policy ledger](opencode-h04-configuration.md#bounds-attempts-and-fixtures); C122 | Synthetic proposed ceilings: foreground12/standalone1/title0, depth1/concurrency2, output4096/retries0. Continuations debit separately; disabled-first and allowlist/catalogue ordering tested. | Ceilings do not prove account/model capacities. |
 | 8. F0/domain role comparisons before specialization; no quality ranking | [role fixtures](../../tests/runtime/fixtures/harness_roles.json); [test_role_fixture_inherits_exact_user_selection_without_quality_ranking](../../tests/runtime/test_harness_configuration.py); C122 | 13 purposes × 5 allowed IDs = 65 inherited comparisons across consumer/domain fixtures. | Owner suitability records required before specialized defaults; none introduced. |
@@ -30,12 +30,15 @@ Rows follow the acceptance bullets of [H03](../planning/opencode-v2/tickets/03-u
 ## Receipt keys and qualifications
 
 Final read-only H04 core adjudication at7fe6761a found no demonstrated defect
-and one narrow local evidence gap: bullet5 names repair attempts, but inspected
-tests do not invoke summary-repair. The shared mapping to compaction exists;
-the required exercise is assigned as a separate test-only slice. Other core
-criteria have composite retained evidence. Broader crash-phase matrices, hot
+and one narrow local evidence gap: bullet5 names repair attempts. The separate
+test-only slice821d57d9, integrated asaa3190ca, closes it with three public
+Authority/real SQLite cases. Independent Spec and Standards reviews each report
+zero material findings. The test blob9896ededbc71d9d1a06193237845045300ef4c45
+matches both checkouts; Authority is unchanged. Other core criteria have
+composite retained evidence. Broader crash-phase matrices, hot
 migration of pinned work and specialized model quality are not extra local
-requirements. H03 dependency closure remains separate; no ticket accepted.
+requirements. Together with H02 dependency closure, this composite establishes
+local H03/H04 acceptance; matching-account and package gates remain separate.
 
 Paths are retained local evidence, not portable package assets. Counts are separate overlapping runs; no tests were rerun for this map.
 
@@ -48,6 +51,7 @@ Paths are retained local evidence, not portable package assets. Counts are separ
 | R65 | `G:/Renulus/scratch/oc-h02-h08/providers/stateless-extraction/python-affected.xml` | 65 |
 | D96 | `C:/Renulus/scratch/oc-h02-h08/learning/deployment-context-integrated01.xml` | 96 |
 | C122 | `C:/Renulus/scratch/oc-h02-h08/configuration/purpose-budget-final02.xml` | 122 |
+| B3 | `G:/Renulus-agent-scratch/oc-h02-h08/configuration-repair-budget/receipts/repair-budget-final01.xml` | 3 / 1.598s JUnit; 1.64s console |
 | F80 | `C:/Renulus/scratch/oc-h02-h08/providers/configuration-launch/receipts/final07.xml` | 80 |
 | L6 | `C:/Renulus/scratch/oc-h02-h08/configuration/lifecycle-connected-final.xml` | 6 |
 | Q2 | `C:/Renulus/scratch/oc-h02-h08/configuration/gated-registry-green01.xml` | 2 |
