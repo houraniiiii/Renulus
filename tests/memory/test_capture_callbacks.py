@@ -1,5 +1,6 @@
 """Public migrated capture callbacks; canonical receipts and no provider IO."""
 import asyncio
+from concurrent.futures import Future
 from dataclasses import FrozenInstanceError
 from contextlib import contextmanager
 import json
@@ -352,6 +353,93 @@ async def test_settled_cleanup_signal_error_does_not_replace_publication_failure
     assert callback.settling.is_set() and callback.released == 1
     assert memory.repository.job(job['id'])['error_code'] == 'synthetic_publication_stale'
     assert memory.repository.list() == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('committed_capture', ['held-cpu'], indirect=True)
+async def test_timeout_keeps_initiating_code_when_cancel_signal_wins_thread_race(
+        committed_capture, callback, monkeypatch, caplog):
+    memory, cpu, evidence_id, scope, _ = committed_capture
+    callback.hold_generation = callback.hold_transport = True
+    callback.cancel_error = ApiError('synthetic_cancel_signal_failed', 'PRIVATE_CANCEL_TEXT', 503)
+    loop = asyncio.get_running_loop()
+    result, schedule = Future.result, loop.call_soon_threadsafe
+    timeout_thread = threading.local()
+
+    def short_result(future, timeout=None):
+        if timeout != 120:
+            return result(future, timeout=timeout)
+        # Shorten only the generation observation, after the public generator
+        # has entered. Leave its actual future and task running.
+        result(asyncio.run_coroutine_threadsafe(callback.entered.wait(), loop), timeout=3)
+        try:
+            return result(future, timeout=0.01)
+        except TimeoutError:
+            timeout_thread.signal_expected = True
+            raise
+
+    def signal_before_thread_resumes(function, *args, **kwargs):
+        if not getattr(timeout_thread, 'signal_expected', False):
+            return schedule(function, *args, **kwargs)
+        timeout_thread.signal_expected = False
+        delivered = threading.Event()
+        def acknowledged():
+            try:
+                function(*args)
+            finally:
+                delivered.set()
+        handle = schedule(acknowledged, **kwargs)
+        # Reproduce the adverse ordering: the cancellation callback finishes
+        # before the timed-out worker can continue exception classification.
+        assert delivered.wait(3), 'Cancellation signal did not finish'
+        return handle
+
+    monkeypatch.setattr(Future, 'result', short_result)
+    monkeypatch.setattr(loop, 'call_soon_threadsafe', signal_before_thread_resumes)
+    job = memory.enqueue(evidence_id, scope)
+    observer = asyncio.create_task(memory.process_pending())
+    try:
+        assert await asyncio.to_thread(cpu.cpu_entered.wait, 3)
+        assert callback.cancelled == 1 and len(callback.generated) == 1
+        assert callback.released == 0 and not callback.settling.is_set()
+        observer.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await observer
+        assert await memory.process_pending(retry=True) == {'processed': 0}
+        with pytest.raises(ApiError) as busy:
+            with memory.recovery_guard():
+                pass
+        assert busy.value.code == 'recovery_busy'
+        with pytest.raises(ApiError) as pending:
+            await memory.close(timeout=0.01)
+        assert pending.value.code == 'memory_close_timeout'
+        assert callback.released == 0
+        cpu.cpu_done.set()
+        with pytest.raises(ApiError) as pending:
+            await memory.close(timeout=0.01)
+        assert pending.value.code == 'memory_close_timeout'
+        assert callback.released == 0 and not callback.settling.is_set()
+        callback.generation_done.set()
+        await asyncio.wait_for(callback.settling.wait(), 3)
+        with pytest.raises(ApiError) as pending:
+            await memory.close(timeout=0.01)
+        assert pending.value.code == 'memory_close_timeout'
+        assert callback.released == 0
+        callback.transport_done.set()
+        await memory.close()
+        failed = memory.repository.job(job['id'])
+        assert failed['state'] == 'failed'
+        assert failed['error_code'] == 'memory_extraction_timeout'
+        assert callback.cancelled == callback.released == 1
+        assert memory.repository.list() == []
+        assert 'PRIVATE_CANCEL_TEXT' not in caplog.text
+        with memory.recovery_guard():
+            pass
+    finally:
+        cpu.cpu_done.set()
+        callback.generation_done.set()
+        callback.transport_done.set()
+        await asyncio.gather(observer, return_exceptions=True)
 
 
 @pytest.mark.asyncio

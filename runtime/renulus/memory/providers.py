@@ -77,10 +77,13 @@ class ApprovedLLM(LLMBase):
                 try:
                     output = future.result(timeout=120)
                 except TimeoutError:
+                    # Retain the initiating timeout before the signal can fail.
+                    timeout_error = capture.reject(ApiError('memory_extraction_timeout',
+                        'Memory extraction timed out', 503, True))
                     # Cancel is a signal, never evidence that loop/transport
                     # work settled. The attempt owner joins both after CPU exit.
                     binding['loop'].call_soon_threadsafe(capture.cancel)
-                    raise ApiError('memory_extraction_timeout', 'Memory extraction timed out', 503, True) from None
+                    raise timeout_error from None
                 return _facts(output)
             except Exception as error:
                 raise capture.reject(error) from None
