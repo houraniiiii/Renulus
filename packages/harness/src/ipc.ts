@@ -2,7 +2,7 @@ import path from "node:path";
 import { createHash, timingSafeEqual } from "node:crypto";
 import type { openHarness } from "./host.ts";
 import { DomainClient } from "./domain-ipc.ts";
-import type { ExtractionInput, ExtractionReply } from "./extraction-host.ts";
+import type { ExtractionIdentity, ExtractionInput, ExtractionReply } from "./extraction-host.ts";
 
 export interface HarnessBoot {
   protocol: "renulus-harness/1";
@@ -20,9 +20,9 @@ export interface HarnessBoot {
 
 type Host = Awaited<ReturnType<typeof openHarness>> & {
   extract?: (input: ExtractionInput) => Promise<ExtractionReply>;
-  extractionStatus?: (operationId: string) => { state: string };
-  cancelExtraction?: (operationId: string) => Promise<{ state: string }>;
-  releaseExtraction?: (operationId: string) => { released: boolean };
+  extractionStatus?: (identity: ExtractionIdentity) => { state: string };
+  cancelExtraction?: (identity: ExtractionIdentity) => Promise<{ state: string }>;
+  releaseExtraction?: (identity: ExtractionIdentity) => { released: boolean };
 };
 type Request = Record<string, unknown> & {
   operation_id: string; attempt_id: string; request_id: string;
@@ -215,15 +215,15 @@ export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainCl
         case "model.extract.status":
           if (Object.keys(request.payload).length) throw new Error("invalid_payload");
           if (!host.extractionStatus) throw new Error("memory_extraction_unavailable");
-          result = host.extractionStatus(request.operation_id); break;
+          result = host.extractionStatus({ operation_id: request.operation_id, attempt_id: request.attempt_id }); break;
         case "model.extract.cancel":
           if (Object.keys(request.payload).length) throw new Error("invalid_payload");
           if (!host.cancelExtraction) throw new Error("memory_extraction_unavailable");
-          result = await host.cancelExtraction(request.operation_id); break;
+          result = await host.cancelExtraction({ operation_id: request.operation_id, attempt_id: request.attempt_id }); break;
         case "model.extract.release":
           if (Object.keys(request.payload).length) throw new Error("invalid_payload");
           if (!host.releaseExtraction) throw new Error("memory_extraction_unavailable");
-          result = host.releaseExtraction(request.operation_id); break;
+          result = host.releaseExtraction({ operation_id: request.operation_id, attempt_id: request.attempt_id }); break;
         case "session.get": {
           const observed = await host.observe(text(request.payload, "session_id"));
           result = { session: observed.session, execution: observed.execution }; break;

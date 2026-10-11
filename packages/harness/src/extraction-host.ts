@@ -17,6 +17,10 @@ export interface ExtractionFailure {
   readonly retryable: boolean;
 }
 export type ExtractionReply = ExtractionResult | { readonly failure: ExtractionFailure };
+export interface ExtractionIdentity {
+  readonly operation_id: string;
+  readonly attempt_id: string;
+}
 interface NativeOwner {
   status(): Promise<{ state: string; configurationId?: string }>;
   close(input?: { timeoutMs?: number }): Promise<{ state: string; outcome: string }>;
@@ -24,6 +28,7 @@ interface NativeOwner {
   inspect(): Promise<unknown>;
 }
 interface Invocation {
+  readonly attemptId: string;
   readonly controller: AbortController;
   readonly task: Promise<ExtractionReply>;
   settled: boolean;
@@ -38,6 +43,13 @@ export function withStatelessExtractions<T extends NativeOwner>(host: T,
   if (!Number.isSafeInteger(bounds.maxOperations) || bounds.maxOperations < 1 ||
       !Number.isSafeInteger(bounds.maxInputChars) || bounds.maxInputChars < 1) throw new Error('invalid_extraction_bounds');
   const operations = new Map<string, Invocation>();
+  const controlOperation = (identity: ExtractionIdentity) => {
+    if (!identity || Object.keys(identity).sort().join(',') !== 'attempt_id,operation_id' ||
+        !identifier(identity.operation_id) || !identifier(identity.attempt_id)) throw new Error('invalid_payload');
+    const operation = operations.get(identity.operation_id);
+    if (operation && operation.attemptId !== identity.attempt_id) throw new Error('memory_extraction_identity_conflict');
+    return operation;
+  };
   let closing: Promise<void> | undefined;
   let sealed = false;
   const beginClose = () => {
@@ -68,7 +80,7 @@ export function withStatelessExtractions<T extends NativeOwner>(host: T,
         const text = Object.freeze({ system: input.system, user: input.user });
         const controller = new AbortController();
         // Register synchronously; close must also own work queued before its first await.
-        const operation: Invocation = { controller, settled: false, task: Promise.resolve().then(async () => {
+        const operation: Invocation = { attemptId: binding.attempt_id, controller, settled: false, task: Promise.resolve().then(async () => {
           const status = await host.status();
           if (sealed || controller.signal.aborted) throw new Error('harness_closing');
           if (status.state !== 'ready' || status.configurationId !== configurationId) throw new Error('configuration_mismatch');
@@ -96,21 +108,21 @@ export function withStatelessExtractions<T extends NativeOwner>(host: T,
         return operation.task;
       } catch (error) { return Promise.reject(error); }
     },
-    extractionStatus(operationId: string) {
-      const operation = operations.get(operationId);
+    extractionStatus(identity: ExtractionIdentity) {
+      const operation = controlOperation(identity);
       return { state: !operation ? 'unavailable' : operation.settled ? 'settled' : 'active' };
     },
-    async cancelExtraction(operationId: string) {
-      const operation = operations.get(operationId);
+    async cancelExtraction(identity: ExtractionIdentity) {
+      const operation = controlOperation(identity);
       if (!operation) return { state: 'unavailable' };
       operation.controller.abort();
       await Promise.allSettled([operation.task]);
       return { state: 'settled' };
     },
-    releaseExtraction(operationId: string) {
-      const operation = operations.get(operationId);
+    releaseExtraction(identity: ExtractionIdentity) {
+      const operation = controlOperation(identity);
       if (operation && !operation.settled) throw new Error('memory_extraction_active');
-      operations.delete(operationId);
+      operations.delete(identity.operation_id);
       return { released: true };
     },
     inspect() {
