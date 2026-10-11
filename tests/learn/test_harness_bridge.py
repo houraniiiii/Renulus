@@ -32,6 +32,7 @@ class ScriptedTransport:
     def __init__(self):
         self.calls = []
         self.prompts = []
+        self.prompt_metadata = {}
         self.responses = {}
         self.answer_text = 'Synthetic CKD explanation.'
 
@@ -41,15 +42,17 @@ class ScriptedTransport:
             result = {'session': {'id': 'ses_synthetic'}}
         elif command == 'session.prompt':
             self.prompts.append(payload['text'])
+            self.prompt_metadata = {'operationId': operation_id, 'attemptId': attempt_id,
+                'configurationId': payload['configuration_id']}
             result = {'sessionId': 'ses_synthetic', 'inputId': 'msg_user',
                 'operationId': operation_id, 'attemptId': attempt_id}
         elif command == 'session.get':
             result = {'session': {'id': 'ses_synthetic', 'outcome': 'succeeded',
-                'time': {'idle': 1791676800003}}}
+                'time': {'idle': 1791676800003}}, 'execution': 'settled'}
         elif command == 'session.messages':
             result = {'messages': [
                 {'id': 'msg_user', 'type': 'user', 'text': self.prompts[-1],
-                 'metadata': {'operationId': operation_id}, 'time': {'created': 1791676800000}},
+                 'metadata': dict(self.prompt_metadata), 'time': {'created': 1791676800000}},
                 {'id': 'msg_answer', 'type': 'assistant', 'finish': 'stop',
                  'content': [{'type': 'text', 'text': self.answer_text}],
                  'time': {'created': 1791676800001, 'completed': 1791676800002}}], 'cursor': None}
