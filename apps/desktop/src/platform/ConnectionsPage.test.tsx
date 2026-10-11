@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConnectionsPage } from './ConnectionsPage';
+import type { HarnessConfigurationStatus, HarnessRolePolicy } from './HarnessSettings';
 
 type Provider = 'codex' | 'opencode-go';
 type Availability = 'unknown' | 'available' | 'unavailable' | 'account_unsupported';
@@ -12,6 +13,7 @@ interface Connections { selected_provider: Provider | null; selected_models?: Pa
 const approved = { codex: ['gpt-6.1-sol', 'gpt-6-astra', 'gpt-6-luna'], 'opencode-go': ['mimo-v2.6-pro', 'deepseek-v4.1-flash'] };
 const authorization = 'https://auth.openai.com/api/accounts/authorize?state=SYNTHETIC';
 const loginPath = '/api/v1/connections/codex/login/synthetic-login';
+const harnessPath = '/api/v1/runtime/harness/configuration';
 const request = vi.fn<typeof fetch>();
 const openAuthorization = vi.fn(async (_url: string) => {});
 const openSource = vi.fn(async (_url: string) => {});
@@ -24,6 +26,9 @@ let go: () => Response | Promise<Response>;
 let refresh: (provider: Provider) => Response | Promise<Response>;
 let disconnect: (provider: Provider) => Response | Promise<Response>;
 let publicUnavailable: boolean;
+let harnessSnapshot: HarnessConfigurationStatus;
+let readHarness: () => Response | Promise<Response>;
+let stageHarness: (roles: HarnessRolePolicy[]) => Response | Promise<Response>;
 
 function connection(provider: Provider, state = 'disconnected'): Connection {
   return { provider, status: state, learning_use: { status: 'app_approved', generation_allowed: true }, allowed_models: approved[provider], models: approved[provider].map(id => ({
@@ -50,6 +55,10 @@ beforeEach(() => {
   request.mockReset(); openAuthorization.mockReset(); openSource.mockReset(); unexpected.length = 0;
   openAuthorization.mockResolvedValue(); openSource.mockResolvedValue(); publicUnavailable = false;
   current = { selected_provider: null, connections: [connection('codex'), connection('opencode-go')] };
+  harnessSnapshot = { requested: null, effective: null, failed: null, failure_code: null, admission_open: false,
+    configuration: null, requested_configuration: null, pinned_runs: [], catalogue: [] };
+  readHarness = () => json(harnessSnapshot);
+  stageHarness = () => failure('unexpected_stage');
   start = () => json({ login_id: 'synthetic-login', status: 'pending', authorization_url: authorization, expires_at: Math.floor(Date.now() / 1000) + 600 });
   status = id => json({ login_id: id, status: 'pending' });
   cancel = id => json({ login_id: id, status: 'cancelled' });
@@ -60,6 +69,8 @@ beforeEach(() => {
     const method = options?.method ?? 'GET';
     if (url === '/api/v1/health') return publicUnavailable ? failure('unavailable') : json({ version: 'synthetic', api_version: 1 });
     if (url === '/api/v1/connections') return publicUnavailable ? failure('unavailable') : json(current);
+    if (url === harnessPath && method === 'GET') return readHarness();
+    if (url === harnessPath && method === 'POST') return stageHarness(JSON.parse(options!.body as string).roles);
     if (url === '/api/v1/connections/codex/login' && method === 'POST') return start();
     const loginMatch = String(url).match(/^\/api\/v1\/connections\/codex\/login\/([^/]+)$/);
     if (loginMatch && method === 'GET') return status(decodeURIComponent(loginMatch[1]));
@@ -87,13 +98,13 @@ afterEach(() => {
 });
 
 describe('subscription status and explicit model selection', () => {
-  it('loads only public subscription status, with all five approved identities honestly unchecked', async () => {
+  it('loads public subscription and harness status, with all five approved identities honestly unchecked', async () => {
     await mount();
     expect(screen.getAllByText('Not connected')).toHaveLength(2);
     expect(screen.queryByText('Selected')).toBeNull();
     expect(screen.getAllByText('Connect account')).toHaveLength(5);
     Object.values(approved).flat().forEach(id => expect(screen.getByText(id)).toBeTruthy());
-    expect(request.mock.calls.map(([url]) => url)).toEqual(['/api/v1/health', '/api/v1/connections']);
+    expect(request.mock.calls.map(([url]) => String(url)).sort()).toEqual(['/api/v1/connections', '/api/v1/health', harnessPath]);
     expect(screen.queryByRole('button', { name: /^Use / })).toBeNull();
   });
   it.each(['configured', 'no_allowed_models', 'authentication_required', 'provider_unavailable', 'subscription_limit'])('keeps refresh and disconnect available for a %s saved account', async state => {
@@ -169,6 +180,62 @@ describe('subscription status and explicit model selection', () => {
     publicUnavailable = false; fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     await screen.findByRole('region', { name: 'Codex subscription' });
     expect(screen.getAllByText('Not connected')).toHaveLength(2);
+  });
+});
+
+describe('Harness settings in Connections', () => {
+  it('shows the configuration snapshot and refreshes staged roles while preserving the selected learning model', async () => {
+    const effective = 'e'.repeat(64), candidate = 'd'.repeat(64);
+    setConnection('opencode-go', 'connected');
+    current.selected_provider = 'opencode-go'; current.selected_models = { 'opencode-go': 'mimo-v2.6-pro' };
+    const configuration = { roles: [{ purpose: 'explain', enabled: true, model_id: null, output_tokens: 4096, dispatch_limit: null }],
+      attempts: { foreground_dispatches: 12, standalone_dispatches: 1, title_dispatches: 0, retries: 0 } };
+    harnessSnapshot = { requested: effective, effective, failed: null, failure_code: null, admission_open: true,
+      configuration, requested_configuration: null, catalogue: approved['opencode-go'],
+      pinned_runs: [{ run_id: 'synthetic-explain-run', purpose: 'explain', version: effective }] };
+    const stagedRead = deferred<Response>();
+    let staging = false;
+    readHarness = () => staging ? stagedRead.promise : json(harnessSnapshot);
+    stageHarness = roles => {
+      harnessSnapshot = { ...harnessSnapshot, requested: candidate, requested_configuration: { ...configuration, roles } };
+      staging = true;
+      return json({ version: candidate });
+    };
+    try {
+      await mount();
+      const panel = within(await screen.findByRole('region', { name: 'Harness settings' }));
+      await panel.findByText('Open for new runs');
+      expect(panel.getByText('synthetic-explain-run')).toBeTruthy();
+      const revisions = within(panel.getByRole('region', { name: 'Configuration revisions' }));
+      expect(revisions.getAllByTitle(effective)).toHaveLength(2);
+      expect((subscription('opencode-go').getByRole('combobox', { name: 'Default OpenCode Go model' }) as HTMLSelectElement).value).toBe('mimo-v2.6-pro');
+      fireEvent.click(panel.getByText('Explain a topic', { selector: 'strong' }));
+      fireEvent.change(panel.getByLabelText('Explain a topic output tokens'), { target: { value: '2048' } });
+      fireEvent.click(panel.getByRole('button', { name: 'Stage role settings' }));
+      await waitFor(() => expect(calls(harnessPath, 'POST')).toHaveLength(1));
+      await waitFor(() => expect(calls(harnessPath)).toHaveLength(2));
+      // A stage acknowledgement alone does not establish the refreshed revision.
+      expect(revisions.queryByTitle(candidate)).toBeNull();
+      expect(revisions.getAllByTitle(effective)).toHaveLength(2);
+      expect((panel.getByRole('button', { name: 'Stage role settings' }) as HTMLButtonElement).disabled).toBe(true);
+      staging = false;
+      await act(async () => { stagedRead.resolve(json(harnessSnapshot)); });
+      await revisions.findByTitle(candidate);
+      expect(revisions.getByTitle(effective)).toBeTruthy();
+      const staged = JSON.parse(calls(harnessPath, 'POST')[0][1]!.body as string);
+      expect(staged.roles.find((role: HarnessRolePolicy) => role.purpose === 'explain')).toEqual({
+        purpose: 'explain', enabled: true, model_id: null, output_tokens: 2048, dispatch_limit: null,
+      });
+      harnessSnapshot = { ...harnessSnapshot, admission_open: false };
+      fireEvent.click(panel.getByRole('button', { name: 'Refresh configuration status' }));
+      await panel.findByText('New runs paused');
+      expect(revisions.getByTitle(candidate)).toBeTruthy(); expect(revisions.getByTitle(effective)).toBeTruthy();
+      expect(screen.getAllByRole('combobox', { name: /^Default / })).toHaveLength(1);
+      expect((subscription('opencode-go').getByRole('combobox', { name: 'Default OpenCode Go model' }) as HTMLSelectElement).value).toBe('mimo-v2.6-pro');
+      expect(calls('/api/v1/connections/select', 'POST')).toHaveLength(0);
+      expect(calls(harnessPath + '/activate', 'POST')).toHaveLength(0);
+      expect(calls(harnessPath, 'POST')).toHaveLength(1); expect(calls(harnessPath)).toHaveLength(3);
+    } finally { stagedRead.resolve(json(harnessSnapshot)); }
   });
 });
 
@@ -251,7 +318,8 @@ describe('explicit OpenCode Go access', () => {
     await mount(); expect(openSource).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('link', { name: /Open OpenCode Go account/ }));
     await waitFor(() => expect(openSource).toHaveBeenCalledWith('https://opencode.ai/auth'));
-    expect(request.mock.calls).toHaveLength(2);
+    expect(request.mock.calls.map(([url]) => String(url)).sort()).toEqual(['/api/v1/connections', '/api/v1/health', harnessPath]);
+    expect(request.mock.calls.every(([, options]) => options?.method === undefined)).toBe(true);
   });
   it('does not let the Go account link interrupt an in-flight Codex login start', async () => {
     const held = deferred<Response>(); start = () => held.promise; await mount();

@@ -6,6 +6,7 @@ import { Badge, Button, ErrorState, Input, LoadingState, Notice, PageHeader, Sel
 import type { Health } from './contracts';
 import { DataManagement } from './DataManagement';
 import { RetrievalConnections } from './RetrievalConnections';
+import { HarnessSettings } from './HarnessSettings';
 import { NamePreference } from '../modules/home/NamePreference';
 import { NightlyPreferences } from '../modules/nightly';
 
@@ -329,6 +330,7 @@ export function ConnectionsPage({ initialSection = 'subscriptions', assistanceAl
           <p>Only your approved models are used. Requests stay with the selected subscription.</p>
         </section><Notice><p>Reviewed tests and your saved study material are available without a model connection.</p></Notice><p className="muted">Renulus {resource.data.health.version} · Connecting and checking models do not send a learning prompt.</p></aside>
       </div>}
+      <HarnessSettings />
     </>}
     {section === 'sources' && <RetrievalConnections openSource={window.renulus?.openSource} />}
     {section === 'data' && <DataManagement />}
