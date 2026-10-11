@@ -17,6 +17,12 @@ _MESSAGE = 'The committed-answer extraction is unavailable.'
 
 
 @dataclass
+class _Observation:
+    request: asyncio.Task
+    response: dict | None = None
+
+
+@dataclass
 class _Capture:
     source: CommittedCapture
     source_current: CaptureCurrent
@@ -34,7 +40,7 @@ class _Capture:
     native_required: bool = False
     receipt: dict | None = None
     settled: bool = False
-    observations: dict = field(default_factory=dict)
+    observations: dict[str, _Observation] = field(default_factory=dict)
     released: asyncio.Event = field(default_factory=asyncio.Event)
 
 
@@ -204,22 +210,37 @@ class HarnessMemoryCaptures:
         return result['text']
 
     async def _observe(self, record, command):
+        observation = record.observations.get(command)
+        if observation is None:
+            request = asyncio.create_task(record.process.request(command, {}, record.binding.operation_id,
+                record.binding.attempt_id, 5), name='renulus-native-memory-observation')
+            request.add_done_callback(lambda done: None if done.cancelled() else done.exception())
+            observation = record.observations[command] = _Observation(request)
         loop = asyncio.get_running_loop()
         async with asyncio.timeout_at(loop.time() + 5):
-            response = record.observations.get(command)
-            if response is None:
-                response = await record.process.request(command, {}, record.binding.operation_id,
-                    record.binding.attempt_id, 5)
-                record.observations[command] = response
+            if observation.response is None:
+                try:
+                    observation.response = await asyncio.shield(observation.request)
+                except Exception:
+                    # The request itself finished with an error. An observer
+                    # timeout/cancellation leaves its shielded owner retained.
+                    record.observations.pop(command, None)
+                    raise
+            response = observation.response
             while response['outcome'] == 'accepted_pending':
                 await asyncio.sleep(.02)
                 response = await record.process.query_result(response['request_id'])
                 if response is None:
                     raise ApiError('memory_settlement_pending', _MESSAGE, 503, True)
-                record.observations[command] = response
+                observation.response = response
             if command == 'model.extract.status':
-                while not await record.process.release_observation(response['request_id']):
-                    await asyncio.sleep(.02)
+                # Local refusal allocated no retained transport receipt. A
+                # terminal native reply still needs its acknowledged release.
+                locally_refused = (response['outcome'] == 'rejected_before_admission'
+                    and await record.process.query_result(response['request_id']) is None)
+                if not locally_refused:
+                    while not await record.process.release_observation(response['request_id']):
+                        await asyncio.sleep(.02)
             record.observations.pop(command, None)
             if response['outcome'] != 'committed_reference':
                 raise ApiError('memory_settlement_pending', _MESSAGE, 503, True)
@@ -251,6 +272,8 @@ class HarnessMemoryCaptures:
             await asyncio.sleep(.02)
         if record.cancel_control is not None:
             await asyncio.gather(asyncio.shield(record.cancel_control), return_exceptions=True)
+        await asyncio.gather(*(asyncio.shield(observation.request)
+            for observation in record.observations.values()), return_exceptions=True)
         record.settled = True
 
     async def close(self):

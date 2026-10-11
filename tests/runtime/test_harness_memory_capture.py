@@ -253,6 +253,193 @@ class TimedStatusOnce(LostExtractionAck):
         return await super().request(command, payload, operation_id, attempt_id, timeout)
 
 
+class DelayedStatusReceipt(LostExtractionAck):
+    """Public status admission outlives its caller's bounded observation."""
+    def __init__(self, owner):
+        super().__init__(owner)
+        self.status_entered, self.response_gate, self.query_entered = (asyncio.Event() for _ in range(3))
+        self.release_entered, self.release_gate = (asyncio.Event() for _ in range(2))
+        self.status_ids, self.queried, self.release_ids = [], [], []
+        self.status_cancelled = 0
+        self.results = {}
+
+    async def request(self, command, payload, operation_id, attempt_id, timeout):
+        if command != 'model.extract.status':
+            return await super().request(command, payload, operation_id, attempt_id, timeout)
+        self.commands.append(command)
+        request_id = uuid4().hex
+        self.status_ids.append(request_id)
+        self.results[request_id] = {'outcome': 'accepted_pending', 'request_id': request_id}
+        self.status_entered.set()
+        try:
+            await self.response_gate.wait()
+        except asyncio.CancelledError:
+            self.status_cancelled += 1
+            raise
+        return self.results[request_id]
+
+    async def query_result(self, request_id):
+        self.queried.append(request_id)
+        self.query_entered.set()
+        if request_id not in self.results:
+            return None
+        if self.gate.is_set():
+            self.completed = True
+            self.results[request_id] = {'outcome': 'committed_reference',
+                'request_id': request_id, 'result': {'state': 'settled'}}
+        return self.results[request_id]
+
+    async def release_observation(self, request_id):
+        self.release_ids.append(request_id)
+        self.release_entered.set()
+        if not self.release_gate.is_set():
+            return False
+        self.results.pop(request_id)
+        return True
+
+
+@pytest.fixture
+def short_observation_deadline(monkeypatch):
+    timeout_at = asyncio.timeout_at
+    def short_observation(deadline):
+        loop = asyncio.get_running_loop()
+        # Shorten the standard five-second observation only; the process
+        # request keeps its own admission/finalizer lifetime.
+        if deadline is not None and 4.9 < deadline - loop.time() <= 5:
+            deadline = loop.time() + .03
+        return timeout_at(deadline)
+    monkeypatch.setattr(asyncio, 'timeout_at', short_observation)
+
+
+async def test_status_request_identity_survives_observer_timeout_and_cancellation(
+        capture_owner, short_observation_deadline):
+    owner, authority, version = capture_owner
+    process = DelayedStatusReceipt(owner)
+    seal = owner.seal_new_runs(expected_effective=version)
+    owner.replace_process(process, configuration_id=version, seal=seal)
+    seal.release()
+    capture = owner.memory_captures.prepare(source(), current=lambda *, conn=None: None)
+    await asyncio.gather(capture.generate((('system', 'Extract facts.'), ('user', 'Synthetic answer.'))),
+        return_exceptions=True)
+    observer = asyncio.create_task(capture.settle())
+    try:
+        await asyncio.wait_for(process.status_entered.wait(), 1)
+        observer.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await observer
+        await asyncio.sleep(.12)
+        assert process.status_cancelled == 0, 'A read deadline cancelled the admitted request owner'
+        assert len(process.status_ids) == 1, 'Retry replaced the still-owned initial status request'
+        assert owner.memory_captures.retained() == 1
+        assert authority.activation_snapshot()['pinned_runs']
+        observer = asyncio.create_task(capture.settle())
+        process.response_gate.set()
+        await asyncio.wait_for(process.query_entered.wait(), 1)
+        assert set(process.queried) == set(process.status_ids)
+        assert not observer.done()
+        process.gate.set()
+        await asyncio.wait_for(process.release_entered.wait(), 1)
+        assert not observer.done()
+        assert set(process.release_ids) == set(process.status_ids)
+        process.release_gate.set()
+        await asyncio.wait_for(asyncio.shield(observer), 1)
+        capture.release()
+        assert process.results == {}
+        assert len(process.status_ids) == 1
+        assert process.commands.count('model.extract') == 1
+        assert authority.activation_snapshot()['pinned_runs'] == []
+    finally:
+        process.response_gate.set()
+        process.gate.set()
+        process.release_gate.set()
+        await asyncio.gather(observer, return_exceptions=True)
+        if owner.memory_captures.retained():
+            await asyncio.wait_for(capture.settle(), 1)
+            capture.release()
+
+
+class LocallyRefusedStatus(DelayedStatusReceipt):
+    def __init__(self, owner, code):
+        super().__init__(owner)
+        self.code, self.refusal = code, None
+        self.refused = asyncio.Event()
+        self.exited = False
+
+    async def request(self, command, payload, operation_id, attempt_id, timeout):
+        if command == 'model.extract.status' and self.refusal is None:
+            self.commands.append(command)
+            self.refusal = await ManagedHarnessProcess.request(
+                self, command, payload, operation_id, attempt_id, timeout)
+            assert self.refusal['error']['code'] == 'not_started'
+            # The unstarted public process supplies the absent-receipt behavior.
+            # Other local capacity refusals use this same explicit synthetic shape.
+            self.refusal['error'] = {'code': self.code}
+            self.refused.set()
+            return self.refusal
+        return await super().request(command, payload, operation_id, attempt_id, timeout)
+
+    async def query_result(self, request_id):
+        if self.refusal is not None and request_id == self.refusal['request_id']:
+            return await ManagedHarnessProcess.query_result(self, request_id)
+        return await super().query_result(request_id)
+
+    async def release_observation(self, request_id):
+        if self.refusal is not None and request_id == self.refusal['request_id']:
+            return await ManagedHarnessProcess.release_observation(self, request_id)
+        return await super().release_observation(request_id)
+
+    async def settlement(self, timeout):
+        return {'state': 'settled' if self.exited else 'pending'}
+
+
+@pytest.mark.parametrize('code', ['not_started', 'overloaded', 'result_capacity'])
+async def test_local_status_refusal_retries_but_retained_terminal_receipt_requires_release(
+        capture_owner, short_observation_deadline, code):
+    owner, authority, version = capture_owner
+    process = LocallyRefusedStatus(owner, code)
+    process.response_gate.set()
+    process.gate.set()
+    seal = owner.seal_new_runs(expected_effective=version)
+    owner.replace_process(process, configuration_id=version, seal=seal)
+    seal.release()
+    capture = owner.memory_captures.prepare(source(), current=lambda *, conn=None: None)
+    await asyncio.gather(capture.generate((('system', 'Extract facts.'), ('user', 'Synthetic answer.'))),
+        return_exceptions=True)
+    observer = asyncio.create_task(capture.settle())
+    status = asyncio.create_task(process.status_entered.wait())
+    try:
+        await asyncio.wait_for(process.refused.wait(), 1)
+        refused_id = process.refusal['request_id']
+        assert await process.query_result(refused_id) is None
+        assert not await process.release_observation(refused_id)
+        done, _ = await asyncio.wait({status}, timeout=.2)
+        assert done, 'A local refusal with no receipt prevented the next status admission'
+        await asyncio.wait_for(process.release_entered.wait(), 1)
+        await asyncio.sleep(.065)
+        assert not observer.done(), 'A retained terminal receipt still requires acknowledged release'
+        assert process.commands.count('model.extract.status') == 2
+        assert len(process.status_ids) == 1
+        assert set(process.release_ids) == set(process.status_ids)
+        assert (await process.query_result(process.status_ids[0]))['outcome'] == 'committed_reference'
+        assert authority.activation_snapshot()['pinned_runs']
+        process.release_gate.set()
+        await asyncio.wait_for(asyncio.shield(observer), 1)
+        capture.release()
+        assert process.results == {}
+        assert process.commands.count('model.extract') == 1
+        assert authority.activation_snapshot()['pinned_runs'] == []
+    finally:
+        process.exited = True
+        process.response_gate.set()
+        process.gate.set()
+        process.release_gate.set()
+        status.cancel()
+        await asyncio.gather(status, return_exceptions=True)
+        await asyncio.wait_for(asyncio.shield(observer), 1)
+        if owner.memory_captures.retained():
+            capture.release()
+
+
 async def test_expired_status_observation_preserves_a_recoverable_settlement_owner(capture_owner):
     owner, authority, version = capture_owner
     process = TimedStatusOnce(owner)
