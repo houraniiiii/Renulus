@@ -26,26 +26,32 @@ lower in the historical ledger.
 | --- | --- | --- |
 | H02 | Actual saved native Library retrieval, canonical cited M5 publication, native mapping/reconciliation and store activation | Connected desktop retrieval/citation opening and remaining exposure/failure acceptance |
 | H03 | Actual production-main text/tool/image loopback dispatch, strict final deployment proof, canonical permits and selected provider identity | Full production admission coverage and required evidence; matching-account tool/image gate remains separate before cutover |
-| H04 | Canonical authority/API, actual candidate/live lifecycle, managed initial/reopen and ordinary settlement; focused startup repair reviewed | Hidden Settings stage/activate/reopen and required failure/crash reconciliation |
+| H04 | Canonical authority/API, actual candidate/live lifecycle, managed initial/reopen, hidden Settings stage/activate/reopen and ordinary settlement | Required connected failure/crash reconciliation; account/package scope remains separate |
 | H05 | Persistent lineage, legacy real hooks, four recapture regressions and actual Mem0/Qdrant/FastEmbed correction/reopen preparation | Separately admitted native memory-extraction inference and integrated capture/settlement acceptance after H04; automatic migrated capture remains OFF |
 | H06 | Actual supported SDK import/export/remove capability with zero inference | Existing conversation migration, one transcript owner, native purge and canonical deletion/replay integration after H05 |
 | H07 | Actual native child/permission snapshot and narrowed-epoch seam preparation | Bounded delegated evidence review, inherited authority and actual family cancellation/settlement after H05 |
 | H08 | Existing instructions/skills and pinned native hooks are source inputs | Versioned instruction/skill activation and connected task use after accepted H04/H06 |
 
-The fixed hidden Settings fixture is integrated at `2e166120`; the observation
-deadline repair (`fbec9d46`) and frozen connection compatibility repair
-(`44058e0a`) have independent Spec and Standards closure, zero residual findings.
-The existing-dependency renderer, Electron and TypeScript builds passed before
-those Python-only repairs. The first hidden journey loaded the actual effective
-revision and opened/edited Explain by keyboard, but staging returned409
-"Prepare the current connection before dispatch." Requested/effective pointers
-remained equal. This failure is under focused investigation; activation/reopen
-acceptance is not claimed. Its owned profile and screenshots are retained under
-`G:/rn-h04/c/s-da67689d/`; it closed normally. No account actions or live
-provider calls occurred. Source investigation traced automatic Home suggestions
-to the fixture-only403 refusal, which invalidated the cached credential epoch.
-Its focused public reproducer/503 availability repair remains pending; no
-successful inference or changed activation is claimed.
+The fixed hidden Settings fixture is integrated at `2e166120`; observation
+deadline (`fbec9d46`) and frozen connection compatibility (`44058e0a`) repairs
+have independent Spec and Standards closure. The earlier hidden Stage409 under
+`G:/rn-h04/c/s-da67689d/` remains preserved and closed normally. Its cause was
+the fixture403 Home-suggestion refusal invalidating the synthetic credential
+epoch. Independently reviewed fixture503 repair67c0c677, integrated as8b9345c4,
+preserves that identity. Proxy repair74263c3b, integrated as0a72cbe6, preserves
+validated response lengths for bounded full-hash observation; both axes are
+closed. Electron rebuild02 and app/harness typechecks passed.
+
+The fresh actual hidden journey at0a72cbe6 now proves Stage200, Activate200 and
+normal same-profile reopen. Explain output64→48 and default dispatch→2 changed
+requested first, then effective after activation; reopened controls retain48/2.
+Four GET200 responses retain complete hashes. Both restart and final explicit
+close were normal with no forced/remaining PIDs; fault=null. Four screenshots
+include1000×720 layout. Read [the exact journey](OPENCODE_H04_HIDDEN_SETTINGS.md).
+POST observer bodies remained pending until renderer close, then status200/body
+unavailable; their bounded passive tooling repair is separately owned. No
+successful inference, live provider, account action or packaged acceptance is
+claimed. Connected failed-candidate/crash reconciliation remains open.
 
 ### Stateless committed-answer extraction assembly
 
@@ -86,13 +92,16 @@ Independent frozen assembly review against44058e0a found three Spec P2s
 (observation timeout poisons settlement, unavailable status prevents initiating
 shutdown, busy read-release leaks receipts) and two Standards P2s (late
 authenticated admission rejection stays uncertain, cleanup controls lose attempt
-identity). All five are source-derived, pending public reproduction and repair;
-the assembly is published as preparation only and the actual-engine tracer
-must wait for closure. Native attempt repair c286ecd5 is integrated asacc9e42a
-(public wrong-attempt red1→green1, affected6 passed, TypeScript exit0). The four
-Python findings have public red→green receipts below and await focused independent
-re-review. The separate initiating-timeout repair ce04e638, integrated
-as0df89c85, has zero residual findings on both axes.
+identity). All five original findings have public red→green repairs. Native
+attempt c286ecd5, integrated asacc9e42a (red1→green1, affected6, tsc0), has
+explicit independent closure on both axes. Python cleanup3ae7064c closes the
+original reproductions, but focused review found two residual P2s: an outer
+deadline can cancel the initial request before its retained ID is cached, and
+local rejected status has no transport receipt yet waits forever for release.
+These are under one bounded CaptureBinding/process-seam repair lease; actual
+engine execution remains held until independent closure. Separate initiating
+timeout repairce04e638, integrated as0df89c85, has zero residual findings on
+both axes.
 
 | Cleanup receipt | Result | Qualified behavior |
 | --- | --- | --- |
@@ -106,10 +115,18 @@ Settings Home refusal repair67c0c677 is integrated as8b9345c4. Its actual manage
 lifespan public trace reproduces authentication/Stage409 before repair (1 failed,
 17.79s), then provider-unavailable with stable credentials and successful Stage
 requested48/2 while effective64/default remains (1 passed,15.35s). No successful
-inference occurs; both runs deselect the16 unchanged cases. Hidden activation
-still needs a repaired fresh synthetic journey. Source investigation found that
-the desktop API proxy omits Content-Length, causing the bounded passive full-hash
-recorder to refuse body reads; the narrow proxy test/repair is separately leased.
+inference occurs; both runs deselect the16 unchanged cases. Both independent
+axes explicitly close this repair. The new hidden activation/reopen journey is
+recorded above. The validated proxy Content-Length repair is also independently
+closed; bounded passive POST observation remains a separate tooling lease.
+
+Current directed lanes: Sartre owns only CaptureBinding observer-identity/local
+refusal repair and its tests; Arendt owns one new actual managed-child H04
+interruption tracer; Ohm owns only passive controller response recording/tests;
+Turing prepares the real Mem0/native extraction tracer and holds all execution.
+Russell and Nietzsche independently review Spec and Standards. The parent owns
+shared integration and durable evidence. No H06/H07 implementation is released
+before real H05 acceptance, and H08 still requires accepted H04/H06.
 
 ### Managed startup assembly and retained coordinator review
 

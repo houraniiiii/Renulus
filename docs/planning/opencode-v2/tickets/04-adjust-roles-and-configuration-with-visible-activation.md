@@ -1,6 +1,6 @@
 # H04 — Adjust roles and configuration with visible activation
 
-**Status:** authorised implementation in progress. Authority, API, Settings and bounded lifecycle evidence is recorded in the [H02–H08 ledger](../../../implementation/OPENCODE_H02_H08_HANDOFF.md); bootstrap/reopen and connected activation acceptance remain open.
+**Status:** authorised implementation in progress. Authority/API, actual managed bootstrap/reopen and hidden Settings stage/activate/reopen evidence is recorded in the [H02–H08 ledger](../../../implementation/OPENCODE_H02_H08_HANDOFF.md) and [desktop journey](../../../implementation/OPENCODE_H04_HIDDEN_SETTINGS.md). Required connected failure/crash reconciliation remains open; H04 is not accepted.
 
 **Spec:** [S1](../specs/01-harness-control.md)
 
