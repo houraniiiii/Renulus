@@ -91,23 +91,26 @@ export function requestAllowed(url, method, origin) {
 
 function settingsResponseRoute(response, origin) {
   let url;
-  try { url = new URL(response.url()); } catch { return null; }
-  const method = response.request().method();
+  try { url = new URL(response.url); } catch { return null; }
+  const method = response.method;
   if (!isFlowUrl(url.href) || url.origin !== origin || url.search || url.hash
       || !['GET', 'POST'].includes(method) || !['/api/v1/runtime/harness/configuration',
         '/api/v1/runtime/harness/configuration/activate'].includes(url.pathname)) return null;
   return { method, path: url.pathname };
 }
+function settingsResponseLength(length) {
+  return typeof length === 'string' && /^[0-9]{1,5}$/.test(length) && Number(length) <= 65536;
+}
 
-export async function captureSettingsResponse(response, origin) {
+// The descriptor is bound to one native request; the reader cannot retry HTTP.
+export async function captureSettingsResponse(response, origin, readBytes) {
   const route = settingsResponseRoute(response, origin);
   if (!route) return null;
-  const row = { ...route, status: response.status() };
+  const row = { ...route, status: response.status };
   try {
-    const length = await response.headerValue('content-length');
-    if (typeof length !== 'string' || !/^[0-9]{1,5}$/.test(length) || Number(length) > 65536) throw new Error();
-    const raw = await response.body();
-    if (raw.length > 65536) throw new Error();
+    if (!settingsResponseLength(response.length)) throw new Error();
+    const raw = await readBytes();
+    if (!Buffer.isBuffer(raw) || raw.length > 65536) throw new Error();
     const data = JSON.parse(raw.toString('utf8'));
     for (const key of ['requested', 'effective', 'failed']) {
       if (data[key] === null || typeof data[key] === 'string' && /^[a-f0-9]{64}$/.test(data[key])) row[key] = data[key];
@@ -117,6 +120,14 @@ export async function captureSettingsResponse(response, origin) {
     if (typeof data.failure_code === 'string' && /^[a-z][a-z0-9_]{0,127}$/.test(data.failure_code)) row.failure_code = data.failure_code;
   } catch { row.metadata = 'unavailable'; }
   return row;
+}
+
+function settingsBodyBytes(reply) {
+  if (typeof reply?.body !== 'string' || typeof reply.base64Encoded !== 'boolean') throw new Error();
+  const encoding = reply.base64Encoded ? 'base64' : 'utf8';
+  if (reply.base64Encoded && (reply.body.length > 87384 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(reply.body))) throw new Error();
+  if (Buffer.byteLength(reply.body, encoding) > 65536) throw new Error();
+  return Buffer.from(reply.body, encoding);
 }
 
 async function noLinks(file, allowMissing = false) {
@@ -479,7 +490,7 @@ export class RenulusController {
     this.seenEvents = new Set();
     this.fixtureCatalog = null; this.observedFileInputs = new Map();
     this.startupDocuments = [];
-    this.settingsResponses = []; this.settingsResponseTasks = new Set(); this.settingsResponsesDropped = 0;
+    this.settingsResponses = []; this.settingsResponseTasks = new Set(); this.settingsObservationTasks = new Set(); this.settingsResponsesDropped = 0;
   }
   log(kind, message) {
     this.logs.push({ at: new Date().toISOString(), kind, message: String(redact(message, this.filled)).slice(0, LIMITS.line) });
@@ -718,7 +729,7 @@ export class RenulusController {
     await budget.wait(this.application.evaluate(installObservation));
     const context = this.application.context();
     context.setDefaultTimeout(Math.min(this.operationTimeout, 10_000));
-    this.attachPages();
+    await budget.wait(this.attachPages());
     this.observer = setInterval(() => {
       if (!this.observing && this.application && !this.fault) {
         this.observing = this.observe().catch(error => { this.fault = error; this.log('safety-failure', error.message); void this.application?.close().catch(() => {}); }).finally(() => { this.observing = null; });
@@ -822,23 +833,74 @@ export class RenulusController {
       this.restoreLaunchLogs = null;
     };
   }
-  attachPages() {
-    const attach = page => {
+  async attachSettingsResponses(page) {
+    const native = await this.application.context().newCDPSession(page);
+    const requests = new Map();
+    const publish = (entry, row) => {
+      if (entry.published) return;
+      entry.published = true;
+      clearTimeout(entry.timer);
+      if (requests.get(entry.id) === entry) requests.delete(entry.id);
+      if (row) {
+        this.settingsResponses.push(row);
+        if (this.settingsResponses.length > 64) { this.settingsResponses.shift(); this.settingsResponsesDropped++; }
+      }
+      entry.complete?.();
+    };
+    const unavailable = entry => ({ ...entry.route, status: entry.response.status, metadata: 'unavailable' });
+    native.on('Network.requestWillBeSent', event => {
+      const previous = requests.get(event.requestId);
+      if (previous) { publish(previous, previous.response ? unavailable(previous) : null); return; }
+      const route = settingsResponseRoute(event.request, this.origin);
+      if (!route || event.redirectResponse || typeof event.requestId !== 'string') return;
+      if (requests.size >= 64) {
+        const oldest = requests.values().next().value;
+        publish(oldest, oldest.response ? unavailable(oldest) : null);
+        this.settingsResponsesDropped++;
+      }
+      requests.set(event.requestId, { id: event.requestId, url: event.request.url, route });
+    });
+    native.on('Network.responseReceived', event => {
+      const entry = requests.get(event.requestId);
+      if (!entry) return;
+      if (entry.response || event.response?.url !== entry.url || !Number.isInteger(event.response.status)
+          || event.response.status < 100 || event.response.status > 599) { publish(entry, null); return; }
+      const lengths = Object.entries(event.response.headers ?? {}).filter(([name]) => name.toLowerCase() === 'content-length');
+      entry.response = { url: entry.url, ...entry.route, status: event.response.status, length: lengths.length === 1 ? lengths[0][1] : undefined };
+      const observation = new Promise(resolve => { entry.complete = resolve; });
+      this.settingsObservationTasks.add(observation);
+      observation.then(() => this.settingsObservationTasks.delete(observation));
+      entry.deadline = Date.now() + 2000;
+      entry.timer = setTimeout(() => publish(entry, unavailable(entry)), 2000);
+    });
+    native.on('Network.loadingFinished', event => {
+      const entry = requests.get(event.requestId);
+      if (!entry?.response || entry.reading) return;
+      entry.reading = true;
+      // A deadline never cancels a native read or releases its concurrency slot.
+      if (!settingsResponseLength(entry.response.length) || Date.now() >= entry.deadline
+          || this.settingsResponseTasks.size >= 4) { publish(entry, unavailable(entry)); return; }
+      const task = captureSettingsResponse(entry.response, this.origin, async () =>
+        settingsBodyBytes(await native.send('Network.getResponseBody', { requestId: entry.id })));
+      this.settingsResponseTasks.add(task);
+      task.then(row => { publish(entry, Date.now() >= entry.deadline ? unavailable(entry) : row); this.settingsResponseTasks.delete(task); },
+        () => { publish(entry, unavailable(entry)); this.settingsResponseTasks.delete(task); });
+    });
+    native.on('Network.loadingFailed', event => {
+      const entry = requests.get(event.requestId);
+      if (entry) publish(entry, entry.response ? unavailable(entry) : null);
+    });
+    native.on('close', () => {
+      for (const entry of requests.values()) publish(entry, entry.response ? unavailable(entry) : null);
+    });
+    await native.send('Network.enable');
+  }
+  async attachPages() {
+    const attach = async page => {
       if (page.__renulusControlAttached) return;
       page.__renulusControlAttached = true;
       page.on('console', message => { if (['error', 'warning', 'warn'].includes(message.type())) this.log('renderer-console', message.text()); });
       page.on('pageerror', error => this.log('renderer-error', error.message));
-      if (this.config.harnessSettingsFixture) page.on('response', response => {
-        if (!settingsResponseRoute(response, this.origin)) return;
-        if (this.settingsResponseTasks.size >= 4) { this.settingsResponsesDropped++; return; }
-        const task = captureSettingsResponse(response, this.origin).then(row => {
-          if (!row) return;
-          this.settingsResponses.push(row);
-          if (this.settingsResponses.length > 64) { this.settingsResponses.shift(); this.settingsResponsesDropped++; }
-        }).catch(() => this.log('settings-observation', 'Settings response metadata was unavailable.'))
-          .finally(() => this.settingsResponseTasks.delete(task));
-        this.settingsResponseTasks.add(task);
-      });
       page.on('filechooser', chooser => {
         // Listener interception covers labels/buttons that programmatically click
         // a file input, as well as direct inputs. Do not leave a chooser pending.
@@ -850,8 +912,11 @@ export class RenulusController {
         });
       });
       page.on('dialog', dialog => { this.log('dialog-blocked', 'An app JavaScript dialog was dismissed.'); void dialog.dismiss().catch(() => {}); });
+      if (this.config.harnessSettingsFixture) await this.attachSettingsResponses(page)
+        .catch(() => this.log('settings-observation', 'Native Settings observation was unavailable.'));
     };
-    this.application.on('window', attach); for (const page of this.application.windows()) attach(page);
+    this.application.on('window', page => { void attach(page).catch(() => this.log('settings-observation', 'Native Settings observation was unavailable.')); });
+    await Promise.all(this.application.windows().map(attach));
   }
   observe() {
     if (!this.observePending) this.observePending = this.observeNow().catch(error => { this.fault = error; throw error; }).finally(() => { this.observePending = null; });
@@ -936,8 +1001,7 @@ export class RenulusController {
   }
   async persist() {
     if (!this.session) return;
-    if (this.settingsResponseTasks.size) await bounded(Promise.allSettled([...this.settingsResponseTasks]), 2000, 'Settings metadata observation did not settle.')
-      .catch(() => this.log('settings-observation', 'Settings metadata is still pending; the lifecycle result remains authoritative.'));
+    if (this.settingsObservationTasks.size) await Promise.allSettled([...this.settingsObservationTasks]);
     const files = { 'logs.ndjson': this.logs.map(item => JSON.stringify(redact(item, this.filled))).join('\n') + '\n',
       'receipt.json': JSON.stringify(redact({ format: 'renulus-control-receipt-v1', syntheticOnly: true, profile: this.session.profile, launches: this.launches, closes: this.closes, events: this.backgroundEvents, startupDocuments: this.startupDocuments,
         ...(this.config.harnessSettingsFixture ? { settingsResponses: this.settingsResponses, settingsResponsesDropped: this.settingsResponsesDropped, settingsResponsesPending: this.settingsResponseTasks.size } : {}), fault: this.fault?.code ?? null }), null, 2) };
