@@ -3,15 +3,16 @@ import { TestLLM } from "@opencode/ai/testing";
 import { AIError, RateLimitError } from "@opencode/ai";
 import type { ModelAdapter } from "../src/host.ts";
 
-export async function scriptedModel(answer: string, hold = false) {
+export async function scriptedModel(answer: string, hold = false, tool?: { name: string; input: unknown }) {
   const runtime = ManagedRuntime.make(TestLLM.testLayer());
   const client = await runtime.runPromise(TestLLM.Test);
   let release!: () => void;
   const settlement = new Promise<void>(resolve => { release = resolve; });
   const response = TestLLM.text(answer, "answer");
-  await runtime.runPromise(client.push(hold
+  await runtime.runPromise(client.push(tool ? TestLLM.tool("synthetic-library-call", tool.name, tool.input) : hold
     ? Stream.unwrap(Effect.promise(() => settlement).pipe(Effect.uninterruptible, Effect.as(Stream.fromIterable(response))))
     : response));
+  if (tool) await runtime.runPromise(client.push(response));
   return {
     providerId: "synthetic",
     modelId: "counted-learning",
@@ -25,6 +26,7 @@ export async function scriptedModel(answer: string, hold = false) {
     },
     client,
     count: async () => (await runtime.runPromise(client.requests())).length,
+    requests: () => runtime.runPromise(client.requests()),
     started: (count = 1) => runtime.runPromise(client.wait(count)),
     release,
     respond: (text: string) => runtime.runPromise(client.push(TestLLM.text(text, "answer"))),
@@ -40,5 +42,5 @@ export async function scriptedModel(answer: string, hold = false) {
       return done;
     },
     close: () => runtime.dispose(),
-  } satisfies ModelAdapter & { count(): Promise<number>; close(): Promise<void>; started(count?: number): Promise<void>; release(): void; respond(text: string): Promise<void>; failNext(): Promise<void>; holdNext(text: string): Promise<() => void> };
+  } satisfies ModelAdapter & { count(): Promise<number>; requests(): Promise<readonly unknown[]>; close(): Promise<void>; started(count?: number): Promise<void>; release(): void; respond(text: string): Promise<void>; failNext(): Promise<void>; holdNext(text: string): Promise<() => void> };
 }

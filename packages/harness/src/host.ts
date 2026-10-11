@@ -16,6 +16,7 @@ import { SessionMessage } from "@opencode/schema/session-message";
 import { acquireStore } from "./ownership.ts";
 import { verifyPreparedProfile, type ProfileSelection } from "./manifest.ts";
 import { activateStores, validateStores } from "./stores.ts";
+import { createLibraryPlugin, type LibraryToolBridge } from "./domain-tools.ts";
 
 export interface ModelAdapter {
   readonly providerId: string;
@@ -26,6 +27,7 @@ export interface ModelAdapter {
 
 export interface HarnessOptions extends ProfileSelection {
   readonly model?: ModelAdapter;
+  readonly library?: LibraryToolBridge;
 }
 
 /** A persistent execution owner. Domain records continue to belong to Python. */
@@ -65,7 +67,10 @@ export async function openHarness(options: HarnessOptions) {
     ...(options.model?.configuration ?? {}),
     compaction: { auto: false },
     agents: {
-      renulus: { mode: "primary", system: "Support nephrology education. Use the supplied learning request.", permissions: [{ action: "*", resource: "*", effect: "deny" }] },
+      renulus: { mode: "primary", system: "Support nephrology education. Use the supplied learning request.", permissions: [
+        { action: "*", resource: "*", effect: "deny" },
+        ...(options.library ? [{ action: "renulus.library", resource: "*", effect: "allow" }] : []),
+      ] },
       title: { disabled: true },
     },
   });
@@ -115,6 +120,12 @@ export async function openHarness(options: HarnessOptions) {
     models: { fetch: false, snapshot: false },
     fs: { filewatcher: false, fff: false },
     events: { persist: false },
+    plugins: options.library ? [{
+      id: "renulus-internal-tool-boundary",
+      effect: context => context.tool.transform(editor => {
+        for (const tool of editor.list()) editor.remove(tool.id);
+      }).pipe(Effect.asVoid),
+    }, createLibraryPlugin(options.library)] : [],
   }, { overrides })).pipe(Layer.provideMerge(Logger.layer([], { mergeWithExisting: false }))));
   const run = <A, E>(effect: Effect.Effect<A, E>) => runtime.runPromise(effect);
   let sdk: OpenCode.Interface;
