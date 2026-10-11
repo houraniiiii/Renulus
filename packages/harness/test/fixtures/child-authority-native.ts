@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Actual pinned SDK/native Job owner; synthetic inference only when explicitly queued.
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp } from "node:fs/promises";
+import { mkdtemp } from "node:fs/promises";
 import path from "node:path";
 import type { DomainBinding } from "../../src/domain-ipc.ts";
 
@@ -10,13 +10,8 @@ export async function childAuthorityNativeFixture(options: { permission?: "allow
   beforeParentPromotionCommit?: () => import("effect").Effect.Effect<void> } = {}) {
   assert.ok(process.env.RENULUS_CHILD_AUTHORITY_TEST_ROOT, "Supply an owned synthetic H07 root");
   const root = await mkdtemp(path.join(process.env.RENULUS_CHILD_AUTHORITY_TEST_ROOT, "native-"));
-  const previous = new Map<string, string | undefined>();
-  for (const name of ["HOME", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "OPENCODE_TEST_HOME",
-    "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME", "XDG_STATE_HOME", "XDG_RUNTIME_DIR", "TEMP", "TMP", "PATH"]) {
-    previous.set(name, process.env[name]);
-    process.env[name] = name === "PATH" ? path.dirname(process.execPath) : path.join(root, "environment", name);
-    if (name !== "PATH") await mkdir(process.env[name]!, { recursive: true });
-  }
+  // Inherit the caller environment unchanged. SDK services below own every
+  // profile/config/cache/database path; system home variables are not test roots.
   const { Effect, ManagedRuntime, Layer, Logger, Context, Option } = await import("effect");
   const { OpenCode, AbsolutePath, Location, Agent } = await import("@opencode/sdk/effect");
   const { Tool } = await import("@opencode/schema/tool");
@@ -93,9 +88,6 @@ export async function childAuthorityNativeFixture(options: { permission?: "allow
     llmClient.replace(Layer.succeed(LLMClient.Service, client)),
     SessionRestart.node.replace(Layer.succeed(SessionRestart.Service, { resumeSuspendedSessions: Effect.never })),
   ] })).pipe(Layer.provideMerge(Logger.layer([], { mergeWithExisting: false }))));
-  const restore = () => { for (const [name, value] of previous) {
-    if (value === undefined) delete process.env[name]; else process.env[name] = value;
-  } };
   try {
     const sdk = await runtime.runPromise(OpenCode.Service);
     const parent = await runtime.runPromise(sdk.sessions.create({ title: "Synthetic evidence review",
@@ -112,11 +104,11 @@ export async function childAuthorityNativeFixture(options: { permission?: "allow
       push: (...responses: readonly import("@opencode/ai/testing").TestLLM.Response[]) => modelRuntime.runPromise(client.push(...responses)),
       serve: (responder: import("@opencode/ai/testing").TestLLM.Responder) => modelRuntime.runPromise(client.serve(responder)),
       async close() {
-        try { await runtime.dispose(); } finally { try { await modelRuntime.dispose(); } finally { restore(); } }
+        try { await runtime.dispose(); } finally { await modelRuntime.dispose(); }
       },
     };
   } catch (error) {
-    try { await runtime.dispose(); } finally { try { await modelRuntime.dispose(); } finally { restore(); } }
+    try { await runtime.dispose(); } finally { await modelRuntime.dispose(); }
     throw error;
   }
 }
