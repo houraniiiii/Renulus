@@ -369,6 +369,25 @@ published Children, routing helper and native bridge ports. The safe callback
 observer is therefore needed to locate the initiating positive09 refusal;
 generic native error projection alone cannot establish the Python cause.
 
+The combined boundary now has a completed dynamic red:
+`family-release-exit-red02.xml`, one failure/45.509s. It observes process exit0,
+Domain active0 and Registry owned0 while public settlement stays pending and
+the canonical pin stays active. The previous incomplete runner receipt remains
+separate; it supplies no additional settlement proof. Final repair hashes are
+Owner561d7a6c/test1d192aed on local0b4f0c85. Independent Standards and Spec each
+close the residual P2 with zero findings on those exact bytes. An unreleasable
+read now returns to the composite check only after actual process settlement;
+Domain/Registry ownership and the canonical transaction remain required.
+
+`children-cleanup-green01.xml` has three passes/47.253s, zero failures/errors/skips:
+busy allowance recovery, busy release followed by actual exit, and uncertain
+Stop followed by actual exit. Each sends Stop once and performs one synthetic
+root dispatch. Read identity survives retries and observer cancellation. Parent
+read the XML and rehashed both files without rerunning. The isolated Owner lane
+is released for one four-send positive diagnostic with all original assertions
+and the safe callback observer; first outcome must precede any further edit.
+No child/M5 positive or H07 acceptance is established by these cleanup cases.
+
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
 expectation-disposition reviews clear. H06–H08 remain open. Required unmet
