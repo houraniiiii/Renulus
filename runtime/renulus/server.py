@@ -87,7 +87,7 @@ class _RequestOwnership:
 
 
 def create_app(profile: str | Path, token: str | None = None, source_root=None, *,
-               provider_http_transport=None) -> FastAPI:
+               provider_http_transport=None, collection_root: Path | None = None) -> FastAPI:
     paths = AppPaths.create(profile, source_root)
     # Check the complete installed migration inventory before repositories or
     # startup hooks can write feature records. The ledger is also a compatibility
@@ -286,8 +286,12 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None, 
                     raise RuntimeError(f"Use a numbered additive migration after 001: {migration.name}")
                 services.db.apply_migration(f"{name}-{migration.stem}", migration.read_text(encoding="utf-8"))
         module = importlib.import_module(f"renulus.{name}.api")
-        router = (module.create_router(services, http_transport=provider_http_transport)
-            if name == 'runtime' else module.create_router(services))
+        if name == 'runtime':
+            router = module.create_router(services, http_transport=provider_http_transport)
+        elif name == 'knowledge':
+            router = module.create_router(services, collection_root=collection_root)
+        else:
+            router = module.create_router(services)
         if name == "knowledge":
             # Retained support is reconciled when Memory opens, so its local
             # source resolver must exist before that module is constructed.

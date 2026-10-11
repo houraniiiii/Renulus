@@ -88,7 +88,7 @@ class HarnessBootstrap:
         profile_owner.require_predecessor(profile_owner.predecessor)
 
     def create_app(self, *, token: str | None = None, source_root: Path | None = None,
-                   provider_http_transport=None) -> FastAPI:
+                   provider_http_transport=None, collection_root: Path | None = None) -> FastAPI:
         global _APPLICATION_OWNER
         self._require_owner()
         self._require_startable()
@@ -99,7 +99,7 @@ class HarnessBootstrap:
         from renulus.server import create_app
         try:
             self._app = create_app(self.scope.root, token=token, source_root=source_root,
-                provider_http_transport=provider_http_transport)
+                provider_http_transport=provider_http_transport, collection_root=collection_root)
             self._services = self._app.state.services
             self._services.on_stopping.append(self._seal)
             return self._app

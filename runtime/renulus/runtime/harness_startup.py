@@ -134,7 +134,8 @@ def load_startup_options(path: Path, *, profile: Path) -> HarnessStartupOptions:
 
 def create_managed_app(options: HarnessStartupOptions, *, token: str | None = None,
                        source_root: Path | None = None, model_registry_factory=None,
-                       prepare_startup=None, provider_http_transport=None) -> FastAPI:
+                       prepare_startup=None, provider_http_transport=None,
+                       collection_root: Path | None = None) -> FastAPI:
     """Call in a dedicated Windows Python process; the issuer lives until exit.
 
     Trusted assembly may prepare an initial policy on the serving loop using
@@ -150,7 +151,7 @@ def create_managed_app(options: HarnessStartupOptions, *, token: str | None = No
     lease = acquire_profile_owner(options.scope, initialize_new=options.initialize_new)
     bootstrap = HarnessBootstrap(options.scope, profile_owner=lease)
     app = bootstrap.create_app(token=token, source_root=source_root,
-        provider_http_transport=provider_http_transport)
+        provider_http_transport=provider_http_transport, collection_root=collection_root)
     services = app.state.services
     authority = ConfigurationAuthority(services.db)
     provider = services.get('provider')

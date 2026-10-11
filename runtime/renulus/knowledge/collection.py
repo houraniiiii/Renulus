@@ -14,7 +14,6 @@ from .acquired import (AcquiredLiterature, AcquisitionCancelled, MARKER, catalog
                        version_identity, version_name, acquisition_topic_ids, unique_object,
                        FrozenLiteratureSelection, recorded_file, recorded_licence, component_exceptions, asset_id)
 
-COLLECTION = Path.home() / "Documents" / "Renulus-data"
 MANIFEST = "metadata/acquisition-2026-10-04/acquisition-manifest.jsonl"
 CATALOGUE = "metadata/era-neph-manual-2026-10-04-catalogue.json"
 VERIFICATION = "metadata/era-neph-manual-2026-10-04-file-verification.json"
@@ -24,9 +23,10 @@ SELECTION_FAILURES = {"literature_selection_excluded", "literature_selection_out
 
 
 class CollectionCatalogue:
-    def __init__(self, repository, root=COLLECTION):
+    def __init__(self, repository, root=None):
         self.repository, self.db = repository, repository.db
-        self.root = Path(root).resolve()
+        self.root = (Path(root) if root is not None else
+                     Path.home() / "Documents" / "Renulus-data").resolve()
         self._selection = None
 
     def _literature_selection(self):

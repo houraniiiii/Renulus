@@ -58,12 +58,12 @@ class NextAcquiredBatch(BaseModel):
     cursor: str | None = Field(default=None, max_length=1000)
 
 
-def create_router(services) -> APIRouter:
+def create_router(services, *, collection_root: Path | None = None) -> APIRouter:
     repository = KnowledgeRepository(services)
     services.registry["knowledge"] = repository
     services.registry["knowledge_attachments"] = KnowledgeAttachments(services)
     services.registry["chat_attachments"] = services.registry["knowledge_attachments"]
-    collection = CollectionCatalogue(repository)
+    collection = CollectionCatalogue(repository, collection_root)
     services.registry["knowledge_catalogue"] = collection
     worker = IngestionWorker(repository)
     services.registry["knowledge_worker"] = worker
