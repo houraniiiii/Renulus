@@ -147,7 +147,7 @@ class HarnessLearningOwner:
 
     async def authorize(self, request):
         if request.command not in {'learning.admit_input', 'learning.authority',
-                'learning.check', 'learning.context', 'library.retrieve', 'library.citation'}:
+                'learning.check', 'learning.context', 'learning.validate_images', 'library.retrieve', 'library.citation'}:
             return None
         admitting = request.command == 'learning.admit_input'
         self._entry(request.binding, admitting=admitting)
@@ -177,6 +177,15 @@ class HarnessLearningOwner:
                             (current.binding.input_id, current.binding.operation_id))
                 self.bindings[current.binding.operation_id] = current.binding
                 return {'admitted': True}
+            if current.command == 'learning.validate_images':
+                if set(current.payload) != {'images'}:
+                    raise ApiError('harness_callback_payload', 'Use typed inline image validation.', 422)
+                from .provider_adapter import validate_harness_images
+                # Local in-memory parser: no SQL transaction, path or network read.
+                validate_harness_images(current.payload['images'])
+                self._entry(current.binding)
+                cancellation.check_current()
+                return {'validated': True}
             if current.command in {'learning.authority', 'learning.check'}:
                 if current.payload:
                     raise ApiError('harness_callback_payload', 'Authority checks take no model arguments.', 422)

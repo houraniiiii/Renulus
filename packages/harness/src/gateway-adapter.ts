@@ -99,25 +99,30 @@ function requireInputs(request: LLMRequest, plan: TrustedGatewayPreparation) {
   if (!plan.native_capabilities.input.includes("image") && request.messages.some(message =>
     message.content.some(part => part.type === "media"))) throw denied();
 }
-function bufferedHttp(http: HttpClientRequest.HttpClientRequest, outcome: DomainOutcome, plan: TrustedGatewayPreparation) {
-  if (Buffer.byteLength(JSON.stringify(outcome) + "\n") > plan.bounds.max_frame_bytes) throw denied();
+/** Reuse the authenticated safe categories for preparation and final HTTP. */
+export function gatewayDomainError(outcome: DomainOutcome): AIError {
   if (outcome.outcome === "rejected_before_admission" && outcome.result === undefined
       && outcome.error?.code === "authentication_required" && outcome.error.status === 401)
-    throw new AIError({ reason: new AuthenticationError({ message: "Reconnect the selected subscription." }) });
+    return new AIError({ reason: new AuthenticationError({ message: "Reconnect the selected subscription." }) });
   if (outcome.outcome === "rejected_before_admission" && outcome.result === undefined
       && outcome.error?.code === "subscription_limit" && outcome.error.status === 429)
-    throw new AIError({ reason: new RateLimitError({ message: "The selected subscription reached a usage limit." }) });
+    return new AIError({ reason: new RateLimitError({ message: "The selected subscription reached a usage limit." }) });
   if (outcome.outcome === "rejected_before_admission" && outcome.result === undefined
       && outcome.error?.status === 409 && ["model_unavailable", "model_not_found", "model_access_denied",
         "account_model_unsupported", "unsupported_image_input", "image_input_not_supported",
         "unsupported_input_modality", "unsupported_modality"].includes(outcome.error.code))
-    throw new AIError({ reason: new InvalidRequestError({ message: modelUnavailable }) });
+    return new AIError({ reason: new InvalidRequestError({ message: modelUnavailable }) });
   if (outcome.outcome === "rejected_before_admission" && outcome.result === undefined && outcome.error?.status === 503) {
     if (["provider_stream_failed", "provider_unavailable"].includes(outcome.error.code))
-      throw new AIError({ reason: new ProviderInternalError({ message: "The selected subscription could not finish the request." }) });
+      return new AIError({ reason: new ProviderInternalError({ message: "The selected subscription could not finish the request." }) });
     if (outcome.error.code === "transport_unavailable")
-      throw new AIError({ reason: new TransportError({ message: "The selected subscription transport was interrupted.", transport: "http", operation: "request" }) });
+      return new AIError({ reason: new TransportError({ message: "The selected subscription transport was interrupted.", transport: "http", operation: "request" }) });
   }
+  return denied();
+}
+function bufferedHttp(http: HttpClientRequest.HttpClientRequest, outcome: DomainOutcome, plan: TrustedGatewayPreparation) {
+  if (Buffer.byteLength(JSON.stringify(outcome) + "\n") > plan.bounds.max_frame_bytes) throw denied();
+  if (outcome.outcome !== "committed_reference") throw gatewayDomainError(outcome);
   const result = outcome.result;
   if (outcome.outcome !== "committed_reference" || outcome.error !== undefined || !result
       || Object.keys(result).sort().join(",") !== "body_base64,headers,permit_id,status"

@@ -27,6 +27,41 @@ All H02–H08 acceptance remains open. Newer committed integration work is:
 | `3704947a` | `a5c2e891` | Local configuration connection port and stale refresh-error fencing |
 | `a92ca60e` | `5f22e7e7` | Existing HarnessSettings inserted on Connections page |
 | `100ada7e` | `59e19e6e` | Controller mutation shutdown and acquisition-error fence |
+| `fd81bd17` | Parent | Actual bounded lifecycle and explicit existing server assembly |
+| `1c56e133` | `bbce6182` | Atomic supplied-connection configuration run admission |
+
+The supplied-connection `begin_run_in` validates canonical active transaction,
+healthy/open exact expected configuration and role/capability scope before its
+single ledger insert. Worker `library/admission-port/final07.xml` has 173 passes
+in 22.56s (150 existing plus 23 new); source hashes match integration. This port
+does not independently prove saved admission assembly.
+
+Production Node composition now uses `openLearningHarness`, the existing
+gateway and authenticated Domain commands for prepare, manifest registration,
+image validation and dispatch. Its closed placeholder enables native model
+resolution only; trusted preparation replaces it before filtering. Image
+validation uses the existing in-memory decoder under actual input authority and
+rechecks currentness. No protected material or additional selector is native.
+Host/Domain settlement precedes gateway teardown. Independent Standards and
+Spec reviews report zero material findings in all seven frozen source/test
+paths; their before/after hashes are identical.
+
+Exact receipts under `G:/Renulus-agent-scratch/oc-h02-h08/production-gateway/`:
+
+| Receipt | Result | Scope |
+| --- | --- | --- |
+| red01.xml | Missing-module collection failure | New factory module absent; not a behavioral red |
+| green01.xml | 1 passed | Public factory tracer |
+| node-final.xml | 40 passed, 0 failed/errors/skipped | Factory and affected gateway tests |
+| actual-entry-green.xml | 1 passed, 12.66s | Actual production entry/SDK/stores/IPC; denied-model saved history and settled close |
+| decoder-red.xml | 1 failed, 7.78s | Actual admitted image decoder callback absent |
+| decoder-green.xml | 3 passed, 12.74s | Public saved authority plus real Pillow valid/invalid image decoding |
+
+These are separate runs. The real-entry test grants no model or account and
+establishes its safe denied flow, not successful inference or bootstrap. The
+production model registry, immutable launch artifacts and pointer CAS are the
+current integration prerequisites. Unknown deployment evidence remains denied
+before network/auth refresh. Migrated automatic capture remains disabled.
 
 The actual lifecycle adapter is verified and ready for its coherent integration commit.
 It seals saved-root admission within the canonical transaction, rejects busy
