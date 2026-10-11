@@ -97,6 +97,8 @@ class HarnessLibrary:
         if authority.cancelled():
             raise ApiError("harness_tool_cancelled", "This Library operation was cancelled", 409)
         require_assistance(conn, expected_revision=authority.policy_revision)
+        if context_epoch_in(conn) != authority.context_epoch:
+            raise ApiError("dependency_changed", "The learning context changed. Retry this request", 409, True)
 
     def retrieve(self, arguments, authority):
         arguments = _arguments(_RetrieveArguments, arguments)
@@ -151,6 +153,7 @@ class HarnessLibrary:
             raise ApiError("harness_publication_transaction_required", "Validate evidence in the publication transaction", 409)
         self._check(authority, conn)
         self._require_evidence(passages, authority, conn=conn)
+        self._check(authority, conn)
 
     def resolve_dependency(self, conn, identity: Identity, *, authority: LibraryAuthority) -> str | None:
         """Resolve a library_revision in the caller's canonical snapshot.

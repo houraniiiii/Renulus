@@ -21,6 +21,7 @@ from renulus.design_c_contracts import Identity, QuestionSnapshot, SavedTestVers
 from renulus.server import create_app
 from renulus.storage import utc_now
 from renulus.storage.study_help import StudyHelpContext, require_context_in
+from renulus.storage.invalidation import bump_context_epoch
 
 
 @pytest.fixture(scope="module")
@@ -370,6 +371,24 @@ def test_active_test_started_during_owner_check_prevents_any_library_read(assess
     assert reads == []
 
 
+def test_context_changed_during_owner_check_prevents_any_library_read(assessment, monkeypatch):
+    _, adapter = assessment
+    repo = adapter.repository
+    reads = []
+    original = repo.retrieve
+    def observe(*args, **options):
+        reads.append(True)
+        return original(*args, **options)
+    monkeypatch.setattr(repo, "retrieve", observe)
+    def guard(conn):
+        with repo.db.transaction() as write:
+            bump_context_epoch(write)
+    with pytest.raises(ApiError) as caught:
+        adapter.retrieve({"query": "CKD"}, authority(guard=guard))
+    assert caught.value.code == "dependency_changed"
+    assert reads == []
+
+
 @pytest.mark.parametrize("phase", ["read", "return", "publication"])
 def test_real_study_receipt_change_blocks_adapter_read_return_and_publication(assessment, phase):
     services, adapter = assessment
@@ -411,6 +430,25 @@ def test_cancelled_publication_and_missing_transaction_are_refused(library):
         with repo.db.connect() as conn:
             adapter.validate_publication([], authority(), conn=conn)
     assert caught.value.code == "harness_publication_transaction_required"
+
+
+def test_cancellation_during_evidence_validation_cannot_approve_publication(library, monkeypatch):
+    repo, adapter = library
+    source = note(repo, "Synthetic glomerular evidence for late publication cancellation.")
+    cancelled = Event()
+    trusted = authority(source["revision_id"], cancelled=cancelled)
+    result = adapter.retrieve({"query": "glomerular"}, trusted)
+    assert result["passages"]
+    original = repo.check_evidence
+    def cancel_after_validation(*args, **options):
+        checked = original(*args, **options)
+        cancelled.set()
+        return checked
+    monkeypatch.setattr(repo, "check_evidence", cancel_after_validation)
+    with pytest.raises(ApiError) as caught:
+        with repo.db.transaction() as conn:
+            adapter.validate_publication(result["passages"], trusted, conn=conn)
+    assert caught.value.code == "harness_tool_cancelled"
 
 
 def test_library_revision_dependency_resolver_is_local_and_revocation_sensitive(library, monkeypatch):
