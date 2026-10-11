@@ -17,7 +17,7 @@ installation, push or downstream-ticket expansion is authorized.
 
 ### Dependency readiness
 
-Current continuation: parent `53125d85`. The reviewed child-learning routing
+Current continuation: parent `93f652ea`. The reviewed child-learning routing
 helper `abdad45b` is integrated as `f0e433d6`; supplied-transaction policy
 settlement `dd75d5eb` is integrated as `294b8218`. Both independent axes are
 clear, with original62-case helper and12-case settlement evidence retained;
@@ -32,13 +32,18 @@ are integrated as `22276aa0` and `53125d85`, with both review axes clear,
 20 affected component tests and recorded typecheck0. The renderer rebuild
 passed. Immediate-Archive hidden verification is still pending.
 
-Transfer capacity `698ec926` remains unintegrated: independent Spec found a
+Transfer capacity `698ec926` initially remained unintegrated: independent Spec found a
 duplicate refused reservation could erase an earlier pending local hold.
 Follow-on `1881dce8` binds cleanup to the originating request; meaningful
 red1/2.29s, green1/1.63s and four affected cases/3.32s are retained under
 G:/Renulus-agent-scratch/oc-h02-h08/h06-transfer-capacity/. Independent
-follow-on reviews are active. Do not treat the original Standards0 as Spec
-closure, or infer unlimited capacity from the multipart SDK proof.
+follow-on reviews now close the P2 with zero material findings on both axes.
+The pair is integrated as `187dd85e`/`93f652ea`, with exact reviewed hashes.
+One justified integrated migration capstone passed in44.84s:
+saved-migration/receipts/capacity-integrated01.xml. It exercises ordinary
+public Send, preserved legacy rows/project/draft, actual native continuation,
+fresh-generation reopen and populated deletion/retired replay after adding
+the reservation protocol. Do not infer unlimited capacity from this proof.
 
 A fresh synthetic legacy seed for the Archive follow-up failed before its
 synthetic generation: recalled Library-backed memory reached the persistent
@@ -49,6 +54,13 @@ a dedicated regression for this local source-check path. Russell retains the
 separate Bridge `record_consumed_in` lease. All new profiles/receipts use G:;
 pause writes if C: falls below200MiB. H06 acceptance and H08 implementation
 remain gated; native assembly `969ac780` stays frozen and unintegrated.
+
+The immediate-Archive hidden follow-up is also execution-blocked: automatic
+approval review rejected the retained controller session's `renulus_restart`
+request through `write_stdin` because approval is required while policy is
+Never. No restart request was sent; the owned app remains normally closed.
+No alternate input/control route was used to bypass that refusal. This does
+not close desktop acceptance or stop the independent backend repair lanes.
 
 Latest H06 checkpoint: six actual production-main Owner cases pass in
 89.295s, and 50 affected migration/history/context checks pass in36.520s.

@@ -26,6 +26,24 @@ Native child assembly969ac780 is not integrated during these checks. Its
 subagent changes require a newly observed final registry artifact; these
 H06 receipts retain their two-Library-tool native registry.
 
+At parent `93f652ea`, transfer capacity `698ec926` and its duplicate-reservation
+repair `1881dce8` are integrated with both independent axes clear. The new
+combined-path receipt `capacity-integrated01.xml` contains one pass/44.84s for
+ordinary saved migration/continuation, preserved facade, native generation
+replacement and populated deletion/retired replay. It supplements the original
+six-case receipt; counts are not combined into a newly executed suite.
+
+The [hidden journey](OPENCODE_H06_HIDDEN_MIGRATION.md) now supplies actual UI
+history, original reader/citation, Archive/Restore, explicitly saved-draft
+reopen and populated deletion/shared-original observations. Immediate Archive
+revealed a debounce defect; both reviewed repairs are integrated and the
+renderer rebuilt, but the actual immediate-Archive follow-up is blocked by
+automatic approval review of the retained controller restart under policy
+Never. A separate fresh legacy seed exposed local persistent-source validation
+without an active transaction; its dedicated repair is assigned. These remain
+explicit C2/regression closure gates. No H06 checkbox or H08 dependency is
+promoted on the strength of component tests alone.
+
 The authoritative requirements are [H06](../planning/opencode-v2/tickets/06-continue-saved-and-temporary-chats-through-one-owner.md),
 [S2](../planning/opencode-v2/specs/02-memory-context.md) and
 [S3](../planning/opencode-v2/specs/03-workflows-migration.md).

@@ -78,6 +78,12 @@ clear. The final public component file has20 passes, typecheck0; source hashes
 match parent `53125d85` after integrating both repairs and rebuilding the
 renderer. This remains component evidence until the hidden follow-up completes.
 
+The attempted follow-up restart was rejected by automatic approval review:
+the retained controller `write_stdin` request required approval while the
+session policy was Never. The request was not sent. The app remains closed,
+and no alternate control route was used. Immediate-Archive acceptance stays
+open despite the reviewed repair and successful renderer build.
+
 The new follow-up seed script uses fresh command keys and does not recreate
 the deleted original owner. Its first attempt created
 `thread_44f6524821d944cb95813bce14d39072`, but public legacy execution ended with
