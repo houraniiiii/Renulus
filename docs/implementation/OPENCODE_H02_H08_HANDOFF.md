@@ -446,6 +446,25 @@ actual transport finalizer, retained observer cleanup, charged uncertain permit
 and leaf-first settlement assertions conform to the bounded contract. This
 does not close restart, detached/revocation or active-Test/Study exposure criteria.
 
+The same test-only lane is released for one graceful reopen/no-replay case:
+after actual old process/pipe, Domain and Registry settlement, keep canonical
+admission closed, replace through the public root seal and start_gated ports,
+and observe a fresh native generation on the same stores. Persisted family rows
+are observations only; the cancelled receipt, uncertain child permit and two
+charged sends must survive without a new model call, permit or restored grant.
+Owner production source remains frozen. This is not a crash claim.
+
+Russell's separate source-only exposure plan finds no concrete implementation
+gap. The smallest next connected negative uses deterministic public reviewed-bank
+creation, an untimed Study attempt (assistance allowed), then a real Test attempt
+while the admitted child's library.retrieve handler is held before delegation.
+Public policy must advance its revision and deny assistance. The original handler
+must return assistance_restricted409/nonretryable with no result, source recording,
+later send or root publication. Concurrent Study then Test is supported by the
+existing whole-attempt API tests; reviewed count1 requires existing eligible
+content and performs no generation. Execution is queued behind the restart case,
+not released in parallel or represented as an existing pass.
+
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
 expectation-disposition reviews clear. H06–H08 remain open. Required unmet
