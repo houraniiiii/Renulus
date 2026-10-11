@@ -383,3 +383,93 @@ asyncio.run(run())
     assert completed.returncode == 0, completed.stderr
     assert json.loads(completed.stdout) == {'committed_inspection': True,
         'retained_publisher': phase == 'held-release', 'settled': True}
+
+
+def test_fixed_lifespan_prepares_connection_and_readable_immutable_launch_artifact(tmp_path):
+    """Actual issuer/native bootstrap; synthetic catalogue/helpers, stop before warmup."""
+    import renulus
+    assets, fixture_source = helper_bundle(tmp_path)
+    native = fixture_source / 'packages/harness'
+    published_native = Path(renulus.__file__).parents[2] / 'packages/harness'
+    shutil.copytree(published_native / 'src', native / 'src')
+    shutil.copyfile(published_native / 'package.json', native / 'package.json')
+    for link, dependency in ((native / 'node_modules', SOURCE / 'packages/harness/node_modules'),
+                             (fixture_source / 'upstream/hermes', SOURCE / 'upstream/hermes')):
+        link.parent.mkdir(parents=True, exist_ok=True)
+        dependency_path = str(dependency.resolve()).replace("'", "''")
+        link_path = str(link).replace("'", "''")
+        linked = subprocess.run(['C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe',
+            '-NoProfile', '-NonInteractive', '-Command',
+            f"New-Item -ItemType Junction -Path '{link_path}' -Target '{dependency_path}' | Out-Null"],
+            capture_output=True, text=True, timeout=10)
+        assert linked.returncode == 0, linked.stderr
+    entry = fixture_source / 'tools/renulus-control/harness-settings-backend.py'
+    entry.parent.mkdir(parents=True)
+    shutil.copyfile(ENTRY, entry)
+    profile, file, _, data = document(tmp_path / 'launch')
+    data['process']['host_entry'] = str(native / 'src/main.mjs')
+    digest = write_document(file, data)
+    code = '''
+import asyncio, importlib.util, json, sys
+from pathlib import Path
+from renulus.runtime.harness_configuration import ConfigurationSpec
+from renulus.runtime.harness_launch import LaunchArtifactStore, finish_spec
+spec = importlib.util.spec_from_file_location('fixed_settings_fixture', sys.argv[1])
+fixture = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(fixture)
+profile = Path(sys.argv[4])
+app = fixture.create_fixture_app(Path(sys.argv[2]), sys.argv[3], profile=profile,
+    helper_assets=Path(sys.argv[5]), token='synthetic-only-session')
+
+class PreparationObserved(Exception):
+    pass
+
+async def run():
+    services = app.state.services
+    authority = app.state.harness_configuration_authority
+    observed = None
+
+    def observe_prepared_configuration():
+        nonlocal observed
+        snapshot = authority.activation_snapshot()
+        prepared = snapshot['configuration']
+        assert type(prepared) is ConfigurationSpec
+        assert snapshot['effective'] == snapshot['requested']
+        assert snapshot['admission_open']
+        assert prepared.connection.provider == 'opencode-go'
+        assert prepared.connection.selected_model == 'mimo-v2.6-pro'
+        assert prepared.connection == services.get('provider').configuration_connection()
+        artifact, = (item for item in prepared.inputs if item.kind == 'artifact' and item.name == 'launch')
+        store = LaunchArtifactStore(profile.parent / 'a', live_root=profile,
+            candidate_root=profile.parent / 'k')
+        frozen = store.load(artifact.sha256)
+        assert frozen.launch_hash == artifact
+        assert frozen.boot_settings == {}
+        assert finish_spec(frozen, prepared.registry_hash) == prepared
+        observed = {'connection': 'opencode-go', 'immutable_artifact_readable': True}
+        raise PreparationObserved
+
+    # Observe the actual bootstrap handoff before tiny synthetic helper bytes
+    # could be mistaken for warmup or serving acceptance. No factory/inference.
+    services.on_startup.insert(0, observe_prepared_configuration)
+    try:
+        async with app.router.lifespan_context(app):
+            raise AssertionError('Bounded preparation unexpectedly entered serving')
+    except PreparationObserved:
+        pass
+    assert observed is not None
+    assert (await services.shutdown(timeout=0))['state'] == 'settled'
+    assert services.stopping
+    print(json.dumps({**observed, 'settled': True}))
+
+asyncio.run(run())
+'''
+    environment = {key: os.environ[key] for key in ('SYSTEMROOT', 'SystemRoot', 'WINDIR') if key in os.environ}
+    environment['PYTHONPATH'] = os.pathsep.join((str(Path(renulus.__file__).parents[1]), str(SOURCE / 'upstream/hermes')))
+    completed = subprocess.run([sys.executable, '-c', code, str(entry), str(file), digest,
+        str(profile), str(assets)], env=environment, capture_output=True, text=True, timeout=85)
+    (tmp_path / 'preparation.stdout.txt').write_text(completed.stdout, encoding='utf-8')
+    (tmp_path / 'preparation.stderr.txt').write_text(completed.stderr, encoding='utf-8')
+    assert completed.returncode == 0, completed.stderr
+    assert json.loads(completed.stdout) == {'connection': 'opencode-go',
+        'immutable_artifact_readable': True, 'settled': True}

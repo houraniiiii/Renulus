@@ -222,10 +222,11 @@ def create_fixture_app(file: Path, digest: str, *, profile: Path, helper_assets:
                 for purpose in sorted(PURPOSES)), inputs=(), capabilities=('text', 'tools'),
             context=ContextPolicy(requested_window_tokens=640, reserve_tokens=8),
             attempts=AttemptPolicy(foreground_dispatches=3, retries=0), children=ChildPolicy())
+        spec = finish_spec(frozen, registry_hash)
         lease.require_predecessor(lease.predecessor)
-        provider.require_configuration_connection(frozen.connection)
+        provider.require_configuration_connection(spec.connection)
         store.save(frozen)
-        return finish_spec(frozen, registry_hash)
+        return spec
 
     return create_managed_app(options, token=token, source_root=SOURCE,
         prepare_startup=prepare, provider_http_transport=httpx.MockTransport(catalogue))
