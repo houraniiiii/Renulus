@@ -68,14 +68,15 @@ async def native_pipe(tmp_path, **settings):
         assert child.returncode == 0, (await child.stderr.read()).decode()
 
 
-def config(tmp_path, *, local_records=16, native_records=16, local_bytes=1048576, native_bytes=1048576, frame_bytes=65536, **settings):
+def config(tmp_path, *, local_records=16, native_records=16, local_bytes=1048576, native_bytes=1048576, frame_bytes=65536, native_controls=4, **settings):
     return HarnessProcessConfig(node_executable=NODE, host_entry=FIXTURE,
         profile_root=tmp_path / "profile", profile_id="profile_synthetic",
         store_id="runtime_synthetic", domain_store_id="domain_synthetic",
         domain_path="state/renulus.sqlite", max_result_records=local_records,
         max_frame_bytes=frame_bytes, max_result_bytes=local_bytes,
         boot_settings={"ipc": {"max_result_records": native_records,
-            "max_frame_bytes": frame_bytes, "max_result_bytes": native_bytes}, **settings})
+            "max_frame_bytes": frame_bytes, "max_result_bytes": native_bytes,
+            "max_control_inflight": native_controls}, **settings})
 
 
 @pytest.mark.parametrize("limits", [{"local_records": 4}, {"native_records": 4},
@@ -137,6 +138,37 @@ async def test_cancelled_reserve_observers_keep_one_original_request_and_capacit
         gate.write_text("release")
         assert (await process.close(3))["state"] == "closed"
         await transfer.close()
+
+
+async def test_duplicate_reserve_rejection_preserves_the_pending_original_hold(tmp_path):
+    gate = tmp_path / "release-original-reserve"
+    process = ManagedHarnessProcess()
+    await process.start(config(tmp_path, local_records=5, native_records=16, native_controls=1,
+        fixture_hold_state="reserved", fixture_gate_file=str(gate)))
+    request, plan, payloads = plan_for(document())
+    try:
+        original = await process.request("session.import.reserve", plan, request.migration_id, "1", .05)
+        assert original["outcome"] == "accepted_pending"
+        duplicate = await process.request("session.import.reserve", plan, request.migration_id, "1", 2)
+        assert duplicate["outcome"] == "rejected_before_admission"
+        assert duplicate["error"]["code"] == "overloaded"
+        assert (await process.query_result(original["request_id"]))["outcome"] == "accepted_pending"
+        unrelated = await process.request("session.create", {"title": "Unrelated"}, "unrelated", "1", 2)
+        assert unrelated["outcome"] == "rejected_before_admission"
+        assert unrelated["error"]["code"] == "result_capacity"
+        gate.write_text("release")
+        async with asyncio.timeout(3):
+            while (settled := await process.query_result(original["request_id"]))["outcome"] == "accepted_pending":
+                await asyncio.sleep(.01)
+        assert settled["outcome"] == "committed_reference"
+        assert settled["result"]["sessionId"] == request.session_id
+        stage = await process.request("session.import.stage", payloads[0], request.migration_id, "1", 2)
+        assert stage["outcome"] == "committed_reference" and stage["result"]["complete"] is True
+        assert (await process.request("operation.retire", {}, request.migration_id, "1", 2))["result"] == {"state": "retired"}
+        assert (await process.request("session.create", {"title": "After"}, "after", "1", 2))["outcome"] == "committed_reference"
+    finally:
+        gate.write_text("release")
+        assert (await process.close(3))["state"] == "closed"
 
 
 async def test_metadata_reply_ceiling_keeps_uncertain_stage_and_reservation(tmp_path):

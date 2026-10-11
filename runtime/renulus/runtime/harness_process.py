@@ -44,6 +44,7 @@ class _TransferReservation:
     digest: str
     base: int
     peak: int
+    owner_request_id: str
     stages: set[int] = field(default_factory=set)
     reads: int = 0
     imports: int = 0
@@ -91,7 +92,7 @@ class _TransferReservation:
             self.retires += 1
 
 
-def _transfer_reservation(payload, attempt_id, reply_limit, inflight):
+def _transfer_reservation(payload, attempt_id, reply_limit, inflight, request_id):
     if (type(payload) is not dict or set(payload) != {"sessionId", "bundleDigest", "totalBytes", "partPayloadBytes"}
             or type(payload["sessionId"]) is not str or not re.fullmatch(r"ses_[0-9a-f]{64}", payload["sessionId"])
             or type(payload["bundleDigest"]) is not str or not re.fullmatch(r"[0-9a-f]{64}", payload["bundleDigest"])
@@ -105,7 +106,7 @@ def _transfer_reservation(payload, attempt_id, reply_limit, inflight):
         copied["bundleDigest"], copied["totalBytes"], copied["partPayloadBytes"]])).hexdigest()
     count = len(copied["partPayloadBytes"]) + 4
     return _TransferReservation(copied, attempt_id, digest, reply_limit + TRANSFER_OVERHEAD,
-        (max(copied["partPayloadBytes"]) + TRANSFER_OVERHEAD) * min(count, inflight))
+        (max(copied["partPayloadBytes"]) + TRANSFER_OVERHEAD) * min(count, inflight), request_id)
 
 
 def _json_bytes(value: dict) -> bytes:
@@ -428,7 +429,7 @@ class ManagedHarnessProcess:
         slot = False
         try:
             if command == "session.import.reserve":
-                proposed = _transfer_reservation(payload, attempt_id, reply_limit, self._config.max_inflight)
+                proposed = _transfer_reservation(payload, attempt_id, reply_limit, self._config.max_inflight, frame["request_id"])
                 stage_envelope = len(_json_bytes({**frame, "command": "session.import.stage", "payload": {}})) - 2 + 1
                 if max(proposed.payload["partPayloadBytes"]) + stage_envelope > self._config.max_frame_bytes:
                     raise ValueError("frame_too_large")
@@ -705,7 +706,8 @@ class ManagedHarnessProcess:
                                 and type(public["result"].get("partCount")) is int
                                 and public["result"] == expected_result):
                             plan.granted = True
-                        elif public["outcome"] == "rejected_before_admission" and not plan.granted:
+                        elif (public["outcome"] == "rejected_before_admission" and not plan.granted
+                                and plan.owner_request_id == record.frame["request_id"]):
                             self._transfer_reservations.pop(operation_id, None)
                 if (record.frame['command'] == 'operation.retire'
                         and public['outcome'] == 'committed_reference'
