@@ -293,6 +293,19 @@ assembly against that local baseline while execution proceeds; no edits are
 allowed before their hash rechecks. Connected publication/settlement and the
 later Stop-negative proof remain open until actual results are observed.
 
+The unchanged `children-positive09.xml` failed once in54.558s with clean
+fixture teardown. The child continuation now reaches HTTP ordinal3, with no
+manifest mismatch recorded. The fixture then raises `KeyError('status')` while
+reading the native Library tool result; that decoded value was not retained,
+so success-wrapper mismatch versus tool failure remains unclassified. Subsequent
+transport/publication refusals are secondary. One bounded public native child
+get/messages diagnostic is authorized under held recovery, with no model work
+and actual close/pipe/Domain settlement. Source-only Owner Standards review also
+identified two P2s: transient observation-release contention caches a permanent
+failure, and unconditional remote Stop can block reconciliation after proven
+process exit. Both require public reproductions before repair. Owner/test remain
+frozen pending the independent Spec hash recheck; no positive or Stop pass is claimed.
+
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
 expectation-disposition reviews clear. H06–H08 remain open. Required unmet
