@@ -333,7 +333,14 @@ def _wire_manifest(payload, responses):
                 _deny("deployment_manifest_mismatch")
             system = parts[0][1]
         elif role in ("user", "assistant") and (not responses or kind in (None, "message")):
-            _fields(message, ("role", "content"), ("type", "id", "status") if responses else ("tool_calls",))
+            optional = ("type", "id", "status") if responses else ("tool_calls",)
+            if not responses and role == "assistant":
+                # Pinned Chat emits an empty DeepSeek replay marker without reasoning;
+                # the original raw body, including this field, remains counted.
+                optional += ("reasoning_content",)
+            _fields(message, ("role", "content"), optional)
+            if "reasoning_content" in message and message["reasoning_content"] != "":
+                _deny("deployment_manifest_mismatch")
             content = message["content"]
             parts = () if content is None and role == "assistant" else _wire_parts(content, role, responses)
             if parts or role == "user":

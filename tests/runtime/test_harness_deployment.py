@@ -2,6 +2,7 @@
 from dataclasses import FrozenInstanceError, replace
 import asyncio
 import base64
+import hashlib
 import json
 import threading
 
@@ -270,9 +271,9 @@ async def test_domain_cancellation_is_distinct_and_blocks_proof_after_count(admi
                            serialized_request=request, manifest=manifest)
 
 
-def replay_case(admitted, provider):
+def replay_case(admitted, provider, *, model_id=None, assistant_text=None):
     _, binding, manifest, _, _, state = admitted
-    route = subscription_route(provider, "gpt-6.1-sol" if provider == "codex" else "mimo-v2.6-pro",
+    route = subscription_route(provider, model_id or ("gpt-6.1-sol" if provider == "codex" else "mimo-v2.6-pro"),
                                credential_ref="synthetic-account", credential_epoch=7, catalogue=None)
     role = replace(state["owner"].role, model_id=route.catalog_model_id,
         connection=ConnectionReference(provider=provider, credential_reference=route.credential_ref,
@@ -307,6 +308,17 @@ def replay_case(admitted, provider):
                 {"type": "image_url", "image_url": {"url": "data:image/png;base64," + PNG}}]}],
             "tools": [{"type": "function", "function": function}], "max_completion_tokens": 32}
 
+    if assistant_text is not None:
+        snapshot = manifest.model_dump(mode="json")
+        snapshot["messages"].insert(1, {"role": "assistant", "content": [
+            {"type": "text", "text": assistant_text}]})
+        manifest = NativeManifest.from_payload(snapshot)
+        if provider == "codex":
+            payload["input"].insert(1, {"type": "message", "role": "assistant",
+                "content": [{"type": "output_text", "text": assistant_text}]})
+        else:
+            payload["messages"].insert(2, {"role": "assistant", "content": assistant_text})
+
     async def resolve(actual):
         return owner
 
@@ -333,6 +345,97 @@ async def test_both_native_protocols_preserve_tool_replay_and_json_semantics(adm
                                serialized_request=request, manifest=manifest)
     assert proof.body == body and proof.input_tokens == 57
     module.require_current(proof, body=body)
+
+
+@pytest.mark.parametrize("assistant_text", [None, "Earlier synthetic assistant."],
+    ids=["tool-call", "plain-text-and-tool-call"])
+async def test_empty_native_chat_reasoning_replay_keeps_exact_counter_and_proof_bytes(admitted, assistant_text):
+    original, binding, manifest, payload, request, _ = replay_case(
+        admitted, "opencode-go", model_id="deepseek-v4.1-flash", assistant_text=assistant_text)
+    initial = await original.prepare(binding, required_capabilities=("text", "tools", "image"))
+    evidence = initial.evidence
+    counted = []
+
+    async def counter(body, snapshot):
+        counted.append((body, snapshot))
+        return await evidence.counter(body, snapshot)
+
+    guarded_evidence = replace(evidence, counter=counter)
+    module = HarnessDeployment(resolve=original.resolve, evidence=lambda _: guarded_evidence,
+        check_current=lambda _: None, max_request_bytes=16384)
+    preparation = await module.prepare(binding, required_capabilities=("text", "tools", "image"))
+    # Pinned Chat lowering requires this empty field on every DeepSeek assistant
+    # without reasoning parts. All account/counter evidence remains synthetic.
+    for message in payload["messages"]:
+        if message["role"] == "assistant":
+            message["reasoning_content"] = ""
+    body = json.dumps(payload, indent=3).encode()
+    request = {**request, "body_base64": base64.b64encode(body).decode()}
+    proof = await module.prove(preparation, step_id="step-2", request_kind="tool-continuation",
+        continuation_of="synthetic_previous", serialized_request=request, manifest=manifest)
+    assert counted == [(body, manifest)]
+    assert proof.body == body and proof.body_bytes == len(body)
+    assert proof.body_sha256 == hashlib.sha256(body).hexdigest()
+    assert proof.input_tokens == 57
+    module.require_current(proof, body=body)
+    changed = body.replace(b'"reasoning_content": ""', b'"reasoning_content": 0 ', 1)
+    assert len(changed) == len(body) and changed != body
+    with pytest.raises(ApiError) as caught:
+        module.require_current(proof, body=changed)
+    assert caught.value.code == "deployment_body_changed"
+
+
+@pytest.mark.parametrize("provider,role,field,value", [
+    *( ("opencode-go", "assistant", "reasoning_content", value)
+       for value in ("PRIVATE reasoning-canary", " ", "\t\n", None, 0, False, [], {}) ),
+    ("opencode-go", "assistant", "reasoning_details", []),
+    ("opencode-go", "assistant", "reasoning_details", [{"data": "PRIVATE opaque-canary"}]),
+    ("opencode-go", "assistant", "cache_control", {}),
+    ("opencode-go", "assistant", "extra_content", {}),
+    ("opencode-go", "assistant", "unreviewed_replay", "PRIVATE unknown-canary"),
+    ("opencode-go", "system", "reasoning_content", ""),
+    ("opencode-go", "user", "reasoning_content", ""),
+    ("opencode-go", "tool", "reasoning_content", ""),
+    ("codex", "user", "reasoning_content", ""),
+    ("codex", "assistant", "reasoning_content", ""),
+    ("codex", "function_call", "reasoning_content", ""),
+    ("codex", "function_call_output", "reasoning_content", ""),
+])
+async def test_replay_reasoning_and_unknown_fields_are_denied_before_counter(admitted, provider, role, field, value):
+    original, binding, manifest, payload, request, _ = replay_case(admitted, provider,
+        model_id="deepseek-v4.1-flash" if provider == "opencode-go" else None,
+        assistant_text="Earlier synthetic assistant." if provider == "codex" and role == "assistant" else None)
+    initial = await original.prepare(binding, required_capabilities=("text", "tools", "image"))
+    evidence = initial.evidence
+    counted = []
+
+    async def counter(body, snapshot):
+        counted.append((body, snapshot))
+        return await evidence.counter(body, snapshot)
+
+    guarded_evidence = replace(evidence, counter=counter)
+    module = HarnessDeployment(resolve=original.resolve, evidence=lambda _: guarded_evidence,
+        check_current=lambda _: None, max_request_bytes=16384)
+    preparation = await module.prepare(binding, required_capabilities=("text", "tools", "image"))
+    if provider == "codex" and role == "assistant":
+        # Establish that the added plain assistant is valid before testing its
+        # forbidden Chat-only field; a malformed fixture cannot supply the denial.
+        await module.prove(preparation, step_id="step-1", request_kind="primary",
+            serialized_request=request, manifest=manifest)
+        assert len(counted) == 1
+        counted.clear()
+    messages = payload["input" if provider == "codex" else "messages"]
+    message = next(item for item in messages if item.get("role") == role or item.get("type") == role)
+    message[field] = value
+    body = json.dumps(payload, indent=3).encode()
+    request = {**request, "body_base64": base64.b64encode(body).decode()}
+    with pytest.raises(ApiError) as caught:
+        await module.prove(preparation, step_id="step-2", request_kind="tool-continuation",
+            continuation_of="synthetic_previous", serialized_request=request, manifest=manifest)
+    assert caught.value.code == "deployment_manifest_mismatch"
+    assert caught.value.status == 409 and caught.value.retryable is False
+    assert "PRIVATE" not in str(caught.value)
+    assert not counted
 
 
 @pytest.mark.parametrize("provider", ["codex", "opencode-go"])
