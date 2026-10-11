@@ -12,7 +12,19 @@ Parent desktop typecheck and native-entry build each exited0. Built main:
 Build receipt directory:
 G:/Renulus-agent-scratch/oc-h02-h08/learning-desktop/parent-build01/.
 
-The companion fixed Python backend is a separate active lane. It must use the
+The companion fixed Python backend is ready at697d4bb1 in two dedicated files.
+Parent independently read affected-green04.xml (13 passes/84.044s) and the
+prompt-derived retrieval red1→green1 (green70.171s). Its committed backend/test
+SHA-256 values are0550e00388313887a53974e6414fb8e5a1e2047ba078a9d73b1db31059ee16b4
+ande4dc37702f8f95c5e6776360f619159663cb98d834793322362e76b522e72e58.
+Independent Spec review found a P2: actual isolated cleanup can finish after
+the45s deadline yet still return success. Standards found a separate P2: the
+public constructor rebases process-wide USERPROFILE contrary to the parallel
+work rules. Both findings are source-qualified; bounded public regressions and
+repairs are assigned to the same two-file lane. Integration/launch wait for
+independent closure.
+
+The fixed backend must use the
 original managed app, ProviderManager, canonical Authority and native production
 main with the actual Library tool. Synthetic loopback SSE may request that tool
 and return a cited answer only from its real returned content/provenance. It

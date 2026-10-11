@@ -25,7 +25,7 @@ lower in the historical ledger.
 | Ticket | Verified preparation/connected scope | Required next closure |
 | --- | --- | --- |
 | H02 | Actual saved native Library retrieval, canonical cited M5 publication, native mapping/reconciliation and store activation | Connected desktop retrieval/citation opening and remaining exposure/failure acceptance |
-| H03 | Actual production-main text/tool/image loopback dispatch, strict final deployment proof, canonical permits and selected provider identity | Qualified production tokenizer/framing bundle and revision-bound account limits/capabilities are not registered; matching-account tool/image gate remains separate before cutover |
+| H03 | Actual production-main text/tool/image loopback dispatch, strict final deployment proof, canonical permits and selected provider identity | Local criterion closure after H02; production accounting/account evidence remains required before real-route enablement and matching-account cutover |
 | H04 | Canonical authority/API, actual candidate/live lifecycle, managed initial/reopen, hidden Settings stage/activate/reopen, actual interrupted activation and failed-candidate reconciliation with ordinary settlement | Criterion/readiness closure with H03 dependency; other failure phases and account/package scope remain distinct |
 | H05 | Persistent lineage, legacy real hooks, four recapture regressions, reviewed actual Mem0/Qdrant/FastEmbed native extraction and held-source-revocation/reopen proof | Remaining capture acceptance and H04 dependency; automatic migrated capture remains OFF in integration |
 | H06 | Actual supported SDK import/export/remove capability with zero inference | Existing conversation migration, one transcript owner, native purge and canonical deletion/replay integration after H05 |
@@ -196,7 +196,13 @@ worker runs passed7 Node,5 ordinary-controller and63 Electron cases. Parent
 desktop typecheck and native-entry build each exited0; built main SHA-256 is
 3eaa7db00ee21ffee89ed1aef0c91e29143280f05fad09db161d72ea82c36fa8.
 Receipts are inG:/Renulus-agent-scratch/oc-h02-h08/learning-desktop/parent-build01/.
-The fixed Python learning backend and actual hidden journey are still pending.
+The fixed Python learning backend697d4bb1 has13 affected passes/84.044s and a
+prompt-derived retrieval red1→green1 (green70.171s), read independently by the
+parent. Frozen independent review reports one Spec P2 (cleanup after the45s
+deadline may still publish success) and one Standards P2 (constructor rebases
+process-wide USERPROFILE against the parallel rules). The same owned two-file
+lane prepares public regressions and narrow repairs; integration and the actual
+hidden journey wait for independent closure. No desktop pass is claimed.
 
 The source-only [counter-evidence audit](../research/2026-10-11-h03-counter-evidence-readiness.md),
 worker989dd0d3 integrated as090f145d, found no adopted production generative
@@ -205,7 +211,22 @@ tokenizer belongs to embeddings; the adopted rough estimators do not satisfy
 the existing inclusive DeploymentEvidence contract. No replacement model,
 character estimate or fabricated limit is selected. Unknown accounting remains
 denied. Immutable route-qualified accounting and separately verified current
-account limits/capabilities are concrete H03 prerequisites.
+account limits/capabilities are concrete prerequisites to enabling real routes.
+
+### Local enforcement and production enablement
+
+The bounded requirement adjudication at12364fcd confirms H03 bullet6 and S1:51
+require final bounds enforcement, while S1:70 prescribes counting synthetic
+transport and H03 bullet5 separately records matching-account acceptance before
+normal cutover (S1:73 preserves account/package classification). No separate
+production artifact-registration criterion is introduced. Actual SDK/synthetic
+proof may close local enforcement when missing evidence denies dispatch; it
+does not qualify the supplied counter for a production route. Earlier wording
+calling registration the next mandatory H03 prerequisite was too broad.
+H02–H08 remain open pending their actual criteria/dependencies, without imposing
+that additional local gate. Normal CLI and real routes remain closed when no
+qualified evidence/factory is supplied; account/TLS/package readiness is not
+promoted by this adjudication.
 
 Isolated automatic-capture preparationa6c5fe4c removes only the native
 automatic enqueue refusal and adds two actual-engine tests. Its final XML has
