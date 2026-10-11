@@ -1,6 +1,7 @@
 """Public subscription preparation; all credentials and transports are synthetic."""
 import asyncio
 import json
+import time
 from uuid import uuid4
 
 import httpx
@@ -8,6 +9,567 @@ import pytest
 
 from renulus.runtime.manager import ProviderManager
 from renulus.contracts import ApiError, ContextScope, Scope
+from renulus.runtime.protected import ConnectionStore
+
+
+def legacy_selected_go_profile(app_paths):
+    ConnectionStore(app_paths.root, app_paths.state).save({
+        'version': 1, 'host_id': uuid4().urn, 'selected_provider': 'opencode-go',
+        'selected_models': {'opencode-go': 'deepseek-v4.1-flash'},
+        'connections': {'opencode-go': {'access_token': uuid4().hex}},
+    })
+
+
+def legacy_selected_codex_profile(app_paths, *, expires_at, refresh_token=None):
+    ConnectionStore(app_paths.root, app_paths.state).save({
+        'version': 1, 'host_id': uuid4().urn, 'selected_provider': 'codex',
+        'selected_models': {'codex': 'gpt-6-astra'},
+        'connections': {'codex': {'client_id': 'synthetic-registered-client',
+            'access_token': uuid4().hex, 'expires_at': expires_at,
+            'scopes': ['resource.invoke', 'chatgpt.tokens.use.direct'],
+            **({'refresh_token': refresh_token} if refresh_token else {})}},
+    })
+
+
+def forbid_provider_usage(request):
+    pytest.fail('Preparation unexpectedly called a provider', pytrace=False)
+
+
+@pytest.mark.parametrize('metadata', [
+    None, [], {'unapproved-provider': {}}, {'opencode-go': None},
+    {'opencode-go': {}},
+    *({'opencode-go': {'reference': reference, 'epoch': 0, 'authentication_required': False}}
+      for reference in [None, 1, 'invalid-reference', '6BCE9A07-6511-40A6-A9F2-555972541409']),
+    *({'opencode-go': {'reference': '6bce9a07-6511-40a6-a9f2-555972541409',
+        'epoch': epoch, 'authentication_required': False}} for epoch in [-1, True, 1.5, '1']),
+    {'opencode-go': {'reference': '6bce9a07-6511-40a6-a9f2-555972541409',
+        'epoch': 0, 'authentication_required': 'false'}},
+    {'opencode-go': {'reference': '6bce9a07-6511-40a6-a9f2-555972541409',
+        'epoch': 0, 'authentication_required': False, 'extra': 'untrusted'}},
+])
+def test_malformed_durable_identity_fails_closed_without_rewriting_profile(app_paths, metadata):
+    legacy_selected_go_profile(app_paths)
+    store = ConnectionStore(app_paths.root, app_paths.state)
+    settings = store.load()
+    settings['credential_metadata'] = metadata
+    store.save(settings)
+    with pytest.raises(ApiError) as invalid:
+        ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    assert invalid.value.code == 'connection_record_invalid'
+    assert store.load()['credential_metadata'] == metadata
+    assert str(invalid.value) == "Reconnect this profile's subscription."
+
+
+@pytest.mark.asyncio
+async def test_stale_refresh_cannot_discard_evidence_from_newer_successful_refresh(app_paths):
+    legacy_selected_go_profile(app_paths)
+    entered, release = asyncio.Event(), asyncio.Event()
+    calls = 0
+
+    async def catalogue(request):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            entered.set()
+            await release.wait()
+            return httpx.Response(200, json={'data': [{'id': 'mimo-v2.6-pro'}]})
+        return httpx.Response(200, json={'data': [{'id': 'deepseek-v4.1-flash'}]})
+
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(catalogue))
+    pending = None
+    try:
+        await manager.prepare_harness_route()
+        pending = asyncio.create_task(manager.refresh('opencode-go'))
+        await asyncio.wait_for(entered.wait(), 3)
+        await manager.refresh('opencode-go')
+        current = await manager.prepare_harness_route()
+        before = manager.harness_capabilities(current)
+        assert before['catalogue_listed'] is True
+        release.set()
+        with pytest.raises(ApiError) as stale:
+            await asyncio.wait_for(pending, 3)
+        assert stale.value.code == 'connection_changed'
+        assert manager.harness_capabilities(current) == before
+    finally:
+        release.set()
+        if pending is not None:
+            await asyncio.gather(pending, return_exceptions=True)
+        await manager.close()
+
+
+@pytest.mark.asyncio
+async def test_inflight_codex_rotation_cannot_clear_newer_auth_invalidation(app_paths, monkeypatch):
+    now = 1_900_000_000
+    monkeypatch.setattr(time, 'time', lambda: now)
+    legacy_selected_codex_profile(app_paths, expires_at=now + 600, refresh_token=uuid4().hex)
+    entered, release = asyncio.Event(), asyncio.Event()
+
+    async def rotate(request):
+        if request.url.path == '/api/accounts/oauth/token':
+            entered.set()
+            await release.wait()
+            return httpx.Response(200, json={'access_token': uuid4().hex, 'token_type': 'Bearer',
+                'expires_in': 3600, 'scope': 'resource.invoke chatgpt.tokens.use.direct'})
+        return httpx.Response(200, json={'models': [{'slug': 'gpt-6-astra'}]})
+
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(rotate))
+    pending = None
+    try:
+        route = await manager.prepare_harness_route()
+        now += 600
+        pending = asyncio.create_task(manager.refresh('codex'))
+        await asyncio.wait_for(entered.wait(), 3)
+        manager.observe_harness_result(route, code='authentication_required')
+        denied_epoch = next(item for item in manager.connections()['connections']
+            if item['provider'] == 'codex')['models'][1]['credential_epoch']
+        release.set()
+        with pytest.raises(ApiError) as stale:
+            await asyncio.wait_for(pending, 3)
+        assert stale.value.code == 'connection_changed'
+    finally:
+        release.set()
+        if pending is not None:
+            await asyncio.gather(pending, return_exceptions=True)
+        await manager.close()
+    reopened = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        with pytest.raises(ApiError) as invalid:
+            await reopened.prepare_harness_route()
+        assert invalid.value.code == 'authentication_required'
+        row = next(item for item in reopened.connections()['connections'] if item['provider'] == 'codex')
+        assert row['models'][1]['credential_epoch'] == denied_epoch
+    finally:
+        await reopened.close()
+
+
+@pytest.mark.asyncio
+async def test_inflight_refresh_cannot_clear_newer_auth_invalidation_or_revive_it_on_reopen(app_paths):
+    legacy_selected_go_profile(app_paths)
+    entered, release = asyncio.Event(), asyncio.Event()
+
+    async def catalogue(request):
+        entered.set()
+        await release.wait()
+        return httpx.Response(200, json={'data': [{'id': 'deepseek-v4.1-flash'}]})
+
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(catalogue))
+    pending = None
+    try:
+        route = await manager.prepare_harness_route()
+        pending = asyncio.create_task(manager.refresh('opencode-go'))
+        await asyncio.wait_for(entered.wait(), 3)
+        manager.observe_harness_result(route, code='authentication_required')
+        denied_epoch = next(item for item in manager.connections()['connections']
+            if item['provider'] == 'opencode-go')['models'][0]['credential_epoch']
+        release.set()
+        with pytest.raises(ApiError) as stale:
+            await asyncio.wait_for(pending, 3)
+        assert stale.value.code == 'connection_changed'
+    finally:
+        release.set()
+        if pending is not None:
+            await asyncio.gather(pending, return_exceptions=True)
+        await manager.close()
+    reopened = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        with pytest.raises(ApiError) as invalid:
+            await reopened.prepare_harness_route()
+        assert invalid.value.code == 'authentication_required'
+        row = next(item for item in reopened.connections()['connections'] if item['provider'] == 'opencode-go')
+        assert row['models'][0]['credential_epoch'] == denied_epoch
+    finally:
+        await reopened.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('status,payload,code', [
+    (401, {}, 'authentication_required'),
+    (200, {'access_token': 'synthetic-invalid', 'token_type': 'invalid', 'expires_in': 3600,
+        'scope': 'resource.invoke chatgpt.tokens.use.direct'}, 'invalid_token_response'),
+    (200, {'access_token': 'synthetic-no-plan', 'token_type': 'Bearer', 'expires_in': 3600,
+        'scope': 'resource.invoke'}, 'plan_permission_required'),
+])
+async def test_codex_refresh_rejection_durably_revokes_prepared_route(app_paths, monkeypatch, status, payload, code):
+    now = 1_900_000_000
+    monkeypatch.setattr(time, 'time', lambda: now)
+    legacy_selected_codex_profile(app_paths, expires_at=now + 600, refresh_token=uuid4().hex)
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(
+        lambda request: httpx.Response(status, json=payload)))
+    try:
+        route = await manager.prepare_harness_route()
+        now += 600
+        with pytest.raises(ApiError) as invalid:
+            await manager.prepare_harness_route()
+        assert invalid.value.code == code
+    finally:
+        await manager.close()
+    reopened = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        with pytest.raises(ApiError) as stale:
+            reopened.require_harness_route(route)
+        assert stale.value.code == 'connection_changed'
+        with pytest.raises(ApiError) as invalid:
+            await reopened.prepare_harness_route()
+        assert invalid.value.code == 'authentication_required'
+        row = next(item for item in reopened.connections()['connections'] if item['provider'] == 'codex')
+        assert row['status'] == 'authentication_required'
+        assert row['models'][1]['credential_epoch'] > route.credential_epoch
+    finally:
+        await reopened.close()
+
+
+@pytest.mark.asyncio
+async def test_codex_token_rotation_persists_new_revision_and_protected_token_across_reopen(app_paths, monkeypatch):
+    now = 1_900_000_000
+    monkeypatch.setattr(time, 'time', lambda: now)
+    legacy_selected_codex_profile(app_paths, expires_at=now + 600, refresh_token=uuid4().hex)
+    rotated_token = uuid4().hex
+    calls = []
+
+    def rotate(request):
+        calls.append((request.method, request.url.path))
+        assert calls[-1] == ('POST', '/api/accounts/oauth/token')
+        return httpx.Response(200, json={'access_token': rotated_token, 'refresh_token': uuid4().hex,
+            'token_type': 'Bearer', 'expires_in': 3600,
+            'scope': 'resource.invoke chatgpt.tokens.use.direct'})
+
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(rotate))
+    try:
+        original = await manager.prepare_harness_route()
+        assert not calls
+        now += 600
+        current = await manager.prepare_harness_route()
+        assert current.credential_ref == original.credential_ref
+        assert current.credential_epoch > original.credential_epoch
+        assert calls == [('POST', '/api/accounts/oauth/token')]
+        with pytest.raises(ApiError) as stale:
+            manager.require_harness_route(original)
+        assert stale.value.code == 'connection_changed'
+    finally:
+        await manager.close()
+    reopened = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        assert reopened.require_harness_route(current) is None
+        if await reopened.credential_for_harness(current) != rotated_token:
+            pytest.fail('Rotated protected credential was not retained', pytrace=False)
+        if rotated_token in json.dumps(current.descriptor()) + json.dumps(reopened.status()):
+            pytest.fail('Rotated credential leaked into public status', pytrace=False)
+        with pytest.raises(ApiError) as stale:
+            reopened.require_harness_route(original)
+        assert stale.value.code == 'connection_changed'
+        report = reopened.harness_capabilities(current)
+        assert report['catalogue_listed'] is None
+        assert report['documented_support']['image'] == 'supported'
+        assert report['capability_evidence']['image'] == 'documented_model'
+    finally:
+        await reopened.close()
+
+
+@pytest.mark.asyncio
+async def test_explicit_refresh_after_reopen_recovers_under_new_revision_without_reviving_old_route(app_paths):
+    legacy_selected_go_profile(app_paths)
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        original = await manager.prepare_harness_route()
+        manager.observe_harness_result(original, code='authentication_required')
+        denied_epoch = next(item for item in manager.connections()['connections']
+            if item['provider'] == 'opencode-go')['models'][0]['credential_epoch']
+    finally:
+        await manager.close()
+    recovering = ProviderManager(app_paths, http_transport=httpx.MockTransport(
+        lambda request: httpx.Response(200, json={'data': [{'id': 'mimo-v2.6-pro'}]})))
+    try:
+        with pytest.raises(ApiError) as invalid:
+            await recovering.prepare_harness_route()
+        assert invalid.value.code == 'authentication_required'
+        await recovering.refresh('opencode-go')
+        current = await recovering.prepare_harness_route()
+        assert current.credential_ref == original.credential_ref
+        assert current.credential_epoch > denied_epoch
+        assert current.catalog_model_id == original.catalog_model_id
+        assert current.catalogue_listed is False
+    finally:
+        await recovering.close()
+    reopened = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        assert reopened.require_harness_route(current) is None
+        with pytest.raises(ApiError) as stale:
+            reopened.require_harness_route(original)
+        assert stale.value.code == 'connection_changed'
+        reopened.observe_harness_result(original, code='authentication_required')
+        assert reopened.require_harness_route(current) is None
+    finally:
+        await reopened.close()
+
+
+@pytest.mark.asyncio
+async def test_transient_refresh_preserves_valid_revision_but_does_not_persist_capability_evidence(app_paths):
+    legacy_selected_go_profile(app_paths)
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(
+        lambda request: httpx.Response(503)))
+    try:
+        route = await manager.prepare_harness_route()
+        manager.observe_harness_result(route, code='completed', images=True, tools=True)
+        with pytest.raises(ApiError) as transient:
+            await manager.refresh('opencode-go')
+        assert transient.value.code == 'provider_unavailable'
+        assert manager.require_harness_route(route) is None
+        report = manager.harness_capabilities(route)
+        assert report['credential_epoch'] == route.credential_epoch
+        assert report['tool_input'] == 'supported'
+        assert report['capability_evidence']['tools'] == 'completed_request'
+    finally:
+        await manager.close()
+    reopened = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        after = await reopened.prepare_harness_route()
+        assert (after.credential_ref, after.credential_epoch) == (route.credential_ref, route.credential_epoch)
+        assert reopened.require_harness_route(route) is None
+        report = reopened.harness_capabilities(after)
+        assert report['catalogue_listed'] is None
+        assert report['documented_support'] == {'text': 'unknown', 'image': 'unknown', 'tools': 'unknown'}
+        assert report['text_input'] == report['image_input'] == report['tool_input'] == 'unknown'
+        assert report['capability_evidence'] == {'text': 'none', 'image': 'none', 'tools': 'none'}
+        assert not reopened.status()['completed_requests']
+    finally:
+        await reopened.close()
+
+
+@pytest.mark.asyncio
+async def test_reconnect_and_disconnect_preserve_reference_and_revoke_routes_across_reopen(app_paths):
+    legacy_selected_go_profile(app_paths)
+    catalogue = httpx.MockTransport(lambda request: httpx.Response(200, json={
+        'data': [{'id': 'deepseek-v4.1-flash'}]}))
+    manager = ProviderManager(app_paths, http_transport=catalogue)
+    try:
+        original = await manager.prepare_harness_route()
+        await manager.connect_go(uuid4().hex, select=True)
+        reconnected = await manager.prepare_harness_route()
+        assert reconnected.credential_ref == original.credential_ref
+        assert reconnected.credential_epoch > original.credential_epoch
+    finally:
+        await manager.close()
+    reopened = ProviderManager(app_paths, http_transport=catalogue)
+    try:
+        assert reopened.require_harness_route(reconnected) is None
+        with pytest.raises(ApiError) as stale:
+            reopened.require_harness_route(original)
+        assert stale.value.code == 'connection_changed'
+        await reopened.disconnect('opencode-go')
+        disconnected_epoch = next(item for item in reopened.connections()['connections']
+            if item['provider'] == 'opencode-go')['models'][0]['credential_epoch']
+        assert disconnected_epoch > reconnected.credential_epoch
+    finally:
+        await reopened.close()
+    signed_out = ProviderManager(app_paths, http_transport=catalogue)
+    try:
+        assert signed_out.connections()['selected_provider'] is None
+        assert next(item for item in signed_out.connections()['connections']
+            if item['provider'] == 'opencode-go')['models'][0]['credential_epoch'] == disconnected_epoch
+        await signed_out.connect_go(uuid4().hex, select=True)
+        newest = await signed_out.prepare_harness_route()
+        assert newest.credential_ref == original.credential_ref
+        assert newest.credential_epoch > disconnected_epoch
+        for old in [original, reconnected]:
+            with pytest.raises(ApiError) as stale:
+                signed_out.require_harness_route(old)
+            assert stale.value.code == 'connection_changed'
+    finally:
+        await signed_out.close()
+    final = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        assert final.require_harness_route(newest) is None
+        for old in [original, reconnected]:
+            with pytest.raises(ApiError) as stale:
+                final.require_harness_route(old)
+            assert stale.value.code == 'connection_changed'
+    finally:
+        await final.close()
+
+
+@pytest.mark.asyncio
+async def test_missing_codex_refresh_token_durably_revokes_prepared_identity(app_paths, monkeypatch):
+    now = 1_900_000_000
+    monkeypatch.setattr(time, 'time', lambda: now)
+    legacy_selected_codex_profile(app_paths, expires_at=now + 600)
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        route = await manager.prepare_harness_route()
+        now += 600
+        with pytest.raises(ApiError) as invalid:
+            await manager.prepare_harness_route()
+        assert invalid.value.code == 'authentication_required'
+        with pytest.raises(ApiError) as stale:
+            manager.require_harness_route(route)
+        assert stale.value.code == 'connection_changed'
+    finally:
+        await manager.close()
+    reopened = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        with pytest.raises(ApiError) as stale:
+            reopened.require_harness_route(route)
+        assert stale.value.code == 'connection_changed'
+        row = next(item for item in reopened.connections()['connections'] if item['provider'] == 'codex')
+        assert row['status'] == 'authentication_required'
+        assert row['models'][1]['credential_epoch'] > route.credential_epoch
+    finally:
+        await reopened.close()
+
+
+@pytest.mark.asyncio
+async def test_prepared_identity_survives_protected_profile_reopen_without_provider_usage(app_paths):
+    legacy_selected_go_profile(app_paths)
+    first = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        before = await first.prepare_harness_route()
+    finally:
+        await first.close()
+    reopened = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        after = await reopened.prepare_harness_route()
+        assert (after.credential_ref, after.credential_epoch) == (before.credential_ref, before.credential_epoch)
+        assert reopened.require_harness_route(before) is None
+        assert after.catalog_model_id == 'deepseek-v4.1-flash'
+        assert reopened.harness_capabilities(before)['catalogue_listed'] is None
+        assert reopened.harness_capabilities(before)['capability_evidence']['text'] == 'none'
+    finally:
+        await reopened.close()
+
+
+@pytest.mark.asyncio
+async def test_native_auth_invalidation_survives_reopen_without_reviving_old_route(app_paths):
+    legacy_selected_go_profile(app_paths)
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        route = await manager.prepare_harness_route()
+        manager.observe_harness_result(route, code='authentication_required')
+    finally:
+        await manager.close()
+    reopened = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        with pytest.raises(ApiError) as stale:
+            reopened.require_harness_route(route)
+        assert stale.value.code == 'connection_changed'
+        with pytest.raises(ApiError) as invalid:
+            await reopened.prepare_harness_route()
+        assert invalid.value.code == 'authentication_required'
+        row = next(item for item in reopened.connections()['connections'] if item['provider'] == 'opencode-go')
+        assert row['models'][0]['credential_epoch'] > route.credential_epoch
+        assert row['status'] == 'authentication_required'
+    finally:
+        await reopened.close()
+
+
+@pytest.mark.asyncio
+async def test_explicit_successful_refresh_persists_new_epoch_and_keeps_old_route_revoked(app_paths):
+    legacy_selected_go_profile(app_paths)
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(
+        lambda request: httpx.Response(200, json={'data': [{'id': 'deepseek-v4.1-flash'}]})))
+    try:
+        original = await manager.prepare_harness_route()
+        await manager.refresh('opencode-go')
+        refreshed = await manager.prepare_harness_route()
+        assert refreshed.credential_ref == original.credential_ref
+        assert refreshed.credential_epoch > original.credential_epoch
+    finally:
+        await manager.close()
+    reopened = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        current = await reopened.prepare_harness_route()
+        assert current.credential_epoch == refreshed.credential_epoch
+        assert reopened.require_harness_route(refreshed) is None
+        with pytest.raises(ApiError) as stale:
+            reopened.require_harness_route(original)
+        assert stale.value.code == 'connection_changed'
+    finally:
+        await reopened.close()
+
+
+@pytest.mark.asyncio
+async def test_explicit_refresh_auth_failure_remains_revoked_after_reopen(app_paths):
+    legacy_selected_go_profile(app_paths)
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(
+        lambda request: httpx.Response(401)))
+    try:
+        route = await manager.prepare_harness_route()
+        with pytest.raises(ApiError) as failed:
+            await manager.refresh('opencode-go')
+        assert failed.value.code == 'authentication_required'
+    finally:
+        await manager.close()
+    reopened = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        with pytest.raises(ApiError) as stale:
+            reopened.require_harness_route(route)
+        assert stale.value.code == 'connection_changed'
+        with pytest.raises(ApiError) as invalid:
+            await reopened.prepare_harness_route()
+        assert invalid.value.code == 'authentication_required'
+    finally:
+        await reopened.close()
+
+
+@pytest.mark.asyncio
+async def test_transient_refresh_does_not_clear_durable_auth_block_or_advance_revision(app_paths):
+    legacy_selected_go_profile(app_paths)
+    status = 503
+    manager = ProviderManager(app_paths, http_transport=httpx.MockTransport(
+        lambda request: httpx.Response(status, json={'data': [{'id': 'deepseek-v4.1-flash'}]})))
+    try:
+        route = await manager.prepare_harness_route()
+        manager.observe_harness_result(route, code='authentication_required')
+        epoch = next(item for item in manager.connections()['connections']
+            if item['provider'] == 'opencode-go')['models'][0]['credential_epoch']
+        with pytest.raises(ApiError) as transient:
+            await manager.refresh('opencode-go')
+        assert transient.value.code == 'provider_unavailable'
+        with pytest.raises(ApiError) as invalid:
+            await manager.prepare_harness_route()
+        assert invalid.value.code == 'authentication_required'
+        assert next(item for item in manager.connections()['connections']
+            if item['provider'] == 'opencode-go')['models'][0]['credential_epoch'] == epoch
+    finally:
+        await manager.close()
+    reopened = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        with pytest.raises(ApiError) as invalid:
+            await reopened.prepare_harness_route()
+        assert invalid.value.code == 'authentication_required'
+        assert next(item for item in reopened.connections()['connections']
+            if item['provider'] == 'opencode-go')['models'][0]['credential_epoch'] == epoch
+    finally:
+        await reopened.close()
+
+
+@pytest.mark.asyncio
+async def test_legacy_generation_auth_failure_remains_revoked_after_reopen(app_paths):
+    legacy_selected_go_profile(app_paths)
+
+    class DeniedInference:
+        async def stream(self, provider, model, token, messages):
+            raise ApiError('authentication_required', 'Synthetic authentication failure', 401)
+            yield
+
+    manager = ProviderManager(app_paths, transport=DeniedInference(),
+        http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        route = await manager.prepare_harness_route()
+        events = [item async for item in manager.events(
+            [{'role': 'user', 'content': 'Synthetic CKD learning'}],
+            scope=ContextScope(kind=Scope.TEMPORARY_CASE), run_id='durable-legacy-denial')]
+        assert events[-1].payload['code'] == 'authentication_required'
+    finally:
+        await manager.close()
+    reopened = ProviderManager(app_paths, http_transport=httpx.MockTransport(forbid_provider_usage))
+    try:
+        with pytest.raises(ApiError) as stale:
+            reopened.require_harness_route(route)
+        assert stale.value.code == 'connection_changed'
+        with pytest.raises(ApiError) as invalid:
+            await reopened.prepare_harness_route()
+        assert invalid.value.code == 'authentication_required'
+    finally:
+        await reopened.close()
 
 
 @pytest.mark.asyncio

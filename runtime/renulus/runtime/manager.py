@@ -8,7 +8,7 @@ from contextvars import ContextVar
 from dataclasses import dataclass, field, replace
 import time
 from typing import TYPE_CHECKING, AsyncIterator
-from uuid import NAMESPACE_URL, uuid4, uuid5
+from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 import httpx
 
@@ -27,6 +27,25 @@ _GO_CONVERSATION = ContextVar("renulus_go_conversation", default=None)
 _UNCHANGED_MODEL = object()
 _RECORDED_PURPOSES = frozenset({"explain", "memory", "memory-extraction", "compaction",
                                "generated-practice", "case-discuss", "case-image-discuss"})
+
+
+def _credential_metadata(settings: dict) -> dict:
+    """Validate optional v1 identity metadata without repairing or widening it."""
+    metadata = settings.get("credential_metadata", {})
+    try:
+        if not isinstance(metadata, dict) or not metadata.keys() <= ALLOWED_MODELS.keys():
+            raise ValueError
+        for record in metadata.values():
+            if (not isinstance(record, dict)
+                    or set(record) != {"reference", "epoch", "authentication_required"}
+                    or not isinstance(record["reference"], str)
+                    or str(UUID(record["reference"])) != record["reference"]
+                    or type(record["epoch"]) is not int or record["epoch"] < 0
+                    or type(record["authentication_required"]) is not bool):
+                raise ValueError
+    except (ValueError, TypeError, AttributeError):
+        raise ApiError("connection_record_invalid", "Reconnect this profile's subscription.", 503, True) from None
+    return metadata
 
 
 @dataclass
@@ -52,8 +71,11 @@ class ProviderManager:
         self._completion_history: deque[dict] = deque(maxlen=32)
         self._credential_locks = {name: asyncio.Lock() for name in ALLOWED_MODELS}
         self._connection_versions = {name: 0 for name in ALLOWED_MODELS}
-        self._credential_epochs = {name: 0 for name in ALLOWED_MODELS}
-        self._credential_refs = {name: str(uuid4()) for name in ALLOWED_MODELS}
+        metadata = _credential_metadata(self._settings)
+        self._credential_epochs = {name: metadata.get(name, {}).get("epoch", 0) for name in ALLOWED_MODELS}
+        self._credential_refs = {name: metadata.get(name, {}).get("reference", str(uuid4())) for name in ALLOWED_MODELS}
+        self._catalog_errors.update({name: "authentication_required" for name in ALLOWED_MODELS
+            if name in self._settings["connections"] and metadata.get(name, {}).get("authentication_required", False)})
         self._auth = None
         self._context = None
 
@@ -62,10 +84,17 @@ class ProviderManager:
                                  timeout=httpx.Timeout(20, connect=10), follow_redirects=False)
 
     def _save(self) -> None:
+        # Retain revision tombstones after disconnect in the same atomic record.
+        prior = self._settings.get("credential_metadata", {})
+        self._settings["credential_metadata"] = {name: {
+            "reference": self._credential_refs[name], "epoch": self._credential_epochs[name],
+            "authentication_required": self._catalog_errors.get(name) == "authentication_required",
+        } for name in ALLOWED_MODELS if name in prior or name in self._settings["connections"]}
         self.store.save(self._settings)
 
-    def _require_connection_version(self, provider: str, version: int) -> None:
-        if self._connection_versions[provider] != version:
+    def _require_connection_version(self, provider: str, version: int, *, credential_epoch: int | None = None) -> None:
+        if (self._connection_versions[provider] != version
+                or credential_epoch is not None and self._credential_epochs[provider] != credential_epoch):
             raise ApiError("connection_changed", "The connection changed during the request. Retry with the current connection.", 409, True)
 
     def connections(self) -> dict:
@@ -118,6 +147,17 @@ class ProviderManager:
         self._credential_epochs[provider] += 1
         self._capabilities = {key: value for key, value in self._capabilities.items() if key[0] != provider}
         self._unsupported_models = {key for key in self._unsupported_models if key[0] != provider}
+
+    def _record_access_error(self, provider: str, public: ApiError) -> None:
+        if public.code == "connection_changed":
+            return
+        self._catalogs.pop(provider, None)
+        if public.code in {"authentication_required", "invalid_token_response", "plan_permission_required"}:
+            self._catalog_errors[provider] = "authentication_required"
+            self._clear_capabilities(provider)
+            self._save()
+        elif self._catalog_errors.get(provider) != "authentication_required":
+            self._catalog_errors[provider] = public.code
 
     def _observe_completion(self, provider: str, model: str, *, images: bool) -> None:
         observed = self._capabilities.setdefault((provider, model), {})
@@ -221,9 +261,12 @@ class ProviderManager:
                     raise ApiError("connection_required", "Reconnect your selected subscription.", 409)
                 if record.get("expires_at", 0) <= time.time() + 60:
                     if not record.get("refresh_token"):
-                        raise ApiError("authentication_required", "Continue with ChatGPT to reconnect.", 401, True)
+                        public = ApiError("authentication_required", "Continue with ChatGPT to reconnect.", 401, True)
+                        self._record_access_error(provider, public)
+                        raise public
                     from .auth import TOKEN_URL, RESOURCE, validate_plan_token
                     version = self._connection_versions[provider]
+                    epoch = self._credential_epochs[provider]
                     try:
                         async with self._client() as client:
                             response = await client.post(TOKEN_URL, data={
@@ -231,19 +274,15 @@ class ProviderManager:
                                 "refresh_token": record["refresh_token"], "resource": RESOURCE})
                             response.raise_for_status()
                             tokens = response.json()
-                        self._require_connection_version(provider, version)
+                        self._require_connection_version(provider, version, credential_epoch=epoch)
                         validated = validate_plan_token(tokens, previous_scopes=record.get("scopes", []))
                         self._clear_capabilities(provider)
                         record.update(validated, refresh_token=tokens.get("refresh_token", record["refresh_token"]))
                         self._save()
                     except Exception as error:
-                        self._require_connection_version(provider, version)
+                        self._require_connection_version(provider, version, credential_epoch=epoch)
                         public = safe_error(error)
-                        self._catalogs.pop(provider, None)
-                        self._catalog_errors[provider] = ("authentication_required" if public.code in {
-                            "invalid_token_response", "plan_permission_required"} else public.code)
-                        if self._catalog_errors[provider] == "authentication_required":
-                            self._clear_capabilities(provider)
+                        self._record_access_error(provider, public)
                         raise public from None
         return record["access_token"]
 
@@ -252,22 +291,21 @@ class ProviderManager:
         version = self._connection_versions[provider]
         try:
             token = await self._access_token(provider)
+            epoch = self._credential_epochs[provider]
             catalog = await self._fetch_catalog(provider, token)
-            self._require_connection_version(provider, version)
+            self._require_connection_version(provider, version, credential_epoch=epoch)
             self._catalogs[provider] = catalog
             # Explicit refresh permits retry after an account-specific rejection.
             self._clear_capabilities(provider)
             self._catalog_errors.pop(provider, None)
+            self._save()
         except Exception as error:
             self._require_connection_version(provider, version)
             public = safe_error(error)
-            self._catalogs.pop(provider, None)
             if provider in self._settings["connections"]:
-                self._catalog_errors[provider] = ("authentication_required" if public.code in {
-                    "invalid_token_response", "plan_permission_required"} else public.code)
-                if self._catalog_errors[provider] == "authentication_required":
-                    self._clear_capabilities(provider)
+                self._record_access_error(provider, public)
             else:
+                self._catalogs.pop(provider, None)
                 self._catalog_errors.pop(provider, None)
             raise public from None
         return self.connections()
@@ -359,6 +397,8 @@ class ProviderManager:
         self._require_connection_version(provider, version)
         if self._settings["selected_provider"] != provider:
             raise ApiError("connection_changed", "The selected connection changed during preparation.", 409, True)
+        if provider not in self._settings.get("credential_metadata", {}):
+            self._save()
         return subscription_route(provider, chosen, credential_ref=self._credential_refs[provider],
             credential_epoch=self._credential_epochs[provider], catalogue=self._catalogs.get(provider))
 
@@ -407,6 +447,7 @@ class ProviderManager:
             self._catalogs.pop(route.provider_id, None)
             self._catalog_errors[route.provider_id] = code
             self._clear_capabilities(route.provider_id)
+            self._save()
         elif code == "completed":
             self._observe_completion(route.provider_id, route.catalog_model_id, images=images)
             if tools:
@@ -659,9 +700,7 @@ class ProviderManager:
             else:
                 public = safe_error(error)
             if provider and public.code == "authentication_required":
-                self._catalogs.pop(provider, None)
-                self._catalog_errors[provider] = public.code
-                self._clear_capabilities(provider)
+                self._record_access_error(provider, public)
             yield event("error", code=public.code, message=public.message, retryable=public.retryable, status=public.status)
         finally:
             if run.pending:
