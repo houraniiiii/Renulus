@@ -146,6 +146,9 @@ export async function runHarnessIpc(create: (boot: HarnessBoot) => Promise<Host>
         case "host.activate":
           await host.activate(text(request.payload, "configuration_id"));
           result = await host.status(); break;
+        case "host.stores.activate":
+          if (Object.keys(request.payload).length) throw new Error("invalid_payload");
+          result = await host.activateStores(); break;
         case "host.recover":
           if (!Array.isArray(request.payload.session_ids) || !request.payload.session_ids.every(nonempty) ||
               new Set(request.payload.session_ids).size !== request.payload.session_ids.length) throw new Error("invalid_payload");
@@ -178,7 +181,10 @@ export async function runHarnessIpc(create: (boot: HarnessBoot) => Promise<Host>
       await reply(request, "committed_reference", { result });
     } catch (error) {
       const code = error instanceof Error ? error.message : "host_error";
-      const rejected = ["invalid_payload", "invalid_observation_page", "unknown_command", "harness_policy_blocked", "host_closing", "harness_closing", "configuration_requires_new_generation", "configuration_mismatch", "recovery_required", "recovery_admission_mismatch", "recovery_requires_quiescence"].includes(code);
+      const rejected = ["invalid_payload", "invalid_observation_page", "unknown_command", "harness_policy_blocked", "host_closing", "harness_closing", "configuration_requires_new_generation", "configuration_mismatch", "recovery_required", "recovery_admission_mismatch", "recovery_requires_quiescence",
+        "store_activation_requires_quiescence", "harness_store_invalid", "harness_domain_schema_mismatch",
+        "harness_store_schema_mismatch", "harness_runtime_schema_mismatch", "harness_store_identity_mismatch",
+        "harness_manifest_mismatch", "harness_selection_changed"].includes(code);
       await reply(request, rejected ? "rejected_before_admission" : "uncertain_after_disconnect", { error: { code: rejected ? code : "host_error" } });
     }
   };

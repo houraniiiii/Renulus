@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 import hashlib
 from pathlib import Path
 import sqlite3
+from threading import Lock
 from typing import Iterable
 
 from .publication import check_publication
@@ -18,6 +19,9 @@ def utc_now() -> str:
 class Database:
     def __init__(self, path: str | Path, *, migration_inventory: dict[str, str] | None = None):
         self.path = Path(path).resolve()
+        self._writer_state = Lock()
+        self._active_writers = 0
+        self._writers_paused = False
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with closing(self.connect()) as conn:
             version = conn.execute("PRAGMA user_version").fetchone()[0]
@@ -49,19 +53,51 @@ class Database:
         return conn
 
     @contextmanager
-    def transaction(self):
-        conn = self.connect()
+    def writer_admission(self):
+        """Logical ownership shared by normal and fixed interruption writers."""
+        with self._writer_state:
+            if self._writers_paused:
+                raise RuntimeError("Canonical writer quiescence is active")
+            self._active_writers += 1
         try:
-            conn.execute("BEGIN IMMEDIATE")
-            check_publication(self, conn)
-            yield conn
-            check_publication(self, conn)
-            conn.commit()
-        except BaseException:
-            conn.rollback()
-            raise
+            yield
         finally:
-            conn.close()
+            with self._writer_state:
+                self._active_writers -= 1
+
+    @contextmanager
+    def transaction(self):
+        with self.writer_admission():
+            conn = self.connect()
+            try:
+                conn.execute("BEGIN IMMEDIATE")
+                check_publication(self, conn)
+                yield conn
+                check_publication(self, conn)
+                conn.commit()
+            except BaseException:
+                conn.rollback()
+                raise
+            finally:
+                conn.close()
+
+    @contextmanager
+    def quiesce_writes(self):
+        """Seal canonical admission without holding a physical lock across IPC.
+
+        Initial harness activation uses this after module assembly and before
+        producers start. An admitted transaction must settle before retrying;
+        this method never waits on an active writer or acquires a SQLite lock.
+        """
+        with self._writer_state:
+            if self._writers_paused or self._active_writers:
+                raise RuntimeError("Canonical writer quiescence requires settled writers")
+            self._writers_paused = True
+        try:
+            yield
+        finally:
+            with self._writer_state:
+                self._writers_paused = False
 
     def fetch_one(self, sql: str, parameters: Iterable = ()) -> dict | None:
         conn = self.connect()

@@ -36,7 +36,7 @@ def record_interrupted_conversation(database, kind, identifier, run_id):
     if kind not in identities:
         raise ValueError("Unknown conversation kind")
     target_type, owner = identities[kind]
-    with closing(database.connect()) as conn:
+    with database.writer_admission(), closing(database.connect()) as conn:
         try:
             conn.execute("BEGIN IMMEDIATE")
             if not conn.execute(f"SELECT 1 FROM {owner} WHERE id=?", (identifier,)).fetchone():

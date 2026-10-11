@@ -12,7 +12,7 @@ export interface ProfileSelection {
   readonly domainPath: string;
 }
 
-/** Read-only check of the Python owner's prepared selection, before SDK migrations. */
+/** Read-only identity check of the Python-owned selection, before SDK writes. */
 export async function verifyPreparedProfile(input: ProfileSelection) {
   const fail = () => { throw new Error("harness_manifest_mismatch"); };
   const identifier = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/;
@@ -52,6 +52,13 @@ export async function verifyPreparedProfile(input: ProfileSelection) {
       runtime_store: { store_id: input.storeId, engine: { name: "opencode", version: "2.0.26", source_commit: SOURCE },
         schema_version: `source:${SOURCE}`, generation: 1, path: RUNTIME_PATH, validation: "pending" },
     };
+    if (manifest?.state === "active") {
+      expected.state = "active";
+      expected.domain_store.validation = "valid";
+      expected.runtime_store.validation = "valid";
+    }
     if (!isDeepStrictEqual(manifest, expected)) fail();
+    return expected;
   } catch { fail(); }
+  throw new Error("harness_manifest_mismatch");
 }

@@ -4,7 +4,37 @@ import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
-from ..harness_contracts import CONTRACT_VERSION, OPENCODE_SOURCE, PairedStoreManifest
+from ..harness_contracts import (CONTRACT_VERSION, OPENCODE_SOURCE, PairedStoreManifest,
+                                  validate_paired_store_manifest)
+
+
+def load_harness_profile(owned_root: Path, *, profile_id: str, domain_store_id: str,
+                         runtime_store_id: str, domain_path: str) -> PairedStoreManifest:
+    """Prepare a missing selection or bind an active one for actual host validation.
+
+    This does not assert database health or open admission. The native owner
+    validates both actual stores before opening an active selection.
+    """
+    if not isinstance(owned_root, Path) or not owned_root.is_absolute():
+        raise ValueError("Profile root must be an explicit absolute Path")
+    file = owned_root / "state/harness/manifest.json"
+    if not file.is_file():
+        return prepare_harness_profile(owned_root, profile_id=profile_id,
+            domain_store_id=domain_store_id, runtime_store_id=runtime_store_id, domain_path=domain_path)
+    if file.stat().st_size > 16384:
+        raise ValueError("Harness manifest exceeds its metadata budget")
+    manifest = PairedStoreManifest.model_validate_json(file.read_bytes())
+    if manifest.state == "prepared":
+        return prepare_harness_profile(owned_root, profile_id=profile_id,
+            domain_store_id=domain_store_id, runtime_store_id=runtime_store_id, domain_path=domain_path)
+    validate_paired_store_manifest(manifest.model_dump(), profile_id=profile_id,
+        domain_store_id=domain_store_id, runtime_store_id=runtime_store_id, snapshot_generation=1)
+    if manifest.domain_store.path != domain_path or manifest.runtime_store.path != "state/harness/opencode.sqlite":
+        raise ValueError("Active manifest differs from the selected store paths")
+    for path in (owned_root, file, owned_root / domain_path, owned_root / manifest.runtime_store.path):
+        if path.resolve() != path:
+            raise ValueError("Profile/store paths must not redirect through links or traversal")
+    return manifest
 
 
 def prepare_harness_profile(owned_root: Path, *, profile_id: str, domain_store_id: str,

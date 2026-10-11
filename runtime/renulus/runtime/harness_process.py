@@ -11,13 +11,13 @@ import secrets
 import subprocess
 from uuid import uuid4
 
-from .harness_profile import prepare_harness_profile
+from .harness_profile import load_harness_profile
 from renulus.harness_contracts import HarnessCommandIdentity, validate_command_outcome
 
 
 PROTOCOL = "renulus-harness/1"
 CONTROLS = frozenset({"host.status", "session.cancel", "host.close"})
-COMMANDS = CONTROLS | {"host.activate", "host.recover", "session.create", "session.prompt",
+COMMANDS = CONTROLS | {"host.activate", "host.stores.activate", "host.recover", "session.create", "session.prompt",
                        "session.get", "session.messages"}
 
 
@@ -148,7 +148,7 @@ class ManagedHarnessProcess:
         self._closing = False
         self._close_request_id = None
         root = config.profile_root.resolve()
-        prepare_harness_profile(root, profile_id=config.profile_id,
+        load_harness_profile(root, profile_id=config.profile_id,
                                 domain_store_id=config.domain_store_id,
                                 runtime_store_id=config.store_id, domain_path=config.domain_path)
         self._identity = {
@@ -288,6 +288,28 @@ class ManagedHarnessProcess:
     async def query_result(self, request_id: str) -> dict | None:
         record = self._requests.get(request_id)
         return record.snapshot() if record else None
+
+    async def settlement(self, timeout: float) -> dict:
+        """Observe actual child/pipe settlement, separate from clean close proof.
+
+        Process death settles native write ownership even if command outcomes
+        remain uncertain. A broken pipe by itself never proves settlement.
+        """
+        if not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or timeout < 0:
+            raise ValueError("Settlement timeout must be nonnegative and finite.")
+        deadline = asyncio.get_running_loop().time() + timeout
+        try:
+            if self._spawn is not None:
+                await asyncio.wait_for(asyncio.shield(self._spawn), timeout)
+            if self._process is None:
+                return {"state": "settled", "exit_code": None}
+            await asyncio.wait_for(asyncio.shield(self._exit),
+                max(0, deadline - asyncio.get_running_loop().time()))
+        except TimeoutError:
+            return {"state": "pending"}
+        except HarnessProcessError:
+            return {"state": "settled", "exit_code": None}
+        return {"state": "settled", "exit_code": self._process.returncode}
 
     async def close(self, timeout: float) -> dict:
         if not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or timeout < 0:

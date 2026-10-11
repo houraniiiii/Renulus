@@ -15,6 +15,7 @@ import { Global } from "@opencode/util/global";
 import { SessionMessage } from "@opencode/schema/session-message";
 import { acquireStore } from "./ownership.ts";
 import { verifyPreparedProfile, type ProfileSelection } from "./manifest.ts";
+import { activateStores, validateStores } from "./stores.ts";
 
 export interface ModelAdapter {
   readonly providerId: string;
@@ -29,7 +30,8 @@ export interface HarnessOptions extends ProfileSelection {
 
 /** A persistent execution owner. Domain records continue to belong to Python. */
 export async function openHarness(options: HarnessOptions) {
-  await verifyPreparedProfile(options);
+  const selection = await verifyPreparedProfile(options);
+  if (selection.state === "active") validateStores(options);
   const root = path.resolve(options.root);
   const state = path.join(root, "state", "harness");
   const workspace = path.join(root, "harness-workspace");
@@ -145,6 +147,15 @@ export async function openHarness(options: HarnessOptions) {
     finally { admittedWrites.delete(lease); settled(); }
   };
   return {
+    async activateStores() {
+      if (!["policy_blocked", "ready"].includes(phase)) throw new Error("harness_policy_blocked");
+      const prior = phase;
+      phase = "store_validating";
+      try {
+        if (admittedWrites.size || (await run(execution.active)).size) throw new Error("store_activation_requires_quiescence");
+        return await activateStores(options);
+      } finally { if (phase === "store_validating") phase = prior; }
+    },
     async activate(id: string) {
       if (!id || !options.model || !["policy_blocked", "ready"].includes(phase)) throw new Error("harness_policy_blocked");
       if (configurationId && configurationId !== id) throw new Error("configuration_requires_new_generation");
