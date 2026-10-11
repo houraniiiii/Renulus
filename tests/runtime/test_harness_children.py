@@ -19,6 +19,7 @@ from renulus.runtime.harness_configuration import (
     ConfigurationAuthority, ConfigurationSpec, ConnectionReference,
 )
 from renulus.runtime.harness_domain import DomainBinding, DomainCancellation, DomainRequest
+from renulus.runtime.harness_children_journal import HarnessChildrenJournal
 from renulus.runtime.harness_library import LibraryAuthority
 from renulus.storage import Database, utc_now
 from tests.runtime.test_harness_configuration import activate
@@ -74,7 +75,8 @@ def family(tmp_path):
     return make_family(db)
 
 
-def make_family(db, library=None, controls=None, publication_check=None, extra_current=None):
+def make_family(db, library=None, controls=None, publication_check=None, extra_current=None,
+        journal_factory=SyntheticJournal):
     authority = ConfigurationAuthority(db)
     version = activate(authority, ConfigurationSpec(connection=ConnectionReference(
         provider='opencode-go', credential_reference='synthetic-go', credential_revision=1,
@@ -103,7 +105,7 @@ def make_family(db, library=None, controls=None, publication_check=None, extra_c
         calls.append('settled')
 
     children = HarnessChildren(db, resolve_parent=lambda supplied: parent if supplied == binding else None,
-        journal=SyntheticJournal(db), configuration_authority=authority,
+        journal=journal_factory(db), configuration_authority=authority,
         library=library, record_consumed_in=lambda conn, run_id, **closure: calls.append(closure),
         require_publication=publication_check or (lambda supplied, conn: None),
         stop_family=controls.stop if controls else stop,
@@ -176,6 +178,137 @@ async def callback(children, binding, command, payload):
     grant = await children.authorize(request)
     assert grant is not None
     return await grant.handler(request, DomainCancellation())
+
+
+async def test_two_foreground_reports_with_null_notifications_use_the_real_journal(tmp_path):
+    import hashlib
+
+    # Actual journal/configuration authority; native jobs/publication are synthetic ports.
+    children, parent, authority, calls = make_family(Database(tmp_path / 'canonical.sqlite'),
+        journal_factory=HarnessChildrenJournal)
+    observed = []
+    for ordinal in (1, 2):
+        reservation = children.prepare(parent.binding, invocation(f'call-{ordinal}'), work())
+        binding = DomainBinding(reservation.operation_id, '1', f'ses_foreground_{ordinal}',
+            f'msg_foreground_{ordinal}', reservation.cancellation_id)
+        children.admit_input(reservation.reservation_id, binding)
+        if ordinal == 2:
+            with pytest.raises(ApiError) as collision:
+                await callback(children, binding, 'child.observe_job',
+                    {'reservation_id': reservation.reservation_id, 'job_id': 'job_foreground_1',
+                        'started_at': 1002, 'notification_id': None})
+            assert collision.value.code == 'child_job_conflict'
+        assert await callback(children, binding, 'child.observe_job',
+            {'reservation_id': reservation.reservation_id, 'job_id': f'job_foreground_{ordinal}',
+                'started_at': 1000 + ordinal, 'notification_id': None}) == {'observed': True}
+        output = f'Synthetic foreground evidence review {ordinal}.'
+        digest = hashlib.sha256(output.encode()).hexdigest()
+        report = await callback(children, binding, 'child.report',
+            {'reservation_id': reservation.reservation_id, 'notification_id': None,
+                'report_digest': digest, 'output': output})
+        assert await callback(children, parent.binding, 'child.consume_report',
+            {'report_id': report['report_id']}) == {'consumed': True}
+        assert authority.run(binding.operation_id)['state'] == 'active'
+        observed.append((reservation.reservation_id, binding, f'job_foreground_{ordinal}',
+            1000 + ordinal, digest, report['report_id']))
+
+    snapshot = children.status(parent.binding).families[0]
+    assert children.status(parent.binding).consumed == 2
+    assert snapshot.family.process_generation == parent.process_generation
+    assert len([call for call in calls if isinstance(call, dict)]) == 2
+    reopened = HarnessChildrenJournal(Database(children.db.path))
+    with reopened.db.transaction() as conn:
+        for identifier, binding, job_id, started_at, digest, report_id in observed:
+            record = reopened.child_in(conn, identifier)
+            assert (record.binding, record.job_id, record.started_at, record.report_digest, record.report_id) == (
+                binding, job_id, started_at, digest, report_id)
+            assert record.notification_id is None and record.state == 'consumed'
+            assert not record.background
+            assert 'Synthetic foreground evidence review' not in record.to_json()
+
+
+@pytest.mark.parametrize('background', [False, True])
+async def test_present_native_notification_stays_reported_until_explicit_consumption(tmp_path, background):
+    import hashlib
+
+    children, parent, _, _ = make_family(Database(tmp_path / 'canonical.sqlite'),
+        journal_factory=HarnessChildrenJournal)
+    reservation = children.prepare(parent.binding, invocation(), {**work(), 'background': background})
+    binding = DomainBinding(reservation.operation_id, '1', 'ses_notified', 'msg_notified',
+        reservation.cancellation_id)
+    children.admit_input(reservation.reservation_id, binding)
+    await callback(children, binding, 'child.observe_job',
+        {'reservation_id': reservation.reservation_id, 'job_id': 'job_notified',
+            'started_at': 1000, 'notification_id': 'notification_actual'})
+    output = 'Synthetic native notification report.'
+    report = await callback(children, binding, 'child.report',
+        {'reservation_id': reservation.reservation_id, 'notification_id': 'notification_actual',
+            'report_digest': hashlib.sha256(output.encode()).hexdigest(), 'output': output})
+    assert children.status(parent.binding).reported == 1
+    assert children.status(parent.binding).consumed == 0
+    with children.db.transaction() as conn:
+        record = children.journal.child_in(conn, reservation.reservation_id)
+        assert record.background is background and record.notification_id == 'notification_actual'
+    assert await callback(children, parent.binding, 'child.consume_report',
+        {'report_id': report['report_id']}) == {'consumed': True}
+    assert children.status(parent.binding).consumed == 1
+
+
+async def test_background_null_notification_is_rejected_without_changing_observed_job(tmp_path):
+    import hashlib
+
+    children, parent, _, _ = make_family(Database(tmp_path / 'canonical.sqlite'),
+        journal_factory=HarnessChildrenJournal)
+    reservation = children.prepare(parent.binding, invocation(), {**work(), 'background': True})
+    binding = DomainBinding(reservation.operation_id, '1', 'ses_background', 'msg_background',
+        reservation.cancellation_id)
+    children.admit_input(reservation.reservation_id, binding)
+    observation = {'reservation_id': reservation.reservation_id, 'job_id': 'job_background',
+        'started_at': 1000, 'notification_id': None}
+    with pytest.raises(ApiError) as missing:
+        await callback(children, binding, 'child.observe_job', observation)
+    assert missing.value.code == 'child_job_conflict'
+    with children.db.transaction() as conn:
+        assert children.journal.child_in(conn, reservation.reservation_id).job_id is None
+    await callback(children, binding, 'child.observe_job',
+        {**observation, 'notification_id': 'notification_background'})
+    output = 'Synthetic report that lacks its actual background notification.'
+    with pytest.raises(ApiError) as report:
+        await callback(children, binding, 'child.report',
+            {'reservation_id': reservation.reservation_id, 'notification_id': None,
+                'report_digest': hashlib.sha256(output.encode()).hexdigest(), 'output': output})
+    assert report.value.code == 'child_job_conflict'
+    with children.db.transaction() as conn:
+        record = children.journal.child_in(conn, reservation.reservation_id)
+        assert record.notification_id == 'notification_background'
+        assert record.state == 'admitted' and record.report_id is None
+
+
+async def test_null_foreground_report_requires_an_exact_observed_job(tmp_path):
+    import hashlib
+
+    children, parent, _, _ = make_family(Database(tmp_path / 'canonical.sqlite'),
+        journal_factory=HarnessChildrenJournal)
+    reservation = children.prepare(parent.binding, invocation(), work())
+    binding = DomainBinding(reservation.operation_id, '1', 'ses_unobserved', 'msg_unobserved',
+        reservation.cancellation_id)
+    children.admit_input(reservation.reservation_id, binding)
+    output = 'Synthetic report before job observation.'
+    payload = {'reservation_id': reservation.reservation_id, 'notification_id': None,
+        'report_digest': hashlib.sha256(output.encode()).hexdigest(), 'output': output}
+    with pytest.raises(ApiError) as unobserved:
+        await callback(children, binding, 'child.report', payload)
+    assert unobserved.value.code == 'child_job_conflict'
+    await callback(children, binding, 'child.observe_job',
+        {'reservation_id': reservation.reservation_id, 'job_id': 'job_unobserved',
+            'started_at': 1000, 'notification_id': None})
+    with pytest.raises(ApiError) as mismatched:
+        await callback(children, binding, 'child.report', {**payload, 'notification_id': 'notification_other'})
+    assert mismatched.value.code == 'child_job_conflict'
+    with children.db.transaction() as conn:
+        record = children.journal.child_in(conn, reservation.reservation_id)
+        assert record.job_id == 'job_unobserved' and record.notification_id is None
+        assert record.state == 'admitted' and record.report_id is None
 
 
 async def test_report_consumption_uses_actual_library_receipts_and_retains_child_policy(library):

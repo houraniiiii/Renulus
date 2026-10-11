@@ -500,6 +500,9 @@ class HarnessChildren:
                 elif record.binding != request.binding:
                     _deny('child_binding_conflict')
             parent, _ = self._check_child(conn, record)
+            if (record.background and request.command in {'child.observe_job', 'child.report'}
+                    and request.payload['notification_id'] is None):
+                _deny('child_job_conflict')
             if request.command.startswith('library.') and record.state != 'admitted':
                 _deny('child_report_closed')
         token = self._tokens.get(record.reservation_id)
@@ -521,11 +524,13 @@ class HarnessChildren:
             _deny('child_payload_invalid', 422)
         if request.command == 'child.observe_job':
             _identifier(payload['job_id'])
-            _identifier(payload['notification_id'])
+            if payload['notification_id'] is not None:
+                _identifier(payload['notification_id'])
             if type(payload['started_at']) is not int or not 0 <= payload['started_at'] <= 9007199254740991:
                 _deny('child_payload_invalid', 422)
         if request.command == 'child.report':
-            _identifier(payload['notification_id'])
+            if payload['notification_id'] is not None:
+                _identifier(payload['notification_id'])
             output, digest = payload['output'], payload['report_digest']
             if (type(output) is not str or type(digest) is not str
                     or re.fullmatch('[0-9a-f]{64}', digest) is None
@@ -614,7 +619,8 @@ class HarnessChildren:
                 for family in self.journal.families_in(conn):
                     for other in self.journal.children_in(conn, family.root_id):
                         if other.reservation_id != row.reservation_id and (
-                                other.job_id == payload['job_id'] or other.notification_id == payload['notification_id']):
+                                other.job_id == payload['job_id'] or (payload['notification_id'] is not None
+                                and other.notification_id == payload['notification_id'])):
                             _deny('child_job_conflict')
                 self.journal.put_child_in(conn, replace(row, job_id=metadata[0],
                     started_at=metadata[1], notification_id=metadata[2]))

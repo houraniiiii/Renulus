@@ -277,7 +277,7 @@ class HarnessChildrenJournal:
         if child.state in {'admitted', 'reported', 'consumed'} and child.binding is None:
             _deny('child_journal_conflict')
         if child.state in {'reported', 'consumed'} and (child.job_id is None
-                or child.started_at is None or child.notification_id is None
+                or child.started_at is None or (child.background and child.notification_id is None)
                 or child.report_id is None or child.report_digest is None):
             _deny('child_journal_conflict')
         binding = child.binding
@@ -291,7 +291,8 @@ class HarnessChildrenJournal:
         job = (child.job_id, child.started_at, child.notification_id)
         report = (child.report_id, child.report_digest)
         if any(value is not None for value in job) and (binding is None
-                or any(value is None for value in job)):
+                or child.job_id is None or child.started_at is None
+                or (child.background and child.notification_id is None)):
             _deny('child_journal_conflict')
         if any(value is not None for value in report) and (child.job_id is None
                 or any(value is None for value in report)

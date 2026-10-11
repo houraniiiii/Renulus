@@ -303,6 +303,43 @@ def test_job_and_report_receipts_bind_as_complete_immutable_tuples(journal, case
         assert journal.child_in(conn, child.reservation_id) == expected
 
 
+@pytest.mark.parametrize('notification_id', [None, 'notification-1'])
+def test_foreground_observed_job_tuple_cannot_be_rebound_or_cleared(journal, notification_id):
+    family = synthetic_family()
+    child = synthetic_child(family)
+    admitted = replace(child, state='admitted', binding=DomainBinding(
+        'child-1', '1', 'child-session', 'child-user', 'child-1'))
+    observed = replace(admitted, job_id='job-1', started_at=100, notification_id=notification_id)
+    with journal.db.transaction() as conn:
+        journal.put_family_in(conn, family)
+        for row in (child, admitted, observed):
+            journal.put_child_in(conn, row)
+        for changed in (replace(observed, job_id='job-2'), replace(observed, started_at=101),
+                replace(observed, notification_id='notification-2'), admitted):
+            with pytest.raises(ApiError) as failure:
+                journal.put_child_in(conn, changed)
+            assert failure.value.code == 'child_journal_conflict'
+            assert journal.child_in(conn, child.reservation_id) == observed
+
+
+def test_background_job_and_report_require_a_present_notification(journal):
+    family = synthetic_family()
+    child = replace(synthetic_child(family), background=True)
+    admitted = replace(child, state='admitted', binding=DomainBinding(
+        'child-1', '1', 'child-session', 'child-user', 'child-1'))
+    without_notification = replace(admitted, job_id='job-1', started_at=100)
+    with journal.db.transaction() as conn:
+        journal.put_family_in(conn, family)
+        journal.put_child_in(conn, child)
+        journal.put_child_in(conn, admitted)
+        for invalid in (without_notification, replace(without_notification, state='reported',
+                report_id='report-1', report_digest='f' * 64)):
+            with pytest.raises(ApiError) as failure:
+                journal.put_child_in(conn, invalid)
+            assert failure.value.code == 'child_journal_conflict'
+            assert journal.child_in(conn, child.reservation_id) == admitted
+
+
 @pytest.mark.parametrize('collision', ['invocation', 'session', 'input', 'job', 'notification', 'report'])
 def test_global_native_uniqueness_conflict_leaves_the_callers_transaction_usable(journal, collision):
     family = synthetic_family()
