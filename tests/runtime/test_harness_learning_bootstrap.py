@@ -39,6 +39,18 @@ class ObservedProcess(ManagedHarnessProcess):
         return reply
 
 
+class AfterAuthenticatedStartProcess(ObservedProcess):
+    """Invoke trusted local work after actual readiness, returning unchanged."""
+    def __init__(self, *args, after_start, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.after_start = after_start
+
+    async def start(self, config):
+        ready = await super().start(config)
+        self.after_start()
+        return ready
+
+
 @asynccontextmanager
 async def bootstrap_profile(tmp_path):
     isolated = await inspect_candidate(tmp_path / "candidate")
@@ -150,3 +162,36 @@ async def test_candidate_epoch_mismatch_refuses_before_live_native_readiness(tmp
         assert authority.status()["admission_open"] is False
         assert services.get("conversations").streaming.active == {}
         assert owner.process.domain_status()["active"] == 0
+
+
+async def test_epoch_change_during_authenticated_start_refuses_before_store_activation(tmp_path):
+    async with bootstrap_profile(tmp_path) as (services, owner, authority, candidate, isolated):
+        assert (await owner.process.settlement(0))["state"] == "settled"
+        observed = AfterAuthenticatedStartProcess(domain_authority=owner.authorize,
+            after_start=lambda: authority.revoke("tools"))
+        seal = owner.seal_new_runs(expected_effective=candidate.version)
+        try:
+            owner.replace_process(observed, configuration_id=candidate.version, seal=seal)
+        finally:
+            seal.release()
+        with pytest.raises(ApiError) as denied:
+            await owner.start_gated(candidate)
+        assert denied.value.code == "candidate_authority_stale"
+        assert denied.value.status == 409 and denied.value.retryable is True
+        assert authority.revocation_overlay() == {"epoch": candidate.grant_epoch + 1, "revoked": ["tools"]}
+        identity = owner.process.native_identity()
+        response = await owner.process.request("host.status", {}, "startup-epoch-refusal", "1", 5)
+        assert response["outcome"] == "committed_reference"
+        assert response["generation"] == identity.generation
+        assert response["result"]["state"] == "policy_blocked"
+        assert response["result"].get("configurationId") is None
+        assert response["result"]["activeSessionIds"] == []
+        assert (await owner.process.settlement(0))["state"] == "pending"
+        assert authority.status()["admission_open"] is False
+        assert services.get("conversations").streaming.active == {}
+        assert owner.activation.status() == {"state": "prepared", "error_code": None}
+        assert owner.process.observations == []
+        assert owner.process.domain_status()["active"] == 0
+    assert (await owner.process.settlement(0))["state"] == "settled"
+    with pytest.raises(HarnessProcessError, match="unavailable"):
+        owner.process.native_identity()
