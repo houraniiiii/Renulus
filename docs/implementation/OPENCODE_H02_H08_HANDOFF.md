@@ -409,6 +409,19 @@ Stop/finalizer, revocation/detached and restart coverage remain open, as does
 H07 acceptance. Native/transport/Owner assembly remains isolated from the
 parent H06 registry pending its separate integration gate.
 
+The exact source/prerequisite map and receipts are now in
+`G:/rh07a/HANDOFF-aebb5ef2-positive10.json` (SHA256e21e1d92...). Positive10 XML
+SHA256 is771709d5.... Its teardown proves Owner close, actual process/pipe
+settlement, Domain active0, Registry close and all HTTP transport finalizers;
+no separate process exit code or host.close outcome was retained for that run.
+The next authorized step is a test-only addition in the same isolated file:
+hold the admitted child's first actual HTTP transport close finalizer, cancel
+through the public conversation facade, and retain canonical pins until native,
+Domain and Registry ownership settles. It uses two sends and preserves dispatched
+budget, tests a cancelled settlement observer, and must produce one cancelled
+terminal without publication or replay. Owner production bytes and the passing
+positive stay frozen; first focused outcome precedes any proposed source repair.
+
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
 expectation-disposition reviews clear. H06–H08 remain open. Required unmet
