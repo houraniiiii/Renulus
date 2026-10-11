@@ -20,7 +20,7 @@ export interface TrustedGatewayPreparation {
   readonly binding: DomainBinding;
   readonly role: { readonly version: string; readonly purpose: string; readonly model_id: string;
     readonly output_tokens: number; readonly dispatch_limit: number };
-  readonly request_kind: "primary" | "tool-continuation";
+  readonly request_kind: "primary" | "child" | "tool-continuation";
   readonly continuation_of?: string;
   readonly route: SubscriptionRoute;
   readonly native_capabilities: Model.Capabilities;
@@ -91,7 +91,7 @@ function trustedPreparation(value: TrustedGatewayPreparation, binding: DomainBin
       || plan.role.output_tokens > plan.limits.output_tokens
       || plan.limits.output_tokens >= plan.limits.window_tokens || plan.limits.input_tokens > plan.limits.window_tokens
       || ![plan.bounds.max_request_bytes, plan.bounds.max_response_bytes, plan.bounds.max_frame_bytes].every(positive)
-      || !["primary", "tool-continuation"].includes(plan.request_kind)
+      || !["primary", "child", "tool-continuation"].includes(plan.request_kind)
       || (plan.request_kind === "tool-continuation" ? !identifier(plan.continuation_of) : plan.continuation_of !== undefined)
       || typeof plan.native_capabilities.tools !== "boolean"
       || !Array.isArray(plan.native_capabilities.input) || !Array.isArray(plan.native_capabilities.output)

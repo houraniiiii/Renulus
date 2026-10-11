@@ -204,6 +204,7 @@ test("prepareStateless refuses noncanonical extraction policy before manifest or
   for (const trusted of [
     extractionPlan(undefined, { role: { ...extractionPlan().role, purpose: "explain" } }),
     extractionPlan(undefined, { role: { ...extractionPlan().role, dispatch_limit: 2 } }),
+    extractionPlan(undefined, { request_kind: "child" }),
     extractionPlan(undefined, { request_kind: "tool-continuation", continuation_of: "synthetic-prior-permit" }),
     extractionPlan(undefined, { native_capabilities: { tools: true, input: ["text"], output: ["text"] } }),
     extractionPlan(undefined, { native_capabilities: { tools: false, input: ["text", "image"], output: ["text"] } }),
@@ -389,6 +390,41 @@ test("prepareStateless interruption retains acquisition and manifest finalizatio
       assert.equal(finalized, true); assert.equal(wire.frames.length, 0);
       assert.equal(registrations, phase === "manifest" ? 1 : 0);
     } finally { release(); await interrupting; await adapter.close(); }
+  }
+});
+
+test("preparePrimary accepts a trusted first child plan through one native request and its bound receipt", async () => {
+  for (const model of ["mimo-v2.6-pro", "gpt-6.1-sol"]) {
+    const wire = channel(() => result(sse(model)));
+    let selections = 0, registrations = 0;
+    const adapter = await createGatewayAdapter({ domain: wire.domain,
+      beforePrepare: () => Effect.sync(() => {
+        selections++;
+        return plan(model, { request_kind: "child", role: { ...plan(model).role, purpose: "evidence-review" } });
+      }),
+      registerManifest: (trusted, unfiltered) => Effect.sync(() => {
+        registrations++;
+        assert.equal(trusted.request_kind, "child");
+        assert.equal(trusted.continuation_of, undefined);
+        assert.equal(trusted.role.purpose, "evidence-review");
+        assert.equal(unfiltered.messages[0].content[0].text, "Synthetic post-hook dialysis");
+      }), validateImages: () => Effect.void,
+    });
+    try {
+      const primary = await Effect.runPromise(adapter.preparePrimary(binding, currentResolved()));
+      const { prepared, unfiltered } = await nativePrimary(primary.resolved, []);
+      const final = await Effect.runPromise(primary.prepare(prepared.request, prepared.options, unfiltered));
+      assert.equal((await Effect.runPromise(adapter.client.generate(final))).text, "Synthetic safe teaching");
+      assert.deepEqual(adapter.receipt(final), { dispatch_id: "synthetic-dispatch", permit_id: "synthetic-permit" });
+      await assert.rejects(Effect.runPromise(primary.prepare(prepared.request, prepared.options, unfiltered)));
+      await assert.rejects(Effect.runPromise(adapter.client.generate(final)));
+      assert.equal(selections, 1); assert.equal(registrations, 1); assert.equal(wire.frames.length, 1);
+      assert.equal(wire.frames[0].command, "model.dispatch");
+      assert.deepEqual(Object.keys(wire.frames[0].payload).sort(), ["dispatch_id", "serialized_request"]);
+      const body = JSON.parse(Buffer.from(wire.frames[0].payload.serialized_request.body_base64, "base64"));
+      assert.equal(body.model, model);
+      assert.equal(body[model.startsWith("gpt-") ? "max_output_tokens" : "max_completion_tokens"], 64);
+    } finally { await adapter.close(); }
   }
 });
 
@@ -1254,7 +1290,11 @@ test("incoherent or repeated trusted preparations fail before any domain IO", as
     { role: { ...plan().role, output_tokens: 65 } },
     { limits: { ...plan().limits, window_tokens: 32 } },
     { bounds: { ...plan().bounds, max_frame_bytes: -1 } },
-    { request_kind: "fallback" }, { request_kind: "tool-continuation" },
+    { request_kind: "fallback" }, { request_kind: "retry" }, { request_kind: "tool-continuation" },
+    { request_kind: "tool-continuation", continuation_of: "" },
+    { request_kind: "tool-continuation", continuation_of: null },
+    { request_kind: "child", continuation_of: "unexpected-child-permit" },
+    { request_kind: "child", continuation_of: null },
     { continuation_of: "unexpected-primary-permit" },
     { native_capabilities: { tools: true, input: ["text"], output: [] } },
   ];
