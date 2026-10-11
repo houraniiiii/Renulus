@@ -81,7 +81,7 @@ class DomainCallbacks:
         self.authority = authority
         self.send = send
         self.records: dict[str, bytes] = {}
-        self.tasks: set[asyncio.Task] = set()
+        self.tasks: dict[asyncio.Task, str] = {}
         self.tokens: dict[str, tuple[DomainBinding, DomainCancellation]] = {}
         self.digests: dict[str, str] = {}
         self.envelopes: dict[str, dict] = {}
@@ -89,6 +89,7 @@ class DomainCallbacks:
         self.max_inflight, self.max_records = max_inflight, max_records
         self.max_bytes, self.max_frame = max_bytes, max_frame
         self.auxiliary: asyncio.Task | None = None
+        self.auxiliary_operation: str | None = None
         self.closed = False
 
     def accept(self, frame: dict) -> None:
@@ -126,8 +127,8 @@ class DomainCallbacks:
         self.envelopes[callback_id] = self._envelope(frame)
         self.sizes[callback_id] = reservation
         task = asyncio.create_task(self._run(frame))
-        self.tasks.add(task)
-        task.add_done_callback(self.tasks.discard)
+        self.tasks[task] = binding.operation_id
+        task.add_done_callback(self.tasks.pop)
 
     def _reject(self, frame: dict, code: str) -> None:
         self._auxiliary_reply({**self._envelope(frame), "outcome": "rejected_before_admission",
@@ -146,6 +147,8 @@ class DomainCallbacks:
                 await self.send(result if isinstance(result, bytes) else _encode(result), callback_id)
             except (ConnectionError, OSError):
                 pass
+        self.auxiliary_operation = (self.envelopes[callback_id]["operation_id"]
+                                    if callback_id else result["operation_id"])
         self.auxiliary = asyncio.create_task(publish())
 
     async def _run(self, frame: dict) -> None:
@@ -256,6 +259,19 @@ class DomainCallbacks:
         result.pop("token", None)
         return result
 
-    def status(self) -> dict:
-        return {"active": len(self.tasks), "retained": len(self.digests),
-                "bytes": sum(self.sizes.values()), "accepting": not self.closed}
+    def status(self, *, operation_id: str | None = None) -> dict:
+        """Observe task ownership through publication; retained outcomes do not settle it."""
+        if operation_id is None:
+            return {"active": len(self.tasks), "retained": len(self.digests),
+                    "bytes": sum(self.sizes.values()), "accepting": not self.closed}
+        retained = {callback_id for callback_id in self.digests
+                    if self.envelopes[callback_id]["operation_id"] == operation_id}
+        active = sum(owner == operation_id and not task.done()
+                     for task, owner in self.tasks.items())
+        if (self.auxiliary and not self.auxiliary.done()
+                and self.auxiliary_operation == operation_id):
+            active += 1
+        return {"active": active,
+                "retained": len(retained),
+                "bytes": sum(self.sizes[callback_id] for callback_id in retained),
+                "accepting": not self.closed}

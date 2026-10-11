@@ -316,8 +316,13 @@ class ManagedHarnessProcess:
     def domain_result(self, callback_id: str) -> dict | None:
         return self._domains.result(callback_id) if self._domains else None
 
-    def domain_status(self) -> dict:
-        return self._domains.status() if self._domains else {"active": 0, "retained": 0}
+    def domain_status(self, *, operation_id: str | None = None) -> dict:
+        """Observe bound callback ownership separately from native settlement."""
+        if self._domains:
+            return self._domains.status(operation_id=operation_id)
+        if operation_id is None:
+            return {"active": 0, "retained": 0}
+        return {"active": 0, "retained": 0, "bytes": 0, "accepting": False}
 
     def cancel_domain(self, cancellation_id: str) -> int:
         return self._domains.cancel(cancellation_id) if self._domains else 0
