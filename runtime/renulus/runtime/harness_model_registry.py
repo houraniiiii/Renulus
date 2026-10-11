@@ -1,12 +1,13 @@
 # SPDX-License-Identifier: MIT
-"""Trusted, bounded model plans for already admitted canonical root operations.
+"""Trusted, bounded model plans for already admitted canonical operations.
 
 The owning domain pins the native input and canonical configuration run before any
 model callback. This registry allocates steps, never purposes or grants from
 model arguments. Evidence/counters are explicit local trusted injections; absent
 evidence denies. Gateway alone debits/sends, with a fresh owned HTTP transport.
-Standalone memory-extraction is text-only and owns one primary permit. No child,
-other auxiliary, retry or restart admission is provided by this module.
+Canonical evidence-review children share their foreground root budget. Standalone
+memory-extraction is text-only and owns one primary permit. No other auxiliary,
+retry or restart admission is provided by this module.
 """
 from __future__ import annotations
 
@@ -34,6 +35,7 @@ from .provider_adapter import SubscriptionRoute, subscription_route
 
 _MESSAGE = "The admitted model operation is unavailable."
 _COMMANDS = frozenset({"model.prepare", "model.manifest", "model.dispatch"})
+_FOREGROUND_PURPOSES = frozenset({"explain", "case-discuss", "case-image-discuss", "evidence-review"})
 
 
 def _deny(code):
@@ -148,6 +150,7 @@ class _Run:
     admission: ModelRunAuthority
     role: RoleBinding
     route: SubscriptionRoute
+    child: bool = False
     plans: list[_Plan] = field(default_factory=list)
     closed: bool = False
     reservation: int = 0
@@ -231,14 +234,26 @@ then calls release. Held grants stay closed after close or release.
                 or set(admission.required_capabilities) != set(canonical["effective_capabilities"])
                 or not isinstance(admission.cancellation, DomainCancellation) or not callable(admission.current)):
             _deny("model_registry_authority_unbound")
-        if (canonical["parent_id"] is not None or canonical["root_id"] != binding.operation_id
-                or canonical["purpose"] not in {"explain", "case-discuss", "case-image-discuss", "evidence-review",
-                    "memory-extraction"}):
+        child = canonical["parent_id"] is not None
+        if child:
+            if canonical["purpose"] != "evidence-review":
+                _deny("model_registry_kind_unavailable")
+            parent = self.authority.run(canonical["parent_id"])
+            if (parent["state"] != "active" or parent["parent_id"] is not None
+                    or parent["run_id"] != parent["root_id"]
+                    or parent["root_id"] != canonical["root_id"]
+                    or parent["version"] != canonical["version"]
+                    or parent["purpose"] not in _FOREGROUND_PURPOSES
+                    or not set(canonical["effective_capabilities"]).issubset(parent["effective_capabilities"])):
+                _deny("model_registry_authority_unbound")
+        elif (canonical["root_id"] != binding.operation_id
+                or canonical["purpose"] not in _FOREGROUND_PURPOSES | {"memory-extraction"}):
             _deny("model_registry_kind_unavailable")
         if canonical["purpose"] == "memory-extraction" and (
                 canonical["dispatch_limit"] != 1 or set(canonical["effective_capabilities"]) != {"text"}):
             _deny("model_registry_kind_unavailable")
-        if canonical["spent_dispatches"]:
+        spent = canonical.get("own_spent_dispatches") if child else canonical["spent_dispatches"]
+        if type(spent) is not int or spent != 0:
             _deny("model_registry_recovery_unavailable")
         spec = self.authority.configuration(canonical["version"])
         route = subscription_route(pinned["provider"], pinned["model_id"],
@@ -251,7 +266,7 @@ then calls release. Held grants stay closed after close or release.
             _deny("model_registry_authority_unbound")
         role = RoleBinding(canonical["version"], canonical["purpose"], spec.connection,
             pinned["model_id"], pinned["output_tokens"], canonical["dispatch_limit"])
-        run = _Run(admission, role, route)
+        run = _Run(admission, role, route, child=child)
         run.reservation = _size({"binding": asdict(binding), "role": {
             "version": role.version, "purpose": role.purpose, "model_id": role.model_id,
             "output_tokens": role.output_tokens, "dispatch_limit": role.dispatch_limit,
@@ -376,7 +391,7 @@ then calls release. Held grants stay closed after close or release.
                 if self.status().retained_bytes + reservation > self.bounds.max_retained_bytes:
                     _deny("model_registry_capacity")
                 previous = run.plans[-1].receipt if run.plans else None
-                plan = _Plan(uuid4().hex, "tool-continuation" if previous else "primary",
+                plan = _Plan(uuid4().hex, "tool-continuation" if previous else "child" if run.child else "primary",
                     previous.permit_id if previous else None, reservation)
                 run.plans.append(plan)
                 owned_plan = plan
