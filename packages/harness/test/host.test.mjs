@@ -41,6 +41,8 @@ test("a completed learning turn reopens with the same execution and no new infer
     host = await openHarness(options);
     const after = await host.observe(session.id);
     assert.deepEqual(after, before);
+    assert.deepEqual((await host.findSession("create-1")).sessions, [before.session]);
+    assert.deepEqual((await host.findSession("unknown-operation")).sessions, []);
     assert.equal(await model.count(), 1);
   } finally {
     await host?.close();

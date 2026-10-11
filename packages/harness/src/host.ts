@@ -168,19 +168,47 @@ export async function openHarness(options: HarnessOptions) {
     finally { admittedWrites.delete(lease); settled(); }
   };
   return {
+    async findSession(operationId: string) {
+      if (!operationId || ["closing", "closed"].includes(phase)) throw new Error("harness_closing");
+      const matched = [];
+      let cursor: NonNullable<Parameters<typeof sdk.sessions.list>[0]>["cursor"];
+      const cursors = new Set<string>();
+      for (let pageNumber = 0; pageNumber < 100; pageNumber++) {
+        const page = await run(sdk.sessions.list({ limit: 100,
+          ...(cursor ? { cursor } : { directory: AbsolutePath.make(workspace), order: "asc" as const }) }));
+        for (const session of page.data) {
+          if (session.metadata?.renulusProfile === options.profileId
+              && session.metadata?.renulusStore === options.storeId
+              && session.metadata?.operationId === operationId) {
+            matched.push(Schema.encodeSync(Session.Info)(session));
+            if (matched.length > 1) throw new Error("harness_session_identity_conflict");
+          }
+        }
+        cursor = page.cursor.next;
+        if (!cursor || page.data.length < 100) return { sessions: matched };
+        if (cursors.has(cursor)) throw new Error("harness_session_lookup_unavailable");
+        cursors.add(cursor);
+      }
+      throw new Error("harness_session_lookup_unavailable");
+    },
     binding(sessionId: string): NativeInputBinding {
       const binding = bindings.get(sessionId);
       if (!binding || !["ready", "recovering"].includes(phase)) throw new Error("native_input_not_admitted");
       return binding;
     },
     async activateStores() {
-      if (!["policy_blocked", "ready"].includes(phase)) throw new Error("harness_policy_blocked");
+      if (!["policy_blocked", "ready", "store_activation_failed"].includes(phase)) throw new Error("harness_policy_blocked");
       const prior = phase;
       phase = "store_validating";
       try {
         if (admittedWrites.size || (await run(execution.active)).size) throw new Error("store_activation_requires_quiescence");
-        return await activateStores(options);
-      } finally { if (phase === "store_validating") phase = prior; }
+        const selected = await activateStores(options);
+        if (phase === "store_validating") phase = prior === "store_activation_failed" ? "policy_blocked" : prior;
+        return selected;
+      } catch (error) {
+        if (phase === "store_validating") phase = "store_activation_failed";
+        throw error;
+      }
     },
     async activate(id: string) {
       if (!id || !options.model || !["policy_blocked", "ready"].includes(phase)) throw new Error("harness_policy_blocked");
