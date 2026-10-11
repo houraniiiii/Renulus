@@ -26,7 +26,8 @@ async def test_saved_cited_answer_uses_native_ipc_and_real_library_without_secon
         profile_root=root, profile_id='synthetic-profile', store_id='synthetic-runtime',
         domain_store_id='synthetic-domain', domain_path='state/renulus.sqlite3',
         max_inflight=1, max_domain_inflight=1)
-    owner = HarnessLearningOwner(services, config, configuration_id='synthetic-h02')
+    owner = HarnessLearningOwner(services, config, configuration_id='synthetic-h02',
+        memory=services.get('memory'), context_filtering=True)
     owner.install()
     try:
         await owner.start()
@@ -49,13 +50,17 @@ async def test_saved_cited_answer_uses_native_ipc_and_real_library_without_secon
         assert reference['dependencies'][0]['target'] == {'type': 'library_revision', 'id': source['revision_id']}
         history = await owner.bridge.messages(chat['identity']['id'])
         assert history['items'][-1]['content'] == 'Synthetic cited CKD explanation [1].'
+        resolved = await owner.resolve_completed_answer(reference)
+        assert resolved['text'] == history['items'][-1]['content']
         citation = services.get('knowledge').citation(source['revision_id'],
             passage_id=reference['citations'][0]['passage_id'])
         assert citation['document_id'] == source['document_id']
+        assert reference['citations'][0].get('locators') == citation['locators']
         assert services.db.fetch_all('SELECT * FROM learn_messages') == []
         assert len(services.db.fetch_all('SELECT * FROM learn_harness_answers')) == 1
         assert services.db.fetch_one('SELECT state FROM learn_harness_answers')['state'] == 'completed'
         assert (await owner.process.request('host.status', {}, 'verify', '1', 5))['result']['modelCalls'] == 2
     finally:
         await owner.close()
+        await services.get('memory').close()
         services.get('helpers').startup.close()

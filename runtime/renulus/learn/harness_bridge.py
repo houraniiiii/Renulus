@@ -48,7 +48,7 @@ class CompletedAnswer:
             'runtime': self.runtime.model_dump(mode='json'), 'input_id': self.input_id,
             'message_ids': list(self.message_ids), 'sha256': self.sha256,
             'citations': [{key: value for key, value in citation.items()
-                if key in {'content_ref', 'passage_id', 'document_id', 'revision_id', 'locator'}}
+                if key in {'content_ref', 'passage_id', 'document_id', 'revision_id', 'locator', 'locators'}}
                 for citation in self.citations],
             'inputs': [item.model_dump(mode='json') for item in self.inputs],
             'dependencies': [item.model_dump(mode='json') for item in self.dependencies]}
@@ -211,7 +211,7 @@ class HarnessLearningBridge:
             'inputs': [item.model_dump(mode='json') for item in inputs],
             'dependencies': [item.model_dump(mode='json') for item in dependencies],
             'citations': [{key: value for key, value in item.items()
-                if key in {'content_ref', 'passage_id', 'document_id', 'revision_id', 'locator'}}
+                if key in {'content_ref', 'passage_id', 'document_id', 'revision_id', 'locator', 'locators'}}
                 for item in json.loads(citations)]}
         with self.db.transaction() as conn:
             self.check(run_id, conn=conn)
@@ -366,13 +366,18 @@ class HarnessLearningBridge:
                     raise ApiError('harness_input_conflict', 'The admitted native input changed.', 409)
                 conn.execute("UPDATE learn_harness_answers SET state='submitted',input_id=? WHERE run_id=?", (input_id, run_id))
             seen_tools = set()
+            terminal_observed = False
             yield event('progress', {'stage': 'native-execution'})
             while True:
-                observed = await self._request('session.get', {'session_id': runtime.session_id}, run_id)
                 messages = await self._native_messages(runtime.session_id, run_id)
+                observed = await self._request('session.get', {'session_id': runtime.session_id}, run_id)
                 selected, found = [], False
                 for message in messages:
                     if message['id'] == input_id:
+                        if message['type'] != 'user' or any(message.get('metadata', {}).get(key) != value
+                                for key, value in {'operationId': run_id, 'attemptId': '1',
+                                    'configurationId': self.configuration_id}.items()):
+                            raise ApiError('harness_input_conflict', 'The delivered native input changed.', 409)
                         found = True
                         continue
                     if found and message['type'] == 'user':
@@ -387,11 +392,22 @@ class HarnessLearningBridge:
                                     seen_tools.add(key)
                                     yield event('tool', {'tool_call_id': part['id'], 'name': part['name'], 'state': part['state']['status']})
                 outcome = observed['session'].get('outcome')
-                if outcome in ('succeeded', 'failed', 'interrupted'):
-                    break
+                # A delivered input was promoted by the native drain. Only
+                # actual ownership/claim settlement can make its outcome final;
+                # timestamps and completed assistant steps are not that proof.
+                if outcome in ('succeeded', 'failed', 'interrupted') and found and observed.get('execution') == 'settled':
+                    if terminal_observed:
+                        break
+                    # The message page above may predate a terminal transition
+                    # observed just now. Read the final transcript after that
+                    # proof before constructing its immutable reference.
+                    terminal_observed = True
+                else:
+                    terminal_observed = False
                 await asyncio.sleep(self.poll_interval)
             if outcome != 'succeeded':
-                raise ApiError('harness_execution_failed', 'The native explanation did not complete.', 409, True)
+                raise ApiError('harness_execution_interrupted' if outcome == 'interrupted' else 'harness_execution_failed',
+                    'The native explanation did not complete.', 409, True)
             text = ''.join(part['text'] for message in selected for part in message.get('content', []) if part['type'] == 'text')
             if not text or not selected or not selected[-1].get('time', {}).get('completed') or selected[-1].get('error'):
                 raise ApiError('harness_answer_incomplete', 'The native completed answer is unavailable.', 409, True)
@@ -410,7 +426,12 @@ class HarnessLearningBridge:
             await self.cancel(run_id)
             raise
         except Exception as error:
-            if not isinstance(error, ApiError) or error.code != 'harness_command_uncertain':
+            if isinstance(error, ApiError) and error.code in {'harness_execution_failed', 'harness_execution_interrupted'}:
+                with self.db.transaction() as conn:
+                    self.check(run_id, conn=conn)
+                    conn.execute("UPDATE learn_harness_answers SET state=? WHERE run_id=? AND state='submitted'",
+                        ('cancelled' if error.code == 'harness_execution_interrupted' else 'failed', run_id))
+            elif not isinstance(error, ApiError) or error.code != 'harness_command_uncertain':
                 await self.cancel(run_id)
             if entry['run'].cancelled.is_set():
                 yield event('cancelled')
@@ -569,10 +590,12 @@ class HarnessLearningBridge:
             session_id = sessions[0]['id']
         runtime = HarnessEngineReference(contract_version='harness/1', profile_id=manifest.profile_id,
             store_id=manifest.runtime_store.store_id, engine=manifest.runtime_store.engine, session_id=session_id)
+        native = await self._native_messages(session_id, run_id, guard=False)
         observed = await self._request('session.get', {'session_id': session_id}, run_id, guard=False)
         if observed['session']['id'] != session_id:
             raise ApiError('harness_mapping_conflict', 'The observed native session changed.', 409)
-        native = await self._native_messages(session_id, run_id, guard=False)
+        if observed.get('execution') == 'settled':
+            native = await self._native_messages(session_id, run_id, guard=False)
         matching = [message for message in native if message['type'] == 'user' and
             message.get('metadata', {}).get('operationId') == run_id and
             message.get('metadata', {}).get('attemptId') == '1' and
@@ -607,20 +630,29 @@ class HarnessLearningBridge:
                 raise ApiError('harness_mapping_conflict', 'The native mapping changed during lookup.', 409)
             conn.execute('UPDATE learn_harness_mappings SET session_id=?,mapping_json=? WHERE thread_id=?',
                 (session_id, checked_mapping.model_dump_json(), row['thread_id']))
-            if not matching or observed['session'].get('outcome') != 'succeeded':
+            outcome = observed['session'].get('outcome')
+            if not matching or observed.get('execution') != 'settled' or outcome not in {'succeeded', 'failed', 'interrupted'}:
                 return {'state': 'not-submitted' if not matching else 'pending'}
-            if not text or not selected or any(message.get('error') or not message.get('time', {}).get('completed') for message in selected):
-                raise ApiError('harness_answer_incomplete', 'The recovered answer is not immutable and complete.', 409)
-            answer = CompletedAnswer(run_id, row['thread_id'], runtime, matching[0]['id'],
-                tuple(message['id'] for message in selected), text, hashlib.sha256(text.encode('utf-8')).hexdigest(),
-                json.dumps(snapshot['citations'], sort_keys=True), inputs, dependencies)
             run = ActiveRun(run_id, row['thread_id'], ContextScope(kind=Scope.STUDY, entity_id=row['thread_id']))
             run.policy_revision, run.context_epoch = snapshot['policy'], snapshot['epoch']
             run.project_id = project['project_id'] if project else None
             entry = {'id': row['thread_id'], 'kind': 'learning', 'saved': True, 'key': snapshot['request_id'],
                 'run': run, 'request': request, 'policy': snapshot['policy'], 'epoch': snapshot['epoch'],
                 'harness_revisions': (current[4]['revision'], snapshot['revisions'][1]), 'project': project,
-                'harness_runtime': runtime, 'harness_answer': answer, 'receipt': receipt}
+                'harness_runtime': runtime, 'receipt': receipt}
+            if outcome != 'succeeded':
+                error = {'code': 'harness_execution_interrupted' if outcome == 'interrupted' else 'harness_execution_failed',
+                    'message': 'The native explanation did not complete.', 'retryable': True}
+                conn.execute("UPDATE learn_harness_answers SET state=?,input_id=? WHERE run_id=?",
+                    ('cancelled' if outcome == 'interrupted' else 'failed', matching[0]['id'], run_id))
+                self.repo.streaming._finish(conn, entry, 'error', error)
+                return {'state': 'error', 'error': error}
+            if not text or not selected or any(message.get('error') or not message.get('time', {}).get('completed') for message in selected):
+                raise ApiError('harness_answer_incomplete', 'The recovered answer is not immutable and complete.', 409)
+            answer = CompletedAnswer(run_id, row['thread_id'], runtime, matching[0]['id'],
+                tuple(message['id'] for message in selected), text, hashlib.sha256(text.encode('utf-8')).hexdigest(),
+                json.dumps(snapshot['citations'], sort_keys=True), inputs, dependencies)
+            entry['harness_answer'] = answer
             self.repo.streaming.active[run_id] = entry
             self._consumed[run_id] = (inputs, dependencies, json.dumps(snapshot['citations']))
             try:

@@ -286,6 +286,12 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
                 services.db.apply_migration(f"{name}-{migration.stem}", migration.read_text(encoding="utf-8"))
         module = importlib.import_module(f"renulus.{name}.api")
         router = module.create_router(services)
+        if name == "knowledge":
+            # Retained support is reconciled when Memory opens, so its local
+            # source resolver must exist before that module is constructed.
+            from .runtime.harness_library import HarnessLibrary
+            library = services.registry.setdefault("harness_library", HarnessLibrary(services.get("knowledge")))
+            services.registry.setdefault("memory_dependency_resolvers", {})["library_revision"] = library
         app.include_router(router, prefix="/api/v1")
         services.capabilities[name] = {"status": "installed"}
     # Separate feature routers preserve the existing module/legacy APIs. Their

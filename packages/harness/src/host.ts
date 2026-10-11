@@ -1,9 +1,11 @@
 import path from "node:path";
+import { createHash } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { Cause, Context, Effect, Layer, Logger, ManagedRuntime, Schema, Stream } from "effect";
-import { AIError, InvalidRequestError, LLMClient, type LLMClientShape } from "@opencode/ai";
+import { AIError, InvalidRequestError, LLMClient, LLMRequest, type LLMClientShape, type Message } from "@opencode/ai";
 import { OpenCode, AbsolutePath, Location, Session, Agent } from "@opencode/sdk/effect";
 import { Config } from "@opencode/core/config";
+import { Agent as NativeAgent } from "@opencode/core/agent";
 import { InstructionDiscovery } from "@opencode/core/instruction-discovery";
 import { llmClient } from "@opencode/core/effect/app-node-platform";
 import { SessionRestart } from "@opencode/core/session/execution/restart";
@@ -11,6 +13,10 @@ import { SessionExecution } from "@opencode/core/session/execution";
 import { SessionStore } from "@opencode/core/session/store";
 import { Job } from "@opencode/core/job";
 import { SessionModelRequest } from "@opencode/core/session/model-request";
+import { Instance } from "@opencode/core/instance";
+import { Plugin } from "@opencode/core/plugin";
+import { Tool } from "@opencode/core/tool";
+import { Npm } from "@opencode/util/npm";
 import { Global } from "@opencode/util/global";
 import { SessionMessage } from "@opencode/schema/session-message";
 import { acquireStore } from "./ownership.ts";
@@ -29,6 +35,7 @@ export interface HarnessOptions extends ProfileSelection {
   readonly model?: ModelAdapter;
   readonly library?: LibraryToolBridge;
   readonly admitInput?: (binding: NativeInputBinding) => Promise<void>;
+  readonly selectContext?: (binding: NativeInputBinding, messages: readonly Message[]) => Promise<readonly Message[]>;
 }
 
 export interface NativeInputBinding {
@@ -54,6 +61,7 @@ export async function openHarness(options: HarnessOptions) {
   let store!: SessionStore.Interface;
   let execution!: SessionExecution.Interface;
   let jobs!: Job.Interface;
+  let instances!: Instance.Interface;
   const held = new Set<string>();
   const bindings = new Map<string, NativeInputBinding>();
   let recoveryStarted = false;
@@ -73,8 +81,11 @@ export async function openHarness(options: HarnessOptions) {
       ? options.model.client.generate(request, settings) : Effect.fail(denied())),
     compact: () => Effect.fail(denied()),
   };
+  const modelConfiguration = options.model?.configuration as { model?: string; providers?: object } | undefined;
   const config = JSON.stringify({
-    ...(options.model?.configuration ?? {}),
+    model: modelConfiguration?.model,
+    providers: modelConfiguration?.providers,
+    mcp: { servers: {} },
     compaction: { auto: false },
     agents: {
       renulus: { mode: "primary", system: "Support nephrology education. Use the supplied learning request.", permissions: [
@@ -91,13 +102,27 @@ export async function openHarness(options: HarnessOptions) {
     Config.node.replace(Config.configured({ project: false, global: false, content: config })),
     InstructionDiscovery.node.replace(InstructionDiscovery.configured({ project: false, global: false })),
     llmClient.replace(Layer.succeed(LLMClient.Service, client)),
+    // The reviewed cohort is already bundled. Candidate and admitted hosts
+    // cannot acquire or update executable packages at runtime.
+    Npm.node.replace(Layer.succeed(Npm.Service, {
+      add: () => Effect.die(new Error("harness_package_acquisition_closed")),
+      update: () => Effect.die(new Error("harness_package_acquisition_closed")),
+      resolve: () => Effect.die(new Error("harness_package_acquisition_closed")),
+      check: () => Effect.succeed(false),
+      which: () => Effect.succeed(undefined),
+    })),
     SessionStore.node.replace(SessionStore.node.mapLayer(original => Layer.flatMap(original, context => {
       store = Context.get(context, SessionStore.Service);
       return Layer.succeed(SessionStore.Service, store);
     }))),
     SessionExecution.node.replace(SessionExecution.node.mapLayer(original => Layer.flatMap(original, context => {
       execution = Context.get(context, SessionExecution.Service);
-      return Layer.succeed(SessionExecution.Service, execution);
+      return Layer.effect(SessionExecution.Service, Effect.context<never>().pipe(Effect.map(ambient => {
+        // The pinned SessionExecution node declares Instance in its dependency
+        // graph. mapLayer deliberately erases that graph to generic R.
+        instances = Context.getUnsafe(ambient, Instance.Service);
+        return execution;
+      })));
     }))),
     Job.node.replace(Job.node.mapLayer(original => Layer.flatMap(original, context => {
       jobs = Context.get(context, Job.Service);
@@ -107,10 +132,17 @@ export async function openHarness(options: HarnessOptions) {
       const service = Context.get(context, SessionModelRequest.Service);
       return Layer.succeed(SessionModelRequest.Service, {
         ...service,
-        primary: input => service.primary(input).pipe(Effect.map(prepared => {
-          if (phase === "recovering" || (phase === "ready" && !held.has(input.session.id))) admissions.add(prepared.request);
-          return { ...prepared, retry: event => Effect.sync(() => { event.decision = { retry: false }; }) };
-        })),
+        primary: input => service.primary(input).pipe(Effect.flatMap(prepared => Effect.promise(async () => {
+          let request = prepared.request;
+          if (options.selectContext) {
+            const binding = bindings.get(input.session.id);
+            if (!binding) throw new Error("harness_context_unbound");
+            const messages = await options.selectContext(binding, request.messages);
+            request = LLMRequest.update(request, { messages });
+          }
+          if (phase === "recovering" || (phase === "ready" && !held.has(input.session.id))) admissions.add(request);
+          return { ...prepared, request, retry: event => Effect.sync(() => { event.decision = { retry: false }; }) };
+        }))),
       });
     }))),
     SessionRestart.node.replace(SessionRestart.node.mapLayer(original => Layer.flatMap(original, context => {
@@ -168,6 +200,50 @@ export async function openHarness(options: HarnessOptions) {
     finally { admittedWrites.delete(lease); settled(); }
   };
   return {
+    async inspect() {
+      if (phase !== "policy_blocked" || selection.state !== "prepared" || admittedWrites.size) {
+        throw new Error("harness_candidate_inspection_blocked");
+      }
+      phase = "candidate_inspecting";
+      let settled!: () => void;
+      const lease = new Promise<void>(resolve => { settled = resolve; });
+      admittedWrites.add(lease);
+      let probe: Session.Info | undefined;
+      try {
+        if ((await run(execution.active)).size || held.size) throw new Error("harness_candidate_not_quiescent");
+        probe = await run(sdk.sessions.create({ title: "Renulus candidate registry probe",
+          agent: Agent.ID.make("renulus"), location: Location.Ref.make({ directory: AbsolutePath.make(workspace) }) }));
+        const session = probe;
+        const definitions = await run(Effect.gen(function* () {
+            yield* Plugin.awaitActivation;
+            const plugins = yield* Plugin.Service;
+            if ((yield* plugins.list()).some(plugin => plugin.state.status === "failed")) {
+              throw new Error("harness_candidate_plugin_failed");
+            }
+            const agents = yield* NativeAgent.Service;
+            const agent = yield* agents.get(Agent.ID.make("renulus"));
+            if (!agent) throw new Error("harness_candidate_agent_missing");
+            const tools = yield* Tool.Service;
+            return (yield* tools.snapshot(agent.permissions)).definitions;
+        }).pipe(instances.provide(session)));
+        const registry = definitions.map(tool => ({ ...tool }))
+          .sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
+        const canonical = (value: unknown): unknown => Array.isArray(value) ? value.map(canonical)
+          : value !== null && typeof value === "object" ? Object.fromEntries(Object.entries(value)
+            .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
+            .map(([key, item]) => [key, canonical(item)])) : value;
+        return { state: "policy_blocked", generation_open: false, recovery_open: false,
+          package_acquisition_open: false, mcp_startup_open: false, live_store_writer: false, registry,
+          registry_hash: createHash("sha256").update(JSON.stringify(canonical(registry))).digest("hex") };
+      } finally {
+        try { if (probe) await run(sdk.sessions.remove({ sessionID: probe.id })); }
+        finally {
+          if (phase === "candidate_inspecting") phase = "policy_blocked";
+          admittedWrites.delete(lease);
+          settled();
+        }
+      }
+    },
     async findSession(operationId: string) {
       if (!operationId || ["closing", "closed"].includes(phase)) throw new Error("harness_closing");
       const matched = [];
@@ -291,10 +367,16 @@ export async function openHarness(options: HarnessOptions) {
         throw new Error("invalid_observation_page");
       }
       const id = Session.ID.make(sessionId);
+      const state = async () => await run(execution.isActive(id)) ? "active" as const
+        : held.has(sessionId) || (await run(store.listSuspended())).includes(id) ? "held" as const : "settled" as const;
+      const before = await state();
       const session = await run(sdk.sessions.get({ sessionID: id }));
       const messages = await run(sdk.message.list({ sessionID: id, limit,
         ...(input.cursor === undefined ? { order: input.order ?? "asc" } : { cursor: input.cursor }) }));
-      return { session: Schema.encodeSync(Session.Info)(session),
+      const after = await state();
+      const executionState = before === "active" || after === "active" ? "active"
+        : before === "held" || after === "held" ? "held" : "settled";
+      return { session: Schema.encodeSync(Session.Info)(session), execution: executionState,
         messages: messages.data.map(message => Schema.encodeSync(SessionMessage.Info)(message)), cursor: messages.cursor };
     },
     async close(input: { timeoutMs?: number } = {}) {

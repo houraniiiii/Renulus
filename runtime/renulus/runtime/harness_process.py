@@ -18,7 +18,7 @@ from renulus.harness_contracts import HarnessCommandIdentity, validate_command_o
 
 PROTOCOL = "renulus-harness/1"
 CONTROLS = frozenset({"host.status", "session.cancel", "host.close"})
-COMMANDS = CONTROLS | {"host.activate", "host.stores.activate", "host.recover", "session.create", "session.prompt",
+COMMANDS = CONTROLS | {"host.inspect", "host.activate", "host.stores.activate", "host.recover", "session.create", "session.prompt",
                        "session.get", "session.messages", "session.find"}
 
 

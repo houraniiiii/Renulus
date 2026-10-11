@@ -9,6 +9,7 @@ from pydantic import TypeAdapter
 from renulus.contracts import ApiError, Scope
 from renulus.design_c_contracts import ContentReference, Identifier, Locator
 from renulus.harness_contracts import HarnessEngineReference, SavedConversationMapping
+from renulus.knowledge.provenance import valid_source_provenance
 
 MAX_ANSWER_CHARS = 16000
 
@@ -39,7 +40,7 @@ def _native_reference_in(conn, evidence, reference, scope, *, publication):
         runtime = HarnessEngineReference.model_validate(reference['runtime'])
         AnswerInputs(inputs=reference['inputs'], dependencies=reference['dependencies'])
         for citation in reference['citations']:
-            if not isinstance(citation, dict) or set(citation) - {'content_ref', 'passage_id', 'document_id', 'revision_id', 'locator'}:
+            if not isinstance(citation, dict) or set(citation) - {'content_ref', 'passage_id', 'document_id', 'revision_id', 'locator', 'locators'}:
                 raise ValueError()
             for key in ('passage_id', 'document_id', 'revision_id'):
                 if key in citation:
@@ -48,6 +49,8 @@ def _native_reference_in(conn, evidence, reference, scope, *, publication):
                 ContentReference.model_validate(citation['content_ref'])
             if 'locator' in citation:
                 TypeAdapter(Locator).validate_python(citation['locator'])
+            if 'locators' in citation and not valid_source_provenance(citation['locators']):
+                raise ValueError()
     except (ValueError, TypeError, KeyError):
         raise ApiError('memory_answer_reference', 'Capture needs an exact bounded native answer reference', 409) from None
     if not conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='learn_harness_answers'").fetchone():

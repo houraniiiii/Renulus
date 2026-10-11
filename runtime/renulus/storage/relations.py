@@ -30,6 +30,8 @@ def link(parent, *columns):
 PARENTS = {
     "learn_messages": (own("learn_threads", "thread_id"),),
     "learn_runs": (own("learn_threads", "thread_id"),),
+    "learn_harness_mappings": (own("learn_threads", "thread_id"),),
+    "learn_harness_answers": (own("learn_runs", "run_id"), own("learn_threads", "thread_id")),
     "learn_conversations": (own("learn_threads", "thread_id"),),
     "case_conversations": (own("case_sessions", "case_id"),),
     "case_attachments": (own("case_sessions", "case_id"),),
@@ -49,6 +51,11 @@ PARENTS = {
     "memory_sources": (own("memory_facts", "record_id"),
         Binding("learning_evidence", ("source_key",), "link", prefix="evidence:")),
     "memory_jobs": (own("learning_evidence", "evidence_id"),),
+    # Answer lineage survives ordinary chat/evidence removal. Explicit
+    # delete-related-learning revokes semantic support through MemoryService.
+    "memory_answer_lineage": (),
+    "memory_support_groups": (own("memory_facts", "record_id"),),
+    "memory_support_inputs": (own("memory_support_groups", "group_id"),),
     "assessment_items": (own("assessment_sessions", "session_id"),),
     "assessment_attempts": (own("assessment_sessions", "session_id"), own("assessment_items", "item_id")),
     "assessment_exposure": (own("assessment_items", "item_id"),),

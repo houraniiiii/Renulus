@@ -153,6 +153,9 @@ export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainCl
       switch (request.command) {
         case "host.status":
           result = closing ? { state: "blocked", outcome: "uncertain_after_disconnect" } : await host.status(); break;
+        case "host.inspect":
+          if (Object.keys(request.payload).length) throw new Error("invalid_payload");
+          result = await host.inspect(); break;
         case "host.activate":
           await host.activate(text(request.payload, "configuration_id"));
           result = await host.status(); break;
@@ -178,8 +181,10 @@ export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainCl
             sessionId: text(request.payload, "session_id"), operationId: request.operation_id,
             attemptId: request.attempt_id, text: text(request.payload, "text"),
           }); break;
-        case "session.get":
-          result = { session: (await host.observe(text(request.payload, "session_id"))).session }; break;
+        case "session.get": {
+          const observed = await host.observe(text(request.payload, "session_id"));
+          result = { session: observed.session, execution: observed.execution }; break;
+        }
         case "session.messages": {
           const observed = await host.observe(text(request.payload, "session_id"), page(request.payload));
           result = { messages: observed.messages, cursor: observed.cursor }; break;
