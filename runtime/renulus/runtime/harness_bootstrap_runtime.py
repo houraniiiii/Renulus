@@ -204,9 +204,11 @@ class ManagedBootstrapRuntime:
         except Exception as error:
             _safe(error)
         if isinstance(registry, HarnessModelRegistry):
-            # Owner's constructor can reject the factory product before returning.
-            # Services already retains this callback, including that failure path.
+            # Retain before validation: this adapter or Owner can reject the
+            # factory product before adoption. Services owns that failure path.
             self._partial_registry = registry
+            if registry.manager is not self._provider:
+                raise ApiError("harness_bootstrap_conflict", _MESSAGE, 409)
         return registry
 
     async def close(self) -> None:

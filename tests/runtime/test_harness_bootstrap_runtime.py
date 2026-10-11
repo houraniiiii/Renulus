@@ -119,6 +119,21 @@ def test_rejected_registry_factory_product_is_retained_and_drained(tmp_path):
         "candidate_created": False, "registry_settlement": "settled", "drain": "settled"}
 
 
+def test_registry_factory_with_second_provider_is_rejected_before_adoption_and_drained(tmp_path):
+    result = run_owned("partial-provider", tmp_path / "profile")
+    assert result == {"code": "harness_bootstrap_conflict", "status": 409, "retryable": False,
+        "safe_diagnostic": True, "installed": False, "candidate_created": False,
+        "same_paths": True, "same_authority": True, "original_provider_retained": True,
+        "factory_calls": 1, "registry_settlement": "settled", "drain": "settled"}
+
+
+def test_registry_factory_with_captured_provider_is_adopted_and_drained(tmp_path):
+    result = run_owned("canonical-registry", tmp_path / "profile")
+    assert result == {"code": None, "installed": True, "candidate_created": True,
+        "captured_provider": True, "adopted_registry": True, "factory_calls": 1,
+        "registry_settlement": "settled", "drain": "settled"}
+
+
 @pytest.mark.parametrize("field,code", [("unpersisted", "configuration_missing"),
     ("policy", "candidate_authority_stale"), ("epoch", "candidate_authority_stale"),
     ("generation-open", "candidate_authority_stale")])
@@ -246,21 +261,26 @@ async def sdk_case(root, services, authority, store, frozen, lease, config):
         await runtime.close()
 
 
-async def partial_registry_case(root, services, authority, store, frozen, spec, lease, config):
+async def partial_registry_case(root, services, authority, store, frozen, spec, lease, config,
+                                *, factory_kind="authority"):
     from renulus.runtime.harness_bootstrap_runtime import ManagedBootstrapRuntime
     from renulus.runtime.harness_configuration import Candidate, ConfigurationAuthority
     from renulus.runtime.harness_gateway import GatewayBounds
     from renulus.runtime.harness_model_registry import HarnessModelRegistry, ModelRegistryBounds
+    from renulus.runtime.manager import ProviderManager
     from renulus.storage import Database
     import httpx
 
     products = []
-    foreign = ConfigurationAuthority(Database(root.parent / "foreign-registry.sqlite3"))
+    provider = services.get("provider")
+    registry_provider = ProviderManager(services.paths) if factory_kind == "provider" else provider
+    registry_authority = (authority if factory_kind != "authority" else
+        ConfigurationAuthority(Database(root.parent / "foreign-registry.sqlite3")))
 
     def factory(resolve):
         def no_http(request):
             raise AssertionError("No request is admitted by this synthetic registry")
-        registry = HarnessModelRegistry(services.get("provider"), foreign, resolve_run=resolve,
+        registry = HarnessModelRegistry(registry_provider, registry_authority, resolve_run=resolve,
             evidence=lambda route: None, http_transport=lambda route: httpx.MockTransport(no_http),
             gateway_bounds=GatewayBounds(max_request_bytes=65536, max_response_bytes=65536, timeout_seconds=2),
             bounds=ModelRegistryBounds(max_runs=1, max_plans_per_run=1, max_owned=1,
@@ -272,15 +292,29 @@ async def partial_registry_case(root, services, authority, store, frozen, spec, 
         config=config, launch_store=store, candidate_root=root.parent / "candidates", attempt_timeout=10,
         model_registry_factory=factory)
     version = authority.stage(spec)
+    diagnostic = {}
     try:
         await runtime.inspect_candidate(Candidate(version, spec, 0))
         code = None
     except Exception as error:
         code = getattr(error, "code", type(error).__name__)
+        diagnostic = {"status": getattr(error, "status", None),
+            "retryable": getattr(error, "retryable", None),
+            "safe_diagnostic": getattr(error, "message", None) ==
+                "The managed bootstrap runtime is unavailable."}
     await runtime.close()
-    return {"code": code, "installed": "harness_learning" in services.registry,
+    result = {"code": code, "installed": "harness_learning" in services.registry,
         "candidate_created": (root.parent / "candidates").exists(),
         "registry_settlement": products[0].status().state, "drain": services.shutdown_status()["state"]}
+    if factory_kind == "provider":
+        result.update(diagnostic, same_paths=products[0].manager.paths is services.paths,
+            same_authority=products[0].authority is authority,
+            original_provider_retained=services.get("provider") is provider, factory_calls=len(products))
+    elif factory_kind == "canonical":
+        result.update(captured_provider=products[0].manager is provider,
+            adopted_registry=services.get("harness_learning").model_registry is products[0],
+            factory_calls=len(products))
+    return result
 
 
 async def candidate_case(case, root, services, authority, store, frozen, spec, lease, config):
@@ -394,6 +428,12 @@ async def scenario(case, root):
             return await sdk_case(root, services, authority, store, frozen, lease, config)
         if case == "partial-registry":
             return await partial_registry_case(root, services, authority, store, frozen, spec, lease, config)
+        if case == "partial-provider":
+            return await partial_registry_case(root, services, authority, store, frozen, spec, lease, config,
+                factory_kind="provider")
+        if case == "canonical-registry":
+            return await partial_registry_case(root, services, authority, store, frozen, spec, lease, config,
+                factory_kind="canonical")
         if case.startswith("candidate-"):
             return await candidate_case(case, root, services, authority, store, frozen, spec, lease, config)
         if case == "factory-error":
