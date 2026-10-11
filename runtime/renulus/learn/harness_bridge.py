@@ -23,6 +23,7 @@ from renulus.storage import utc_now
 from renulus.storage.assessment_policy import require_assistance
 from renulus.storage.invalidation import context_epoch_in
 from .service import ActiveRun
+from .conversation_models import Send
 
 
 @dataclass(frozen=True)
@@ -62,6 +63,7 @@ class HarnessLearningBridge:
         self.check_dependencies_in = check_dependencies_in
         self.poll_interval = poll_interval
         self._consumed = {}
+        self._reconciling = {}
 
     def _manifest(self):
         try:
@@ -140,6 +142,41 @@ class HarnessLearningBridge:
         self._consumed[run_id] = (unique_inputs, tuple(merged.values()),
             json.dumps(refs, sort_keys=True, ensure_ascii=False, allow_nan=False))
         self.check(run_id)
+        self._checkpoint(self.repo.streaming.active[run_id])
+
+    def _checkpoint(self, entry):
+        """Reference-only admission and trusted closure survive lost IPC replies."""
+        run_id = entry['run'].id
+        inputs, dependencies, citations = self._consumed.get(run_id, ((), (), '[]'))
+        snapshot = {'version': 1, 'kind': 'pending', 'configuration_id': self.configuration_id,
+            'policy': entry['policy'], 'epoch': entry['epoch'],
+            'revisions': list(entry['harness_revisions']), 'request_id': entry['key'],
+            'request_fields': entry['request'].model_dump(mode='json', exclude={'text'}),
+            'request_digest': canonical_digest(entry['request'].model_dump(mode='json')),
+            'input_sha256': hashlib.sha256(entry['request'].text.encode('utf-8')).hexdigest(),
+            'project_digest': canonical_digest(entry.get('project')),
+            'inputs': [item.model_dump(mode='json') for item in inputs],
+            'dependencies': [item.model_dump(mode='json') for item in dependencies],
+            'citations': [{key: value for key, value in item.items()
+                if key in {'content_ref', 'passage_id', 'document_id', 'revision_id', 'locator'}}
+                for item in json.loads(citations)]}
+        with self.db.transaction() as conn:
+            self.check(run_id, conn=conn)
+            conn.execute("UPDATE learn_harness_answers SET reference_json=? WHERE run_id=? AND state!='completed'",
+                (json.dumps(snapshot, sort_keys=True, ensure_ascii=False, allow_nan=False), run_id))
+
+    def bind_input(self, run_id, *, session_id, input_id, attempt_id='1'):
+        """Parent-only native admission callback; no transport inside this write."""
+        entry = self.repo.streaming.active.get(run_id)
+        if entry is None or attempt_id != '1' or entry.get('harness_runtime') is None or (
+                entry['harness_runtime'].session_id != session_id):
+            raise ApiError('harness_input_conflict', 'The native input belongs to different work.', 409)
+        with self.db.transaction() as conn:
+            self.check(run_id, conn=conn)
+            row = conn.execute('SELECT input_id,state FROM learn_harness_answers WHERE run_id=?', (run_id,)).fetchone()
+            if row['state'] != 'uncertain' or row['input_id'] not in (None, input_id):
+                raise ApiError('harness_input_conflict', 'The admitted native input changed.', 409)
+            conn.execute('UPDATE learn_harness_answers SET input_id=? WHERE run_id=?', (input_id, run_id))
 
     def mapping(self, identifier):
         with self.db.transaction() as conn:
@@ -223,6 +260,8 @@ class HarnessLearningBridge:
             result = await self._request('session.messages', payload, run_id, guard=guard)
             messages.extend(result['messages'])
             cursor = result.get('cursor')
+            if isinstance(cursor, dict):
+                cursor = cursor.get('next')
             if not cursor:
                 return messages
             if cursor in cursors or len(messages) >= 10000:
@@ -238,6 +277,7 @@ class HarnessLearningBridge:
             return Event(run_id=run_id, sequence=sequence, type=kind, payload=payload or {})
         try:
             self.check(run_id)
+            self._checkpoint(entry)
             yield event('started', {'thread_id': entry['id'], 'scope': 'study'})
             runtime = await self._session(entry)
             entry['harness_runtime'] = runtime
@@ -257,6 +297,9 @@ class HarnessLearningBridge:
             input_id = result['inputId']
             with self.db.transaction() as conn:
                 self.check(run_id, conn=conn)
+                pinned = conn.execute('SELECT input_id FROM learn_harness_answers WHERE run_id=?', (run_id,)).fetchone()[0]
+                if pinned not in (None, input_id):
+                    raise ApiError('harness_input_conflict', 'The admitted native input changed.', 409)
                 conn.execute("UPDATE learn_harness_answers SET state='submitted',input_id=? WHERE run_id=?", (input_id, run_id))
             seen_tools = set()
             yield event('progress', {'stage': 'native-execution'})
@@ -303,7 +346,8 @@ class HarnessLearningBridge:
             await self.cancel(run_id)
             raise
         except Exception as error:
-            await self.cancel(run_id)
+            if not isinstance(error, ApiError) or error.code != 'harness_command_uncertain':
+                await self.cancel(run_id)
             if entry['run'].cancelled.is_set():
                 yield event('cancelled')
             else:
@@ -326,6 +370,14 @@ class HarnessLearningBridge:
             return json.loads(row['reference_json'])
         if row['state'] != 'submitted' or row['input_id'] != answer.input_id:
             raise ApiError('harness_answer_conflict', 'The completed input does not match its admitted receipt.', 409)
+        mapping = conn.execute('SELECT mapping_json FROM learn_harness_mappings WHERE thread_id=?', (answer.thread_id,)).fetchone()
+        summary, _ = self.repo._get(conn, 'learning', answer.thread_id)
+        expected = map_saved_conversation(Conversation.model_validate(summary), answer.runtime, manifest=self._manifest())
+        if mapping is None or mapping['mapping_json'] is None or SavedConversationMapping.model_validate_json(mapping['mapping_json']) != expected:
+            raise ApiError('harness_answer_conflict', 'The completed answer belongs to another runtime.', 409)
+        # Lineage sees the proved immutable native references in this same write.
+        # Any callback failure rolls this staging and its local effects back.
+        conn.execute('UPDATE learn_harness_answers SET reference_json=? WHERE run_id=?', (reference, answer.run_id))
         publication = self.publish_answer_in(conn, answer, entry) if self.publish_answer_in else canonical_digest(answer.reference())
         conn.execute("UPDATE learn_harness_answers SET state='completed',reference_json=?,publication_digest=? WHERE run_id=?",
             (reference, publication, answer.run_id))
@@ -377,7 +429,151 @@ class HarnessLearningBridge:
             raise ApiError('harness_answer_conflict', 'The immutable completed answer changed.', 409)
         return text
 
+    def _recovery_state(self, conn, run_id):
+        row = conn.execute('SELECT * FROM learn_harness_answers WHERE run_id=?', (run_id,)).fetchone()
+        if row is None or row['state'] in ('completed', 'cancelled', 'failed'):
+            return None
+        run = conn.execute('SELECT state FROM learn_runs WHERE id=?', (run_id,)).fetchone()
+        if run is None or run['state'] == 'cancelled':
+            return None
+        snapshot = json.loads(row['reference_json'] or '{}')
+        if snapshot.get('kind') != 'pending' or snapshot.get('version') != 1:
+            raise ApiError('harness_reconciliation_unavailable', 'This operation lacks trusted recovery references.', 409)
+        command = conn.execute("SELECT * FROM conversation_commands WHERE operation='send' AND target_type='learn_thread' "
+            "AND target_id=? AND json_extract(result_json,'$.run_id')=?", (row['thread_id'], run_id)).fetchone()
+        if command is None:
+            raise ApiError('harness_reconciliation_unavailable', 'The admitted command is unavailable.', 409)
+        receipt = json.loads(command['result_json'])
+        if receipt['state'] == 'cancelled' or command['idempotency_key'] != snapshot['request_id']:
+            raise ApiError('harness_reconciliation_conflict', 'The admitted receipt changed.', 409)
+        require_assistance(conn, expected_revision=snapshot['policy'])
+        summary, metadata = self.repo._get(conn, 'learning', row['thread_id'])
+        if (context_epoch_in(conn) != snapshot['epoch'] or summary['lifecycle'] != 'active' or
+                metadata['draft_revision'] != snapshot['revisions'][1] or
+                summary['revision'] != receipt['conversation']['revision'] or
+                summary['revision'] not in (snapshot['revisions'][0], snapshot['revisions'][0] + 1)):
+            raise ApiError('harness_reconciliation_stale', 'The original learning admission is no longer current.', 409)
+        projects = self.repo.services.registry.get('projects')
+        project = projects.context_in(conn, 'learning', row['thread_id']) if projects else None
+        if canonical_digest(project) != snapshot['project_digest'] or row['request_digest'] != snapshot['request_digest']:
+            raise ApiError('harness_reconciliation_stale', 'The original learning admission changed.', 409)
+        inputs = tuple(EligibleInput.model_validate(item) for item in snapshot['inputs'])
+        dependencies = tuple(Dependency.model_validate(item) for item in snapshot['dependencies'])
+        if inputs or dependencies:
+            if self.check_dependencies_in is None:
+                raise ApiError('harness_dependencies_unavailable', 'Learning dependencies need local validation.', 409)
+            self.check_dependencies_in(conn, inputs=inputs, dependencies=dependencies)
+        return dict(row), snapshot, dict(command), receipt, summary, project, inputs, dependencies
+
+    async def reconcile_pending(self, identifier):
+        with self.db.transaction() as conn:
+            require_assistance(conn)
+            self.repo._get(conn, 'learning', identifier)
+            run_ids = [row['run_id'] for row in conn.execute(
+                "SELECT run_id FROM learn_harness_answers WHERE thread_id=? AND state IN ('reserved','uncertain','submitted')", (identifier,))]
+        for run_id in run_ids:
+            if run_id in self.repo.streaming.active:
+                continue
+            task = self._reconciling.get(run_id)
+            if task is None:
+                task = asyncio.create_task(self.reconcile(run_id))
+                self._reconciling[run_id] = task
+                task.add_done_callback(lambda completed, key=run_id: self._reconciling.pop(key, None))
+            await asyncio.shield(task)
+
+    async def reconcile(self, run_id):
+        """Observe an existing native effect. No create, prompt or recovery command."""
+        with self.db.transaction() as conn:
+            state = self._recovery_state(conn, run_id)
+            if state is None or run_id in self.repo.streaming.active:
+                return {'state': 'unchanged'}
+            row, snapshot, command, receipt, summary, project, inputs, dependencies = state
+            mapping_row = conn.execute('SELECT * FROM learn_harness_mappings WHERE thread_id=?', (row['thread_id'],)).fetchone()
+            if mapping_row is None:
+                raise ApiError('harness_mapping_uncertain', 'The reserved native mapping is unavailable.', 409)
+            manifest = self._manifest()
+            if (mapping_row['profile_id'], mapping_row['store_id']) != (manifest.profile_id, manifest.runtime_store.store_id):
+                raise ApiError('harness_mapping_conflict', 'The native store selection changed.', 409)
+            session_id = mapping_row['session_id']
+        if session_id is None:
+            result = await self._request('session.find', {}, run_id, guard=False)
+            sessions = result['sessions']
+            if not sessions:
+                return {'state': 'not-found'}
+            metadata = sessions[0].get('metadata', {})
+            if len(sessions) != 1 or any(metadata.get(key) != value for key, value in {
+                    'renulusProfile': manifest.profile_id, 'renulusStore': manifest.runtime_store.store_id,
+                    'operationId': run_id}.items()):
+                raise ApiError('harness_mapping_conflict', 'The recovered native session is ambiguous.', 409)
+            session_id = sessions[0]['id']
+        runtime = HarnessEngineReference(contract_version='harness/1', profile_id=manifest.profile_id,
+            store_id=manifest.runtime_store.store_id, engine=manifest.runtime_store.engine, session_id=session_id)
+        observed = await self._request('session.get', {'session_id': session_id}, run_id, guard=False)
+        if observed['session']['id'] != session_id:
+            raise ApiError('harness_mapping_conflict', 'The observed native session changed.', 409)
+        native = await self._native_messages(session_id, run_id, guard=False)
+        matching = [message for message in native if message['type'] == 'user' and
+            message.get('metadata', {}).get('operationId') == run_id and
+            message.get('metadata', {}).get('attemptId') == '1' and
+            message.get('metadata', {}).get('configurationId') == snapshot['configuration_id']]
+        if len(matching) > 1 or (matching and row['input_id'] not in (None, matching[0]['id'])):
+            raise ApiError('harness_input_conflict', 'The recovered input is ambiguous or changed.', 409)
+        selected = []
+        if matching:
+            found = False
+            for message in native:
+                if message['id'] == matching[0]['id']:
+                    found = True
+                    continue
+                if found and message['type'] == 'user':
+                    break
+                if found and message['type'] == 'assistant':
+                    selected.append(message)
+            text = ''.join(part['text'] for message in selected for part in message.get('content', []) if part['type'] == 'text')
+            request = Send(text=matching[0]['text'], **snapshot['request_fields'])
+            if (canonical_digest(request.model_dump(mode='json')) != row['request_digest'] or
+                    hashlib.sha256(request.text.encode('utf-8')).hexdigest() != snapshot['input_sha256']):
+                raise ApiError('harness_input_conflict', 'The recovered input differs from the admitted request.', 409)
+        with self.db.transaction() as conn:
+            current = self._recovery_state(conn, run_id)
+            if current is None:
+                return {'state': 'unchanged'}
+            if current[:4] != state[:4] or self._manifest() != manifest or run_id in self.repo.streaming.active:
+                raise ApiError('harness_reconciliation_conflict', 'The pending operation changed during lookup.', 409)
+            checked_mapping = map_saved_conversation(Conversation.model_validate(current[4]), runtime, manifest=manifest)
+            current_mapping = conn.execute('SELECT * FROM learn_harness_mappings WHERE thread_id=?', (row['thread_id'],)).fetchone()
+            if current_mapping is None or dict(current_mapping) != dict(mapping_row):
+                raise ApiError('harness_mapping_conflict', 'The native mapping changed during lookup.', 409)
+            conn.execute('UPDATE learn_harness_mappings SET session_id=?,mapping_json=? WHERE thread_id=?',
+                (session_id, checked_mapping.model_dump_json(), row['thread_id']))
+            if not matching or observed['session'].get('outcome') != 'succeeded':
+                return {'state': 'not-submitted' if not matching else 'pending'}
+            if not text or not selected or any(message.get('error') or not message.get('time', {}).get('completed') for message in selected):
+                raise ApiError('harness_answer_incomplete', 'The recovered answer is not immutable and complete.', 409)
+            answer = CompletedAnswer(run_id, row['thread_id'], runtime, matching[0]['id'],
+                tuple(message['id'] for message in selected), text, hashlib.sha256(text.encode('utf-8')).hexdigest(),
+                json.dumps(snapshot['citations'], sort_keys=True), inputs, dependencies)
+            run = ActiveRun(run_id, row['thread_id'], ContextScope(kind=Scope.STUDY, entity_id=row['thread_id']))
+            run.policy_revision, run.context_epoch = snapshot['policy'], snapshot['epoch']
+            run.project_id = project['project_id'] if project else None
+            entry = {'id': row['thread_id'], 'kind': 'learning', 'saved': True, 'key': snapshot['request_id'],
+                'run': run, 'request': request, 'policy': snapshot['policy'], 'epoch': snapshot['epoch'],
+                'harness_revisions': (current[4]['revision'], snapshot['revisions'][1]), 'project': project,
+                'harness_runtime': runtime, 'harness_answer': answer, 'receipt': receipt}
+            self.repo.streaming.active[run_id] = entry
+            self._consumed[run_id] = (inputs, dependencies, json.dumps(snapshot['citations']))
+            try:
+                conn.execute("UPDATE learn_harness_answers SET state='submitted',input_id=? WHERE run_id=?", (answer.input_id, run_id))
+                self.publish_in(conn, entry)
+                self.repo.streaming._finish(conn, entry, 'completed')
+                conn.execute("UPDATE learn_runs SET state='completed',error_code=NULL,updated_at=? WHERE id=?", (utc_now(), run_id))
+            finally:
+                self.repo.streaming.active.pop(run_id, None)
+                self._consumed.pop(run_id, None)
+        return {'state': 'completed', 'answer_reference': answer.reference()}
+
     async def messages(self, identifier, limit=50, cursor=None):
+        await self.reconcile_pending(identifier)
         mapping = self.mapping(identifier)
         if mapping is None:
             return self.repo.messages('learning', identifier, limit, cursor)
