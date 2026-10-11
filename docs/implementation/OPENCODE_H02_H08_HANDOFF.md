@@ -141,6 +141,33 @@ to this batch.
 
 ## Resumed integration — October 11
 
+### Primary preparation and retained recovery — October 11
+
+The parent extends the public ModelAdapter with optional preparePrimary(binding,
+resolved). It runs before native capability/media shaping and supplies the exact
+resolved model. The supported PluginHooks node decoration invokes the original
+session.context hooks first, selects admitted context, rechecks ownership and
+copies shaped system/messages before unsupportedParts/boundImages. The same
+preparation receives that copied context with the final surviving native tool
+definitions as its third prepare argument. This does not patch upstream source
+or authorize an unaccounted HTTP effect.
+
+Authenticated held recovery currently rejects recovery_admission_unavailable
+before releasing native recovery: reconstructed Python run/input grants remain
+an integration gate. Ordinary scripted foundation recovery remains compatible.
+
+Receipts under C:/Renulus/scratch/oc-h02-h08/learning/: primary-policy-red01.xml
+reproduces one unadmitted model call; primary-policy-green01.xml has one passing
+case. primary-context-red01.xml exposes the absent pre-filter snapshot;
+primary-context-green01.xml passes. primary-recovery-red01.xml reproduces
+accepted recovery without reconstructed authority. primary-final01.xml has
+3 passing cases. primary-affected01.xml has 16 passes, zero skips/failures,
+17.15 seconds (host, Library host, activation and primary policy). TypeScript
+exits 0. Counts describe separate runs. Independent Standards and Spec reviews
+of the two source/test paths report zero material findings, with both hashes
+unchanged through review. No production gateway/account/image acceptance is
+claimed. All H02–H08 acceptance and migrated automatic capture gates remain open.
+
 Parent consumed native tools (`ce85b7c5`), saved bridge (`1631e767`),
 configuration authority (`a85e1ee0`), controlled Library SDK composition
 (`63dde885`), pre-dispatch native input binding (`a884ef17`), failed-store

@@ -13,8 +13,12 @@ import { SessionExecution } from "@opencode/core/session/execution";
 import { SessionStore } from "@opencode/core/session/store";
 import { Job } from "@opencode/core/job";
 import { SessionModelRequest } from "@opencode/core/session/model-request";
+import type { SessionRunnerModel } from "@opencode/core/session/runner/model";
+import type { StreamOptions } from "@opencode/ai/route/client";
 import { Instance } from "@opencode/core/instance";
 import { Plugin } from "@opencode/core/plugin";
+import { PluginHooks } from "@opencode/core/plugin/hooks";
+import type { SessionContext } from "@opencode/plugin/effect/session";
 import { Tool } from "@opencode/core/tool";
 import { Npm } from "@opencode/util/npm";
 import { Global } from "@opencode/util/global";
@@ -29,6 +33,15 @@ export interface ModelAdapter {
   readonly modelId: string;
   readonly configuration: object;
   readonly client: LLMClientShape;
+  readonly preparePrimary?: (binding: NativeInputBinding, model: SessionRunnerModel.Resolved) =>
+    Effect.Effect<PrimaryModelPreparation, AIError>;
+}
+
+export interface PrimaryModelPreparation {
+  readonly resolved: SessionRunnerModel.Resolved;
+  /** Reuse the same trusted preparation after native hooks and context selection. */
+  readonly prepare: (request: LLMRequest, settings: StreamOptions, unfiltered: LLMRequest) =>
+    Effect.Effect<LLMRequest, AIError>;
 }
 
 export interface HarnessOptions extends ProfileSelection {
@@ -64,6 +77,10 @@ export async function openHarness(options: HarnessOptions) {
   let instances!: Instance.Interface;
   const held = new Set<string>();
   const bindings = new Map<string, NativeInputBinding>();
+  const primaryContexts = new Map<string, {
+    readonly binding: NativeInputBinding | undefined;
+    snapshot?: Pick<SessionContext, "system" | "messages">;
+  }>();
   let recoveryStarted = false;
   let releaseRecovery!: () => void;
   let recovered!: () => void;
@@ -128,21 +145,71 @@ export async function openHarness(options: HarnessOptions) {
       jobs = Context.get(context, Job.Service);
       return Layer.succeed(Job.Service, jobs);
     }))),
+    PluginHooks.node.replace(PluginHooks.node.mapLayer(original => Layer.flatMap(original, context => {
+      const service = Context.get(context, PluginHooks.Service);
+      const trigger: typeof service.trigger = (domain, name, event) => service.trigger(domain, name, event).pipe(
+        Effect.flatMap(shaped => Effect.gen(function* () {
+          if (domain !== "session" || name !== "context") return shaped;
+          const draft = shaped as SessionContext;
+          const current = primaryContexts.get(draft.sessionID);
+          if (!current) return shaped;
+          const requireCurrent = () => {
+            if (primaryContexts.get(draft.sessionID) !== current ||
+                !["ready", "recovering"].includes(phase) || held.has(draft.sessionID) ||
+                (current.binding && bindings.get(draft.sessionID) !== current.binding)) throw denied();
+          };
+          requireCurrent();
+          if (options.selectContext) {
+            if (!current.binding) throw denied();
+            draft.messages = [...yield* Effect.promise(() => options.selectContext!(current.binding!, draft.messages))];
+            requireCurrent();
+          }
+          // This is the shaped native context before unsupportedParts/boundImages.
+          // Copy it while owned; final preparation receives the same surviving
+          // tool definitions that native preparation advertises.
+          current.snapshot = structuredClone({ system: draft.system, messages: draft.messages });
+          return shaped;
+        })),
+      );
+      return Layer.succeed(PluginHooks.Service, { ...service, trigger });
+    }))),
     SessionModelRequest.node.replace(SessionModelRequest.node.mapLayer(original => Layer.flatMap(original, context => {
       const service = Context.get(context, SessionModelRequest.Service);
       return Layer.succeed(SessionModelRequest.Service, {
         ...service,
-        primary: input => service.primary(input).pipe(Effect.flatMap(prepared => Effect.promise(async () => {
+        primary: input => Effect.gen(function* () {
+          const binding = bindings.get(input.session.id);
+          const requireBinding = () => {
+            if (!binding || bindings.get(input.session.id) !== binding ||
+                !["ready", "recovering"].includes(phase) || held.has(input.session.id)) throw denied();
+            return binding;
+          };
+          const preparation = options.model?.preparePrimary
+            ? yield* options.model.preparePrimary(requireBinding(), input.model) : undefined;
+          if (preparation) requireBinding();
+          // Native primary shapes media against this exact resolved capability
+          // snapshot. Preparing only its final request would lose images first.
+          if (primaryContexts.has(input.session.id)) throw denied();
+          const context = { binding, snapshot: undefined as Pick<SessionContext, "system" | "messages"> | undefined };
+          primaryContexts.set(input.session.id, context);
+          const prepared = yield* service.primary(preparation ? { ...input, model: preparation.resolved } : input).pipe(
+            Effect.ensuring(Effect.sync(() => {
+              if (primaryContexts.get(input.session.id) === context) primaryContexts.delete(input.session.id);
+            })),
+          );
           let request = prepared.request;
-          if (options.selectContext) {
-            const binding = bindings.get(input.session.id);
-            if (!binding) throw new Error("harness_context_unbound");
-            const messages = await options.selectContext(binding, request.messages);
-            request = LLMRequest.update(request, { messages });
+          if (preparation) {
+            requireBinding();
+            if (!context.snapshot) throw denied();
+            const unfiltered = LLMRequest.update(request, { ...context.snapshot,
+              tools: structuredClone(request.tools) });
+            request = yield* preparation.prepare(request, prepared.options, unfiltered);
+            requireBinding();
           }
           if (phase === "recovering" || (phase === "ready" && !held.has(input.session.id))) admissions.add(request);
-          return { ...prepared, request, retry: event => Effect.sync(() => { event.decision = { retry: false }; }) };
-        }))),
+          return { ...prepared, request, retry: (event: Parameters<typeof prepared.retry>[0]) =>
+            Effect.sync(() => { event.decision = { retry: false }; }) };
+        }).pipe(Effect.orDie),
       });
     }))),
     SessionRestart.node.replace(SessionRestart.node.mapLayer(original => Layer.flatMap(original, context => {
@@ -308,6 +375,10 @@ export async function openHarness(options: HarnessOptions) {
       if (input.configurationId !== configurationId || JSON.stringify([...input.sessionIds].sort()) !== JSON.stringify([...held].sort())) {
         throw new Error("recovery_admission_mismatch");
       }
+      // Recovered claims have no reconstructed Python run/input authority yet.
+      // Keep them durable: a late primary denial would already have released
+      // the recovery gate and could terminalize the retained execution.
+      if (options.model?.preparePrimary && held.size) throw new Error("recovery_admission_unavailable");
       // Seal fresh admission before inspecting ALL native executions, including children.
       phase = "recovering";
       try {
