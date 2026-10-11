@@ -273,6 +273,21 @@ Chat assistant compatibility fix; opaque/nonempty reasoning stays denied and
 the counter/proof must retain the unchanged raw bytes. Owner/test stay frozen
 pending that published repair and both independent reviews.
 
+The bounded repair is now ready as `028a33d8`, against `77dceea2`, and awaits
+independent Ohm Spec/Russell Standards review. It changes only Deployment and
+its dedicated tests: Chat assistants accept the serializer's exact empty
+`reasoning_content` string, while all other values/roles, Responses and opaque
+or unknown fields remain denied before accounting. NativeManifest is unchanged;
+the counter and proof retain the original bytes/hash/length. Public red02 has
+two failures before repair, green01 has two passes, and focused-final01 has
+28 passes/1.354s, zero failures/errors/skips with90 deselected. These counts
+overlap. The production comment was added after testing; executable code and
+tests did not change, so no comment-only rerun was done. Exact source hashes,
+commands, receipts and source-derived serializer qualification are in
+model-owner/deployment-empty-reasoning/HANDOFF.md under the G: scratch root.
+The Owner lane may align this published prerequisite but remains paused until
+both reviews clear; parent integration and the connected rerun are still pending.
+
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
 expectation-disposition reviews clear. H06–H08 remain open. Required unmet
