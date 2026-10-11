@@ -855,3 +855,29 @@ async def test_close_without_owned_mutations_is_idempotent_and_preserves_snapsho
     assert (error.value.code, error.value.status, error.value.retryable) == (
         "runtime_stopping", 503, True)
     assert authority.status()["admission_open"] is True
+
+
+@pytest.mark.parametrize('code', ('harness_configuration_busy', 'activation_conflict'))
+async def test_failure_atomic_root_refusal_allows_later_configuration_retry(configured, code):
+    authority, spec, _, provider, _ = configured
+    candidate = authority.stage(spec.model_copy(update={"roles": (RolePolicy(purpose="explain", output_tokens=1024),)}))
+
+    class RefusedOnce(SyntheticLifecycle):
+        refused = False
+
+        async def seal_new_runs(self, *, expected_effective):
+            if not self.refused:
+                self.refused = True
+                raise ApiError(code, 'The root gate refused before acquisition.', 409, True)
+            return await super().seal_new_runs(expected_effective=expected_effective)
+
+    lifecycle = RefusedOnce(authority)
+    controller = HarnessConfigurationController(authority, provider, lifecycle)
+    before = await controller.snapshot()
+    with pytest.raises(ApiError) as refused:
+        await controller.activate(candidate)
+    assert refused.value.code == code
+    assert await controller.snapshot() == before
+    assert lifecycle.roots_open and not lifecycle.seals
+    result = await controller.activate(candidate)
+    assert result['effective'] == candidate and result['admission_open']

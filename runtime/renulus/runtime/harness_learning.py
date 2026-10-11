@@ -23,10 +23,20 @@ _STALE_LEARNING_AUTHORITY_CODES = INELIGIBLE_LINEAGE_CODES | frozenset({
 })
 
 
+class _LearningRootSeal:
+    def __init__(self, owner):
+        self.owner = owner
+
+    def release(self):
+        if self.owner._root_seal is self:
+            self.owner._root_seal = None
+
+
 class HarnessLearningOwner:
     def __init__(self, services, config, *, configuration_id, memory=None, context_filtering=False):
         self.services, self.db, self.config = services, services.db, config
         self.configuration_id, self.memory = configuration_id, memory
+        self._root_seal = None
         self.repo = services.get('conversations')
         self.library = services.registry.get('harness_library') or HarnessLibrary(services.get('knowledge'))
         self.process = ManagedHarnessProcess(domain_authority=self.authorize)
@@ -35,7 +45,8 @@ class HarnessLearningOwner:
         self.bridge = HarnessLearningBridge(self.repo, self.process,
             active_manifest=self.manifest, configuration_id=configuration_id,
             publish_answer_in=self.publish_answer_in, check_run_dependencies_in=self.check_run_dependencies_in,
-            eligible_history_in=self.eligible_history_in, context_filtering=context_filtering)
+            eligible_history_in=self.eligible_history_in, context_filtering=context_filtering,
+            check_new_run_in=self.check_new_run_in)
         self._starting = None
 
     def manifest(self):
@@ -75,6 +86,45 @@ class HarnessLearningOwner:
         while (await self.process.close(1))['state'] != 'closed':
             if (await self.process.settlement(1))['state'] == 'settled':
                 break
+
+    def check_new_run_in(self, conn):
+        if self._root_seal is not None:
+            raise ApiError('harness_configuration_busy',
+                'Configuration is changing. New learning runs are sealed.', 409, True)
+
+    def seal_new_runs(self, *, expected_effective):
+        """Failure-atomic root gate sharing the canonical admission transaction."""
+        seal = _LearningRootSeal(self)
+        try:
+            with self.db.transaction() as conn:
+                if self._root_seal is not None or self.configuration_id != expected_effective:
+                    raise ApiError('activation_conflict', 'The live configuration changed.', 409, True)
+                if (any(entry.get('harness_revisions') is not None
+                        for entry in tuple(self.repo.streaming.active.values())) or conn.execute(
+                    "SELECT 1 FROM learn_harness_answers a JOIN learn_runs r ON r.id=a.run_id "
+                    "WHERE r.state IS NULL OR r.state='running' OR a.state IS NULL "
+                    "OR a.state IN ('reserved','uncertain','submitted') LIMIT 1").fetchone()):
+                    raise ApiError('harness_configuration_busy',
+                        'Finish or stop the native learning runs before changing configuration.', 409, True)
+                self._root_seal = seal
+        except BaseException:
+            seal.release()
+            raise
+        return seal
+
+    def require_root_seal(self, seal):
+        if seal is None or self._root_seal is not seal:
+            raise ApiError('activation_conflict', 'The root admission lease changed.', 409, True)
+
+    def replace_process(self, process, *, configuration_id, seal):
+        """Lifecycle owner calls only after observing actual old settlement."""
+        self.require_root_seal(seal)
+        self.process = process
+        self.configuration_id = self.bridge.configuration_id = configuration_id
+        self.bridge.transport = process
+        self.bindings.clear()
+        self.activation = HarnessProfileActivation(self.db, process, self.config)
+        self._starting = None
 
     def _entry(self, binding, *, admitting=False, conn=None):
         self.bridge.check(binding.operation_id, conn=conn)

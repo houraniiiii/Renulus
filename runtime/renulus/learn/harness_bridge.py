@@ -57,13 +57,14 @@ class CompletedAnswer:
 class HarnessLearningBridge:
     def __init__(self, repository, transport, *, active_manifest, configuration_id,
                  publish_answer_in=None, check_dependencies_in=None, check_run_dependencies_in=None,
-                 eligible_history_in=None, context_filtering=False, poll_interval=0.05):
+                 eligible_history_in=None, context_filtering=False, check_new_run_in=None, poll_interval=0.05):
         self.repo, self.db, self.transport = repository, repository.db, transport
         self.active_manifest, self.configuration_id = active_manifest, configuration_id
         self.publish_answer_in = publish_answer_in
         self.check_dependencies_in = check_dependencies_in
         self.check_run_dependencies_in = check_run_dependencies_in
         self.eligible_history_in = eligible_history_in
+        self.check_new_run_in = check_new_run_in
         # Trusted assembly asserts that the native per-model hook is installed.
         self.context_filtering = context_filtering
         self.poll_interval = poll_interval
@@ -81,6 +82,8 @@ class HarnessLearningBridge:
 
     def prepare_in(self, conn, identifier, request, key):
         self._manifest()
+        if self.check_new_run_in is not None:
+            self.check_new_run_in(conn)
         # H02 admits new saved learning. Importing legacy text is the H06 gate.
         if conn.execute('SELECT 1 FROM learn_messages WHERE thread_id=? LIMIT 1', (identifier,)).fetchone():
             raise ApiError('harness_history_requires_migration',

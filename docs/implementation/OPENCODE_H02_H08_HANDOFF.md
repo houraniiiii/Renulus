@@ -15,6 +15,75 @@ installation, push or downstream-ticket expansion is authorized.
 
 ## Current checkpoint — October 11, native composition
 
+### Continued configuration integration
+
+All H02–H08 acceptance remains open. Newer committed integration work is:
+
+| Parent | Source | Result |
+| --- | --- | --- |
+| `c9a0fad1` | Parent | Gated active-profile registry inspection and actual writer flag |
+| `5efa45c8` | `15e802fc` | Shielded profile configuration controller |
+| `1ff2378d` | `533a3ca1` | Authenticated SDK/deployment/single loopback HTTP fixture |
+| `3704947a` | `a5c2e891` | Local configuration connection port and stale refresh-error fencing |
+| `a92ca60e` | `5f22e7e7` | Existing HarnessSettings inserted on Connections page |
+| `100ada7e` | `59e19e6e` | Controller mutation shutdown and acquisition-error fence |
+
+The actual lifecycle adapter is verified and ready for its coherent integration commit.
+It seals saved-root admission within the canonical transaction, rejects busy
+or missing leases, measures an isolated closed native registry, observes old
+process/pipe/Domain settlement, and rebinds the transcript/resolver owner before
+fresh launch. Stop and command observations have total budgets. A blocked stop
+retains its process and cleanup task; lifecycle close joins that work before
+Owner/dependency release. Successful candidate health requires actual closure.
+Explicit assembly registers controller close as a producer and lifecycle close
+before learning transport teardown in reversed dependency shutdown order.
+The existing configuration router is mounted on the existing local server.
+Absent assembly returns its documented unavailable response; explicit assembly
+without an effective configuration shows null/closed pointers and cannot stage.
+This does not bootstrap a healthy configuration or change default consumers.
+
+| Receipt under `C:/Renulus/scratch/oc-h02-h08/` | Exact result | Scope |
+| --- | --- | --- |
+| configuration/gated-registry-green01.xml | 2 passed, 19.84s | Actual SDK closed registry and live writer observation |
+| configuration/controller-integrated01.xml | 52 passed, 7.84s | Injected controller/SQLite policy |
+| providers/model-sdk-integrated01.xml | 2 setup errors | Missing G basetemp parent; no behavior exercised |
+| providers/model-sdk-integrated02.xml | 2 passed, 13.55s | Authenticated SDK, exact body, one owned loopback HTTP; synthetic account/count evidence |
+| providers/configuration-port-integrated.xml | 54 passed, 5.64s | Provider identity, delayed stale 401/503 refusal |
+| providers/connections-settings-integrated.xml | 57 passed, 14.23s | Page/component public behavior with synthetic fetch |
+| configuration/controller-connected-final.xml | 59 passed, 9.12s | Owned close plus recoverable pre-acquisition busy/conflict |
+| configuration/lifecycle-green02.xml | 2 passed, 25.77s | Actual idle native restart and failure-atomic busy acquisition |
+| configuration/lifecycle-lease-red.xml / lifecycle-lease-green.xml | 1 failed / 1 passed | Missing lease could falsely grant restart boundary |
+| configuration/acquisition-refusal-red.xml | 2 failed | Busy/conflict refusal incorrectly permanently fenced retry |
+| configuration/lifecycle-bounded-red.xml / lifecycle-bounded-green.xml | 1 failed, 11.35s / 1 passed, 10.50s | Actual Node IPC held callback; bounded attempt plus retained finalizer |
+| configuration/configuration-server-red.xml / configuration-server-green.xml | 1 failed / 1 passed | Existing router was not mounted |
+| configuration/configuration-assembly-red.xml | 1 failed | Missing explicit assembly interface |
+| configuration/configuration-assembly-green.xml | 1 passed, 1 failed | Fixture used wrong stage URL; not a production defect |
+| configuration/lifecycle-connected-final.xml | 6 passed, 53.83s | Actual lifecycle, retained callback and existing HTTP server assembly |
+
+Desktop typecheck, renderer build and Electron entry build exit 0. The hidden
+desktop opened Connections and observed the documented unavailable configuration
+alert on its fresh account-free profile. A 1000x720 resize stayed hidden; two
+screenshots and the controller receipt are retained under
+`G:/rn-h04-control/c/s-f4d9c57b/out/`. Normal shutdown completed with no forced
+or remaining processes and no controller fault. Console HTTP 409 (unavailable
+daily suggestions) and 503 (configuration owner not assembled) remain explicit
+expected unavailable-state observations, not successful activation evidence.
+This checks the actual page and truthful unavailable state, not role activation.
+Independent Standards and final Spec R2 report zero material findings in the
+held eight code/test paths, whose hashes remained unchanged. The earlier
+source-only unbounded-attempt P2 has an actual reproduced red and a green above.
+Provider stale-error P2 is closed independently on both review axes. Counts are
+distinct runs, not a reconciled full-suite claim.
+
+Current critical-path work: Sartre owns the atomic supplied-connection
+configuration root-pin extension; Turing owns a new bounded trusted model
+registry consuming those pins and the existing deployment/gateway; Arendt is
+investigating immutable bootstrap/reopen construction. Parent owns native/model
+assembly, actual staged settings/overlays, crash reconciliation, and hidden
+Settings journeys. No production tokenizer/route-limit evidence was invented;
+unknown evidence must deny inference. Migrated automatic memory capture remains
+off. H06/H07 preparation remains gated on real H05 acceptance, and H08 on H04/H06.
+
 Resume from the actual branch/worktree, not the earlier preparation status below.
 All H02–H08 acceptance remains open. The integration consumed these newer
 verified worker commits:

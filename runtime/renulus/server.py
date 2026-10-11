@@ -296,7 +296,7 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None) 
         services.capabilities[name] = {"status": "installed"}
     # Separate feature routers preserve the existing module/legacy APIs. Their
     # schemas have already been checked and applied before any startup backfill.
-    for name in ("learn.conversation_api", "study.project_api", "study.home_api", "study.nightly_api",
+    for name in ("runtime.harness_configuration_api", "learn.conversation_api", "study.project_api", "study.home_api", "study.nightly_api",
                  "assessment.test_api", "assessment.attempt_api", "assessment.generation_api", "assessment.import_api", "learn.chat_test_api", "knowledge.reader_api", "knowledge.attachment_api", "knowledge.note_api", "storage.workspace_api", "storage.search_api", "storage.study_help_api"):
         path = Path(__file__).parent.joinpath(*name.split(".")).with_suffix(".py")
         if path.exists():

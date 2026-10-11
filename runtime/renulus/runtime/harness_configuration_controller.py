@@ -40,13 +40,18 @@ class RegistryHealth(FrozenModel):
 class ConfigurationLifecycle(Protocol):
     """One parent adapter; observation results must come from real lifecycle work."""
     async def inspect_candidate(self, candidate: Candidate) -> CandidateHealth:
-        """Return/raise only after isolated closed inspection AND candidate settlement."""
+        """Healthy results require isolated closed inspection AND settlement.
+
+        A bounded settlement_pending refusal retains its isolated cleanup owner;
+        the parent drains lifecycle.close before releasing runtime dependencies.
+        """
         ...
 
     async def seal_new_runs(self, *, expected_effective: str | None) -> NewRunSeal:
         """Failure-atomic: exceptions leave ingress and ownership unchanged.
 
         After acquisition, return its seal without awaiting or doing fallible work.
+        busy/conflict ApiErrors with status 409 are explicit pre-acquisition refusals.
         """
         ...
 
@@ -152,7 +157,10 @@ class HarnessConfigurationController:
         try:
             seal = await self.lifecycle.seal_new_runs(expected_effective=expected_effective)
         except Exception as error:
-            # No returned handle: retain a recovery fence, never invent release/settlement.
+            if (isinstance(error, ApiError) and error.status == 409
+                    and error.code in {'harness_configuration_busy', 'activation_conflict'}):
+                self._acquisition_unresolved = False
+            # Unclassified acquisition failure retains a fence; no handle means no release.
             raise _lifecycle_error(error) from None
         self._seal = seal
         self._acquisition_unresolved = False
