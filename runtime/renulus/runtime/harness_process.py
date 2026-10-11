@@ -20,6 +20,10 @@ PROTOCOL = "renulus-harness/1"
 CONTROLS = frozenset({"host.status", "session.cancel", "host.close"})
 COMMANDS = CONTROLS | {"host.inspect", "host.activate", "host.stores.activate", "host.recover", "session.create", "session.prompt",
                        "session.get", "session.messages", "session.find"}
+OBSERVATION_COMMANDS = frozenset({"session.get", "session.messages", "session.find",
+                                  "host.status", "host.inspect"})
+OBSERVATION_OUTCOMES = frozenset({"committed_reference", "rejected_before_admission",
+                                 "cancelled_settled"})
 
 
 def _json_bytes(value: dict) -> bytes:
@@ -73,6 +77,8 @@ class _Request:
     pending: bool = True
     admission: str = "transport_queued"
     disconnect_error: str | None = None
+    observed: bool = False
+    releasing: asyncio.Task[bool] | None = None
 
     @property
     def size(self) -> int:
@@ -88,6 +94,8 @@ class _Request:
         result["admission"] = self.admission
         if self.disconnect_error:
             result.update(outcome="uncertain_after_disconnect", error={"code": self.disconnect_error})
+        if not self.pending and result["outcome"] in OBSERVATION_OUTCOMES:
+            self.observed = True
         return result
 
     def publish(self, result: dict, wire: bytes) -> None:
@@ -312,6 +320,42 @@ class ManagedHarnessProcess:
     async def query_result(self, request_id: str) -> dict | None:
         record = self._requests.get(request_id)
         return record.snapshot() if record else None
+
+    async def release_observation(self, request_id: str) -> bool:
+        """Forget an observed terminal read only after its release frame is sent.
+
+        True acknowledges local pipe publication, not native settlement. Native
+        IPC retains any active command/reply until its own finalizers settle.
+        Cancellation of an observer leaves this publication owned.
+        """
+        if type(request_id) is not str:
+            return False
+        record = self._requests.get(request_id)
+        if (record is None or not record.observed or record.pending or record.disconnect_error
+                or record.frame["command"] not in OBSERVATION_COMMANDS
+                or json.loads(record.result)["outcome"] not in OBSERVATION_OUTCOMES
+                or self._disconnected or self._process is None or self._process.returncode is not None):
+            return False
+        if record.releasing is None:
+            record.releasing = asyncio.create_task(self._release_observation(request_id, record))
+            record.releasing.add_done_callback(_observe_exception)
+        return await asyncio.shield(record.releasing)
+
+    async def _release_observation(self, request_id: str, record: _Request) -> bool:
+        completion = asyncio.get_running_loop().create_future()
+        completion.add_done_callback(_observe_exception)
+        encoded = _json_bytes({**self._identity, "kind": "observation_release",
+                               "request_id": request_id}) + b"\n"
+        self._sequence += 1
+        try:
+            self._outbound.put_nowait((0, self._sequence, None, encoded, completion, None))
+            await completion
+        except (asyncio.QueueFull, ConnectionError, OSError):
+            record.releasing = None
+            return False
+        if self._requests.get(request_id) is record:
+            del self._requests[request_id]
+        return True
 
     def domain_result(self, callback_id: str) -> dict | None:
         return self._domains.result(callback_id) if self._domains else None

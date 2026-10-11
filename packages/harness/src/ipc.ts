@@ -24,8 +24,11 @@ type Request = Record<string, unknown> & {
 };
 const identityKeys = ["protocol", "profile_id", "store_id", "generation", "token"] as const;
 const controls = new Set(["host.status", "session.cancel"]);
+const observations = new Set(["session.get", "session.messages", "session.find", "host.status", "host.inspect"]);
+const observationOutcomes = new Set(["committed_reference", "rejected_before_admission", "cancelled_settled"]);
 type Lane = "data" | "control" | "close";
-type RecordEntry = { lane: Lane; digest: string; size: number; overhead: number; pending: boolean; reply?: Buffer };
+type RecordEntry = { lane: Lane; command: string; digest: string; size: number; overhead: number;
+  pending: boolean; publications: number; outcome?: string; releaseRequested?: boolean; reply?: Buffer };
 const object = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 const nonempty = (value: unknown): value is string => typeof value === "string" && value.length > 0;
@@ -98,6 +101,18 @@ export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainCl
     void pending.then(() => writes.delete(pending), () => { writes.delete(pending); process.exitCode = 1; });
     return pending;
   };
+  const release = (requestId: string, record: RecordEntry) => {
+    if (record.releaseRequested && !record.pending && !active.has(requestId) && !record.publications) {
+      records.delete(requestId);
+    }
+  };
+  const publish = (requestId: string, bytes: Buffer) => {
+    const record = records.get(requestId);
+    if (record) record.publications += 1;
+    return write(bytes).finally(() => {
+      if (record) { record.publications -= 1; release(requestId, record); }
+    });
+  };
   const domain = new DomainClient(boot, bytes => write(bytes), {
     maxInflight: boot.ipc?.max_domain_inflight, maxRecords: boot.ipc?.max_domain_result_records,
     maxBytes: boot.ipc?.max_domain_result_bytes, maxFrameBytes,
@@ -140,11 +155,12 @@ export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainCl
     };
     let line = Buffer.from(JSON.stringify({ ...envelope, outcome, ...body }) + "\n");
     if (line.length > maxFrameBytes) {
+      outcome = "uncertain_after_disconnect";
       line = Buffer.from(JSON.stringify({ ...envelope, outcome: "uncertain_after_disconnect", error: { code: "reply_too_large" } }) + "\n");
     }
     const record = records.get(request.request_id);
-    if (record && retain) record.reply = line;
-    return write(line);
+    if (record && retain) { record.reply = line; record.outcome = outcome; }
+    return publish(request.request_id, line);
   };
   const dispatch = async (request: Request) => {
     try {
@@ -219,6 +235,17 @@ export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainCl
     if (token.length !== expected.length || !timingSafeEqual(token, expected) ||
         !identityKeys.every(key => frame[key] === boot[key])) return;
     if (frame.kind === "domain_result") { domain.receive(frame); return; }
+    if (frame.kind === "observation_release") {
+      if (Object.keys(frame).length !== identityKeys.length + 2 ||
+          !Object.keys(frame).every(key => [...identityKeys, "kind", "request_id"].includes(key)) ||
+          !identifier(frame.request_id)) return;
+      const record = records.get(frame.request_id);
+      if (record && observations.has(record.command) && observationOutcomes.has(record.outcome ?? "")) {
+        record.releaseRequested = true;
+        release(frame.request_id, record);
+      }
+      return;
+    }
     if (frame.kind !== "request") return;
     if (!["operation_id", "attempt_id", "request_id"].every(key => identifier(frame[key])) ||
         !nonempty(frame.command) || !object(frame.payload)) return;
@@ -230,7 +257,11 @@ export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainCl
     if (previous) {
       if (previous.digest !== digest) {
         await reply(request, "rejected_before_admission", { error: { code: "request_id_conflict" } }, false);
-      } else if (previous.reply) await write(previous.reply);
+      } else if (previous.reply) {
+        // A queued replay still owns its receipt, but cannot stop control input.
+        // Coalesce identical replays while this publication is already active.
+        if (!previous.publications) void publish(request.request_id, previous.reply).catch(drain);
+      }
       else await reply(request, "accepted_pending", { result: { state: "pending" } }, false);
       return;
     }
@@ -250,12 +281,14 @@ export async function runHarnessIpc(create: (boot: HarnessBoot, domain: DomainCl
       await reply(request, "rejected_before_admission", { error: { code: "result_capacity" } }, false);
       return;
     }
-    const record = { lane, digest, size: reservation, overhead, pending: true } as RecordEntry;
+    const record = { lane, command: request.command, digest, size: reservation, overhead,
+      pending: true, publications: 0 } as RecordEntry;
     records.set(request.request_id, record);
     const task = dispatch(request).catch(() => { drain(); }).finally(() => {
       record.pending = false;
       record.size = overhead + (record.reply?.length ?? 0);
       active.delete(request.request_id);
+      release(request.request_id, record);
     });
     active.set(request.request_id, task);
   };
