@@ -222,6 +222,8 @@ class HarnessLearningBridge:
         if guard:
             self.check(run_id)
         if checked.outcome not in ('committed_reference', 'cancelled_settled') or checked.error:
+            if command == 'session.messages' and checked.error and checked.error.code == 'reply_too_large':
+                raise ApiError('harness_history_reply_too_large', 'This native history page exceeds the transport frame limit.', 409, True)
             raise ApiError('harness_command_uncertain' if checked.outcome == 'uncertain_after_disconnect' else 'harness_command_rejected',
                 'The native operation could not be confirmed. It will not be sent again automatically.', 409, True)
         return checked.result
@@ -254,10 +256,19 @@ class HarnessLearningBridge:
 
     async def _native_messages(self, session_id, run_id, *, guard=True):
         messages, cursor, cursors = [], None, set()
+        page_limit = 200
         while True:
-            payload = {'session_id': session_id, 'limit': 200}
+            payload = {'session_id': session_id, 'limit': page_limit}
             payload.update({'cursor': cursor} if cursor else {'order': 'asc'})
-            result = await self._request('session.messages', payload, run_id, guard=guard)
+            try:
+                result = await self._request('session.messages', payload, run_id, guard=guard)
+            except ApiError as error:
+                if error.code != 'harness_history_reply_too_large' or page_limit == 1:
+                    raise
+                # Only an oversized read retries, at its unchanged native cursor.
+                # No uncertain create/prompt is ever routed through this path.
+                page_limit = max(1, page_limit // 2)
+                continue
             messages.extend(result['messages'])
             cursor = result.get('cursor')
             if isinstance(cursor, dict):
