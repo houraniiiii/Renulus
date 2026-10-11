@@ -11,10 +11,12 @@ from renulus.learn.memory_context import MemoryContext
 from renulus.memory.lineage import INELIGIBLE_LINEAGE_CODES
 from renulus.storage import utc_now
 from .harness_activation import HarnessProfileActivation
+from .harness_configuration import Candidate
+from .harness_configuration_controller import RegistryHealth
 from .harness_domain import DomainCancellation, DomainCancelled, DomainGrant
 from .harness_library import HarnessLibrary, LibraryAuthority
 from .harness_model_registry import HarnessModelRegistry, ModelRunAuthority
-from .harness_process import ManagedHarnessProcess, NativeProcessIdentity
+from .harness_process import ManagedHarnessProcess, NativeProcessIdentity, OBSERVATION_COMMANDS
 from .harness_profile import load_harness_profile
 from .harness_profile_owner import ProfileOwnerLease, ProfileOwnerScope
 
@@ -66,6 +68,7 @@ class HarnessLearningOwner:
             settle_run=self.settle_run if configuration_authority is not None else None,
             cancel_run=self.cancel_run)
         self._starting = None
+        self._starting_candidate = None
         self._close_task = None
 
     def _make_model_registry(self, *, previous=None):
@@ -106,9 +109,61 @@ class HarnessLearningOwner:
             self._starting = asyncio.create_task(self._start(), name='renulus-learning-harness-start')
         return await asyncio.shield(self._starting)
 
-    async def _start(self):
+    def _require_gated_candidate(self, candidate):
         if self._closing:
             raise ApiError('runtime_stopping', 'The learning runtime is closing.', 503, True)
+        if (type(candidate) is not Candidate or self.configuration_authority is None
+                or candidate.version != self.configuration_id or type(candidate.grant_epoch) is not int
+                or any(value is not False for value in (candidate.generation_open,
+                    candidate.recovery_open, candidate.package_acquisition_open,
+                    candidate.mcp_startup_open, candidate.live_store_writer))):
+            raise ApiError('candidate_authority_stale', 'The gated startup candidate is unavailable.', 409, True)
+        snapshot = self.configuration_authority.activation_snapshot()
+        if (snapshot['effective'] != candidate.version or snapshot['configuration'] != candidate.spec
+                or self.configuration_spec != candidate.spec or snapshot['admission_open']
+                or snapshot['grant_epoch'] != candidate.grant_epoch or snapshot['pinned_runs']):
+            raise ApiError('candidate_authority_stale', 'The gated startup authority changed.', 409, True)
+
+    async def start_gated(self, candidate: Candidate) -> RegistryHealth:
+        """Inspect the initial live registry before arming it under closed admission."""
+        self._require_gated_candidate(candidate)
+        if self._starting is None:
+            self._starting_candidate = candidate
+            self._starting = asyncio.create_task(self._start(candidate),
+                name='renulus-learning-harness-gated-start')
+        elif self._starting_candidate != candidate:
+            raise ApiError('activation_conflict', 'The native startup already has another owner.', 409, True)
+        return await asyncio.shield(self._starting)
+
+    async def _startup_command(self, command, payload):
+        deadline = asyncio.get_running_loop().time() + 5
+        response = await self.process.request(command, payload, 'configuration-activation', '1', 5)
+        while response['outcome'] == 'accepted_pending':
+            remaining = deadline - asyncio.get_running_loop().time()
+            if remaining <= 0:
+                raise ApiError('harness_configuration_unavailable',
+                    'The startup operation is pending; its owner is retained.', 503, True)
+            await asyncio.sleep(min(.02, remaining))
+            response = await self.process.query_result(response['request_id'])
+            if response is None:
+                raise ApiError('harness_configuration_unavailable',
+                    'The startup observation is unavailable.', 503, True)
+        if command in OBSERVATION_COMMANDS:
+            try:
+                await asyncio.wait_for(self.process.release_observation(response['request_id']),
+                    max(0, deadline - asyncio.get_running_loop().time()))
+            except TimeoutError:
+                raise ApiError('harness_configuration_unavailable',
+                    'The startup observation remains owned.', 503, True) from None
+        if response['outcome'] != 'committed_reference':
+            raise ApiError('harness_configuration_unavailable', 'The learning runtime did not activate.', 409)
+        return response['result']
+
+    async def _start(self, candidate=None):
+        if self._closing:
+            raise ApiError('runtime_stopping', 'The learning runtime is closing.', 503, True)
+        if candidate is not None:
+            self._require_gated_candidate(candidate)
         self.require_profile_owner()
         await self.process.start(self.config)
         self.register_process(self.process, self.config)
@@ -117,10 +172,22 @@ class HarnessLearningOwner:
         await self.activation.activate()
         if self._closing:
             raise ApiError('runtime_stopping', 'The learning runtime is closing.', 503, True)
-        outcome = await self.process.request('host.activate',
-            {'configuration_id': self.configuration_id}, 'configuration-activation', '1', 5)
-        if outcome['outcome'] != 'committed_reference':
-            raise ApiError('harness_configuration_unavailable', 'The learning runtime did not activate.', 409)
+        if candidate is not None:
+            self._require_gated_candidate(candidate)
+            registry = await self._startup_command('host.inspect', {})
+            self._require_gated_candidate(candidate)
+            if (registry.get('state') != 'policy_blocked' or registry.get('live_store_writer') is not True
+                    or registry.get('registry_hash') != candidate.spec.registry_hash
+                    or any(registry.get(key) is not False for key in ('generation_open',
+                        'recovery_open', 'package_acquisition_open', 'mcp_startup_open'))):
+                raise ApiError('registry_mismatch', 'The gated live registry differs from the candidate.', 409, True)
+        ready = await self._startup_command('host.activate', {'configuration_id': self.configuration_id})
+        if candidate is not None:
+            self._require_gated_candidate(candidate)
+            if ready.get('state') != 'ready' or ready.get('configurationId') != candidate.version:
+                raise ApiError('harness_configuration_unavailable', 'The gated runtime did not arm this configuration.', 409)
+            return RegistryHealth(configuration_version=candidate.version,
+                grant_epoch=candidate.grant_epoch, registry_hash=registry['registry_hash'])
 
     def require_profile_owner(self):
         """Opt-in assembly requires the actual current process's issuer-bound lease."""
@@ -317,6 +384,7 @@ class HarnessLearningOwner:
         self.model_registry = registry
         self.activation = HarnessProfileActivation(self.db, process, self.config)
         self._starting = None
+        self._starting_candidate = None
 
     def _entry(self, binding, *, admitting=False, conn=None):
         self.bridge.check(binding.operation_id, conn=conn)
