@@ -152,8 +152,29 @@ slot cannot admit two simultaneously owned data requests; ordinary native prompt
 submission returns its durable input receipt before the turn finishes. Scheduling
 standalone memory extraction after eligible committed publication remains the
 parent/H05 responsibility. Native tool/SDK composition, actual Memory engines,
-canonical Library authority, desktop and live account acceptance remain separate
-connected tests; the dedicated scripted child does not prove them.
+canonical Library authority, desktop and live account acceptance require their
+own connected tests; the dedicated scripted child does not prove them.
+
+The follow-on [native fixture](../../packages/harness/test/fixtures/native-domain-host.mjs)
+and [public subprocess tests](../../tests/runtime/test_harness_native_domain.py)
+do connect the actual pinned native SDK Library tool, private Node/Python pipes,
+and an owned Python callback. The host's admitInput hook captures the immutable
+user input binding before scheduling; Python matches it to the actual prompt
+receipt rather than trusting the tool payload. The native assistant message ID
+is independently asserted different from the input ID. A single CPU worker
+awaits a nested native prompt and its observed result with max_inflight=1 and
+max_domain_inflight=1, after the outer submit receipt frees its data position.
+The outer Library tool remains pending during this work. The retrieved passage,
+exact locators and reference-only dependencies survive native consumption.
+Three TestLLM dispatches account for outer tool, nested extraction and outer
+continuation; no provider runs. Python Library/Memory engines and real canonical
+publication are not substituted by this synthetic callback.
+
+Native cancellation without close remains pending through CPU and async finalizer
+settlement, then returns cancelled_settled. When close races that cancel, native
+runtime disposal can end the separate cancel receipt as uncertain_after_disconnect.
+Close and public settlement still include actual domain finalization; a cancelled
+callback publishes no value. Tests keep these command observations distinct.
 
 ## Red/green receipts
 
@@ -170,6 +191,7 @@ Owned receipts: C:/Renulus/scratch/oc-h02-h08/domain-ipc/.
 | Typed safe API failures | cycle07-red.xml: API identity replaced by generic error | cycle07-green.xml: 1 passed |
 | Narrow authenticated recovery lookup | cycle08-red.xml: command not admitted | cycle08-green.xml: 1 passed, known/unknown/duplicate/forged payload |
 | Node callback identity/capacity/abort | node-cycle02-red.txt: callback timed out | node-cycle02-green.txt: 2 passed |
+| Actual native SDK, pipe callback and owned CPU/finalizer | cycle09-red.xml: dedicated fixture absent | cycle09b-green.xml: 2 passed; final-native-domain02.xml: 3 passed |
 
 Earlier affected regression: python-regression01.xml, 169 passed; later
 python-regression02.xml, 170 passed. Node native foundation/domain regression:
@@ -179,3 +201,8 @@ Final affected transport run final-transport02.xml: 66 passed, including a
 ThreadPoolExecutor(max_workers=1) worker awaiting a native prompt through the live
 owning loop. TypeScript passed after consuming the published native prerequisites.
 Final Node foundation/Library/domain run final-node02.txt: 17 passed.
+The initial cycle09-green.xml incorrectly expected a racing cancel's receipt to
+prove clean cancellation, and final-native-domain01.xml incorrectly expected that
+receipt to remain pending during runtime disposal. The corrected final native
+run verifies actual domain settlement separately and adds cancellation without
+concurrent close; all three cases passed in 12.86 seconds.
