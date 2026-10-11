@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ConversationSummary, PassageDraft, StudyHelpContext } from '../../platform/designC';
+import type { ContentReference, ConversationSummary, PassageDraft, StudyHelpContext } from '../../platform/designC';
 import { WorkspaceProvider } from '../workspace';
 import { NavigationProvider } from '../../shell/navigation';
 import { ApiError } from '../../platform/api';
@@ -289,6 +289,80 @@ describe('Chat volatile handoffs',()=>{
     expect((await screen.findByLabelText('Message Renulus') as HTMLTextAreaElement).value).toBe('Retain this edited CKD draft');
     expect(screen.getByRole('button',{name:'Remove source 1'})).toBeTruthy();
     expect(calls.send).not.toHaveBeenCalled();
+  });
+
+  it.each(['passage','send'] as const)('retains a fresh %s intent through pending Archive and consumes it once after Restore',async(kind)=>{
+    setup();
+    let current:ConversationSummary={...chat};
+    let stored={text:'Existing draft',content_refs:[] as ContentReference[],revision:0};
+    let releaseWrite:()=>void=()=>{};
+    const draftGate=new Promise<void>(resolve=>{releaseWrite=resolve;});
+    const original=calls.api.getMockImplementation(),onConsumed=vi.fn();
+    const queuedProps=()=>kind==='passage'
+      ?{passageIntent:{id:'queued-passage',text:'Queued fictional passage',title:'Queued source',reference:{target:{type:'library_revision' as const,id:'queued-source'}}},onPassageIntentConsumed:onConsumed}
+      :{sendIntent:{text:'Queued fictional question',request_id:'queued-send'},onSendIntentConsumed:onConsumed};
+    calls.api.mockImplementation(async(path:string,options?:{method?:string;body?:{expected_revision:number;text?:string;content_refs?:ContentReference[]}})=>{
+      if(options?.method){
+        if(options.body?.expected_revision!==current.revision)throw new ApiError('Synthetic stale revision',409,'revision_conflict');
+        if(path.endsWith('/draft')){
+          await draftGate;
+          stored={text:options.body.text!,content_refs:options.body.content_refs!,revision:stored.revision+1};
+          current={...current,revision:current.revision+1};
+          return {...stored,conversation_revision:current.revision};
+        }
+        if(path.endsWith('/archive')||path.endsWith('/restore')){
+          current={...current,revision:current.revision+1,lifecycle:path.endsWith('/archive')?'archived':'active'};
+          return current;
+        }
+        throw new Error('Unexpected synthetic mutation');
+      }
+      if(path==='/conversations/learning/saved-chat')return current;
+      if(path.endsWith('/draft'))return {...stored,conversation_revision:current.revision};
+      return original?.(path,options);
+    });
+    calls.send.mockImplementation(async(_chat,_body,onEvent)=>onEvent({run_id:'queued-run',sequence:1,type:'error',payload:{message:'Synthetic terminal refusal',code:'unavailable',retryable:true}}));
+    const view=render(frame(<Chat identity={chat.identity}/>));
+    const composer=await screen.findByLabelText('Message Renulus');
+    vi.useFakeTimers({toFake:['setTimeout','clearTimeout']});
+    try{
+      fireEvent.change(composer,{target:{value:'Archive snapshot draft'}});
+      await act(async()=>fireEvent.click(screen.getByRole('button',{name:'Archive'})));
+      expect(calls.api.mock.calls.find(([path,options])=>path.endsWith('/draft')&&options?.method==='PUT')?.[1].body).toEqual({expected_revision:1,text:'Archive snapshot draft',content_refs:[]});
+      view.rerender(frame(<Chat identity={chat.identity} {...queuedProps()}/>));
+      await act(async()=>{await vi.advanceTimersByTimeAsync(450);});
+      expect(onConsumed).not.toHaveBeenCalled();
+      expect((screen.getByLabelText('Message Renulus') as HTMLTextAreaElement).value).toBe('Archive snapshot draft');
+      expect(screen.queryByRole('button',{name:'Remove source 1'})).toBeNull();
+      expect(calls.send).not.toHaveBeenCalled();
+      await act(async()=>{releaseWrite();await draftGate;});
+      expect(screen.getByRole('button',{name:'Restore'})).toBeTruthy();
+      view.rerender(frame(<Chat identity={chat.identity} {...queuedProps()}/>));
+      await act(async()=>{await vi.advanceTimersByTimeAsync(450);});
+      expect(onConsumed).not.toHaveBeenCalled();
+      expect((screen.getByLabelText('Message Renulus') as HTMLTextAreaElement).value).toBe('Archive snapshot draft');
+      expect(screen.queryByRole('button',{name:'Remove source 1'})).toBeNull();
+      expect(calls.send).not.toHaveBeenCalled();
+      await act(async()=>fireEvent.click(screen.getByRole('button',{name:'Restore'})));
+      expect(onConsumed).toHaveBeenCalledTimes(1);
+      expect(onConsumed).toHaveBeenCalledWith(kind==='passage'?'queued-passage':'queued-send');
+      const expectedText=kind==='passage'?'Archive snapshot draft\n\nQueued fictional passage':'Queued fictional question';
+      expect((screen.getByLabelText('Message Renulus') as HTMLTextAreaElement).value).toBe(expectedText);
+      view.rerender(frame(<Chat identity={chat.identity} {...queuedProps()}/>));
+      await act(async()=>{await vi.advanceTimersByTimeAsync(450);});
+      expect(onConsumed).toHaveBeenCalledTimes(1);
+      expect((screen.getByLabelText('Message Renulus') as HTMLTextAreaElement).value).toBe(expectedText);
+      if(kind==='passage'){
+        expect(screen.getAllByRole('button',{name:'Remove source 1'})).toHaveLength(1);
+        expect(calls.send).not.toHaveBeenCalled();
+      }else{
+        expect(calls.send).toHaveBeenCalledTimes(1);
+        expect(calls.send.mock.calls[0][1]).toMatchObject({text:'Queued fictional question',request_id:'queued-send',expected_revision:4,content_refs:[]});
+      }
+      expect(screen.queryByText('Synthetic stale revision')).toBeNull();
+    }finally{
+      await act(async()=>{releaseWrite();await draftGate;});
+      view.unmount();vi.useRealTimers();
+    }
   });
 
   it('flushes a new temporary draft before Save and replays the same command after a lost acknowledgement',async()=>{

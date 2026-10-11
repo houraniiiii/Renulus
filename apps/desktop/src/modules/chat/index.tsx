@@ -195,21 +195,21 @@ export default function ChatPage(props: ChatPageProps) {
 
   useEffect(()=>{
     const intent=props.passageIntent;
-    if(!intent||loading||!chat||consumed.current.has('passage:'+intent.id))return;
+    if(!intent||loading||!chat||busy||archiving||chat.lifecycle!=='active'||consumed.current.has('passage:'+intent.id))return;
     if(refs.length>=20||text.length+intent.text.length+2>16000){setError(new ApiError('Make room in the draft before using this passage.',422,'draft_limit'));return;}
     consumed.current.add('passage:'+intent.id);
     setText(previous=>previous+(previous?'\n\n':'')+intent.text);
     setRefs(previous=>previous.some(ref=>JSON.stringify(ref)===JSON.stringify(intent.reference))?previous:[...previous,intent.reference]);
     props.onPassageIntentConsumed?.(intent.id);
-  },[props.passageIntent,loading,chat?.identity.id]);
+  },[props.passageIntent,loading,busy,archiving,chat?.identity.id,chat?.lifecycle]);
 
   useEffect(()=>{
     const intent=props.sendIntent;
-    if(!intent||loading||!chat||busy||consumed.current.has('send:'+intent.request_id))return;
+    if(!intent||loading||!chat||busy||archiving||chat.lifecycle!=='active'||consumed.current.has('send:'+intent.request_id))return;
     consumed.current.add('send:'+intent.request_id);
     setText(intent.text);props.onSendIntentConsumed?.(intent.request_id);
     void send(intent.text,intent.request_id);
-  },[props.sendIntent,loading,chat?.identity.id]);
+  },[props.sendIntent,loading,busy,archiving,chat?.identity.id,chat?.lifecycle]);
 
   async function refreshMessages(current: ConversationSummary,version=epoch.current) {
     const page=await api<PageResult<Message>>(conversationPath(current)+'/messages',{headers:helpHeaders});
