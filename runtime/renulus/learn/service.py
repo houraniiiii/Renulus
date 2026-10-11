@@ -424,7 +424,7 @@ class LearnService:
                     self.check_run(run, conn=conn)
                     source_dependencies = self._source_dependencies_in(conn, run, citations, topic_id, fresh)
             def check_inputs(conn=None):
-                with nullcontext(conn) if conn is not None else closing(self.db.connect()) as snapshot:
+                with nullcontext(conn) if conn is not None else self.db.transaction() as snapshot:
                     self.check_run(run, conn=snapshot)
                     memory.check_answer_inputs_in(snapshot, inputs=answer_inputs,
                         dependencies=source_dependencies, project_id=run.project_id)
