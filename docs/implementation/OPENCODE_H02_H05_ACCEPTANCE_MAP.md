@@ -29,6 +29,18 @@ October 11, 2026. Published source: `12364fcd1b4134f31b19e65ec00262d09db5eaac`, 
 
 ## Retained receipts and gates
 
+Final read-only H05 adjudication at7fe6761a identifies no additional intrinsic
+local requirement beyond H02/H04 dependency closure and the automatic-capture
+integration decision. L1/N2 resolve completed native bytes/publication; admitted
+source/history/tool producers carry complete closure, while unsupported summary
+and child inputs remain denied. Public four-case Learn/Memory regressions need
+not be repeated as a native four-case matrix. M166/M18/N2 establish scope,
+actual engines, echo ancestry, existing restore barriers and terminal revocation.
+Actual child producers and complete paired restore retain H07/H18 ownership.
+This is criterion/evidence adjudication, not new independent review of the
+authored legacy hook or ticket acceptance. Isolated U2 still needs integration
+and explicit disposition of the old OFF expectation.
+
 | Key | Static receipt | Passed |
 | --- | --- | --- |
 | A1 | [activation](C:/Renulus/scratch/oc-h02-h08/activation/ipc-cycle01-green.xml) | 1 |
