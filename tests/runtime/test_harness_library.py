@@ -762,3 +762,205 @@ def test_content_reference_disclosure_is_still_denied_during_active_test(persist
         with pytest.raises(ApiError) as caught:
             adapter.project_content_reference(conn, consumed[0], authority=trusted)
         assert caught.value.code == "assistance_restricted"
+
+
+def test_independent_library_root_support_survives_test_and_context_changes(persistent_library_support, monkeypatch):
+    import sqlite3
+    from renulus.design_c_contracts import Dependency
+    from renulus.memory.lineage import AnswerInputs
+    services, adapter, source = persistent_library_support
+    identity = Identity(type="library_revision", id=source["revision_id"])
+    with services.db.transaction() as conn:
+        token = adapter.resolve_dependency(conn, identity, authority=authority(source["revision_id"]))
+    dependency = Dependency(target=identity, expected_revision=token)
+    start_assessment(services, "test")
+    with services.db.transaction() as conn:
+        bump_context_epoch(conn)
+    def reference_only(action, table, column, *_):
+        if action == sqlite3.SQLITE_READ and (column in {"text", "context_text", "extraction_json", "original_path"}
+                or table in {"preferences", "learn_harness_runs", "learn_harness_answers"}):
+            return sqlite3.SQLITE_DENY
+        return sqlite3.SQLITE_OK
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Persistent roots require no run, nested connection, body or engine")
+    with services.db.transaction() as conn:
+        conn.set_authorizer(reference_only)
+        monkeypatch.setattr(services.db, "connect", forbidden)
+        closure = adapter.resolve_dependency_in(conn, dependency, project_id=None, for_support=True)
+        assert isinstance(closure, AnswerInputs)
+        assert closure.model_dump(mode="json") == {"version": 1, "inputs": [], "dependencies": []}
+        assert HarnessLibrary(adapter.repository).resolve_dependency_in(
+            conn, dependency, project_id=None, for_support=True) == closure
+
+
+def test_independent_library_root_cannot_treat_unknown_group_project_as_scope(persistent_library_support):
+    from renulus.design_c_contracts import Dependency
+    services, adapter, source = persistent_library_support
+    identity = Identity(type="library_revision", id=source["revision_id"])
+    with services.db.transaction() as conn:
+        token = adapter.resolve_dependency(conn, identity, authority=authority(source["revision_id"]))
+        dependency = Dependency(target=identity, expected_revision=token)
+        with pytest.raises(ApiError) as caught:
+            adapter.resolve_dependency_in(conn, dependency, project_id="thread-is-not-a-project", for_support=True)
+        assert caught.value.code == "memory_project_scope"
+
+
+@pytest.mark.parametrize("marker", ["knowledge-document", "document", "knowledge-revision", "revision"])
+def test_independent_library_root_denies_tombstoned_restored_source_rows(persistent_library_support, marker):
+    from renulus.design_c_contracts import Dependency
+    services, adapter, source = persistent_library_support
+    identity = Identity(type="library_revision", id=source["revision_id"])
+    with services.db.transaction() as conn:
+        token = adapter.resolve_dependency(conn, identity, authority=authority(source["revision_id"]))
+        dependency = Dependency(target=identity, expected_revision=token)
+        # A restore may retain old ready rows alongside a canonical deletion marker.
+        identifier = source["document_id"] if marker in {"knowledge-document", "document"} else source["revision_id"]
+        services.db.mark_deleted(marker, identifier, conn)
+        with pytest.raises(ApiError) as caught:
+            adapter.resolve_dependency_in(conn, dependency, project_id=None, for_support=True)
+        assert caught.value.code == "memory_dependency_revoked"
+
+
+def test_independent_library_root_requires_the_callers_canonical_snapshot(persistent_library_support):
+    from contextlib import closing
+    from renulus.design_c_contracts import Dependency
+    services, adapter, source = persistent_library_support
+    identity = Identity(type="library_revision", id=source["revision_id"])
+    with services.db.transaction() as conn:
+        token = adapter.resolve_dependency(conn, identity, authority=authority(source["revision_id"]))
+    dependency = Dependency(target=identity, expected_revision=token)
+    with closing(services.db.connect()) as conn:
+        assert not conn.in_transaction
+        with pytest.raises(ApiError) as caught:
+            adapter.resolve_dependency_in(conn, dependency, project_id=None, for_support=True)
+        assert caught.value.code == "harness_publication_transaction_required"
+
+
+def test_independent_library_roots_keep_canonical_global_and_project_visibility(persistent_library_support):
+    from dataclasses import replace
+    from renulus.design_c_contracts import Dependency
+    from renulus.learn.conversation_models import Mutation
+    from renulus.storage.invalidation import context_epoch_in
+    from renulus.study.project_models import DocumentLink, NewProject
+    services, adapter, global_source = persistent_library_support
+    projects, repo = services.get("projects"), adapter.repository
+    owner = projects.create(NewProject(title="Synthetic source owner"))
+    other = projects.create(NewProject(title="Synthetic other project"))
+    project_source = repo.import_text("Synthetic project-scoped transplantation root.",
+        scope=ContextScope(kind=Scope.LIBRARY, entity_id=owner["id"]))
+    thread_source = repo.import_text("Synthetic private historical thread root.",
+        scope=ContextScope(kind=Scope.LIBRARY, entity_id="historical-thread"))
+    assert project_source["status"] == thread_source["status"] == "ready"
+    # A canonical link does not override a document's actual private scope.
+    projects.document(other["id"], DocumentLink(expected_revision=other["revision"],
+        revision_id=project_source["revision_id"]), "link")
+    projects.change(owner["id"], Mutation(expected_revision=owner["revision"]), "archive")
+    dependencies = []
+    with services.db.transaction() as conn:
+        epoch = context_epoch_in(conn)
+        for source, entity_id in [(global_source, None), (project_source, owner["id"]), (thread_source, "historical-thread")]:
+            identity = Identity(type="library_revision", id=source["revision_id"])
+            trusted = replace(authority(source["revision_id"], context_epoch=epoch),
+                scope=ContextScope(kind=Scope.STUDY, entity_id=entity_id))
+            token = adapter.resolve_dependency(conn, identity, authority=trusted)
+            assert token is not None
+            dependencies.append(Dependency(target=identity, expected_revision=token))
+    global_root, project_root, thread_root = dependencies
+    start_assessment(services, "test")
+    with services.db.transaction() as conn:
+        for project_id in (None, owner["id"], other["id"]):
+            assert adapter.resolve_dependency_in(conn, global_root, project_id=project_id,
+                for_support=True).dependencies == ()
+        assert adapter.resolve_dependency_in(conn, project_root, project_id=owner["id"],
+            for_support=True).inputs == ()
+        for dependency, project_id in [(project_root, None), (project_root, other["id"]),
+                (thread_root, None), (thread_root, owner["id"]), (thread_root, other["id"])]:
+            with pytest.raises(ApiError) as caught:
+                adapter.resolve_dependency_in(conn, dependency, project_id=project_id, for_support=True)
+            assert caught.value.code == "memory_dependency_revoked"
+        # The canonical group project remains required even for a global source.
+        services.db.mark_deleted("project", owner["id"], conn)
+        with pytest.raises(ApiError) as caught:
+            adapter.resolve_dependency_in(conn, global_root, project_id=owner["id"], for_support=True)
+        assert caught.value.code == "memory_project_scope"
+        assert adapter.resolve_dependency_in(conn, global_root, project_id=None, for_support=True).inputs == ()
+
+
+def test_independent_library_root_keeps_rights_readiness_and_exact_metadata_digest(persistent_library_support):
+    import json
+    from renulus.design_c_contracts import Dependency
+    services, adapter, source = persistent_library_support
+    identity = Identity(type="library_revision", id=source["revision_id"])
+    with services.db.transaction() as conn:
+        token = adapter.resolve_dependency(conn, identity, authority=authority(source["revision_id"]))
+    dependency = Dependency(target=identity, expected_revision=token)
+    start_assessment(services, "test")
+    with services.db.transaction() as conn:
+        with pytest.raises(ApiError) as caught:
+            adapter.resolve_dependency_in(conn, dependency, project_id=None, for_support=False)
+        assert caught.value.code == "assistance_restricted"
+        original = conn.execute("SELECT rights_json,metadata_json FROM knowledge_revisions WHERE id=?",
+            (identity.id,)).fetchone()
+        def denied():
+            with pytest.raises(ApiError) as caught:
+                adapter.resolve_dependency_in(conn, dependency, project_id=None, for_support=True)
+            assert caught.value.code == "memory_dependency_revoked"
+        # Fixture-only rights editor, following the existing accepted Library checks.
+        for operation in ("display", "cache", "index", "embedding", "model_input", "derivation"):
+            rights = json.loads(original["rights_json"])
+            rights[operation] = False
+            conn.execute("UPDATE knowledge_revisions SET rights_json=? WHERE id=?", (json.dumps(rights), identity.id))
+            denied()
+        conn.execute("UPDATE knowledge_revisions SET rights_json=? WHERE id=?", (original["rights_json"], identity.id))
+        for status in ("queued", "processing", "cancelled", "failed", "deleted"):
+            conn.execute("UPDATE knowledge_revisions SET status=? WHERE id=?", (status, identity.id))
+            denied()
+        conn.execute("UPDATE knowledge_revisions SET status='ready' WHERE id=?", (identity.id,))
+        # This metadata change remains individually eligible, but changes the consumed digest.
+        metadata = json.loads(original["metadata_json"])
+        metadata["notes"] = ["Synthetic provenance metadata changed"]
+        conn.execute("UPDATE knowledge_revisions SET metadata_json=? WHERE id=?", (json.dumps(metadata), identity.id))
+        denied()
+        conn.execute("UPDATE knowledge_revisions SET metadata_json=? WHERE id=?", (original["metadata_json"], identity.id))
+        conn.execute("UPDATE knowledge_documents SET active_revision=NULL WHERE id=?", (source["document_id"],))
+        denied()
+        conn.execute("UPDATE knowledge_documents SET active_revision=? WHERE id=?", (identity.id, source["document_id"]))
+        assert adapter.resolve_dependency_in(conn, dependency, project_id=None, for_support=True).inputs == ()
+        with pytest.raises(ApiError) as caught:
+            adapter.resolve_dependency_in(conn, Dependency(target=identity, expected_revision="0" * 64),
+                project_id=None, for_support=True)
+        assert caught.value.code == "memory_dependency_revoked"
+        with pytest.raises(ApiError) as caught:
+            adapter.resolve_dependency_in(conn, Dependency(target=Identity(type="goal", id="unknown"), expected_revision="1"),
+                project_id=None, for_support=True)
+        assert caught.value.code == "memory_dependency_unknown"
+
+
+@pytest.mark.parametrize("change", ["replacement", "retracted", "project_deleted"])
+def test_independent_library_roots_deny_public_source_and_project_revocation(persistent_library_support, change):
+    from renulus.design_c_contracts import Dependency
+    from renulus.learn.conversation_models import Mutation
+    from renulus.storage.invalidation import context_epoch_in
+    from renulus.study.project_models import NewProject
+    services, adapter, source = persistent_library_support
+    projects, repo = services.get("projects"), adapter.repository
+    project = projects.create(NewProject(title="Synthetic retained group"))
+    identity = Identity(type="library_revision", id=source["revision_id"])
+    with services.db.transaction() as conn:
+        token = adapter.resolve_dependency(conn, identity,
+            authority=authority(source["revision_id"], context_epoch=context_epoch_in(conn)))
+    dependency = Dependency(target=identity, expected_revision=token)
+    if change == "replacement":
+        note(repo, "Synthetic corrected CKD replacement root.", document_id=source["document_id"],
+            metadata=SourceMetadata(source_id="L02", doi="10.1234/h02-persistent-support"))
+    elif change == "retracted":
+        repo.update_source_status(status_event("10.1234/h02-persistent-support", retracted=True))
+    else:
+        projects.delete(project["id"], Mutation(expected_revision=project["revision"]))
+    start_assessment(services, "test")
+    with services.db.transaction() as conn:
+        with pytest.raises(ApiError) as caught:
+            adapter.resolve_dependency_in(conn, dependency, project_id=project["id"], for_support=True)
+        assert caught.value.code == ("memory_project_scope" if change == "project_deleted" else "memory_dependency_revoked")
+        if change == "project_deleted":
+            assert adapter.resolve_dependency_in(conn, dependency, project_id=None, for_support=True).dependencies == ()

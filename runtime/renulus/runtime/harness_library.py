@@ -6,14 +6,17 @@ import inspect
 import json
 from contextlib import closing
 from threading import Event
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from renulus.contracts import ApiError, ContextScope, Scope
-from renulus.design_c_contracts import Identity, canonical_digest
+from renulus.design_c_contracts import Dependency, Identity, canonical_digest
 from renulus.knowledge.saved_extraction import _reference as _reader_reference
 from renulus.storage.assessment_policy import require_assistance
 from renulus.storage.invalidation import context_epoch_in
+
+if TYPE_CHECKING:
+    from renulus.memory.lineage import AnswerInputs
 
 
 class _RetrieveArguments(BaseModel):
@@ -238,11 +241,19 @@ class HarnessLibrary:
             require_assistance(conn, expected_revision=authority.policy_revision)
         if context_epoch_in(conn) != authority.context_epoch:
             return None
+        token = self._source_dependency(conn, identity, scope=authority.scope,
+            topic_id=authority.topic_id, current_only=authority.current_only)
+        return None if _local(authority.cancelled) else token
+
+    def _source_dependency(self, conn, identity, *, scope, topic_id=None, current_only=False):
         row = conn.execute("SELECT r.id,r.document_id,r.sha256,r.metadata_json,r.rights_json,d.title,d.source_id "
             "FROM knowledge_revisions r JOIN knowledge_documents d ON d.active_revision=r.id "
             "WHERE r.id=? AND r.status='ready' AND d.deleted_at IS NULL AND d.reserved=0 "
-            "AND d.scope_kind='personal-library' AND (d.scope_entity IS NULL OR d.scope_entity=?)",
-            (identity.id, authority.scope.entity_id)).fetchone()
+            "AND d.scope_kind='personal-library' AND (d.scope_entity IS NULL OR d.scope_entity=?) "
+            "AND NOT EXISTS (SELECT 1 FROM deletion_ledger WHERE "
+            "(entity_type IN ('knowledge-document','document') AND entity_id=d.id) OR "
+            "(entity_type IN ('knowledge-revision','revision') AND entity_id=r.id))",
+            (identity.id, scope.entity_id)).fetchone()
         if row is None:
             return None
         passage = conn.execute("SELECT p.id,p.locators_json FROM knowledge_passages p WHERE p.revision_id=? "
@@ -253,14 +264,41 @@ class HarnessLibrary:
             return None
         checked = self.repository.check_evidence([{"id": passage["id"],
             "document_id": row["document_id"], "document_revision": identity.id}],
-            scope=authority.scope, topic_id=authority.topic_id, current_only=authority.current_only, conn=conn)
-        if checked["eligible_ids"] != [passage["id"]] or _local(authority.cancelled):
+            scope=scope, topic_id=topic_id, current_only=current_only, conn=conn)
+        if checked["eligible_ids"] != [passage["id"]]:
             return None
         return canonical_digest({"identity": identity.model_dump(mode="json"),
             "document_id": row["document_id"], "sha256": row["sha256"], "title": row["title"],
             "source_id": row["source_id"], "metadata": json.loads(row["metadata_json"]),
             "rights": json.loads(row["rights_json"]), "passage_id": passage["id"],
             "locators": json.loads(passage["locators_json"])})
+
+    def resolve_dependency_in(self, conn, dependency: Dependency, *,
+                              project_id: str | None, for_support: bool) -> "AnswerInputs":
+        """Validate an independent persistent Library root without a live run.
+
+        Prebind this object before Memory opens. The canonical group owns
+        project_id; no model payload, historical thread or streaming owner may
+        supply scope. Empty AnswerInputs attest an eligible independent root.
+        The caller owns the transaction and canonical project/group identity;
+        archived projects retain support, missing/deleted projects cannot grant it.
+        """
+        from renulus.memory.lineage import AnswerInputs
+        if not conn.in_transaction:
+            raise ApiError("harness_publication_transaction_required", "Resolve retained sources in the canonical transaction", 409)
+        if dependency.target.type != "library_revision":
+            raise ApiError("memory_dependency_unknown", "Use the Library resolver only for Library revisions", 409)
+        if not for_support:
+            require_assistance(conn)
+        if project_id is not None and not conn.execute("SELECT 1 FROM study_projects WHERE id=? "
+                "AND lifecycle!='deleted' AND NOT EXISTS (SELECT 1 FROM deletion_ledger "
+                "WHERE entity_type='project' AND entity_id=study_projects.id)", (project_id,)).fetchone():
+            raise ApiError("memory_project_scope", "Retained Library support requires its canonical project", 409)
+        token = self._source_dependency(conn, dependency.target,
+            scope=ContextScope(kind=Scope.STUDY, entity_id=project_id))
+        if token is None or token != dependency.expected_revision:
+            raise ApiError("memory_dependency_revoked", "The retained Library source changed or is unavailable", 409)
+        return AnswerInputs()
 
     async def execute(self, command, arguments, authority):
         method = {"library.retrieve": self.retrieve, "library.citation": self.open_citation}.get(command)
