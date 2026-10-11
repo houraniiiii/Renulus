@@ -43,6 +43,64 @@ node C:/Renulus/dev/repo/tools/renulus-control/server.mjs --repo C:/Renulus/dev/
 | --state-root | Absolute evidence root; default path.join(os.tmpdir(), 'rn-c') |
 | --helper-assets | Optional absolute trusted public helper bundle |
 | --fixture-root | Optional fixed absolute owned synthetic fixture directory; uploads are disabled when omitted |
+| --harness-settings-fixture | Optional literal v1; source mode requires --python and --helper-assets, rejects --executable |
+
+### Fixed Settings fixture (preparation)
+
+The opt-in uses the reviewed Node26.4.0 controller at
+C:/Renulus/scratch/ocf/tools/node-v26.4.0-win-x64/node.exe. After the parent
+confirms integrated startup/adapter/close prerequisites and authorizes a build
+and hidden launch, append --harness-settings-fixture v1 to the existing source
+controller/client command. Use a short owned state root such as G:/rh04.
+No tool arguments or MCP schemas change. There is no arbitrary backend entry,
+startup JSON, endpoint, policy, callback or evidence option.
+
+The controller writes startup-N.json once under its session out/ directory and
+records its SHA256. It derives the live p/ root, stable profile/store identities,
+separate a/ artifacts and k/ candidates, fixed native main and transport bounds.
+The first document requests new initialization; subsequent documents reuse the
+identities with initialize_new:false and no initial policy. Existing effective,
+requested and revocation state remain canonical on reopen.
+
+Only this opt-in gives Electron sibling d/ desktop/session state. The live p/
+root stays empty until the actual Windows issuer acquires it. A strict
+background-only envelope becomes the typed settingsFixture option at
+startBackend. It selects only tools/renulus-control/harness-settings-backend.py,
+which validates the document digest and calls public create_managed_app.
+After issuer acquisition, the trusted preparation callback validates both
+helper manifests against the reviewed source contract and copies only declared
+hash/size-checked files, publishing the helper manifest last. It assigns its
+process a synthetic home beneath d/ and forces offline helper flags. It never
+reads or forwards a personal home, credential, proxy or provider configuration.
+
+The fixture injects only fixed synthetic catalogue HTTP into the original
+ProviderManager. Initial role policy includes all14 Settings purposes. Its
+registry hash comes from supported host.inspect over a real closed native
+candidate, registered with the actual issuer and retained through settlement.
+The shared bootstrap adapter performs candidate/live validation and activation;
+the fixture supplies no CandidateHealth, account limits, tokenizer/count or
+deployment evidence and installs no model registry. It grants no inference.
+
+Settings requests reach the actual renderer, frontend proxy and app routes.
+The passive recorder observes only GET/POST configuration and activation
+responses at the owned origin. It projects status, exact revision hashes,
+admission and safe error codes; body/account/credential data are not retained.
+Reading requires a bounded Content-Length<=65536, with at most4 active reads
+and64 retained metadata entries. Unrelated responses consume no read slots.
+Snapshots and receipt.json expose the projection, dropped entries and pending
+reads. A bounded metadata wait never overrides the actual lifecycle result.
+This record does not authorize activation or settlement.
+Normal close still uses the authenticated runtime/shutdown route and verified
+process exit. Actual renderer stage/activation/reopen and normal shutdown proof
+remain pending the parent-controlled connected run.
+
+Dedicated contract checks are harness-settings.test.mjs,
+electron/harness-settings-fixture.test.ts and
+tests/runtime/test_harness_settings_backend_fixture.py. They use OS/HTTP
+boundary substitutes, real issuer subprocesses and tiny declared synthetic
+helper bytes. Their app-construction/negative-lifespan checks use real APIs
+without serving a socket or starting a native candidate; they do not establish
+helper-engine, desktop or connected startup acceptance.
 
 The source executable is the existing apps/desktop/node_modules/electron/dist/electron.exe.
 

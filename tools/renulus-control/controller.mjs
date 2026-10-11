@@ -31,17 +31,23 @@ function absolute(value, label) {
   return path.resolve(value);
 }
 export function parseCli(argv) {
-  const names = { '--repo': 'repo', '--python': 'python', '--executable': 'executable', '--state-root': 'stateRoot', '--helper-assets': 'helperAssets', '--fixture-root': 'fixtureRoot' };
+  const names = { '--repo': 'repo', '--python': 'python', '--executable': 'executable', '--state-root': 'stateRoot', '--helper-assets': 'helperAssets', '--fixture-root': 'fixtureRoot', '--harness-settings-fixture': 'harnessSettingsFixture' };
   const result = { stateRoot: path.join(os.tmpdir(), 'rn-c') };
   for (let i = 0; i < argv.length; i += 2) {
     const key = names[argv[i]];
     check(key && i + 1 < argv.length && !argv[i + 1].startsWith('--') && !Object.hasOwn(result, key === 'stateRoot' ? '_stateRoot' : key), 'invalid_cli', 'Use --repo, --python, and optional --executable, --state-root, --helper-assets, --fixture-root once each.');
-    result[key] = key === 'fixtureRoot' ? fixtureRootPath(argv[i + 1]) : absolute(argv[i + 1], argv[i]);
+    result[key] = key === 'harnessSettingsFixture' ? argv[i + 1] : key === 'fixtureRoot' ? fixtureRootPath(argv[i + 1]) : absolute(argv[i + 1], argv[i]);
     if (key === 'stateRoot') result._stateRoot = true;
   }
   delete result._stateRoot;
   check(result.repo && (result.python || result.executable), 'invalid_cli', '--repo and either --python (source mode) or --executable (packaged mode) are required absolute paths.');
+  settingsFixtureConfiguration(result);
   return result;
+}
+
+function settingsFixtureConfiguration(config) {
+  if (config.harnessSettingsFixture === undefined) return;
+  check(config.harnessSettingsFixture === 'v1' && config.python && config.helperAssets && !config.executable, 'invalid_cli', 'The fixed --harness-settings-fixture v1 requires source --python and --helper-assets.');
 }
 
 // This is an allowlist, deliberately not a copy of the invoking account's environment.
@@ -51,6 +57,7 @@ export function isolatedEnvironment(inherited, config, session) {
   const systemRoot = result.SystemRoot ?? result.SYSTEMROOT ?? 'C:\Windows';
   return { ...result, PATH: path.join(systemRoot, 'System32'), TEMP: session.temporary, TMP: session.temporary,
     RENULUS_BACKGROUND_TEST: '1', RENULUS_BACKGROUND_OWNER_PID: String(process.pid), RENULUS_PROFILE: session.profile, ...(config.python ? { RENULUS_PYTHON: config.python } : {}),
+    ...(session.settingsFixture ? { RENULUS_BACKGROUND_HARNESS_SETTINGS: JSON.stringify(session.settingsFixture) } : {}),
     HF_HUB_OFFLINE: '1', TRANSFORMERS_OFFLINE: '1', HF_HUB_DISABLE_TELEMETRY: '1', DO_NOT_TRACK: '1' };
 }
 
@@ -80,6 +87,36 @@ export function requestAllowed(url, method, origin) {
   // App-owned subscription, source and retention gates produce actual product
   // errors. This controller does not substitute a local API mutation firewall.
   return p.startsWith('/api/v1/');
+}
+
+function settingsResponseRoute(response, origin) {
+  let url;
+  try { url = new URL(response.url()); } catch { return null; }
+  const method = response.request().method();
+  if (!isFlowUrl(url.href) || url.origin !== origin || url.search || url.hash
+      || !['GET', 'POST'].includes(method) || !['/api/v1/runtime/harness/configuration',
+        '/api/v1/runtime/harness/configuration/activate'].includes(url.pathname)) return null;
+  return { method, path: url.pathname };
+}
+
+export async function captureSettingsResponse(response, origin) {
+  const route = settingsResponseRoute(response, origin);
+  if (!route) return null;
+  const row = { ...route, status: response.status() };
+  try {
+    const length = await response.headerValue('content-length');
+    if (typeof length !== 'string' || !/^[0-9]{1,5}$/.test(length) || Number(length) > 65536) throw new Error();
+    const raw = await response.body();
+    if (raw.length > 65536) throw new Error();
+    const data = JSON.parse(raw.toString('utf8'));
+    for (const key of ['requested', 'effective', 'failed']) {
+      if (data[key] === null || typeof data[key] === 'string' && /^[a-f0-9]{64}$/.test(data[key])) row[key] = data[key];
+    }
+    if (typeof data.admission_open === 'boolean') row.admission_open = data.admission_open;
+    if (typeof data.error?.code === 'string' && /^[a-z][a-z0-9_]{0,127}$/.test(data.error.code)) row.error_code = data.error.code;
+    if (typeof data.failure_code === 'string' && /^[a-z][a-z0-9_]{0,127}$/.test(data.failure_code)) row.failure_code = data.failure_code;
+  } catch { row.metadata = 'unavailable'; }
+  return row;
 }
 
 async function noLinks(file, allowMissing = false) {
@@ -426,6 +463,7 @@ export class RenulusController {
     check(config.python || config.executable, 'invalid_cli', 'Source mode requires --python; packaged mode uses its fixed bundled interpreter.');
     for (const key of ['executable', 'helperAssets']) if (config[key]) this.config[key] = absolute(config[key], '--' + key);
     if (config.fixtureRoot !== undefined) this.config.fixtureRoot = fixtureRootPath(config.fixtureRoot);
+    settingsFixtureConfiguration(this.config);
     this.launch = dependencies.launch ?? defaultLaunch;
     this.preflight = dependencies.preflight ?? launchContract;
     this.inspect = dependencies.inspect ?? inspectProcesses;
@@ -440,6 +478,8 @@ export class RenulusController {
     this.outputSequence = 0; this.backgroundEvents = {};
     this.seenEvents = new Set();
     this.fixtureCatalog = null; this.observedFileInputs = new Map();
+    this.startupDocuments = [];
+    this.settingsResponses = []; this.settingsResponseTasks = new Set(); this.settingsResponsesDropped = 0;
   }
   log(kind, message) {
     this.logs.push({ at: new Date().toISOString(), kind, message: String(redact(message, this.filled)).slice(0, LIMITS.line) });
@@ -447,6 +487,11 @@ export class RenulusController {
   }
   async prepare(signal) {
     if (this.session) return;
+    if (this.config.harnessSettingsFixture) {
+      check(process.versions.node === '26.4.0', 'fixture_runtime', 'The Settings fixture requires the reviewed Node 26.4.0 controller runtime.');
+      await noLinks(this.config.helperAssets);
+      check((await lstat(this.config.helperAssets)).isDirectory(), 'helper_assets_missing', 'Settings fixture helper assets must be an existing reviewed directory.');
+    }
     if (this.config.fixtureRoot) this.fixtureCatalog = await loadFixtureCatalog(this.config, signal);
     const stateRoot = this.config.stateRoot;
     check(independent(stateRoot, this.config.repo) && (!this.config.python || independent(stateRoot, path.dirname(this.config.python))), 'unsafe_state', 'Controller state must be separate from repository and dependency directories.');
@@ -470,7 +515,8 @@ export class RenulusController {
     this.session = { directory, profile: path.join(directory, 'p'), temporary: path.join(directory, 't'), outputs: path.join(directory, 'out') };
     for (const child of [this.session.profile, this.session.temporary, this.session.outputs]) await mkdir(child);
     await writeFile(path.join(directory, 'session.json'), JSON.stringify({ format: 'renulus-control-session-v1', syntheticOnly: true, profile: this.session.profile }), { flag: 'wx' });
-    if (this.config.helperAssets) this.helpers = await seedHelpers(this.config.repo, this.config.helperAssets, this.session.profile, signal);
+    this.session.desktop = this.config.harnessSettingsFixture ? path.join(directory, 'd') : path.join(this.session.profile, 'desktop');
+    if (this.config.helperAssets && !this.config.harnessSettingsFixture) this.helpers = await seedHelpers(this.config.repo, this.config.helperAssets, this.session.profile, signal);
     this.log('session', 'Created a fresh owned synthetic profile.');
   }
   run(name, args = {}, { signal } = {}) {
@@ -523,7 +569,8 @@ export class RenulusController {
         .filter(input => UPLOAD_LABELS.has(input.label) && !input.directory && !SENSITIVE_INPUT.test(input.hint));
       await budget.wait(this.observe());
       for (const input of fileInputs) this.observedFileInputs.set(input.locator.css, canonical(input));
-      return { url: this.page.url().split(/[?#]/)[0], snapshot: redact(snapshot).slice(0, LIMITS.snapshot), truncated: snapshot.length > LIMITS.snapshot, locator: 'Exact role/name, or pure CSS; every action requires exactly one match.', fileInputs };
+      return { url: this.page.url().split(/[?#]/)[0], snapshot: redact(snapshot).slice(0, LIMITS.snapshot), truncated: snapshot.length > LIMITS.snapshot, locator: 'Exact role/name, or pure CSS; every action requires exactly one match.', fileInputs,
+        ...(this.config.harnessSettingsFixture ? { settingsResponses: this.settingsResponses.slice(), settingsResponsesDropped: this.settingsResponsesDropped, settingsResponsesPending: this.settingsResponseTasks.size } : {}) };
     }
     if (name === 'renulus_upload') {
       check(Object.keys(args).sort().join(',') === 'fixture,locator', 'invalid_argument', 'Upload accepts only an observed locator and a declared fixture basename.');
@@ -642,6 +689,22 @@ export class RenulusController {
     this.fault = null; this.origin = null;
     await budget.wait(this.prepare(budget.signal));
     const contract = await budget.wait(this.preflight(this.config));
+    if (this.config.harnessSettingsFixture) {
+      const session = this.session, number = this.startupDocuments.length + 1;
+      const identity = 'synthetic-settings-' + path.basename(session.directory);
+      const document = { version: 1, process: { node_executable: process.execPath,
+        host_entry: path.join(this.config.repo, 'packages/harness/src/main.mjs'),
+        profile_root: session.profile, profile_id: identity, store_id: identity + '-runtime',
+        domain_store_id: identity + '-domain', domain_path: 'state/renulus.sqlite3',
+        max_inflight: 1, max_domain_inflight: 1, max_frame_bytes: 65536, start_timeout: 45 },
+        artifact_root: path.join(session.directory, 'a'), candidate_root: path.join(session.directory, 'k'),
+        attempt_timeout: 45, initialize_new: number === 1 };
+      const raw = JSON.stringify(document), startupDocument = path.join(session.outputs, 'startup-' + number + '.json');
+      await budget.wait(writeFile(startupDocument, raw, { flag: 'wx' }));
+      session.settingsFixture = Object.freeze({ kind: 'harness-settings-synthetic-v1', startupDocument,
+        startupSha256: createHash('sha256').update(raw).digest('hex'), helperAssets: this.config.helperAssets });
+      this.startupDocuments.push({ path: startupDocument, sha256: session.settingsFixture.startupSha256 });
+    }
     this.env = isolatedEnvironment(process.env, this.config, this.session);
     const started = Date.now();
     if (this.launch === defaultLaunch) this.captureLaunchLogs();
@@ -765,6 +828,17 @@ export class RenulusController {
       page.__renulusControlAttached = true;
       page.on('console', message => { if (['error', 'warning', 'warn'].includes(message.type())) this.log('renderer-console', message.text()); });
       page.on('pageerror', error => this.log('renderer-error', error.message));
+      if (this.config.harnessSettingsFixture) page.on('response', response => {
+        if (!settingsResponseRoute(response, this.origin)) return;
+        if (this.settingsResponseTasks.size >= 4) { this.settingsResponsesDropped++; return; }
+        const task = captureSettingsResponse(response, this.origin).then(row => {
+          if (!row) return;
+          this.settingsResponses.push(row);
+          if (this.settingsResponses.length > 64) { this.settingsResponses.shift(); this.settingsResponsesDropped++; }
+        }).catch(() => this.log('settings-observation', 'Settings response metadata was unavailable.'))
+          .finally(() => this.settingsResponseTasks.delete(task));
+        this.settingsResponseTasks.add(task);
+      });
       page.on('filechooser', chooser => {
         // Listener interception covers labels/buttons that programmatically click
         // a file input, as well as direct inputs. Do not leave a chooser pending.
@@ -792,7 +866,7 @@ export class RenulusController {
     // Playwright 1.62 launches Electron through cmd.exe on Windows. The owned
     // launcher handle and the real Electron main process have different PIDs.
     const shellLaunch = state.pid !== launcherPid;
-    check(state.name === 'Renulus' && Number.isSafeInteger(state.pid) && state.pid > 0 && state.ownerPid === String(process.pid) && state.background && !state.attachedBackend && samePath(state.profile, this.session.profile) && samePath(state.userData, path.join(this.session.profile, 'desktop')), 'ownership_mismatch', 'The launched app does not have the expected synthetic profile, owner/main PID and managed background mode.');
+    check(state.name === 'Renulus' && Number.isSafeInteger(state.pid) && state.pid > 0 && state.ownerPid === String(process.pid) && state.background && !state.attachedBackend && samePath(state.profile, this.session.profile) && samePath(state.userData, this.session.desktop), 'ownership_mismatch', 'The launched app does not have the expected synthetic profile, owner/main PID and managed background mode.');
     check(state.violations.length === 0 && state.windows.every(window => !window.visible && !window.focused && !window.focusable && window.backgroundThrottling === false && window.sandbox && window.contextIsolation && !window.nodeIntegration), 'visible_window', 'An owned window was visible, focused or lacked the required background isolation.');
     check(state.packaged === !!this.config.executable, 'ownership_mismatch', 'The launched source/package mode differs from the fixed CLI configuration.');
     for (const child of state.children) check(samePath(child.profile, this.session.profile), 'backend_unverified', 'An unexpected managed child has no controller-owned profile.');
@@ -862,8 +936,11 @@ export class RenulusController {
   }
   async persist() {
     if (!this.session) return;
+    if (this.settingsResponseTasks.size) await bounded(Promise.allSettled([...this.settingsResponseTasks]), 2000, 'Settings metadata observation did not settle.')
+      .catch(() => this.log('settings-observation', 'Settings metadata is still pending; the lifecycle result remains authoritative.'));
     const files = { 'logs.ndjson': this.logs.map(item => JSON.stringify(redact(item, this.filled))).join('\n') + '\n',
-      'receipt.json': JSON.stringify(redact({ format: 'renulus-control-receipt-v1', syntheticOnly: true, profile: this.session.profile, launches: this.launches, closes: this.closes, events: this.backgroundEvents, fault: this.fault?.code ?? null }), null, 2) };
+      'receipt.json': JSON.stringify(redact({ format: 'renulus-control-receipt-v1', syntheticOnly: true, profile: this.session.profile, launches: this.launches, closes: this.closes, events: this.backgroundEvents, startupDocuments: this.startupDocuments,
+        ...(this.config.harnessSettingsFixture ? { settingsResponses: this.settingsResponses, settingsResponsesDropped: this.settingsResponsesDropped, settingsResponsesPending: this.settingsResponseTasks.size } : {}), fault: this.fault?.code ?? null }), null, 2) };
     for (const [name, content] of Object.entries(files)) {
       const file = path.join(this.session.outputs, name); await writeFile(file + '.writing', content); await rename(file + '.writing', file);
     }
