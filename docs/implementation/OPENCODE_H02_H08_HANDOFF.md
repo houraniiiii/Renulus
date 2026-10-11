@@ -332,6 +332,21 @@ callback diagnostics (safe API code/status/retryability or exception type only,
 same original cancellation token) to locate the Library refusal. Original positive
 assertions remain intact; another connected rerun is not yet released.
 
+The first cleanup reproduction is now dynamically confirmed and repaired in
+the isolated Owner lane. `G:/rh07a/e/family-release-red01.xml` has one failure
+in17.918s: a busy observation-release slot permanently changed public settlement
+from pending to `child_settlement_unavailable`. The unchanged focused test in
+`family-release-green01.xml` has one pass in22.411s, zero failures/errors/skips.
+Its retained proof records one read ID, seven release attempts, one Stop and
+one synthetic root HTTP send. Cancelling the settlement observer leaves cleanup
+owned; native, Domain and Registry settlement precede canonical release.
+Parent read both receipts without rerunning the test. The dead-peer/uncertain
+Stop P2 remains under focused reproduction in the same two-file lease; neither
+the Owner assembly nor its cleanup changes are committed or integrated yet.
+Russell is separately tracing only the published Library/Children/native bridge
+sources, without tests or edits, to determine whether the unresolved positive09
+tool failure needs the already authorized safe callback diagnostics.
+
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
 expectation-disposition reviews clear. H06–H08 remain open. Required unmet
