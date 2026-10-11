@@ -1,6 +1,6 @@
 """SQLite authority with staged, cancellable derived revisions."""
 from datetime import datetime, timezone
-from contextlib import closing, contextmanager
+from contextlib import closing, contextmanager, nullcontext
 import hashlib
 import json
 from pathlib import Path
@@ -683,16 +683,23 @@ class KnowledgeRepository:
         return {r["id"]: r for r in rows if self._eligible(
             json.loads(r["metadata_json"]), json.loads(r["rights_json"]), topic_id, current_only)}
 
-    def check_evidence(self, citations, *, scope, topic_id=None, current_only=False):
-        """Read-only source projection for Learn; no body/index/import work."""
+    def check_evidence(self, citations, *, scope, topic_id=None, current_only=False, conn=None):
+        """Read-only source projection; optionally use the caller's publication snapshot.
+
+        A supplied connection already owns canonical serialization. Do not acquire
+        the Library lock underneath its write transaction (import uses lock → DB).
+        This path does no engine, index, original-file or remote work.
+        """
         scope = self._scope(scope)
         if scope.kind != Scope.STUDY:
             raise ApiError("retrieval_scope_denied", "Evidence checks require ordinary study scope", 403)
         if not isinstance(citations, list) or len(citations) > 20:
             raise ApiError("evidence_limit", "Check at most twenty source references", 422)
         eligible_ids, metadata_by_id = [], {}
-        with self._lock, closing(self.db.connect()) as conn:
-            conn.execute("BEGIN")
+        supplied = conn is not None
+        with (nullcontext() if supplied else self._lock), (nullcontext(conn) if supplied else closing(self.db.connect())) as conn:
+            if not supplied:
+                conn.execute("BEGIN")
             revisions = self._retrievable_revisions(scope, topic_id, current_only, conn=conn)
             for citation in citations:
                 identifier = citation.get("id") if isinstance(citation, dict) else None

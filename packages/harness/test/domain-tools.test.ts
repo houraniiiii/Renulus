@@ -48,7 +48,7 @@ async function nativeHarness(bridge: LibraryToolBridge) {
     await mkdir(process.env[name], { recursive: true });
   }
   process.env.PATH = path.dirname(process.execPath);
-  const { Effect, ManagedRuntime, Layer, Logger } = await import("effect");
+  const { Context, Effect, ManagedRuntime, Layer, Logger } = await import("effect");
   const { OpenCode, AbsolutePath, Location, Agent } = await import("@opencode/sdk/effect");
   const { TestLLM } = await import("@opencode/ai/testing");
   const { LLMClient } = await import("@opencode/ai");
@@ -56,6 +56,8 @@ async function nativeHarness(bridge: LibraryToolBridge) {
   const { InstructionDiscovery } = await import("@opencode/core/instruction-discovery");
   const { llmClient } = await import("@opencode/core/effect/app-node-platform");
   const { Global } = await import("@opencode/util/global");
+  const { SessionExecution } = await import("@opencode/core/session/execution");
+  let interrupt!: () => Promise<boolean>;
   const modelRuntime = ManagedRuntime.make(TestLLM.testLayer());
   const client = await modelRuntime.runPromise(TestLLM.Test);
   const config = JSON.stringify({ model: "synthetic/library", compaction: { auto: false },
@@ -73,6 +75,11 @@ async function nativeHarness(bridge: LibraryToolBridge) {
     config: { directory: path.join(root, "config"), project: false, content: config },
     models: { fetch: false, snapshot: false }, fs: { filewatcher: false, fff: false }, events: { persist: false },
   }, { overrides: [
+    SessionExecution.node.replace(SessionExecution.node.mapLayer(original => Layer.flatMap(original, context => {
+      const execution = Context.get(context, SessionExecution.Service);
+      interrupt = () => runtime.runPromise(execution.interrupt(session.id, { resume: false, reason: "user", awaitSettlement: true }));
+      return Layer.succeed(SessionExecution.Service, execution);
+    }))),
     Global.node.replace(Global.layerWith(Object.fromEntries(["home", "data", "cache", "config",
       "state", "tmp", "bin", "log", "repos"].map(key => [key, path.join(root, key)])))),
     Config.node.replace(Config.configured({ project: false, global: false, content: config })),
@@ -83,7 +90,7 @@ async function nativeHarness(bridge: LibraryToolBridge) {
   const session = await runtime.runPromise(sdk.sessions.create({ title: "Synthetic cited learning",
     agent: Agent.ID.make("renulus"), location: Location.Ref.make({ directory: AbsolutePath.make(root) }),
     metadata: { operationId: "native-learning", attemptId: "native-attempt" } }));
-  return { sdk, session, runtime, client, modelRuntime, TestLLM,
+  return { sdk, session, runtime, client, modelRuntime, TestLLM, interrupt: () => interrupt(),
     async close() { await runtime.dispose(); await modelRuntime.dispose(); } };
 }
 
@@ -197,4 +204,37 @@ test("revoked run scope during dependency recording prevents native disclosure",
   bridge.recordDependencies = async () => { admitted = false; };
   await assert.rejects(executeLibraryTool("library.retrieve", { query: "fistula", limit: 2 },
     context, bridge, new AbortController().signal), /dependency_changed/);
+});
+
+test("native interruption waits for the admitted domain callback to settle", async () => {
+  const { bridge, consumed } = bridgeFixture();
+  let entered!: () => void, release!: () => void, aborted!: () => void;
+  const started = new Promise<void>(resolve => { entered = resolve; });
+  const work = new Promise<void>(resolve => { release = resolve; });
+  const cancellation = new Promise<void>(resolve => { aborted = resolve; });
+  bridge.resolve = async native => ({ ...envelope, sessionId: native.sessionID });
+  bridge.execute = async (_, __, ___, signal) => {
+    signal.addEventListener("abort", aborted, { once: true });
+    entered();
+    await work;
+    return { status: "ready", passages: [passage] };
+  };
+  const native = await nativeHarness(bridge);
+  try {
+    await native.modelRuntime.runPromise(native.client.push(native.TestLLM.tool("native-cancel",
+      "renulus_library_retrieve", { query: "fistula", limit: 2 })));
+    await native.runtime.runPromise(native.sdk.sessions.prompt({ sessionID: native.session.id, text: "Retrieve the synthetic source" }));
+    const completed = native.runtime.runPromise(native.sdk.sessions.wait({ sessionID: native.session.id }));
+    await Promise.race([started, completed.then(() => { throw new Error("Native execution ended before the domain callback"); })]);
+    let settled = false;
+    const interrupted = native.interrupt().then(result => { settled = true; return result; });
+    await cancellation;
+    await new Promise(resolve => setTimeout(resolve, 20));
+    assert.equal(settled, false, "The callback still owns admitted CPU work");
+    release();
+    assert.equal(await interrupted, true);
+    await completed;
+    assert.deepEqual(consumed, []);
+    assert.equal((await native.modelRuntime.runPromise(native.client.requests())).length, 1);
+  } finally { release(); await native.close(); }
 });
