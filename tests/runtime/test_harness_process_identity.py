@@ -156,3 +156,35 @@ async def test_unknown_or_closed_startup_state_cannot_issue_identity_while_child
             process.native_identity()
     finally:
         assert (await process.close(2))["state"] == "closed"
+
+
+async def test_public_readiness_mutation_cannot_promote_authenticated_unknown_state(tmp_path):
+    process = ManagedHarnessProcess()
+    ready = await process.start(config(tmp_path, ready_state="unknown"))
+    try:
+        assert ready["state"] == "unknown"
+        with pytest.raises(HarnessProcessError, match=r"^Native child identity is unavailable\.$"):
+            process.native_identity()
+        ready["state"] = "ready"
+        with pytest.raises(HarnessProcessError, match=r"^Native child identity is unavailable\.$"):
+            process.native_identity()
+    finally:
+        assert (await process.close(2))["state"] == "closed"
+
+
+async def test_mutating_public_readiness_fields_cannot_change_authenticated_native_identity(tmp_path):
+    process = ManagedHarnessProcess()
+    ready = await process.start(config(tmp_path))
+    try:
+        identity = process.native_identity()
+        assert set(ready) == {"protocol", "profile_id", "store_id", "generation", "kind", "state"}
+        assert ready["profile_id"] == "synthetic-profile"
+        assert ready["store_id"] == "synthetic-runtime"
+        assert ready["generation"] == identity.generation
+        ready.update(protocol="foreign-protocol", profile_id="foreign-profile",
+            store_id="foreign-store", generation="foreign-generation", state="closed")
+        assert process.native_identity() == identity
+        ready.clear()
+        assert process.native_identity() == identity
+    finally:
+        assert (await process.close(2))["state"] == "closed"

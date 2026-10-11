@@ -248,7 +248,8 @@ class ManagedHarnessProcess:
                 ready = await asyncio.shield(self._ready)
             if self._closing:
                 raise HarnessProcessError("The child is closing.")
-            return ready
+            # Authenticated scalar readiness must not share the caller's snapshot.
+            return dict(ready)
         except TimeoutError:
             self._closing = True
             raise HarnessProcessError("The child did not authenticate readiness in time.") from None
