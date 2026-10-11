@@ -336,6 +336,52 @@ async def test_requested_revision_race_at_final_start_cannot_open_stale_candidat
 
 
 @pytest.mark.asyncio
+async def test_requested_pointer_race_after_final_observation_keeps_admission_and_roots_closed(configured, monkeypatch):
+    authority, spec, previous, provider, _ = configured
+    candidate = authority.stage(spec.model_copy(update={"roles": (RolePolicy(purpose="explain",
+        output_tokens=1024),)}))
+    lifecycle = SyntheticLifecycle(authority)
+    controller = HarnessConfigurationController(authority, provider, lifecycle)
+    independent = ConfigurationAuthority(Database(authority.db.path))
+    open_admission = authority.open_admission
+    newer = []
+
+    def stage_before_open(*args, **kwargs):
+        # Arrive after the controller's final observation, before the actual CAS.
+        observed = independent.activation_snapshot()
+        assert observed["requested"] == observed["effective"] == observed["activating"] == candidate
+        assert observed["admission_open"] is False
+        newer.append(independent.stage(spec.model_copy(update={"roles": (RolePolicy(purpose="summary"),)})))
+        return open_admission(*args, **kwargs)
+
+    monkeypatch.setattr(authority, "open_admission", stage_before_open)
+    try:
+        with pytest.raises(ApiError) as error:
+            await controller.activate(candidate)
+        assert (error.value.code, error.value.status, error.value.retryable) == (
+            "activation_conflict", 409, False)
+        state = authority.activation_snapshot()
+        assert len(newer) == 1 and state["requested"] == newer[0]
+        assert state["effective"] == state["activating"] == candidate
+        assert state["previous"] == previous
+        assert state["admission_open"] is False
+        assert lifecycle.events == ["seal", "inspect-settled", "stop-settled",
+                                    "start-gated", "stop-settled"]
+        assert lifecycle.roots_open is False and not lifecycle.seals[0].released
+        with pytest.raises(ApiError) as root_denied:
+            lifecycle.begin_run("late-root", "explain")
+        assert root_denied.value.code == "harness_configuration_busy"
+        with pytest.raises(ApiError) as mutation_denied:
+            await controller.activate(newer[0])
+        assert mutation_denied.value.code == "harness_configuration_recovery_required"
+        assert authority.activation_snapshot() == state
+    finally:
+        await controller.close()
+    assert authority.activation_snapshot() == state
+    assert lifecycle.roots_open is False and not lifecycle.seals[0].released
+
+
+@pytest.mark.asyncio
 async def test_failed_fresh_owner_is_settled_without_rollback_or_reopening(configured):
     authority, spec, previous, provider, _ = configured
     candidate = authority.stage(spec.model_copy(update={"roles": (RolePolicy(purpose="explain",

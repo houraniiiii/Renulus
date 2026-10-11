@@ -212,7 +212,8 @@ class HarnessConfigurationController:
                 raise ApiError("activation_conflict",
                     "Configuration pointers changed during activation.", 409, True)
             self.authority.open_admission(version, registry_hash=final.registry_hash,
-                grant_epoch=final.grant_epoch)
+                grant_epoch=final.grant_epoch, expected_requested=version,
+                expected_activating=version)
             seal.release()  # Synchronous/nonthrowing: ingress is the last opening step.
             self._seal = None
             starting = False
