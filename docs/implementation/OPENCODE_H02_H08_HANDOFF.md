@@ -19,10 +19,12 @@ installation, push or downstream-ticket expansion is authorized.
 
 Current integration source baseline: `6e28a81c`; later parent commits record
 evidence and ownership updates. Ready isolated Owner assembly `aebb5ef2` and
-test-only `f12c6375` have both independent review axes clear. Actual four-send
-child/Library/M5 composition, three cleanup races and the two-send admitted-child
-Stop finalizer case have passing receipts. Sartre alone owns the next test-only
-graceful reopen case in oc-library; the public active-Test exposure case is queued.
+test-only `f12c6375`/`8651d0f0` have both independent review axes clear. Actual
+four-send child/Library/M5 composition, three cleanup races, the two-send
+admitted-child Stop finalizer case and graceful native-generation reopen have
+passing receipts. Sartre alone owns the active test-only public Study-to-Test
+exposure case in oc-library; production Owner remains frozen. Graceful reopen
+is within the same Python app and does not establish crash/profile restart.
 No native/transport/Owner child assembly is integrated in this parent yet.
 H06's immediate-Archive hidden check remains blocked by controller approval policy;
 H06–H08 acceptance stays open. The chronological qualifications below remain binding.
@@ -488,6 +490,13 @@ native-generation reopen within the same Python app, not crash/profile restart.
 Independent reviews use the immutable f12..865 commit objects while the next
 test is authored, avoiding a moving worktree review.
 
+Both independent reviews of those committed objects are now clear: Standards0
+and Spec0. They verified test e3ddc131/unchanged Owner561d7a6c, preserved earlier
+test functions and receipt87f022af (one pass/21.884s); no tests were rerun.
+The old grant refusal and retained charged/uncertain permits do not turn the
+graceful same-app reopen into crash/profile-restart acceptance. Positive09's
+initiating Library cause remains unknown.
+
 The single public Study-to-Test exposure case is now released in the same test
 file, with production Owner frozen. It holds only the actual child's Library
 handler before delegating, activates Test through the existing API, and checks
@@ -508,7 +517,7 @@ lower in the historical ledger.
 | H04 | Local acceptance verified: authority/API/budgets, candidate/live lifecycle, managed initial/reopen, hidden Settings and actual failure/crash reconciliation; named repair-budgetB3 reviewed clear | Account/package scope and later native auxiliary enablement remain distinct |
 | H05 | Local acceptance verified: persistent lineage, four public recapture regressions, actual Mem0/Qdrant/FastEmbed native extraction/held-source-revocation/reopen; reviewed automatic cutover3026e3ca/67321f02 | No intrinsic local criterion remains; actual child producers and full paired restore retain H07/H18 ownership |
 | H06 | Saved migration/continuation/reopen/delete and purge reconciliation through actual production main; repaired hidden journey and reviewed Archive debounce fix | Immediate-Archive hidden verification remains execution-blocked; final criterion disposition stays open |
-| H07 | Isolated actual root/child Library/M5 publication, canonical budgets/source identity and admitted-child Stop/finalizer settlement; native permission/detached preparation | Independent final test review, connected restart/exposure/remaining detached criteria and coordinated parent integration |
+| H07 | Isolated actual root/child Library/M5 publication, canonical budgets/source identity, admitted-child Stop/finalizer settlement and graceful native-generation reopen; independent reviews clear; native permission/detached preparation | Active connected Study-to-Test exposure case, remaining required detached/crash criteria mapping and coordinated parent integration |
 | H08 | Existing instructions/skills and pinned native hooks are source inputs | Versioned instruction/skill activation and connected task use after accepted H04/H06 |
 
 The fixed hidden Settings fixture is integrated at `2e166120`; observation
