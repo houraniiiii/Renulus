@@ -5,6 +5,9 @@ from renulus.contracts import ApiError
 import json
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
+import subprocess
+import sys
+import types
 
 from renulus.runtime.harness_configuration import (
     ConfigurationAuthority, ConfigurationSpec, ConnectionReference, RouteLimits, RolePolicy,
@@ -70,6 +73,84 @@ def configured(tmp_path):
     return authority, spec, version, connection, limits
 
 
+@pytest.fixture(scope="module")
+def pre004_module():
+    """Create upgrade fixtures through the previously committed public authority."""
+    root = Path(__file__).resolve().parents[2]
+    path = "runtime/renulus/runtime/harness_configuration.py"
+    # This blob is shared by lane 22c52fa1 and integrated a85e1ee0. No lane commit is needed.
+    source = subprocess.check_output(["git", "cat-file", "blob",
+        "fe17e466f6de7b5392a06eea272a29b4509539af"], cwd=root, text=True)
+    module = types.ModuleType("renulus.runtime._h04_pre004")
+    module.__package__ = "renulus.runtime"
+    module.__file__ = str(root / path)
+    sys.modules[module.__name__] = module
+    try:
+        exec(compile(source, module.__file__, "exec"), module.__dict__)
+        yield module
+    finally:
+        del sys.modules[module.__name__]
+
+
+@pytest.fixture
+def pre004_configured(tmp_path, pre004_module):
+    module = pre004_module
+    authority = module.ConfigurationAuthority(Database(tmp_path / "pre004.sqlite"))
+    connection = module.ConnectionReference(provider="opencode-go",
+        credential_reference="connection-go", credential_revision=1)
+    spec = module.ConfigurationSpec(connection=connection, registry_hash="a" * 64,
+        roles=(module.RolePolicy(purpose="title", dispatch_limit=1),
+               module.RolePolicy(purpose="summary", dispatch_limit=0)),
+        attempts=module.AttemptPolicy(retries=1, retryable_errors=("transport_unavailable",)))
+    version = authority.stage(spec)
+    assert authority.validate(version, lambda candidate: module.CandidateHealth(
+        configuration_version=candidate.version, grant_epoch=candidate.grant_epoch,
+        registry_hash=candidate.spec.registry_hash))
+    authority.activate(version, module.RestartBoundary(admission_closed=True, runtime_stopped=True,
+        domain_settled=True), expected_effective=None)
+    authority.open_admission(version, registry_hash=spec.registry_hash, grant_epoch=0)
+    limits = RouteLimits(input_tokens=8192, output_tokens=2048, window_tokens=10240)
+    return authority, connection, limits
+
+
+def test_upgrade_confirmed_receipt_replays_without_dispatch_or_lock(pre004_configured):
+    previous, connection, limits = pre004_configured
+    previous.begin_run("foreground", "explain")
+    first = previous.admit("foreground", "title", payload_hash="1" * 64,
+        request_kind="title", connection=connection, limits=limits, input_tokens=100)
+    previous.mark_dispatched(first["permit_id"], connection=connection, limits=limits,
+        input_tokens=100, payload_hash="1" * 64)
+    previous.complete(first["permit_id"], "confirmed", result_reference="saved-title")
+    upgraded = ConfigurationAuthority(previous.db)
+    receipt = upgraded.admit("foreground", "title", payload_hash="1" * 64,
+        request_kind="title", connection=connection, limits=limits, input_tokens=100)
+    assert receipt["permit_id"] == first["permit_id"]
+    assert receipt["dispatch_purpose"] == "title"
+    assert receipt["result_reference"] == "saved-title"
+    assert receipt["dispatch_allowed"] is False
+    assert upgraded.run("foreground")["spent_dispatches"] == 1
+
+
+@pytest.mark.parametrize("purpose,limit", [("title", 1), ("summary", 0)])
+def test_upgrade_rejects_historical_reservations_beyond_purpose_budget(pre004_configured, purpose, limit):
+    previous, connection, limits = pre004_configured
+    previous.begin_run("foreground", "explain")
+    permits = [previous.admit("foreground", "auxiliary-" + str(index), payload_hash="1" * 64,
+        request_kind=purpose, connection=connection, limits=limits, input_tokens=100)
+        for index in range(limit + 1)]
+    upgraded = ConfigurationAuthority(previous.db)
+    with pytest.raises(ApiError) as error:
+        upgraded.mark_dispatched(permits[-1]["permit_id"], connection=connection, limits=limits,
+            input_tokens=100, payload_hash="1" * 64)
+    assert error.value.code == "dispatch_budget_exhausted"
+    assert upgraded.permit(permits[-1]["permit_id"])["state"] == "reserved"
+    if limit:
+        allowed = upgraded.mark_dispatched(permits[0]["permit_id"], connection=connection, limits=limits,
+            input_tokens=100, payload_hash="1" * 64)
+        assert allowed["dispatch_allowed"] is True
+    assert upgraded.run("foreground")["spent_dispatches"] == limit + 1
+
+
 def test_one_permit_summary_does_not_receive_free_precompaction(configured):
     authority, spec, version, connection, limits = configured
     authority.begin_run("summary", "summary")
@@ -98,6 +179,274 @@ def test_titles_degrade_deterministically_and_zero_cap_prevents_auxiliary_dispat
                         connection=connection, limits=limits, input_tokens=100)
     assert error.value.code == "dispatch_budget_exhausted"
     assert authority.run("title-parent")["spent_dispatches"] == 0
+
+
+@pytest.mark.parametrize("purpose,limit", [("title", 1), ("summary", 0)])
+def test_auxiliary_role_budget_applies_inside_foreground_allowance(configured, purpose, limit):
+    authority, spec, version, connection, limits = configured
+    activate(authority, spec.model_copy(update={"roles": (RolePolicy(purpose=purpose, dispatch_limit=limit),)}), expected=version)
+    authority.begin_run("foreground", "explain")
+    for index in range(limit):
+        authority.admit("foreground", "auxiliary-" + str(index), payload_hash="1" * 64,
+            request_kind=purpose, connection=connection, limits=limits, input_tokens=100)
+    with pytest.raises(ApiError) as error:
+        authority.admit("foreground", "over-limit", payload_hash="2" * 64,
+            request_kind=purpose, connection=connection, limits=limits, input_tokens=100)
+    assert error.value.code == "dispatch_budget_exhausted"
+    assert authority.run("foreground")["spent_dispatches"] == limit
+    authority.admit("foreground", "primary", payload_hash="3" * 64,
+        request_kind="primary", connection=connection, limits=limits, input_tokens=100)
+    assert authority.run("foreground")["spent_dispatches"] == limit + 1
+
+
+@pytest.mark.parametrize("limit", [1, 2])
+def test_relabelled_retry_keeps_original_purpose_budget(configured, limit):
+    authority, spec, version, connection, limits = configured
+    activate(authority, spec.model_copy(update={
+        "roles": (RolePolicy(purpose="title", dispatch_limit=limit),),
+        "attempts": AttemptPolicy(retries=1, retryable_errors=("transport_unavailable",)),
+    }), expected=version)
+    authority.begin_run("foreground", "explain")
+    first = authority.admit("foreground", "title", payload_hash="1" * 64,
+        request_kind="title", connection=connection, limits=limits, input_tokens=100)
+    authority.mark_dispatched(first["permit_id"], connection=connection, limits=limits,
+        input_tokens=100, payload_hash="1" * 64)
+    authority.complete(first["permit_id"], "failed", failure_code="transport_unavailable")
+    if limit == 1:
+        with pytest.raises(ApiError) as error:
+            authority.admit("foreground", "title", payload_hash="1" * 64,
+                request_kind="transport-fallback", connection=connection, limits=limits,
+                input_tokens=100, retry_of=first["permit_id"])
+    else:
+        retried = authority.admit("foreground", "title", payload_hash="1" * 64,
+            request_kind="transport-fallback", connection=connection, limits=limits,
+            input_tokens=100, retry_of=first["permit_id"])
+        assert retried["retry_number"] == 1
+        with pytest.raises(ApiError) as error:
+            authority.admit("foreground", "another-title", payload_hash="2" * 64,
+                request_kind="title", connection=connection, limits=limits, input_tokens=100)
+    assert error.value.code == "dispatch_budget_exhausted"
+    assert authority.run("foreground")["spent_dispatches"] == limit
+
+
+@pytest.mark.parametrize("kind", ["retry", "continuation"])
+def test_inherited_auxiliary_purpose_revocation_blocks_dispatch_and_publication(configured, kind):
+    authority, spec, version, connection, limits = configured
+    activate(authority, spec.model_copy(update={
+        "roles": (RolePolicy(purpose="title", dispatch_limit=3, output_tokens=512),),
+        "attempts": AttemptPolicy(retries=1, retryable_errors=("transport_unavailable",)),
+    }), expected=version)
+    authority.begin_run("foreground", "explain")
+    first = authority.admit("foreground", "title", payload_hash="1" * 64,
+        request_kind="title", connection=connection, limits=limits, input_tokens=100)
+    authority.mark_dispatched(first["permit_id"], connection=connection, limits=limits,
+        input_tokens=100, payload_hash="1" * 64)
+    if kind == "retry":
+        authority.complete(first["permit_id"], "failed", failure_code="transport_unavailable")
+        derived = authority.admit("foreground", "title", payload_hash="1" * 64,
+            request_kind="transport-fallback", connection=connection, limits=limits,
+            input_tokens=100, retry_of=first["permit_id"])
+    else:
+        authority.complete(first["permit_id"], "confirmed", result_reference="tool-result")
+        derived = authority.admit("foreground", "after-title-tool", payload_hash="1" * 64,
+            request_kind="tool-continuation", connection=connection, limits=limits,
+            input_tokens=100, continuation_of=first["permit_id"])
+    assert derived["dispatch_purpose"] == "title"
+    assert derived["output_tokens"] == 512
+    authority.revoke("purpose:title")
+    with pytest.raises(ApiError) as error:
+        authority.mark_dispatched(derived["permit_id"], connection=connection, limits=limits,
+            input_tokens=100, payload_hash="1" * 64)
+    assert error.value.code == "authority_revoked"
+    with authority.db.transaction() as conn:
+        with pytest.raises(ApiError) as error:
+            authority.require_current("foreground", permit_id=derived["permit_id"], conn=conn)
+        assert error.value.code == "authority_revoked"
+    assert authority.permit(derived["permit_id"])["state"] == "reserved"
+
+
+@pytest.mark.parametrize("purpose", ["title", "summary"])
+def test_exact_auxiliary_continuation_spends_original_purpose_budget(configured, purpose):
+    authority, spec, version, connection, limits = configured
+    activate(authority, spec.model_copy(update={
+        "roles": (RolePolicy(purpose=purpose, dispatch_limit=2),),
+    }), expected=version)
+    authority.begin_run("foreground", "explain")
+    first = authority.admit("foreground", "auxiliary", payload_hash="1" * 64,
+        request_kind=purpose, connection=connection, limits=limits, input_tokens=100)
+    authority.mark_dispatched(first["permit_id"], connection=connection, limits=limits,
+        input_tokens=100, payload_hash="1" * 64)
+    authority.complete(first["permit_id"], "confirmed", result_reference="tool-result")
+    with pytest.raises(ApiError) as error:
+        authority.admit("foreground", "ambiguous", payload_hash="2" * 64,
+            request_kind="tool-continuation", connection=connection, limits=limits, input_tokens=100)
+    assert error.value.code == "continuation_identity_required"
+    continuation = authority.admit("foreground", "after-tool", payload_hash="2" * 64,
+        request_kind="tool-continuation", connection=connection, limits=limits, input_tokens=100,
+        continuation_of=first["permit_id"])
+    assert continuation["dispatch_purpose"] == purpose
+    assert continuation["retry_number"] == 0
+    authority.mark_dispatched(continuation["permit_id"], connection=connection, limits=limits,
+        input_tokens=100, payload_hash="2" * 64)
+    authority.complete(continuation["permit_id"], "confirmed", result_reference="continued-result")
+    with pytest.raises(ApiError) as error:
+        authority.admit("foreground", "over-limit", payload_hash="3" * 64,
+            request_kind="tool-continuation", connection=connection, limits=limits, input_tokens=100,
+            continuation_of=continuation["permit_id"])
+    assert error.value.code == "dispatch_budget_exhausted"
+    assert authority.run("foreground")["spent_dispatches"] == 2
+
+
+def test_continuation_retry_jointly_spends_root_and_purpose_limits(configured):
+    authority, spec, version, connection, limits = configured
+    activate(authority, spec.model_copy(update={
+        "roles": (RolePolicy(purpose="title", dispatch_limit=3),),
+        "attempts": AttemptPolicy(foreground_dispatches=3, retries=1,
+            retryable_errors=("transport_unavailable",)),
+    }), expected=version)
+    authority.begin_run("foreground", "explain")
+    first = authority.admit("foreground", "title", payload_hash="1" * 64,
+        request_kind="title", connection=connection, limits=limits, input_tokens=100)
+    authority.mark_dispatched(first["permit_id"], connection=connection, limits=limits,
+        input_tokens=100, payload_hash="1" * 64)
+    authority.complete(first["permit_id"], "confirmed", result_reference="tool-result")
+    continuation = authority.admit("foreground", "after-tool", payload_hash="2" * 64,
+        request_kind="tool-continuation", connection=connection, limits=limits, input_tokens=100,
+        continuation_of=first["permit_id"])
+    authority.mark_dispatched(continuation["permit_id"], connection=connection, limits=limits,
+        input_tokens=100, payload_hash="2" * 64)
+    authority.complete(continuation["permit_id"], "failed", failure_code="transport_unavailable")
+    retry = authority.admit("foreground", "after-tool", payload_hash="2" * 64,
+        request_kind="transport-fallback", connection=connection, limits=limits, input_tokens=100,
+        retry_of=continuation["permit_id"])
+    assert retry["dispatch_purpose"] == "title"
+    assert retry["retry_number"] == 1
+    authority.mark_dispatched(retry["permit_id"], connection=connection, limits=limits,
+        input_tokens=100, payload_hash="2" * 64)
+    authority.complete(retry["permit_id"], "confirmed", result_reference="retry-result")
+    for kind in ("primary", "title"):
+        with pytest.raises(ApiError) as error:
+            authority.admit("foreground", kind + "-over-limit", payload_hash="3" * 64,
+                request_kind=kind, connection=connection, limits=limits, input_tokens=100)
+        assert error.value.code == "dispatch_budget_exhausted"
+    assert authority.run("foreground")["spent_dispatches"] == 3
+
+
+@pytest.mark.parametrize("root_limit,purpose_limit", [(2, 3), (3, 2)])
+def test_parent_siblings_and_cancelled_reservations_keep_both_budgets_after_reopen(
+        configured, root_limit, purpose_limit):
+    authority, spec, version, connection, limits = configured
+    activate(authority, spec.model_copy(update={
+        "roles": (RolePolicy(purpose="title", dispatch_limit=purpose_limit),),
+        "attempts": AttemptPolicy(foreground_dispatches=root_limit),
+    }), expected=version)
+    authority.begin_run("parent", "explain")
+    authority.begin_child("first-child", "parent", "evidence-review")
+    authority.begin_child("second-child", "parent", "evidence-review")
+    parent = authority.admit("parent", "title", payload_hash="1" * 64, request_kind="title",
+        connection=connection, limits=limits, input_tokens=100)
+    child = authority.admit("first-child", "title", payload_hash="2" * 64, request_kind="title",
+        connection=connection, limits=limits, input_tokens=100)
+    authority.complete(parent["permit_id"], "cancelled_before_send")
+    reopened = ConfigurationAuthority(authority.db)
+    assert reopened.permit(child["permit_id"])["dispatch_purpose"] == "title"
+    with pytest.raises(ApiError) as error:
+        reopened.admit("second-child", "title", payload_hash="3" * 64, request_kind="title",
+            connection=connection, limits=limits, input_tokens=100)
+    assert error.value.code == "dispatch_budget_exhausted"
+    assert reopened.run("parent")["spent_dispatches"] == 2
+    if root_limit == 3:
+        reopened.admit("second-child", "primary", payload_hash="4" * 64, request_kind="child",
+            connection=connection, limits=limits, input_tokens=100)
+        assert reopened.run("parent")["spent_dispatches"] == 3
+
+
+@pytest.mark.parametrize("target", ["other-run", "child-route", "new-version"])
+def test_continuation_cannot_cross_owning_run_config_or_route(configured, target):
+    authority, spec, version, connection, limits = configured
+    authority.begin_run("source", "explain")
+    first = authority.admit("source", "first", payload_hash="1" * 64, request_kind="primary",
+        connection=connection, limits=limits, input_tokens=100)
+    authority.mark_dispatched(first["permit_id"], connection=connection, limits=limits,
+        input_tokens=100, payload_hash="1" * 64)
+    authority.complete(first["permit_id"], "confirmed", result_reference="tool-result")
+    if target == "child-route":
+        authority.begin_child(target, "source", "evidence-review", operation_model="deepseek-v4.1-flash")
+    else:
+        if target == "new-version":
+            connection = connection.model_copy(update={"credential_revision": 2,
+                "selected_model": "deepseek-v4.1-flash"})
+            activate(authority, spec.model_copy(update={"connection": connection}), expected=version)
+        authority.begin_run(target, "explain")
+    with pytest.raises(ApiError) as error:
+        authority.admit(target, "after-tool", payload_hash="2" * 64, request_kind="tool-continuation",
+            connection=connection, limits=limits, input_tokens=100, continuation_of=first["permit_id"])
+    assert error.value.code == "continuation_authority_mismatch"
+    with pytest.raises(ApiError) as error:
+        authority.require_current(target, permit_id=first["permit_id"])
+    assert error.value.code == "permit_authority_mismatch"
+    assert authority.run("source")["spent_dispatches"] == 1
+
+
+@pytest.mark.parametrize("state", ["reserved", "dispatched", "failed", "uncertain"])
+def test_continuation_requires_confirmed_prior_permit(configured, state):
+    authority, spec, version, connection, limits = configured
+    authority.begin_run("foreground", "explain")
+    first = authority.admit("foreground", "first", payload_hash="1" * 64, request_kind="primary",
+        connection=connection, limits=limits, input_tokens=100)
+    if state != "reserved":
+        authority.mark_dispatched(first["permit_id"], connection=connection, limits=limits,
+            input_tokens=100, payload_hash="1" * 64)
+    if state in {"failed", "uncertain"}:
+        authority.complete(first["permit_id"], state,
+            failure_code="transport_unavailable" if state == "failed" else None)
+    with pytest.raises(ApiError) as error:
+        authority.admit("foreground", "after-tool", payload_hash="2" * 64, request_kind="tool-continuation",
+            connection=connection, limits=limits, input_tokens=100, continuation_of=first["permit_id"])
+    assert error.value.code == "continuation_not_confirmed"
+    assert authority.run("foreground")["spent_dispatches"] == 1
+
+
+def test_upgrade_ambiguous_auxiliary_continuation_fails_closed(pre004_configured):
+    previous, connection, limits = pre004_configured
+    previous.begin_run("foreground", "explain")
+    first = previous.admit("foreground", "title", payload_hash="1" * 64, request_kind="title",
+        connection=connection, limits=limits, input_tokens=100)
+    previous.mark_dispatched(first["permit_id"], connection=connection, limits=limits,
+        input_tokens=100, payload_hash="1" * 64)
+    previous.complete(first["permit_id"], "confirmed", result_reference="tool-result")
+    ambiguous = previous.admit("foreground", "after-tool", payload_hash="2" * 64,
+        request_kind="tool-continuation", connection=connection, limits=limits, input_tokens=100)
+    upgraded = ConfigurationAuthority(previous.db)
+    assert upgraded.permit(ambiguous["permit_id"])["dispatch_purpose"] is None
+    with pytest.raises(ApiError) as error:
+        upgraded.mark_dispatched(ambiguous["permit_id"], connection=connection, limits=limits,
+            input_tokens=100, payload_hash="2" * 64)
+    assert error.value.code == "dispatch_purpose_unavailable"
+    with pytest.raises(ApiError) as error:
+        upgraded.admit("foreground", "new", payload_hash="3" * 64, request_kind="primary",
+            connection=connection, limits=limits, input_tokens=100)
+    assert error.value.code == "dispatch_purpose_unavailable"
+    assert upgraded.run("foreground")["spent_dispatches"] == 2
+
+
+def test_upgrade_relabelled_retry_inherits_prior_purpose_and_spent_limit(pre004_configured):
+    previous, connection, limits = pre004_configured
+    previous.begin_run("foreground", "explain")
+    first = previous.admit("foreground", "title", payload_hash="1" * 64, request_kind="title",
+        connection=connection, limits=limits, input_tokens=100)
+    previous.mark_dispatched(first["permit_id"], connection=connection, limits=limits,
+        input_tokens=100, payload_hash="1" * 64)
+    previous.complete(first["permit_id"], "failed", failure_code="transport_unavailable")
+    retry = previous.admit("foreground", "title", payload_hash="1" * 64, request_kind="transport-fallback",
+        connection=connection, limits=limits, input_tokens=100, retry_of=first["permit_id"])
+    upgraded = ConfigurationAuthority(previous.db)
+    assert upgraded.permit(retry["permit_id"])["dispatch_purpose"] == "title"
+    with pytest.raises(ApiError) as error:
+        upgraded.mark_dispatched(retry["permit_id"], connection=connection, limits=limits,
+            input_tokens=100, payload_hash="1" * 64)
+    assert error.value.code == "dispatch_budget_exhausted"
+    assert upgraded.run("foreground")["spent_dispatches"] == 2
 
 
 @pytest.mark.parametrize("outcome", ["uncertain", "failed"])

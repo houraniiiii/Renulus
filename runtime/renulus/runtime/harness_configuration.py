@@ -5,6 +5,7 @@ starts a host or grants a network effect merely by staging a configuration.
 """
 from __future__ import annotations
 
+from contextlib import closing
 from dataclasses import dataclass
 import hashlib
 import json
@@ -42,6 +43,8 @@ PURPOSES = frozenset({"explain", "case-discuss", "case-image-discuss", "evidence
     "summary", "test-result-narrative", "daily_suggestions", "updates-digest", "title"})
 STANDALONE_PURPOSES = frozenset({"memory-extraction", "compaction", "summary",
     "test-result-narrative", "daily_suggestions", "updates-digest"})
+AUXILIARY_PURPOSES = {"title": "title", "summary": "summary", "compaction": "compaction",
+                      "summary-repair": "compaction"}
 
 
 class RolePolicy(FrozenModel):
@@ -172,6 +175,8 @@ class ConfigurationAuthority:
         self.db = database
         migration = Path(__file__).with_name("migrations") / "002-harness-configuration.sql"
         self.db.apply_migration("runtime-002-harness-configuration", migration.read_text(encoding="utf-8"))
+        purpose_migration = migration.with_name("004-harness-dispatch-purpose.sql")
+        self.db.apply_migration("runtime-004-harness-dispatch-purpose", purpose_migration.read_text(encoding="utf-8"))
 
     def status(self) -> dict:
         row = self.db.fetch_one("SELECT * FROM harness_configuration_pointer WHERE id=1")
@@ -324,17 +329,31 @@ class ConfigurationAuthority:
             "SELECT capability FROM harness_configuration_revocations ORDER BY capability")]}
 
     def require_current(self, run_id: str, *, required_capabilities: tuple[str, ...] = (),
-                        connection: ConnectionReference | None = None, conn=None) -> dict:
+                        connection: ConnectionReference | None = None,
+                        permit_id: str | None = None, conn=None) -> dict:
         """Local guard for final dispatch AND the parent's canonical publication transaction."""
         if conn is None:
             with self.db.transaction() as transaction:
                 return self.require_current(run_id, required_capabilities=required_capabilities,
-                                            connection=connection, conn=transaction)
+                                            connection=connection, permit_id=permit_id, conn=transaction)
         row = conn.execute("SELECT * FROM harness_configuration_runs WHERE run_id=?", (run_id,)).fetchone()
         if not row or row["state"] != "active":
             _deny("run_unavailable")
         overlay = self.revocation_overlay(conn=conn)
         revoked = set(overlay["revoked"])
+        dispatch_purpose = row["purpose"]
+        if permit_id is not None:
+            attempt = conn.execute("SELECT * FROM harness_configuration_attempts WHERE permit_id=?",
+                                   (permit_id,)).fetchone()
+            if not attempt or attempt["run_id"] != run_id:
+                _deny("permit_authority_mismatch")
+            dispatch_purpose = self._dispatch_purposes(conn, row["root_id"])[permit_id]
+            if dispatch_purpose is None:
+                _deny("dispatch_purpose_unavailable")
+            if "purpose:" + dispatch_purpose in revoked:
+                _deny("authority_revoked")
+            required_capabilities = tuple(set(required_capabilities) |
+                                          set(json.loads(attempt["required_capabilities_json"])))
         ancestor = row
         while ancestor:
             route = json.loads(ancestor["route_json"])
@@ -351,7 +370,8 @@ class ConfigurationAuthority:
                 or connection.credential_reference != route["credential_reference"]
                 or connection.credential_revision != route["credential_revision"]):
             _deny("connection_changed")
-        return {"version": row["version"], "purpose": row["purpose"], "grant_epoch": overlay["epoch"],
+        return {"version": row["version"], "purpose": row["purpose"],
+                "dispatch_purpose": dispatch_purpose, "grant_epoch": overlay["epoch"],
                 "effective_capabilities": sorted(granted), "route": route}
 
     def _fit(self, spec: ConfigurationSpec, limits: RouteLimits, input_tokens: int, output: int) -> int:
@@ -365,9 +385,60 @@ class ConfigurationAuthority:
             _deny("request_does_not_fit")
         return output
 
+    def _dispatch_purposes(self, conn, root_id: str) -> dict[str, str | None]:
+        """Read the ledger, conservatively identifying pre-004 attempts."""
+        purposes, steps, mixed_runs = {}, {}, set()
+        for attempt in conn.execute("SELECT a.*,r.purpose AS run_purpose FROM harness_configuration_attempts a "
+                "JOIN harness_configuration_runs r ON r.run_id=a.run_id WHERE a.root_id=? ORDER BY a.rowid", (root_id,)):
+            step = (attempt["run_id"], attempt["step_id"])
+            purpose = attempt["dispatch_purpose"]
+            if purpose is None:
+                if attempt["retry_number"]:
+                    purpose = steps.get(step)
+                elif attempt["request_kind"] == "tool-continuation" and attempt["run_id"] in mixed_runs:
+                    purpose = None
+                else:
+                    purpose = AUXILIARY_PURPOSES.get(attempt["request_kind"], attempt["run_purpose"])
+            if purpose not in PURPOSES:
+                purpose = None
+            purposes[attempt["permit_id"]] = purpose
+            if not attempt["retry_number"]:
+                steps[step] = purpose
+            if purpose != attempt["run_purpose"]:
+                mixed_runs.add(attempt["run_id"])
+        return purposes
+
+    def _check_dispatch_budget(self, conn, run, purpose: str, purposes: dict[str, str | None],
+                               *, permit_id: str | None = None) -> int:
+        """Enforce pooled debits at reservation or at a permit's original ledger position."""
+        identities = list(purposes)
+        if permit_id is not None:
+            identities = identities[:identities.index(permit_id) + 1]
+        counted = [purposes[identity] for identity in identities]
+        if None in counted:
+            _deny("dispatch_purpose_unavailable")
+        route = json.loads(run["route_json"])
+        purpose_limit, output = run["dispatch_limit"], route["output_tokens"]
+        if purpose != run["purpose"]:
+            binding = self.resolve_role(run["version"], purpose, parent_model=route["model_id"])
+            if binding.model_id != route["model_id"]:
+                _deny("auxiliary_route_requires_own_run")
+            purpose_limit, output = binding.dispatch_limit, min(output, binding.output_tokens)
+        root_limit = conn.execute("SELECT dispatch_limit FROM harness_configuration_runs WHERE run_id=?",
+                                  (run["root_id"],)).fetchone()[0]
+        local_spent = conn.execute("SELECT COUNT(*) FROM harness_configuration_attempts WHERE run_id=? AND (? IS NULL OR rowid <= (SELECT rowid FROM harness_configuration_attempts WHERE permit_id=?))",
+                                   (run["run_id"], permit_id, permit_id)).fetchone()[0]
+        debit = 1 if permit_id is None else 0
+        if (counted.count(purpose) + debit > purpose_limit
+                or len(counted) + debit > root_limit
+                or (run["parent_id"] and local_spent + debit > run["dispatch_limit"])):
+            _deny("dispatch_budget_exhausted")
+        return output
+
     def admit(self, run_id: str, step_id: str, *, payload_hash: str, request_kind: str,
               connection: ConnectionReference, limits: RouteLimits, input_tokens: int,
-              required_capabilities: tuple[str, ...] = (), retry_of: str | None = None) -> dict:
+              required_capabilities: tuple[str, ...] = (), retry_of: str | None = None,
+              continuation_of: str | None = None) -> dict:
         """Durably debit immediately before transport. No network work inside this method."""
         _identifier(step_id)
         if not isinstance(payload_hash, str) or not re.fullmatch(r"[0-9a-f]{64}", payload_hash):
@@ -377,6 +448,10 @@ class ConfigurationAuthority:
             _deny("request_kind_not_allowed")
         if type(input_tokens) is not int or input_tokens < 0:
             _deny("invalid_input_budget")
+        if continuation_of is not None:
+            _identifier(continuation_of)
+            if request_kind != "tool-continuation" or retry_of is not None:
+                _deny("invalid_continuation")
         with self.db.transaction() as conn:
             row = conn.execute("SELECT * FROM harness_configuration_runs WHERE run_id=?", (run_id,)).fetchone()
             if not row or row["state"] != "active":
@@ -410,34 +485,45 @@ class ConfigurationAuthority:
                 retry_number = previous["retry_number"] + 1
             elif retry_of is not None or request_kind in {"summary-repair", "transport-fallback", "recovery"}:
                 _deny("retry_not_allowed")
-            output = route["output_tokens"]
-            auxiliary_purpose = {"title": "title", "summary": "summary", "compaction": "compaction", "summary-repair": "compaction"}.get(request_kind)
-            if auxiliary_purpose:
-                binding = self.resolve_role(row["version"], auxiliary_purpose, parent_model=route["model_id"])
-                if binding.model_id != route["model_id"]:
-                    _deny("auxiliary_route_requires_own_run")
-                output = min(output, binding.output_tokens)
-                if auxiliary_purpose == "title" and binding.dispatch_limit == 0:
-                    _deny("dispatch_budget_exhausted")
-                if "purpose:" + auxiliary_purpose in revoked:
-                    _deny("authority_revoked")
-            root = conn.execute("SELECT dispatch_limit FROM harness_configuration_runs WHERE run_id=?", (row["root_id"],)).fetchone()[0]
-            spent = conn.execute("SELECT COUNT(*) FROM harness_configuration_attempts WHERE root_id=?", (row["root_id"],)).fetchone()[0]
-            if spent >= root:
-                _deny("dispatch_budget_exhausted")
-            if row["parent_id"] and conn.execute("SELECT COUNT(*) FROM harness_configuration_attempts WHERE run_id=?", (run_id,)).fetchone()[0] >= row["dispatch_limit"]:
-                _deny("dispatch_budget_exhausted")
+            purposes = self._dispatch_purposes(conn, row["root_id"])
+            if None in purposes.values():
+                _deny("dispatch_purpose_unavailable")
+            dispatch_purpose = AUXILIARY_PURPOSES.get(request_kind, row["purpose"])
+            if previous:
+                dispatch_purpose = purposes[previous["permit_id"]]
+            elif request_kind == "tool-continuation":
+                if continuation_of is None:
+                    prior = conn.execute("SELECT permit_id,state FROM harness_configuration_attempts WHERE run_id=? ORDER BY rowid DESC LIMIT 1",
+                                         (run_id,)).fetchone()
+                    if prior is None or any(purposes[attempt[0]] != row["purpose"] for attempt in conn.execute(
+                            "SELECT permit_id FROM harness_configuration_attempts WHERE run_id=?", (run_id,))):
+                        _deny("continuation_identity_required")
+                else:
+                    prior = conn.execute("SELECT permit_id,state,run_id FROM harness_configuration_attempts WHERE permit_id=?",
+                                         (continuation_of,)).fetchone()
+                    if prior is None or prior["run_id"] != run_id:
+                        _deny("continuation_authority_mismatch")
+                if prior["state"] != "confirmed":
+                    _deny("continuation_not_confirmed")
+                dispatch_purpose = purposes[prior["permit_id"]]
+            if "purpose:" + dispatch_purpose in revoked:
+                _deny("authority_revoked")
+            output = self._check_dispatch_budget(conn, row, dispatch_purpose, purposes)
             output = self._fit(spec, limits, input_tokens, output)
             epoch = conn.execute("SELECT epoch FROM harness_configuration_grants WHERE id=1").fetchone()[0]
             permit_id = uuid4().hex
-            conn.execute("INSERT INTO harness_configuration_attempts(permit_id,run_id,root_id,step_id,payload_hash,request_kind,required_capabilities_json,retry_number,grant_epoch,output_tokens,state,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,'reserved',?)",
-                (permit_id, run_id, row["root_id"], step_id, payload_hash, request_kind, _json(sorted(required_capabilities)), retry_number, epoch, output, utc_now()))
+            conn.execute("INSERT INTO harness_configuration_attempts(permit_id,run_id,root_id,step_id,payload_hash,request_kind,required_capabilities_json,retry_number,grant_epoch,output_tokens,state,created_at,dispatch_purpose) VALUES(?,?,?,?,?,?,?,?,?,?,'reserved',?,?)",
+                (permit_id, run_id, row["root_id"], step_id, payload_hash, request_kind, _json(sorted(required_capabilities)), retry_number, epoch, output, utc_now(), dispatch_purpose))
         return self.permit(permit_id)
 
     def permit(self, permit_id: str) -> dict:
-        row = self.db.fetch_one("SELECT a.*,r.version,r.purpose,r.route_json FROM harness_configuration_attempts a JOIN harness_configuration_runs r ON r.run_id=a.run_id WHERE permit_id=?", (permit_id,))
-        if not row:
-            _deny("permit_missing")
+        with closing(self.db.connect()) as conn:
+            result = conn.execute("SELECT a.*,r.version,r.purpose,r.route_json FROM harness_configuration_attempts a JOIN harness_configuration_runs r ON r.run_id=a.run_id WHERE permit_id=?", (permit_id,)).fetchone()
+            if not result:
+                _deny("permit_missing")
+            row = dict(result)
+            if row["dispatch_purpose"] is None:
+                row["dispatch_purpose"] = self._dispatch_purposes(conn, row["root_id"])[permit_id]
         row["route"] = json.loads(row.pop("route_json"))
         row["required_capabilities"] = json.loads(row.pop("required_capabilities_json"))
         row["dispatch_allowed"] = False
@@ -463,11 +549,13 @@ class ConfigurationAuthority:
                 _deny("payload_changed")
             required = tuple(sorted(set(required_capabilities) | set(json.loads(attempt["required_capabilities_json"]))))
             current = self.require_current(attempt["run_id"], required_capabilities=required,
-                                           connection=connection, conn=conn)
-            auxiliary = {"title": "title", "summary": "summary", "compaction": "compaction", "summary-repair": "compaction"}.get(attempt["request_kind"])
-            if auxiliary and "purpose:" + auxiliary in self.revocation_overlay(conn=conn)["revoked"]:
-                _deny("authority_revoked")
-            output = self._fit(self.configuration(current["version"]), limits, input_tokens, attempt["output_tokens"])
+                                           connection=connection, permit_id=permit_id, conn=conn)
+            run = conn.execute("SELECT * FROM harness_configuration_runs WHERE run_id=?",
+                               (attempt["run_id"],)).fetchone()
+            purposes = self._dispatch_purposes(conn, attempt["root_id"])
+            output = min(attempt["output_tokens"], self._check_dispatch_budget(
+                conn, run, current["dispatch_purpose"], purposes, permit_id=permit_id))
+            output = self._fit(self.configuration(current["version"]), limits, input_tokens, output)
             conn.execute("UPDATE harness_configuration_attempts SET state='dispatched',grant_epoch=?,output_tokens=?,required_capabilities_json=? WHERE permit_id=?",
                          (current["grant_epoch"], output, _json(required), permit_id))
         permit = self.permit(permit_id)
