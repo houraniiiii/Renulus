@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
 import json
+from pathlib import Path
+import sqlite3
 
 from renulus.contracts import ApiError, ContextScope, Event, Scope, durable_id
 from renulus.design_c_contracts import (Conversation, Dependency, EligibleInput,
@@ -25,6 +27,12 @@ from renulus.storage.invalidation import context_epoch_in
 from renulus.runtime.harness_process import OBSERVATION_COMMANDS
 from .service import ActiveRun
 from .conversation_models import Send
+
+
+def _citation_references(citations):
+    return [{key: value for key, value in citation.items()
+        if key in {'content_ref', 'passage_id', 'document_id', 'revision_id', 'locator', 'locators'}}
+        for citation in citations]
 
 
 @dataclass(frozen=True)
@@ -48,9 +56,7 @@ class CompletedAnswer:
         return {'version': 1, 'run_id': self.run_id, 'thread_id': self.thread_id,
             'runtime': self.runtime.model_dump(mode='json'), 'input_id': self.input_id,
             'message_ids': list(self.message_ids), 'sha256': self.sha256,
-            'citations': [{key: value for key, value in citation.items()
-                if key in {'content_ref', 'passage_id', 'document_id', 'revision_id', 'locator', 'locators'}}
-                for citation in self.citations],
+            'citations': _citation_references(self.citations),
             'inputs': [item.model_dump(mode='json') for item in self.inputs],
             'dependencies': [item.model_dump(mode='json') for item in self.dependencies]}
 
@@ -118,7 +124,6 @@ class HarnessLearningBridge:
         if self.admit_run_in is not None:
             self.admit_run_in(conn, run, request)
         self.repo.learn.active[run.id] = run
-        self._consumed[run.id] = ((), (), '[]')
         return run
 
     def _check_dependencies(self, conn, run_id, inputs, dependencies):
@@ -142,7 +147,7 @@ class HarnessLearningBridge:
             summary, metadata = self.repo._get(current, 'learning', entry['id'])
             if summary['lifecycle'] != 'active' or (summary['revision'], metadata['draft_revision']) != entry['harness_revisions']:
                 raise ApiError('conversation_revision_conflict', 'The conversation or draft changed. Retry this request.', 409, True)
-            consumed = self._consumed.get(run_id, ((), (), '[]'))
+            consumed = self._consumed_in(current, run_id)
             self._check_dependencies(current, run_id, consumed[0], consumed[1])
 
     def select_context(self, run_id, *, messages):
@@ -195,8 +200,47 @@ class HarnessLearningBridge:
 
     def record_consumed(self, run_id, *, inputs=(), dependencies=(), citations=()):
         """Trusted domain callback only; model/tool argument text is never lineage."""
-        self.check(run_id)
-        old_inputs, old_dependencies, old_citations = self._consumed.get(run_id, ((), (), '[]'))
+        citations = tuple(citations)
+        with self.db.transaction() as conn:
+            refs = json.loads(self._consumed_in(conn, run_id)[2])
+            for citation in citations:
+                if citation not in refs:
+                    refs.append(citation)
+            self.record_consumed_in(conn, run_id, inputs=inputs, dependencies=dependencies, citations=citations)
+            consumed = self._consumed_in(conn, run_id)
+        # Optional transient citation detail is reusable only after this commit
+        # and only while the SQL closure still matches it.
+        self._consumed[run_id] = (consumed[0], consumed[1],
+            json.dumps(refs, sort_keys=True, ensure_ascii=False, allow_nan=False))
+
+    def _consumed_in(self, conn, run_id):
+        row = conn.execute('SELECT reference_json FROM learn_harness_answers WHERE run_id=?',
+            (run_id,)).fetchone()
+        if row is None:
+            raise ApiError('harness_run_unavailable', 'This learning operation is no longer active.', 409)
+        snapshot = json.loads(row['reference_json'] or '{}')
+        consumed = (tuple(EligibleInput.model_validate(value) for value in snapshot.get('inputs', ())),
+            tuple(Dependency.model_validate(value) for value in snapshot.get('dependencies', ())),
+            json.dumps(snapshot.get('citations', []), sort_keys=True, ensure_ascii=False, allow_nan=False))
+        cached = self._consumed.get(run_id)
+        if cached is not None and cached[:2] == consumed[:2] and (
+                _citation_references(json.loads(cached[2])) == json.loads(consumed[2])):
+            return cached
+        return consumed
+
+    def record_consumed_in(self, conn, run_id, *, inputs=(), dependencies=(), citations=()):
+        """Merge trusted reference closure in the caller's canonical transaction."""
+        try:
+            active = isinstance(conn, sqlite3.Connection) and conn.in_transaction
+        except sqlite3.ProgrammingError:
+            active = False
+        if not active:
+            raise ApiError('harness_transaction_required', 'Use an active canonical transaction.', 409)
+        path = next((row[2] for row in conn.execute('PRAGMA database_list') if row[1] == 'main'), None)
+        if not path or Path(path).resolve() != self.db.path:
+            raise ApiError('harness_connection_mismatch', 'Use this learning profile canonical connection.', 409)
+        self.check(run_id, conn=conn)
+        old_inputs, old_dependencies, old_citations = self._consumed_in(conn, run_id)
         inputs = tuple(EligibleInput.model_validate(value) for value in inputs)
         dependencies = tuple(Dependency.model_validate(value) for value in dependencies)
         merged = {}
@@ -211,15 +255,20 @@ class HarnessLearningBridge:
         for citation in citations:
             if citation not in refs:
                 refs.append(citation)
-        self._consumed[run_id] = (unique_inputs, tuple(merged.values()),
+        consumed = (unique_inputs, tuple(merged.values()),
             json.dumps(refs, sort_keys=True, ensure_ascii=False, allow_nan=False))
-        self.check(run_id)
-        self._checkpoint(self.repo.streaming.active[run_id])
+        self._check_dependencies(conn, run_id, consumed[0], consumed[1])
+        self._checkpoint_in(conn, self.repo.streaming.active[run_id], consumed)
 
     def _checkpoint(self, entry):
         """Reference-only admission and trusted closure survive lost IPC replies."""
+        with self.db.transaction() as conn:
+            self.check(entry['run'].id, conn=conn)
+            self._checkpoint_in(conn, entry, self._consumed_in(conn, entry['run'].id))
+
+    def _checkpoint_in(self, conn, entry, consumed):
         run_id = entry['run'].id
-        inputs, dependencies, citations = self._consumed.get(run_id, ((), (), '[]'))
+        inputs, dependencies, citations = consumed
         snapshot = {'version': 1, 'kind': 'pending', 'configuration_id': self.configuration_id,
             'policy': entry['policy'], 'epoch': entry['epoch'],
             'revisions': list(entry['harness_revisions']), 'request_id': entry['key'],
@@ -229,13 +278,12 @@ class HarnessLearningBridge:
             'project_digest': canonical_digest(entry.get('project')),
             'inputs': [item.model_dump(mode='json') for item in inputs],
             'dependencies': [item.model_dump(mode='json') for item in dependencies],
-            'citations': [{key: value for key, value in item.items()
-                if key in {'content_ref', 'passage_id', 'document_id', 'revision_id', 'locator', 'locators'}}
-                for item in json.loads(citations)]}
-        with self.db.transaction() as conn:
-            self.check(run_id, conn=conn)
-            conn.execute("UPDATE learn_harness_answers SET reference_json=? WHERE run_id=? AND state!='completed'",
-                (json.dumps(snapshot, sort_keys=True, ensure_ascii=False, allow_nan=False), run_id))
+            'citations': _citation_references(json.loads(citations))}
+        updated = conn.execute("UPDATE learn_harness_answers SET reference_json=? WHERE run_id=? "
+            "AND state IN ('reserved','uncertain','submitted')",
+            (json.dumps(snapshot, sort_keys=True, ensure_ascii=False, allow_nan=False), run_id))
+        if updated.rowcount != 1:
+            raise ApiError('harness_answer_conflict', 'The native receipt is no longer pending.', 409)
 
     def bind_input(self, run_id, *, session_id, input_id, attempt_id='1'):
         """Parent-only native admission callback; no transport inside this write."""
@@ -437,7 +485,9 @@ class HarnessLearningBridge:
             text = ''.join(part['text'] for message in selected for part in message.get('content', []) if part['type'] == 'text')
             if not text or not selected or not selected[-1].get('time', {}).get('completed') or selected[-1].get('error'):
                 raise ApiError('harness_answer_incomplete', 'The native completed answer is unavailable.', 409, True)
-            inputs, dependencies, citations = self._consumed.get(run_id, ((), (), '[]'))
+            with self.db.transaction() as conn:
+                self.check(run_id, conn=conn)
+                inputs, dependencies, citations = self._consumed_in(conn, run_id)
             answer = CompletedAnswer(run_id, entry['id'], runtime, input_id,
                 tuple(message['id'] for message in selected), text, hashlib.sha256(text.encode('utf-8')).hexdigest(),
                 citations, inputs, dependencies)
@@ -484,6 +534,10 @@ class HarnessLearningBridge:
             return json.loads(row['reference_json'])
         if row['state'] != 'submitted' or row['input_id'] != answer.input_id:
             raise ApiError('harness_answer_conflict', 'The completed input does not match its admitted receipt.', 409)
+        inputs, dependencies, citations = self._consumed_in(conn, answer.run_id)
+        if (answer.inputs != inputs or answer.dependencies != dependencies or
+                _citation_references(answer.citations) != _citation_references(json.loads(citations))):
+            raise ApiError('harness_answer_conflict', 'The consumed answer closure changed before publication.', 409)
         mapping = conn.execute('SELECT mapping_json FROM learn_harness_mappings WHERE thread_id=?', (answer.thread_id,)).fetchone()
         summary, _ = self.repo._get(conn, 'learning', answer.thread_id)
         expected = map_saved_conversation(Conversation.model_validate(summary), answer.runtime, manifest=self._manifest())
@@ -493,6 +547,10 @@ class HarnessLearningBridge:
         # Any callback failure rolls this staging and its local effects back.
         conn.execute('UPDATE learn_harness_answers SET reference_json=? WHERE run_id=?', (reference, answer.run_id))
         publication = self.publish_answer_in(conn, answer, entry) if self.publish_answer_in else canonical_digest(answer.reference())
+        inputs, dependencies, citations = self._consumed_in(conn, answer.run_id)
+        if (answer.inputs != inputs or answer.dependencies != dependencies or
+                _citation_references(answer.citations) != _citation_references(json.loads(citations))):
+            raise ApiError('harness_answer_conflict', 'The consumed answer closure changed during publication.', 409)
         conn.execute("UPDATE learn_harness_answers SET state='completed',reference_json=?,publication_digest=? WHERE run_id=?",
             (reference, publication, answer.run_id))
         now = utc_now()
@@ -703,7 +761,6 @@ class HarnessLearningBridge:
                 json.dumps(snapshot['citations'], sort_keys=True), inputs, dependencies)
             entry['harness_answer'] = answer
             self.repo.streaming.active[run_id] = entry
-            self._consumed[run_id] = (inputs, dependencies, json.dumps(snapshot['citations']))
             try:
                 conn.execute("UPDATE learn_harness_answers SET state='submitted',input_id=? WHERE run_id=?", (answer.input_id, run_id))
                 self.publish_in(conn, entry)
