@@ -72,16 +72,21 @@ class MemoryContext:
                 raise memory_changed()
 
 
-async def guarded_stream(provider, messages, *, memory_context, db, **kwargs):
+async def guarded_stream(provider, messages, *, memory_context, db, current=None, **kwargs):
     """Observe runtime compaction boundaries hidden by its text-only stream()."""
-    memory_context.check(db)
+    def check():
+        memory_context.check(db)
+        if current is not None:
+            current()
+
+    check()
     events = getattr(provider, "events", None)
-    use_events = bool(memory_context.pins) and callable(events)
+    use_events = (bool(memory_context.pins) or current is not None) and callable(events)
     stream = (events(messages, **kwargs) if use_events else provider.stream(messages, **kwargs))
     try:
         while True:
             # Also check after the consumer resumes a previously yielded delta.
-            memory_context.check(db)
+            check()
             try:
                 item = await anext(stream)
             except StopAsyncIteration:
@@ -92,7 +97,7 @@ async def guarded_stream(provider, messages, *, memory_context, db, **kwargs):
                 if item.type == "error":
                     raise ApiError(item.payload["code"], item.payload["message"],
                         item.payload.get("status", 503), item.payload["retryable"])
-            memory_context.check(db)
+            check()
             if not use_events:
                 yield item
             elif item.type == "delta":

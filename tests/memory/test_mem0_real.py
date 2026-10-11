@@ -18,7 +18,6 @@ from renulus.contracts import ApiError, ContextScope, Scope
 from renulus.memory.models import ManualFact
 from renulus.memory.service import MemoryService
 from renulus.learn.service import LearnService
-from renulus.design_c_contracts import Dependency, EligibleInput, Identity
 from renulus.runtime.helpers import HelperAssets
 
 from .conftest import evidence
@@ -181,11 +180,8 @@ async def test_actual_cpu_engine_support_revocation_after_edit_delete_reindex_re
     scope = ContextScope(kind=Scope.STUDY)
     async def publish(root, key):
         _, run = learn.prepare(root['text'], scope, None, 'glomerular', 'direct', key)
-        pin = EligibleInput(kind='memory', dependency=Dependency(target=Identity(
-            type='memory_revision', id=f"{root['id']}:{root['revision']}"), expected_revision=str(root['revision'])))
-        # Explicit synthetic trusted publication at the real Learn transaction.
-        # Production consumed-input collection remains the parent's integration.
-        run.publication = lambda conn: memory.publish_answer_lineage_in(conn, 'learn-answer:' + run.id, inputs=(pin,))
+        # No trusted publisher override: Learn records the actual CPU recall pins.
+        assert run.publication is None
         flow = [event async for event in learn.answer(run, root['text'], 'direct', 'glomerular')]
         assert flow[-1].type == 'completed'
         await memory.process_pending()

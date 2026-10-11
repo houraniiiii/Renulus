@@ -412,7 +412,11 @@ async def test_legacy_answer_without_known_manifest_is_readable_but_ineligible_f
     try:
         question = "Synthetic legacy CKD question."
         _, run = learn.prepare(question, ContextScope(kind=Scope.STUDY), None, "ckd", "direct", "legacy")
+        # Produce a genuine unknown-lineage legacy answer before the memory hook
+        # is composed. Current Learn with Memory now publishes known lineage.
+        learn.services.registry['memory'] = None
         flow = [event async for event in learn.answer(run, question, "direct", "ckd")]
+        learn.services.registry['memory'] = memory
         assert flow[-1].type == "completed"
         retained = learn.get_thread(run.thread_id)["messages"]
         assert any(message["role"] == "assistant" for message in retained)

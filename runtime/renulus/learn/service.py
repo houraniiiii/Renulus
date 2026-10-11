@@ -5,8 +5,10 @@ from dataclasses import dataclass, field
 import hashlib
 import inspect
 import json
+import re
 
 from renulus.contracts import ApiError, ContextScope, Event, Scope, durable_id
+from renulus.design_c_contracts import Dependency, EligibleInput, Identity
 from renulus.storage import utc_now
 from renulus.storage.assessment_policy import require_assistance
 from renulus.storage.invalidation import context_epoch_in, bump_context_epoch
@@ -128,6 +130,11 @@ class LearnService:
             with nullcontext(conn) if conn is not None else self.db.transaction() as conn:
                 self._require_legacy_owner_in(conn, thread_id)
                 self.check_run(run, conn=conn)
+                projects = self.services.registry.get('projects')
+                if projects is not None:
+                    project = projects.context_in(conn, 'learning', thread_id)
+                    run.project_id = project['project_id']
+                    run.revision_ids = project['revision_ids'] if run.project_id else None
                 if self.db.is_deleted("learn_thread", thread_id):
                     raise ApiError("thread_deleted", "This study thread has been deleted", 409)
                 conn.execute("INSERT INTO learn_runs VALUES(?,?,?,?,?,?,?)",
@@ -155,6 +162,30 @@ class LearnService:
             require_assistance(snapshot, expected_revision=run.policy_revision)
             if run.context_epoch is not None and context_epoch_in(snapshot) != run.context_epoch:
                 raise ApiError('dependency_changed', 'The learning context changed. Retry this request.', 409, True)
+
+    def _source_dependencies_in(self, conn, run, citations, topic_id, fresh):
+        if not citations:
+            return ()
+        library = self.services.registry.get('harness_library')
+        if library is None:
+            raise ApiError('memory_dependency_unknown', 'Source lineage needs the canonical Library resolver', 409)
+        from renulus.runtime.harness_library import LibraryAuthority
+        authority = LibraryAuthority(scope=run.scope, revision_ids=run.revision_ids,
+            policy_revision=run.policy_revision, context_epoch=run.context_epoch,
+            cancelled=run.cancelled.is_set, guard=lambda snapshot: None,
+            record_dependencies=lambda references: None, topic_id=topic_id, current_only=fresh)
+        library.validate_publication(citations, authority, conn=conn)
+        dependencies = []
+        for citation in citations:
+            revision = citation.get('document_revision')
+            if not isinstance(revision, str):
+                raise ApiError('memory_dependency_unknown', 'This source has no canonical Library revision', 409)
+            identity = Identity(type='library_revision', id=revision)
+            digest = library.resolve_dependency(conn, identity, authority=authority)
+            if not isinstance(digest, str) or not re.fullmatch(r'[0-9a-f]{64}', digest):
+                raise ApiError('memory_dependency_unknown', 'This source has no eligible local receipt', 409)
+            dependencies.append(Dependency(target=identity, expected_revision=digest))
+        return tuple(dict.fromkeys(dependencies))
 
     async def cancel(self, run_id):
         run = self.active.get(run_id)
@@ -225,6 +256,8 @@ class LearnService:
             return Event(run_id=run.id, sequence=sequence, type=kind, payload=payload or {})
         citations, answer = [], ""
         memory_context = MemoryContext()
+        memory = self.services.registry.get('memory')
+        history_inputs = ()
         fresh = run.scope.kind == Scope.STUDY and freshness_requested(question, freshness)
         try:
             self.check_run(run)
@@ -324,7 +357,10 @@ class LearnService:
                 return
             history = []
             if run.thread_id:
-                history = await conversation_history(self.get_thread(run.thread_id)["messages"],
+                messages = self.get_thread(run.thread_id)['messages']
+                if memory and run.scope.kind == Scope.STUDY:
+                    messages, history_inputs = memory.eligible_history(messages, project_id=run.project_id)
+                history = await conversation_history(messages,
                     knowledge, run.scope, topic_id, fresh)
             elif run.case_handoff_id or run.context:
                 history = [*run.context, {"role": "user", "content": question}]
@@ -344,14 +380,17 @@ class LearnService:
                 system += ("\nFreshness was requested. State each cited source's supplied publication and retrieval dates, "
                     "canonical URL and passage locator. Dated research is not verified latest-final guidance. "
                     "Explicitly disclose any missing latest-final/content review; do not claim it from fetch dates.")
-            memory = self.services.registry.get("memory")
             if memory and run.scope.kind == Scope.STUDY:
                 try:
                     recalled = await asyncio.to_thread(memory.retrieve, question, scope=run.scope,
-                        topic_id=topic_id, limit=6, budget_chars=3000)
+                        topic_id=topic_id, limit=6, budget_chars=3000, project_id=run.project_id)
                     if inspect.isawaitable(recalled):
                         recalled = await recalled
-                except Exception:
+                except ApiError as error:
+                    if error.code not in ('helper_assets_missing', 'helper_assets_invalid',
+                            'helper_contract_missing', 'memory_package_missing',
+                            'memory_index_failed', 'memory_embedding_incompatible'):
+                        raise
                     yield event("memory-unavailable", {"message": "Learner memory could not be recalled for this explanation."})
                 else:
                     # Retrieval has its own revision filter, but these records
@@ -368,7 +407,21 @@ class LearnService:
                 if checked != citations:
                     raise ApiError("explain_sources_changed", "Source eligibility changed before this answer. Start a new explanation.", 409, True)
             self.check_run(run)
+            answer_inputs = (*history_inputs, *(EligibleInput(kind='memory', dependency=Dependency(
+                target=Identity(type='memory_revision', id=f'{pin[0]}:{pin[1]}'),
+                expected_revision=str(pin[1]))) for pin in memory_context.pins))
+            source_dependencies = ()
+            if memory and run.scope.kind == Scope.STUDY:
+                with self.db.transaction() as conn:
+                    self.check_run(run, conn=conn)
+                    source_dependencies = self._source_dependencies_in(conn, run, citations, topic_id, fresh)
+            def check_inputs(conn=None):
+                with nullcontext(conn) if conn is not None else closing(self.db.connect()) as snapshot:
+                    self.check_run(run, conn=snapshot)
+                    memory.check_answer_inputs_in(snapshot, inputs=answer_inputs,
+                        dependencies=source_dependencies, project_id=run.project_id)
             stream = guarded_stream(provider, history, memory_context=memory_context, db=self.db,
+                                    current=check_inputs if memory and run.scope.kind == Scope.STUDY else None,
                                     scope=run.scope, run_id=run.id, model=model,
                                     system=system, purpose="explain")
             try:
@@ -391,6 +444,7 @@ class LearnService:
                 checked = await check_citations(knowledge, citations, run.scope, topic_id, True)
                 if checked != citations:
                     raise ApiError("explain_sources_changed", "Source eligibility changed during this answer. Start a new explanation.", 409, True)
+            answer_digest = hashlib.sha256(answer.encode('utf-8')).hexdigest()
             if run.thread_id:
                 with self.db.transaction() as conn:
                     self.check_run(run, conn=conn)
@@ -403,6 +457,8 @@ class LearnService:
                     # Same BEGIN IMMEDIATE transaction as answer/evidence writes:
                     # no edit/delete can commit between this check and capture eligibility.
                     memory_context.check(self.db, conn=conn)
+                    if memory and run.scope.kind == Scope.STUDY:
+                        check_inputs(conn)
                     now = utc_now()
                     message_id = durable_id("message")
                     conn.execute("INSERT INTO learn_messages VALUES(?,?,?,?,?,?,?)",
@@ -419,10 +475,20 @@ class LearnService:
                             (f"learn-answer:{run.id}", "study-answer", topic_id, run.thread_id,
                              json.dumps({"scope": {"kind": "study", "entity_id": run.thread_id},
                                  "answer_reference": {"message_id": message_id, "run_id": run.id,
-                                     "sha256": hashlib.sha256(answer.encode("utf-8")).hexdigest(),
+                                     "sha256": answer_digest,
                                      "version": 1}}), now))
-                    if run.publication:
-                        run.publication(conn)
+                    publication = run.publication(conn) if run.publication else None
+                    if (memory and run.scope.kind == Scope.STUDY and
+                            not run.case_handoff_id and not run.context):
+                        evidence_id = 'learn-answer:' + run.id
+                        published = conn.execute('SELECT publication_digest FROM memory_answer_lineage '
+                            'WHERE evidence_id=?', (evidence_id,)).fetchone()
+                        if isinstance(publication, str) and (published is None or published[0] != publication):
+                            raise ApiError('memory_lineage_conflict',
+                                'The publication callback did not return its local lineage digest', 409)
+                        if published is None:
+                            memory.publish_answer_lineage_in(conn, evidence_id,
+                                inputs=answer_inputs, dependencies=source_dependencies, project_id=run.project_id)
                 if memory:
                     try:
                         memory.notify()

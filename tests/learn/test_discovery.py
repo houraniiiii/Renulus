@@ -11,6 +11,7 @@ import pytest
 from renulus.contracts import ApiError, ContextScope, Scope
 from renulus.memory.models import ManualFact
 from renulus.memory.repository import MemoryRepository
+from renulus.memory.service import MemoryService
 from renulus.retrieval.service import RetrievalService
 from renulus.server import create_app
 
@@ -212,13 +213,15 @@ async def test_discovery_failures_allow_an_honest_completed_explanation(build, f
     # MemoryContext must continue checking it at answer publication.
     fact = MemoryRepository(services).add(ManualFact(text="Synthetic learner preference",
         kind="preference", scope=ContextScope(kind=Scope.STUDY), idempotency_key="discovery-preference"))
-    class Memory:
+    class Memory(MemoryService):
+        # Only retrieval selection and wake notification are controlled. Actual
+        # history/current/publication hooks must retain the canonical revision.
         def retrieve(self, *args, **kwargs):
             return {"context": fact["text"], "records": [fact]}
         def notify(self):
             assert services.db.fetch_one("SELECT state FROM learn_runs WHERE id=?", (run.id,))["state"] == "completed"
             raise RuntimeError("Synthetic capture notification failure")
-    services.registry["memory"] = Memory()
+    services.registry["memory"] = Memory(services)
     learn, run, question = prepare(services)
     flow = await collect(learn, run, question)
     assert_unverified(flow)

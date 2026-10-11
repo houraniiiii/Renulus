@@ -48,6 +48,11 @@ class MemoryService:
         return self.repository.lineage.publish_in(conn, evidence_id, inputs=inputs,
             dependencies=dependencies, project_id=project_id)
 
+    def check_answer_inputs_in(self, conn, *, inputs, dependencies=(), project_id=None):
+        """Check typed closure in the caller's local snapshot; no byte/IPC IO."""
+        self.repository.lineage.check_inputs_in(conn,
+            AnswerInputs(inputs=inputs, dependencies=dependencies), project_id=project_id)
+
     def register_dependency_resolver(self, target_type, resolver):
         """Bind a local canonical validator; prebind registry on profile reopen."""
         self.repository.lineage.register_resolver(target_type, resolver)
