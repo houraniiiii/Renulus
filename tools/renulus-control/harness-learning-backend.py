@@ -400,7 +400,6 @@ def create_fixture_app(file: Path, digest: str, *, profile: Path, helper_assets:
         raise _invalid()
     from renulus.runtime.harness_startup import create_managed_app
     options = load_fixture_launch(file, digest, profile=profile, helper_assets=helper_assets)
-    os.environ['USERPROFILE'] = str(profile.parent / 'd/home')
     for name in ('HF_HUB_OFFLINE', 'TRANSFORMERS_OFFLINE', 'HF_HUB_DISABLE_TELEMETRY', 'DO_NOT_TRACK'):
         os.environ[name] = '1'
     shared_spec = importlib.util.spec_from_file_location('learning_shared_helpers',
@@ -473,7 +472,8 @@ def create_fixture_app(file: Path, digest: str, *, profile: Path, helper_assets:
                 max_retained_bytes=500000, max_manifest_bytes=32768, max_frame_bytes=65536))
 
     app = create_managed_app(options, token=token, source_root=SOURCE, prepare_startup=prepare,
-        provider_http_transport=httpx.MockTransport(catalogue), model_registry_factory=factory)
+        provider_http_transport=httpx.MockTransport(catalogue), model_registry_factory=factory,
+        collection_root=profile / 'library/collection')
     app.state.learning_fixture = fixture
     return app
 

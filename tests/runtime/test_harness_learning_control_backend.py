@@ -182,6 +182,65 @@ def test_missing_session_token_denies_before_owned_profile_creation(tmp_path):
     assert not profile.exists()
 
 
+def test_owned_fixture_constructor_preserves_home_and_uses_explicit_state(tmp_path):
+    profile, file, assets, data = document(tmp_path)
+    environment = {key: os.environ[key] for key in ('SYSTEMROOT', 'SystemRoot', 'WINDIR') if key in os.environ}
+    environment['PYTHONPATH'] = os.pathsep.join((str(SOURCE / 'runtime'), str(SOURCE / 'upstream/hermes')))
+    environment['TEMP'] = environment['TMP'] = str(tmp_path)
+    completed = subprocess.run([sys.executable, str(Path(__file__)), '--explicit-state-child',
+        str(file), write_document(file, data), str(profile), str(assets)], env=environment,
+        capture_output=True, text=True, timeout=30)
+    assert completed.returncode == 0, completed.stderr
+    assert 'EXPLICIT_STATE_WITHOUT_HOME' in completed.stdout
+
+
+async def child_explicit_state(file, digest, profile, assets):
+    import httpx
+    homes = {name: os.environ.get(name) for name in ('USERPROFILE', 'HOME', 'CODEX_HOME')}
+
+    def unavailable_home():
+        raise AssertionError('Owned fixture construction must not resolve a system home')
+
+    with pytest.MonkeyPatch.context() as guard:
+        guard.setattr(Path, 'home', staticmethod(unavailable_home))
+        app = module().create_fixture_app(file, digest, profile=profile, helper_assets=assets,
+            token='synthetic-only-session')
+    services = app.state.services
+    try:
+        assert {name: os.environ.get(name) for name in homes} == homes
+        assert services.paths.root == profile
+        assert services.get('provider').paths == services.paths
+        assert services.get('helpers').paths == services.paths
+        assert services.get('knowledge_catalogue').root == profile / 'library/collection'
+        helpers = services.get('helpers')
+        helpers.startup.configure()
+        for name in ('HF_HOME', 'HF_HUB_CACHE', 'TRANSFORMERS_CACHE',
+                'HF_MODULES_CACHE', 'TORCH_HOME', 'FASTEMBED_CACHE_PATH', 'TEMP', 'TMP'):
+            assert Path(os.environ[name]).is_relative_to(services.paths.cache)
+        manifest = profile / 'library/collection/metadata/acquisition-2026-10-04/acquisition-manifest.jsonl'
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text(json.dumps({'source_id': 'R01',
+            'title': 'Synthetic owned learning fixture catalogue',
+            'local_path': 'raw/R01/synthetic-note.txt', 'sha256': 'a' * 64, 'bytes': 9}) + '\n',
+            encoding='utf-8')
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),
+                base_url='http://127.0.0.1:18777',
+                headers={'x-renulus-token': 'synthetic-only-session'}) as client:
+            response = await client.get('/api/v1/library/collection/preview', params={'source_id': 'R01'})
+            assert response.status_code == 200
+            observed = response.json()
+            assert observed['total'] == 1 and observed['indexed'] is False and observed['errors'] == []
+            assert observed['entries'][0]['title'] == 'Synthetic owned learning fixture catalogue'
+            assert observed['entries'][0]['collection_path'] == 'raw/R01/synthetic-note.txt'
+        assert app.state.learning_fixture.observations()['http_requests'] == 0
+    finally:
+        await app.state.harness_bootstrap.close()
+        await services.finish_shutdown()
+    assert {name: os.environ.get(name) for name in homes} == homes
+    assert services.shutdown_status()['state'] == 'settled'
+    print('EXPLICIT_STATE_WITHOUT_HOME', flush=True)
+
+
 async def child_expired_inspection(file, digest, profile, assets):
     import asyncio
     from renulus.runtime import harness_process
@@ -372,6 +431,9 @@ if __name__ == '__main__':
             Path(sys.argv[4]), Path(sys.argv[5])))
     elif sys.argv[1] == '--cleanup-deadline-child':
         asyncio.run(child_expired_cleanup(Path(sys.argv[2]), sys.argv[3],
+            Path(sys.argv[4]), Path(sys.argv[5])))
+    elif sys.argv[1] == '--explicit-state-child':
+        asyncio.run(child_explicit_state(Path(sys.argv[2]), sys.argv[3],
             Path(sys.argv[4]), Path(sys.argv[5])))
     else:
         assert sys.argv[1] in ('--fixture-child', '--reopen-child')
