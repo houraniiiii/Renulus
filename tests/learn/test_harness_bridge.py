@@ -44,7 +44,8 @@ class ScriptedTransport:
             result = {'sessionId': 'ses_synthetic', 'inputId': 'msg_user',
                 'operationId': operation_id, 'attemptId': attempt_id}
         elif command == 'session.get':
-            result = {'session': {'id': 'ses_synthetic', 'outcome': 'succeeded'}}
+            result = {'session': {'id': 'ses_synthetic', 'outcome': 'succeeded',
+                'time': {'idle': 1791676800003}}}
         elif command == 'session.messages':
             result = {'messages': [
                 {'id': 'msg_user', 'type': 'user', 'text': self.prompts[-1],

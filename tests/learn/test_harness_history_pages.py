@@ -18,7 +18,9 @@ class FrameBoundedTransport(ScriptedTransport):
 
     async def request(self, command, payload, operation_id, *args):
         response = await super().request(command, payload, operation_id, *args)
-        if command == 'session.messages':
+        if command == 'session.get':
+            response['result']['session']['time'] = {'idle': 1791676800164}
+        elif command == 'session.messages':
             start = int(payload.get('cursor', '0'))
             limit = payload['limit']
             self.read_pages.append((start, limit))

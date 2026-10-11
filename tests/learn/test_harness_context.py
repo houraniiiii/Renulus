@@ -44,6 +44,8 @@ class ContextTransport(ScriptedTransport):
                 'content': [{'type': 'tool', 'id': 'call_' + str(turn), 'name': 'library.retrieve',
                     'state': {'status': 'completed'}}, {'type': 'text', 'text': 'Synthetic answer ' + str(turn)}],
                 'time': {'created': 1791676800001 + turn * 10, 'completed': 1791676800002 + turn * 10}})
+        elif command == 'session.get':
+            response['result']['session']['time'] = {'idle': self.native[-1]['time']['completed'] + 1}
         elif command == 'session.messages':
             response['result'] = {'messages': copy.deepcopy(self.native), 'cursor': {}}
         return response
