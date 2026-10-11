@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import traceback
 
 from renulus.contracts import ContextScope, Scope
 from renulus.learn.conversation_models import NewConversation, Send
@@ -13,6 +14,35 @@ from renulus.server import create_app
 
 async def test_saved_cited_answer_uses_native_ipc_and_real_library_without_second_transcript(tmp_path):
     from renulus.runtime.harness_learning import HarnessLearningOwner
+    from renulus.runtime.harness_domain import DomainGrant
+
+    callbacks = []
+    failures = []
+
+    def observe_failure(error):
+        failures.append({'type': type(error).__name__, 'frames': [
+            [Path(frame.filename).name, frame.name, frame.lineno]
+            for frame in traceback.extract_tb(error.__traceback__)]})
+
+    class ObservedOwner(HarnessLearningOwner):
+        async def authorize(self, request):
+            callbacks.append((request.callback_id, request.command))
+            try:
+                grant = await super().authorize(request)
+            except BaseException as error:
+                observe_failure(error)
+                raise
+            if grant is None:
+                return None
+
+            async def handle(current, cancellation):
+                try:
+                    return await grant.handler(current, cancellation)
+                except BaseException as error:
+                    observe_failure(error)
+                    raise
+
+            return DomainGrant(grant.binding, handle, grant.check_current, grant.cancellation)
 
     root = tmp_path / 'profile'
     root.mkdir()
@@ -26,7 +56,7 @@ async def test_saved_cited_answer_uses_native_ipc_and_real_library_without_secon
         profile_root=root, profile_id='synthetic-profile', store_id='synthetic-runtime',
         domain_store_id='synthetic-domain', domain_path='state/renulus.sqlite3',
         max_inflight=1, max_domain_inflight=1)
-    owner = HarnessLearningOwner(services, config, configuration_id='synthetic-h02',
+    owner = ObservedOwner(services, config, configuration_id='synthetic-h02',
         memory=services.get('memory'), context_filtering=True)
     owner.install()
     try:
@@ -43,7 +73,14 @@ async def test_saved_cited_answer_uses_native_ipc_and_real_library_without_secon
         async with asyncio.timeout(45):
             events = [json.loads(encoded.split('data: ', 1)[1])
                 async for encoded in repo.streaming.events(entry, receipt)]
-        assert events[-1]['type'] == 'completed', json.dumps(events, indent=2)
+        assert events[-1]['type'] == 'completed', json.dumps({
+            'events': events,
+            'failures': failures,
+            'domain': [{'command': command, **{key: value for key, value in
+                (owner.process.domain_result(callback_id) or {}).items()
+                if key in {'outcome', 'error'}}} for callback_id, command in callbacks],
+            'ownership': owner.process.domain_status(operation_id=entry['run'].id),
+        }, indent=2)
         reference = events[-1]['payload']['answer_reference']
         assert reference['citations'], reference
         assert reference['citations'][0]['revision_id'] == source['revision_id']
