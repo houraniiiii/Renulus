@@ -46,10 +46,16 @@ signalling cancellation or deleting a record. Status
 reports active, settled or unavailable. Cancel signals interruption and retains
 the invocation until finalizers settle. Release refuses active work. These
 commands use reserved control capacity, and status is a bounded observation.
+The initial observation request is itself retained before the first await and
+shielded from observer cancellation. Expiry reuses that owned request task and
+its resulting identity; it cannot submit a second read in its place. A local
+pre-admission refusal has no receipt only when the public process query confirms
+absence; it can then retire that observation without claiming native settlement.
 Pending and terminal observation identities remain retained across timeout or
 busy release; a new status read begins only after the previous release succeeds.
-Read expiry cannot terminate the independently retained cleanup drain. A final
-authenticated rejection after a pending acknowledgement proves no native
+Read expiry cannot terminate the independently retained cleanup drain. Final
+cleanup joins outstanding initial observation tasks before its settlement proof.
+A final authenticated rejection after a pending acknowledgement proves no native
 invocation, while an unknown acknowledgement continues to require actual proof.
 
 CPU completion, native invocation settlement, scoped Domain settlement and
@@ -71,3 +77,23 @@ Mem0/Qdrant/FastEmbed and an owned loopback HTTP boundary. Account, limits and
 inclusive counter evidence remain explicitly synthetic. A source edit during
 held extraction must prevent a fact and stale recapture while preserving actual
 finalizer ownership and live control.
+
+The first actual-engine tracer has a passing positive receipt:
+`G:/Renulus-agent-scratch/oc-h02-h08/native-extraction-tracer/receipts/positive02.xml`,
+1 passed, zero failures/errors/skips, 21.029s. It uses the original Services
+provider, production main, actual saved answer bytes and real Mem0/Qdrant/
+FastEmbed. Setup and extraction each issue one synthetic-account loopback
+request, for two total sends. The explicit native capture has a separate
+confirmed permit, checks publication in the final Memory transaction, creates
+no extraction transcript and settles its actual owners. Account limits and
+inclusive counts remain synthetic. The held-source-revocation case is still
+being implemented; this positive does not accept H05 or enable automatic capture.
+
+The retained first receipt, positive01.xml (1 failure, 79.672s), timed out while
+waiting for the counter. Public job state subsequently classified the cause as
+`model_registry_capacity`: the fixture allowed 32768 manifest/request bytes,
+while the installed Mem0 additive system prompt is 34276 UTF-8 bytes. Only
+explicit fixture byte/frame/retention bounds and early failure diagnostics
+changed before positive02. This is a fixture refusal, not a production defect
+or a claim that the production bound changed. A local Qdrant payload-index
+warning remains recorded.

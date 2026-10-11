@@ -98,8 +98,13 @@ explicit independent closure on both axes. Python cleanup3ae7064c closes the
 original reproductions, but focused review found two residual P2s: an outer
 deadline can cancel the initial request before its retained ID is cached, and
 local rejected status has no transport receipt yet waits forever for release.
-These are under one bounded CaptureBinding/process-seam repair lease; actual
-engine execution remains held until independent closure. Separate initiating
+Worker47b07fdd is integrated as19b1b0e9. Both independent axes now explicitly
+close both residual P2s, with zero material findings: initial request tasks are
+retained and shielded before awaiting; local refusal skips release only when
+public query_result confirms no transport receipt. Actual terminal receipts
+still need acknowledged release, and final settlement joins initial tasks.
+The real-engine worker is released for the first positive/held-source-revocation
+vertical tracer, not acceptance or automatic capture. Separate initiating
 timeout repairce04e638, integrated as0df89c85, has zero residual findings on
 both axes.
 
@@ -111,6 +116,17 @@ both axes.
 | shutdown-red01.xml / shutdown-green01.xml | 1 failed / 1 passed, 6.32s | Public Services shutdown initiates native close while the producer awaits exit proof |
 | cleanup-affected01.xml | 27 passed, 86.48s | Final capture file plus affected saved admission/current/model-owner tests; one inherited TestClient warning |
 
+Follow-up worker receipts under
+`G:/Renulus-agent-scratch/oc-h02-h08/library/capture-observation/receipts/`
+are separate, overlapping runs: identity-red01 has1 failure/0 errors (8.896s),
+identity-green02 has1 pass (6.881s); refusal-red03 has3 failures/0 errors
+(15.128s), refusal-green04 has3 passes (13.070s); affected05 has14 passes,
+zero failures/errors/skips (47.178s). Parent independently read all XML and
+verified exact committed bytes; the prior27-case run was not repeated. The
+deadline test shortens only its observation window, and capacity/native receipt
+shapes are explicitly scripted. The real unstarted process supplies absent-
+receipt behavior. These receipts do not claim actual engine/SDK overload.
+
 Settings Home refusal repair67c0c677 is integrated as8b9345c4. Its actual managed
 lifespan public trace reproduces authentication/Stage409 before repair (1 failed,
 17.79s), then provider-unavailable with stable credentials and successful Stage
@@ -120,11 +136,22 @@ axes explicitly close this repair. The new hidden activation/reopen journey is
 recorded above. The validated proxy Content-Length repair is also independently
 closed; bounded passive POST observation remains a separate tooling lease.
 
-Current directed lanes: Sartre owns only CaptureBinding observer-identity/local
-refusal repair and its tests; Arendt owns one new actual managed-child H04
-interruption tracer; Ohm owns only passive controller response recording/tests;
-Turing prepares the real Mem0/native extraction tracer and holds all execution.
-Russell and Nietzsche independently review Spec and Standards. The parent owns
+The actual-engine positive receipt positive02.xml has1 pass/0 failures/errors/
+skips (21.029s): genuine saved setup1 send plus explicit extraction1 send through
+production main and actual Mem0/Qdrant/FastEmbed, exact typed roots, writer-free
+native resolution, same-connection permit publication and actual settlement.
+Its retained positive01 timeout (1 failure,79.672s) is classified by public job
+state as a fixture32KiB capacity refusal; the actual Mem0 system has34276 UTF-8
+bytes. Only fixture byte/frame/retention limits and early failure diagnostics
+changed. The held-source-revocation negative and coherent test commit remain
+pending; no H05 acceptance or automatic capture is granted.
+
+Current directed lanes: Sartre prepares the distinct H02 desktop fixture backend
+in two new dedicated files; Arendt handed off the actual managed-child H04
+interruption test9547ac66; Ohm handed off passive recorder repairbc742b63.
+Russell and Nietzsche independently review these two exact scopes for Spec and
+Standards. Turing implements the held-source-revocation real-engine tracer after
+its positive result; automatic capture remains OFF. The parent owns
 shared integration and durable evidence. No H06/H07 implementation is released
 before real H05 acceptance, and H08 still requires accepted H04/H06.
 
