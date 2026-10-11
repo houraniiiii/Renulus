@@ -359,10 +359,6 @@ class MemoryRepository:
         require_eligible(scope)
         with self.db.transaction() as conn:
             material = self.material(evidence_id, scope, conn=conn)
-            if automatic and material.get('_answer') and 'runtime' in material['_answer'][1]['answer_reference']:
-                # H05 connected resolver/host acceptance has not activated
-                # migrated automatic capture. Explicit capture uses this seam.
-                return None
             if conn.execute('SELECT 1 FROM memory_suppression WHERE source_key=?',
                             ('evidence:' + evidence_id,)).fetchone():
                 raise ApiError('memory_capture_suppressed', 'This source was removed or corrected in memory', 409)
