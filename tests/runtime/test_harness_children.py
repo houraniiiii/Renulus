@@ -5,9 +5,11 @@ Uses the actual canonical Database and supplied-connection child configuration
 authority. The parent owns production journal DDL; this provisional SQLite
 fixture does not establish native child or H07 acceptance.
 """
-from dataclasses import replace
+from dataclasses import asdict, replace
 import asyncio
 import json
+from pathlib import Path
+from threading import Event
 
 import pytest
 
@@ -18,10 +20,14 @@ from renulus.runtime.harness_children import (
 from renulus.runtime.harness_configuration import (
     ConfigurationAuthority, ConfigurationSpec, ConnectionReference,
 )
-from renulus.runtime.harness_domain import DomainBinding, DomainCancellation, DomainRequest
+from renulus.runtime.harness_domain import DomainBinding, DomainCallbacks, DomainCancellation, DomainRequest
 from renulus.runtime.harness_children_journal import HarnessChildrenJournal
-from renulus.runtime.harness_library import LibraryAuthority
-from renulus.storage import Database, utc_now
+from renulus.runtime.harness_library import HarnessLibrary, LibraryAuthority
+from renulus.knowledge.repository import KnowledgeRepository
+from renulus.services import Services
+from renulus.storage import AppPaths, Database, utc_now
+from tests.knowledge.test_interactive_queue import SyntheticIndex
+from tests.knowledge.test_repository import SyntheticEmbedder, SyntheticExtractor
 from tests.runtime.test_harness_configuration import activate
 from tests.runtime.test_harness_library import library, note
 
@@ -178,6 +184,195 @@ async def callback(children, binding, command, payload):
     grant = await children.authorize(request)
     assert grant is not None
     return await grant.handler(request, DomainCancellation())
+
+
+@pytest.fixture
+def callback_library(tmp_path):
+    """Real Library/SQLite/public imports; all CPU/index adapters are synthetic."""
+    class RetrievalIndex(SyntheticIndex):
+        search_calls = 0
+
+        def search(self, query, vector, revision_ids, limit):
+            self.search_calls += 1
+            return [dict(row) for row in self.rows if row['revision_id'] in revision_ids][:limit]
+
+    paths = AppPaths.create(tmp_path / 'library')
+    db = Database(paths.database)
+    module = Path(__file__).resolve().parents[2] / 'runtime/renulus/knowledge'
+    db.apply_migration('knowledge-001', (module / 'schema.sql').read_text(encoding='utf-8'))
+    for migration in sorted((module / 'migrations').glob('*.sql')):
+        db.apply_migration('knowledge-' + migration.stem, migration.read_text(encoding='utf-8'))
+    repository = KnowledgeRepository(Services(paths, db), extractor=SyntheticExtractor(),
+        embedder=SyntheticEmbedder(), index=RetrievalIndex(paths.indexes / 'knowledge'))
+    return repository, HarnessLibrary(repository)
+
+
+def child_callbacks(children, publication_gate=None):
+    identity = {'protocol': 'renulus-harness/1', 'profile_id': 'synthetic-profile',
+        'store_id': 'synthetic-store', 'generation': 'generation-1', 'token': 'synthetic-token'}
+    sent = []
+
+    async def send(wire, callback_id):
+        if publication_gate is not None:
+            entered, release = publication_gate
+            entered.set()
+            await release.wait()
+        if callback_id:
+            wire = callbacks.publication_wire(callback_id)
+        sent.append(json.loads(wire))
+
+    callbacks = DomainCallbacks(identity, children.authorize, send, max_inflight=2,
+        max_records=16, max_bytes=262144, max_frame=32768)
+    return callbacks, identity, sent
+
+
+def library_frame(identity, binding, callback_id='callback-retrieve', command='library.retrieve', arguments=None):
+    return {**identity, **asdict(binding), 'kind': 'domain_request', 'callback_id': callback_id,
+        'command': command, 'payload': {'command': command, 'envelope': {},
+            'arguments': arguments or {'query': 'fistula stenosis', 'limit': 1}}}
+
+
+async def test_domain_child_library_records_sources_through_read_and_writer_connections(callback_library):
+    repository, adapter = callback_library
+    source = note(repository, 'Synthetic dialysis access surveillance assesses fistula flow and stenosis.')
+    children, parent, _, _ = make_family(repository.db, adapter, journal_factory=HarnessChildrenJournal)
+    reservation = children.prepare(parent.binding, invocation(), work())
+    binding = DomainBinding(reservation.operation_id, '1', 'ses_library', 'msg_library',
+        reservation.cancellation_id)
+    children.admit_input(reservation.reservation_id, binding)
+    callbacks, identity, sent = child_callbacks(children)
+    frame = library_frame(identity, binding)
+    callbacks.accept(frame)
+    await asyncio.wait_for(callbacks.settled(), 20)
+    result = callbacks.result(frame['callback_id'])
+    assert result['outcome'] == 'committed_reference', result.get('error')
+    passage = result['result']['passages'][0]
+    assert passage['document_revision'] == source['revision_id']
+    with children.db.transaction() as conn:
+        record = children.journal.child_in(conn, reservation.reservation_id)
+        closure = json.loads(record.sources_json)
+        assert closure[0]['dependency']['target']['id'] == source['revision_id']
+        assert closure[0]['citation']['passage_id'] == passage['id']
+        assert 'Synthetic dialysis access surveillance' not in record.to_json()
+    assert children.status(parent.binding).owned == 0 and callbacks.status()['active'] == 0
+    assert sent[-1]['outcome'] == 'committed_reference'
+    repeat = {**frame, 'callback_id': 'callback-retrieve-again'}
+    callbacks.accept(repeat)
+    await asyncio.wait_for(callbacks.settled(), 3)
+    assert callbacks.result(repeat['callback_id'])['outcome'] == 'committed_reference'
+    with children.db.transaction() as conn:
+        assert json.loads(children.journal.child_in(conn, reservation.reservation_id).sources_json) == closure
+    assert repository.index.search_calls == 2
+    repository.delete_document(source['document_id'])
+    callbacks.accept({**frame, 'callback_id': 'callback-revoked-source'})
+    await asyncio.wait_for(callbacks.settled(), 3)
+    assert callbacks.result('callback-revoked-source')['error']['code'] == 'harness_sources_changed'
+    assert repository.index.search_calls == 2
+
+
+class HeldQueryEmbedder(SyntheticEmbedder):
+    """Owned CPU latency/finalizer at the public embedder port; no native model."""
+    def __init__(self):
+        self.entered, self.finish, self.finalizing, self.release = (Event() for _ in range(4))
+
+    def embed(self, texts, *, query=False):
+        if query:
+            self.entered.set()
+            try:
+                assert self.finish.wait(10), 'Release the synthetic query worker'
+            finally:
+                self.finalizing.set()
+                assert self.release.wait(10), 'Release the synthetic query finalizer'
+        return super().embed(texts, query=query)
+
+
+@pytest.mark.parametrize('change', ['callback', 'root', 'family', 'internal'])
+async def test_domain_child_library_cancellation_retains_cpu_finalizer_and_exact_errors(callback_library, change):
+    repository, adapter = callback_library
+    note(repository, 'Synthetic dialysis access surveillance assesses fistula flow and stenosis.')
+    held = HeldQueryEmbedder()
+    repository.embedder = held
+    failure = ApiError('synthetic_child_current_failure', 'Synthetic private guard detail.', 500, True)
+    changed = False
+
+    def current(conn):
+        if changed:
+            raise failure
+
+    children, parent, _, _ = make_family(repository.db, adapter, extra_current=current,
+        journal_factory=HarnessChildrenJournal)
+    reservation = children.prepare(parent.binding, invocation(), work())
+    binding = DomainBinding(reservation.operation_id, '1', 'ses_cancel', 'msg_cancel', reservation.cancellation_id)
+    children.admit_input(reservation.reservation_id, binding)
+    callbacks, identity, sent = child_callbacks(children)
+    frame = library_frame(identity, binding)
+    callbacks.accept(frame)
+    try:
+        assert await asyncio.to_thread(held.entered.wait, 3), callbacks.result(frame['callback_id'])
+        if change == 'callback':
+            callbacks.receive_cancel({**identity, **asdict(binding), 'kind': 'domain_cancel',
+                'callback_id': frame['callback_id']})
+        elif change == 'root':
+            parent.cancellation.cancel()
+        elif change == 'family':
+            children.seal(parent.binding)
+        else:
+            changed = True
+        assert callbacks.status()['active'] == 1 and children.status(parent.binding).owned == 1
+        assert callbacks.result(frame['callback_id'])['outcome'] == 'accepted_pending'
+        held.finish.set()
+        assert await asyncio.to_thread(held.finalizing.wait, 3)
+        assert callbacks.status()['active'] == 1 and children.status(parent.binding).owned == 1
+        assert callbacks.result(frame['callback_id'])['outcome'] == 'accepted_pending'
+        held.release.set()
+        await asyncio.wait_for(callbacks.settled(), 3)
+        result = callbacks.result(frame['callback_id'])
+        if change == 'internal':
+            assert result['outcome'] == 'uncertain_after_disconnect'
+            assert result['error'] == {'code': failure.code, 'status': 500, 'retryable': True}
+            assert failure.message not in json.dumps(result)
+        else:
+            assert result['outcome'] == 'cancelled_settled'
+            assert result['error'] == {'code': 'domain_cancelled'}
+        assert 'result' not in sent[-1]
+        with children.db.transaction() as conn:
+            assert children.journal.child_in(conn, reservation.reservation_id).sources_json == '[]'
+        assert children.status(parent.binding).owned == 0
+    finally:
+        held.finish.set()
+        held.release.set()
+        await asyncio.wait_for(callbacks.settled(), 3)
+        if change == 'family':
+            assert (await children.settlement(parent.binding, 3))['state'] == 'settled'
+
+
+async def test_domain_child_queued_library_result_and_replay_recheck_current(callback_library):
+    repository, adapter = callback_library
+    note(repository, 'Synthetic dialysis access surveillance assesses fistula flow and stenosis.')
+    children, parent, authority, _ = make_family(repository.db, adapter, journal_factory=HarnessChildrenJournal)
+    reservation = children.prepare(parent.binding, invocation(), work())
+    binding = DomainBinding(reservation.operation_id, '1', 'ses_queued', 'msg_queued', reservation.cancellation_id)
+    children.admit_input(reservation.reservation_id, binding)
+    entered, release = asyncio.Event(), asyncio.Event()
+    callbacks, identity, sent = child_callbacks(children, (entered, release))
+    frame = library_frame(identity, binding)
+    callbacks.accept(frame)
+    try:
+        await asyncio.wait_for(entered.wait(), 3)
+        assert callbacks.result(frame['callback_id'])['outcome'] == 'committed_reference'
+        assert callbacks.status()['active'] == 1 and repository.index.search_calls == 1
+        authority.revoke('purpose:evidence-review')
+        release.set()
+        await asyncio.wait_for(callbacks.settled(), 3)
+        assert sent[-1]['error']['code'] == 'child_grant_epoch_changed'
+        assert 'result' not in sent[-1]
+        callbacks.accept(frame)
+        await asyncio.wait_for(callbacks.settled(), 3)
+        assert sent[-1]['error']['code'] == 'child_grant_epoch_changed'
+        assert repository.index.search_calls == 1
+    finally:
+        release.set()
+        await asyncio.wait_for(callbacks.settled(), 3)
 
 
 async def test_two_foreground_reports_with_null_notifications_use_the_real_journal(tmp_path):

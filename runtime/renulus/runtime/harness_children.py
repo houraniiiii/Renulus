@@ -315,7 +315,7 @@ class HarnessChildren:
         self._live.add(child_id)
         return ChildReservation(child_id, child_id, '1', child_id, family.grant_epoch)
 
-    def _check_child(self, conn, record):
+    def _check_child_current(self, conn, record):
         if record is None:
             _deny('child_reservation_unavailable')
         if record.reservation_id not in self._live:
@@ -325,19 +325,41 @@ class HarnessChildren:
         if (family != self._family(parent) or record.family_epoch != family.family_epoch
                 or record.state not in {'reserved', 'admitted', 'reported', 'consumed'}):
             _deny('child_family_sealed')
-        self.configuration.require_current(record.reservation_id, conn=conn)
+        pins = self.configuration.require_current(record.reservation_id, conn=conn)
+        if pins['version'] != family.configuration_version:
+            _deny('child_configuration_mismatch')
+        return parent, family
+
+    def _check_child(self, conn, record):
+        parent, family = self._check_child_current(conn, record)
         self._check_sources(conn, record, parent)
         return parent, family
 
-    def _library_authority(self, record, parent, cancellation):
-        def guard(conn):
-            cancellation.check_current()
-            self._parent(record.parent_binding, conn)
+    def _library_current(self, conn, record, cancellation):
+        if cancellation.cancelled:
+            raise DomainCancelled('domain_cancelled')
+        started = not conn.in_transaction
+        if started:
+            # Journal reads need a snapshot, without another canonical writer.
+            conn.execute('BEGIN')
+        try:
+            self._connection(conn)
             row = self.journal.child_in(conn, record.reservation_id)
-            if row is None or row.binding != record.binding or row.state == 'sealed':
+            if row is None or row.binding != record.binding:
                 _deny('child_family_sealed')
+            parent, _ = self._check_child_current(conn, row)
             if row.state != 'admitted':
                 _deny('child_report_closed')
+            if cancellation.cancelled:
+                raise DomainCancelled('domain_cancelled')
+            return row, parent
+        finally:
+            if started:
+                conn.rollback()
+
+    def _library_authority(self, record, parent, cancellation):
+        def guard(conn):
+            self._library_current(conn, record, cancellation)
         return replace(parent.library, guard=guard,
             cancelled=lambda: cancellation.cancelled or parent.cancellation.cancelled,
             record_dependencies=lambda references: self._record_sources(record, references, cancellation))
@@ -361,10 +383,8 @@ class HarnessChildren:
     def _record_sources(self, record, references, cancellation):
         cancellation.check_current()
         with self.db.transaction() as conn:
-            row = self.journal.child_in(conn, record.reservation_id)
-            parent, _ = self._check_child(conn, row)
-            if row.state != 'admitted':
-                _deny('child_report_closed')
+            row, parent = self._library_current(conn, record, cancellation)
+            self._check_sources(conn, row, parent)
             trusted = self._library_authority(row, parent, cancellation)
             sources = json.loads(row.sources_json)
             for reference in references:
@@ -387,9 +407,11 @@ class HarnessChildren:
                 for child in self.journal.children_in(conn, family.root_id))
             if retained - len(row.sources_json.encode()) + len(encoded.encode()) > self.bounds.max_retained_bytes:
                 _deny('child_source_capacity')
-            cancellation.check_current()
+            self._library_current(conn, record, cancellation)
             self.journal.put_child_in(conn, replace(row, sources_json=encoded))
             self._check_child(conn, self.journal.child_in(conn, record.reservation_id))
+            if cancellation.cancelled:
+                raise DomainCancelled('domain_cancelled')
 
     def admit_input(self, reservation_id, actual_child_binding) -> ChildAdmission:
         _identifier(reservation_id)
@@ -566,7 +588,6 @@ class HarnessChildren:
             self._request_current(captured)
             if len(self._owned) >= self.bounds.max_owned:
                 _deny('child_callback_capacity')
-            cancellation._parent = token
             root_id = captured.binding.operation_id
             with self.db.transaction() as conn:
                 record = self.journal.child_in(conn, root_id)
