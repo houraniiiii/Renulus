@@ -60,6 +60,12 @@ to legacy execution. The coordinator's null/closed result remains observable.
 Actual lifecycle/owner composition and connected startup verification are
 recorded in the H02–H08 handoff.
 
+The entry joins the retained bootstrap drain before closing Services dependencies,
+including startup failure before ordinary callbacks run. Cancelling a close
+observer does not release the serving loop or its owned finalizers. Services
+shutdown also sends the coordinator a synchronous stop signal; it never registers
+the coordinator's async close as a recursive dependency callback.
+
 Trusted assembly may pass an async `prepare_startup(app, lease, authority,
 launch_store)` callback returning an explicit initial ConfigurationSpec or None.
 It runs after issuer-bound creation and before coordinator startup, and cannot

@@ -7,6 +7,7 @@ no inference. Boot settings come only from the policy's launch artifact.
 """
 from __future__ import annotations
 
+import asyncio
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, fields
 import json
@@ -190,6 +191,12 @@ def create_managed_app(options: HarnessStartupOptions, *, token: str | None = No
         finally:
             # Also covers bootstrap/ordinary-startup failure before original
             # lifespan reaches its yield. Never release the issuer or its job.
+            while True:
+                try:
+                    await bootstrap.close()
+                    break
+                except asyncio.CancelledError:
+                    continue  # The serving loop still owns the retained drain.
             await services.finish_shutdown()
 
     app.router.lifespan_context = lifespan

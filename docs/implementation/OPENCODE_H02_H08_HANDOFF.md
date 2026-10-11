@@ -28,11 +28,27 @@ connected application startup acceptance.
 
 Independent Standards and Spec reviews each found the same P2: retained
 coordinator startup has no shutdown seal/join edge, so a cancelled observer
-can leave canonical work running while runtime dependencies close. This is
-source-derived, not yet a dynamically reproduced failure. Sartre owns only
-the coordinator and its dedicated tests for a public close/drain repair. Parent
-owns joining that edge in the serving lifespan before Services dependencies.
-No ticket acceptance is granted by the44-case receipt.
+could leave canonical work running while runtime dependencies close. The
+coherent worker repair `00fa2b4b` is integrated as `1bb4eaaf`: close seals
+before its first await, joins retained startup, then joins one runtime
+finalizer. Only a synchronous stop signal is registered with Services. Its
+independently read `library/bootstrap-close/final-green06.xml` records12
+passes,41 deselected, zero failures/errors/skips,73.211 seconds. Those cases
+use actual dedicated Windows issuers/Authority/Services and synthetic native
+ports. Independent focused closure review remains pending. The unchanged
+44-case cohort was not repeated.
+
+Parent entry shutdown now awaits that public close edge before Services
+dependencies, retaining the serving loop through repeated observer cancellation.
+Separate public dedicated-child receipts under
+`G:/Renulus-agent-scratch/oc-h02-h08/startup/receipts/`: lifespan-red01 has1
+ordering failure (6.36s), lifespan-green01 has1 pass (5.97s);
+lifespan-cancel-red02 has1 cancellation failure (6.27s), lifespan-final03 has2
+passes (11.19s). The final affected entry file, lifespan-file-final04.xml,
+records21 passes, zero failures/errors/skips,19.36s. No-account assembly never
+launches native inference; the public close wrapper records order and uses a
+synthetic observation gate, while issuer/app/Services are actual. These runs
+are separate and do not establish connected native startup acceptance.
 
 Lost-create Stop guard test worker `6c6cd96e4c4b6901d25038e5e776447b95772953`
 is integrated as `b8327836`. Its separate `cancel-reservation/receipts/green01.xml`
@@ -61,13 +77,26 @@ that fixture without a production change. server-compatibility has2 passes in
 with this checkout's runtime explicitly on PYTHONPATH. These are not native
 startup/serving/reopen proofs.
 
-Dynamic lanes: Arendt owns only new ManagedBootstrapRuntime adapter and tests;
-Turing owns a distinct test-only actual initial/reopen managed-startup process
-journey and waits for published adapter/close ports. Ohm prepares the hidden
-desktop Settings launch path read-only. Russell/Nietzsche independently review
-Spec/Standards for the committed entry. Parent owns shared lifespan/CLI assembly,
-integration and evidence. All H02–H08 acceptance remains open; migrated
-automatic memory capture remains off.
+Runtime adapter worker `1e154ad2` is integrated as `d13d560c`. Its independently
+read `providers/bootstrap-runtime/receipts/final-green01.xml` records26 passes,
+zero failures/errors/skips,186.881 seconds, including actual zero-inference
+SDK isolated inspection, gated live startup, generation reuse and settlement.
+Standards review reports zero material findings. Spec found one P2: an optional
+registry factory could return a registry backed by a second ProviderManager.
+Arendt owns the two-file public red/identity-guard repair; no factory path is
+treated as accepted while that finding remains open. The adapter composes
+existing Owner/Memory/controller/lifecycle; it supplies no deployment evidence.
+
+Entry `b8327836..75128590` independently passed both review axes, apart from
+the separately tracked coordinator drain. Dynamic lanes: Arendt owns only the
+adapter factory repair; Turing retains the distinct test-only actual
+initial/reopen journey pending published close/join and review closure. Ohm
+owns the fixed source-only hidden Settings launch extension: literal v1
+selector, sibling desktop state and reviewed helper provisioning after issuer
+acquisition. No hidden managed launch has run. Russell/Nietzsche review exact
+bounded commits; parent owns shared lifespan/CLI assembly, integration and
+evidence. All H02–H08 acceptance remains open; migrated automatic memory
+capture remains off.
 
 ### Saved inline image port and ready connected lanes
 
