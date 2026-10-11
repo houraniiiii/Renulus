@@ -475,6 +475,25 @@ existing whole-attempt API tests; reviewed count1 requires existing eligible
 content and performs no generation. Execution is queued behind the restart case,
 not released in parallel or represented as an existing pass.
 
+Graceful reopen now has its first passing receipt:
+`G:/rh07a/e/children-reopen01.xml`, one pass/21.884s, zero failures/errors/skips.
+Test-only `8651d0f042ee5498a9c3cd2399610780a25869c8` follows f12c6375; Owner561d7a6c
+and the earlier test functions are unchanged. After observed old exit0/pipe and
+Domain/Registry settlement, public lifecycle/root-seal/replace/start_gated creates
+a new native generation on the same stores with canonical admission closed.
+The cancelled receipt, native messages, family metadata and uncertain child
+permit persist; old child resolution denies child_recovery_required409. Reopen
+adds no model callback, send, debit, refund, report or publication. This is a
+native-generation reopen within the same Python app, not crash/profile restart.
+Independent reviews use the immutable f12..865 commit objects while the next
+test is authored, avoiding a moving worktree review.
+
+The single public Study-to-Test exposure case is now released in the same test
+file, with production Owner frozen. It holds only the actual child's Library
+handler before delegating, activates Test through the existing API, and checks
+denial before Library disclosure or further inference. First result must be
+classified before any production edit; earlier cases are not repeated.
+
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
 expectation-disposition reviews clear. H06–H08 remain open. Required unmet
