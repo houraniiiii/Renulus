@@ -388,6 +388,27 @@ is released for one four-send positive diagnostic with all original assertions
 and the safe callback observer; first outcome must precede any further edit.
 No child/M5 positive or H07 acceptance is established by these cleanup cases.
 
+The isolated Owner assembly is committed as `aebb5ef2c9994a78ef90252914b8ab6ce7a3b0f4`,
+with the exact reviewed Owner561d7a6c/test1d192aed hashes and a clean worker.
+Its one authorized connected diagnostic, `G:/rh07a/e/children-positive10.xml`,
+now passes in37.729s, zero failures/errors/skips. Parent read that XML without
+rerunning. It proves actual production-main root delegation, a configured
+evidence-review child, real Library retrieval, report consumption and the
+existing root M5 publisher. Four scripted HTTP dispatches use MiMo, DeepSeek,
+DeepSeek and MiMo, with two root and two child permits. The completed answer
+retains exact Library source/digest/locators, its reader opens200, and the
+reported family is settled with Domain active0 and Registry owned0.
+
+Synthetic account, capability/limit/count evidence and HTTP inference remain
+explicit; no live-account acceptance is inferred. The safe callbacks report
+no failure in this run. Positive09's underlying Library refusal remains
+unexplained: the cleanup repair and diagnostics do not establish its cause
+or claim to repair it. Preserve that failed receipt alongside this passing
+composition evidence. No unchanged rerun is released. Actual admitted-child
+Stop/finalizer, revocation/detached and restart coverage remain open, as does
+H07 acceptance. Native/transport/Owner assembly remains isolated from the
+parent H06 registry pending its separate integration gate.
+
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
 expectation-disposition reviews clear. H06–H08 remain open. Required unmet
