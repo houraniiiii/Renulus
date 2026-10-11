@@ -11,7 +11,34 @@ from renulus.server import create_app
 from renulus.learn.conversation_models import Mutation, NewConversation
 from renulus.storage.backup import export_records
 from test_harness_migration import history
-from test_harness_bridge import collect, native_at
+from test_harness_bridge import ScriptedTransport, collect, native_at
+
+
+async def test_lost_create_acknowledgement_keeps_owner_until_native_identity_is_reconciled(tmp_path):
+    class LostCreate(ScriptedTransport):
+        async def request(self, command, *args):
+            response = await super().request(command, *args)
+            if command == 'session.create':
+                response = {**response, 'outcome': 'uncertain_after_disconnect', 'result': None,
+                    'error': {'code': 'synthetic_lost_ack'}}
+            return response
+
+    _, repo, bridge, transport, identifier, request = native_at(tmp_path, LostCreate())
+    entry, receipt = repo.streaming.begin('learning', identifier, request)
+    assert (await collect(repo.streaming, entry, receipt))[-1]['type'] == 'error'
+    assert transport.calls.count('session.create') == 1
+    summary = repo.get('learning', identifier)
+    with pytest.raises(ApiError) as pending:
+        await repo.delete('learning', identifier, Mutation(expected_revision=summary['revision']),
+            'lost-create-delete')
+    assert pending.value.code == 'harness_purge_identity_unavailable'
+    assert pending.value.retryable is True
+    assert repo.get('learning', identifier) == summary
+    with pytest.raises(ApiError) as legacy:
+        repo.learn.prepare('No second transcript', entry['run'].scope, identifier, None, 'direct',
+            'lost-create-legacy')
+    assert legacy.value.code == 'harness_owned_thread'
+    assert bridge.mapping(identifier) is None
 
 
 async def test_conflicting_native_session_leaves_no_partial_reservation_when_caller_commits(tmp_path):

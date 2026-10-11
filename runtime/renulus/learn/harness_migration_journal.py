@@ -171,8 +171,11 @@ class HarnessMigrationJournal:
         self._transaction(conn)
         row = conn.execute('SELECT profile_id,store_id,session_id FROM learn_harness_mappings WHERE thread_id=?',
             (thread_id,)).fetchone()
-        if row is None or row['session_id'] is None:
+        if row is None:
             return
+        if row['session_id'] is None:
+            raise ApiError('harness_purge_identity_unavailable',
+                'Reconcile the pending native session before deleting this saved owner.', 409, True)
         operations = {item['run_id'] for item in conn.execute(
             'SELECT run_id FROM learn_harness_answers WHERE thread_id=?', (thread_id,))}
         operations.update(item['migration_id'] for item in conn.execute(
