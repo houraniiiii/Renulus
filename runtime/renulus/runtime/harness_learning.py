@@ -169,6 +169,8 @@ class HarnessLearningOwner:
         self.register_process(self.process, self.config)
         if self._closing:
             raise ApiError('runtime_stopping', 'The learning runtime is closing.', 503, True)
+        if candidate is not None:
+            self._require_gated_candidate(candidate)
         await self.activation.activate()
         if self._closing:
             raise ApiError('runtime_stopping', 'The learning runtime is closing.', 503, True)
