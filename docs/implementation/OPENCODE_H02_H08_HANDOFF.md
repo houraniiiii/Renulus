@@ -35,8 +35,9 @@ then failed at successor host.inspect. Diagnostic03 retains a live policy-blocke
 successor with active0/held1 after generic host_error; the underlying exception
 is still unknown. Independent Spec adjudication permits an explicit closed,
 non-replaying reopen disposition; writable ready/held[] was overspecified.
-Turing's sole test is released for that public closed-reopen proof once, with
-production frozen. Native death/reopen acceptance is pending.
+The corrected test's fourth run stopped before termination on a fixture cursor
+shape error. Only cursor.next extraction and one death05 rerun are released;
+production remains frozen. Native death/reopen acceptance is pending.
 Graceful reopen
 is within the same Python app and does not establish crash/profile restart.
 No native/transport/Owner child assembly is integrated in this parent yet.
@@ -937,6 +938,17 @@ checkpoint defect repaired by05b46cc6; death02/03 retain their failed writable-
 startup expectation and unknown initiating host_error. They are not silently
 converted to successful closed-reopen evidence. The first corrected full public
 outcome must establish the previously unreached assertions before acceptance.
+
+Death04 stops before HANDLE acquisition/termination on a test-only pagination
+mistake: native_messages passes the whole returned cursor object as the next
+request's cursor, which accepts a string. G:/rh07hd/e/death04.xml records one
+failure/19.724s, zero errors/skips (SHAad6289cb). The two setup sends/held-finalizer
+assertions precede that helper, but no death or successor proof follows. This
+is a fixture error, not a production red. Its source23b4e981 and receipt remain
+retained. Only extraction of nullable string page.cursor.next, matching the
+already established public contract and existing four-page bound, is released
+before one same-node death05 run. No other expected behavior, deadline, source
+or cohort changes are authorized. Production repair05b46cc6 remains unchanged.
 
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
