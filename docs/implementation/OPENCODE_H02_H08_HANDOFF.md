@@ -23,8 +23,9 @@ test-only `f12c6375`/`8651d0f0` have both independent review axes clear. Actual
 four-send child/Library/M5 composition, three cleanup races, the two-send
 admitted-child Stop finalizer case and graceful native-generation reopen have
 passing receipts. The test-only public Study-to-Test case `0ca143a7` now has a
-passing receipt and both independent reviews clear. Sartre alone owns the next
-connected background-Stop test in oc-library; production Owner remains frozen. Graceful reopen
+passing receipt and both independent reviews clear. The isolated background-Stop
+case now passes in test-only b3a1c5dc; its independent reviews are in progress. Sartre alone
+owns this test lane in oc-library; production Owner remains frozen. Graceful reopen
 is within the same Python app and does not establish crash/profile restart.
 No native/transport/Owner child assembly is integrated in this parent yet.
 H06's immediate-Archive hidden check remains blocked by controller approval policy;
@@ -592,6 +593,16 @@ cursor.next is authorized before one background03 run; Owner561d7a6c and the
 prior six test functions remain frozen. Background01's initiating timeout
 remains unknown.
 
+Background03 passes once in17.931s, with zero failures/errors/skips; the parent
+independently read G:/rh07a/e/children-background03.xml (SHA2e678678). Complete
+bounded pagination now reaches the no-synthetic transcript check, no M5/memory
+and no extra-effect assertions. Three charged sends, one public Stop, held
+finalizer/observer cancellation, no late report consumption or additional wake,
+and actual family/root/Domain/Registry/HTTP settlement all pass. The production
+Owner is unchanged. Coherent test-only b3a1c5dc is ready, with both independent
+review axes reading immutable commit objects. No whole-H07 or parent integration
+acceptance follows.
+
 The native source uses before_wake for initial child startup as well as later
 delivery. The background test therefore records legitimate pre-Stop callbacks
 and requires no additional late wake/promotion/model request after Stop; it
@@ -606,8 +617,10 @@ third, root continuation send. A root answer acknowledging failure can publish
 without child findings; no successful child report, child M5 or automatic
 capture is invented. Expected budgets are root-own2/child-own1/shared3, with
 no retry or fourth send and independent family/Domain/Registry/HTTP settlement.
-The active background case must finish before this test-only case is released;
-these expectations are not runtime evidence.
+Following the background03 pass and b3a1c5dc commit, this single new test-only
+case is now released to Sartre in the same exclusive lane. Prior seven tests,
+default response behavior and production Owner remain frozen; no earlier suite
+is repeated. These child-failure expectations are not runtime evidence.
 
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
@@ -623,7 +636,7 @@ lower in the historical ledger.
 | H04 | Local acceptance verified: authority/API/budgets, candidate/live lifecycle, managed initial/reopen, hidden Settings and actual failure/crash reconciliation; named repair-budgetB3 reviewed clear | Account/package scope and later native auxiliary enablement remain distinct |
 | H05 | Local acceptance verified: persistent lineage, four public recapture regressions, actual Mem0/Qdrant/FastEmbed native extraction/held-source-revocation/reopen; reviewed automatic cutover3026e3ca/67321f02 | No intrinsic local criterion remains; actual child producers and full paired restore retain H07/H18 ownership |
 | H06 | Saved migration/continuation/reopen/delete and purge reconciliation through actual production main; repaired hidden journey and reviewed Archive debounce fix | Immediate-Archive hidden verification remains execution-blocked; final criterion disposition stays open |
-| H07 | Isolated actual root/child Library/M5 publication, budgets/source identity, admitted-child Stop, graceful native-generation reopen and admitted-child Study-to-Test denial; independent reviews clear; native permission/detached preparation | Active composed background-Stop case, intentional child failure, remaining family process-death qualification and coordinated parent integration |
+| H07 | Isolated actual root/child Library/M5 publication, budgets/source identity, admitted-child Stop, graceful native-generation reopen and admitted-child Study-to-Test denial reviewed clear; composed background-Stop passed pending review; native permission/detached preparation | Background test review, intentional child failure, remaining family process-death qualification and coordinated parent integration |
 | H08 | Existing instructions/skills and pinned native hooks are source inputs | Versioned instruction/skill activation and connected task use after accepted H04/H06 |
 
 The fixed hidden Settings fixture is integrated at `2e166120`; observation
