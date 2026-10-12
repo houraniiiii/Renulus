@@ -140,5 +140,27 @@ clinical/educational efficacy is established. This journey does not repeat
 backend Stop/disconnect/project/neutral-Test or physical erasure claims. The
 separate six-case Owner,50-case affected and orphan receipts retain those
 respective scopes. H18 paired restore, H21 temporary execution and H20 release
-remain separate. Finish the reviewed Archive repair and capacity disposition
-before declaring H06 accepted or releasing H08 implementation.
+remain separate. The capacity pair is integrated as187dd85e/93f652ea with both
+independent reviews clear and the one-case capacity capstone passing in44.841s;
+its earlier pending disposition is superseded by the current H02–H08 ledger.
+The immediate-Archive hidden follow-up remains required before declaring H06
+accepted or releasing H08 implementation.
+
+### Saved-migration criterion disposition
+
+The bounded source/evidence review at parent94784266, runtime6e28a81c, identifies
+one remaining local proof. It did not run tests or retry the rejected controller.
+
+| H06 criterion | Retained proof | Remaining local check |
+| --- | --- | --- |
+| Stable paired mapping; no generation during conversion or dual transcript writer | Actual migration/identity/readback, local lost-ACK/rollback/current-authority contracts, capacity capstone and hidden saved continuation | None identified |
+| Identity, Archive, project/draft, disconnect, Stop and neutral Test status | Six-case actual Owner receipt89.295s, hidden Archive/Restore, saved-draft restart and cited history | Edit then immediate Archive before debounce; Restore/reopen preserves the exact latest draft |
+| Legacy history/citations readable; unknown lineage excluded | Native import/continuation and hidden reader; unknown history excluded from context/capture | None identified |
+| Transactional deletion and payload retirement, including creation targeting new | Public command retirement/export/rollback, actual native purge and hidden deletion preserving the shared PDF | None identified |
+| Terminal-unavailable replay and interrupted orphan receipts | Creation410/no redispatch, recovered-orphan evidence and reviewed lost-purge-ACK reconciliation | None identified |
+| Temporary chats retain their current owner | Saved-only cutover preserves existing temporary ownership | Volatile isolation/cross-store Save belongs to H21 |
+
+These are distinct evidence scopes, not a combined run. The prepared repaired
+seed and component20/typecheck/build receipts do not replace the one missing
+desktop trace. H06 remains open; account/package and full paired restore keep
+their separate gates.
