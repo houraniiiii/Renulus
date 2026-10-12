@@ -625,6 +625,16 @@ case is now released to Sartre in the same exclusive lane. Prior seven tests,
 default response behavior and production Owner remain frozen; no earlier suite
 is repeated. These child-failure expectations are not runtime evidence.
 
+The updated criterion map also keeps two narrower qualifications open. H07
+criterion6 explicitly includes detached callbacks: background03 proves Stop
+denial but does not itself prove public Test activation at detached report
+delivery. Existing native isolated parked-report/current-delivery checks remain
+valid; the exact public composed port is being checked before leasing another
+case or proposing a new surface. S1:57/S3:69 process-death requirements retain
+the live-family host-death/reopen qualification; existing general IPC death and
+graceful-generation reopen evidence is not relabelled as that proof. This does
+not add a whole-profile/Python crash matrix to the literal H07 restart criterion.
+
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
 expectation-disposition reviews clear. H06–H08 remain open. Required unmet
@@ -639,7 +649,7 @@ lower in the historical ledger.
 | H04 | Local acceptance verified: authority/API/budgets, candidate/live lifecycle, managed initial/reopen, hidden Settings and actual failure/crash reconciliation; named repair-budgetB3 reviewed clear | Account/package scope and later native auxiliary enablement remain distinct |
 | H05 | Local acceptance verified: persistent lineage, four public recapture regressions, actual Mem0/Qdrant/FastEmbed native extraction/held-source-revocation/reopen; reviewed automatic cutover3026e3ca/67321f02 | No intrinsic local criterion remains; actual child producers and full paired restore retain H07/H18 ownership |
 | H06 | Saved migration/continuation/reopen/delete and purge reconciliation through actual production main; repaired hidden journey and reviewed Archive debounce fix | Immediate-Archive hidden verification remains execution-blocked; final criterion disposition stays open |
-| H07 | Isolated actual root/child Library/M5 publication, budgets/source identity, admitted-child Stop, graceful native-generation reopen, admitted-child Study-to-Test denial and composed background-Stop reviewed clear; native permission/detached preparation | Intentional child failure, remaining family process-death qualification and coordinated parent integration |
+| H07 | Isolated actual root/child Library/M5 publication, budgets/source identity, admitted-child Stop, graceful native-generation reopen, admitted-child Study-to-Test denial and composed background-Stop reviewed clear; native permission/detached preparation | Intentional child failure, detached Test-exposure boundary, live-family process-death qualification and coordinated parent integration |
 | H08 | Existing instructions/skills and pinned native hooks are source inputs | Versioned instruction/skill activation and connected task use after accepted H04/H06 |
 
 The fixed hidden Settings fixture is integrated at `2e166120`; observation
