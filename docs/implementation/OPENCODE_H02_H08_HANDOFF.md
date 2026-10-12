@@ -503,6 +503,28 @@ handler before delegating, activates Test through the existing API, and checks
 denial before Library disclosure or further inference. First result must be
 classified before any production edit; earlier cases are not repeated.
 
+Its first receipt, `G:/rh07a/e/children-exposure01.xml`, has one failure/18.63s:
+public Study/Test setup, policy revision change and two sends succeeded, but the
+held original Library handler raised DomainCancelled rather than the asserted
+assistance_restricted ApiError. It delegated once and returned no result. The
+retained safe stack ends at the original DomainCancellation.check_current;
+post-transition token state and the root terminal cause were not recorded.
+This is not yet a production defect classification. Process/pipe, Domain,
+Registry and transport-finalizer teardown assertions passed, but Owner-close
+success and later family/publication assertions were not established by this
+failed test. The exact receipt/test are retained; production Owner is unchanged.
+
+Source-only criterion mapping confirms graceful reopen covers the ticket's
+restart case; full profile relaunch is not an extra literal H07 requirement.
+S1/S3 process-death evidence with a live family remains separately qualified.
+The smallest missing composed cases are late detached completion/no-wake after
+revocation and a deliberate child-execution failure. Before-canonical-admission
+Stop is already covered by the construction cleanup cases. Native isolated
+permission-wait and denied-selector receipts remain valid evidence; they are
+not represented as composed Owner tests. The active exposure case does not
+automatically establish detached callback exposure. No new suite was run for
+this mapping, and H07 acceptance remains open.
+
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
 expectation-disposition reviews clear. H06–H08 remain open. Required unmet
