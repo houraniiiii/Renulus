@@ -25,7 +25,8 @@ admitted-child Stop finalizer case and graceful native-generation reopen have
 passing receipts. The test-only public Study-to-Test case `0ca143a7` now has a
 passing receipt and both independent reviews clear. The isolated background-Stop
 case now passes in test-only b3a1c5dc with both independent reviews clear. Sartre
-owns the corrected foreground-failure test in oc-library; Russell owns only the
+has committed the passing corrected foreground-failure test as43f6cfcf in
+oc-library, pending independent reviews; Russell owns only the
 separate new detached-exposure test in oc-memory from b3a1c5dc. Production Owner
 and the shared seven-case helper remain frozen. Turing prepares a separate
 native-host-death test from the same baseline, with execution still held.
@@ -677,6 +678,23 @@ child M5 or eligible capture. Three sends/no retry and actual composite
 settlement remain mandatory. The failed receipts are retained, not relabelled
 as production reds or successful full-flow evidence.
 
+Foreground failure03 passes once in18.502s, zero failures/errors/skips, with
+the parent independently reading XML70f10323. Test5429faf4/Owner561d7a6c and
+exact command/observations are pinned in G:/rh07a/HANDOFF-foreground-failure03-green.json.
+Actual child session.get reports settled/failed; the provider_stream_failed503
+nonretryable dispatch leaves a failed charged permit. Before settlement, one
+report ID/digest remains staged with empty source closure; the real Registry
+denies its consumption with model_registry_publication_pending409/nonretryable.
+No successful consumption occurs. The root publishes a plain acknowledgment
+with no child-derived inputs/dependencies/citations. Root M5/capture eligibility
+is legitimate; child M5, jobs and derived facts are absent. Exactly three sends
+(root-own2/child-own1/shared3), no retry/fallback, actual native/family/Domain/
+Registry/HTTP settlement and leaf-first SQL/post-commit release all pass. This
+is a fixture-contract correction, not a production repair or Job/crash proof.
+The test-only43f6cfcf commit is ready on b3a1c5dc, changing only the existing
+test file with its fixed500 response and bounded diagnostics. Both independent
+axes review immutable objects; no old suite is repeated.
+
 The updated criterion map also keeps two narrower qualifications open. H07
 criterion6 explicitly includes detached callbacks: background03 proves Stop
 denial but does not itself prove public Test activation at detached report
@@ -710,6 +728,14 @@ Source/resolution checking and that exact missing ignored wiring are permitted,
 with no install, copy or artifact mutation; another test run remains held until
 preflight is reported. The original failure is not a production red.
 
+Resolve-only probes now establish the missing prerequisite: all five published
+bare imports failed ERR_MODULE_NOT_FOUND before the documented junction and
+resolve into the existing cohort afterward. No SDK module was evaluated, host
+started or artifact installed/copied. Owner/helper/new-test hashes remain
+unchanged. One unchanged detached02 run in a fresh G: basetemp is authorized;
+the original readiness cause and actual settlement remain unproved rather than
+being inferred from this setup correction.
+
 Source-only preparation identifies an owned fault-injection seam for that
 future case: retain a Windows handle from public native_identity, verify its
 creation/liveness and an authenticated same-generation status after acquisition,
@@ -742,7 +768,7 @@ lower in the historical ledger.
 | H04 | Local acceptance verified: authority/API/budgets, candidate/live lifecycle, managed initial/reopen, hidden Settings and actual failure/crash reconciliation; named repair-budgetB3 reviewed clear | Account/package scope and later native auxiliary enablement remain distinct |
 | H05 | Local acceptance verified: persistent lineage, four public recapture regressions, actual Mem0/Qdrant/FastEmbed native extraction/held-source-revocation/reopen; reviewed automatic cutover3026e3ca/67321f02 | No intrinsic local criterion remains; actual child producers and full paired restore retain H07/H18 ownership |
 | H06 | Saved migration/continuation/reopen/delete and purge reconciliation through actual production main; repaired hidden journey and reviewed Archive debounce fix | Immediate-Archive hidden verification remains execution-blocked; final criterion disposition stays open |
-| H07 | Isolated actual root/child Library/M5 publication, budgets/source identity, admitted-child Stop, graceful native-generation reopen, admitted-child Study-to-Test denial and composed background-Stop reviewed clear; native permission/detached preparation | Intentional child failure, detached Test-exposure boundary, live-family process-death qualification and coordinated parent integration |
+| H07 | Isolated actual root/child Library/M5 publication, budgets/source identity, admitted-child Stop, graceful native-generation reopen, admitted-child Study-to-Test denial and composed background-Stop reviewed clear; deliberate child failure now green pending review | Child-failure review, detached Test-exposure boundary, live-family process-death qualification and coordinated parent integration |
 | H08 | Existing instructions/skills and pinned native hooks are source inputs | Versioned instruction/skill activation and connected task use after accepted H04/H06 |
 
 The fixed hidden Settings fixture is integrated at `2e166120`; observation
