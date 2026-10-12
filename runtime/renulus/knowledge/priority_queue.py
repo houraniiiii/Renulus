@@ -5,6 +5,7 @@ import re
 from threading import RLock
 
 from ..storage.database import utc_now
+from .repository import QUEUED_JOB
 
 PREFERENCE = "knowledge.interactive_imports"
 # Tunable queue policy, not permanent product limits. Overflow stays in FIFO.
@@ -58,13 +59,14 @@ class LibraryPriorityQueue:
             return {}
         placeholders = ",".join("?" for _ in ids)
         rows = conn.execute(
-            "SELECT j.id,j.state FROM knowledge_jobs j "
+            "SELECT j.id,j.state,EXISTS(SELECT 1 FROM knowledge_cleanup c WHERE c.revision_id=j.revision_id) AS fenced FROM knowledge_jobs j "
             "JOIN knowledge_revisions r ON r.id=j.revision_id "
             "JOIN knowledge_documents d ON d.id=r.document_id "
             "WHERE d.scope_kind='personal-library' AND d.deleted_at IS NULL "
             "AND d.latest_revision=r.id AND j.state IN ('queued','processing') "
             f"AND j.id IN ({placeholders})", ids).fetchall()
-        return {row["id"]: row["state"] for row in rows}
+        # Keep fenced hints durable, but do not select them until cleanup settles.
+        return {row["id"]: "fenced" if row["fenced"] else row["state"] for row in rows}
 
     def mark(self, job_id):
         """Best effort: import success must survive an advisory write failure."""
@@ -103,9 +105,9 @@ class LibraryPriorityQueue:
                     if queued and self._burst < INTERACTIVE_BURST:
                         job, interactive = {"id": queued[0]}, True
                     else:
-                        exclusion = " AND id NOT IN (" + ",".join("?" for _ in ids) + ")" if ids else ""
-                        row = conn.execute("SELECT id FROM knowledge_jobs WHERE state='queued'" +
-                            exclusion + " ORDER BY created_at,id LIMIT 1", ids).fetchone()
+                        exclusion = " AND j.id NOT IN (" + ",".join("?" for _ in ids) + ")" if ids else ""
+                        row = conn.execute("SELECT j.id FROM knowledge_jobs j WHERE " + QUEUED_JOB +
+                            exclusion + " ORDER BY j.created_at,j.id LIMIT 1", ids).fetchone()
                         if row:
                             job = dict(row)
                         elif queued:

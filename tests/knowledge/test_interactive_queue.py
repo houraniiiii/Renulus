@@ -59,6 +59,12 @@ class SyntheticIndex:
     def build_fts(self):
         pass
 
+    def optimize(self):
+        pass  # This synthetic adapter owns no historical/native fragments.
+
+    def close(self):
+        pass  # No native resources.
+
     def remove(self, revision_id):
         self.rows = [row for row in self.rows if row["revision_id"] != revision_id]
 
@@ -91,7 +97,7 @@ def client(repository, tmp_path, monkeypatch):
     # module pollers, default collection access or private/native profile.
     monkeypatch.setattr(library_api, "KnowledgeRepository", lambda services: repository)
     monkeypatch.setattr(library_api, "CollectionCatalogue",
-        lambda repo: CollectionCatalogue(repo, tmp_path / "synthetic-collection"))
+        lambda repo, collection_root=None: CollectionCatalogue(repo, tmp_path / "synthetic-collection"))
     app = FastAPI()
 
     @app.exception_handler(ApiError)

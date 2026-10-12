@@ -334,3 +334,50 @@ async def test_cancelled_application_lifespan_waits_for_actual_memory_settlement
         await asyncio.gather(lifetime, return_exceptions=True)
     assert control.settled.is_set() and control.replied.is_set()
     assert control.provider_closed.is_set()
+
+
+@pytest.mark.asyncio
+async def test_managed_library_stop_timeout_retains_real_lance_handle_until_join(tmp_path, monkeypatch):
+    from renulus.knowledge.engines import Extracted
+    app = create_app(tmp_path / 'held-library-profile', token='synthetic-session',
+        collection_root=tmp_path / 'empty-collection')
+    services = app.state.services
+    library, worker = services.get('knowledge'), services.get('knowledge_worker')
+    entered, release = threading.Event(), threading.Event()
+    released_dependency = asyncio.Event()
+    class Extractor:
+        def extract_file(self, path, title):
+            text = path.read_text()
+            return Extracted([{'text': text, 'context_text': text, 'headings': [],
+                'locators': [{'page': None}]}], {'synthetic': True})
+    library.extractor = Extractor()
+    library.embedder = SimpleNamespace(model_id='synthetic-384', max_tokens=512,
+        dimensions=384, embed=lambda texts: [[1.] + [0.] * 383 for _ in texts])
+    stage = library.index.stage
+    def held(rows, **kwargs):
+        stage(rows, **kwargs)  # Actual tiny Lance write, no CPU model/helper copy.
+        entered.set()
+        assert release.wait(10)
+    monkeypatch.setattr(library.index, 'stage', held)
+    item = library.import_text('Synthetic dialysis shutdown source', process=False)
+    services.on_shutdown_dependencies.insert(0, released_dependency.set)
+    worker.start()  # Actual server-registered stop(0) / stop(None), no app launch.
+    try:
+        assert await asyncio.to_thread(entered.wait, 5)
+        table = library.index._table
+        with pytest.raises(ApiError) as error:
+            await services.shutdown(timeout=.01)
+        assert error.value.code == 'runtime_shutdown_pending'
+        status = worker.status()
+        assert status['running'] and status['stopping'] and not status['settled']
+        assert status['active_job'] == item['job']['id']
+        assert library.index._table is table and table is not None
+        assert not released_dependency.is_set()
+        with pytest.raises(ApiError):
+            library.recover()
+    finally:
+        release.set()
+        await services.shutdown()
+        library.index.close()
+    assert released_dependency.is_set() and worker.status()['settled']
+    assert library.get_job(item['job']['id'])['state'] == 'ready'

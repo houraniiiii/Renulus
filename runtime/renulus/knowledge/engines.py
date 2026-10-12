@@ -1,6 +1,8 @@
 """Selected engines only, with explicit CPU assets and no first-use downloads."""
 from dataclasses import dataclass, field
-from datetime import timedelta
+from contextlib import contextmanager
+import hashlib
+import os
 import importlib.util
 from importlib.metadata import PackageNotFoundError, version
 import math
@@ -401,21 +403,30 @@ class DoclingExtractor:
 class LanceIndex:
     """Native embedded FTS/vector fusion. Canonical revision filters come from SQLite."""
 
-    def __init__(self, path: Path, dimensions: int = DIMENSIONS):
+    def __init__(self, path: Path, dimensions: int = DIMENSIONS, *, maintenance_guard=None):
         self.path = Path(path).resolve()
         self.dimensions = dimensions
+        # #26 supplies a cross-process/exclusive-reader lease, held through
+        # native settlement. An instance-local RLock is not that authority.
+        self.maintenance_guard = maintenance_guard
         self._table = None
         self._connection = None
+        self._closing = False
 
     def _open(self):
+        if self._closing:
+            raise ApiError("index_close_pending", "The library index is still closing. Retry its cleanup before reusing it", 503, True)
         if self._table is None:
             try:
                 import lancedb
                 import pyarrow as pa
             except ImportError:
                 raise ApiError("helper_package_unavailable", "LanceDB is not installed", 503, True) from None
-            connection = lancedb.connect(str(self.path))
-            self._connection = connection
+            # A failed create_table may still own the connection. Reuse it,
+            # never overwrite an unresolved native owner on the next attempt.
+            if self._connection is None:
+                self._connection = lancedb.connect(str(self.path))
+            connection = self._connection
             schema = pa.schema([pa.field("passage_id", pa.string()),
                 pa.field("revision_id", pa.string()), pa.field("document_id", pa.string()),
                 pa.field("text", pa.string()), pa.field("vector", pa.list_(pa.float32(), self.dimensions))])
@@ -449,14 +460,16 @@ class LanceIndex:
     def close(self):
         # The pinned synchronous SDK wraps the public AsyncTable/Connection
         # lifecycle. Their close methods are synchronous and release Rust handles.
-        table, connection = self._table, self._connection
-        self._table = self._connection = None
-        try:
-            if table is not None:
-                table._table.close()
-        finally:
-            if connection is not None:
-                connection._conn.close()
+        # Clear each owner only after its native close succeeds. A failed table
+        # close must not close the connection underneath that unresolved handle.
+        self._closing = True
+        if self._table is not None:
+            self._table._table.close()
+            self._table = None
+        if self._connection is not None:
+            self._connection._conn.close()
+            self._connection = None
+        self._closing = False
 
     def search(self, query: str, vector: list[float], revision_ids: list[str], limit: int) -> list[dict]:
         if not revision_ids:
@@ -474,6 +487,18 @@ class LanceIndex:
             return
         table = self._open()
         table.delete("revision_id = '" + revision_id.replace("'", "''") + "'")
-        # All access is serialised by the repository; no other process may own
-        # this isolated profile. Delete old data/FTS versions, not only live rows.
-        table.optimize(cleanup_older_than=timedelta(seconds=0), delete_unverified=True)
+
+    def optimize(self):
+        """Coalesce only under admitted cross-process/exclusive-reader ownership.
+
+        The public SDK also prunes seven-day history by default, even with
+        delete_unverified=False. Do not invoke it based on age or local locks
+        alone. #25 leaves retryable debt until #26 supplies this lease; ordinary
+        append maintenance remains disabled.
+        """
+        if self._table is None and not self.path.exists():
+            return
+        if self.maintenance_guard is None:
+            raise ApiError("index_maintenance_owner_required", "Library rows are ready; local index maintenance is waiting for exclusive ownership", 503, True)
+        with self.maintenance_guard():
+            return self._open().optimize(delete_unverified=False)

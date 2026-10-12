@@ -27,6 +27,8 @@ def seed_canonical_note_and_local_index(services):
         (note["id"], 1, "SYNTHETIC_LOCAL_MEM0_ID", "generation_synthetic_machine_local"))
     services.db.execute("INSERT INTO preferences VALUES(?,?,?)",
         ("knowledge.index_generation", json.dumps("index_" + "1" * 32), "2026-10-04T21:00:00Z"))
+    services.db.execute("INSERT INTO knowledge_index_work(kind,target,generation,attempts,retry_after,error_code) "
+        "VALUES('retirement','knowledge','knowledge',2,1234,'index_cleanup_pending')")
     return note
 
 
@@ -51,13 +53,14 @@ def test_download_keeps_canonical_note_history_but_excludes_local_engine_state(s
     assert records["memory_sources"][0]["record_id"] == note["id"]
     assert "memory_index_state" not in records
     assert "memory_index_entries" not in records
+    assert "knowledge_index_work" not in records
     assert all(row["key"] != "knowledge.index_generation" for row in records["preferences"])
     assert b"SYNTHETIC_LOCAL_MEM0_ID" not in payload
     assert b"SYNTHETIC_LOCAL_EMBEDDING_FINGERPRINT" not in payload
 
 
 @pytest.mark.parametrize("kind", ["json", "zip"])
-@pytest.mark.parametrize("table", ["memory_index_state", "memory_index_entries"])
+@pytest.mark.parametrize("table", ["memory_index_state", "memory_index_entries", "knowledge_index_work"])
 def test_forged_derived_tables_are_refused_before_any_profile_change(source, target, kind, table):
     services, _ = source
     seed_canonical_note_and_local_index(services)

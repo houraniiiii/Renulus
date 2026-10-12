@@ -102,22 +102,32 @@ def test_races_cannot_publish_stale_extraction(repository, operation):
     assert not repository.db.fetch_all("SELECT * FROM knowledge_passages")
 
 
-def test_replacement_and_deletion_physically_prune_old_lance_versions(repository):
+def test_replacement_and_deletion_remove_live_rows_without_unowned_history_pruning(repository):
     initial = import_note(repository, "OLD_RENAL_SENTINEL sodium review")
     replaced = import_note(repository, "New transplant review", document_id=initial["document_id"])
     table = repository.index._open()
     assert table.count_rows() == 1
-    assert len(table.list_versions()) == 1
+    # #25 removes live rows; age-zero pruning requires #26's cross-process
+    # exclusive-reader contract. Recent historical versions are intentionally kept.
+    assert len(table.list_versions()) > 1
     assert repository.citation(initial["revision_id"])["document_revision"] == initial["revision_id"]
     result = repository.delete_document(initial["document_id"])
-    assert result["cleanup_pending"] is False
+    assert result["cleanup_pending"] is True  # #26 must supply native maintenance ownership.
+    assert repository.db.fetch_all('SELECT * FROM knowledge_cleanup') == []
+    assert repository.db.fetch_one("SELECT error_code FROM knowledge_index_work WHERE kind='maintenance'")["error_code"] == 'index_maintenance_owner_required'
     assert table.count_rows() == 0
-    assert len(table.list_versions()) == 1
+    assert len(table.list_versions()) > 1
     assert not repository.db.fetch_all("SELECT * FROM knowledge_passages")
     assert not list((repository.paths.library / "knowledge").rglob("original.*"))
     assert repository.retrieve("transplant", scope=STUDY)["passages"] == []
     with pytest.raises(ApiError):
         repository.original(replaced["revision_id"])
+    # Unadmitted optimization is honest debt, not a blocker for a new ready
+    # generation. Retirement clears only the old generation's local debt.
+    rebuilt = repository.rebuild_index()
+    assert rebuilt['status'] == 'ready' and rebuilt['passages'] == 0
+    assert not rebuilt['cleanup_pending']
+    assert repository.db.fetch_all("SELECT * FROM knowledge_index_work WHERE kind='maintenance'") == []
 
 
 def test_rebuild_uses_eligible_canonical_passages_and_survives_restart(repository):
@@ -191,11 +201,12 @@ def test_delete_during_rebuild_cannot_leave_a_retrievable_or_retained_passage(re
         assert deleting.wait(10)
         release.set()
         assert rebuild.result(timeout=10)["status"] == "ready"
-        assert not deletion.result(timeout=10)["cleanup_pending"]
+        assert deletion.result(timeout=10)["cleanup_pending"]  # Removal settled; #26 maintenance debt remains.
+        assert repository.db.fetch_all('SELECT * FROM knowledge_cleanup') == []
     repository.embedder = base
     assert repository.retrieve("anemia", scope=STUDY)["passages"] == []
     assert repository.index._open().count_rows() == 0
-    assert len(repository.index._open().list_versions()) == 1
+    assert len(repository.index._open().list_versions()) > 1
     assert len(list((repository.paths.indexes / "k").glob("*"))) == 1
 
 

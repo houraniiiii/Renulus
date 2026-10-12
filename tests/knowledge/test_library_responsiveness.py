@@ -84,6 +84,14 @@ class MemoryIndex:
             self.search_barrier.block()
         return hits[:limit]
 
+    def optimize(self):
+        # No historical fragments in this controlled in-memory adapter.
+        pass
+
+    def close(self):
+        # No native handles; real handle-failure semantics are tested separately.
+        pass
+
     def remove(self, revision_id):
         if self.remove_barrier:
             self.remove_barrier.block()
@@ -382,10 +390,11 @@ def test_page100_uses_constant_connections_and_preserves_full_revision_details(l
 def test_asgi_lifespan_worker_drains_queue_while_library_routes_respond(tmp_path, monkeypatch, phase):
     from renulus import server
 
-    # Exercise the real application boundary and Library router lifespan only;
-    # omit unrelated helper and memory startup from this focused route proof.
-    monkeypatch.setattr(server, "MODULE_ORDER", ("knowledge",))
-    app = server.create_app(tmp_path / "asgi-profile")
+    # Feature routers need the canonical module schemas/owners even in this
+    # focused test. Omit helper/memory startup, not their schema dependencies;
+    # the Library router still starts and drains its actual worker lifespan.
+    app = server.create_app(tmp_path / "asgi-profile", collection_root=tmp_path / "empty-collection")
+    app.state.services.on_startup.clear()
     library = app.state.services.registry["knowledge"]
     library.index = MemoryIndex(library.index.path)
     library.extractor, library.embedder = PassageExtractor(), RecordingEmbedder()

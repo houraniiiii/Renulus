@@ -70,6 +70,9 @@ class SeamIndex:
         self.searches.append(list(revision_ids))
         return [dict(row) for row in self.rows if row["revision_id"] in revision_ids][:limit]
 
+    def optimize(self):
+        pass  # In-memory double has no historical fragments to coalesce.
+
     def remove(self, revision_id):
         self.rows[:] = [row for row in self.rows if row["revision_id"] != revision_id]
 

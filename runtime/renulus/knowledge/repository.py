@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import re
 import shutil
+import time
 from threading import RLock
 
 from ..contracts import ApiError, ContextScope, Scope, durable_id
@@ -18,6 +19,13 @@ from .source_status import SourceStatusJournal
 
 TERMINAL = {"ready", "failed", "cancelled"}
 INDEX_BATCH = 64
+CLEANUP_SWEEP = 64
+RETRY_BASE_SECONDS = 1
+RETRY_MAX_SECONDS = 300
+# Shared by FIFO and priority selection; direct execution rechecks in its claim
+# transaction. Canonical cleanup is also the fence after a portable restore.
+QUEUED_JOB = ("j.state='queued' AND NOT EXISTS "
+              "(SELECT 1 FROM knowledge_cleanup c WHERE c.revision_id=j.revision_id)")
 MAX_RETRIEVAL_REVISIONS = 1000
 # Metadata routes must not load the extracted document or original file path.
 REVISION_SUMMARY = ("r.id,r.document_id,r.ordinal,r.status,r.sha256,r.media_type,r.bytes,"
@@ -43,6 +51,10 @@ class KnowledgeRepository:
         self._lock = RLock()
         self._ingest_lock = RLock()
         self._index_lock = RLock()
+        self._active_ingestion = None
+        # Native handles survive failed close until a real cleanup retry settles
+        # them. SQLite records intent, not transferable process ownership.
+        self._retired_indexes = {}
         self.source_status = SourceStatusJournal(self)
 
     def update_source_status(self, event):
@@ -53,6 +65,8 @@ class KnowledgeRepository:
         if not self._ingest_lock.acquire(timeout=90):
             raise ApiError("recovery_busy", "The library is finishing an import. Retry backup or restore after this file completes", 409, True)
         try:
+            if self._active_ingestion is not None:
+                raise ApiError("recovery_busy", "The library is still finishing an import. Retry recovery after it settles", 409, True)
             with self._index_lock, self._lock:
                 yield
         finally:
@@ -77,40 +91,118 @@ class KnowledgeRepository:
     def _generation_path(self, generation):
         return self.paths.indexes / "k" / generation.removeprefix("index_")
 
+    def _index_token(self, index=None):
+        return Path((index or self.index).path).relative_to(self.paths.indexes).as_posix()
+
+    def _index_folder(self, token):
+        if not re.fullmatch(r"knowledge|k/[0-9a-f]{32}|knowledge-generations/index_[0-9a-f]{32}", token):
+            raise ApiError("unsafe_index_path", "Derived index cleanup left its owned folder", 409)
+        return self.paths.indexes / token
+
     def _remove_index_folder(self, path):
         path = Path(path)
+        self._index_folder(path.relative_to(self.paths.indexes).as_posix())
+        # Do not follow a replaced generation parent or a Windows junction.
+        for part in (path, path.parent):
+            if part.is_symlink() or part.is_junction():
+                raise ApiError("unsafe_index_path", "Derived index cleanup left its owned folder", 409)
         if not path.exists():
             return
-        if path.is_symlink() or not path.resolve().is_relative_to(self.paths.indexes.resolve()):
+        if not path.resolve().is_relative_to(self.paths.indexes.resolve()):
             raise ApiError("unsafe_index_path", "Derived index cleanup left its owned folder", 409)
         shutil.rmtree(path)
 
-    def _cleanup_index_generations(self):
-        active = self.index.path.resolve()
-        candidates = [self.paths.indexes / "knowledge"]
+    @staticmethod
+    def _work_in(conn, kind, target, generation):
+        conn.execute("INSERT INTO knowledge_index_work(kind,target,generation) VALUES(?,?,?) "
+                     "ON CONFLICT(kind,target,generation) DO NOTHING", (kind, target, generation))
+
+    def _work_failed(self, kind, target, generation, code):
+        with self.db.transaction() as conn:
+            self._work_in(conn, kind, target, generation)
+            attempts = conn.execute("SELECT attempts FROM knowledge_index_work WHERE kind=? AND target=? AND generation=?",
+                                    (kind, target, generation)).fetchone()[0] + 1
+            delay = min(RETRY_MAX_SECONDS, RETRY_BASE_SECONDS * 2 ** min(attempts - 1, 20))
+            conn.execute("UPDATE knowledge_index_work SET attempts=?,retry_after=?,error_code=? "
+                         "WHERE kind=? AND target=? AND generation=?",
+                         (attempts, time.time() + delay, code, kind, target, generation))
+
+    def mark_index_dirty_in(self, conn, generation=None):
+        """Caller owns _index_lock; durable debt must precede native mutation.
+
+        #25 uses this only for removal. #26 may use it for admitted append/FTS
+        maintenance; ordinary append maintenance is deliberately not enabled yet.
+        """
+        generation = generation or self._index_token()
+        self._work_in(conn, "maintenance", "passages", generation)
+        conn.execute("UPDATE knowledge_index_work SET dirty_sequence=dirty_sequence+1 "
+                     "WHERE kind='maintenance' AND target='passages' AND generation=?", (generation,))
+
+    def _cleanup_index_generations(self, *, force=True):
+        active = self._index_token()
+        candidates = {"knowledge", *self._retired_indexes}
         for folder, pattern in (("knowledge-generations", r"index_[0-9a-f]{32}"),
                                 ("k", r"[0-9a-f]{32}")):
             generations = self.paths.indexes / folder
-            if generations.is_dir():
-                candidates += [path for path in generations.iterdir()
-                               if re.fullmatch(pattern, path.name)]
-        pending = []
-        for path in candidates:
-            if path.resolve() != active:
-                try:
-                    self._remove_index_folder(path)
-                except Exception:
-                    pending.append(path.name)
+            if generations.is_dir() and not generations.is_symlink() and not generations.is_junction():
+                candidates.update(folder + "/" + path.name for path in generations.iterdir()
+                                  if re.fullmatch(pattern, path.name))
+        with self.db.transaction() as conn:
+            for token in candidates - {active}:
+                if token in self._retired_indexes or self._index_folder(token).exists():
+                    self._work_in(conn, "retirement", token, token)
+        tasks = self.db.fetch_all("SELECT * FROM knowledge_index_work WHERE kind='retirement' "
+                                 "ORDER BY retry_after,target")
+        attempted = 0
+        for task in tasks:
+            token = task["target"]
+            if token == active or attempted >= CLEANUP_SWEEP or (not force and task["retry_after"] > time.time()):
+                continue
+            attempted += 1
+            try:
+                previous = self._retired_indexes.get(token)
+                if previous is not None:
+                    previous.close()
+                    del self._retired_indexes[token]
+                self._remove_index_folder(self._index_folder(token))
+                with self.db.transaction() as conn:
+                    conn.execute("DELETE FROM knowledge_index_work WHERE generation=? AND kind IN ('retirement','maintenance','removal')", (token,))
+            except Exception:
+                self._work_failed("retirement", token, task["generation"], "index_cleanup_pending")
+        return self.db.fetch_all("SELECT target AS generation,error_code FROM knowledge_index_work WHERE kind='retirement'")
+
+    def _pending_index_work(self):
+        pending = self.db.fetch_all("SELECT revision_id,error_code FROM knowledge_cleanup")
+        pending += self.db.fetch_all("SELECT generation,COALESCE(error_code,'index_cleanup_pending') AS error_code "
+                                     "FROM knowledge_index_work WHERE kind='retirement' OR "
+                                     "(kind='maintenance' AND dirty_sequence>completed_sequence)")
         return pending
 
     def rebuild_index(self):
         """Stage canonical eligible passages, validate, then atomically select them."""
         with self._ingest_lock, self._index_lock, self._lock:
+            if self._active_ingestion is not None:
+                raise ApiError("recovery_busy", "The library is still finishing an import. Retry recovery after it settles", 409, True)
+            publication = self.db.fetch_one("SELECT * FROM knowledge_index_work WHERE kind='publication' AND generation=?",
+                                            (self._index_token(),))
+            restored = self.db.fetch_one("SELECT 1 FROM preferences WHERE key='knowledge.restore_dirty' AND value='true'")
+            if publication and not restored:
+                # A committed selector is not a failed build. Retry only old
+                # handle/folder cleanup, even across a process restart.
+                pending = self.cleanup()
+                if not pending:
+                    self.db.execute("DELETE FROM knowledge_index_work WHERE kind='publication' AND generation=?", (self._index_token(),))
+                return {"status": "ready", "passages": publication["passages"],
+                        "generation": publication["target"], "cleanup_pending": bool(pending)}
             # A restore can bring an older active row beside a newer tombstone.
             deleted = self.db.fetch_all("SELECT d.id FROM knowledge_documents d JOIN deletion_ledger l ON l.entity_id=d.id AND l.entity_type='knowledge-document' WHERE d.deleted_at IS NULL")
             for row in deleted:
                 self.delete_document(row["id"])
-            if self.cleanup():
+            self.cleanup()
+            # Optimization debt does not invalidate ready rows and must not
+            # prevent replacing their generation. Only unfinished row/original
+            # cleanup is a destructive admission fence.
+            if self.db.fetch_one("SELECT 1 FROM knowledge_cleanup"):
                 raise ApiError("knowledge_cleanup_pending", "Finish deleted-document cleanup before rebuilding the library", 503, True)
             generation = durable_id("index")
             candidate = LanceIndex(self._generation_path(generation), self.embedder.dimensions)
@@ -137,19 +229,34 @@ class KnowledgeRepository:
                 with self.db.transaction() as conn:
                     conn.execute("INSERT INTO preferences VALUES('knowledge.index_generation',?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at", (json.dumps(generation), utc_now()))
                     conn.execute("DELETE FROM preferences WHERE key='knowledge.restore_dirty'")
+                    token, old_token = self._index_token(candidate), self._index_token(previous)
+                    self._work_in(conn, "retirement", old_token, old_token)
+                    conn.execute("DELETE FROM knowledge_index_work WHERE kind='publication'")
+                    conn.execute("INSERT INTO knowledge_index_work(kind,target,generation,passages) VALUES('publication',?,?,?)",
+                                 (generation, token, len(identities)))
                 self.index = candidate
                 activated = True
-                previous.close()
-                pending = self._cleanup_index_generations()
+                self._retired_indexes[old_token] = previous
+                try:
+                    pending = self._cleanup_index_generations()
+                    if not pending:
+                        self.db.execute("DELETE FROM knowledge_index_work WHERE kind='publication' AND generation=?", (token,))
+                except Exception:
+                    # Publication already committed. Durable retirement intent
+                    # and the retained object make the next retry cleanup-only.
+                    pending = True
                 return {"status": "ready", "passages": len(identities), "generation": generation,
                         "cleanup_pending": bool(pending)}
             except Exception:
                 if not activated:
-                    candidate.close()
+                    token = self._index_token(candidate)
+                    self._retired_indexes[token] = candidate
                     try:
+                        candidate.close()
+                        del self._retired_indexes[token]
                         self._remove_index_folder(candidate.path)
                     except Exception:
-                        pass  # Startup cleanup retries abandoned staging folders.
+                        self._work_failed("retirement", token, token, "index_cleanup_pending")
                 raise
 
     def capabilities(self):
@@ -343,7 +450,13 @@ class KnowledgeRepository:
         # Keep CPU conversion/model state serial while allowing cancellation,
         # replacement and deletion to change canonical state during extraction.
         with self._ingest_lock:
-            return self._run_job(job_id)
+            if self._active_ingestion is not None:
+                raise ApiError("ingestion_busy", "The library is still finishing an import. Retry after it settles", 409, True)
+            self._active_ingestion = job_id
+            try:
+                return self._run_job(job_id)
+            finally:
+                self._active_ingestion = None
 
     def _run_job(self, job_id):
         with self._lock, self.db.transaction() as conn:
@@ -352,6 +465,8 @@ class KnowledgeRepository:
                 raise ApiError("job_missing", "Import job was not found", 404)
             if job["state"] != "queued":
                 return dict(job)
+            if conn.execute("SELECT 1 FROM knowledge_cleanup WHERE revision_id=?", (job["revision_id"],)).fetchone():
+                return dict(job)  # Partial rows must settle before this same ID stages again.
             revision = dict(conn.execute("SELECT * FROM knowledge_revisions WHERE id=?", (job["revision_id"],)).fetchone())
             document = dict(conn.execute("SELECT * FROM knowledge_documents WHERE id=?", (revision["document_id"],)).fetchone())
             conn.execute("UPDATE knowledge_jobs SET state='processing',phase='extraction' WHERE id=?", (job_id,))
@@ -359,7 +474,7 @@ class KnowledgeRepository:
         try:
             extracted = self.extractor.extract_file(Path(revision["original_path"]), document["title"])
             if not self._phase(job_id, "embedding"):
-                self.cleanup()
+                self.cleanup(force=False)
                 return self.get_job(job_id)
             passages = extracted.passages
             for item in passages:
@@ -373,7 +488,7 @@ class KnowledgeRepository:
                     conn.execute("UPDATE knowledge_jobs SET state='failed',phase='failed',error_code=?,error_message=?,finished_at=? WHERE id=?", (code, message, utc_now(), job_id))
                     conn.execute("UPDATE knowledge_revisions SET status='failed' WHERE id=?", (revision["id"],))
                     self._schedule_cleanup(conn, revision["id"], True)
-        self.cleanup()
+        self.cleanup(force=False)
         return self.get_job(job_id)
 
     def _stage_import(self, job_id, revision, document, extracted):
@@ -455,55 +570,121 @@ class KnowledgeRepository:
         self.cleanup()
         return self.get_job(job_id)
 
-    def cleanup(self):
-        # Canonical exclusion is immediate; physical cleanup may wait for a
-        # running native search/stage. Never wait for that work with _lock held.
+    def cleanup(self, *, force=True):
+        """Bounded cleanup; explicit retry bypasses backoff, worker uses due work.
+
+        Removal acknowledgement and fragment maintenance are separate. A native
+        optimize failure cannot leave destructive cleanup aimed at a later retry.
+        """
         if not self._index_lock.acquire(blocking=False):
-            return self.db.fetch_all("SELECT revision_id,error_code FROM knowledge_cleanup")
+            return self._pending_index_work()
         try:
-            for task in self.db.fetch_all("SELECT c.*,r.document_id FROM knowledge_cleanup c JOIN knowledge_revisions r ON r.id=c.revision_id"):
+            generation = self._index_token()
+            # Machine-local retries are reconstructed from canonical intent on
+            # restore/restart. Old-generation removal is never an admission fence.
+            with self.db.transaction() as conn:
+                conn.execute("DELETE FROM knowledge_index_work WHERE kind='removal' AND "
+                             "(generation!=? OR NOT EXISTS(SELECT 1 FROM knowledge_cleanup c WHERE c.revision_id=target))", (generation,))
+                for task in conn.execute("SELECT revision_id FROM knowledge_cleanup").fetchall():
+                    self._work_in(conn, "removal", task["revision_id"], generation)
+            tasks = self.db.fetch_all("SELECT c.revision_id,w.retry_after FROM knowledge_cleanup c "
+                                     "JOIN knowledge_index_work w ON w.kind='removal' AND w.target=c.revision_id AND w.generation=? "
+                                     "ORDER BY w.retry_after,c.created_at,c.revision_id", (generation,))
+            attempted = 0
+            for selected in tasks:
+                if attempted >= CLEANUP_SWEEP or (not force and selected["retry_after"] > time.time()):
+                    continue
+                attempted += 1
+                revision_id = selected["revision_id"]
                 try:
-                    self.index.remove(task["revision_id"])
+                    # Re-read intent under the engine/metadata lock order, not
+                    # the stale sweep snapshot. Activation needs _index_lock.
+                    with self._lock, self.db.transaction() as conn:
+                        row = conn.execute("SELECT c.*,r.document_id,r.status,d.active_revision,d.deleted_at,w.completed_sequence AS removed "
+                            "FROM knowledge_cleanup c JOIN knowledge_revisions r ON r.id=c.revision_id "
+                            "JOIN knowledge_documents d ON d.id=r.document_id JOIN knowledge_index_work w "
+                            "ON w.kind='removal' AND w.target=c.revision_id AND w.generation=? WHERE c.revision_id=?", (generation, revision_id)).fetchone()
+                        if not row:
+                            continue
+                        task = dict(row)
+                        tombstone = conn.execute("SELECT 1 FROM deletion_ledger WHERE "
+                            "(entity_type IN ('knowledge-document','document') AND entity_id=?) OR "
+                            "(entity_type IN ('knowledge-revision','revision') AND entity_id=?)",
+                            (task["document_id"], revision_id)).fetchone()
+                        if task["active_revision"] == revision_id and task["status"] == "ready" and not task["deleted_at"] and not tombstone:
+                            conn.execute("DELETE FROM knowledge_cleanup WHERE revision_id=?", (revision_id,))
+                            conn.execute("DELETE FROM knowledge_index_work WHERE kind='removal' AND target=?", (revision_id,))
+                            continue
+                        if not task["removed"]:
+                            self.mark_index_dirty_in(conn, generation)
+                    if not task["removed"]:
+                        self.index.remove(revision_id)
+                        # Native delete acknowledgement precedes file cleanup.
+                        with self.db.transaction() as conn:
+                            conn.execute("UPDATE knowledge_index_work SET completed_sequence=1,error_code=NULL "
+                                         "WHERE kind='removal' AND target=? AND generation=?", (revision_id, generation))
                     if task["remove_original"]:
-                        folder = self._folder(task["document_id"], task["revision_id"])
+                        folder = self._folder(task["document_id"], revision_id)
                         if folder.exists():
                             shutil.rmtree(folder)
                     with self._lock, self.db.transaction() as conn:
                         if task["remove_original"]:
-                            conn.execute("UPDATE knowledge_revisions SET original_path=NULL,extraction_json=NULL WHERE id=?", (task["revision_id"],))
-                        # A delete can upgrade a superseded-revision task while
-                        # its index removal is running. Preserve that new task.
-                        conn.execute("DELETE FROM knowledge_cleanup WHERE revision_id=? AND remove_original=?", (task["revision_id"], task["remove_original"]))
+                            conn.execute("UPDATE knowledge_revisions SET original_path=NULL,extraction_json=NULL WHERE id=?", (revision_id,))
+                        # A delete can upgrade a task while native removal runs.
+                        conn.execute("DELETE FROM knowledge_cleanup WHERE revision_id=? AND remove_original=?", (revision_id, task["remove_original"]))
+                        if not conn.execute("SELECT 1 FROM knowledge_cleanup WHERE revision_id=?", (revision_id,)).fetchone():
+                            conn.execute("DELETE FROM knowledge_index_work WHERE kind='removal' AND target=?", (revision_id,))
                 except Exception:
-                    self.db.execute("UPDATE knowledge_cleanup SET error_code='cleanup_pending' WHERE revision_id=?", (task["revision_id"],))
-            pending = self.db.fetch_all("SELECT revision_id,error_code FROM knowledge_cleanup")
-            pending += [{"generation": name, "error_code": "index_cleanup_pending"}
-                        for name in self._cleanup_index_generations()]
-            return pending
+                    self.db.execute("UPDATE knowledge_cleanup SET error_code='cleanup_pending' WHERE revision_id=?", (revision_id,))
+                    self._work_failed("removal", revision_id, generation, "cleanup_pending")
+            debt = self.db.fetch_one("SELECT * FROM knowledge_index_work WHERE kind='maintenance' AND generation=? AND dirty_sequence>completed_sequence", (generation,))
+            if debt and (force or debt["retry_after"] <= time.time()):
+                try:
+                    self.index.optimize()
+                    self.db.execute("UPDATE knowledge_index_work SET completed_sequence=?,attempts=0,retry_after=0,error_code=NULL "
+                                    "WHERE kind='maintenance' AND target='passages' AND generation=?", (debt["dirty_sequence"], generation))
+                except Exception as error:
+                    code = error.code if isinstance(error, ApiError) else "index_maintenance_pending"
+                    self._work_failed("maintenance", "passages", generation, code)
+            self._cleanup_index_generations(force=force)
+            return self._pending_index_work()
         finally:
             self._index_lock.release()
 
     def recover(self):
-        """Resume durable jobs, discard partial index rows and retain stored originals."""
-        with self._lock, self.db.transaction() as conn:
-            jobs = conn.execute("SELECT j.id,j.revision_id,j.state,r.original_path,d.latest_revision,d.deleted_at,d.scope_kind FROM knowledge_jobs j JOIN knowledge_revisions r ON r.id=j.revision_id JOIN knowledge_documents d ON d.id=r.document_id WHERE j.state IN ('queued','processing')").fetchall()
-            for job in jobs:
-                if job["deleted_at"] or job["latest_revision"] != job["revision_id"] or job["scope_kind"] != Scope.LIBRARY.value:
-                    self._cancel_in(conn, job["id"], job["revision_id"], "obsolete")
-                elif not job["original_path"] or not Path(job["original_path"]).is_file():
-                    conn.execute("UPDATE knowledge_jobs SET state='failed',phase='failed',error_code='original_missing',error_message='Stored input is missing; import the original again',finished_at=? WHERE id=?", (utc_now(), job["id"]))
-                    conn.execute("UPDATE knowledge_revisions SET status='failed' WHERE id=?", (job["revision_id"],))
-                    self._schedule_cleanup(conn, job["revision_id"], True)
-                elif job["state"] == "processing":
-                    conn.execute("UPDATE knowledge_jobs SET state='queued',phase='resuming',error_code=NULL,error_message=NULL,finished_at=NULL WHERE id=?", (job["id"],))
-                    conn.execute("UPDATE knowledge_revisions SET status='queued',extraction_json=NULL WHERE id=?", (job["revision_id"],))
-                    conn.execute("DELETE FROM knowledge_passages WHERE revision_id=?", (job["revision_id"],))
-                    self._schedule_cleanup(conn, job["revision_id"], False)
-        return self.cleanup()
+        """Resume interrupted jobs only after their real ingestion owner settles."""
+        if not self._ingest_lock.acquire(blocking=False):
+            raise ApiError("recovery_busy", "The library is still finishing an import. Retry recovery after it settles", 409, True)
+        try:
+            # RLock reentrancy is not permission for an extractor callback to
+            # reset its own still-processing job.
+            if self._active_ingestion is not None:
+                raise ApiError("recovery_busy", "The library is still finishing an import. Retry recovery after it settles", 409, True)
+            with self._index_lock, self._lock, self.db.transaction() as conn:
+                jobs = conn.execute("SELECT j.id,j.revision_id,j.state,r.original_path,d.latest_revision,d.deleted_at,d.scope_kind FROM knowledge_jobs j JOIN knowledge_revisions r ON r.id=j.revision_id JOIN knowledge_documents d ON d.id=r.document_id WHERE j.state IN ('queued','processing')").fetchall()
+                for job in jobs:
+                    if job["deleted_at"] or job["latest_revision"] != job["revision_id"] or job["scope_kind"] != Scope.LIBRARY.value:
+                        self._cancel_in(conn, job["id"], job["revision_id"], "obsolete")
+                    elif not job["original_path"] or not Path(job["original_path"]).is_file():
+                        conn.execute("UPDATE knowledge_jobs SET state='failed',phase='failed',error_code='original_missing',error_message='Stored input is missing; import the original again',finished_at=? WHERE id=?", (utc_now(), job["id"]))
+                        conn.execute("UPDATE knowledge_revisions SET status='failed' WHERE id=?", (job["revision_id"],))
+                        self._schedule_cleanup(conn, job["revision_id"], True)
+                    elif job["state"] == "processing":
+                        conn.execute("UPDATE knowledge_jobs SET state='queued',phase='resuming',error_code=NULL,error_message=NULL,finished_at=NULL WHERE id=?", (job["id"],))
+                        conn.execute("UPDATE knowledge_revisions SET status='queued',extraction_json=NULL WHERE id=?", (job["revision_id"],))
+                        conn.execute("DELETE FROM knowledge_passages WHERE revision_id=?", (job["revision_id"],))
+                        self._schedule_cleanup(conn, job["revision_id"], False)
+                    if not job["deleted_at"] and job["latest_revision"] == job["revision_id"] and job["scope_kind"] == Scope.LIBRARY.value and job["original_path"] and Path(job["original_path"]).is_file():
+                        # An imported/stale cleanup flag may describe a prior
+                        # cancelled attempt, not this canonical live retry.
+                        conn.execute("UPDATE knowledge_cleanup SET remove_original=0 WHERE revision_id=?", (job["revision_id"],))
+            return self.cleanup()
+        finally:
+            self._ingest_lock.release()
 
     def next_queued_job(self):
         # Work is durable in SQLite, not held in a request or an in-memory list.
-        return self.db.fetch_one("SELECT id FROM knowledge_jobs WHERE state='queued' ORDER BY created_at,id LIMIT 1")
+        return self.db.fetch_one("SELECT j.id FROM knowledge_jobs j WHERE " + QUEUED_JOB + " ORDER BY j.created_at,j.id LIMIT 1")
 
     def list_documents(self, *, include_deleted=False, limit=None, offset=0, query="", status=None):
         if limit is not None and (type(limit) is not int or not 1 <= limit <= 100):

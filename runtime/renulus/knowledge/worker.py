@@ -59,13 +59,20 @@ class IngestionWorker:
         # row and stored original. The next app startup safely requeues it.
 
     def status(self):
-        return {"running": bool(self._thread and self._thread.is_alive() and not self._stop.is_set()),
+        alive = bool(self._thread and self._thread.is_alive())
+        return {"running": alive, "stopping": bool(alive and self._stop.is_set()),
+                "settled": not alive,
                 "cpu_workers": 1, "active_job": self.active_job, "error_code": self.error_code,
                 "queued": self.repository.db.fetch_one("SELECT COUNT(*) AS n FROM knowledge_jobs WHERE state='queued'")["n"]}
 
     def _run(self):
         while not self._stop.is_set():
             try:
+                # Retry due debt even with continuous ingress or a wholly fenced
+                # queue. This is removal debt only, not ordinary append optimize.
+                self.repository.cleanup(force=False)
+                if self._stop.is_set():
+                    break
                 job = self._queue.next_job()
                 if job:
                     self.active_job = job["id"]

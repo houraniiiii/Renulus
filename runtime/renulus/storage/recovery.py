@@ -296,6 +296,12 @@ class Recovery:
                                    "format_version": getattr(staged, "archive_version", 2) if staged else 1,
                                    "omissions": bundle.get("omissions", {}), "cleanup_pending": False})
                     invalidate_restored_context(conn)
+                    if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='knowledge_index_work'").fetchone():
+                        # Local deletion acknowledgement/backoff cannot describe
+                        # restored canonical rows. Reconcile removal from portable
+                        # cleanup on next Library pass. Retain native retirement
+                        # owners and maintenance debt of this machine's index.
+                        conn.execute("DELETE FROM knowledge_index_work WHERE kind IN ('publication','removal')")
                     rebuild = {"status": "required", "modules": {}, "updated_at": utc_now()}
                     conn.execute("INSERT INTO storage_recovery_runs VALUES(?,?,?,?)", (
                         identifier, utc_now(), json.dumps(result), json.dumps(rebuild)))
