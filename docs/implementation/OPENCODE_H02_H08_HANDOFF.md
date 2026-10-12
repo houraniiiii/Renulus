@@ -29,8 +29,9 @@ corrected foreground-failure test43f6cfcf and detached-exposure test767d876a now
 both have Standards0/Spec0. Production Owner and the shared seven-case helper
 remain frozen. The first separate native-host-death run proved retained ownership
 and composite settlement, then failed at the public reopen gate with busy409.
-Sartre owns source/read-only synthetic checkpoint diagnosis; Turing preserves
-the unchanged test and failed receipt. No production repair is leased yet.
+Sartre has confirmed the stale cancelled-run checkpoint and owns the narrow
+Owner/Bridge retirement repair plus a new local guard test. Turing preserves
+the unchanged connected test and failed receipt pending a published repair.
 Graceful reopen
 is within the same Python app and does not establish crash/profile restart.
 No native/transport/Owner child assembly is integrated in this parent yet.
@@ -807,6 +808,32 @@ cause of that refusal. Sartre may inspect the frozen source and only the exact
 owned synthetic canonical state/identity/generation fields read-only; no text,
 credentials, mutation, native replay or second run. Turing's file is frozen and
 no production edit is authorized until the gate condition is confirmed.
+
+The gate condition is now confirmed by an exact read-only synthetic metadata
+query: answer submitted, canonical run cancelled, configuration pin settled,
+generation9780723e59e04c1dafda81fbae393e8c matching the dead authenticated peer.
+The answer-state predicate alone returns true. Awaiting the producer also
+precedes its unconditional active-entry removal; unrecorded transfer/capture
+counts are not inferred. Bridge.cancel seals local cancellation but awaits
+session.cancel before changing the checkpoint. Dead-peer rejection skips that
+update, and recovery ignores the cancelled canonical run. This is a diagnosed
+reopen defect. G:/rh07hd/HANDOFF-death01-red.json (SHA8af429f5) retains the exact
+red and qualifications; no further native run has occurred.
+
+Independent Spec adjudication permits the existing cancelled checkpoint state
+for this exact canonically cancelled, unpublished operation after composite
+settlement. It does not permit retiring every failed/terminal-looking run:
+uncancelled pending and completed lost-ACK receipts retain reconciliation.
+Sartre's exclusive lease is now harness_learning.py, harness_bridge.py and new
+tests/learn/test_harness_cancelled_retirement.py in oc-library on43f6cfcf.
+The supplied-connection disposition must conditionally match original operation,
+actual input, paired store and authenticated generation, authoritative cancellation,
+publication absence and settled pins. References, command/attempt identities,
+cancellation cause and uncertain charges remain; no refund/replay/new grant or
+fabricated native terminal state. Existing seal refusal is not simply weakened.
+Only a narrow local red/green guard file is released. Turing's unchanged actual
+death test awaits a coherent published repair; no WIP runtime consumption or
+unchanged cohort is authorized.
 
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
