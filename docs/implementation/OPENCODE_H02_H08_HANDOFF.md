@@ -22,8 +22,9 @@ evidence and ownership updates. Ready isolated Owner assembly `aebb5ef2` and
 test-only `f12c6375`/`8651d0f0` have both independent review axes clear. Actual
 four-send child/Library/M5 composition, three cleanup races, the two-send
 admitted-child Stop finalizer case and graceful native-generation reopen have
-passing receipts. Sartre alone owns the active test-only public Study-to-Test
-exposure case in oc-library; production Owner remains frozen. Graceful reopen
+passing receipts. The test-only public Study-to-Test case `0ca143a7` now has a
+passing receipt and independent reviews pending. Sartre alone owns the next
+connected background-Stop test in oc-library; production Owner remains frozen. Graceful reopen
 is within the same Python app and does not establish crash/profile restart.
 No native/transport/Owner child assembly is integrated in this parent yet.
 H06's immediate-Archive hidden check remains blocked by controller approval policy;
@@ -514,6 +515,21 @@ Registry and transport-finalizer teardown assertions passed, but Owner-close
 success and later family/publication assertions were not established by this
 failed test. The exact receipt/test are retained; production Owner is unchanged.
 
+Independent source diagnosis found a legitimate cancellation-first path: the
+root's concurrent policy guard seals the family before the original Library
+handler checks its token. The test now requires either the exact policy ApiError
+or DomainCancelled with both original public tokens cancelled at refusal, plus
+the exact assistance_restricted root terminal in either case. No production
+code changed. `0ca143a7343cb8b56d1e978b47b92972c39a5295` adds only that test;
+`children-exposure02.xml` passes once in19.500s, zero failures/errors/skips.
+Observed callback cancellation and both token flags are retained; the root
+emits one policy error. No Library source, report/consume, third send, M5 or
+memory job occurs; the two charged permits, actual family/native/Domain/Registry
+and HTTP settlement all pass. XML89fedd15/test6cb3584f/Owner561d7a6c are pinned
+in HANDOFF-0ca143a7-active-test-exposure.json. The first failure is a test
+expectation qualification, not a repaired production defect. Independent reviews
+use immutable commit objects and no earlier cases are rerun.
+
 Source-only criterion mapping confirms graceful reopen covers the ticket's
 restart case; full profile relaunch is not an extra literal H07 requirement.
 S1/S3 process-death evidence with a live family remains separately qualified.
@@ -524,6 +540,15 @@ permission-wait and denied-selector receipts remain valid evidence; they are
 not represented as composed Owner tests. The active exposure case does not
 automatically establish detached callback exposure. No new suite was run for
 this mapping, and H07 acceptance remains open.
+
+Sartre's exclusive test lease now covers one composed late-background Stop case.
+Its two concurrent child/root-continuation requests are identified by actual
+session/model/body rather than arrival order. Three admitted sends precede Stop;
+the child transport finalizer and root continuation response remain held. After
+Stop, release must prove no late report consumption, native promotion/wake,
+fourth send or M5 and retain ownership through actual settlement. Public IPC
+notification counts are observable; Inbox emptiness is not claimed. Existing
+native SDK Inbox proofs remain separate. This case has not yet run.
 
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
