@@ -40,8 +40,11 @@ shape error. Death05 corrects only cursor.next and reaches closed-successor and
 unchanged-transcript observations, then fails full replay Event equality.
 Existing replay constructs a fresh Event UUID; the exact dynamic differing
 fields were not retained. Independent Spec confirms full receipt and Event
-comparison excluding only top-level id. One corrected death06 is released;
-production remains frozen. Native death/reopen acceptance is pending.
+comparison excluding only top-level id. Corrected death06 passes once/19.324s,
+including exact receipt/error equality and normal successor settlement. The
+sole new test is committed as a9db0a32 with Standards0/Spec0. This bounded native
+death/closed-reopen proof is ready in isolation; coordinated parent integration
+and overall H07 acceptance remain open. Production remains frozen.
 Graceful reopen
 is within the same Python app and does not establish crash/profile restart.
 No native/transport/Owner child assembly is integrated in this parent yet.
@@ -974,6 +977,44 @@ yet passed. Only this assertion correction and one death06 run are released;
 05b46cc6, the shared helper and existing deadlines remain frozen. A pass permits
 the sole new test to be committed for two-axis review, not parent integration.
 
+Death06 passes once: G:/rh07hd/e/death06.xml records one test/19.324s with zero
+failures/errors/skips (SHAefe6a2ee); tested source SHA00574ac9. Parent read the
+XML independently. The complete saved receipts and all replay Event fields
+except top-level id compare equal. All later no-effect, retained-charge,
+no-publication and normal successor close/exit0/pipe/Domain/Registry settlement
+assertions pass. The predecessor's retained HANDLE observes actual exit9 while
+the HTTP finalizer, Domain and Registry still own work; only release of that
+finalizer permits child-then-root canonical settlement. Two total sends remain
+charged, root confirmed and child uncertain. Fresh same-store generation is
+policy-blocked with active0 and one exact old-family held claim, rejects the old
+child authority, preserves native transcript/identity and saved receipts, and
+performs zero model callbacks or automatic replay. This is closed non-replaying
+reopen in the same Python app/Services, not writable recovery or Python/profile
+crash. The initiating host_error remains unknown. Earlier failed receipts retain
+their original classifications. The new test alone may now be committed and
+independently reviewed; no additional test run or runtime change is released.
+
+The test-only commit is a9db0a32af33ae30580452180f5ad073a0841dec, parent
+48d18ee6fc099c6edf0b6a9a99eb6804ad805b7e (worker cherry-pick of05b46cc6 onb3).
+It creates only tests/runtime/test_harness_learning_children_host_death.py,
+483 lines, exact tested SHA00574ac9; worker is clean. The complete immutable
+handoff is G:/rh07hd/HANDOFF-a9db0a32-native-death.json (SHAfe3ea85e).
+Independent Spec Arendt reports zero material findings on only48d18ee6...a9db0a32:
+the test distinguishes OS exit from composite settlement, preserves exact held
+claims and uncertainty without automatic replay, and compares full saved
+receipts while excluding only the generated Event UUID. Standards Nietzsche
+reports zero documented-rule violations and zero actionable heuristic smells:
+authenticated retained-HANDLE fault ownership, separate exit/finalizer/Domain/
+Registry/canonical observations, delegating public observers and hash-only
+mismatch diagnostics preserve the documented boundaries. Both reviewers verify
+the exact committed/working test and XML fingerprints before and after. Review
+uses the retained receipt with no edits or reruns. The bounded proof is ready
+in isolation, alongside the already reviewed05b46cc6 retirement repair; overall
+H07 and parent integration remain open. No additional worker execution is leased.
+The parent retains runtime6e28a81c and
+its two-Library-tool H06 registry until immediate-Archive hidden verification;
+these ready isolated changes are not an authorization to bypass that gate.
+
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
 expectation-disposition reviews clear. H06–H08 remain open. Required unmet
@@ -988,7 +1029,7 @@ lower in the historical ledger.
 | H04 | Local acceptance verified: authority/API/budgets, candidate/live lifecycle, managed initial/reopen, hidden Settings and actual failure/crash reconciliation; named repair-budgetB3 reviewed clear | Account/package scope and later native auxiliary enablement remain distinct |
 | H05 | Local acceptance verified: persistent lineage, four public recapture regressions, actual Mem0/Qdrant/FastEmbed native extraction/held-source-revocation/reopen; reviewed automatic cutover3026e3ca/67321f02 | No intrinsic local criterion remains; actual child producers and full paired restore retain H07/H18 ownership |
 | H06 | Saved migration/continuation/reopen/delete and purge reconciliation through actual production main; repaired hidden journey and reviewed Archive debounce fix | Immediate-Archive hidden verification remains execution-blocked; final criterion disposition stays open |
-| H07 | Isolated actual root/child Library/M5 publication, budgets/source identity, Stop/finalizer, graceful reopen, Study-to-Test, background Stop, failed-child and detached Test-exposure proofs reviewed clear; cancelled-checkpoint repair has18 local passes and both reviews clear | Successor inspection failure after live-family native death remains under bounded diagnosis; connected death/reopen and coordinated parent integration remain open |
+| H07 | Isolated actual root/child Library/M5 publication, budgets/source identity, Stop/finalizer, graceful reopen, Study-to-Test, background Stop, failed-child and detached Test-exposure proofs reviewed clear; cancelled-checkpoint repair has18 local passes and both reviews clear; closed native-death/reopen test a9db0a32 passes once/19.324s with Standards0/Spec0 | Coordinated parent integration after H06 and final ticket disposition; writable/profile-crash recovery is not claimed |
 | H08 | Existing instructions/skills and pinned native hooks are source inputs | Versioned instruction/skill activation and connected task use after accepted H04/H06 |
 
 The fixed hidden Settings fixture is integrated at `2e166120`; observation
