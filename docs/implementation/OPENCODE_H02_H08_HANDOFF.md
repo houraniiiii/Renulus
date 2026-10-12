@@ -24,12 +24,12 @@ four-send child/Library/M5 composition, three cleanup races, the two-send
 admitted-child Stop finalizer case and graceful native-generation reopen have
 passing receipts. The test-only public Study-to-Test case `0ca143a7` now has a
 passing receipt and both independent reviews clear. The isolated background-Stop
-case now passes in test-only b3a1c5dc with both independent reviews clear. Sartre
-has committed the passing corrected foreground-failure test as43f6cfcf in
-oc-library, pending independent reviews; Russell owns only the
-separate new detached-exposure test in oc-memory from b3a1c5dc. Production Owner
-and the shared seven-case helper remain frozen. Turing prepares a separate
-native-host-death test from the same baseline, with execution still held.
+case now passes in test-only b3a1c5dc with both independent reviews clear. The
+corrected foreground-failure test43f6cfcf now also has Standards0/Spec0. Russell's
+separate detached-exposure test767d876a passes and is under independent review.
+Production Owner and the shared seven-case helper remain frozen. Turing's
+separate native-host-death test from b3a1c5dc has completed static preflight and
+is released for its first single-node execution; no production repair is leased.
 Graceful reopen
 is within the same Python app and does not establish crash/profile restart.
 No native/transport/Owner child assembly is integrated in this parent yet.
@@ -692,8 +692,10 @@ is legitimate; child M5, jobs and derived facts are absent. Exactly three sends
 Registry/HTTP settlement and leaf-first SQL/post-commit release all pass. This
 is a fixture-contract correction, not a production repair or Job/crash proof.
 The test-only43f6cfcf commit is ready on b3a1c5dc, changing only the existing
-test file with its fixed500 response and bounded diagnostics. Both independent
-axes review immutable objects; no old suite is repeated.
+test file with its fixed500 response and bounded diagnostics. Independent
+Standards and Spec both report zero findings on the immutable commit objects.
+Both verify test5429faf4/Owner561d7a6c/XML70f10323, the unchanged seven earlier
+test functions and default four-send branch. No old suite is repeated.
 
 The updated criterion map also keeps two narrower qualifications open. H07
 criterion6 explicitly includes detached callbacks: background03 proves Stop
@@ -753,6 +755,32 @@ unchanged helpers and the retained-handle identity contract above. Execution,
 process termination and any production repair remain held until the test
 contract/preflight is ready and an execution slot is released. The checkpoint
 concern remains source inference, not an established product failure.
+
+October12 continuation: detached02 passes once in19.856s, zero failures/errors/
+skips (G:/rh07dx/e/detached02.xml, SHAe6c3b206). Sole new test-only commit
+767d876af4c070da8b3dfa2bec78ddfd55e84aac is clean on b3a1c5dc; testc0b291a2,
+helper45ebbfaf and Owner561d7a6c are pinned. Public Study-to-Test activation
+cancels the original root/child tokens and seals the native family without
+explicit Stop. The root emits assistance_restricted with retryable:true;
+the direct child ApiError alternative is not claimed. Three charged sends
+(root-own2/child-own1/shared3) precede the transition. No report, consumption,
+promotion, extra dispatch, M5 or child Memory job occurs. Full pagination covers
+two pages/four messages; actual native/family/Domain/Registry/HTTP settlement
+precedes leaf-first SQL and release. This proves detached completion refusal,
+not parked delivery or crash. Detached01's initiating native cause and candidate
+settlement remain unknown. Arendt reviews Spec and Nietzsche Standards against
+immutable objects, without execution.
+
+The next single native-host-death execution is now released to Turing with
+new-test SHA73d780a9 and the same frozen b3a1c5dc/helper/Owner. Its reviewed fault
+site retains the exact native HANDLE, creation FILETIME, liveness and authenticated
+same-generation reply before termination; no PID rediscovery or unrelated process
+action is allowed. G:/rh07hd owns the short synthetic state/receipts; existing
+cohort resolution, pinned Node/helpers and disk reserve passed preflight. The
+first outcome must be recorded before changes. Actual OS exit cannot substitute
+for held callback/HTTP settlement; uncertainty, debits and no replay/publication
+remain mandatory. No checkpoint repair or repeated suite is authorized by this
+release. This source/test preparation is not a passing death/reopen receipt.
 
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
