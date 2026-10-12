@@ -30,10 +30,12 @@ both have Standards0/Spec0. Production Owner and the shared seven-case helper
 remain frozen. The first separate native-host-death run proved retained ownership
 and composite settlement, then failed at the public reopen gate with busy409.
 Sartre's narrow Owner/Bridge retirement repair05b46cc6 has18 local guard passes
-and Standards0/Spec0. Turing's unchanged connected death02 passed the former
-busy gate, then failed at successor host.inspect; its native cause remains
-unknown. One bounded metadata-only diagnostic run is released. Native
-death/reopen acceptance is pending.
+and Standards0/Spec0. Turing's connected death02 passed the former busy gate,
+then failed at successor host.inspect. Diagnostic03 retains a live policy-blocked
+successor with active0/held1 after generic host_error; the underlying exception
+is still unknown. Arendt owns supported recovery/cancellation seam diagnosis
+read-only. No new production or execution lease is open. Native death/reopen
+acceptance is pending.
 Graceful reopen
 is within the same Python app and does not establish crash/profile restart.
 No native/transport/Owner child assembly is integrated in this parent yet.
@@ -882,6 +884,32 @@ observe the failed inspection state. No prose, bytes, credentials, new effect,
 recovery, replay or changed timeout is allowed. The same node may run once as
 death03; production05b46cc6 stays frozen. Classify the retained response before
 any new production lease or further execution.
+
+Death03 preserves that diagnostic first outcome: one failure/20.935s, zero
+errors/skips (XMLca82eb98), same failed startup call. The original73d780a9 source
+and failure02 are preserved; diagnostic test add0d436 and repair05b46cc6 sources
+match before/after. In the same successor generation6732ca22, host.stores.activate
+returns committed_reference/state active; host.inspect returns
+uncertain_after_disconnect/error host_error. The one permitted host.status
+read then commits with policy_blocked, active count0 and held count1, and its
+observation release returns true. Host.activate is not attempted. Thus the
+generic outcome label does not establish successor process death: the control
+reply proves it was still responsive. The exact initiating native exception
+remains unknown; a later held count alone does not prove the earlier throw site.
+G:/rh07hd/HANDOFF-death03-final.json (SHAd3baaa27) links the full bounded reply
+projection, source snapshots and receipt hashes. Turing's sole diagnostic test
+is frozen/uncommitted; no further run or mutation is released.
+
+Arendt now traces only the published host and pinned native public cancellation/
+SessionRestart/claim seams. The contract must preserve the whole recovery hold
+until predecessor death, family quiescence and durable child/notification
+reconciliation are established. Do not weaken candidate quiescence, re-adopt an
+old child grant, release recovery to fail through a network gate, or replay an
+uncertain model step. Determine whether an existing current-authenticated
+policy-blocked cancellation port can dispose of the exact cancelled old-family
+claim without waking it; otherwise report the smallest missing supported seam.
+This is source-only preparation, not a new repair or diagnosis of the hidden
+host_error. H06's separate desktop approval block remains unchanged.
 
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
