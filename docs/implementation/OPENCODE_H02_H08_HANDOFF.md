@@ -568,6 +568,17 @@ HANDOFF-background01-failed.json and its source snapshot. Independent source
 diagnosis is underway with test and production frozen; no retry is authorized
 until the failure is classified.
 
+Independent source diagnosis identified a malformed fixture expectation:
+SubagentTool returns the background output as text, and native Chat serialization
+preserves that text in tool.content. The script incorrectly parsed it as JSON.
+The unretained initiating failure of background01 remains unknown; this source
+mismatch is not a production repair claim. One corrected test-only run is now
+authorized: validate exact native text and actual child session identity, retain
+bounded safe failure diagnostics, and let cleanup observe actual peer/pipe exit
+or native family/root settlement while always requiring Domain/Registry/HTTP
+settlement. All Stop/three-send/no-late-effect assertions remain, without a
+deadline increase or production change.
+
 The native source uses before_wake for initial child startup as well as later
 delivery. The background test therefore records legitimate pre-Stop callbacks
 and requires no additional late wake/promotion/model request after Stop; it
