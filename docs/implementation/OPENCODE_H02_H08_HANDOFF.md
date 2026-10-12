@@ -625,12 +625,33 @@ case is now released to Sartre in the same exclusive lane. Prior seven tests,
 default response behavior and production Owner remain frozen; no earlier suite
 is repeated. These child-failure expectations are not runtime evidence.
 
+The first intentional-failure run records one failure/54.717s, zero errors/skips:
+G:/rh07a/e/children-foreground-failure01.xml (SHA19de2141). It reached three
+actual HTTP effects and the exact child provider_stream_failed503/nonretryable
+with a failed charged permit. The root-continuation script then asserted that
+native tool content was a string containing the child session; it retained
+neither the type nor the bytes, so that precise mismatch remains unproved.
+The subsequent timeout/transport_unavailable leaves the root continuation
+uncertain and the public root terminal harness_execution_failed. Actual
+native/family, Domain, Registry and HTTP settlement checks passed; acknowledgment
+and successful-body publication assertions were not reached. Testf3e779ce and
+Owner561d7a6c are frozen with HANDOFF-foreground-failure01-failed.json pending
+independent source diagnosis. No product defect or retry is authorized by this
+receipt alone.
+
 The updated criterion map also keeps two narrower qualifications open. H07
 criterion6 explicitly includes detached callbacks: background03 proves Stop
 denial but does not itself prove public Test activation at detached report
 delivery. Existing native isolated parked-report/current-delivery checks remain
 valid; the exact public composed port is being checked before leasing another
-case or proposing a new surface. S1:57/S3:69 process-death requirements retain
+case or proposing a new surface. Source checking confirms production exposes
+no inbox.update/steer control: do not add that operation merely for a test.
+The existing composed seam can instead activate Test while an actual detached
+finalizer is held, then prove an exact policy refusal or original policy-driven
+token/family seal before report/publication. Callback absence alone is not
+proof. This addresses detached completion, not parked delivery; native isolated
+explicit-delivery evidence keeps its qualification. This next case is not yet
+released while the intentional-failure test is paused. S1:57/S3:69 process-death requirements retain
 the live-family host-death/reopen qualification; existing general IPC death and
 graceful-generation reopen evidence is not relabelled as that proof. This does
 not add a whole-profile/Python crash matrix to the literal H07 restart criterion.
