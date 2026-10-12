@@ -36,7 +36,11 @@ successor with active0/held1 after generic host_error; the underlying exception
 is still unknown. Independent Spec adjudication permits an explicit closed,
 non-replaying reopen disposition; writable ready/held[] was overspecified.
 The corrected test's fourth run stopped before termination on a fixture cursor
-shape error. Only cursor.next extraction and one death05 rerun are released;
+shape error. Death05 corrects only cursor.next and reaches closed-successor and
+unchanged-transcript observations, then fails full replay Event equality.
+Existing replay constructs a fresh Event UUID; the exact dynamic differing
+fields were not retained. Independent Spec confirms full receipt and Event
+comparison excluding only top-level id. One corrected death06 is released;
 production remains frozen. Native death/reopen acceptance is pending.
 Graceful reopen
 is within the same Python app and does not establish crash/profile restart.
@@ -949,6 +953,26 @@ retained. Only extraction of nullable string page.cursor.next, matching the
 already established public contract and existing four-page bound, is released
 before one same-node death05 run. No other expected behavior, deadline, source
 or cohort changes are authorized. Production repair05b46cc6 remains unchanged.
+
+Death05 retains one failure/19.857s, zero errors/skips in
+G:/rh07hd/e/death05.xml (SHAe0da420c); frozen source873d851b and
+HANDOFF-death05-replay-red.json (SHAfa8fd3c6) remain preserved. The run reaches
+authenticated retained-HANDLE termination, composite predecessor settlement,
+closed successor with active0/held1, old-child authority refusal and unchanged
+native session identities/transcripts. It then fails equality between two whole
+replayed Event lists at line410. Both public replay calls return the same run,
+one error event and replayed=true; differing fields were not retained, so no
+claim that the error payload changed or that only an envelope field changed is
+supported. Source inspection shows contracts.Event.id defaults to a new UUID
+and ConversationStreams.events constructs a new Event per replay. Whole-event
+identity is therefore an overspecified test condition. Independent Spec
+confirms exact saved receipt and complete run/sequence/type/payload equality,
+excluding only the ephemeral Event.id; the contract has no generated timestamp.
+Any remaining receipt or payload difference requires separate evidence and
+adjudication. Later no-effect and normal successor cleanup assertions have not
+yet passed. Only this assertion correction and one death06 run are released;
+05b46cc6, the shared helper and existing deadlines remain frozen. A pass permits
+the sole new test to be committed for two-axis review, not parent integration.
 
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
