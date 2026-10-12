@@ -579,6 +579,19 @@ or native family/root settlement while always requiring Domain/Registry/HTTP
 settlement. All Stop/three-send/no-late-effect assertions remain, without a
 deadline increase or production change.
 
+The corrected background02 run reached all three sends, one public Stop,
+retained child-finalizer ownership, observer cancellation and actual native
+family/root, Domain, Registry and HTTP settlement. It then failed on a fixture
+assertion that session.messages.cursor is null; the public cursor is an object
+with previous/next fields. Its one failure/18.833s, testfdc37b43 and XMLcbedfad8
+are preserved in G:/rh07a/HANDOFF-background02-failed.json. No report/consume or
+additional late before_wake/model.prepare was observed, but final transcript,
+M5 and memory assertions after that cursor check were not reached. This is not
+a production repair or full-case pass. Only bounded complete pagination via
+cursor.next is authorized before one background03 run; Owner561d7a6c and the
+prior six test functions remain frozen. Background01's initiating timeout
+remains unknown.
+
 The native source uses before_wake for initial child startup as well as later
 delivery. The background test therefore records legitimate pre-Stop callbacks
 and requires no additional late wake/promotion/model request after Stop; it
