@@ -24,8 +24,10 @@ four-send child/Library/M5 composition, three cleanup races, the two-send
 admitted-child Stop finalizer case and graceful native-generation reopen have
 passing receipts. The test-only public Study-to-Test case `0ca143a7` now has a
 passing receipt and both independent reviews clear. The isolated background-Stop
-case now passes in test-only b3a1c5dc with both independent reviews clear. Sartre alone
-owns this test lane in oc-library; production Owner remains frozen. Graceful reopen
+case now passes in test-only b3a1c5dc with both independent reviews clear. Sartre
+owns the paused foreground-failure test in oc-library; Russell owns only the
+separate new detached-exposure test in oc-memory from b3a1c5dc. Production Owner
+and the shared seven-case helper remain frozen. Graceful reopen
 is within the same Python app and does not establish crash/profile restart.
 No native/transport/Owner child assembly is integrated in this parent yet.
 H06's immediate-Archive hidden check remains blocked by controller approval policy;
@@ -649,6 +651,16 @@ session/report/canary match booleans before the unchanged split assertions.
 Public native tool-error metadata will be correlated without retaining prose,
 body bytes or credentials. No timeout increase or production edit is authorized.
 
+Diagnostic02 again fails once in54.815s (XML4cfd9182/testc7016048). It identifies
+the mismatch without prose capture: the wire tool content is a95-byte JSON
+string with content/error keys and tool.execution category; both it and the
+public native error omit the child session and canary. Original binding/session
+and call IDs independently match. The same exact child failure and failed
+charge precede the script refusal; successful root acknowledgment is still
+unproved. The frozen diagnostic and hash-serialization addendum under G:/rh07a/
+allow source comparison of fixed error fingerprints. Author is paused; no
+assertion relaxation or production change has been justified yet.
+
 The updated criterion map also keeps two narrower qualifications open. H07
 criterion6 explicitly includes detached callbacks: background03 proves Stop
 denial but does not itself prove public Test activation at detached report
@@ -660,8 +672,12 @@ The existing composed seam can instead activate Test while an actual detached
 finalizer is held, then prove an exact policy refusal or original policy-driven
 token/family seal before report/publication. Callback absence alone is not
 proof. This addresses detached completion, not parked delivery; native isolated
-explicit-delivery evidence keeps its qualification. This next case is not yet
-released while the intentional-failure test is paused. S1:57/S3:69 process-death requirements retain
+explicit-delivery evidence keeps its qualification. This case is now released
+independently to Russell on codex/oc-h07-detached-exposure at exact b3a1c5dc,
+with only new tests/runtime/test_harness_learning_children_detached_exposure.py
+leased. It reuses the committed helper unchanged, preserving the previous
+oc-memory branch and avoiding Sartre's moving failure file. One new-node first
+outcome is authorized; no existing cohort or production edit. S1:57/S3:69 process-death requirements retain
 the live-family host-death/reopen qualification; existing general IPC death and
 graceful-generation reopen evidence is not relabelled as that proof. This does
 not add a whole-profile/Python crash matrix to the literal H07 restart criterion.
