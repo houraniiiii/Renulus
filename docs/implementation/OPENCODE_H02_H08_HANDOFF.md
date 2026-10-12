@@ -29,9 +29,11 @@ corrected foreground-failure test43f6cfcf and detached-exposure test767d876a now
 both have Standards0/Spec0. Production Owner and the shared seven-case helper
 remain frozen. The first separate native-host-death run proved retained ownership
 and composite settlement, then failed at the public reopen gate with busy409.
-Sartre's narrow Owner/Bridge retirement repair05b46cc6 is committed with18 local
-guard cases passing; independent reviews and Turing's unchanged connected
-host-death regression are released. Native death/reopen acceptance is pending.
+Sartre's narrow Owner/Bridge retirement repair05b46cc6 has18 local guard passes
+and Standards0/Spec0. Turing's unchanged connected death02 passed the former
+busy gate, then failed at successor host.inspect; its native cause remains
+unknown. One bounded metadata-only diagnostic run is released. Native
+death/reopen acceptance is pending.
 Graceful reopen
 is within the same Python app and does not establish crash/profile restart.
 No native/transport/Owner child assembly is integrated in this parent yet.
@@ -858,6 +860,29 @@ Independent Standards/Spec review the exact43f6cfcf..05b46cc6 objects. Turing ma
 consume only05b46cc6 on b3a1c5dc and run the unchanged death test once in fresh
 G:/rh07hd state. This is not yet connected-green or parent integration evidence.
 
+Both independent repair reviews now close with Standards0/Spec0, exact source
+and XML fingerprints unchanged. They verify local transaction/identity guards,
+publication and recovery preservation, bounded deferred proof and unchanged
+busy predicates without claiming actual native acceptance. Turing consumed
+only05b46cc6 on b3 and ran the unchanged test73d780a9. Death02 has one failure/
+44.628s, zero errors/skips (G:/rh07hd/e/death02.xml, SHA1f0abe2b), independently
+read by the parent. The original root seal refusal is gone; canonical admission
+close and lifecycle settlement pass. Successor start_gated then fails at its
+host.inspect request with harness_configuration_unavailable409/nonretryable.
+The non-committed native response itself was not retained, so its outcome/code
+and underlying cause remain unknown. Later ready/reopen/no-replay assertions
+remain unproved. This does not convert the full case to green.
+
+After preserving the exact death02 source/receipt/handoff, Turing may make one
+diagnostic-only amendment to the sole new test: transparent public request and
+query_result observations on the successor, retaining command/outcome/identity,
+safe bounded error code/status/retryability and registry state/hash/gate/count
+metadata only. One read-only public host.status before cleanup is allowed to
+observe the failed inspection state. No prose, bytes, credentials, new effect,
+recovery, replay or changed timeout is allowed. The same node may run once as
+death03; production05b46cc6 stays frozen. Classify the retained response before
+any new production lease or further execution.
+
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
 expectation-disposition reviews clear. H06–H08 remain open. Required unmet
@@ -872,7 +897,7 @@ lower in the historical ledger.
 | H04 | Local acceptance verified: authority/API/budgets, candidate/live lifecycle, managed initial/reopen, hidden Settings and actual failure/crash reconciliation; named repair-budgetB3 reviewed clear | Account/package scope and later native auxiliary enablement remain distinct |
 | H05 | Local acceptance verified: persistent lineage, four public recapture regressions, actual Mem0/Qdrant/FastEmbed native extraction/held-source-revocation/reopen; reviewed automatic cutover3026e3ca/67321f02 | No intrinsic local criterion remains; actual child producers and full paired restore retain H07/H18 ownership |
 | H06 | Saved migration/continuation/reopen/delete and purge reconciliation through actual production main; repaired hidden journey and reviewed Archive debounce fix | Immediate-Archive hidden verification remains execution-blocked; final criterion disposition stays open |
-| H07 | Isolated actual root/child Library/M5 publication, budgets/source identity, admitted-child Stop, graceful native-generation reopen, admitted-child Study-to-Test denial and composed background-Stop reviewed clear; deliberate child failure now green pending review | Child-failure review, detached Test-exposure boundary, live-family process-death qualification and coordinated parent integration |
+| H07 | Isolated actual root/child Library/M5 publication, budgets/source identity, Stop/finalizer, graceful reopen, Study-to-Test, background Stop, failed-child and detached Test-exposure proofs reviewed clear; cancelled-checkpoint repair has18 local passes and both reviews clear | Successor inspection failure after live-family native death remains under bounded diagnosis; connected death/reopen and coordinated parent integration remain open |
 | H08 | Existing instructions/skills and pinned native hooks are source inputs | Versioned instruction/skill activation and connected task use after accepted H04/H06 |
 
 The fixed hidden Settings fixture is integrated at `2e166120`; observation
