@@ -666,6 +666,17 @@ the live-family host-death/reopen qualification; existing general IPC death and
 graceful-generation reopen evidence is not relabelled as that proof. This does
 not add a whole-profile/Python crash matrix to the literal H07 restart criterion.
 
+Source-only preparation identifies an owned fault-injection seam for that
+future case: retain a Windows handle from public native_identity, verify its
+creation/liveness and an authenticated same-generation status after acquisition,
+then terminate only that exact synthetic child handle. OS exit must not release
+held Domain/Registry/HTTP work or canonical pins. Reopen has an unexecuted
+checkpoint concern: disconnect may leave the saved answer submitted/uncertain,
+while seal_new_runs rejects those states even after composite settlement. A
+public reproduction must establish this before any exit-aware retirement repair
+is authorized. No process was terminated or new case released for this source
+check; same-store native-host death is distinct from Python/profile crash.
+
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
 expectation-disposition reviews clear. H06–H08 remain open. Required unmet
