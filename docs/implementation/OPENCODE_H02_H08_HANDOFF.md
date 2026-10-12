@@ -25,7 +25,7 @@ admitted-child Stop finalizer case and graceful native-generation reopen have
 passing receipts. The test-only public Study-to-Test case `0ca143a7` now has a
 passing receipt and both independent reviews clear. The isolated background-Stop
 case now passes in test-only b3a1c5dc with both independent reviews clear. Sartre
-owns the paused foreground-failure test in oc-library; Russell owns only the
+owns the corrected foreground-failure test in oc-library; Russell owns only the
 separate new detached-exposure test in oc-memory from b3a1c5dc. Production Owner
 and the shared seven-case helper remain frozen. Turing prepares a separate
 native-host-death test from the same baseline, with execution still held.
@@ -697,6 +697,18 @@ outcome is authorized; no existing cohort or production edit. S1:57/S3:69 proces
 the live-family host-death/reopen qualification; existing general IPC death and
 graceful-generation reopen evidence is not relabelled as that proof. This does
 not add a whole-profile/Python crash matrix to the literal H07 restart criterion.
+
+Russell's first new-node run fails during unchanged candidate setup, before the
+detached-exposure body: G:/rh07dx/e/detached01.xml has one failure/10.314s,
+zero errors/skips (SHA35682e04). The initiating child-disconnected-before-readiness
+exception is followed by a blocked-close assertion; native cause and actual
+candidate settlement were not retained. No policy or dispatch proof follows.
+The new testc0b291a2/helper45ebbfaf/Owner561d7a6c remain frozen. Read-only
+preflight finds no package node_modules link in this worker, while the working
+oc-library harness uses a junction to the existing reviewed cohort node_modules.
+Source/resolution checking and that exact missing ignored wiring are permitted,
+with no install, copy or artifact mutation; another test run remains held until
+preflight is reported. The original failure is not a production red.
 
 Source-only preparation identifies an owned fault-injection seam for that
 future case: retain a Windows handle from public native_identity, verify its
