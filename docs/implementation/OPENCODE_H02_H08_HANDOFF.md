@@ -25,11 +25,12 @@ admitted-child Stop finalizer case and graceful native-generation reopen have
 passing receipts. The test-only public Study-to-Test case `0ca143a7` now has a
 passing receipt and both independent reviews clear. The isolated background-Stop
 case now passes in test-only b3a1c5dc with both independent reviews clear. The
-corrected foreground-failure test43f6cfcf now also has Standards0/Spec0. Russell's
-separate detached-exposure test767d876a passes and is under independent review.
-Production Owner and the shared seven-case helper remain frozen. Turing's
-separate native-host-death test from b3a1c5dc has completed static preflight and
-is released for its first single-node execution; no production repair is leased.
+corrected foreground-failure test43f6cfcf and detached-exposure test767d876a now
+both have Standards0/Spec0. Production Owner and the shared seven-case helper
+remain frozen. The first separate native-host-death run proved retained ownership
+and composite settlement, then failed at the public reopen gate with busy409.
+Sartre owns source/read-only synthetic checkpoint diagnosis; Turing preserves
+the unchanged test and failed receipt. No production repair is leased yet.
 Graceful reopen
 is within the same Python app and does not establish crash/profile restart.
 No native/transport/Owner child assembly is integrated in this parent yet.
@@ -769,7 +770,10 @@ two pages/four messages; actual native/family/Domain/Registry/HTTP settlement
 precedes leaf-first SQL and release. This proves detached completion refusal,
 not parked delivery or crash. Detached01's initiating native cause and candidate
 settlement remain unknown. Arendt reviews Spec and Nietzsche Standards against
-immutable objects, without execution.
+immutable objects, without execution. Both independent axes now close with zero
+findings, matching the committed test/helper/Owner and retained XML hashes.
+The unique root terminal and exact code are asserted; retryable:true is an
+observed receipt qualification. No direct child ApiError branch is claimed.
 
 The next single native-host-death execution is now released to Turing with
 new-test SHA73d780a9 and the same frozen b3a1c5dc/helper/Owner. Its reviewed fault
@@ -781,6 +785,28 @@ first outcome must be recorded before changes. Actual OS exit cannot substitute
 for held callback/HTTP settlement; uncertainty, debits and no replay/publication
 remain mandatory. No checkpoint repair or repeated suite is authorized by this
 release. This source/test preparation is not a passing death/reopen receipt.
+
+The first host-death run now supplies a meaningful bounded failure:
+G:/rh07hd/e/death01.xml has one failure/20.259s, zero errors/skips, independently
+read by the parent (SHA74d4b736). Test73d780a9/helper45ebbfaf/Owner561d7a6c are
+unchanged. The authenticated retained handle was terminated and actual exit9
+observed. While the child HTTP finalizer was held, process settlement remained
+pending, Domain active1/Registry owned1 and both canonical pins remained active.
+After release, real process/pipe/Domain/Registry/HTTP settlement preceded
+child-then-root canonical settlement and release. Root confirmed/child uncertain
+permits retain two charged sends; no report, M5 or Memory job occurs. The native
+close outcome remains blocked/uncertain despite actual ownership settlement.
+Public seal_new_runs then raises harness_configuration_busy409/retryable:true.
+Fresh-generation replacement, transcript comparison and post-reopen replay
+assertions were not reached. Original fixture cleanup ran without a JUnit
+teardown error; this is not a whole-case pass. The exact first-outcome map,
+command and metadata are retained in G:/rh07hd/e/death01-post.json.
+
+The durable-checkpoint predicate is a source candidate, not yet the diagnosed
+cause of that refusal. Sartre may inspect the frozen source and only the exact
+owned synthetic canonical state/identity/generation fields read-only; no text,
+credentials, mutation, native replay or second run. Turing's file is frozen and
+no production edit is authorized until the gate condition is confirmed.
 
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
