@@ -29,9 +29,9 @@ corrected foreground-failure test43f6cfcf and detached-exposure test767d876a now
 both have Standards0/Spec0. Production Owner and the shared seven-case helper
 remain frozen. The first separate native-host-death run proved retained ownership
 and composite settlement, then failed at the public reopen gate with busy409.
-Sartre has confirmed the stale cancelled-run checkpoint and owns the narrow
-Owner/Bridge retirement repair plus a new local guard test. Turing preserves
-the unchanged connected test and failed receipt pending a published repair.
+Sartre's narrow Owner/Bridge retirement repair05b46cc6 is committed with18 local
+guard cases passing; independent reviews and Turing's unchanged connected
+host-death regression are released. Native death/reopen acceptance is pending.
 Graceful reopen
 is within the same Python app and does not establish crash/profile restart.
 No native/transport/Owner child assembly is integrated in this parent yet.
@@ -834,6 +834,29 @@ fabricated native terminal state. Existing seal refusal is not simply weakened.
 Only a narrow local red/green guard file is released. Turing's unchanged actual
 death test awaits a coherent published repair; no WIP runtime consumption or
 unchanged cohort is authorized.
+
+The three-path repair is now published as05b46cc6fe80dbca761f1e97e398f822f3a21ed9
+on43f6cfcf. G:/rh07cr/e/retirement-affected01.xml records18 passes/55.456s,
+zero failures/errors/skips, independently read by the parent (SHAebcba126).
+Bridge d75480d0 / Owner bcc7e563 / new guard test a0a8969b are recorded in
+G:/rh07cr/HANDOFF-05b46cc6.json. Local process ports are explicitly synthetic;
+no native or earlier cohort was run by the repair author. The first local red
+was a nonexistent test status method, not a product red. The meaningful missing
+Bridge-port red and public Owner busy-gate red, followed by their greens, remain
+separately qualified in that handoff.
+
+The public local seam is retire_cancelled_in(conn, command, *, runtime, input_id)
+returning bool. Owner captures actual live native identity and the admitted
+command/binding, then retains compact proof in the existing bounded root slots
+only after original process/pipe and family/Domain/Registry/HTTP settlement.
+Canonical cancellation may be recorded after cleanup; the next admission or
+root seal rechecks it and the exact pending unpublished checkpoint inside its
+supplied transaction. Proof survives rollback until generation replacement;
+the busy predicate remains intact. No reference, request, permit, cause or
+uncertain charge is removed. Uncancelled pending and published work is preserved.
+Independent Standards/Spec review the exact43f6cfcf..05b46cc6 objects. Turing may
+consume only05b46cc6 on b3a1c5dc and run the unchanged death test once in fresh
+G:/rh07hd state. This is not yet connected-green or parent integration evidence.
 
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
