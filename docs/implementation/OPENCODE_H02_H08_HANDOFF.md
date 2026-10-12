@@ -556,6 +556,23 @@ fourth send or M5 and retain ownership through actual settlement. Public IPC
 notification counts are observable; Inbox emptiness is not claimed. Existing
 native SDK Inbox proofs remain separate. This case has not yet run.
 
+The native source uses before_wake for initial child startup as well as later
+delivery. The background test therefore records legitimate pre-Stop callbacks
+and requires no additional late wake/promotion/model request after Stop; it
+does not falsely require zero startup checks. The same exclusive test lease
+and frozen Owner apply.
+
+The next intentional-failure plan is source-derived only: a foreground child
+receives one complete synthetic HTTP500 response, which must close its actual
+HTTP owners, retain a failed charged permit and expose only sanitized
+provider_stream_failed503/nonretryable. Native tool-error replay may permit a
+third, root continuation send. A root answer acknowledging failure can publish
+without child findings; no successful child report, child M5 or automatic
+capture is invented. Expected budgets are root-own2/child-own1/shared3, with
+no retry or fourth send and independent family/Domain/Registry/HTTP settlement.
+The active background case must finish before this test-only case is released;
+these expectations are not runtime evidence.
+
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
 expectation-disposition reviews clear. H06–H08 remain open. Required unmet
