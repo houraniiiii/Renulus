@@ -27,7 +27,9 @@ passing receipt and both independent reviews clear. The isolated background-Stop
 case now passes in test-only b3a1c5dc with both independent reviews clear. Sartre
 owns the paused foreground-failure test in oc-library; Russell owns only the
 separate new detached-exposure test in oc-memory from b3a1c5dc. Production Owner
-and the shared seven-case helper remain frozen. Graceful reopen
+and the shared seven-case helper remain frozen. Turing prepares a separate
+native-host-death test from the same baseline, with execution still held.
+Graceful reopen
 is within the same Python app and does not establish crash/profile restart.
 No native/transport/Owner child assembly is integrated in this parent yet.
 H06's immediate-Archive hidden check remains blocked by controller approval policy;
@@ -706,6 +708,13 @@ while seal_new_runs rejects those states even after composite settlement. A
 public reproduction must establish this before any exit-aware retirement repair
 is authorized. No process was terminated or new case released for this source
 check; same-store native-host death is distinct from Python/profile crash.
+Turing now owns only new tests/runtime/test_harness_learning_children_host_death.py
+on codex/oc-h07-native-death in the clean oc-domain-ipc lane from b3a1c5dc;
+the previous branch is preserved. Source/test preparation is released using
+unchanged helpers and the retained-handle identity contract above. Execution,
+process termination and any production repair remain held until the test
+contract/preflight is ready and an execution slot is released. The checkpoint
+concern remains source inference, not an established product failure.
 
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
