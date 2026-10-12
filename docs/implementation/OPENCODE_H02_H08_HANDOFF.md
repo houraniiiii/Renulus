@@ -33,9 +33,10 @@ Sartre's narrow Owner/Bridge retirement repair05b46cc6 has18 local guard passes
 and Standards0/Spec0. Turing's connected death02 passed the former busy gate,
 then failed at successor host.inspect. Diagnostic03 retains a live policy-blocked
 successor with active0/held1 after generic host_error; the underlying exception
-is still unknown. Arendt owns supported recovery/cancellation seam diagnosis
-read-only. No new production or execution lease is open. Native death/reopen
-acceptance is pending.
+is still unknown. Independent Spec adjudication permits an explicit closed,
+non-replaying reopen disposition; writable ready/held[] was overspecified.
+Turing's sole test is released for that public closed-reopen proof once, with
+production frozen. Native death/reopen acceptance is pending.
 Graceful reopen
 is within the same Python app and does not establish crash/profile restart.
 No native/transport/Owner child assembly is integrated in this parent yet.
@@ -910,6 +911,32 @@ policy-blocked cancellation port can dispose of the exact cancelled old-family
 claim without waking it; otherwise report the smallest missing supported seam.
 This is source-only preparation, not a new repair or diagnosis of the hidden
 host_error. H06's separate desktop approval block remains unchanged.
+
+That source adjudication is now complete. Existing host.cancel refuses held
+sessions; fresh native Session.interrupt and Job.cancel have no predecessor
+execution owner to terminate. Supported durable primitives exist for a future
+explicit cancellation-only reconciliation port, but composing that new port is
+not required merely to force writable startup. S1/S3 require actual outcome and
+uncertainty observation, quiescence and no automatic uncertain replay. H07's
+restart clause does not require retained claims to disappear. Therefore a fresh
+owner may remain policy-blocked with an exact held recovery claim, provided the
+public reopened flow exposes the canonical cancelled result, charged uncertain
+attempt and honest ownership state. Native held denotes durable recovery data;
+it is not proof the dead predecessor still owns running work.
+
+Turing may correct only the new test to prove this closed disposition once as
+death04. Keep the public guarded startup refusal, same-generation status with
+active0 and held IDs matching the old family, unchanged canonical outcome and
+identical-command replay, old-child-grant refusal, no successor model callbacks,
+no publication or extra debit/send/refund. Compare immutable native transcript
+content separately from the intentionally changed active/held execution state.
+Normal successor close/exit/pipe and Domain/Registry settlement remain required.
+No global recovery release, empty-held/ready requirement, new command, timeout
+change or production edit is leased. Death01 remains the diagnosed canonical
+checkpoint defect repaired by05b46cc6; death02/03 retain their failed writable-
+startup expectation and unknown initiating host_error. They are not silently
+converted to successful closed-reopen evidence. The first corrected full public
+outcome must establish the previously unreached assertions before acceptance.
 
 H02–H05 local acceptance is verified at314eb932 and the repaired hidden journey,
 with automatic cutover3026e3ca/67321f02 integrated and both final independent
