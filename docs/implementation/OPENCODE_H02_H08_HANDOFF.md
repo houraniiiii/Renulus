@@ -23,7 +23,7 @@ test-only `f12c6375`/`8651d0f0` have both independent review axes clear. Actual
 four-send child/Library/M5 composition, three cleanup races, the two-send
 admitted-child Stop finalizer case and graceful native-generation reopen have
 passing receipts. The test-only public Study-to-Test case `0ca143a7` now has a
-passing receipt and independent reviews pending. Sartre alone owns the next
+passing receipt and both independent reviews clear. Sartre alone owns the next
 connected background-Stop test in oc-library; production Owner remains frozen. Graceful reopen
 is within the same Python app and does not establish crash/profile restart.
 No native/transport/Owner child assembly is integrated in this parent yet.
@@ -530,6 +530,12 @@ in HANDOFF-0ca143a7-active-test-exposure.json. The first failure is a test
 expectation qualification, not a repaired production defect. Independent reviews
 use immutable commit objects and no earlier cases are rerun.
 
+Both reviews now close with Standards0/Spec0. They verified the sole226-line
+test addition, unchanged prior source and pinned hashes, and read the original
+one-pass receipt. Its cancellation-first branch is dynamically proven; the
+alternate exact ApiError branch is source-checked, not an extra runtime pass.
+No before-admission, detached or crash acceptance is inferred.
+
 Source-only criterion mapping confirms graceful reopen covers the ticket's
 restart case; full profile relaunch is not an extra literal H07 requirement.
 S1/S3 process-death evidence with a live family remains separately qualified.
@@ -564,7 +570,7 @@ lower in the historical ledger.
 | H04 | Local acceptance verified: authority/API/budgets, candidate/live lifecycle, managed initial/reopen, hidden Settings and actual failure/crash reconciliation; named repair-budgetB3 reviewed clear | Account/package scope and later native auxiliary enablement remain distinct |
 | H05 | Local acceptance verified: persistent lineage, four public recapture regressions, actual Mem0/Qdrant/FastEmbed native extraction/held-source-revocation/reopen; reviewed automatic cutover3026e3ca/67321f02 | No intrinsic local criterion remains; actual child producers and full paired restore retain H07/H18 ownership |
 | H06 | Saved migration/continuation/reopen/delete and purge reconciliation through actual production main; repaired hidden journey and reviewed Archive debounce fix | Immediate-Archive hidden verification remains execution-blocked; final criterion disposition stays open |
-| H07 | Isolated actual root/child Library/M5 publication, canonical budgets/source identity, admitted-child Stop/finalizer settlement and graceful native-generation reopen; independent reviews clear; native permission/detached preparation | Active connected Study-to-Test exposure case, remaining required detached/crash criteria mapping and coordinated parent integration |
+| H07 | Isolated actual root/child Library/M5 publication, budgets/source identity, admitted-child Stop, graceful native-generation reopen and admitted-child Study-to-Test denial; independent reviews clear; native permission/detached preparation | Active composed background-Stop case, intentional child failure, remaining family process-death qualification and coordinated parent integration |
 | H08 | Existing instructions/skills and pinned native hooks are source inputs | Versioned instruction/skill activation and connected task use after accepted H04/H06 |
 
 The fixed hidden Settings fixture is integrated at `2e166120`; observation
