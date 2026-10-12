@@ -661,6 +661,20 @@ unproved. The frozen diagnostic and hash-serialization addendum under G:/rh07a/
 allow source comparison of fixed error fingerprints. Author is paused; no
 assertion relaxation or production change has been justified yet.
 
+Fixed-source fingerprint comparison identifies the diagnostic02 error exactly
+as model_registry_publication_pending, at attempted report consumption. Both
+the native error and95-byte wire envelope match that code. Independent Spec
+adjudication agrees that reported metadata may remain staged/ineligible: the
+H07/S1/S3 contract requires domain qualification before findings/publication,
+not zero report calls or zero consumption attempts. Thus the earlier no-report
+plan was overspecified; no production defect or earlier health guard follows.
+One corrected same-node run is authorized to observe the failed native outcome,
+failed charged permit, staged report and denied consumption separately before
+settlement, then permit root acknowledgment with no child-derived closure,
+child M5 or eligible capture. Three sends/no retry and actual composite
+settlement remain mandatory. The failed receipts are retained, not relabelled
+as production reds or successful full-flow evidence.
+
 The updated criterion map also keeps two narrower qualifications open. H07
 criterion6 explicitly includes detached callbacks: background03 proves Stop
 denial but does not itself prove public Test activation at detached report
