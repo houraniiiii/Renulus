@@ -554,7 +554,19 @@ the child transport finalizer and root continuation response remain held. After
 Stop, release must prove no late report consumption, native promotion/wake,
 fourth send or M5 and retain ownership through actual settlement. Public IPC
 notification counts are observable; Inbox emptiness is not claimed. Existing
-native SDK Inbox proofs remain separate. This case has not yet run.
+native SDK Inbox proofs remain separate.
+
+Its first run, `G:/rh07a/e/children-background01.xml`, failed once in53.585s
+while awaiting the root-continuation response gate. It did not reach public
+Stop assertions. HTTP counts and the initiating failure were not retained, so
+no three-send or product-defect claim follows. The new settlement observer also
+incorrectly required native family readback during cleanup even when actual
+process exit is a supported proof. Process/pipe, Domain, Registry and transport
+finalizer teardown checks passed; Owner-close success/canonical release were
+not established. Test69e15595/Owner561d7a6c/XMLd04046dc are preserved in
+HANDOFF-background01-failed.json and its source snapshot. Independent source
+diagnosis is underway with test and production frozen; no retry is authorized
+until the failure is classified.
 
 The native source uses before_wake for initial child startup as well as later
 delivery. The background test therefore records legitimate pre-Stop callbacks
