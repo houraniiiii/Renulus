@@ -639,6 +639,16 @@ Owner561d7a6c are frozen with HANDOFF-foreground-failure01-failed.json pending
 independent source diagnosis. No product defect or retry is authorized by this
 receipt alone.
 
+Independent source diagnosis does not justify relaxing the failed predicate:
+the intended native Job-error branch produces a ToolFailure containing the
+child session, then Chat serializes its structured error envelope as a JSON
+string. Other refusal branches need not contain that ID. The observed branch
+is therefore still unknown. One diagnostic-only same-node run is authorized,
+retaining type/length/hash, JSON key names, safe error category/code and exact
+session/report/canary match booleans before the unchanged split assertions.
+Public native tool-error metadata will be correlated without retaining prose,
+body bytes or credentials. No timeout increase or production edit is authorized.
+
 The updated criterion map also keeps two narrower qualifications open. H07
 criterion6 explicitly includes detached callbacks: background03 proves Stop
 denial but does not itself prove public Test activation at detached report
