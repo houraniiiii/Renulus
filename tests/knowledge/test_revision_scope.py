@@ -131,4 +131,4 @@ def test_actual_router_preserves_none_empty_and_explicit_revision_scope(tmp_path
         assert {row["document_revision"] for row in legacy.json()["passages"]} == {
             linked["revision_id"], other["revision_id"]}
     finally:
-        library.index.close()
+        library.close()

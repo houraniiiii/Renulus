@@ -148,8 +148,10 @@ def library(tmp_path, engine):
     db.apply_migration("knowledge-001", schema.read_text())
     for migration in sorted((schema.parent / "migrations").glob("*.sql")):
         db.apply_migration("knowledge-" + migration.stem, migration.read_text())
-    return KnowledgeRepository(Services(paths, db), extractor=engine.extractor,
-        embedder=SeamEmbedder(), index=SeamIndex(paths.indexes / "knowledge"))
+    repo = KnowledgeRepository(Services(paths, db), extractor=engine.extractor,
+        embedder=SeamEmbedder(), index=SeamIndex(paths.indexes / 'knowledge'))
+    yield repo
+    repo.close()
 
 
 def import_image(library, tmp_path, suffix=".png", **kwargs):
@@ -208,13 +210,17 @@ def test_durable_success_browses_original_and_empty_citation_then_deletes(librar
     assert library.recover() == [] and original.is_file()
     assert library.cancel_job(imported["job"]["id"])["state"] == "ready"
     assert original.is_file()  # Publication won before cancellation.
+    library.close()
     restarted = KnowledgeRepository(library.services, extractor=engine.extractor,
-        embedder=SeamEmbedder(), index=library.index)
-    assert restarted.original(revision_id)[0] == original
-    assert restarted.retrieve("image", scope=STUDY)["status"] == "no_eligible_documents"
-    assert restarted.embedder.calls == []
-    assert library.delete_document(imported["document_id"])["cleanup_pending"] is False
-    assert not original.exists() and library.db.fetch_all("SELECT * FROM knowledge_passages") == []
+        embedder=SeamEmbedder(), index=SeamIndex(library.index.path))
+    try:
+        assert restarted.original(revision_id)[0] == original
+        assert restarted.retrieve('image', scope=STUDY)['status'] == 'no_eligible_documents'
+        assert restarted.embedder.calls == []
+        assert restarted.delete_document(imported['document_id'])['cleanup_pending'] is False
+    finally:
+        restarted.close()
+    assert not original.exists() and library.db.fetch_all('SELECT * FROM knowledge_passages') == []
     stored = library.db.fetch_one("SELECT * FROM knowledge_revisions WHERE id=?", (revision_id,))
     assert stored["status"] == "deleted" and stored["extraction_json"] is None
     for operation in (library.original, library.citation):

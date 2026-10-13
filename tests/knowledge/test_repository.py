@@ -41,7 +41,9 @@ def repository(tmp_path):
     for migration in sorted((schema.parent / "migrations").glob("*.sql")):
         db.apply_migration("knowledge-" + migration.stem, migration.read_text())
     services = Services(paths, db)
-    return KnowledgeRepository(services, extractor=SyntheticExtractor(), embedder=SyntheticEmbedder())
+    repo = KnowledgeRepository(services, extractor=SyntheticExtractor(), embedder=SyntheticEmbedder())
+    yield repo
+    repo.close()
 
 
 def import_note(repository, text, **kwargs):
@@ -102,28 +104,30 @@ def test_races_cannot_publish_stale_extraction(repository, operation):
     assert not repository.db.fetch_all("SELECT * FROM knowledge_passages")
 
 
-def test_replacement_and_deletion_remove_live_rows_without_unowned_history_pruning(repository):
+def test_replacement_and_deletion_maintain_live_rows_under_owned_snapshot_contract(repository):
     initial = import_note(repository, "OLD_RENAL_SENTINEL sodium review")
     replaced = import_note(repository, "New transplant review", document_id=initial["document_id"])
     table = repository.index._open()
     assert table.count_rows() == 1
-    # #25 removes live rows; age-zero pruning requires #26's cross-process
-    # exclusive-reader contract. Recent historical versions are intentionally kept.
+    # No per-document optimize; the explicit deletion/queue boundary coalesces
+    # maintenance under #26's profile and generation lifetime ownership.
     assert len(table.list_versions()) > 1
     assert repository.citation(initial["revision_id"])["document_revision"] == initial["revision_id"]
     result = repository.delete_document(initial["document_id"])
-    assert result["cleanup_pending"] is True  # #26 must supply native maintenance ownership.
+    assert result['cleanup_pending'] is False
     assert repository.db.fetch_all('SELECT * FROM knowledge_cleanup') == []
-    assert repository.db.fetch_one("SELECT error_code FROM knowledge_index_work WHERE kind='maintenance'")["error_code"] == 'index_maintenance_owner_required'
+    assert repository.maintenance_status()['pending'] is False
+    assert repository.maintenance_status()['error_code'] is None
     assert table.count_rows() == 0
-    assert len(table.list_versions()) > 1
+    # Public optimize can create versions after pruning. No exact file/version
+    # count or measured amplification bound is claimed by this functional test.
+    assert len(table.list_versions()) >= 1
     assert not repository.db.fetch_all("SELECT * FROM knowledge_passages")
     assert not list((repository.paths.library / "knowledge").rglob("original.*"))
     assert repository.retrieve("transplant", scope=STUDY)["passages"] == []
     with pytest.raises(ApiError):
         repository.original(replaced["revision_id"])
-    # Unadmitted optimization is honest debt, not a blocker for a new ready
-    # generation. Retirement clears only the old generation's local debt.
+    # Retirement clears only the old generation's local maintenance state.
     rebuilt = repository.rebuild_index()
     assert rebuilt['status'] == 'ready' and rebuilt['passages'] == 0
     assert not rebuilt['cleanup_pending']
@@ -144,11 +148,12 @@ def test_rebuild_uses_eligible_canonical_passages_and_survives_restart(repositor
     assert not result["cleanup_pending"]
     assert not old_path.exists()
     assert repository.get_document(deleted["document_id"], include_deleted=True)["deleted_at"]
+    repository.close()
     restored = KnowledgeRepository(repository.services, extractor=SyntheticExtractor(), embedder=SyntheticEmbedder())
     assert restored.index.path == repository.index.path
     assert restored.index._open().count_rows() == 1
     assert restored.retrieve("stenosis", scope=STUDY)["passages"][0]["document_revision"] == active["revision_id"]
-    restored.index.close()
+    restored.close()
 
 
 def test_failed_rebuild_keeps_active_index_and_retries_cleanly(repository, monkeypatch):
@@ -165,7 +170,7 @@ def test_failed_rebuild_keeps_active_index_and_retries_cleanly(repository, monke
     assert repository.index is previous
     assert repository.db.fetch_one("SELECT value FROM preferences WHERE key='knowledge.index_generation'") == selector
     assert repository.retrieve("immunology", scope=STUDY)["passages"][0]["document_revision"] == note["revision_id"]
-    assert not list((repository.paths.indexes / "k").glob("*"))
+    assert not [path for path in (repository.paths.indexes / 'k').glob('*') if path.is_dir()]
     assert repository.rebuild_index()["passages"] == 1
 
 
@@ -201,26 +206,27 @@ def test_delete_during_rebuild_cannot_leave_a_retrievable_or_retained_passage(re
         assert deleting.wait(10)
         release.set()
         assert rebuild.result(timeout=10)["status"] == "ready"
-        assert deletion.result(timeout=10)["cleanup_pending"]  # Removal settled; #26 maintenance debt remains.
+        assert not deletion.result(timeout=10)['cleanup_pending']  # Removal and owned maintenance settle.
         assert repository.db.fetch_all('SELECT * FROM knowledge_cleanup') == []
     repository.embedder = base
     assert repository.retrieve("anemia", scope=STUDY)["passages"] == []
     assert repository.index._open().count_rows() == 0
-    assert len(repository.index._open().list_versions()) > 1
-    assert len(list((repository.paths.indexes / "k").glob("*"))) == 1
+    assert len(repository.index._open().list_versions()) >= 1
+    assert len([path for path in (repository.paths.indexes / 'k').glob('*') if path.is_dir()]) == 1
 
 
 def test_legacy_selected_generation_reopens_and_promotes_without_removing_unknown_folders(repository):
     note = import_note(repository, "Legacy renal anemia study note")
     first = repository.rebuild_index()
     previous = repository.index.path
-    repository.index.close()
+    repository.close()
     legacy = repository.paths.indexes / "knowledge-generations" / first["generation"]
     legacy.parent.mkdir(parents=True, exist_ok=True)
     previous.rename(legacy)
     unrelated = legacy.parent / "other-session"
     unrelated.mkdir()
     (unrelated / "sentinel.txt").write_text("Retained unrelated state")
+    repository.close()
     reopened = KnowledgeRepository(repository.services, extractor=SyntheticExtractor(), embedder=SyntheticEmbedder())
     assert reopened.index.path == legacy
     assert reopened.retrieve("anemia", scope=STUDY)["passages"][0]["document_revision"] == note["revision_id"]
@@ -228,7 +234,7 @@ def test_legacy_selected_generation_reopens_and_promotes_without_removing_unknow
     assert reopened.index.path.parent == repository.paths.indexes / "k"
     assert not legacy.exists()
     assert (unrelated / "sentinel.txt").read_text() == "Retained unrelated state"
-    reopened.index.close()
+    reopened.close()
 
 
 def test_real_lance_rebuild_at_118_character_profile_path(tmp_path_factory):
@@ -247,21 +253,22 @@ def test_real_lance_rebuild_at_118_character_profile_path(tmp_path_factory):
     assert outcome["status"] == "ready" and outcome["passages"] == 1 and not outcome["cleanup_pending"]
     selected = db.fetch_one("SELECT value FROM preferences WHERE key='knowledge.index_generation'")
     assert json.loads(selected["value"]) == outcome["generation"]
+    repository.close()
     reopened = KnowledgeRepository(repository.services, extractor=SyntheticExtractor(), embedder=SyntheticEmbedder())
     assert reopened.retrieve("recovery", scope=STUDY)["passages"][0]["document_revision"] == note["revision_id"]
-    reopened.index.close()
-    repository.index.close()
+    reopened.close()
+    repository.close()
 
 
 def test_temporary_and_unclassified_imports_do_not_write(repository, tmp_path):
-    before = {str(p): p.read_bytes() for p in repository.paths.root.rglob("*") if p.is_file()}
+    before = {str(p): p.read_bytes() for p in repository.paths.root.rglob('*') if p.is_file() and p.name != 'knowledge-native-owner' and not p.name.endswith('.native-owner')}
     for kind in (Scope.TEMPORARY_CASE, Scope.UNCLASSIFIED, Scope.SAVED_CASE):
         with pytest.raises(ApiError) as caught:
             repository.import_text("PRIVATE_SYNTHETIC_CASE_SENTINEL", scope=ContextScope(kind=kind))
         assert caught.value.code == "unsafe_import_scope"
         with pytest.raises(ApiError):
             repository.import_file(tmp_path / "does-not-exist.pdf", scope=ContextScope(kind=kind))
-    after = {str(p): p.read_bytes() for p in repository.paths.root.rglob("*") if p.is_file()}
+    after = {str(p): p.read_bytes() for p in repository.paths.root.rglob('*') if p.is_file() and p.name != 'knowledge-native-owner' and not p.name.endswith('.native-owner')}
     assert before == after
     assert repository.list_documents()["documents"] == []
 

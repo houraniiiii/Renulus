@@ -59,10 +59,11 @@ def saved(tmp_path_factory):
         csv.write_text("question,option,key\nSYNTHETIC dialysis observation,Fistula stenosis,A\n", encoding="utf-8")
         table = knowledge.import_file(csv, rights=own_text_rights())
         assert table["status"] == "ready", table
+        state = {'app': app, 'services': services, 'note': note, 'table': table}
         try:
-            yield {"app": app, "services": services, "note": note, "table": table}
+            yield state
         finally:
-            knowledge.index.close()
+            state['services'].get('knowledge').close()
 
 
 @pytest.fixture
@@ -108,13 +109,13 @@ def test_actual_docling_saved_text_and_csv_map_offsets_originals_and_reopen(save
             assert any(segment["reference"]["locator"]["kind"] == "table" for segment in result["segments"])
     pin = snapshot(saved, conn)
     conn.rollback()
-    reopened = create_app(saved["services"].paths.root)
-    try:
-        other = reopened.state.services
-        with other.db.transaction() as reopened_conn:
-            assert other.get("readers").recheck_import_original(reopened_conn, pin)["fingerprint"] == pin["fingerprint"]
-    finally:
-        reopened.state.services.get("knowledge").index.close()
+    saved['services'].get('knowledge').close()
+    reopened = create_app(saved['services'].paths.root)
+    # The module fixture follows the real reopened owner for subsequent checks.
+    saved['app'], saved['services'] = reopened, reopened.state.services
+    other = reopened.state.services
+    with other.db.transaction() as reopened_conn:
+        assert other.get('readers').recheck_import_original(reopened_conn, pin)['fingerprint'] == pin['fingerprint']
 
 
 def test_saved_snapshot_loads_no_converter_index_helper_or_new_connection(saved, conn, monkeypatch):
@@ -376,15 +377,14 @@ def test_actual_saved_library_source_creates_private_import_with_canonical_pins_
     assert row["source_revision_id"] == row["live_source_revision_id"] == revision_id
     assert client.post("/api/v1/assessment/imports", json=request).json()["id"] == identifier
     assert services.db.fetch_one("SELECT COUNT(*) AS count FROM assessment_test_imports WHERE id=?", (identifier,))["count"] == 1
+    services.get('knowledge').close()
     reopened = create_app(services.paths.root)
-    try:
-        other = TestClient(reopened)
-        read = other.get("/api/v1/assessment/imports/" + identifier + "/original")
-        assert read.status_code == 200 and read.json()["text"] == pin["text"]
-        with reopened.state.services.db.transaction() as conn:
-            current = reopened.state.services.get("readers").recheck_import_original(conn, pin)
-            assert current["fingerprint"] == pin["fingerprint"]
-        private_original = reopened.state.services.paths.root / pin["original"]["relative_path"]
-        assert hashlib.sha256(private_original.read_bytes()).hexdigest() == pin["original_sha256"]
-    finally:
-        reopened.state.services.get("knowledge").index.close()
+    saved['app'], saved['services'] = reopened, reopened.state.services
+    other = TestClient(reopened)
+    read = other.get('/api/v1/assessment/imports/' + identifier + '/original')
+    assert read.status_code == 200 and read.json()['text'] == pin['text']
+    with reopened.state.services.db.transaction() as conn:
+        current = reopened.state.services.get('readers').recheck_import_original(conn, pin)
+        assert current['fingerprint'] == pin['fingerprint']
+    private_original = reopened.state.services.paths.root / pin['original']['relative_path']
+    assert hashlib.sha256(private_original.read_bytes()).hexdigest() == pin['original_sha256']

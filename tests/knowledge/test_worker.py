@@ -21,6 +21,7 @@ def test_startup_worker_drains_persisted_queue_without_request_and_skips_cancell
     cancelled = import_note(repository, "Cancelled sentinel", process=False)
     repository.cancel_job(cancelled["job"]["id"])
     repository.db.execute("UPDATE knowledge_jobs SET state='processing' WHERE id=?", (interrupted["job"]["id"],))
+    repository.close()
     fresh = KnowledgeRepository(repository.services, extractor=SyntheticExtractor(), embedder=SyntheticEmbedder())
     worker = IngestionWorker(fresh)
     worker.start()
@@ -31,5 +32,6 @@ def test_startup_worker_drains_persisted_queue_without_request_and_skips_cancell
         assert worker.status()["queued"] == 0
         assert fresh.index._open().count_rows() == 2
     finally:
-        worker.stop()
+        worker.stop(None)
+        fresh.close()
     assert not worker.status()["running"]

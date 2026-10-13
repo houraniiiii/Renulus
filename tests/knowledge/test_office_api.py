@@ -55,7 +55,7 @@ def test_durable_api_actual_extraction_retrieval_exact_citation_and_original(off
         assert repository.db.fetch_all("SELECT * FROM knowledge_passages") == []
         assert not list(repository.paths.library.rglob("original.*"))
     finally:
-        repository.index.close()
+        repository.close()
         api.close()
 
 
@@ -95,8 +95,8 @@ def test_three_real_office_formats_restore_originals_and_canonical_locators_via_
             assert citation.status_code == 200, citation.text
             assert citation.json()["locators"] == json.loads(row["locators_json"])
     finally:
-        repository.index.close()
-        target.index.close()
+        repository.close()
+        target.close()
         api.close()
         target_api.close()
 

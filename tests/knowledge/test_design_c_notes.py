@@ -29,7 +29,7 @@ def app(tmp_path, monkeypatch):
     try:
         yield result
     finally:
-        result.state.services.get("knowledge").index.close()
+        result.state.services.get("knowledge").close()
 
 
 def test_replacing_a_queued_study_note_retains_its_immutable_original(app):
@@ -103,13 +103,14 @@ def test_note_http_create_edit_replay_and_historical_original_reopen(app):
     assert client.get(path).json() == second
     historical = client.get(path, params={"revision_id": first["revision_id"]})
     assert historical.status_code == 200 and historical.json() == first
+    app.state.services.get('knowledge').close()
     reopened = create_app(app.state.services.paths.root)
     try:
         other = TestClient(reopened)
         assert other.get(path).json() == second
         assert other.get(path, params={"revision_id": first["revision_id"]}).json() == first
     finally:
-        reopened.state.services.get("knowledge").index.close()
+        reopened.state.services.get("knowledge").close()
 
 
 def test_note_stale_commands_and_delete_replay_never_overwrite_or_expose_originals(app):
@@ -414,6 +415,7 @@ def test_mounted_note_delete_and_older_full_zip_reopen_cannot_restore_revisions_
     assert client.get("/api/v1/study/projects/" + project["id"]).json()["documents"] == []
     assert client.get("/api/v1/library/notes/" + retained["document_id"]).json() == retained
     assert hashlib.sha256(retained_path.read_bytes()).hexdigest() == retained_sha256
+    services.get('knowledge').close()
     reopened = create_app(services.paths.root)
     try:
         other = TestClient(reopened)
@@ -426,4 +428,4 @@ def test_mounted_note_delete_and_older_full_zip_reopen_cannot_restore_revisions_
         assert all(not original.exists() for original in originals)
         assert hashlib.sha256(retained_path.read_bytes()).hexdigest() == retained_sha256
     finally:
-        reopened.state.services.get("knowledge").index.close()
+        reopened.state.services.get("knowledge").close()

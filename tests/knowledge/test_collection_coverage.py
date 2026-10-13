@@ -21,6 +21,8 @@ from renulus.knowledge.repository import KnowledgeRepository
 from renulus.services import Services
 from renulus.storage import AppPaths, Database
 from test_acquired import jats
+from renulus.knowledge.ownership import KnowledgeCapacity
+from test_storage_reliability import SyntheticFilesystem, synthetic_owner
 
 
 @pytest.fixture(autouse=True)
@@ -50,8 +52,12 @@ def repository(tmp_path):
     class FakeEngine:
         def __getattr__(self, name):
             pytest.fail("An enqueue policy test called an engine: " + name)
-    return KnowledgeRepository(Services(paths, db), extractor=FakeEngine(),
-        embedder=FakeEngine(), index=SimpleNamespace(path=paths.indexes / "unused"))
+    fs = SyntheticFilesystem()
+    repo = KnowledgeRepository(Services(paths, db), extractor=FakeEngine(),
+        embedder=FakeEngine(), index=SimpleNamespace(path=paths.indexes / 'knowledge', close=lambda: None),
+        owner=synthetic_owner(paths.state / 'knowledge-native-owner', fs), capacity=KnowledgeCapacity(filesystem=fs))
+    yield repo
+    repo.close()
 
 
 def frozen(root, selected=("PMC90001", "PMC90002"), excluded=(), **patch):

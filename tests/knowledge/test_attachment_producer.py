@@ -35,7 +35,7 @@ def app(tmp_path, monkeypatch):
     try:
         yield result
     finally:
-        result.state.services.get("knowledge").index.close()
+        result.state.services.get("knowledge").close()
 
 
 def conversation(app, *, temporary=False, kind="learning"):
@@ -347,11 +347,12 @@ def test_saved_upload_persists_exact_original_sidecar_and_reopens_without_extrac
     assert services.db.fetch_one("SELECT COUNT(*) AS count FROM learn_messages WHERE thread_id=?", (chat["identity"]["id"],))["count"] == 0
     services.db.execute("UPDATE knowledge_attachments SET extraction_state='failed',index_state='failed' WHERE id=?", (receipt["id"],))
     assert client.post("/api/v1/readers/original", json=read_body(receipt)).content == data
+    services.get('knowledge').close()
     reopened = create_app(services.paths.root)
     try:
         assert TestClient(reopened).post("/api/v1/readers/original", json=read_body(receipt)).content == data
     finally:
-        reopened.state.services.get("knowledge").index.close()
+        reopened.state.services.get("knowledge").close()
 
 
 @pytest.mark.parametrize("kind", ["learning", "case"])
@@ -376,11 +377,12 @@ def test_temporary_upload_keeps_bytes_and_commands_out_of_canonical_storage(app,
         assert result == {"allowed": True}
         assert services.get("knowledge_attachments").authorize_in(conn, receipt["id"]) == {
             "allowed": False, "reason": "not_found"}
+    services.get('knowledge').close()
     reopened = create_app(services.paths.root)
     try:
         assert TestClient(reopened).post("/api/v1/readers/resolve", json=read_body(receipt)).status_code == 404
     finally:
-        reopened.state.services.get("knowledge").index.close()
+        reopened.state.services.get("knowledge").close()
 
 
 @pytest.mark.parametrize("temporary", [False, True])
@@ -669,6 +671,7 @@ def test_ordinary_upload_all_required_formats_connect_to_actual_reader_and_nativ
     assert all(item["access"] == {"allowed": True} for item in listed.json()["items"])
     assert services.db.fetch_one("SELECT COUNT(*) AS count FROM learn_messages WHERE thread_id=?",
         (chat["identity"]["id"],))["count"] == 0
+    services.get('knowledge').close()
     reopened = create_app(services.paths.root)
     try:
         other = TestClient(reopened)
@@ -681,7 +684,7 @@ def test_ordinary_upload_all_required_formats_connect_to_actual_reader_and_nativ
         assert draft.status_code == 200 and draft.json()["text"] == draft_text
         assert draft.json()["content_refs"] == draft_refs and len(draft_refs) == 7
     finally:
-        reopened.state.services.get("knowledge").index.close()
+        reopened.state.services.get("knowledge").close()
 
 
 def test_individual_delete_journals_locked_file_then_actual_startup_finishes_cleanup(app, monkeypatch):
@@ -705,6 +708,7 @@ def test_individual_delete_journals_locked_file_then_actual_startup_finishes_cle
     assert json.loads(journal["value"]) == [{"attachment_id": receipt["id"],
         "relative_directory": "library/attachments/" + receipt["id"]}]
     assert TestClient(app).post("/api/v1/readers/original", json=read_body(receipt)).status_code == 404
+    services.get('knowledge').close()
     reopened = create_app(services.paths.root)
     with TestClient(reopened):
         assert not path.exists()
@@ -774,4 +778,4 @@ def test_producer_original_round_trips_through_actual_typed_archive_and_reader(a
         assert metadata["filename"] == "SYNTHETIC.md" and json.loads(metadata["rights_json"])["display"]
         assert not target.db.fetch_all("SELECT * FROM memory_jobs")
     finally:
-        target.get("knowledge").index.close()
+        target.get("knowledge").close()

@@ -63,13 +63,14 @@ class IngestionWorker:
         return {"running": alive, "stopping": bool(alive and self._stop.is_set()),
                 "settled": not alive,
                 "cpu_workers": 1, "active_job": self.active_job, "error_code": self.error_code,
+                "index_maintenance": self.repository.maintenance_status(),
                 "queued": self.repository.db.fetch_one("SELECT COUNT(*) AS n FROM knowledge_jobs WHERE state='queued'")["n"]}
 
     def _run(self):
         while not self._stop.is_set():
             try:
-                # Retry due debt even with continuous ingress or a wholly fenced
-                # queue. This is removal debt only, not ordinary append optimize.
+                # Retry due removal/maintenance debt under continuous ingress;
+                # thresholds also run between bounded staging batches.
                 self.repository.cleanup(force=False)
                 if self._stop.is_set():
                     break
@@ -79,6 +80,10 @@ class IngestionWorker:
                     self.repository.run_job(job["id"])
                     self.error_code = None
                     continue
+                if not self._stop.is_set():
+                    # One coalesced idle boundary, not optimize per document.
+                    # Fenced/waiting jobs cannot postpone maintenance forever.
+                    self.repository.cleanup(force=False, queue_drained=True)
             except Exception:
                 # No source contents or paths enter worker status/logging.
                 self.error_code = "ingestion_worker_unavailable"

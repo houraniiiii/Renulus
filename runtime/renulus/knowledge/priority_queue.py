@@ -5,7 +5,7 @@ import re
 from threading import RLock
 
 from ..storage.database import utc_now
-from .repository import QUEUED_JOB
+from .repository import QUEUED_JOB, QUEUE_CAPACITY_WAIT
 
 PREFERENCE = "knowledge.interactive_imports"
 # Tunable queue policy, not permanent product limits. Overflow stays in FIFO.
@@ -59,7 +59,8 @@ class LibraryPriorityQueue:
             return {}
         placeholders = ",".join("?" for _ in ids)
         rows = conn.execute(
-            "SELECT j.id,j.state,EXISTS(SELECT 1 FROM knowledge_cleanup c WHERE c.revision_id=j.revision_id) AS fenced FROM knowledge_jobs j "
+            "SELECT j.id,j.state,(EXISTS(SELECT 1 FROM knowledge_cleanup c WHERE c.revision_id=j.revision_id) OR " +
+            QUEUE_CAPACITY_WAIT + ") AS fenced FROM knowledge_jobs j "
             "JOIN knowledge_revisions r ON r.id=j.revision_id "
             "JOIN knowledge_documents d ON d.id=r.document_id "
             "WHERE d.scope_kind='personal-library' AND d.deleted_at IS NULL "

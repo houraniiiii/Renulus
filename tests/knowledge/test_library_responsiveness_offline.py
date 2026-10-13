@@ -76,7 +76,7 @@ def selected_text_repository(tmp_path, monkeypatch):
     try:
         yield repository
     finally:
-        repository.index.close()
+        repository.close()
         helpers.startup.close()
 
 

@@ -1,6 +1,8 @@
 """Selected engines only, with explicit CPU assets and no first-use downloads."""
 from dataclasses import dataclass, field
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
+from datetime import timedelta
+from functools import wraps
 import hashlib
 import os
 import importlib.util
@@ -400,22 +402,82 @@ class DoclingExtractor:
             raise ApiError("extraction_failed", "Docling could not extract this file; check its format, encryption and offline helpers", 422) from None
 
 
-class LanceIndex:
-    """Native embedded FTS/vector fusion. Canonical revision filters come from SQLite."""
+def _native_serialized(method):
+    @wraps(method)
+    def operation(self, *args, **kwargs):
+        # Drain the entire synchronous native operation, not just its builder.
+        # The exact cross-process token is retained outside this instance lock.
+        with self._native_lock:
+            return method(self, *args, **kwargs)
+    return operation
 
-    def __init__(self, path: Path, dimensions: int = DIMENSIONS, *, maintenance_guard=None):
-        self.path = Path(path).resolve()
+
+class LanceIndex:
+    """Owned-lifetime native hybrid retrieval; no external historical snapshots.
+
+    All readers/writers must use this adapter and close their native handles
+    before releasing its exact generation token. Builders/results may not escape
+    the operation. Repository ownership additionally fences selector/restore.
+    """
+
+    def __init__(self, path: Path, dimensions: int = DIMENSIONS, *, maintenance_guard=None,
+                 ownership_factory=None):
+        # Preserve the lexical path: resolving a junction here would hide it
+        # from the shared no-follow Windows ownership/capacity checks.
+        self.path = Path(path).absolute()
         self.dimensions = dimensions
-        # #26 supplies a cross-process/exclusive-reader lease, held through
-        # native settlement. An instance-local RLock is not that authority.
         self.maintenance_guard = maintenance_guard
+        self._ownership_factory = ownership_factory
+        self._ownership = None
+        self._profile_owner = None
+        self._native_lock = RLock()
+        self._fts_ready = False
         self._table = None
+        self._rejected_table = None  # Unvalidated native handle, never queryable.
         self._connection = None
         self._closing = False
+        self._retiring = False
+        # Monotonic: an ownership/open attempt can leave uncertain native state
+        # even when no SDK handle has made it into these fields yet.
+        self._native_attempted = False
 
+    def bind_profile_owner(self, owner):
+        if self._ownership is not None:
+            raise RuntimeError('Bind the profile before opening its native index')
+        self._profile_owner = owner
+        if self._ownership_factory is None:
+            from .ownership import NativeOwnership
+            self._ownership_factory = lambda token: NativeOwnership(token, filesystem=owner.fs)
+
+    def _require_owner(self, *, admit=True):
+        if self._profile_owner is not None:
+            if admit:
+                self._profile_owner.require_open()
+            else:
+                self._profile_owner.require()
+        if self._ownership is None:
+            self._native_attempted = True  # Before factory/acquisition, including failures.
+            from .ownership import NativeOwnership
+            factory = self._ownership_factory or NativeOwnership
+            # Outside the generation itself: retirement never removes a held
+            # token or replaces one through an SDK directory operation.
+            owner = factory(self.path.parent / (self.path.name + '.native-owner'))
+            owner.acquire_for_path(self.path, create=not self._retiring)
+            self._ownership = owner
+        self._ownership.require()
+
+    @_native_serialized
     def _open(self):
         if self._closing:
             raise ApiError("index_close_pending", "The library index is still closing. Retry its cleanup before reusing it", 503, True)
+        self._require_owner()
+        if self._rejected_table is not None:
+            try:
+                self._rejected_table._table.close()
+            except Exception:
+                raise ApiError('index_close_pending',
+                    'An incompatible Library table still owns native resources; retry close', 503, True) from None
+            self._rejected_table = None
         if self._table is None:
             try:
                 import lancedb
@@ -430,11 +492,28 @@ class LanceIndex:
             schema = pa.schema([pa.field("passage_id", pa.string()),
                 pa.field("revision_id", pa.string()), pa.field("document_id", pa.string()),
                 pa.field("text", pa.string()), pa.field("vector", pa.list_(pa.float32(), self.dimensions))])
-            self._table = connection.create_table("passages", schema=schema, exist_ok=True)
-            if self._table.schema.field("vector").type.list_size != self.dimensions:
-                raise ApiError("incompatible_index", "The library index requires a coordinated rebuild", 503)
+            candidate = connection.create_table("passages", schema=schema, exist_ok=True)
+            try:
+                if candidate.schema.field('vector').type.list_size != self.dimensions:
+                    raise ValueError('Incompatible vector dimensions')
+                if callable(getattr(candidate.schema, 'equals', None)) and not candidate.schema.equals(schema, check_metadata=False):
+                    raise ValueError('Incompatible passage schema')
+            except Exception:
+                # This preexisting cache-before-validation bug must not make the
+                # next open admit an incompatible table. Keep failed close owners
+                # separately, without closing their connection underneath them.
+                self._rejected_table = candidate
+                try:
+                    candidate._table.close()
+                except Exception:
+                    pass  # Exact rejected handle and connection retained for retry.
+                else:
+                    self._rejected_table = None
+                raise ApiError('incompatible_index', 'The library index requires a coordinated rebuild', 503) from None
+            self._table = candidate
         return self._table
 
+    @_native_serialized
     def stage(self, rows: list[dict], *, create_fts=True):
         if not rows:
             return
@@ -443,11 +522,25 @@ class LanceIndex:
         if create_fts:
             self.build_fts()
 
-    def build_fts(self):
-        from lancedb.index import FTS
+    @_native_serialized
+    def has_fts(self):
+        """Read persisted metadata under ownership, without creation or debt."""
         table = self._open()
-        table.create_index("text", config=FTS(with_position=True), replace=True)
+        if not self._fts_ready:
+            self._fts_ready = any(index.index_type == 'FTS' and list(index.columns) == ['text']
+                                  for index in table.list_indices())
+        return self._fts_ready
 
+    @_native_serialized
+    def build_fts(self):
+        """Ensure one FTS index, including on reopen; never replace it per import."""
+        if self.has_fts():
+            return
+        from lancedb.index import FTS
+        self._open().create_index('text', config=FTS(with_position=True), replace=False)
+        self._fts_ready = True
+
+    @_native_serialized
     def validate_passages(self, identities: set[tuple[str, str, str]]):
         table = self._open()
         if table.count_rows() != len(identities):
@@ -457,20 +550,74 @@ class LanceIndex:
         if actual != identities:
             raise ApiError("index_validation_failed", "The rebuilt library index does not match its canonical passages", 503, True)
 
-    def close(self):
+    @_native_serialized
+    def close(self, *, retain_owner=False):
         # The pinned synchronous SDK wraps the public AsyncTable/Connection
         # lifecycle. Their close methods are synchronous and release Rust handles.
         # Clear each owner only after its native close succeeds. A failed table
         # close must not close the connection underneath that unresolved handle.
         self._closing = True
+        if self._rejected_table is not None:
+            self._rejected_table._table.close()
+            self._rejected_table = None
         if self._table is not None:
             self._table._table.close()
             self._table = None
         if self._connection is not None:
             self._connection._conn.close()
             self._connection = None
-        self._closing = False
+        if not retain_owner and not self._retiring and self._ownership is not None:
+            self._ownership.close()
+            self._ownership = None
+        self._fts_ready = False
+        self._closing = retain_owner or self._retiring
 
+    @_native_serialized
+    def retire_unopened_if_absent(self):
+        """Seal only a bound, never-admitted, resource-free absent candidate.
+
+        No close/release/acquisition is performed. Current empty fields alone
+        cannot prove that a previous native attempt or failed close settled.
+        Verification errors leave this object unchanged for an ownership retry.
+        """
+        if (self._native_attempted or self._closing or self._retiring or
+                any(resource is not None for resource in
+                    (self._ownership, self._table, self._rejected_table, self._connection))):
+            return False
+        if self._profile_owner is None:
+            return False  # Only the repository's bound admission fence proves this case.
+        self._profile_owner.require()  # Also valid while profile close is sealed.
+        from .ownership import exact_path_absent
+        fs = self._profile_owner.fs
+        if not exact_path_absent(fs, self.path):
+            return False
+        if not exact_path_absent(fs, self.path.parent / (self.path.name + '.native-owner')):
+            return False  # Unknown/foreign sibling token is not resource-free absence.
+        self._closing = self._retiring = True  # This candidate can never admit native work.
+        return True
+
+    @_native_serialized
+    def prepare_retirement(self):
+        # Native close does not grant whole-tree/all-stream deletion authority.
+        # Retain the exact generation pin and sibling token across pending debt.
+        self._retiring = True
+        self._require_owner(admit=False)
+        self.close(retain_owner=True)
+
+    @_native_serialized
+    def finish_retirement(self):
+        if self._table is not None or self._rejected_table is not None or self._connection is not None:
+            raise ApiError('index_close_pending', 'Native index retirement has not settled', 503, True)
+        if self._ownership is not None:
+            from .ownership import exact_path_absent
+            if not exact_path_absent(self._ownership.fs, self.path):
+                raise ApiError('index_cleanup_pending', 'Retired Library bytes remain preserved', 503, True)
+            self._ownership.close()
+            self._ownership = None
+        # A retired object must never reopen its now-deleted generation.
+        self._closing = True
+
+    @_native_serialized
     def search(self, query: str, vector: list[float], revision_ids: list[str], limit: int) -> list[dict]:
         if not revision_ids:
             return []
@@ -478,27 +625,32 @@ class LanceIndex:
         # IDs are canonical app IDs; quoting still covers imported/restored profiles.
         allowed = ",".join("'" + x.replace("'", "''") + "'" for x in revision_ids)
         table = self._open()
+        # Do not enable fast_search: pinned 0.39 includes appended unindexed
+        # fragments in both hybrid legs before native FTS maintenance.
         return (table.search(query_type="hybrid").vector(vector).text(query)
                 .where(f"revision_id IN ({allowed})", prefilter=True)
                 .rerank(RRFReranker()).limit(limit).to_list())
 
+    @_native_serialized
     def remove(self, revision_id: str):
         if self._table is None and not self.path.exists():
             return
         table = self._open()
         table.delete("revision_id = '" + revision_id.replace("'", "''") + "'")
 
+    @_native_serialized
     def optimize(self):
-        """Coalesce only under admitted cross-process/exclusive-reader ownership.
+        """Public pinned compaction/prune/index optimization under lifetime fences.
 
-        The public SDK also prunes seven-day history by default, even with
-        delete_unverified=False. Do not invoke it based on age or local locks
-        alone. #25 leaves retryable debt until #26 supplies this lease; ordinary
-        append maintenance remains disabled.
+        No external historical readers are supported. Profile and generation
+        tokens exclude other cooperating processes; the operation lock drains
+        same-instance readers. Seven-day defaults do NOT bound ordinary growth.
+        Age-zero verified-version cleanup is safe only under this contract.
+        Unverified in-progress/failed files remain protected by the SDK.
         """
         if self._table is None and not self.path.exists():
             return
-        if self.maintenance_guard is None:
-            raise ApiError("index_maintenance_owner_required", "Library rows are ready; local index maintenance is waiting for exclusive ownership", 503, True)
-        with self.maintenance_guard():
-            return self._open().optimize(delete_unverified=False)
+        table = self._open()
+        extra = self.maintenance_guard() if self.maintenance_guard is not None else nullcontext()
+        with self._ownership.maintenance(), extra:
+            return table.optimize(cleanup_older_than=timedelta(0), delete_unverified=False)

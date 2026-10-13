@@ -33,7 +33,7 @@ def services(tmp_path, monkeypatch):
     try:
         yield app.state.services
     finally:
-        app.state.services.get("knowledge").index.close()
+        app.state.services.get("knowledge").close()
 
 
 def case_original(services, *, saved=False):

@@ -36,7 +36,9 @@ def live_repository(monkeypatch):
     paths = AppPaths.create(profile, source_root=source_root)
     db = Database(paths.database)
     schema = Path(__file__).parents[2] / "runtime/renulus/knowledge/schema.sql"
-    db.apply_migration("knowledge-001", schema.read_text())
+    db.apply_migration('knowledge-001', schema.read_text())
+    for migration in sorted((schema.parent / 'migrations').glob('*.sql')):
+        db.apply_migration('knowledge-' + migration.stem, migration.read_text())
     services = Services(paths, db)
     services.registry["helpers"] = HelperAssets(paths)
     services.registry["helpers"].embedding_config()
@@ -55,9 +57,13 @@ def live_repository(monkeypatch):
     monkeypatch.setattr(socket.socket, "connect_ex", local_only(original_connect_ex))
     startup = services.registry["helpers"].startup
     asyncio.run(startup.start())
+    repository = None
     try:
-        yield KnowledgeRepository(services)
+        repository = KnowledgeRepository(services)
+        yield repository
     finally:
+        if repository is not None:
+            repository.close()
         startup.close()
 
 

@@ -244,6 +244,7 @@ class SourceStatusJournal:
         serialized = canonical(event)
         digest = hashlib.sha256(serialized.encode()).hexdigest()
         with self.repository._lock, self.db.transaction() as conn:
+            self.repository._require_open()
             previous = conn.execute("SELECT request_hash FROM knowledge_source_status_events WHERE id=?", (event["event_id"],)).fetchone()
             if previous and previous["request_hash"] != digest:
                 raise ApiError("source_status_conflict", "That source event belongs to different evidence", 409)

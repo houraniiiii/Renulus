@@ -135,4 +135,4 @@ def test_actual_updates_review_outbox_changes_library_currency_and_survives_retr
     # A review can publish both an invalidation and its reviewed status. Retry
     # must preserve the exact existing events, rather than assume a single event.
     assert services.db.fetch_all("SELECT * FROM knowledge_source_status_events ORDER BY id") == published_events
-    knowledge.index.close()
+    knowledge.close()

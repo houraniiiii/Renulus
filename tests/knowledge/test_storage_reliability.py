@@ -1,6 +1,8 @@
 """Issue #25 regressions through public seams, without CPU helpers or private state."""
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
+from datetime import timedelta
+from types import SimpleNamespace
 from pathlib import Path
 from threading import Event
 import json
@@ -11,12 +13,116 @@ from renulus.contracts import ApiError
 from renulus.knowledge.engines import LanceIndex
 from renulus.knowledge.priority_queue import LibraryPriorityQueue
 from renulus.knowledge.repository import KnowledgeRepository
+from renulus.knowledge.ownership import KnowledgeCapacity, MIN_FREE_BYTES, NativeOwnership
 from renulus.knowledge.worker import IngestionWorker
 from renulus.services import Services
 from renulus.storage import AppPaths, Database
 from renulus.storage.backup import export_records
 from renulus.storage.recovery import Recovery
 from test_repository import SyntheticEmbedder, SyntheticExtractor
+
+
+class SyntheticFilesystem:
+    """Portable ownership/capacity model, NOT Windows handles or allocation proof."""
+    def __init__(self):
+        self.held = set()
+        self.free = MIN_FREE_BYTES + 1024 ** 3
+        self.measured = SimpleNamespace(logical_bytes=256, allocated_bytes=512)
+        self.targets = []
+        self.fail_release = False
+
+    def path_exists(self, path):
+        return Path(path).exists()
+
+    @contextmanager
+    def guarded_roots(self, paths):
+        # Explicit no-follow model only; does not claim native parent pins.
+        for path in paths:
+            path = Path(path).absolute()
+            for part in (*path.parents, path):
+                if part.is_symlink() or part.is_junction():
+                    raise OSError('Synthetic reparse refusal')
+        yield
+
+    def canonical_path(self, path, **kwargs):
+        with self.guarded_roots([path]):
+            return Path(path).resolve()
+
+    def file_info(self, path):
+        stat = Path(path).stat()
+        return SimpleNamespace(identity=(stat.st_dev, stat.st_ino), directory=Path(path).is_dir(),
+            logical_bytes=stat.st_size, links=stat.st_nlink)
+
+    @contextmanager
+    def created_directory(self, path):
+        with self.guarded_roots([Path(path).parent]):
+            Path(path).mkdir()
+            yield self.file_info(path)  # Portable model, not a native retained handle.
+
+    def mkdir_exact(self, path):
+        with self.created_directory(path) as info:
+            return info
+
+    @contextmanager
+    def created_file(self, path, **kwargs):
+        with Path(path).open('xb') as stream:
+            info = self.file_info(path)
+            def publish(data):
+                stream.write(data)
+                stream.flush()
+            yield SimpleNamespace(info=info, publish=publish, check=lambda: self.file_info(path),
+                read=lambda **kwargs: Path(path).read_bytes())
+
+    @contextmanager
+    def opened_file(self, path, **kwargs):
+        with self.guarded_roots([path]):
+            yield SimpleNamespace(info=self.file_info(path), check=lambda: self.file_info(path),
+                read=lambda **kwargs: Path(path).read_bytes())
+
+    @contextmanager
+    def original_io(self, filesystem, resource, path):
+        # Explicit portable adapter, not a product fallback or native I/O proof.
+        # Preserve the legacy resource fault seams used by the 107 controls.
+        import hashlib
+        def sha256(*, expected_bytes):
+            info = resource.check()
+            if info.identity != resource.info.identity or info.links != 1 or info.logical_bytes != expected_bytes:
+                raise OSError('Synthetic original identity/length changed')
+            data = resource.read(limit=expected_bytes)
+            if len(data) != expected_bytes:
+                raise OSError('Synthetic short original read')
+            return hashlib.sha256(data).hexdigest()
+        yield SimpleNamespace(publish=resource.publish, sha256=sha256)
+
+    def process_identity(self, pid):
+        return SimpleNamespace(pid=pid, creation_filetime=1, executable='synthetic')
+
+    def exclusive_guard(self, paths):
+        keys = tuple(str(Path(path).resolve()) for path in paths)
+        if any(key in self.held for key in keys):
+            raise OSError('Synthetic competing native lifetime')
+        self.held.update(keys)
+        def close():
+            if self.fail_release:
+                raise OSError('Synthetic token release failure')
+            self.held.difference_update(keys)
+        return SimpleNamespace(close=close)
+
+    def available_bytes(self, path):
+        self.targets.append(Path(path))
+        return self.free
+
+    def measure_roots(self, paths, **kwargs):
+        return self.measured
+
+
+def synthetic_owner(path, fs=None):
+    return NativeOwnership(path, filesystem=fs or SyntheticFilesystem())
+
+
+def synthetic_index(path):
+    fs = SyntheticFilesystem()
+    return LanceIndex(path, ownership_factory=lambda token: synthetic_owner(token, fs))
 
 
 class FaultIndex:
@@ -57,6 +163,27 @@ class FaultIndex:
         self.closed = True
 
 
+def close_synthetic_fixture(repo):
+    """Model process end after asserting pending retirement cannot close normally.
+
+    No tree/file is deleted and no product cleanup success is fabricated. This
+    helper applies only to the portable SyntheticFilesystem, not native handles.
+    """
+    assert isinstance(repo._owner.fs, SyntheticFilesystem)
+    if repo._closed:
+        return  # A prior test already explicitly modelled this process ending.
+    if repo._retired_indexes or repo._retirement_owners:
+        with pytest.raises(ApiError) as error:
+            repo.close()
+        assert error.value.code == 'index_cleanup_pending'
+        repo._owner.require()
+        assert repo.maintenance_status()['retirement_pending']
+        repo._owner.fs.held.clear()  # Explicit portable process-termination model.
+        repo._closed = True
+    else:
+        repo.close()
+
+
 @pytest.fixture
 def repository(tmp_path):
     paths = AppPaths.create(tmp_path / 'profile')
@@ -65,11 +192,15 @@ def repository(tmp_path):
     db.apply_migration('knowledge-001', (module / 'schema.sql').read_text())
     for migration in sorted((module / 'migrations').glob('*.sql')):
         db.apply_migration('knowledge-' + migration.stem, migration.read_text())
+    fs = SyntheticFilesystem()
     repo = KnowledgeRepository(Services(paths, db), extractor=SyntheticExtractor(),
-        embedder=SyntheticEmbedder(), index=FaultIndex(paths.indexes / 'knowledge'))
+        embedder=SyntheticEmbedder(), index=FaultIndex(paths.indexes / 'knowledge'),
+        owner=synthetic_owner(paths.state / 'knowledge-native-owner', fs), capacity=KnowledgeCapacity(filesystem=fs))
     yield repo
     repo.index.fail_close = False
-    repo.index.close()
+    for index in repo._retired_indexes.values():
+        index.fail_close = False
+    close_synthetic_fixture(repo)
 
 
 def interrupted(repo):
@@ -113,7 +244,7 @@ def test_lance_delete_success_is_not_optimization_failure(tmp_path):
             self.deletes.append(predicate)
         def optimize(self, **kwargs):
             raise OSError('synthetic optimize fault after delete')
-    index = LanceIndex(tmp_path / 'synthetic-index')
+    index = synthetic_index(tmp_path / 'synthetic-index')
     table = Table()
     index._table = table
     index.remove('rev_synthetic')
@@ -125,15 +256,16 @@ def test_removed_revision_leaves_only_non_destructive_maintenance_debt(repositor
     first = repo.import_text('Synthetic kidney source')
     repo.index.fail_optimize = True
     result = repo.delete_document(first['document_id'])
-    assert repo.db.fetch_all('SELECT * FROM knowledge_cleanup') == []
+    assert repo.db.fetch_all('SELECT * FROM knowledge_cleanup')
     debt = repo.db.fetch_all('SELECT * FROM knowledge_index_work')
     assert any(row['kind'] == 'maintenance' for row in debt)
-    assert not any(row['kind'] == 'removal' for row in debt)
+    assert any(row['kind'] == 'removal' and row['completed_sequence'] == 1 for row in debt)
     assert result['cleanup_pending'] is True
     removed = list(repo.index.removed)
     repo.index.fail_optimize = False
-    assert repo.cleanup() == []
+    assert repo.cleanup()  # Original disposition remains independently pending.
     assert repo.index.removed == removed
+    assert repo.maintenance_status()['original_pending'] == 1
 
 
 def test_stale_cleanup_cannot_remove_current_ready_but_superseded_ready_is_removable(repository):
@@ -171,10 +303,11 @@ def test_published_selector_and_close_failure_is_ready_and_retry_is_cleanup_only
     assert previous.path.exists()
     previous.fail_close = False
     retried = repo.rebuild_index()
-    assert retried['status'] == 'ready' and not retried['cleanup_pending']
+    assert retried['status'] == 'ready' and retried['cleanup_pending']
     assert retried['generation'] == result['generation']
     assert len(candidates) == 1
-    assert previous.closed and not previous.path.exists()
+    assert previous.closed and previous.path.exists()
+    assert repo.maintenance_status()['retirement_pending'] == 1
 
 
 def test_public_recover_cannot_reset_a_live_ingestion_owner(repository):
@@ -239,7 +372,7 @@ def test_lance_close_failure_retains_native_handles_for_retry(tmp_path):
     class Table:
         def __init__(self):
             self._table = Native()
-    index = LanceIndex(tmp_path / 'index')
+    index = synthetic_index(tmp_path / 'index')
     table = Table()
     index._table = table
     with pytest.raises(OSError):
@@ -263,7 +396,7 @@ def test_machine_local_debt_is_excluded_from_export(repository):
     assert records['knowledge_cleanup'][0]['revision_id'] == item['revision_id']
 
 
-def test_optimize_uses_public_safe_retention_defaults_and_never_deletes_rows(tmp_path):
+def test_optimize_uses_public_owned_snapshot_retention_and_never_deletes_rows(tmp_path):
     class Table:
         def __init__(self):
             self.options = []
@@ -278,16 +411,13 @@ def test_optimize_uses_public_safe_retention_defaults_and_never_deletes_rows(tmp
             yield
         finally:
             leases.append('settled')
-    index = LanceIndex(tmp_path / 'index')
+    index = synthetic_index(tmp_path / 'index')
     table = Table()
     index._table = table
-    with pytest.raises(ApiError) as error:
-        index.optimize()
-    assert error.value.code == 'index_maintenance_owner_required'
-    assert table.options == []
     index.maintenance_guard = synthetic_owner
     assert index.optimize() == 'coalesced'
-    assert table.options == [{'delete_unverified': False}]
+    index._ownership.require()  # Native lifetime outlives the maintenance call.
+    assert table.options == [{'cleanup_older_than': timedelta(0), 'delete_unverified': False}]
     assert leases == ['entered', 'settled']
 
 
@@ -305,7 +435,7 @@ def test_connection_close_failure_retains_only_the_unresolved_connection(tmp_pat
     class Connection:
         def __init__(self):
             self._conn = Native(fail=True)
-    index = LanceIndex(tmp_path / 'index')
+    index = synthetic_index(tmp_path / 'index')
     table, connection = Table(), Connection()
     index._table, index._connection = table, connection
     with pytest.raises(OSError):
@@ -331,12 +461,14 @@ def test_original_cleanup_failure_retries_files_not_successful_native_delete(rep
             raise OSError('Synthetic locked original')
         return remove_tree(path, *args, **kwargs)
     with monkeypatch.context() as patch:
-        patch.setattr('renulus.knowledge.repository.shutil.rmtree', fail)
+        patch.setattr('shutil.rmtree', fail)
         assert repo.delete_document(item['document_id'])['cleanup_pending']
     removed = list(repo.index.removed)
-    assert repo.cleanup() == []
+    assert repo.cleanup()
     assert repo.index.removed == removed
-    assert not folder.exists()
+    assert folder.exists()
+    row = repo.db.fetch_one("SELECT * FROM knowledge_index_work WHERE kind='removal'")
+    assert row['completed_sequence'] == 1 and row['error_code'] == 'original_cleanup_pending'
 
 
 def test_cleanup_backoff_and_explicit_retry_do_not_turn_append_into_maintenance(repository, monkeypatch):
@@ -398,14 +530,23 @@ def test_published_cleanup_only_retry_survives_reopen(repository, monkeypatch):
     published = repo.rebuild_index()
     assert published['cleanup_pending'] and previous.closed
     repo.index.close()
+    # Model process termination, not a graceful close: failed folder retirement
+    # would intentionally keep the live repository fenced. No production path
+    # treats PID/timeout metadata as settlement.
+    fs = repo._owner.fs
+    fs.held.clear()
+    repo._closed = True
     reopened = KnowledgeRepository(repo.services, extractor=SyntheticExtractor(),
-        embedder=SyntheticEmbedder(), index=FaultIndex(repo._selected_index_path()))
+        embedder=SyntheticEmbedder(), index=FaultIndex(repo._selected_index_path()),
+        owner=synthetic_owner(repo.paths.state / 'knowledge-native-owner', fs), capacity=KnowledgeCapacity(filesystem=fs))
     def no_build(*args):
         pytest.fail('A ready publication must not be rebuilt for retirement retry')
     reopened.embedder.embed = no_build
     result = reopened.rebuild_index()
-    assert result == {**published, 'cleanup_pending': False}
-    assert reopened.index.path.exists() and not previous.path.exists()
+    assert result == published  # Ready publication, still pending safe reclamation.
+    assert reopened.index.path.exists() and previous.path.exists()
+    assert reopened.maintenance_status()['retirement_pending'] == 1
+    close_synthetic_fixture(reopened)
 
 
 def test_failed_candidate_close_retains_handle_until_cleanup_and_preserves_original_error(repository, monkeypatch):
@@ -428,8 +569,9 @@ def test_failed_candidate_close_retains_handle_until_cleanup_and_preserves_origi
     assert repo.index is old and candidate.path.exists() and not candidate.closed
     assert repo.cleanup()
     candidate.fail_close = False
-    assert repo.cleanup() == []
-    assert candidate.closed and not candidate.path.exists()
+    assert repo.cleanup()
+    assert candidate.closed and candidate.path.exists()
+    assert repo.maintenance_status()['retirement_pending'] == 1
 
 
 def test_cleanup_revalidates_sweep_intent_before_destructive_call(repository, monkeypatch):
@@ -482,9 +624,10 @@ def test_restore_reconstructs_removal_fence_without_resetting_owned_retirement(r
     assert retired.path.exists()
     repo.index.fail_remove = False
     retired.fail_close = False
-    assert repo.cleanup() == []
+    assert repo.cleanup()  # Row-removal fences clear; unrelated retirement stays pending.
     assert repo.run_job(item['job']['id'])['state'] == 'ready'
-    assert retired.closed and not retired.path.exists()
+    assert retired.closed and retired.path.exists()
+    assert repo.maintenance_status()['retirement_pending'] == 1
 
 
 def test_worker_retries_due_fence_without_restarting_or_duplicate_staging(repository, monkeypatch):
@@ -525,9 +668,11 @@ def test_removal_sweeps_are_bounded_and_remaining_intent_stays_durable(repositor
             repo._cancel_in(conn, item['job']['id'], item['revision_id'], 'synthetic-cancel')
     assert repo.cleanup()
     assert len(repo.index.removed) == CLEANUP_SWEEP
-    assert len(repo.db.fetch_all('SELECT * FROM knowledge_cleanup')) == 1
-    assert repo.cleanup() == []
+    assert len(repo.db.fetch_all('SELECT * FROM knowledge_cleanup')) == CLEANUP_SWEEP + 1
+    assert repo.db.fetch_one("SELECT COUNT(*) AS n FROM knowledge_index_work WHERE kind='removal' AND completed_sequence=1")['n'] == CLEANUP_SWEEP
+    assert repo.cleanup()  # All originals remain pending; row removals stay bounded/independent.
     assert len(repo.index.removed) == CLEANUP_SWEEP + 1
+    assert repo.maintenance_status()['original_pending'] == CLEANUP_SWEEP + 1
 
 
 def test_failed_table_open_reuses_its_still_owned_connection(tmp_path, monkeypatch):
@@ -555,7 +700,7 @@ def test_failed_table_open_reuses_its_still_owned_connection(tmp_path, monkeypat
         opened.append(connection)
         return connection
     monkeypatch.setitem(sys.modules, 'lancedb', SimpleNamespace(connect=connect))
-    index = LanceIndex(tmp_path / 'index')
+    index = synthetic_index(tmp_path / 'index')
     with pytest.raises(OSError):
         index._open()
     assert index._connection is opened[0]

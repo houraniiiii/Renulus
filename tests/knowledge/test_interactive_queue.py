@@ -21,6 +21,8 @@ from renulus.knowledge.repository import KnowledgeRepository
 from renulus.knowledge.worker import IngestionWorker
 from renulus.services import Services
 from renulus.storage import AppPaths, Database
+from renulus.knowledge.ownership import KnowledgeCapacity
+from test_storage_reliability import SyntheticFilesystem, synthetic_owner
 
 
 class SyntheticExtractor:
@@ -87,8 +89,12 @@ def repository(tmp_path):
     for migration in sorted((module / "migrations").glob("*.sql")):
         db.apply_migration("knowledge-" + migration.stem, migration.read_text(encoding="utf-8"))
     services = Services(paths, db)
-    return KnowledgeRepository(services, extractor=SyntheticExtractor(), embedder=SyntheticEmbedder(),
-        index=SyntheticIndex(paths.indexes / "knowledge"))
+    fs = SyntheticFilesystem()
+    repo = KnowledgeRepository(services, extractor=SyntheticExtractor(), embedder=SyntheticEmbedder(),
+        index=SyntheticIndex(paths.indexes / 'knowledge'), owner=synthetic_owner(paths.state / 'knowledge-native-owner', fs),
+        capacity=KnowledgeCapacity(filesystem=fs))
+    yield repo
+    repo.close()
 
 
 @pytest.fixture
@@ -111,7 +117,7 @@ def client(repository, tmp_path, monkeypatch):
         yield api, worker
     finally:
         repository.extractor.release.set()
-        worker.stop()
+        worker.stop(None)
         api.close()
 
 
@@ -263,14 +269,18 @@ def test_interrupted_selected_hint_survives_new_worker_recovery(client, reposito
     assert hints(repository) == [job_id]
     repository.db.execute("UPDATE knowledge_jobs SET state='processing',phase='extraction' WHERE id=?", (job_id,))
     repository.db.execute("UPDATE knowledge_revisions SET status='processing' WHERE id=?", (direct["revision_id"],))
+    repository.close()
+    fs = repository._owner.fs
     fresh = KnowledgeRepository(repository.services, extractor=SyntheticExtractor(),
-        embedder=SyntheticEmbedder(), index=repository.index)
+        embedder=SyntheticEmbedder(), index=repository.index,
+        owner=synthetic_owner(repository.paths.state / 'knowledge-native-owner', fs), capacity=KnowledgeCapacity(filesystem=fs))
     restarted = IngestionWorker(fresh)
     try:
         restarted.start()
         wait_ready(fresh, [job_id, *bulk])
     finally:
-        restarted.stop()
+        restarted.stop(None)
+        fresh.close()
     assert fresh.extractor.titles == ["restart-priority", "bulk-0", "bulk-1"]
     assert fresh.db.fetch_one("SELECT COUNT(*) AS n FROM knowledge_passages WHERE revision_id=?",
                             (direct["revision_id"],))["n"] == 1
