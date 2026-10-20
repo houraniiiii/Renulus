@@ -19,9 +19,11 @@ Library cleanup and index-growth fixes are included. This is a source delivery
 on this PC, with Node and helper dependencies supplied by the development setup.
 The previous **f1c49444** installation remains at `C:/Renulus/app` for recovery.
 Read the [MVP delivery record](docs/implementation/MVP_20261019.md) for verification,
-account failures, recovery and remaining scope. Successful live generation through
-the new host has not been established; the latest Codex probe reported a
-subscription usage limit.
+account failures, recovery and remaining scope. An October 20 live check through
+the production desktop assembly successfully generated and saved a short answer
+with the selected Codex GPT 6.1 Sol route, removed its synthetic conversation and
+closed cleanly. The earlier quota failure is retained as historical evidence;
+live OpenCode Go acceptance remains unverified.
 
 The canonical checkout is `C:/Renulus/dev/repo`. The earlier
 [Design C handoff](docs/implementation/DESIGN_C_OPENCODE_HANDOFF.md) and
