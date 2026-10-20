@@ -369,7 +369,8 @@ class ProfileOwnerLease:
             return identity
 
 
-def acquire_profile_owner(scope: ProfileOwnerScope, *, initialize_new: bool = False) -> ProfileOwnerLease:
+def acquire_profile_owner(scope: ProfileOwnerScope, *, initialize_new: bool = False,
+                          adopt_legacy: bool = False) -> ProfileOwnerLease:
     """Bind once on the dedicated process's main thread, before any app writes.
 
     Every acquisition error is fatal to bootstrap. If assignment already passed,
@@ -379,12 +380,12 @@ def acquire_profile_owner(scope: ProfileOwnerScope, *, initialize_new: bool = Fa
     """
     with _ACQUIRE_LOCK:
         try:
-            return _acquire(scope, initialize_new=initialize_new)
+            return _acquire(scope, initialize_new=initialize_new, adopt_legacy=adopt_legacy)
         except OSError:
             _deny("profile_owner_storage_unavailable")
 
 
-def _acquire(scope, *, initialize_new):
+def _acquire(scope, *, initialize_new, adopt_legacy=False):
     global _BOUND_OWNER
     if os.name != "nt":
         _deny("profile_owner_windows_required")
@@ -393,7 +394,7 @@ def _acquire(scope, *, initialize_new):
     if _BOUND_OWNER is not None or _LIFETIME_HANDLES:
         _deny("profile_owner_process_bound")
     _validate_scope(scope)
-    if type(initialize_new) is not bool:
+    if type(initialize_new) is not bool or type(adopt_legacy) is not bool:
         _deny("profile_owner_scope_invalid")
     kernel = _Kernel()
     keys = _scope_keys(scope)
@@ -401,7 +402,11 @@ def _acquire(scope, *, initialize_new):
     job, assigned = None, False
     try:
         empty = not scope.root.exists() or (scope.root.is_dir() and not any(scope.root.iterdir()))
-        previous_generation, receipt_sha256 = (None, None) if initialize_new and empty else (
+        # Ordinary desktop startup already owns Electron's profile instance lock.
+        # A pre-OpenCode profile has no native store or prior issuer to recover.
+        legacy = (adopt_legacy and not (scope.root / _JOURNAL).exists()
+                  and not (scope.root / 'state/harness').exists())
+        previous_generation, receipt_sha256 = (None, None) if (initialize_new and empty) or legacy else (
             _previous(scope.root, keys, kernel))
         generation = uuid4().hex
         job_name = _job_name(keys, generation)

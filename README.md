@@ -8,20 +8,25 @@ It uses the selected existing models through Codex and/or OpenCode Go
 subscriptions, without retraining.
 The project owner will not host a service or model inference.
 
-This repository contains the Windows app, Design C integration, original
-teaching packs and dated evidence. The active `codex/design-c-integration` branch
-implements saved chats/projects, contextual readers, Notes and whole Study/Test
-attempts on the existing Hermes foundation. The
-[Design C implementation spec](docs/planning/DESIGN_C_IMPLEMENTATION_SPEC.md)
-records each ticket's evidence and remaining acceptance gates. The owner has
-selected OpenCode v2 for the next harness migration. This task now closes the
-connected Design C UI and [integration handoff](docs/implementation/DESIGN_C_OPENCODE_HANDOFF.md);
-final default Windows delivery is deferred from DC21 to combined H20. The current
-Hermes adapters remain working until their explicit migration replacements land.
-The canonical checkout is `C:/Renulus/dev/repo`; the normal shortcut selects the
-unchanged validated **f1c49444** app at `C:/Renulus/app`. The learning/account
-profile is preserved at `C:/Renulus/data/learning`; normal startup/reopen and
-saved-state/connection checks passed after migration.
+This repository contains the Windows app, Design C interface, original teaching
+packs and dated evidence. The owner's October 19 instruction authorized a local
+MVP and shortcut cutover. The normal `C:/Renulus/Start-Renulus.cmd` now selects
+the source build on `codex/renulus-mvp` at
+`C:/Users/karol/.codex/worktrees/renulus-mvp/repo`, using the existing
+`C:/Renulus/data/learning` profile. Saved learning chat uses the pinned OpenCode
+v2 host; other producers retain their existing implementation. The bounded
+Library cleanup and index-growth fixes are included. This is a source delivery
+on this PC, with Node and helper dependencies supplied by the development setup.
+The previous **f1c49444** installation remains at `C:/Renulus/app` for recovery.
+Read the [MVP delivery record](docs/implementation/MVP_20261019.md) for verification,
+account failures, recovery and remaining scope. Successful live generation through
+the new host has not been established; the latest Codex probe reported a
+subscription usage limit.
+
+The canonical checkout is `C:/Renulus/dev/repo`. The earlier
+[Design C handoff](docs/implementation/DESIGN_C_OPENCODE_HANDOFF.md) and
+[implementation spec](docs/planning/DESIGN_C_IMPLEMENTATION_SPEC.md) retain their
+dated acceptance scopes; they do not describe the current shortcut selection.
 See the [October 8 storage cleanup](docs/implementation/storage-cleanup-20261008.md).
 Content1.4.2 has251 questions and59 cases across27
 topics, with General and partial ESENeph preparation. The final bounded composite accepts

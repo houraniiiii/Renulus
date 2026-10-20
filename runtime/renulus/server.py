@@ -1,10 +1,10 @@
-"""Narrow local product API. Hermes is the sole generative agent foundation."""
+"""Local product API with explicit legacy or native desktop learning assembly."""
 import argparse
 import importlib
 import os
 from pathlib import Path
 import secrets
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, closing
 import inspect
 import asyncio
 import json
@@ -162,12 +162,16 @@ def create_app(profile: str | Path, token: str | None = None, source_root=None, 
         return path.startswith("/api/v1/")
 
     def captured_policy(expected=None):
-        with services.db.transaction() as conn:
+        # Each response chunk needs a fresh, consistent read. Reserving the
+        # SQLite writer here blocks streaming behind unrelated Library work.
+        with closing(services.db.connect()) as conn:
+            conn.execute("BEGIN")
             return require_assistance(conn, expected_revision=expected)
 
     def captured_help(context):
         from .storage.study_help import require_context_in
-        with services.db.transaction() as conn:
+        with closing(services.db.connect()) as conn:
+            conn.execute("BEGIN")
             return require_context_in(services, conn, context)
 
     def policy_error(error):
@@ -324,6 +328,8 @@ def main():
     parser.add_argument("--profile", required=True, help="Explicit isolated writable profile")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--source-root")
+    parser.add_argument("--desktop-harness", action="store_true",
+        help="Use the selected subscription with lazy native OpenCode learning startup")
     parser.add_argument("--harness-startup", type=Path,
         help="Explicit managed harness startup metadata; normal startup remains the default")
     args = parser.parse_args()
@@ -331,7 +337,12 @@ def main():
     token = os.environ.get("RENULUS_SESSION_TOKEN")
     if not token:
         raise SystemExit("RENULUS_SESSION_TOKEN is required for standalone startup")
-    if args.harness_startup is None:
+    if args.desktop_harness and args.harness_startup is not None:
+        parser.error("--desktop-harness and --harness-startup are mutually exclusive")
+    if args.desktop_harness:
+        from .runtime.desktop_harness import create_desktop_app
+        app = create_desktop_app(args.profile, token=token, source_root=args.source_root)
+    elif args.harness_startup is None:
         app = create_app(args.profile, token, args.source_root)
     else:
         from .runtime.harness_startup import create_managed_app, load_startup_options

@@ -1,5 +1,13 @@
 # Renulus project brief
 
+Current delivery update, October 20: the owner authorized a local Design C MVP
+with saved learning chat on OpenCode v2, bounded Library storage repairs and
+ordinary shortcut cutover. The source delivery, retained previous installation,
+account failures and verification are recorded in
+[MVP_20261019.md](implementation/MVP_20261019.md). This supersedes the older
+default-cutover restriction below for this PC. It does not mark the full harness
+migration or packaged acceptance complete.
+
 Confirmed direction updated on 2026-10-04 from the
 [user's answers in rounds 1–3 and subsequent stack approval](planning/2026-10-04-user-answers.md).
 The October 9–10 decisions add saved conversations by default and select Design C

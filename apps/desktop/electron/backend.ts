@@ -45,7 +45,7 @@ export async function startBackend(options: { profile: DesktopProfile; token: st
   const args = [...(fixture ? [path.join(workspace, 'tools/renulus-control', options.learningFixture ? 'harness-learning-backend.py' : 'harness-settings-backend.py')]
     : packaged ? ['-I', '-B', '-X', 'utf8', path.join(bundleRoot, 'bootstrap.py')] : ['-m', 'renulus.server']),
     '--profile', profile.root, '--port', String(port), ...(packaged ? ['--source-root', bundleRoot] : []),
-    ...(fixture ? ['--harness-startup', fixture.startupDocument, '--harness-startup-sha256', fixture.startupSha256, '--helper-assets', fixture.helperAssets] : [])];
+    ...(fixture ? ['--harness-startup', fixture.startupDocument, '--harness-startup-sha256', fixture.startupSha256, '--helper-assets', fixture.helperAssets] : ['--desktop-harness'])];
   const deps = {
     forceKillProcessTree: (pid: number) => { execFileSync('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore', timeout: 10000 }); },
     isProcessAlive: (pid: number): boolean | undefined => {

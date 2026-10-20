@@ -54,7 +54,8 @@ def _invalid_constant(value):
     raise ValueError("nonfinite JSON")
 
 
-def _sse_failure(payload: bytes | bytearray, credential: str) -> tuple[bool, str | None]:
+def _sse_failure(payload: bytes | bytearray, credential: str, *,
+                 require_data: bool = False) -> tuple[bool, str | None]:
     try:
         text = payload.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
     except UnicodeError:
@@ -62,9 +63,13 @@ def _sse_failure(payload: bytes | bytearray, credential: str) -> tuple[bool, str
     secrets = (credential, base64.b64encode(credential.encode()).decode())
     text_tail = ""
     tail_size = max(map(len, secrets))
+    seen_data = False
     for frame in text.split("\n\n"):
         data = "\n".join(line[5:].lstrip(" ") for line in frame.split("\n") if line.startswith("data:"))
-        if not data or data == "[DONE]":
+        if not data:
+            continue
+        seen_data = True
+        if data == "[DONE]":
             continue
         try:
             event = json.loads(data)
@@ -96,6 +101,8 @@ def _sse_failure(payload: bytes | bytearray, credential: str) -> tuple[bool, str
             if any(secret in joined for secret in secrets):
                 _deny("gateway_credential_echo")
             text_tail = joined[-tail_size:]
+    if require_data and not seen_data:
+        _deny("gateway_invalid_response")
     return False, None
 
 
@@ -318,10 +325,10 @@ class HarnessGateway:
                         "rate_limit_exceeded" if response.status_code == 429 else None)
                 public = self.manager.observe_harness_stream_error(route, code)
                 raise ApiError(public.code, public.message, public.status, False) from None
-            if (response.status_code != 200
-                    or response.headers.get("content-type", "").split(";")[0].strip().lower() != "text/event-stream"):
+            content_type = response.headers.get("content-type", "").split(";")[0].strip().lower()
+            if response.status_code != 200 or content_type not in {"text/event-stream", ""}:
                 _deny("gateway_invalid_response")
-            failed, code = _sse_failure(payload, credential)
+            failed, code = _sse_failure(payload, credential, require_data=content_type == "")
             if failed:
                 public = self.manager.observe_harness_stream_error(route, code)
                 raise ApiError(public.code, public.message, public.status, False) from None

@@ -6,6 +6,20 @@ remain proposals unless accepted here.
 
 ## Confirmed choices
 
+### October 19–20 local MVP and bounded storage closeout
+
+The owner authorized a local Design C/OpenCode v2 MVP and normal Desktop launcher
+cutover while retaining the learning profile and previous installation. Include
+the bounded Library cleanup/index-maintenance fixes from #25/#26; development
+storage infrastructure and automatic retention (#27–#29) are deferred. The
+subsequent instruction "1 and 2" authorized removing the two interrupted synthetic
+connection probes, fixing the gateway response handling and committing/synchronizing
+the MVP source. "finish up" continues that closeout. See the
+[recorded answers](planning/2026-10-04-user-answers.md#october-19-and-20-local-mvp-closeout)
+and [delivery record](implementation/MVP_20261019.md). Account usage limits remain
+visible failures; this adds no paid fallback or permission to switch subscriptions
+automatically.
+
 ### October 10 superseding harness direction and Design C closeout
 
 The owner selected **OpenCode v2 for the next harness migration**, retaining

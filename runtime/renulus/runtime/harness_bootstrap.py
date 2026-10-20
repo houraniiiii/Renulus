@@ -108,16 +108,20 @@ class HarnessBootstrap:
 
     async def start(self, *, authority: ConfigurationAuthority, provider: ProviderManager,
                     launch_store: LaunchArtifactStore, assemble_runtime: RuntimeFactory,
-                    initial_spec: ConfigurationSpec | None = None) -> BootstrapResult:
+                    initial_spec: ConfigurationSpec | None = None,
+                    replace_on_restart: bool = False,
+                    defer_failure_cleanup: bool = False) -> BootstrapResult:
         self._require_binding(authority, provider)
-        arguments = (authority, provider, launch_store, assemble_runtime, initial_spec)
+        arguments = (authority, provider, launch_store, assemble_runtime, initial_spec,
+            replace_on_restart, defer_failure_cleanup)
         if self._arguments is not None and (any(left is not right for left, right
-                in zip(arguments[:4], self._arguments[:4])) or initial_spec != self._arguments[4]):
+                in zip(arguments[:4], self._arguments[:4])) or arguments[4:] != self._arguments[4:]):
             raise ApiError("harness_bootstrap_conflict", "Startup is already bound to another request.", 409)
         if self._starting is None:
             self._arguments = arguments
             self._starting = asyncio.create_task(
-                self._start_guarded(authority, provider, launch_store, assemble_runtime, initial_spec),
+                self._start_guarded(authority, provider, launch_store, assemble_runtime, initial_spec,
+                    replace_on_restart, defer_failure_cleanup),
                 name="renulus-harness-bootstrap")
             self._starting.add_done_callback(lambda task: None if task.cancelled() else task.exception())
         result = await asyncio.shield(self._starting)
@@ -245,14 +249,19 @@ class HarnessBootstrap:
         if authority.activation_snapshot()["pinned_runs"]:
             raise ApiError("harness_bootstrap_recovery_pending", "Unknown receipts still own policy pins.", 409, True)
 
-    async def _start_guarded(self, authority, provider, launch_store, assemble_runtime, initial_spec):
+    async def _start_guarded(self, authority, provider, launch_store, assemble_runtime, initial_spec,
+                             replace_on_restart=False, defer_failure_cleanup=False):
         try:
-            return await self._start(authority, provider, launch_store, assemble_runtime, initial_spec)
+            return await self._start(authority, provider, launch_store, assemble_runtime, initial_spec,
+                replace_on_restart)
         except BaseException as error:
             if self._draining is not None:
                 # The public drain joins this task before runtime/Services cleanup.
                 raise ApiError("runtime_stopping", "The harness bootstrap is closing.", 503, True) from None
-            if self._runtime is not None:
+            # Lazy desktop activation runs inside a Services-owned HTTP handler.
+            # A whole-app drain here would wait for that same handler. Keep the
+            # installed runtime owned by Services until normal close instead.
+            if self._runtime is not None and not defer_failure_cleanup:
                 try:
                     await self._close_runtime()
                 except BaseException as cleanup_error:
@@ -266,7 +275,8 @@ class HarnessBootstrap:
                     error = changed
             raise _safe_failure(error) from None
 
-    async def _start(self, authority, provider, launch_store, assemble_runtime, initial_spec):
+    async def _start(self, authority, provider, launch_store, assemble_runtime, initial_spec,
+                     replace_on_restart=False):
         self._require_binding(authority, provider)
         previous = authority.activation_snapshot()
         if previous["pinned_runs"] and self.profile_owner.predecessor.previous_generation is None:
@@ -279,18 +289,19 @@ class HarnessBootstrap:
         self._local_connection = provider.configuration_connection()
         if self._local_connection is None:
             return BootstrapResult(status["effective"], False, "harness_bootstrap_no_connection")
-        if initial_spec is not None and any(status[key] is not None
+        if not replace_on_restart and initial_spec is not None and any(status[key] is not None
                 for key in ("effective", "requested", "activating")):
             raise ApiError("activation_conflict", "An initial policy requires null pointers.", 409)
         if status["effective"] is None and initial_spec is None:
             return BootstrapResult(status["effective"], False, "harness_bootstrap_policy_required")
-        initial = status["effective"] is None
+        initial = status["effective"] is None or (replace_on_restart and initial_spec is not None
+            and initial_spec != status["configuration"])
         spec = initial_spec if initial else status["configuration"]
         provider.require_configuration_connection(spec.connection)
         inputs = self._launch(launch_store, spec)
         if initial:
-            version = authority.stage_if_current(spec, expected_effective=None,
-                expected_requested=None, grant_epoch=status["grant_epoch"], expected_activating=None)
+            version = authority.stage_if_current(spec, expected_effective=status["effective"],
+                expected_requested=status["requested"], grant_epoch=status["grant_epoch"], expected_activating=None)
         else:
             version = status["effective"]
         candidate = Candidate(version, spec, status["grant_epoch"])
@@ -309,7 +320,7 @@ class HarnessBootstrap:
         if not authority.validate(version, observed):
             raise ApiError("candidate_unhealthy", "The isolated candidate did not validate.", 409, True)
         if initial:
-            authority.activate(version, self._boundary(), expected_effective=None)
+            authority.activate(version, self._boundary(), expected_effective=status["effective"])
             expected.update(effective=version, activating=version)
         self._current(*self._observation)
         live = await self._runtime.start_live(candidate)

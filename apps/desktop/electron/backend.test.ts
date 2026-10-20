@@ -126,6 +126,7 @@ describe('owned backend cold startup', () => {
     expect(outcome).not.toHaveProperty('error');
     if (!('value' in outcome)) throw outcome.error;
     expect(outcome.value).toMatchObject({ owned: true, port: 18777, child });
+    expect(io.spawn.mock.calls[0]?.[1]).toContain('--desktop-harness');
     expect(setup.onOwnedChild).toHaveBeenCalledOnce();
     expect(io.execFileSync).not.toHaveBeenCalled();
     await outcome.value.stop();

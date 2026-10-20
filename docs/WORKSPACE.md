@@ -12,12 +12,15 @@ part of this repository.
 
 ## This PC's storage layout
 
-The active integration branch is `codex/design-c-integration`. Its current scope
-is the [bounded Design C closeout and OpenCode handoff](implementation/DESIGN_C_OPENCODE_HANDOFF.md),
-not a separate Hermes default cutover. Read the captured planning documents in
-the canonical tree; do not merge older source or modify the original uncommitted
-planning worktree `C:/Users/karol/.codex/worktrees/a11f/repo`. The normal launcher,
-owner profile and credentials remain unchanged.
+The October 19 MVP is on `codex/renulus-mvp` at
+`C:/Users/karol/.codex/worktrees/renulus-mvp/repo`. The ordinary launcher selects
+that built source app and the existing `C:/Renulus/data/learning` profile. The
+previous packaged app remains at `C:/Renulus/app`; this local MVP does not replace
+its files or prove packaged acceptance. See the
+[current delivery record](implementation/MVP_20261019.md). The canonical and T3
+source views are synchronized by the parent during closeout. Keep the original
+planning worktree `C:/Users/karol/.codex/worktrees/a11f/repo` separate and preserve
+unfinished storage work in its existing worktrees.
 
 | Location under `C:/Renulus` | Purpose |
 | --- | --- |

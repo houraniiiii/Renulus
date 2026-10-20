@@ -658,6 +658,25 @@ The subsequent [implementation handoff](../implementation/OPENCODE_FOUNDATIONS_H
 records H01/H24's completed local scope, source commits, real SDK/store and IPC
 tests, memory/application settlement tests, hidden UI checks and remaining
 baseline failures. This is an engineering result under the instruction above,
-not a new user decision. The default application still uses the existing
+not a new user decision. At that checkpoint the default application still used the existing
 execution path; H02, selected-account integration, migration and release remain
 later work.
+
+## October 19 and 20 local MVP closeout
+
+The October 19 MVP instruction, retained in
+[MVP_20261019.md](../implementation/MVP_20261019.md), authorizes the Design C source
+app, OpenCode v2 saved learning chat, necessary Library fixes and local Desktop
+shortcut cutover with existing data and subscription choices preserved. The
+unfinished development-storage campaign (#27–#29) is deferred.
+
+In this thread the assistant offered two concrete follow-ups: (1) clean up the
+two stuck synthetic `verify-live.py` probes and fix gateway response handling;
+(2) commit and synchronize the bounded #25/#26 and MVP changes in the MVP and
+T3 workspaces. The owner answered **"1 and 2"** on October 20 local time, then
+**"finish up"** after the provider interruption. Those actions are authorized.
+
+The exact gateway fix, verification results and delivery limitations are
+engineering findings in the delivery record. Future EmbeddingGemma 2 migration
+remains later work. A subscription quota failure is not authorization for a paid
+API fallback or an automatic change of provider/model.

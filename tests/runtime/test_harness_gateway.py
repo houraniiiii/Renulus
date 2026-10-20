@@ -90,6 +90,7 @@ async def test_one_protected_post_returns_bounded_native_bytes_and_spends_one_pe
         calls.append(request)
         if request.headers.get("authorization") != "Bearer " + credential:
             pytest.fail("Final HTTP did not receive the protected credential", pytrace=False)
+        assert request.headers["accept-encoding"] == "identity"
         assert authority.run("learning-run")["spent_dispatches"] == 1
         return httpx.Response(200, headers={"content-type": "text/event-stream",
             "set-cookie": "untrusted-provider-state"}, content=payload)
@@ -470,6 +471,43 @@ async def test_failed_sse_uses_machine_code_without_returning_provider_prose(con
         pytest.fail("Provider prose leaked through a machine failure", pytrace=False)
     with pytest.raises(ApiError):
         manager.require_harness_route(route)
+    authority.settle_run("learning-run")
+
+
+async def test_chunked_sse_without_content_type_header_requires_sse_frames_and_maps_machine_errors(configured):
+    _, authority, route, credential = configured
+    payload = (b"event: response.created\ndata: " + json.dumps({"type": "response.created",
+        "response": {"id": "resp_1", "status": "in_progress"}}).encode()
+        + b"\n\nevent: error\ndata: " + json.dumps({"type": "error", "error": {
+            "code": "subscription_sharing_usage_limit_exceeded", "message": credential}}).encode() + b"\n\n")
+    client = gateway(configured, lambda request: httpx.Response(200,
+        headers={"transfer-encoding": "chunked"}, content=payload))
+    with pytest.raises(ApiError) as denied:
+        await dispatch(client, route)
+    assert denied.value.code == "subscription_limit"
+    assert authority.run("learning-run")["spent_dispatches"] == 1
+    authority.settle_run("learning-run")
+
+
+async def test_valid_sse_without_content_type_is_forwarded_with_normalized_header(configured):
+    _, authority, route, _ = configured
+    payload = b'data: {"choices":[{"delta":{"content":"Synthetic answer"}}]}\n\ndata: [DONE]\n\n'
+    result = await dispatch(gateway(configured, lambda request: httpx.Response(200,
+        headers={"transfer-encoding": "chunked"}, content=payload)), route)
+    assert result["headers"] == {"content-type": "text/event-stream"}
+    assert base64.b64decode(result["body_base64"]) == payload
+    assert authority.permit(result["permit_id"])["state"] == "confirmed"
+    authority.settle_run("learning-run")
+
+
+@pytest.mark.parametrize("payload", [b"", b"<html>upstream error</html>", b"{}",
+    b": keepalive\n\n", b"data: invalid json\n\n", b"data: []\n\n"])
+async def test_response_without_content_type_must_contain_valid_sse_data(configured, payload):
+    _, authority, route, _ = configured
+    with pytest.raises(ApiError) as denied:
+        await dispatch(gateway(configured, lambda request: httpx.Response(200, content=payload)), route)
+    assert denied.value.code == "gateway_invalid_response"
+    assert authority.run("learning-run")["spent_dispatches"] == 1
     authority.settle_run("learning-run")
 
 

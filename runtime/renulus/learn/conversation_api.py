@@ -40,6 +40,9 @@ def create_router(services):
     @router.get("/{kind}/{identifier}/messages")
     async def messages(kind: Literal["learning", "case"], identifier: str, limit: int = Query(default=50, ge=1, le=100),
                  cursor: str | None = Query(default=None, max_length=2048)):
+        desktop = services.registry.get('desktop_harness') if kind == 'learning' else None
+        if desktop is not None and desktop.has_native_history(identifier):
+            await desktop.ensure()
         harness = services.registry.get('learning_harness') if kind == 'learning' else None
         if harness is not None and hasattr(harness, 'messages'):
             return await harness.messages(identifier, limit, cursor)
@@ -87,6 +90,9 @@ def create_router(services):
 
     @router.post('/{kind}/{identifier}/messages')
     async def send(kind: Literal['learning','case'], identifier: str, body: Send, idempotency_key: str | None = Header(default=None)):
+        desktop = services.registry.get('desktop_harness') if kind == 'learning' else None
+        if desktop is not None and repository.get(kind, identifier)['retention'] == 'saved':
+            await desktop.ensure()
         owner = services.registry.get('harness_learning') if kind == 'learning' else None
         if owner is not None:
             await owner.prepare_saved_continuation(identifier, expected_revision=body.expected_revision)
