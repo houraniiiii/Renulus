@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 import type { NativeTransport } from '../dispatch/native.ts';
 import type { Permit } from '../dispatch/contracts.ts';
-import type { TransportPlan, TransportResult } from '../../../contracts/worker.ts';
+import type { HttpPlan as WorkerHttpPlan, TransportPlan, TransportResult } from '../../../contracts/worker.ts';
 import type { WorkerChannel } from './channel.ts';
 import { canonicalJson } from '../contracts/worker-codec.ts';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { createEngineArtifacts } from './artifacts.ts';
 import { reject } from '../storage/contracts.ts';
 
@@ -72,5 +72,73 @@ export function createWorkerTransport(options: {
         await artifacts.release(output.artifact_handle, binding);
       }
     },
+  };
+}
+
+export function createWorkerHttp(options: {
+  channel: WorkerChannel; maxChunkBytes: number; retention: 'saved' | 'temporary';
+}): import('../domain/capabilities/contracts.ts').CapabilityTransport['http'] {
+  const artifacts = createEngineArtifacts(options.channel, options.maxChunkBytes);
+  return async (plan, signal) => {
+    signal.throwIfAborted();
+    const { lease } = plan, envelope = lease.envelope;
+    if (lease.id !== plan.lease_id || lease.state !== 'admitted' || envelope.retention !== options.retention)
+      reject('capability_lease_invalid');
+    const binding = { operation_id: envelope.run_id, attempt_id: lease.id };
+    const output = artifacts.output(plan.max_response_bytes, lease.grant.expires_at_ms);
+    let call: ReturnType<WorkerChannel['submitBound']> | undefined;
+    let cancelTask: Promise<void> | undefined;
+    const cancel = () => { cancelTask ??= (async () => {
+      if (!call) return;
+      const admitted = await call.admission;
+      if (admitted.reply.settlement.state === 'settled') return;
+      const control = options.channel.submit('worker.settle', { action: 'cancel', target: {
+        identity: admitted.reply.identity, request_sha256: admitted.reply.request_sha256,
+        worker_lease: admitted.reply.settlement.worker_lease }, revisions: null, artifact_handle: null }, binding);
+      await control.terminal; options.channel.release(control.requestId);
+    })(); void cancelTask.catch(() => {}); };
+    try {
+      call = options.channel.submitBound('transport.http', (identity, revisions): WorkerHttpPlan => ({
+        permit_id: 'http_' + randomUUID().replaceAll('-', ''), admission_receipt: lease.id,
+        identity, revisions, retention: options.retention, expires_at_ms: lease.grant.expires_at_ms, output,
+        endpoints: lease.grant.endpoints, method: plan.method as WorkerHttpPlan['method'], url: plan.url,
+        headers: Object.entries(plan.headers).map(([name, value]) => ({ name, value })),
+        body_base64: plan.body_base64, body_sha256: plan.body_sha256,
+        credential: plan.credential_ref ? { ref: plan.credential_ref, revision: plan.credential_revision! } : null,
+        max_response_bytes: plan.max_response_bytes,
+      }), binding);
+      signal.addEventListener('abort', cancel, { once: true }); if (signal.aborted) cancel();
+      const observed = await call.terminal;
+      options.channel.release(call.requestId);
+      await cancelTask;
+      const result = observed.reply.result;
+      if (observed.reply.outcome !== 'committed_reference')
+        reject(result && 'code' in result && result.code ? result.code : 'capability_http_failed');
+      if (result.tag !== 'http' || result.admission_receipt !== lease.id || result.identity.request_id !== call.requestId)
+        reject('capability_reply_mismatch');
+      if (result.outcome !== 'committed_reference' || !result.artifact) reject(result.code ?? 'capability_http_failed');
+      if (!observed.current || signal.aborted) reject('capability_stale');
+      let body = await artifacts.read(result.artifact, output.max_bytes, binding, signal);
+      signal.throwIfAborted();
+      let offset = 0, closing: Promise<void> | undefined;
+      return { status: result.http_status ?? 502, headers: Object.fromEntries((result.headers ?? []).map(h => [h.name, h.value])),
+        async read(readSignal) {
+          signal.throwIfAborted(); readSignal.throwIfAborted();
+          if (closing || offset >= body.length) return null;
+          const chunk = body.subarray(offset, offset + options.maxChunkBytes); offset += chunk.length;
+          return chunk;
+        },
+        close() {
+          closing ??= artifacts.release(output.artifact_handle, binding).then(() => { body = Buffer.alloc(0); });
+          return closing;
+        },
+      };
+    } catch (error) {
+      await artifacts.release(output.artifact_handle, binding);
+      throw error;
+    } finally {
+      signal.removeEventListener('abort', cancel);
+      await cancelTask;
+    }
   };
 }
