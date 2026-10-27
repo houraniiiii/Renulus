@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
+/** One completed user/assistant exchange of the root session, by its fresh saved identities. */
+export interface PromotedExchange { runId: string; inputId: string; messageIds: string[]; sha256: string }
 export interface PromotionPlan {
-  id: string; threadId: string; title: string; profileId: string; storeId: string;
+  id: string; threadId: string; title: string; profileId: string; storeId: string; exchanges: PromotedExchange[];
   rootSessionId: string; sessionIds: string[]; cancellationEpoch: number; contextEpoch: number;
   policyRevision: number; idempotencyKey: string;
 }

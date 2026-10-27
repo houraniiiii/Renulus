@@ -6,11 +6,7 @@ import { exact, integer, reject, text } from './contracts.ts';
 import { canonical, digest, one, rows } from './schema.ts';
 import { requireAssistance } from './conversation.ts';
 
-export const TEMPORARY_SCHEMA = `CREATE TABLE temporary_save_intents(
- id TEXT PRIMARY KEY, idempotency_key TEXT NOT NULL UNIQUE, request_hash TEXT NOT NULL,
- state TEXT NOT NULL CHECK(state IN ('staged','copied','active','cancelled','retired')),
- cancellation_epoch INTEGER NOT NULL, plan_json TEXT NOT NULL CHECK(json_valid(plan_json)), graph_digest TEXT,
- created_at TEXT NOT NULL, updated_at TEXT NOT NULL);`;
+/** Table: runtime/migrations/007-l3-temporary-save.sql. No payload, hash of content or export prefix. */
 const commands = new Set(['temporary.save.begin', 'temporary.save.copied', 'temporary.save.activate', 'temporary.save.cancel', 'temporary.save.retire', 'temporary.save.pending']);
 export function isTemporaryCommand(value: unknown): value is TemporaryCommand {
   return !!value && typeof value === 'object' && 'type' in value && commands.has(String(value.type));
@@ -20,7 +16,13 @@ export function validateTemporaryCommand(c: TemporaryCommand) {
   if (c.type === 'temporary.save.pending') { exact(c, ['type']); return; }
   if (c.type === 'temporary.save.begin') {
     exact(c, ['type', 'plan']); const p = c.plan;
-    exact(p, ['id', 'threadId', 'title', 'profileId', 'storeId', 'rootSessionId', 'sessionIds', 'cancellationEpoch', 'contextEpoch', 'policyRevision', 'idempotencyKey']);
+    exact(p, ['id', 'threadId', 'title', 'profileId', 'storeId', 'exchanges', 'rootSessionId', 'sessionIds', 'cancellationEpoch', 'contextEpoch', 'policyRevision', 'idempotencyKey']);
+    if (!Array.isArray(p.exchanges) || p.exchanges.length > 100) reject('temporary_invalid_family');
+    for (const e of p.exchanges) {
+      exact(e, ['runId', 'inputId', 'messageIds', 'sha256']); identifier(e.runId); identifier(e.inputId);
+      if (!Array.isArray(e.messageIds) || !e.messageIds.length || e.messageIds.length > 100) reject('temporary_invalid_family');
+      e.messageIds.forEach(identifier); if (!/^[a-f0-9]{64}$/.test(e.sha256)) reject('temporary_invalid_digest');
+    }
     for (const v of [p.id, p.threadId, p.profileId, p.storeId, p.rootSessionId, p.idempotencyKey]) identifier(v);
     text(p.title, 1, 200); integer(p.cancellationEpoch); integer(p.contextEpoch); integer(p.policyRevision);
     if (!Array.isArray(p.sessionIds) || !p.sessionIds.length || p.sessionIds.length > 64 || new Set(p.sessionIds).size !== p.sessionIds.length || p.sessionIds[0] !== p.rootSessionId) reject('temporary_invalid_family');
@@ -63,7 +65,9 @@ export function executeTemporary<C extends TemporaryCommand>(db: DatabaseSync, c
       if (c.type === 'temporary.save.cancel') {
         if (before.state !== 'retired' && before.state !== 'cancelled') db.prepare("UPDATE temporary_save_intents SET state='cancelled',cancellation_epoch=cancellation_epoch+1,updated_at=? WHERE id=?").run(now, c.id);
       } else if (c.type === 'temporary.save.retire') {
-        db.prepare("UPDATE temporary_save_intents SET state='retired',graph_digest=NULL,updated_at=? WHERE id=?").run(now, c.id);
+        // A retired attempt keeps identities only: no title, message identities or content hashes remain.
+        const identities = canonical({ id: plan.id, threadId: plan.threadId, rootSessionId: plan.rootSessionId, sessionIds: plan.sessionIds });
+        db.prepare("UPDATE temporary_save_intents SET state='retired',graph_digest=NULL,plan_json=?,updated_at=? WHERE id=?").run(identities, now, c.id);
       } else {
         current(db, plan);
         if (!['staged', 'copied'].includes(before.state)) reject('temporary_cancelled');
@@ -78,6 +82,15 @@ export function executeTemporary<C extends TemporaryCommand>(db: DatabaseSync, c
           db.prepare("INSERT INTO learn_threads VALUES(?,?,NULL,'direct',?,?)").run(plan.threadId, plan.title, now, now);
           db.prepare('INSERT INTO learn_conversations(thread_id,updated_at) VALUES(?,?)').run(plan.threadId, now);
           db.prepare('INSERT INTO learn_harness_mappings(thread_id,profile_id,store_id,session_id,mapping_json) VALUES(?,?,?,?,?)').run(plan.threadId, plan.profileId, plan.storeId, plan.rootSessionId, canonical(mapping));
+          // Exact visible history. Promoted exchanges carry no lineage/evidence rows, so they are readable
+          // and findable but neither inference context nor memory capture until the learner asks again.
+          for (const e of plan.exchanges) {
+            const reference = { version: 1, run_id: e.runId, thread_id: plan.threadId, runtime: mapping.runtime, input_id: e.inputId,
+              message_ids: e.messageIds, sha256: e.sha256, citations: [], inputs: [], dependencies: [] };
+            db.prepare("INSERT INTO learn_runs VALUES(?,?,?,'completed',NULL,?,?)").run(e.runId, plan.threadId, 'temporary-save:' + plan.id + ':' + e.runId, now, now);
+            db.prepare("INSERT INTO learn_harness_answers(run_id,thread_id,request_digest,state,input_id,reference_json,publication_digest,command_request_id,process_generation) VALUES(?,?,?,'completed',?,?,?,?,NULL)")
+              .run(e.runId, plan.threadId, digest(canonical(reference)), e.inputId, canonical(reference), digest(canonical(reference)), plan.idempotencyKey);
+          }
           db.prepare("UPDATE temporary_save_intents SET state='active',updated_at=? WHERE id=?").run(now, c.id);
         }
       }

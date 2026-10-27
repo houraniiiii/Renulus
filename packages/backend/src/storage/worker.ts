@@ -13,6 +13,7 @@ import { executeProject, isProjectCommand } from './projects.ts';
 import { executeAssessment, isAssessmentCommand, reconcileAssessments } from './assessment.ts';
 import { executeRecovery, isRecoveryCommand } from './recovery.ts';
 import { executeUpdates, isUpdatesCommand } from './updates.ts';
+import { executeTemporary, isTemporaryCommand } from './temporary.ts';
 import { DatabaseSync, backup } from 'node:sqlite';
 import { closeSync, existsSync, linkSync, mkdirSync, openSync, realpathSync, unlinkSync } from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
@@ -82,6 +83,7 @@ async function dispatch(command: StorageCommand) {
   if (isAssessmentCommand(command)) return transaction(true, () => executeAssessment(db!, command));
   if (isRecoveryCommand(command)) return transaction(command.type !== 'recovery.snapshot' && command.type !== 'storage.reservations', () => executeRecovery(db!, command));
   if (isUpdatesCommand(command)) return transaction(true, () => executeUpdates(db!, command));
+  if (isTemporaryCommand(command)) return transaction(true, () => executeTemporary(db!, command));
   if (isMemoryCommand(command)) return transaction(true, () => executeMemoryCommand(db!, command));
   if (isKnowledgeCommand(command)) return transaction(true, () => {
     const result = executeKnowledge(db!, command);

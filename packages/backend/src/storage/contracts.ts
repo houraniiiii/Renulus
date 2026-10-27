@@ -25,6 +25,8 @@ import type { RecoveryCommand, RecoveryResults } from '../domain/recovery/contra
 import { isRecoveryCommand, validateRecoveryCommand } from './recovery.ts';
 import type { UpdatesCommand, UpdatesResults } from '../domain/updates/contracts.ts';
 import { isUpdatesCommand, validateUpdatesCommand } from './updates.ts';
+import type { TemporaryCommand, TemporaryResults } from '../domain/temporary/contracts.ts';
+import { isTemporaryCommand, validateTemporaryCommand } from './temporary.ts';
 import type { SelectedWriterAuthority } from './selected-owner.ts';
 export type Scalar = string | number | null;
 export type RecordRow = Record<string, Scalar>;
@@ -102,14 +104,14 @@ export interface CanonicalExport {
   omissions: Record<string, { records: number; reason: string }>;
 }
 
-export type StorageCommand = DispatchCommand | LearningMetadataCommand | LearningDispatchCommand | LearningCommand | MemoryCommand | KnowledgeCommand | StudyCommand | CapabilityCommand | ContentCommand | ProjectCommand | AssessmentCommand | RecoveryCommand | UpdatesCommand
+export type StorageCommand = DispatchCommand | LearningMetadataCommand | LearningDispatchCommand | LearningCommand | MemoryCommand | KnowledgeCommand | StudyCommand | CapabilityCommand | ContentCommand | ProjectCommand | AssessmentCommand | RecoveryCommand | UpdatesCommand | TemporaryCommand
   | { type: 'storage.preview' }
   | { type: 'records.page'; table: string; offset: number; limit: number }
   | { type: 'records.export' }
   | { type: 'learning.rename'; threadId: string; expectedRevision: number; title: string; idempotencyKey: string }
   | { type: 'database.backup'; name: string };
 
-export interface CommandResults extends DispatchResults, LearningResults, LearningDispatchResults, LearningMetadataResults, MemoryResults, KnowledgeResults, StudyResults, CapabilityResults, ContentResults, ProjectResults, AssessmentResults, RecoveryResults, UpdatesResults {
+export interface CommandResults extends DispatchResults, LearningResults, LearningDispatchResults, LearningMetadataResults, MemoryResults, KnowledgeResults, StudyResults, CapabilityResults, ContentResults, ProjectResults, AssessmentResults, RecoveryResults, UpdatesResults, TemporaryResults {
   'storage.preview': StoragePreview;
   'records.page': { rows: RecordRow[]; nextOffset: number | null };
   'records.export': CanonicalExport;
@@ -157,6 +159,7 @@ export function validateCommand(value: unknown): asserts value is StorageCommand
   if (isAssessmentCommand(value)) { validateAssessmentCommand(value); return; }
   if (isRecoveryCommand(value)) { validateRecoveryCommand(value); return; }
   if (isUpdatesCommand(value)) { validateUpdatesCommand(value); return; }
+  if (isTemporaryCommand(value)) { validateTemporaryCommand(value); return; }
   if ('type' in value && value.type === 'learning.dispatch.begin') { validateLearningDispatchCommand(value as LearningDispatchCommand); return; }
   if (isLearningMetadataCommand(value)) { validateLearningMetadataCommand(value); return; }
   if (isLearningCommand(value)) { validateLearningCommand(value); return; }

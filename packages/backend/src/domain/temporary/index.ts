@@ -3,10 +3,26 @@
 import { randomUUID } from 'node:crypto';
 import type { VolatileHarness, NativeGraph } from '../../../../harness/src/volatile-host.ts';
 import { exportVolatileFamily, remapVolatileFamily } from '../../../../harness/src/volatile-host.ts';
-import type { PromotionPlan, PromotionReceipt, TemporaryStorage } from './contracts.ts';
+import type { PromotedExchange, PromotionPlan, PromotionReceipt, TemporaryStorage } from './contracts.ts';
+import { nativeText, type NativeMessage } from '../learning/history.ts';
 import { canonical, digest } from '../../storage/schema.ts';
 import { reject } from '../../storage/contracts.ts';
 
+/** Only completed, error-free answers become visible saved history; anything else stays unreferenced. */
+function completedExchanges(root: NativeGraph[number]): PromotedExchange[] {
+  const result: (PromotedExchange & { text: string; valid: boolean })[] = [];
+  for (const message of root.messages as unknown as NativeMessage[]) {
+    if (message.type === 'user') result.push({ runId: 'run_' + randomUUID().replaceAll('-', ''), inputId: message.id, messageIds: [], sha256: '', text: '', valid: true });
+    else if (message.type === 'assistant' && result.length) {
+      const exchange = result.at(-1)!;
+      exchange.messageIds.push(message.id); exchange.text += nativeText(message);
+      if (message.error || !message.time?.completed) exchange.valid = false;
+    }
+  }
+  return result.filter(e => e.valid && e.messageIds.length && e.text).map(({ text, valid: _valid, ...e }) => ({ ...e, sha256: digest(text) }));
+}
+
+const missing = (error: unknown) => !!error && typeof error === 'object' && '_tag' in error && (error._tag === 'SessionNotFoundError' || error._tag === 'Session.NotFoundError');
 type SavedNative = Pick<VolatileHarness, 'importSession' | 'exportSession' | 'removeSession'>;
 export interface TemporaryFamilyOptions {
   host: VolatileHarness; rootSessionId: string; storage: TemporaryStorage; saved: SavedNative;
@@ -40,7 +56,7 @@ export function createTemporaryFamily(options: TemporaryFamilyOptions) {
     if (!plan || !receipt || receipt.state === 'active') return;
     for (const id of [...plan.sessionIds].reverse()) {
       try { await options.saved.removeSession(id); }
-      catch (error) { if (!(error && typeof error === 'object' && '_tag' in error && error._tag === 'Session.NotFoundError')) throw error; }
+      catch (error) { if (!missing(error)) throw error; }
     }
     if (retire) receipt = await options.storage.command({ type: 'temporary.save.retire', id: plan.id, expectedEpoch: receipt.cancellationEpoch });
   }
@@ -61,7 +77,7 @@ export function createTemporaryFamily(options: TemporaryFamilyOptions) {
         const remapped = remapVolatileFamily(graph, { ...options.identity, promotionId: id });
         transferred = remapped.graph;
         plan = { id, threadId: 'thread_' + randomUUID().replaceAll('-', ''), title, ...options.identity,
-          rootSessionId: transferred[0].info.id, sessionIds: transferred.map(data => data.info.id),
+          rootSessionId: transferred[0].info.id, sessionIds: transferred.map(data => data.info.id), exchanges: completedExchanges(transferred[0]),
           cancellationEpoch, ...current, idempotencyKey };
       } else if (plan.idempotencyKey !== idempotencyKey || plan.title !== title) reject('idempotency_conflict');
       await serial(async () => {
@@ -150,7 +166,7 @@ export async function reconcileTemporarySaves(storage: TemporaryStorage, saved: 
   for (const pending of await storage.command({ type: 'temporary.save.pending' })) {
     for (const id of [...pending.sessionIds].reverse()) {
       try { await saved.removeSession(id); } catch (error) {
-        if (!(error && typeof error === 'object' && '_tag' in error && error._tag === 'Session.NotFoundError')) throw error;
+        if (!missing(error)) throw error;
       }
     }
     await storage.command({ type: 'temporary.save.retire', id: pending.id, expectedEpoch: pending.cancellationEpoch });
