@@ -59,40 +59,73 @@ export function validateRecoveryGraph(graph:RecoveryGraph) {
   for(let n=0;pending.size&&n<=graph.sessions.length;n++)for(const [id,parent]of pending)if(!parent||!pending.has(String(parent)))pending.delete(id);
   if(pending.size)fail('recovery_graph_parent_cycle');
 }
+/** Exact settled history only: compaction/summary nodes and provider continuation state are derived. */
+const history=(messages:JsonObject[])=>messages.filter(m=>m.type!=='compaction').map(m=>{
+  const next=structuredClone(m);delete next.providerState;delete next.retry;
+  if(Array.isArray(next.content))for(const part of next.content){delete part.providerState;delete part.providerResultState;}
+  return next;
+});
+/** Incoming sessions never bring live permissions, claims or provider state with them. */
 function inert(session:GraphSession,storeId:string):GraphSession {
   const info=structuredClone(session.info);info.permissions=[{action:'*',resource:'*',effect:'deny'}];
   info.metadata={...(info.metadata as JsonObject??{}),renulusStore:storeId,recoveryInert:true};
-  // Summary/provider checkpoints are derived; exact settled history is retained.
-  const messages=session.messages.filter(m=>m.type!=='compaction').map(m=>{
-    const next=structuredClone(m);delete next.providerState;delete next.retry;
-    if(Array.isArray(next.content))for(const part of next.content){delete part.providerState;delete part.providerResultState;}
-    return next;
-  });return {info,messages};
+  return {info,messages:history(session.messages)};
 }
-export function mergeRecoveryGraphs(current:RecoveryGraph,incoming:RecoveryGraph,candidateStore=current.storeId,eligible:(session:GraphSession)=>boolean=()=>true):{graph:RecoveryGraph;mapping:GraphMap;retained:number;added:number;excluded:number} {
+/** Additive merge: current sessions are kept exactly (mutable metadata, order and permissions win); incoming-only
+ * sessions and strictly newer incoming suffixes are added inertly. Any identity/order/relation disagreement refuses. */
+export function mergeRecoveryGraphs(current:RecoveryGraph,incoming:RecoveryGraph,candidateStore=current.storeId,eligible:(session:GraphSession)=>boolean=()=>true):{graph:RecoveryGraph;mapping:GraphMap;retained:number;currentOnly:number;added:number;excluded:number} {
   validateRecoveryGraph(current);validateRecoveryGraph(incoming);
   const currentSessions=new Map(current.sessions.map(s=>[String(s.info.id),structuredClone(s)]));
+  const bySession=new Map(incoming.sessions.map(s=>[String(s.info.id),s]));
   const mapping:GraphMap={incomingStore:incoming.storeId,candidateStore,sessions:{},messages:{}};
-  let retained=0,added=0,excluded=0;
+  // A child is imported only with its parent: excluded roots exclude their whole closure.
+  const memo=new Map<string,boolean>();
+  const included=(s:GraphSession):boolean=>{
+    const id=String(s.info.id),known=memo.get(id);if(known!==undefined)return known;
+    const parent=s.info.parentID?bySession.get(String(s.info.parentID)):undefined;
+    const ok=!parent?eligible(s):included(parent);memo.set(id,ok);return ok;
+  };
+  const added:GraphSession[]=[];let retained=0,appended=0,excluded=0;
   for(const source of incoming.sessions) {
-    if(!eligible(source)){excluded++;continue;}
-    const sid=String(source.info.id),existing=currentSessions.get(sid);mapping.sessions[sid]=sid;
-    for(const m of source.messages)mapping.messages[String(m.id)]=String(m.id);
-    if(!existing){currentSessions.set(sid,structuredClone(source));added+=source.messages.length;continue;}
+    if(!included(source)){excluded++;continue;}
+    const sid=String(source.info.id),existing=currentSessions.get(sid),theirs=history(source.messages);mapping.sessions[sid]=sid;
+    for(const m of theirs)mapping.messages[String(m.id)]=String(m.id);
+    if(!existing){added.push(source);continue;}
     if(existing.info.parentID!==source.info.parentID)fail('recovery_graph_identity_conflict');
-    const common=Math.min(existing.messages.length,source.messages.length);
+    const ours=history(existing.messages),common=Math.min(ours.length,theirs.length);
     for(let i=0;i<common;i++) {
-      if(existing.messages[i].id!==source.messages[i].id||canonical(existing.messages[i])!==canonical(source.messages[i]))fail('recovery_graph_identity_conflict');retained++;
+      if(ours[i].id!==theirs[i].id||canonical(ours[i])!==canonical(theirs[i]))fail('recovery_graph_identity_conflict');retained++;
     }
     // A single consistent ordering is mandatory. Divergent suffixes are never interleaved.
-    if(source.messages.length>existing.messages.length){existing.messages.push(...structuredClone(source.messages.slice(common)));added+=source.messages.length-common;}
+    if(theirs.length>ours.length){existing.messages.push(...theirs.slice(common));appended+=theirs.length-common;}
   }
-  const graph:RecoveryGraph={contract:'renulus-native-recovery/1',storeId:candidateStore,sessions:[...currentSessions.values()].map(s=>inert(s,candidateStore))};
-  validateRecoveryGraph(graph);return {graph,mapping,retained,added,excluded};
+  // Incoming-only sessions are added after current ones so every parent precedes its children on import.
+  const sessions=[...currentSessions.values(),...added.map(s=>inert(s,candidateStore))];
+  const graph:RecoveryGraph={contract:'renulus-native-recovery/1',storeId:candidateStore,sessions};
+  validateRecoveryGraph(graph);
+  const addedMessages=added.reduce((n,s)=>n+history(s.messages).length,0);
+  const currentMessages=current.sessions.reduce((n,s)=>n+history(s.messages).length,0);
+  return {graph,mapping,retained,currentOnly:currentMessages-retained,added:addedMessages+appended,excluded};
 }
 export function createGraphRecovery(o:GraphRecoveryOptions) {
   let busy=false;
+  /** Every session of the store: paged roots, then each root's children (deduplicated, so listing order is irrelevant). */
+  async function allSessionIds():Promise<string[]> {
+    const ids=new Set<string>(),queue:(string|undefined)[]=[undefined];
+    while(queue.length) {
+      const parent=queue.shift();
+      let cursor:NonNullable<Parameters<typeof o.sdk.sessions.list>[0]>['cursor']|undefined;
+      for(let page=0;page<100;page++) {
+        o.checkHeld();
+        const result=await o.run(o.sdk.sessions.list({limit:100,...(parent?{parentID:Session.ID.make(parent)}:{}),...(cursor?{cursor}:{})}));
+        for(const s of result.data)if(!ids.has(String(s.id))){ids.add(String(s.id));queue.push(String(s.id));}
+        cursor=result.cursor.next;if(!cursor||result.data.length<100)break;
+      }
+    }
+    return [...ids];
+  }
   return {
+    async snapshotAll():Promise<RecoveryGraph> {return this.snapshot(await allSessionIds());},
     async snapshot(sessionIds:readonly string[]):Promise<RecoveryGraph> {
       o.checkHeld();if(busy)fail('recovery_graph_busy');busy=true;
       try {const sessions:GraphSession[]=[];for(const id of sessionIds){o.checkHeld();const result=await o.run(o.sdk.sessions.export({sessionID:Session.ID.make(id),sanitize:false}));o.checkHeld();sessions.push({info:encodeInfo(result.info),messages:result.messages.map(encodeMessage)});}

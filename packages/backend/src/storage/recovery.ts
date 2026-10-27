@@ -61,9 +61,16 @@ function conflictColumns(table:string,row:RecordRow):string[] {
   if(['learn_messages','case_attachments','case_attachment_parts','assessment_test_versions','assessment_question_versions'].includes(table))return Object.keys(row);
   return [];
 }
+// Native links whose sessions the native owner must supply before the canonical merge can be validated.
+const nativeLinks=['learn_harness_mappings','learn_harness_migrations'];
+const sessionOf=(table:string,row:RecordRow)=>nativeLinks.includes(table)&&typeof row.session_id==='string'?row.session_id:null;
+/** A preview has no native candidate yet: every native identity maps to itself and nothing is committed. */
+const previewMapping=():NativeMapping=>({incomingStore:'',candidateStore:'',sessions:new Proxy({},{get:(_,k)=>String(k)}),messages:new Proxy({},{get:(_,k)=>String(k)})});
 export function mergeRecovery(db:DatabaseSync,incoming:RecoverySnapshot,mapping:NativeMapping,currentFrontierDigest:string):RecoveryMerge {
   if(recoveryFrontierDigest(db)!==currentFrontierDigest)reject('recovery_frontier_changed');
   if(schemaHash(db)!==incoming.schemaHash)reject('recovery_schema_mismatch');
+  // Without the sender's deletion frontier nothing can be proven undeleted: refuse rather than guess.
+  if(!Array.isArray(incoming.records?.deletion_ledger))reject('recovery_frontier_missing');
   const current=exportRecords(db).records,added=structuredClone(incoming.records);
   const pks:Record<string,string[]>={},known=new Map<string,RecordRow>(),blocked=new Set<string>(),edges=new Map<string,Set<string>>();
   for(const table of Object.keys(current)) {
@@ -90,7 +97,9 @@ export function mergeRecovery(db:DatabaseSync,incoming:RecoverySnapshot,mapping:
     }
   }
   const queue=[...blocked];for(let i=0;i<queue.length;i++)for(const child of edges.get(queue[i])??[])if(!blocked.has(child)){blocked.add(child);queue.push(child);}
-  const result:RecoveryMerge={retained:0,currentOnly:0,added:0,excluded:0,conflicts:0,mappedReferences:0,captureBarriers:0};
+  const result:RecoveryMerge={retained:0,currentOnly:0,added:0,excluded:0,conflicts:0,mappedReferences:0,captureBarriers:0,eligibleNativeSessions:[],excludedNativeSessions:[]};
+  const kept=new Set<string>(),dropped=new Set<string>();
+  for(const [table,rr]of Object.entries(current))for(const row of rr){const s=sessionOf(table,row);if(s)kept.add(s);}
   // Apply current + incoming deletion frontier first, before any payload can become eligible.
   db.exec('PRAGMA defer_foreign_keys=ON');
   for(const row of added.deletion_ledger??[])db.prepare('INSERT INTO deletion_ledger VALUES(?,?,?) ON CONFLICT(entity_type,entity_id) DO UPDATE SET deleted_at=MAX(deletion_ledger.deleted_at,excluded.deleted_at)').run(row.entity_type,row.entity_id,row.deleted_at);
@@ -99,8 +108,10 @@ export function mergeRecovery(db:DatabaseSync,incoming:RecoverySnapshot,mapping:
   const addedEvidence:string[]=[];
   for(const [table,rr]of Object.entries(added))for(const row of rr) {
     if(table==='deletion_ledger')continue;const id=identity(table,row,pks[table]);incomingIds.add(id);
-    if(blocked.has(id)){result.excluded++;continue;}
+    const session=sessionOf(table,row);
+    if(blocked.has(id)){result.excluded++;if(session)dropped.add(session);continue;}
     const existing=known.get(id);
+    if(session)kept.add(session);
     if(existing) {if(conflictColumns(table,row).some(k=>existing[k]!==row[k]))reject('recovery_immutable_conflict');result.retained++;continue;}
     // Never import runnable jobs, engine readiness or opaque summary/Finder projections.
     if(/^(memory_index_|knowledge_index_)/.test(table)||['learn_harness_purges','learn_harness_migrations'].includes(table)){result.excluded++;continue;}
@@ -127,15 +138,31 @@ export function mergeRecovery(db:DatabaseSync,incoming:RecoverySnapshot,mapping:
   if(exists(db,'memory_index_state'))db.exec("UPDATE memory_index_state SET epoch=epoch+1,state='dirty',fingerprint=NULL,generation=NULL; DELETE FROM memory_index_entries");
   reconcileMemorySupport(db);
   if(rows(db,'PRAGMA foreign_key_check').length)reject('recovery_references');
+  result.eligibleNativeSessions=[...kept].sort();result.excludedNativeSessions=[...dropped].filter(s=>!kept.has(s)).sort();
   return result;
 }
-export function isRecoveryCommand(v:unknown):v is RecoveryCommand {return !!v&&typeof v==='object'&&'type'in v&&typeof v.type==='string'&&['recovery.snapshot','recovery.merge','storage.reserve','storage.settle','storage.reservations'].includes(v.type);}
+/** Read-only by construction: the identical merge runs in a savepoint that is always rolled back. */
+export function previewRecovery(db:DatabaseSync,incoming:RecoverySnapshot,currentFrontierDigest:string):RecoveryMerge {
+  db.exec('SAVEPOINT recovery_preview');
+  try {return mergeRecovery(db,incoming,previewMapping(),currentFrontierDigest);}
+  finally {db.exec('ROLLBACK TO recovery_preview; RELEASE recovery_preview');}
+}
+/** Every canonical native link must resolve in the supplied native graph (current and incoming links alike). */
+export function verifyNativeClosure(records:RecoveryRecords,native:{sessions:ReadonlySet<string>;messages:ReadonlySet<string>}) {
+  for(const [table,rr]of Object.entries(records))for(const row of rr) {
+    const session=sessionOf(table,row);
+    if(session&&!native.sessions.has(session))reject('recovery_native_closure');
+    if(table==='learn_harness_answers'&&typeof row.input_id==='string'&&!native.messages.has(row.input_id))reject('recovery_native_closure');
+  }
+}
+export function isRecoveryCommand(v:unknown):v is RecoveryCommand {return !!v&&typeof v==='object'&&'type'in v&&typeof v.type==='string'&&['recovery.snapshot','recovery.preview','recovery.merge','storage.reserve','storage.settle','storage.reservations'].includes(v.type);}
 export function validateRecoveryCommand(v:RecoveryCommand) {
   switch(v.type) {
     case 'recovery.snapshot':case 'storage.reservations':exact(v,['type']);break;
     case 'storage.reserve':exact(v,['type','request']);exact(v.request,['id','intentId','peakBytes','allocatedBytes','freeBytes','ceilingBytes']);text(v.request.id,1,128);text(v.request.intentId,1,128);for(const k of ['peakBytes','allocatedBytes','freeBytes','ceilingBytes']as const)integer(v.request[k]);integer(v.request.peakBytes,1);integer(v.request.ceilingBytes,50_000_000_000,150_000_000_000);break;
     case 'storage.settle':exact(v,['type','id','intentId','settled','cleanupDebtBytes']);text(v.id,1,128);text(v.intentId,1,128);integer(v.cleanupDebtBytes);if(typeof v.settled!=='boolean')reject('storage_invalid_command');break;
+    case 'recovery.preview':exact(v,['type','incoming','currentFrontierDigest']);exact(v.incoming,['records','frontierDigest','schemaHash']);for(const s of [v.currentFrontierDigest,v.incoming.frontierDigest,v.incoming.schemaHash])if(!/^[a-f0-9]{64}$/.test(s))reject('storage_invalid_command');if(Buffer.byteLength(canonical(v.incoming))>16*1024*1024)reject('recovery_limit');break;
     case 'recovery.merge':exact(v,['type','incoming','mapping','currentFrontierDigest']);exact(v.incoming,['records','frontierDigest','schemaHash']);exact(v.mapping,['incomingStore','candidateStore','sessions','messages']);for(const s of [v.currentFrontierDigest,v.incoming.frontierDigest,v.incoming.schemaHash])if(!/^[a-f0-9]{64}$/.test(s))reject('storage_invalid_command');text(v.mapping.incomingStore,1,128);text(v.mapping.candidateStore,1,128);if(Buffer.byteLength(canonical(v.incoming))>16*1024*1024)reject('recovery_limit');break;
   }
 }
-export function executeRecovery(db:DatabaseSync,c:RecoveryCommand) {switch(c.type){case 'recovery.snapshot':return snapshotRecovery(db);case 'recovery.merge':return mergeRecovery(db,c.incoming,c.mapping,c.currentFrontierDigest);case 'storage.reserve':return reserveStorage(db,c.request);case 'storage.settle':return settleStorage(db,c.id,c.intentId,c.settled,c.cleanupDebtBytes);case 'storage.reservations':return reservationStatus(db);}}
+export function executeRecovery(db:DatabaseSync,c:RecoveryCommand) {switch(c.type){case 'recovery.snapshot':return snapshotRecovery(db);case 'recovery.preview':return previewRecovery(db,c.incoming,c.currentFrontierDigest);case 'recovery.merge':return mergeRecovery(db,c.incoming,c.mapping,c.currentFrontierDigest);case 'storage.reserve':return reserveStorage(db,c.request);case 'storage.settle':return settleStorage(db,c.id,c.intentId,c.settled,c.cleanupDebtBytes);case 'storage.reservations':return reservationStatus(db);}}
