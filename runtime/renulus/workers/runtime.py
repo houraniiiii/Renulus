@@ -20,7 +20,7 @@ from renulus.worker_contracts import (CancelledResult, Capacity,
 from .artifacts import Artifacts, Refused
 from .engines import SelectedEngines
 from .derived import DerivedEngines, UnsettledEngine
-from .broker_models import BrokerLaunch, TransportResult
+from .broker_models import BrokerLaunch, TransportResult, HttpResult
 
 
 class Capture:
@@ -190,6 +190,8 @@ class Worker:
 
     def _lane(self, job):
         name = job.command.command
+        if name.startswith("evidence."):
+            return "transport"
         return name.split(".")[0] if name.startswith(("embedding.", "library.", "memory.",
             "transport.", "credential.")) else "document"
 
@@ -201,7 +203,7 @@ class Worker:
     def _admit_engine(self, command):
         if command.command == 'native.io' and (self.config.native is None or command.retention != 'saved'):
             raise Refused('artifact_denied')
-        if command.command == "transport.execute":
+        if command.command in ("transport.execute", "transport.http", "evidence.run"):
             plan = command.input
             if (plan.identity != command_identity(command) or plan.revisions != self.revisions
                     or plan.retention != command.retention):
@@ -251,7 +253,7 @@ class Worker:
                  and job.input_artifact.grant.expires_at_ms > int(time.time() * 1000)))
             and (not hasattr(command.input, "capture_plan") or
                  command.input.capture_plan.expires_at_ms > int(time.time() * 1000))
-            and (command.command != "transport.execute" or
+            and (command.command not in ("transport.execute", "transport.http", "evidence.run") or
                  command.input.expires_at_ms > int(time.time() * 1000)))
 
     def _schedule(self):
@@ -365,7 +367,37 @@ class Worker:
             raise Refused("artifact_invalid")
         return result
 
+    def _capability(self, job):
+        plan = job.command.input
+        with self.lock:
+            if not self._current(job):
+                raise Refused("stale_revision")
+            broker = job.broker = self._broker()
+        execute = broker.execute_http if job.command.command == "transport.http" else broker.execute_evidence
+        execution = asyncio.run(execute(plan, check_current=lambda: self._current(job), cancel=job.cancel_signal))
+        result = execution.result
+        if (not isinstance(result, HttpResult) or result.identity != plan.identity
+                or result.revisions != plan.revisions or result.admission_receipt != plan.admission_receipt):
+            raise Refused("engine_failed")
+        if result.outcome == "committed_reference":
+            with self.lock:
+                if not self._current(job):
+                    return self._fence_transport(result)
+                if len(execution.body) > job.output.reservation:
+                    raise Refused("artifact_limit")
+                with self.artifacts.lock:
+                    job.output.body.extend(execution.body)
+                    job.output.engine = "protected-http:1"
+                    if self.artifacts.reference(job.output) != result.artifact:
+                        raise Refused("artifact_invalid")
+        elif execution.body or result.artifact is not None:
+            raise Refused("artifact_invalid")
+        return result
+
     def _fence_transport(self, result):
+        if isinstance(result, HttpResult):
+            return result.model_copy(update={"outcome": "cancelled_settled", "artifact": None,
+                "headers": (), "code": "stale_revision"})
         return result.model_copy(update={"outcome": "cancelled_settled", "artifact": None,
             "content_type": None, "code": "stale_revision"})
 
@@ -391,6 +423,8 @@ class Worker:
                 i = command.input
                 if command.command == "transport.execute":
                     result = self._transport(job)
+                elif command.command in ("transport.http", "evidence.run"):
+                    result = self._capability(job)
                 elif command.command.startswith("credential."):
                     result = self._credentials(job)
                 elif command.command == 'native.io':
@@ -429,7 +463,7 @@ class Worker:
                     engine = "docling:2.133.0/docling-core:2.99.0"
                 # Serialization is outside the control lock. Output remains invisible
                 # to read until completion and the final authority/cancel checks.
-                if not command.command.startswith(("transport.", "credential.")) and result is None:
+                if not command.command.startswith(("transport.", "evidence.", "credential.")) and result is None:
                     result = self.artifacts.publish(job.output, value, engine=engine)
         except Refused as error:
             failure = error.code
@@ -456,7 +490,7 @@ class Worker:
                 if job.input_artifact is not None:
                     self.artifacts.unpin(job.input_artifact)
                     job.input_artifact = None
-                if isinstance(result, TransportResult):
+                if isinstance(result, (TransportResult, HttpResult)):
                     if cancelled and result.outcome == "committed_reference":
                         result = self._fence_transport(result)
                     if result.outcome == "committed_reference":
@@ -478,7 +512,7 @@ class Worker:
                         job.output.complete = True
                         self.artifacts.unpin(job.output)
                     self._reply(command, result, lease=job.lease)
-                if job.broker is not None and command.command == "transport.execute":
+                if job.broker is not None and command.command in ("transport.execute", "transport.http", "evidence.run"):
                     job.broker.close()
                     self.brokers.discard(job.broker)
                     job.broker = None
@@ -517,7 +551,7 @@ class Worker:
         job.cancelled = True
         if job.cancel_signal is not None:
             job.cancel_signal.set()
-        if job.broker is not None and job.command.command == "transport.execute":
+        if job.broker is not None and job.command.command in ("transport.execute", "transport.http", "evidence.run"):
             job.broker.cancel(job.command.input.permit_id)
         elif job.command.command.startswith("credential."):
             self._close_credentials()

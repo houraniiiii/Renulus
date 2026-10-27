@@ -13,7 +13,7 @@ from .workers.contract_base import (PROTOCOL, MAX_FRAME_BYTES, MAX_CHUNK_BYTES, 
     Id, Digest, Counter, Size, PathString, Retention, Model, ProcessIdentity, Identity,
     Revisions, OutputGrant, ArtifactResult)
 from .workers.broker_models import (BrokerBounds, CredentialAuthority, CredentialResult, LoginId, Provider,
-    TransportPlan, TransportResult)
+    TransportPlan, TransportResult, HttpPlan, EvidencePlan, HttpResult)
 from .workers.native_contracts import NativePaths, NativeInput
 OUTCOMES = ("rejected_before_admission", "accepted_pending", "committed_reference",
             "cancelled_settled", "uncertain_after_disconnect")
@@ -24,7 +24,7 @@ SUPPORTED_COMMANDS = ("worker.settle", "artifact.upload", "artifact.read",
                       "embedding.embed", "document.extract", "document.chunk",
                       "library.query", "library.stage", "library.remove", "library.maintain",
                       "memory.extract", "memory.recall", "memory.reconcile", "memory.purge",
-                      "native.io", "transport.execute", "credential.activate", "credential.metadata",
+                      "native.io", "transport.execute", "transport.http", "evidence.run", "credential.activate", "credential.metadata",
                       "credential.connect", "credential.refresh", "credential.forget",
                       "credential.login-status", "credential.login-cancel")
 
@@ -398,6 +398,26 @@ class TransportExecuteCommand(Envelope):
         return self
 
 
+class HttpExecuteCommand(Envelope):
+    command: Literal["transport.http"]
+    input: HttpPlan
+
+    @field_validator("input", mode="before")
+    @classmethod
+    def wire_plan(cls, value):
+        return HttpPlan.model_validate_json(canonical_json(value)) if isinstance(value, dict) else value
+
+
+class EvidenceRunCommand(Envelope):
+    command: Literal["evidence.run"]
+    input: EvidencePlan
+
+    @field_validator("input", mode="before")
+    @classmethod
+    def wire_plan(cls, value):
+        return EvidencePlan.model_validate_json(canonical_json(value)) if isinstance(value, dict) else value
+
+
 class CredentialStateCommand(Envelope):
     command: Literal["credential.activate", "credential.metadata"]
     input: EmptyInput
@@ -427,7 +447,7 @@ Command = Annotated[Union[UploadCommand, ReadCommand, EmbedCommand, ExtractComma
                           ChunkCommand, SettleCommand, UnavailableCommand, LibraryQueryCommand,
                           LibraryStageCommand, LibraryRemoveCommand, LibraryMaintainCommand,
                           MemoryRecallCommand, MemoryReconcileCommand, MemoryPurgeCommand,
-                          MemoryExtractCommand, TransportExecuteCommand, CredentialStateCommand,
+                          MemoryExtractCommand, TransportExecuteCommand, HttpExecuteCommand, EvidenceRunCommand, CredentialStateCommand,
                           CredentialCommand, CredentialLoginCommand, NativeIOCommand], Field(discriminator="command")]
 COMMAND = TypeAdapter(Command)
 
@@ -476,7 +496,7 @@ class CancelledResult(Model):
 
 
 Result = Annotated[Union[ErrorResult, ArtifactResult, UploadResult, ReadResult, StateResult,
-                         PendingResult, CancelledResult, TransportResult, CredentialResult], Field(discriminator="tag")]
+                         PendingResult, CancelledResult, TransportResult, HttpResult, CredentialResult], Field(discriminator="tag")]
 
 
 class Settlement(Model):

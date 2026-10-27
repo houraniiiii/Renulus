@@ -57,7 +57,7 @@ class BrokerRefused(Exception):
 
 @dataclass(frozen=True)
 class TransportExecution:
-    result: TransportResult
+    result: TransportResult | HttpResult
     body: bytes = field(default=b"", repr=False)
 
 
@@ -403,6 +403,131 @@ class ProtectedBroker:
             attempt.settled = True
             attempt.result = execution.result
         return execution
+
+    async def _capability(self, plan, check_current, cancel, endpoints, max_bytes, operation, credential=None):
+        from .capability_transport import CapabilityTransport, CapabilityTransportError, NetworkLease
+        from .evidence import Failure
+        attempt = _Attempt(self._scope)
+
+        def result(outcome, effect, code=None, body=b"", status=None, headers=()):
+            artifact = (ArtifactResult(artifact_handle=plan.output.artifact_handle,
+                artifact_revision=plan.output.artifact_revision, artifact_sha256=hashlib.sha256(body).hexdigest(),
+                bytes=len(body), engine="protected-http:1", pages=None, next_cursor=None)
+                if outcome == "committed_reference" else None)
+            return TransportExecution(HttpResult(admission_receipt=plan.admission_receipt,
+                identity=plan.identity, revisions=plan.revisions, outcome=outcome, effect=effect,
+                network_started=attempt.started, requests_started=attempt.requests, code=code,
+                http_status=status, headers=headers, artifact=artifact), body if artifact else b"")
+
+        key = hashlib.sha256(plan.permit_id.encode("ascii")).hexdigest()
+        with self._process.lock:
+            if key in self._process.attempts:
+                return result("rejected_before_admission", "not_sent", "transport_permit_replayed")
+            if len(self._process.attempts) >= self._process.capacity:
+                return result("rejected_before_admission", "not_sent", "transport_capacity")
+            self._process.attempts[key] = attempt
+        stopped = None
+        try:
+            if (any(getattr(plan.identity, name) != value for name, value in self.launch.identity.model_dump().items())
+                    or plan.retention != self.launch.retention):
+                _deny("transport_binding_mismatch")
+            self._alive(plan, attempt, check_current, cancel)
+
+            async def current(_lease, _count):
+                self._alive(plan, attempt, check_current, cancel)
+                return True
+
+            async def run():
+                transport = CapabilityTransport(NetworkLease(plan.admission_receipt, endpoints,
+                    plan.expires_at_ms, max_bytes), current=current, credential=credential)
+                try:
+                    return await operation(transport, attempt)
+                finally:
+                    await transport.close()
+
+            worker = asyncio.create_task(run())
+            deadline = asyncio.get_running_loop().time() + self.launch.bounds.timeout_seconds
+            while not worker.done():
+                try:
+                    await asyncio.wait({worker}, timeout=0.02)
+                    if stopped is None:
+                        self._alive(plan, attempt, check_current, cancel)
+                        if asyncio.get_running_loop().time() >= deadline:
+                            _deny("transport_timeout")
+                except (Exception, asyncio.CancelledError) as error:
+                    if stopped is None:
+                        stopped = error.code if isinstance(error, BrokerRefused) else "transport_cancelled"
+                        attempt.cancel.set()
+                        worker.cancel()
+            if stopped is not None:
+                try:
+                    worker.result()
+                except BaseException:
+                    pass
+                _deny(stopped)
+            body, status, headers = worker.result()
+            self._alive(plan, attempt, check_current, cancel)
+            if len(body) > plan.output.max_bytes:
+                raise Failure("capability_response_limit", True)
+            execution = result("committed_reference", "response_received" if attempt.started else "not_sent",
+                body=body, status=status, headers=headers)
+        except (Exception, asyncio.CancelledError) as error:
+            code = (error.code if isinstance(error, (BrokerRefused, Failure)) else
+                str(error) if isinstance(error, CapabilityTransportError) else
+                "transport_cancelled" if isinstance(error, asyncio.CancelledError) else "transport_failed")
+            answered = isinstance(error, Failure) and error.answered
+            execution = result("cancelled_settled" if answered else
+                "uncertain_after_disconnect" if attempt.started else "rejected_before_admission",
+                "response_received" if answered else "uncertain" if attempt.started else "not_sent", code)
+        with self._process.lock:
+            attempt.settled = True
+            attempt.result = execution.result
+        return execution
+
+    async def execute_http(self, plan: HttpPlan, *, check_current: Callable[[], bool],
+                           cancel: Event | None = None) -> TransportExecution:
+        from .broker_models import HttpHeader
+        from .capability_transport import Endpoint, CapabilityTransportError
+        body = base64.b64decode(plan.body_base64, validate=True)
+
+        async def operation(transport, attempt):
+            self._alive(plan, attempt, check_current, cancel)
+            attempt.started = True
+            attempt.requests = 1
+            credential = plan.credential
+            stream = await transport.http(url=plan.url, method=plan.method,
+                headers={h.name: h.value for h in plan.headers}, body=body, body_sha256=plan.body_sha256,
+                credential_ref=credential.ref if credential else None,
+                credential_revision=credential.revision if credential else None)
+            try:
+                payload = bytearray()
+                while (chunk := await stream.read()) is not None:
+                    if len(payload) + len(chunk) > min(plan.max_response_bytes, plan.output.max_bytes):
+                        raise CapabilityTransportError("capability_response_limit")
+                    payload.extend(chunk)
+                return bytes(payload), stream.status, tuple(HttpHeader(name=k, value=v) for k, v in stream.headers.items())
+            finally:
+                await stream.close()
+
+        return await self._capability(plan, check_current, cancel,
+            tuple(Endpoint(e.host, e.port, e.private_network) for e in plan.endpoints),
+            plan.max_response_bytes + len(body) + 65536, operation)
+
+    async def execute_evidence(self, plan: EvidencePlan, *, check_current: Callable[[], bool],
+                               cancel: Event | None = None) -> TransportExecution:
+        from . import evidence
+        from .capability_transport import Endpoint
+
+        async def operation(transport, attempt):
+            body = await evidence.run(plan, transport, attempt, self.launch.profile_root, self.launch.state_root)
+            return body, None, ()
+
+        endpoint = plan.endpoint
+        endpoints = (Endpoint(endpoint.host, endpoint.port, endpoint.private_network),) if endpoint else (
+            Endpoint(evidence.OFFICIAL["europe-pmc"][0], 443),)
+        return await self._capability(plan, check_current, cancel, endpoints,
+            evidence.ARTICLE_BYTES * max(1, plan.max_requests) + 1024 * 1024, operation,
+            credential=evidence.credential_callback(self.launch.profile_root, self.launch.state_root, plan))
 
     def execute_sync(self, plan: TransportPlan, *, check_current: Callable[[], bool],
                      cancel: Event | None = None) -> TransportExecution:

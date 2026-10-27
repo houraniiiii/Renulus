@@ -1555,6 +1555,329 @@
       "title": "ErrorResult",
       "type": "object"
     },
+    "EvidencePlan": {
+      "additionalProperties": false,
+      "description": "Selected evidence provider work. The worker derives every request from fixed provider tables.",
+      "properties": {
+        "permit_id": {
+          "maxLength": 256,
+          "minLength": 32,
+          "pattern": "^[A-Za-z0-9_-]+$(?![\\s\\S])",
+          "title": "Permit Id",
+          "type": "string"
+        },
+        "admission_receipt": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Admission Receipt",
+          "type": "string"
+        },
+        "identity": {
+          "$ref": "#/$defs/Identity"
+        },
+        "revisions": {
+          "$ref": "#/$defs/Revisions"
+        },
+        "retention": {
+          "enum": [
+            "saved",
+            "temporary"
+          ],
+          "title": "Retention",
+          "type": "string"
+        },
+        "expires_at_ms": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Expires At Ms",
+          "type": "integer"
+        },
+        "output": {
+          "$ref": "#/$defs/OutputGrant"
+        },
+        "action": {
+          "enum": [
+            "status",
+            "search",
+            "fetch"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "enum": [
+                "europe-pmc",
+                "pubmed",
+                "brave",
+                "tavily",
+                "exa"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider"
+        },
+        "query": {
+          "anyOf": [
+            {
+              "maxLength": 240,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query"
+        },
+        "pmcid": {
+          "anyOf": [
+            {
+              "pattern": "^PMC[1-9][0-9]{0,10}$(?![\\s\\S])",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pmcid"
+        },
+        "limit": {
+          "default": 5,
+          "maximum": 20,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "max_requests": {
+          "default": 0,
+          "maximum": 4,
+          "minimum": 0,
+          "title": "Max Requests",
+          "type": "integer"
+        },
+        "endpoint": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HttpEndpoint"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "base_url": {
+          "anyOf": [
+            {
+              "maxLength": 2048,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Base Url"
+        },
+        "credential": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HttpCredential"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "permit_id",
+        "admission_receipt",
+        "identity",
+        "revisions",
+        "retention",
+        "expires_at_ms",
+        "output",
+        "action"
+      ],
+      "title": "EvidencePlan",
+      "type": "object"
+    },
+    "EvidenceRunCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "profile_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "domain_store_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Domain Store Id",
+          "type": "string"
+        },
+        "runtime_store_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Runtime Store Id",
+          "type": "string"
+        },
+        "authority_epoch": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Authority Epoch",
+          "type": "integer"
+        },
+        "process_generation": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Process Generation",
+          "type": "string"
+        },
+        "operation_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Operation Id",
+          "type": "string"
+        },
+        "attempt_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Attempt Id",
+          "type": "string"
+        },
+        "request_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "protocol": {
+          "const": "renulus-worker/1",
+          "title": "Protocol",
+          "type": "string"
+        },
+        "kind": {
+          "const": "command",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload_sha256": {
+          "pattern": "^[a-f0-9]{64}$(?![\\s\\S])",
+          "title": "Payload Sha256",
+          "type": "string"
+        },
+        "configuration_revision": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Configuration Revision",
+          "type": "integer"
+        },
+        "grant_revision": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Grant Revision",
+          "type": "integer"
+        },
+        "context_epoch": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Context Epoch",
+          "type": "integer"
+        },
+        "deletion_epoch": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Deletion Epoch",
+          "type": "integer"
+        },
+        "cancellation_epoch": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Cancellation Epoch",
+          "type": "integer"
+        },
+        "retention": {
+          "enum": [
+            "saved",
+            "temporary"
+          ],
+          "title": "Retention",
+          "type": "string"
+        },
+        "expected_revision": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Expected Revision"
+        },
+        "limits": {
+          "$ref": "#/$defs/Limits"
+        },
+        "command": {
+          "const": "evidence.run",
+          "title": "Command",
+          "type": "string"
+        },
+        "input": {
+          "$ref": "#/$defs/EvidencePlan"
+        }
+      },
+      "required": [
+        "profile_id",
+        "domain_store_id",
+        "runtime_store_id",
+        "authority_epoch",
+        "process_generation",
+        "operation_id",
+        "attempt_id",
+        "request_id",
+        "protocol",
+        "kind",
+        "payload_sha256",
+        "configuration_revision",
+        "grant_revision",
+        "context_epoch",
+        "deletion_epoch",
+        "cancellation_epoch",
+        "retention",
+        "expected_revision",
+        "limits",
+        "command",
+        "input"
+      ],
+      "title": "EvidenceRunCommand",
+      "type": "object"
+    },
     "ExtractCommand": {
       "additionalProperties": false,
       "properties": {
@@ -1982,6 +2305,489 @@
         "capacity"
       ],
       "title": "Hello",
+      "type": "object"
+    },
+    "HttpCredential": {
+      "additionalProperties": false,
+      "description": "Reference and revision only. The worker alone resolves and attaches the secret.",
+      "properties": {
+        "ref": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Ref",
+          "type": "string"
+        },
+        "revision": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "ref",
+        "revision"
+      ],
+      "title": "HttpCredential",
+      "type": "object"
+    },
+    "HttpEndpoint": {
+      "additionalProperties": false,
+      "description": "One host-granted TCP endpoint. `private_network` is an explicit host grant, never a plan default.",
+      "properties": {
+        "host": {
+          "maxLength": 253,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9.:_-]+$(?![\\s\\S])",
+          "title": "Host",
+          "type": "string"
+        },
+        "port": {
+          "maximum": 65535,
+          "minimum": 1,
+          "title": "Port",
+          "type": "integer"
+        },
+        "private_network": {
+          "default": false,
+          "title": "Private Network",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "host",
+        "port"
+      ],
+      "title": "HttpEndpoint",
+      "type": "object"
+    },
+    "HttpExecuteCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "profile_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "domain_store_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Domain Store Id",
+          "type": "string"
+        },
+        "runtime_store_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Runtime Store Id",
+          "type": "string"
+        },
+        "authority_epoch": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Authority Epoch",
+          "type": "integer"
+        },
+        "process_generation": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Process Generation",
+          "type": "string"
+        },
+        "operation_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Operation Id",
+          "type": "string"
+        },
+        "attempt_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Attempt Id",
+          "type": "string"
+        },
+        "request_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "protocol": {
+          "const": "renulus-worker/1",
+          "title": "Protocol",
+          "type": "string"
+        },
+        "kind": {
+          "const": "command",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload_sha256": {
+          "pattern": "^[a-f0-9]{64}$(?![\\s\\S])",
+          "title": "Payload Sha256",
+          "type": "string"
+        },
+        "configuration_revision": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Configuration Revision",
+          "type": "integer"
+        },
+        "grant_revision": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Grant Revision",
+          "type": "integer"
+        },
+        "context_epoch": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Context Epoch",
+          "type": "integer"
+        },
+        "deletion_epoch": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Deletion Epoch",
+          "type": "integer"
+        },
+        "cancellation_epoch": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Cancellation Epoch",
+          "type": "integer"
+        },
+        "retention": {
+          "enum": [
+            "saved",
+            "temporary"
+          ],
+          "title": "Retention",
+          "type": "string"
+        },
+        "expected_revision": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Expected Revision"
+        },
+        "limits": {
+          "$ref": "#/$defs/Limits"
+        },
+        "command": {
+          "const": "transport.http",
+          "title": "Command",
+          "type": "string"
+        },
+        "input": {
+          "$ref": "#/$defs/HttpPlan"
+        }
+      },
+      "required": [
+        "profile_id",
+        "domain_store_id",
+        "runtime_store_id",
+        "authority_epoch",
+        "process_generation",
+        "operation_id",
+        "attempt_id",
+        "request_id",
+        "protocol",
+        "kind",
+        "payload_sha256",
+        "configuration_revision",
+        "grant_revision",
+        "context_epoch",
+        "deletion_epoch",
+        "cancellation_epoch",
+        "retention",
+        "expected_revision",
+        "limits",
+        "command",
+        "input"
+      ],
+      "title": "HttpExecuteCommand",
+      "type": "object"
+    },
+    "HttpHeader": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "value": {
+          "maxLength": 4096,
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "value"
+      ],
+      "title": "HttpHeader",
+      "type": "object"
+    },
+    "HttpPlan": {
+      "additionalProperties": false,
+      "description": "One admitted HTTP hop (no redirect following). The host re-admits every redirect itself.",
+      "properties": {
+        "permit_id": {
+          "maxLength": 256,
+          "minLength": 32,
+          "pattern": "^[A-Za-z0-9_-]+$(?![\\s\\S])",
+          "title": "Permit Id",
+          "type": "string"
+        },
+        "admission_receipt": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Admission Receipt",
+          "type": "string"
+        },
+        "identity": {
+          "$ref": "#/$defs/Identity"
+        },
+        "revisions": {
+          "$ref": "#/$defs/Revisions"
+        },
+        "retention": {
+          "enum": [
+            "saved",
+            "temporary"
+          ],
+          "title": "Retention",
+          "type": "string"
+        },
+        "expires_at_ms": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Expires At Ms",
+          "type": "integer"
+        },
+        "output": {
+          "$ref": "#/$defs/OutputGrant"
+        },
+        "endpoints": {
+          "items": {
+            "$ref": "#/$defs/HttpEndpoint"
+          },
+          "maxItems": 32,
+          "minItems": 1,
+          "title": "Endpoints",
+          "type": "array"
+        },
+        "method": {
+          "enum": [
+            "GET",
+            "HEAD",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE",
+            "OPTIONS"
+          ],
+          "title": "Method",
+          "type": "string"
+        },
+        "url": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        },
+        "headers": {
+          "items": {
+            "$ref": "#/$defs/NativeHeader"
+          },
+          "maxItems": 8,
+          "title": "Headers",
+          "type": "array"
+        },
+        "body_base64": {
+          "maxLength": 1398104,
+          "title": "Body Base64",
+          "type": "string"
+        },
+        "body_sha256": {
+          "pattern": "^[a-f0-9]{64}$(?![\\s\\S])",
+          "title": "Body Sha256",
+          "type": "string"
+        },
+        "credential": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HttpCredential"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "max_response_bytes": {
+          "maximum": 16777216,
+          "minimum": 1,
+          "title": "Max Response Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "permit_id",
+        "admission_receipt",
+        "identity",
+        "revisions",
+        "retention",
+        "expires_at_ms",
+        "output",
+        "endpoints",
+        "method",
+        "url",
+        "headers",
+        "body_base64",
+        "body_sha256",
+        "max_response_bytes"
+      ],
+      "title": "HttpPlan",
+      "type": "object"
+    },
+    "HttpResult": {
+      "additionalProperties": false,
+      "properties": {
+        "tag": {
+          "const": "http",
+          "default": "http",
+          "title": "Tag",
+          "type": "string"
+        },
+        "admission_receipt": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Admission Receipt",
+          "type": "string"
+        },
+        "identity": {
+          "$ref": "#/$defs/Identity"
+        },
+        "revisions": {
+          "$ref": "#/$defs/Revisions"
+        },
+        "outcome": {
+          "enum": [
+            "rejected_before_admission",
+            "committed_reference",
+            "cancelled_settled",
+            "uncertain_after_disconnect"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "settlement": {
+          "const": "settled",
+          "default": "settled",
+          "title": "Settlement",
+          "type": "string"
+        },
+        "effect": {
+          "enum": [
+            "not_sent",
+            "response_received",
+            "uncertain"
+          ],
+          "title": "Effect",
+          "type": "string"
+        },
+        "network_started": {
+          "title": "Network Started",
+          "type": "boolean"
+        },
+        "requests_started": {
+          "default": 0,
+          "maximum": 32,
+          "minimum": 0,
+          "title": "Requests Started",
+          "type": "integer"
+        },
+        "code": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Code"
+        },
+        "http_status": {
+          "anyOf": [
+            {
+              "maximum": 599,
+              "minimum": 100,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Http Status"
+        },
+        "headers": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/HttpHeader"
+          },
+          "maxItems": 16,
+          "title": "Headers",
+          "type": "array"
+        },
+        "artifact": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArtifactResult"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "admission_receipt",
+        "identity",
+        "revisions",
+        "outcome",
+        "effect",
+        "network_started"
+      ],
+      "title": "HttpResult",
       "type": "object"
     },
     "Identity": {
@@ -4982,6 +5788,7 @@
               "cancelled": "#/$defs/CancelledResult",
               "credentials": "#/$defs/CredentialResult",
               "error": "#/$defs/ErrorResult",
+              "http": "#/$defs/HttpResult",
               "pending": "#/$defs/PendingResult",
               "read": "#/$defs/ReadResult",
               "state": "#/$defs/StateResult",
@@ -5014,6 +5821,9 @@
             },
             {
               "$ref": "#/$defs/TransportResult"
+            },
+            {
+              "$ref": "#/$defs/HttpResult"
             },
             {
               "$ref": "#/$defs/CredentialResult"
@@ -6557,6 +7367,7 @@
           "document.chunk": "#/$defs/ChunkCommand",
           "document.extract": "#/$defs/ExtractCommand",
           "embedding.embed": "#/$defs/EmbedCommand",
+          "evidence.run": "#/$defs/EvidenceRunCommand",
           "library.maintain": "#/$defs/LibraryMaintainCommand",
           "library.query": "#/$defs/LibraryQueryCommand",
           "library.remove": "#/$defs/LibraryRemoveCommand",
@@ -6571,6 +7382,7 @@
           "native.publish": "#/$defs/UnavailableCommand",
           "transport.cancel": "#/$defs/UnavailableCommand",
           "transport.execute": "#/$defs/TransportExecuteCommand",
+          "transport.http": "#/$defs/HttpExecuteCommand",
           "transport.send": "#/$defs/UnavailableCommand",
           "worker.settle": "#/$defs/SettleCommand"
         },
@@ -6624,6 +7436,12 @@
         },
         {
           "$ref": "#/$defs/TransportExecuteCommand"
+        },
+        {
+          "$ref": "#/$defs/HttpExecuteCommand"
+        },
+        {
+          "$ref": "#/$defs/EvidenceRunCommand"
         },
         {
           "$ref": "#/$defs/CredentialStateCommand"
