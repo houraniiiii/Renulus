@@ -8,9 +8,11 @@ This is process lifetime ownership, not filesystem/network confinement.
 from __future__ import annotations
 import ctypes
 from ctypes import wintypes
+import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 from threading import Event, Thread, RLock
 import time
 from uuid import uuid4
@@ -23,7 +25,10 @@ class ShellOwnershipError(RuntimeError):
 
 class TrustedShell:
     @staticmethod
-    def start(argv, *, cwd, workspace, environment, current, timeout_ms=30000, max_output_bytes=262144):
+    def start(argv, *, cwd, workspace, environment, current, mode, timeout_ms=30000, max_output_bytes=262144, pipes=False):
+        # Arbitrary programs are never exposed to doctor, child or temporary sessions.
+        if mode != "developer":
+            raise ShellOwnershipError("shell_developer_mode_required")
         if (os.name != "nt" or not callable(current) or not isinstance(argv,list) or not argv
                 or len(argv)>64 or any(not isinstance(v,str) or "\0" in v or len(v)>16000 for v in argv)
                 or not Path(argv[0]).is_absolute() or not Path(argv[0]).is_file()
@@ -41,11 +46,12 @@ class TrustedShell:
         if (type(environment) is not dict or any(k not in permitted or not isinstance(v,str) or "\0" in v for k,v in environment.items())
                 or not current()):
             raise ShellOwnershipError("shell_authority_stale")
-        return OwnedShell(argv,target,environment,current,timeout_ms,max_output_bytes)
+        return OwnedShell(argv,target,environment,current,timeout_ms,max_output_bytes,pipes)
 
 
 class OwnedShell:
-    def __init__(self,argv,cwd,environment,current,timeout_ms,limit):
+    def __init__(self,argv,cwd,environment,current,timeout_ms,limit,pipes=False):
+        # pipes: the caller owns bidirectional stdin/stdout (MCP stdio); stderr is discarded.
         self.kernel=_Kernel()
         self.job=self.kernel.job("Local\\RenulusDeveloperShell-"+uuid4().hex)
         self.kernel.api.TerminateJobObject.argtypes=[wintypes.HANDLE,wintypes.UINT]
@@ -57,8 +63,9 @@ class OwnedShell:
         self.closed=False
         self.process=None
         try:
-            self.process=subprocess.Popen(argv,cwd=str(cwd),env=dict(environment),stdin=subprocess.DEVNULL,
-                stdout=subprocess.PIPE,stderr=subprocess.STDOUT,shell=False,
+            self.process=subprocess.Popen(argv,cwd=str(cwd),env=dict(environment),
+                stdin=subprocess.PIPE if pipes else subprocess.DEVNULL,
+                stdout=subprocess.PIPE,stderr=subprocess.DEVNULL if pipes else subprocess.STDOUT,shell=False,
                 creationflags=0x00000004|subprocess.CREATE_NO_WINDOW,close_fds=True)  # CREATE_SUSPENDED
             handle=wintypes.HANDLE(int(self.process._handle))
             self.identity=self.kernel.identity(handle,self.process.pid)
@@ -72,8 +79,9 @@ class OwnedShell:
             resume.restype=wintypes.LONG
             if resume(handle)!=0:
                 raise ShellOwnershipError("shell_resume_failed")
-            self.reader=Thread(target=self._read,name="renulus-owned-shell-output",daemon=True)
-            self.reader.start()
+            self.reader=None if pipes else Thread(target=self._read,name="renulus-owned-shell-output",daemon=True)
+            if self.reader:
+                self.reader.start()
         except BaseException:
             if self.process is not None:
                 self.process.kill()
@@ -133,8 +141,9 @@ class OwnedShell:
                     raise ShellOwnershipError('shell_descendants_uncertain')
         finally:
             for handle in handles:self.kernel.api.CloseHandle(handle)
-        self.reader.join(timeout=1)
-        if self.reader.is_alive():
+        if self.reader:
+            self.reader.join(timeout=1)
+        if self.reader and self.reader.is_alive():
             raise ShellOwnershipError("shell_output_unsettled")
         with self.lock:
             self.kernel.api.CloseHandle(self.job)
@@ -152,3 +161,42 @@ class OwnedShell:
         settlement=self.terminate()
         return {"exit_code":self.process.returncode,"output":bytes(self.output).decode("utf8",errors="replace"),
             **settlement,"pid":self.identity.pid,"creation_filetime":self.identity.creation_filetime}
+
+
+def serve(stdin=None, stdout=None):
+    """One owned shell per helper process, driven by the TypeScript developer plugin.
+
+    stdin line 1 is the launch request; later lines are heartbeats proving the host
+    still holds a current lease (`{"stop": true}` or 1s of silence revokes it).
+    The single stdout line reports the settled result or the exact refusal.
+    """
+    stdin, stdout = stdin or sys.stdin, stdout or sys.stdout
+    request = json.loads(stdin.readline())
+    state = {"seen": time.monotonic(), "stop": False}
+
+    def listen():
+        try:
+            for line in stdin:
+                if json.loads(line).get("stop") is True:
+                    break
+                state["seen"] = time.monotonic()
+        except (ValueError, OSError):
+            pass
+        state["stop"] = True
+
+    Thread(target=listen, name="renulus-owned-shell-heartbeat", daemon=True).start()
+    try:
+        owned = TrustedShell.start(request["argv"], cwd=request["cwd"], workspace=request["workspace"],
+            environment=request["environment"], mode=request["mode"], timeout_ms=request["timeout_ms"],
+            max_output_bytes=request["max_output_bytes"],
+            current=lambda: not state["stop"] and time.monotonic() - state["seen"] < 1.0)
+        reply = {"ok": True, **owned.wait()}
+    except ShellOwnershipError as error:
+        reply = {"ok": False, "error": str(error), "descendants_settled": False, "effects": "uncertain"}
+    stdout.write(json.dumps(reply) + "\n")
+    stdout.flush()
+
+
+if __name__ == "__main__":
+    serve()
+    os._exit(0)  # The heartbeat reader is a daemon thread blocked on stdin.

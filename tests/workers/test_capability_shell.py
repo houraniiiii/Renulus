@@ -30,7 +30,7 @@ class TrustedShellTests(unittest.TestCase):
                 +"socket.create_connection(('127.0.0.1',"+str(server.getsockname()[1])+"),timeout=2).close()\n"
                 +"subprocess.Popen(["+repr(sys.executable)+",'-c',"+repr(child)+"])\n",encoding="utf8")
             env={k:os.environ[k] for k in ("SystemRoot","WINDIR","TEMP","TMP") if k in os.environ}
-            owner=TrustedShell.start([sys.executable,str(script)],cwd=str(workspace),workspace=str(workspace),environment=env,current=lambda:True,timeout_ms=5000)
+            owner=TrustedShell.start([sys.executable,str(script)],cwd=str(workspace),workspace=str(workspace),environment=env,current=lambda:True,mode="developer",timeout_ms=5000)
             try:
                 peer,_=server.accept()
                 peer.close()

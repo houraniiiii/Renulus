@@ -57,7 +57,7 @@ export function createCapabilityAuthority(options: CapabilityAuthorityOptions) {
     let url=new URL(String(input));
     for(let hop=0;hop<5;hop++) {
       endpoint(item,url); await credit(item,body.length);
-      const plan:HttpPlan={lease_id:item.lease.id,url:url.href,method,headers,body_base64:body.toString('base64'),body_sha256:sha(body),
+      const plan:HttpPlan={lease:item.lease,lease_id:item.lease.id,url:url.href,method,headers,body_base64:body.toString('base64'),body_sha256:sha(body),
         max_response_bytes:Math.min(1024*1024,item.lease.grant.max_bytes-item.lease.used_bytes),
         ...(credential?{credential_ref:credential.ref,credential_revision:credential.revision}:{})};
       const stream=await options.transport.http(plan,AbortSignal.any([item.abort.signal,...init.signal?[init.signal]:[]]));
@@ -110,6 +110,7 @@ export function createCapabilityAuthority(options: CapabilityAuthorityOptions) {
       const sockets=new Set<string>(), pending=new Set<Promise<unknown>>();
       // Resources remain retained through failed/blocked closure and can be retried.
       item.resources.add(()=>attachment.cancelPending()); item.resources.add(()=>attachment.removeNativeAllow()); item.resources.add(()=>attachment.context.close());
+      if(options.transport.release) item.resources.add(()=>options.transport.release!(item.lease.id));
       const observe=<T>(p:Promise<T>)=>{pending.add(p);return track(item,p.finally(()=>pending.delete(p)));};
       const checkTarget=(target:{host:string;port:number})=>{if(!item.lease.grant.endpoints.some(e=>e.host===target.host&&e.port===target.port))reject('browser_endpoint_denied');};
       return {

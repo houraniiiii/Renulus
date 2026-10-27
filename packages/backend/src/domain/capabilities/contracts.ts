@@ -32,6 +32,7 @@ export interface CapabilityStorage {
   execute<C extends CapabilityCommand>(command: C): Promise<CapabilityResults[C['type']]>;
 }
 export interface HttpPlan {
+  lease: CapabilityLease;
   lease_id: string; url: string; method: string; headers: Record<string, string>;
   body_base64: string; body_sha256: string; max_response_bytes: number;
   /** Worker-only credential lookup. No credential value may cross this port. */
@@ -48,6 +49,8 @@ export interface CapabilityTransport {
   tunnelRead(id: string, signal: AbortSignal): Promise<{ data: Uint8Array; eof: boolean }>;
   tunnelWrite(id: string, data: Uint8Array, end: boolean, signal: AbortSignal): Promise<void>;
   tunnelClose(id: string): Promise<void>;
+  /** Destroys every socket of the lease and returns only after the owning client process has exited. */
+  release?(leaseId: string): Promise<void>;
 }
 export interface OwnedBrowserContext {
   /** Close includes pending actions, proxy connections and the isolated context. */
