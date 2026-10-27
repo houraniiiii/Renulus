@@ -7,10 +7,14 @@ Design C is the selected replacement as of October 10, 2026. Follow the
 screen map, later user decisions, interactions and acceptance. DC01 reconciles
 the editable Figma references before implementation uses them as visual targets.
 
-The canonical source now implements the Design C shell and connected modules.
-The installed default remains the previously validated Flow delivery until the
-DC20/DC21 gates pass. Source checks and hidden app evidence are recorded in the
-spec and execution record; they do not establish matching Windows delivery.
+The canonical source implements the Design C shell and connected modules. The
+owner's October 19/20 MVP instruction authorized local shortcut cutover; the
+ordinary launcher now selects the Design C source app with OpenCode v2 saved
+learning chat. The previous packaged Flow app remains at `C:/Renulus/app` for
+recovery. See the [MVP delivery record](docs/implementation/MVP_20261019.md) for
+the current source delivery, verification and limits. This bounded current-PC
+cutover does not pass full H20 or matching packaged Windows acceptance. Earlier
+DC20/DC21 deferral text records the pre-MVP checkpoint.
 
 ## Character
 

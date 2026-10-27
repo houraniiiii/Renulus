@@ -680,3 +680,58 @@ The exact gateway fix, verification results and delivery limitations are
 engineering findings in the delivery record. Future EmbeddingGemma 2 migration
 remains later work. A subscription quota failure is not authorization for a paid
 API fallback or an automatic change of provider/model.
+
+## October 26 architecture and content-delivery follow-ups
+
+The owner asks for concise current-state answers and a delegated, primary-source
+licensing review of concrete data to include. Evaluate bundling, source links,
+opt-in setup acquisition, preloaded summaries and user-supplied local/Drive files;
+identify permitted routes rather than assuming public access permits every use
+or treating unverified permission as a categorical prohibition.
+
+The owner wants useful, reliable learning and persistent references to important
+material without storage exceeding roughly **50–150 GB**. This is the requested
+storage envelope, not an approved 50 GB default, partition budget or retention
+algorithm. The assistant's TypeScript/Effect main-backend plus a small Python
+helper recommendation and proposed minimum data layout remain proposals, not
+confirmed replacements for the selected stack. This follow-up authorizes research
+and documentation, not product migration or corpus distribution.
+
+## October 26 full backend finalisation specification
+
+The owner now confirms **TypeScript/Effect plus Python** as the target backend
+direction and requests one spec for **full OpenCode v2 integration**, all tools
+connected, and reliable plugin-based addition, removal and editing of harness
+capabilities. **Keep the other selected frameworks**, including Mem0 OSS/local
+Qdrant, LanceDB, Docling/HybridChunker, FastEmbed and canonical SQLite. This
+supersedes treating the hybrid architecture itself as merely an assistant
+recommendation; exact module placement and migration sequencing remain
+engineering choices for the spec.
+
+The owner explicitly requests delegated subagents in sequential waves and
+adversarial reviews. The deliverable is the
+[single backend finalisation spec](BACKEND_FINALISATION_SPEC.md), including the
+complete tool/workflow inventory, connected migration, native extension seams and
+readiness criteria. This is specification authority, not incidental runtime
+implementation, provider usage, installation or deployment. The earlier exact
+model/subscription, source-use, retention and assessment decisions still apply.
+
+## October 27 backend implementation authorisation
+
+The owner requests completion of the backend end to end using
+`BACKEND_FINALISATION_SPEC.md`, with implementation following a brief gap check.
+Follow BF00–BF08 dependencies, reuse working code, use TypeScript/Effect plus
+Python and native OpenCode execution/plugins, and retain Mem0/local Qdrant,
+LanceDB, Docling/HybridChunker, FastEmbed and SQLite. Connect every required tool
+and workflow, including reliable plugin addition/editing/removal. Preserve the
+existing UI, data, subscriptions and selected application models.
+
+The owner authorises focused implementation subagents, adversarial integration
+review, repairs and autonomous continuation. Use Kimi K3.1 at max and GPT 6.1 Sol
+as the main implementers, with a separate Sol reviewer. These are development
+agent choices, not additions to Renulus's generative model allowlist. Disabled
+required capabilities do not count as complete. Record genuine external blockers
+precisely and report changes, verification and remaining required work. This
+supersedes the earlier specification-only restriction for the authorised task.
+Progress/evidence is recorded in
+[the implementation record](../implementation/BACKEND_FINALISATION_20261027.md).

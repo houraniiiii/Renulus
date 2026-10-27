@@ -1,0 +1,56 @@
+{
+  "cohort": "4b6fea2875e4f2e3e8a8fee181803e54f7056845",
+  "license": "MIT",
+  "files": [
+    {
+      "source": "packages/gui-extensions/src/browser/chromium.ts",
+      "sha256": "2a41297f0e3a916ed0cbb17f9ad92a867d49c3be48f2d237d2ee2205950dfc3e",
+      "adopted_sha256": "0e70bd9e3d022f25efee5a87c5f4717523821587630125dfc89ed0be019fa638"
+    },
+    {
+      "source": "packages/gui-extensions/src/browser/cdp.ts",
+      "sha256": "6a4433605d4f35a4453b6042f6fadafd71cd3870ff4cc63909ba0c981fd345b5",
+      "adopted_sha256": "51803344a0c307cf3f54bec85b649438b0cda3977f0ef36b6a278453c57f5831"
+    },
+    {
+      "source": "packages/gui-extensions/src/browser/files.ts",
+      "sha256": "3cbb1460509df7b93861110ebd03c8d3e6d75b6bb89d3caa2c536e0f26c15666",
+      "adopted_sha256": "1ecc99f01b05040d1016c9faa69176a15a3341e0ea41d57242100930edbffb5e"
+    },
+    {
+      "source": "packages/gui-extensions/src/browser/diagnostics.ts",
+      "sha256": "6bb1aeddc2df2a0c20b726b1ee043a8eb687b92222abda35f37ffd73b4a4b935",
+      "adopted_sha256": "b41d721d934128fa75255dab3fc8cb9022df4399ede7e0c5eeb2f63c3750b5a1"
+    },
+    {
+      "source": "packages/gui-extensions/src/browser/icon.ts",
+      "sha256": "07666f0eb3f85e6b2767a7df33c2e046f37180c5037d7627c4df9155e00fe954",
+      "adopted_sha256": "cba658647f905efb4781d06219c95101c55ecceeac71a578d0e52a5c3c0729c2"
+    },
+    {
+      "source": "packages/gui-extensions/src/browser/profiling.ts",
+      "sha256": "f6667e682be9986a3f5c79a9fa9bf9b1d9294128a29a0bbe7d10eba88a7c453e",
+      "adopted_sha256": "842ec685c5910ade37846d18c7c1fe7f55a7220c8d14dd124cf96a8636fe460f"
+    },
+    {
+      "source": "packages/gui-extensions/src/browser/policy.ts",
+      "sha256": "83cbfb42ccdf68fde4ff7eb26696e5708af73b3083e8c9916475a7e5fe603d35",
+      "adopted_sha256": "07c163c7ade787e89c104b001e3e648e7de1cc55af40af086bec7d6adf6eaa6a"
+    },
+    {
+      "source": "packages/gui-extensions/src/browser/analysis.ts",
+      "sha256": "6bc2cccf8ba5b28cd38e2904af2b06986c09704dacdb1f36439f54b7a55422f3",
+      "adopted_sha256": "03ab8b47403aa182d0944a71ec15a504f3d4a9b7bb9cda2d3ce50c2c69769192"
+    },
+    {
+      "source": "packages/gui-extensions/src/browser/errors.ts",
+      "sha256": "1e5bf3fdaac09a288eac057b21934bfa7679150adf4e4924f2927702eb6fd99d",
+      "adopted_sha256": "320ea8d9af626120c0be7e994cbb14bd0c95f2bb1dfa7c9cc3b694b8b4fa6958"
+    }
+  ],
+  "changes": [
+    "TypeScript erased with esbuild 0.28.1; local ESM suffixes",
+    "icon MAX_ICON_URL inlined from native ipc.ts 24576",
+    "OS foreground focus restoration removed; app-owned hidden context"
+  ]
+}

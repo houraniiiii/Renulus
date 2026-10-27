@@ -53,6 +53,7 @@ explicit reference launcher and is separate from Renulus implementation evidence
 - [Use Renulus](docs/implementation/USING_RENULUS.md) — subscriptions, study, Library, Cases, Memory and recovery.
 - [Implementation run](docs/implementation/EXECUTION.md) — current C coordination and dated implementation evidence.
 - [Decisions](docs/DECISIONS.md) — confirmed choices and unresolved work.
+- [Backend finalisation spec](docs/planning/BACKEND_FINALISATION_SPEC.md) — the October 26 TS/Effect + Python target, complete native plugin/tool integration, migration and readiness gates.
 - [Design C implementation spec](docs/planning/DESIGN_C_IMPLEMENTATION_SPEC.md) — current UI replacement target, ordered tickets, backend gaps and acceptance.
 - [Implementation stages](docs/planning/IMPLEMENTATION_PLAN.md) — original foundation plan; the C spec governs the UI replacement.
 - [Architecture](docs/planning/ARCHITECTURE.md) — module ownership, records and interfaces.

@@ -7,7 +7,7 @@ import { useMemoryRequest, useMemoryResource } from './requests';
 import { readableState, type MemoryJob, type MemoryStatus } from './types';
 
 function restoredScope(job: MemoryJob): ContextScope | undefined {
-  if (job.state !== 'cancelled' || job.error_code !== 'restore_interrupted' || !job.evidence_id || !job.scope) return;
+  if (job.state !== 'cancelled' || !['restore_interrupted', 'restore_explicit_capture'].includes(job.error_code ?? '') || !job.evidence_id || !job.scope) return;
   try {
     const value = JSON.parse(job.scope);
     if (value && ['study', 'personal-library', 'generated-practice', 'reviewed-assessment'].includes(value.kind)

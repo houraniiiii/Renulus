@@ -1,5 +1,10 @@
 # OpenCode integration specifications and vertical slices
 
+**October 26:** use the [backend finalisation spec](../BACKEND_FINALISATION_SPEC.md)
+as the single target for completing the hybrid TS/Effect + Python backend and
+native plugin/tool integration. Its mapping consumes these H criteria and
+retained proofs; the October 10 summaries below remain historical checkpoints.
+
 **Canonical Design C handoff:** H00 is already repaired in `fa3b590c`. H01/H24
 are complete for their local foundation scope from
 `c2bd896420fb88f76d63ca576414dbbba182f4c2`; see the

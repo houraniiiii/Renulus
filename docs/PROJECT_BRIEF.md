@@ -1,5 +1,12 @@
 # Renulus project brief
 
+Backend planning update, October 26: the owner requests full OpenCode v2
+integration using TypeScript/Effect and Python, all tools/workflows connected,
+and reliable native plugin lifecycle. The selected memory/document/index engines
+remain unchanged. The [backend finalisation spec](planning/BACKEND_FINALISATION_SPEC.md)
+consolidates the target and reviewed migration. This is specification work; the
+current delivered backend remains at the separately qualified MVP scope below.
+
 Current delivery update, October 20: the owner authorized a local Design C MVP
 with saved learning chat on OpenCode v2, bounded Library storage repairs and
 ordinary shortcut cutover. The source delivery, retained previous installation,

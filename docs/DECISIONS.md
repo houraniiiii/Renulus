@@ -1,10 +1,35 @@
 # Renulus decisions
 
-Updated on 2026-10-10. The [recorded user answers](planning/2026-10-04-user-answers.md)
+Updated on 2026-10-26. The [recorded user answers](planning/2026-10-04-user-answers.md)
 are the evidence for the new product decisions. Earlier assistant suggestions
 remain proposals unless accepted here.
 
 ## Confirmed choices
+
+### October 27 backend implementation
+
+The owner now authorises implementing BF00–BF08 of the backend finalisation
+spec, including native plugins and all required workflows, while preserving the
+selected engines, UI, records, subscriptions and application models. Follow the
+dependency order, reuse working implementations and fix independent integration
+review findings. This supersedes the earlier specification-only restriction;
+the implementation is not complete merely because the specification is reviewed.
+See the [exact instruction](planning/2026-10-04-user-answers.md#october-27-backend-implementation-authorisation)
+and [implementation evidence](implementation/BACKEND_FINALISATION_20261027.md).
+
+### October 26 full backend specification direction
+
+The owner requests full OpenCode v2 integration with **TypeScript/Effect and
+Python**, reliably pluggable harness capabilities and all tools/workflows
+connected. Keep Mem0 OSS/local Qdrant, LanceDB, Docling/HybridChunker, FastEmbed,
+canonical SQLite and the selected subscriptions/models. The
+[backend finalisation spec](planning/BACKEND_FINALISATION_SPEC.md) consolidates
+the target and migration following sequential delegated source/design waves and
+adversarial reviews. Earlier instructions to preserve working Python modules
+govern migration safety; they do not forbid the newly requested TS/Effect target.
+This authorises the specification and review work, not runtime implementation or
+an incidental default-installation change. See the
+[exact recorded instruction](planning/2026-10-04-user-answers.md#october-26-full-backend-finalisation-specification).
 
 ### October 19–20 local MVP and bounded storage closeout
 
@@ -96,7 +121,7 @@ DC21/H20 release gates and the immutable snapshot remain unchanged.
 | Background document models | Small CPU models for embeddings/OCR may be bundled and managed entirely by Renulus, with no GPU, Docker, model server or setup for doctors. Conversation and other generative work keep the selected subscription/model rules. |
 | Backend preference | Straightforward integration of suitable existing components. |
 | Harness direction | Renulus primarily provides data, retrieval, tools, execution and subagents, with the application as a client. The owner selected OpenCode v2 on October 10; the earlier Pi recommendation remains historical research. Initial H01/H24 implementation is now authorised as recorded above. |
-| Backend foundation | OpenCode v2 is selected for the harness migration using supported embedding/configuration and minimal necessary changes. The Design C baseline still uses the attributed Hermes integration. Preserve reusable Python domain modules, upstream licences/provenance and working adapters until their replacements are connected. |
+| Backend foundation | OpenCode v2 owns migrated execution/transcripts. The October 26 finalisation target uses TS/Effect and Python with native plugins, keeping the selected data engines; see the [single spec](planning/BACKEND_FINALISATION_SPEC.md). Preserve working Python/Hermes modules, licences and provenance until connected replacements pass; this is a target, not a completed rewrite. |
 | Harness configurability | Models by purpose, routing/fallback policies, subagents, instructions, skills, MCP and plugins must be reliably adjustable. Target 128K–256K context with developed context/memory management; actual limits remain route-specific validation work and later tickets remain planned. |
 | Future providers/local inference | Plan for additional providers and optional vLLM/Ollama connections later. This does not require doctors to run a model server, change current selected subscription defaults or authorise incidental inference/provider charges. |
 | Learner-memory engine | Retain Mem0 OSS and its local Qdrant client; no Qdrant server is required. Existing code uses Hermes's in-process integration. The OpenCode plan retains the Python memory adapter and canonical records, routing extraction through the new harness when its owning slice is connected. |

@@ -2,7 +2,7 @@
 import { Effect } from 'effect';
 import { AIError, InvalidRequestError, LLM, LLMClient } from '@opencode/ai';
 import type { DomainClient, DomainBinding } from './domain-ipc.ts';
-import { createGatewayAdapter, gatewayDomainError, type TrustedGatewayPreparation, type StatelessModelPreparation } from './gateway-adapter.ts';
+import { createGatewayAdapter, gatewayDomainError, type TrustedGatewayPreparation, type StatelessModelPreparation, type StandalonePurpose } from './gateway-adapter.ts';
 import { captureNativeManifest } from './native-manifest.ts';
 import type { ExtractionFailure, ExtractionReply } from './extraction-host.ts';
 
@@ -44,14 +44,14 @@ export async function createLearningGateway(domain: DomainClient) {
         ? Effect.void : Effect.fail(denied())),
     ),
   });
-  return { ...gateway,
-    async generateExtraction(binding: DomainBinding, input: Readonly<{ system: string; user: string }>, signal: AbortSignal): Promise<ExtractionReply> {
+  async function generate(binding: DomainBinding, input: Readonly<{ system: string; user: string }>, signal: AbortSignal,
+    purpose?: StandalonePurpose): Promise<ExtractionReply> {
       if (extracting.has(binding.operation_id)) return { failure: { code: 'memory_extraction_identity_conflict', status: 409, retryable: false } };
       extracting.set(binding.operation_id, undefined);
       let prepared: StatelessModelPreparation | undefined;
       try {
         const exit = await Effect.runPromiseExit(Effect.scoped(Effect.gen(function* () {
-          const admitted = yield* gateway.prepareStateless(binding, input);
+          const admitted = yield* (purpose ? gateway.prepareStandalone(binding, purpose, input) : gateway.prepareStateless(binding, input));
           prepared = admitted;
           const response = yield* LLM.generate(admitted.request).pipe(Effect.provideService(LLMClient.Service, gateway.client));
           const receipt = admitted.receipt();
@@ -62,6 +62,9 @@ export async function createLearningGateway(domain: DomainClient) {
         return { failure: safeFailure(prepared?.failure()) ?? extracting.get(binding.operation_id) ??
           { code: 'memory_extraction_failed', status: 503, retryable: true } };
       } finally { extracting.delete(binding.operation_id); }
-    },
+    }
+  return { ...gateway,
+    generateExtraction: (binding: DomainBinding, input: Readonly<{ system: string; user: string }>, signal: AbortSignal) => generate(binding, input, signal),
+    generateStandalone: (binding: DomainBinding, purpose: StandalonePurpose, input: Readonly<{ system: string; user: string }>, signal: AbortSignal) => generate(binding, input, signal, purpose),
   };
 }

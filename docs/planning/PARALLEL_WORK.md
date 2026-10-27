@@ -1,5 +1,11 @@
 # Parallel implementation and worktrees
 
+For backend finalisation, the [single backend spec](BACKEND_FINALISATION_SPEC.md)
+maps the existing H/DC obligations into the new dependency order and target
+module ownership. Use its accepted committed baseline before implementation
+worktrees; this specification task uses sequential delegated reviews and does
+not start code implementation. Retain the isolation and single-owner rules here.
+
 For the selected Design C replacement, the [C spec](DESIGN_C_IMPLEMENTATION_SPEC.md)
 owns tickets DC01–DC21, dependencies and the five delivery waves. Its ticket
 dependencies govern completion even when contract-based work starts earlier.

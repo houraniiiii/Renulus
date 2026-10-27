@@ -1,0 +1,798 @@
+{
+  "parents": {
+    "learn_messages": [
+      {
+        "parent": "learn_threads",
+        "columns": [
+          "thread_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "learn_runs": [
+      {
+        "parent": "learn_threads",
+        "columns": [
+          "thread_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "learn_harness_mappings": [
+      {
+        "parent": "learn_threads",
+        "columns": [
+          "thread_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "learn_harness_answers": [
+      {
+        "parent": "learn_runs",
+        "columns": [
+          "run_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      },
+      {
+        "parent": "learn_threads",
+        "columns": [
+          "thread_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "learn_harness_migrations": [
+      {
+        "parent": "learn_threads",
+        "columns": [
+          "thread_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "learn_harness_purges": [],
+    "learn_conversations": [
+      {
+        "parent": "learn_threads",
+        "columns": [
+          "thread_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "case_conversations": [
+      {
+        "parent": "case_sessions",
+        "columns": [
+          "case_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "case_attachments": [
+      {
+        "parent": "case_sessions",
+        "columns": [
+          "case_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "case_attachment_parts": [
+      {
+        "parent": "case_attachments",
+        "columns": [
+          "attachment_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "knowledge_revisions": [
+      {
+        "parent": "knowledge_documents",
+        "columns": [
+          "document_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "knowledge_passages": [
+      {
+        "parent": "knowledge_revisions",
+        "columns": [
+          "revision_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "knowledge_jobs": [
+      {
+        "parent": "knowledge_revisions",
+        "columns": [
+          "revision_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "knowledge_cleanup": [
+      {
+        "parent": "knowledge_revisions",
+        "columns": [
+          "revision_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "knowledge_attachments": [
+      {
+        "parent": "learn_threads",
+        "columns": [
+          "chat_id"
+        ],
+        "kind": "owned",
+        "discriminator": [
+          "chat_kind",
+          "learning"
+        ],
+        "prefix": ""
+      },
+      {
+        "parent": "case_sessions",
+        "columns": [
+          "chat_id"
+        ],
+        "kind": "owned",
+        "discriminator": [
+          "chat_kind",
+          "case"
+        ],
+        "prefix": ""
+      }
+    ],
+    "knowledge_attachment_originals": [
+      {
+        "parent": "knowledge_attachments",
+        "columns": [
+          "attachment_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "knowledge_attachment_metadata": [
+      {
+        "parent": "knowledge_attachments",
+        "columns": [
+          "attachment_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "knowledge_source_status_events": [
+      {
+        "parent": "knowledge_documents",
+        "columns": [
+          "document_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "memory_history": [
+      {
+        "parent": "memory_facts",
+        "columns": [
+          "record_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "memory_requests": [
+      {
+        "parent": "memory_facts",
+        "columns": [
+          "record_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "memory_sources": [
+      {
+        "parent": "memory_facts",
+        "columns": [
+          "record_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      },
+      {
+        "parent": "learning_evidence",
+        "columns": [
+          "source_key"
+        ],
+        "kind": "link",
+        "discriminator": null,
+        "prefix": "evidence:"
+      }
+    ],
+    "memory_jobs": [
+      {
+        "parent": "learning_evidence",
+        "columns": [
+          "evidence_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "memory_answer_lineage": [],
+    "memory_support_groups": [
+      {
+        "parent": "memory_facts",
+        "columns": [
+          "record_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "memory_support_inputs": [
+      {
+        "parent": "memory_support_groups",
+        "columns": [
+          "group_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "assessment_items": [
+      {
+        "parent": "assessment_sessions",
+        "columns": [
+          "session_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "assessment_attempts": [
+      {
+        "parent": "assessment_sessions",
+        "columns": [
+          "session_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      },
+      {
+        "parent": "assessment_items",
+        "columns": [
+          "item_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "assessment_exposure": [
+      {
+        "parent": "assessment_items",
+        "columns": [
+          "item_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "assessment_generated_items": [
+      {
+        "parent": "assessment_generated_sessions",
+        "columns": [
+          "session_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "assessment_generated_attempts": [
+      {
+        "parent": "assessment_generated_sessions",
+        "columns": [
+          "session_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      },
+      {
+        "parent": "assessment_generated_items",
+        "columns": [
+          "item_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "assessment_test_versions": [
+      {
+        "parent": "assessment_tests",
+        "columns": [
+          "test_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "assessment_attempt_drafts": [
+      {
+        "parent": "assessment_test_attempts",
+        "columns": [
+          "attempt_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "assessment_attempt_exposure": [
+      {
+        "parent": "assessment_test_attempts",
+        "columns": [
+          "attempt_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "study_project_goals": [
+      {
+        "parent": "study_projects",
+        "columns": [
+          "project_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "study_project_documents": [
+      {
+        "parent": "study_projects",
+        "columns": [
+          "project_id"
+        ],
+        "kind": "link",
+        "discriminator": null,
+        "prefix": ""
+      },
+      {
+        "parent": "knowledge_revisions",
+        "columns": [
+          "revision_id"
+        ],
+        "kind": "link",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "study_project_chats": [
+      {
+        "parent": "study_projects",
+        "columns": [
+          "project_id"
+        ],
+        "kind": "link",
+        "discriminator": null,
+        "prefix": ""
+      },
+      {
+        "parent": "learn_threads",
+        "columns": [
+          "chat_id"
+        ],
+        "kind": "link",
+        "discriminator": [
+          "chat_kind",
+          "learning"
+        ],
+        "prefix": ""
+      },
+      {
+        "parent": "case_sessions",
+        "columns": [
+          "chat_id"
+        ],
+        "kind": "link",
+        "discriminator": [
+          "chat_kind",
+          "case"
+        ],
+        "prefix": ""
+      }
+    ],
+    "learning_evidence": [
+      {
+        "parent": "learn_threads",
+        "columns": [
+          "entity_id"
+        ],
+        "kind": "owned",
+        "discriminator": [
+          "kind",
+          "study-interest"
+        ],
+        "prefix": ""
+      },
+      {
+        "parent": "learn_threads",
+        "columns": [
+          "entity_id"
+        ],
+        "kind": "owned",
+        "discriminator": [
+          "kind",
+          "study-answer"
+        ],
+        "prefix": ""
+      },
+      {
+        "parent": "assessment_attempts",
+        "columns": [
+          "entity_id"
+        ],
+        "kind": "owned",
+        "discriminator": [
+          "kind",
+          "assessment-answer"
+        ],
+        "prefix": ""
+      },
+      {
+        "parent": "assessment_generated_attempts",
+        "columns": [
+          "entity_id"
+        ],
+        "kind": "owned",
+        "discriminator": [
+          "kind",
+          "generated-answer"
+        ],
+        "prefix": ""
+      },
+      {
+        "parent": "assessment_test_attempts",
+        "columns": [
+          "entity_id"
+        ],
+        "kind": "owned",
+        "discriminator": [
+          "kind",
+          "assessment-test-answer"
+        ],
+        "prefix": ""
+      }
+    ],
+    "content_pack_topics": [
+      {
+        "parent": "content_packs",
+        "columns": [
+          "pack_id",
+          "pack_version"
+        ],
+        "kind": "link",
+        "discriminator": null,
+        "prefix": ""
+      },
+      {
+        "parent": "content_topics",
+        "columns": [
+          "topic_id",
+          "topic_version"
+        ],
+        "kind": "link",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "content_pack_cases": [
+      {
+        "parent": "content_packs",
+        "columns": [
+          "pack_id",
+          "pack_version"
+        ],
+        "kind": "link",
+        "discriminator": null,
+        "prefix": ""
+      },
+      {
+        "parent": "content_case_versions",
+        "columns": [
+          "case_id",
+          "case_version"
+        ],
+        "kind": "link",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "content_pack_questions": [
+      {
+        "parent": "content_packs",
+        "columns": [
+          "pack_id",
+          "pack_version"
+        ],
+        "kind": "link",
+        "discriminator": null,
+        "prefix": ""
+      },
+      {
+        "parent": "content_question_versions",
+        "columns": [
+          "question_id",
+          "question_version"
+        ],
+        "kind": "link",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "content_active_pack": [
+      {
+        "parent": "content_packs",
+        "columns": [
+          "pack_id",
+          "pack_version"
+        ],
+        "kind": "link",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "content_question_withdrawals": [
+      {
+        "parent": "content_question_versions",
+        "columns": [
+          "question_id",
+          "version"
+        ],
+        "kind": "link",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "content_pack_withdrawals": [
+      {
+        "parent": "content_packs",
+        "columns": [
+          "pack_id",
+          "version"
+        ],
+        "kind": "link",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "update_reviews": [
+      {
+        "parent": "update_entries",
+        "columns": [
+          "entry_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "update_review_heads": [
+      {
+        "parent": "update_entries",
+        "columns": [
+          "entry_id"
+        ],
+        "kind": "link",
+        "discriminator": null,
+        "prefix": ""
+      },
+      {
+        "parent": "update_reviews",
+        "columns": [
+          "review_id"
+        ],
+        "kind": "link",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "update_source_statuses": [
+      {
+        "parent": "update_reviews",
+        "columns": [
+          "review_id"
+        ],
+        "kind": "link",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "update_affected_versions": [
+      {
+        "parent": "update_entries",
+        "columns": [
+          "entry_id"
+        ],
+        "kind": "link",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "update_library_changes": [
+      {
+        "parent": "update_entries",
+        "columns": [
+          "entry_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "update_literature_records": [
+      {
+        "parent": "update_entries",
+        "columns": [
+          "entry_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ],
+    "update_schedule_runs": [
+      {
+        "parent": "update_schedule_jobs",
+        "columns": [
+          "job_id"
+        ],
+        "kind": "owned",
+        "discriminator": null,
+        "prefix": ""
+      }
+    ]
+  },
+  "tombstones": {
+    "conversation_command": "conversation_commands",
+    "learn_thread": "learn_threads",
+    "learn_message": "learn_messages",
+    "learn_run": "learn_runs",
+    "case": "case_sessions",
+    "case_attachment": "case_attachments",
+    "memory_fact": "memory_facts",
+    "learning_evidence": "learning_evidence",
+    "knowledge-document": "knowledge_documents",
+    "document": "knowledge_documents",
+    "knowledge-revision": "knowledge_revisions",
+    "revision": "knowledge_revisions",
+    "assessment_session": "assessment_sessions",
+    "assessment_item": "assessment_items",
+    "assessment_attempt": "assessment_attempts",
+    "generated_session": "assessment_generated_sessions",
+    "generated_item": "assessment_generated_items",
+    "generated_attempt": "assessment_generated_attempts",
+    "project": "study_projects",
+    "test": "assessment_tests",
+    "saved_test": "assessment_tests",
+    "saved_test_version": "assessment_test_versions",
+    "test_attempt": "assessment_test_attempts",
+    "attachment": "knowledge_attachments",
+    "attachment_original": "knowledge_attachment_originals",
+    "goal": "study_project_goals",
+    "update_entry": "update_entries",
+    "project_chat": "study_project_chats",
+    "project_document": "study_project_documents",
+    "test_import": "assessment_test_imports"
+  },
+  "unavailable": {
+    "assessment_test_attempts": [
+      [
+        "live_version_id",
+        "assessment_test_versions",
+        "id"
+      ]
+    ],
+    "assessment_question_reports": [
+      [
+        "live_version_id",
+        "assessment_test_versions",
+        "id"
+      ],
+      [
+        "live_attempt_id",
+        "assessment_test_attempts",
+        "id"
+      ]
+    ],
+    "assessment_test_jobs": [
+      [
+        "live_published_version_id",
+        "assessment_test_versions",
+        "id"
+      ]
+    ],
+    "assessment_test_imports": [
+      [
+        "live_source_revision_id",
+        "knowledge_revisions",
+        "id"
+      ],
+      [
+        "live_published_version_id",
+        "assessment_test_versions",
+        "id"
+      ]
+    ],
+    "knowledge_documents": [
+      [
+        "active_revision",
+        "knowledge_revisions",
+        "id"
+      ],
+      [
+        "latest_revision",
+        "knowledge_revisions",
+        "id"
+      ]
+    ]
+  }
+}
