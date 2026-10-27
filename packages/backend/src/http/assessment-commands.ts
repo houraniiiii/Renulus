@@ -14,7 +14,8 @@ export async function assessmentCommand(request:IncomingMessage,url:URL,storage:
   const body=()=>readJsonObject(request,1024*1024);
   const key=(b?:ObjectValue)=>{const h=request.headers['idempotency-key'];if(Array.isArray(h))reject('invalid_request');return h??b?.idempotency_key??'';};
   const producer=()=>{if(!generation)reject('assessment_generation_unavailable');return generation;};
-  const command=(c:AssessmentCommand)=>storage.command(c);
+  // The receipt is host-only and may be null; no public route reads it.
+  const command=(c:Exclude<AssessmentCommand,{type:'assessment.fictional.receipt'}>)=>storage.command(c);
   // Validated draft keys/checkpoints are trusted producer material, not pre-attempt output.
   const generationView=(job:ObjectValue)=>({id:job.id,state:job.state,requested_count:job.requested_count,validated_count:job.validated_count,accepted_count:job.accepted_count,published_version_id:job.published_version_id,error_code:job.error_code,result:job.published_version_id?{version_id:job.published_version_id}:null});
   if(path==='policy'&&method==='GET')return result(await command({type:'assessment.policy'}));

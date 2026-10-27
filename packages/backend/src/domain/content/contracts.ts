@@ -6,5 +6,6 @@ export type ContentCommand =
   | {type:'content.active'} | {type:'content.topics'} | {type:'content.sources'}
   | {type:'content.topic';topicId:string} | {type:'content.case';caseId:string;version:number|null}
   | {type:'content.install';plan:ContentPackPlan}
+  | {type:'content.pack.withdraw';packId:string;version:string;reason:string}
   | {type:'content.withdraw';questionId:string;version:number;reason:string;replacementVersion:number|null};
 export type ContentResults = {[K in ContentCommand['type']]:ObjectValue};

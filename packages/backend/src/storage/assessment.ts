@@ -12,10 +12,11 @@ export { reconcileAssessments } from '../domain/assessment/attempts.ts';
 const types=new Set(['assessment.policy','assessment.tests.list','assessment.tests.get','assessment.tests.setup','assessment.tests.preview','assessment.tests.reviewed','assessment.tests.publish','assessment.tests.change','assessment.attempts.list','assessment.attempts.start','assessment.attempts.get','assessment.attempts.draft','assessment.attempts.present','assessment.attempts.answer','assessment.attempts.submit','assessment.attempts.transition','assessment.attempts.help','assessment.help.current','assessment.report','assessment.narrative.input','assessment.generation.create','assessment.generation.get','assessment.generation.claim','assessment.generation.checkpoint','assessment.generation.fail','assessment.generation.cancel','assessment.generation.publish','assessment.import.create','assessment.import.get','assessment.import.edit','assessment.import.resolve','assessment.import.visibility','assessment.import.claim','assessment.import.normalized','assessment.import.cancel','assessment.import.publish']);
 export const isAssessmentCommand=(v:unknown):v is AssessmentCommand=>!!v&&typeof v==='object'&&'type'in v&&types.has(String(v.type));
 types.add('assessment.fictional.stamp');
+types.add('assessment.fictional.receipt');
 types.add('assessment.generation.interrupted');
 export function validateAssessmentCommand(c:AssessmentCommand) {
   const fields:Record<string,string[]>={
-    'assessment.policy':[], 'assessment.fictional.stamp':[], 'assessment.tests.list':['lifecycle','limit','before'], 'assessment.tests.get':['testId'],
+    'assessment.policy':[], 'assessment.fictional.stamp':[], 'assessment.fictional.receipt':['idempotencyKey'], 'assessment.tests.list':['lifecycle','limit','before'], 'assessment.tests.get':['testId'],
     'assessment.tests.setup':['versionId'],'assessment.tests.preview':['versionId'],'assessment.tests.reviewed':['title','count','topicIds','idempotencyKey'],
     'assessment.tests.publish':['title','version','provenance','expectedRevision','idempotencyKey'], 'assessment.tests.change':['testId','expectedRevision','action','title','idempotencyKey'],
     'assessment.attempts.list':[],'assessment.attempts.start':['versionId','mode','timing','idempotencyKey'],'assessment.attempts.get':['attemptId'],
@@ -68,7 +69,7 @@ export function validateAssessmentCommand(c:AssessmentCommand) {
     case 'assessment.import.normalized':list(c.candidates,1,50);for(const v of c.candidates){exact(v,['id','span','stem','options','explanation','topic_id','correct_option_ids','key_status','removed','revision','review_confirmed']);id(v.id);exact(v.span,['start','end']);integer(v.span.start);integer(v.span.end,v.span.start+1);text(v.stem,1,6000);options(v.options);text(v.explanation,0,6000);id(v.topic_id);ids(v.correct_option_ids);if(!['missing','ambiguous','resolved'].includes(v.key_status)||typeof v.removed!=='boolean'||typeof v.review_confirmed!=='boolean')reject('invalid_request');integer(v.revision,1);}break;
   }
 }
-export function executeAssessment(db:DatabaseSync,c:AssessmentCommand):ObjectValue {
+export function executeAssessment(db:DatabaseSync,c:AssessmentCommand):ObjectValue|null {
   validateAssessmentCommand(c);reconcileAssessments(db);
   if(c.type.startsWith('assessment.tests.'))return versionCommand(db,c);
   if(c.type.startsWith('assessment.generation.'))return generationCommand(db,c);

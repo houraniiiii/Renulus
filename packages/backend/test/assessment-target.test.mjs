@@ -11,6 +11,8 @@ import { MARKER,SELECTOR } from '../src/storage/ownership.ts';
 import { inventory,loadMigrationInventory,canonical,digest } from '../src/storage/schema.ts';
 import { createAssessmentGeneration } from '../src/domain/assessment/generation.ts';
 import { assessmentCommand } from '../src/http/assessment-commands.ts';
+import { createAssessmentTools,registerAssessmentTools } from '../src/domain/assessment/tools.ts';
+import { Effect } from 'effect';
 const repository=resolve(dirname(fileURLToPath(import.meta.url)),'../../..');
 const python='C:/Renulus/dev/python/Scripts/python.exe';
 async function fixture() {
@@ -114,5 +116,98 @@ test('ambiguous imported key requires explicit resolution; private fiction revie
     const refused=createAssessmentGeneration(f.storage,native({fictionalTransform:async()=>batch(),privacyReview:async()=>({schema:'fictional-test-review/1',artifact_sha256:'0'.repeat(64),source_identity_removed:true,clinical_details_generalised:true,no_source_links:true,issues:[]})}));
     await assert.rejects(refused.fictionalise({title:'SYNTHETIC refused',sourceText:sentinel,instruction:'Fictional nephrology',count:5,idempotencyKey:'bf05-fictional-refused'},new AbortController().signal),fail('fictionalisation_privacy_refused'));
     await producer.close();await refused.close();
+  }finally{await f.close();}
+});
+
+const signal=()=>new AbortController().signal;
+const review=({artifactSha256})=>({schema:'fictional-test-review/1',artifact_sha256:artifactSha256,source_identity_removed:true,clinical_details_generalised:true,no_source_links:true,issues:[]});
+test('fictional receipt replays the published request after restart with no inference; Test fence survives restart; personal cohorts only',async()=>{
+  const f=await fixture();try{
+    const key='quick-practice:bf05-request-1',receipt={type:'assessment.fictional.receipt',idempotencyKey:key};let transforms=0;
+    const make=()=>createAssessmentGeneration(f.storage,native({fictionalTransform:async()=>{transforms++;return batch();},privacyReview:async input=>review(input)}));
+    const sentinel='SYNTHETIC_PATIENT_SECRET_00077',input={title:'SYNTHETIC quick practice',sourceText:sentinel,instruction:'General fictional nephrology practice',count:5,idempotencyKey:key};
+    assert.equal(await f.command(receipt),null);
+    const first=make(),published=await first.fictionalise(input,signal());assert.equal(transforms,1);assert.equal(published.status,'ready');
+    assert.deepEqual(await f.command(receipt),published);await first.close();
+    await f.reopen();const restarted=make();
+    assert.deepEqual(await f.command(receipt),published);
+    assert.deepEqual(await restarted.fictionalise(input,signal()),published);assert.equal(transforms,1);
+    assert.ok(!JSON.stringify(await f.command({type:'records.export'})).includes(sentinel));
+    // Only fictional publications answer the receipt; other saved results are not readable through it.
+    const generated=createAssessmentGeneration(f.storage,native({generate:async ({batchIndex})=>batch(batchIndex)}));
+    const job=await generated.create({title:'SYNTHETIC saved practice',count:5,topic_id:null,inputs:[],source_refs:[],idempotencyKey:'bf05-receipt-generated'});await generated.settled(job.id);
+    assert.equal(await f.command({type:'assessment.fictional.receipt',idempotencyKey:'generation-publish:'+job.id}),null);
+    const test=await f.command({type:'assessment.attempts.start',versionId:published.version_id,mode:'test',timing:{kind:'untimed',duration_seconds:null},idempotencyKey:'bf05-fiction-test'});
+    await f.reopen();const afterRestart=make();
+    assert.equal((await f.command({type:'assessment.policy'})).assistance_allowed,false);
+    await assert.rejects(afterRestart.fictionalise({...input,idempotencyKey:'quick-practice:bf05-request-2'},signal()),fail('assistance_restricted'));
+    await assert.rejects(f.command({type:'assessment.generation.create',input:{title:'SYNTHETIC blocked',count:5,topic_id:null,inputs:[],source_refs:[],idempotencyKey:'bf05-blocked-generation'}}),fail('assistance_restricted'));
+    await assert.rejects(f.command(receipt),fail('assistance_restricted'));
+    const scored=await f.command({type:'assessment.attempts.submit',attemptId:test.id,expectedRevision:0,latestDraft:null,idempotencyKey:'bf05-fiction-submit'});
+    assert.equal(scored.result.origin,'generated');assert.equal(scored.result.cohorts.personal.denominator,5);assert.equal(scored.result.cohorts.fresh.denominator,0);
+    assert.deepEqual(await f.command(receipt),published);assert.equal(transforms,1);
+    await afterRestart.close();await generated.close();
+  }finally{await f.close();}
+});
+test('import refinement keeps edits, resolved keys and the original across failed normalization and reopen without self-approval',async()=>{
+  const f=await fixture();try{
+    const text='1. SYNTHETIC unfamiliar question\na. Alpha option\nb. Beta option\nAnswer: a';
+    const created=await f.command({type:'assessment.import.create',title:'SYNTHETIC refined import',original:{kind:'paste',text,terms:'SYNTHETIC owner permission',permission_confirmed:true},idempotencyKey:'bf05-refine-original'});
+    const candidate=created.candidates[0];assert.equal(candidate.key_status,'resolved');
+    const edited=await f.command({type:'assessment.import.edit',importId:created.id,expectedRevision:created.revision,candidateId:candidate.id,stem:'SYNTHETIC edited stem',options:candidate.options,explanation:'',topicId:'personal-import',idempotencyKey:'bf05-refine-edit'});
+    assert.equal(edited.candidates[0].key_status,'missing');
+    const resolved=await f.command({type:'assessment.import.resolve',importId:created.id,expectedRevision:edited.revision,candidateId:candidate.id,optionIds:['b'],reviewConfirmed:true,idempotencyKey:'bf05-refine-resolve'});
+    const at=s=>({start:text.indexOf(s),end:text.indexOf(s)+s.length});
+    const normalization={candidates:[{span:{start:0,end:text.length},stem_span:at('SYNTHETIC unfamiliar question'),stem:'SYNTHETIC unfamiliar question',options:[{id:'a',text:'Alpha option',span:at('Alpha option')},{id:'b',text:'Beta option',span:at('Beta option')}],explanation:'',explanation_span:null}]};
+    const normalizer=createAssessmentGeneration(f.storage,native({normalize:async()=>normalization}));
+    const normalized=await normalizer.normalize(created.id,resolved.revision,signal());
+    assert.equal(normalized.candidates[0].stem,'SYNTHETIC edited stem');assert.deepEqual(normalized.candidates[0].correct_option_ids,['b']);
+    const failing=createAssessmentGeneration(f.storage,native({normalize:unavailable}));
+    await assert.rejects(failing.normalize(created.id,normalized.revision,signal()),fail('synthetic_unavailable'));
+    await normalizer.close();await failing.close();await f.reopen();
+    const reopened=await f.command({type:'assessment.import.get',importId:created.id,original:false});
+    assert.equal(reopened.state,'cancelled');assert.equal(reopened.call_count,2);assert.equal(reopened.result,null);
+    assert.equal(reopened.candidates[0].stem,'SYNTHETIC edited stem');assert.equal(reopened.candidates[0].key_status,'resolved');assert.equal(reopened.candidates[0].review_confirmed,true);
+    const original=await f.command({type:'assessment.import.get',importId:created.id,original:true});assert.equal(original.text,text);assert.equal(original.sha256,digest(text));
+    assert.equal((await f.command({type:'assessment.tests.list',lifecycle:'active',limit:10,before:null})).items.length,0);
+  }finally{await f.close();}
+});
+test('P tools record Study help before assistance and only propose practice; narrative sees the committed result only; pack withdrawal',async()=>{
+  const f=await fixture();try{
+    const saved=await f.command({type:'assessment.tests.reviewed',title:'SYNTHETIC broad nephrology',count:5,topicIds:[],idempotencyKey:'bf05-tools-reviewed'});
+    const study=await f.command({type:'assessment.attempts.start',versionId:saved.version_id,mode:'study',timing:{kind:'untimed',duration_seconds:null},idempotencyKey:'bf05-tools-study'});
+    let grants=['renulus.study.help','renulus.practice.propose'];
+    const tools=createAssessmentTools({storage:f.storage,resolve:async context=>({operationId:'op1',attemptId:'att1',sessionId:context.sessionID,studyAttemptId:study.id,grants}),check:async()=>{}});
+    const context={sessionID:'sess1',id:'call1'};
+    const help=await tools.execute('renulus_study_help',{kind:'sources'},context,signal());
+    assert.equal(help.kind,'sources');assert.ok(!JSON.stringify(help).includes('correct_option_ids'));assert.ok(!JSON.stringify(help).includes('explanation'));
+    assert.deepEqual((await tools.execute('renulus_study_help',{kind:'sources'},context,signal())).context,help.context);
+    await assert.rejects(tools.execute('renulus_study_help',{kind:'sources',attempt_id:'other'},{...context,id:'call-x'},signal()),e=>e.code==='storage_invalid_command'||/invalid|exact|unexpected/i.test(String(e.code??e.message)));
+    const proposal=await tools.execute('renulus_practice_propose',{title:'SYNTHETIC proposal',focus:'Electrolytes',count:10},{...context,id:'call2'},signal());
+    assert.equal(proposal.status,'proposal');assert.equal(proposal.requires_explicit_save,true);
+    await assert.rejects(tools.execute('renulus_practice_propose',{title:'SYNTHETIC proposal',focus:'Electrolytes',count:7},{...context,id:'call3'},signal()));
+    grants=['renulus.practice.propose'];
+    await assert.rejects(tools.execute('renulus_study_help',{kind:'hint'},{...context,id:'call4'},signal()),fail('assessment_tool_grant_denied'));grants=['renulus.study.help','renulus.practice.propose'];
+    const added=[];await Effect.runPromise(registerAssessmentTools({tool:{transform:fn=>{fn({add:t=>added.push(t)});return Effect.void;}}},tools));
+    assert.deepEqual(added.map(t=>[t.name,t.options.permission]),[['renulus_study_help','renulus.study.help'],['renulus_practice_propose','renulus.practice.propose']]);
+    const viaNative=await Effect.runPromise(added[0].execute({kind:'sources'},context));assert.deepEqual(JSON.parse(viaNative.content).context,help.context);
+    const answered=await f.command({type:'assessment.attempts.answer',attemptId:study.id,expectedRevision:0,itemId:study.current_item.item_id,optionIds:[study.current_item.options[0].id],idempotencyKey:'bf05-tools-answer'});
+    assert.equal(answered.committed[0].assisted,true);
+    const test=await f.command({type:'assessment.attempts.start',versionId:saved.version_id,mode:'test',timing:{kind:'untimed',duration_seconds:null},idempotencyKey:'bf05-tools-test'});
+    await assert.rejects(tools.execute('renulus_study_help',{kind:'hint'},{...context,id:'call5'},signal()),fail('attempt_restricted'));
+    let seen;const producer=createAssessmentGeneration(f.storage,native({narrative:async ({committed})=>{seen=committed;return 'SYNTHETIC narrative';}}));
+    await assert.rejects(producer.narrative(test.id,signal()),fail('assistance_restricted'));
+    const scored=await f.command({type:'assessment.attempts.submit',attemptId:test.id,expectedRevision:0,latestDraft:null,idempotencyKey:'bf05-tools-submit'});
+    const narrated=await producer.narrative(test.id,signal());assert.equal(narrated.text,'SYNTHETIC narrative');
+    assert.ok(!JSON.stringify(seen).includes('correct_option_ids'));assert.ok(!('items'in seen.summary));assert.equal(seen.summary.denominator,5);
+    assert.deepEqual((await f.command({type:'assessment.attempts.get',attemptId:test.id})).result,scored.result);await producer.close();
+    // Reserved questions never appear in teaching material; withdrawing the pack is permanent and ends reviewed assembly.
+    assert.ok(!JSON.stringify(await f.command({type:'content.topics'})).includes(study.current_item.stem));
+    const manifest=(await f.command({type:'content.active'})).manifest;assert.ok(manifest);
+    const withdrawal={type:'content.pack.withdraw',packId:manifest.id,version:manifest.version,reason:'SYNTHETIC withdrawal'};
+    assert.equal((await f.command(withdrawal)).withdrawn,true);assert.equal((await f.command(withdrawal)).withdrawn,true);
+    await assert.rejects(f.command({...withdrawal,reason:'SYNTHETIC other reason'}),fail('content_conflict'));
+    assert.equal((await f.command({type:'content.active'})).manifest,null);
+    await assert.rejects(f.command({type:'assessment.tests.reviewed',title:'SYNTHETIC after withdrawal',count:5,topicIds:[],idempotencyKey:'bf05-after-withdrawal'}),fail('insufficient_coverage'));
   }finally{await f.close();}
 });

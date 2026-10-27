@@ -8,7 +8,7 @@ import { id, list } from '../domain/assessment/validation.ts';
 import { canonical, digest, one, rows } from './schema.ts';
 import { requireAssistance } from './conversation.ts';
 import { utcNow } from './export.ts';
-const types=new Set(['content.active','content.topics','content.sources','content.topic','content.case','content.install','content.withdraw']);
+const types=new Set(['content.active','content.topics','content.sources','content.topic','content.case','content.install','content.withdraw','content.pack.withdraw']);
 export const isContentCommand=(v:unknown):v is ContentCommand=>!!v&&typeof v==='object'&&'type'in v&&types.has(String(v.type));
 export function validateContentCommand(c:ContentCommand) {
   switch(c.type){
@@ -16,6 +16,7 @@ export function validateContentCommand(c:ContentCommand) {
     case 'content.topic':exact(c,['type','topicId']);id(c.topicId);break;
     case 'content.case':exact(c,['type','caseId','version']);id(c.caseId);if(c.version!==null)integer(c.version,1);break;
     case 'content.withdraw':exact(c,['type','questionId','version','reason','replacementVersion']);id(c.questionId);integer(c.version,1);text(c.reason,1,2000);if(!c.reason.trim())reject('invalid_request');if(c.replacementVersion!==null)integer(c.replacementVersion,c.version+1);break;
+    case 'content.pack.withdraw':exact(c,['type','packId','version','reason']);id(c.packId);text(c.version,1,80);text(c.reason,1,2000);if(!c.reason.trim())reject('invalid_request');break;
     case 'content.install': {
       exact(c,['type','plan']);exact(c.plan,['manifest','bundle','sha256']);exact(c.plan.bundle,['topics','cases','questions','sources']);
       if(!/^[a-f0-9]{64}$/.test(c.plan.sha256))reject('invalid_request');id(c.plan.manifest.id);text(c.plan.manifest.version,1,80);
@@ -82,6 +83,14 @@ function install(db:DatabaseSync,plan:ContentPackPlan) {
   db.prepare('INSERT INTO content_active_pack VALUES(1,?,?) ON CONFLICT(slot) DO UPDATE SET pack_id=excluded.pack_id,pack_version=excluded.pack_version').run(m.id,m.version);
   return {id:m.id,version:m.version,sha256:plan.sha256,installed:!old,active:true,questions:plan.bundle.questions.length,cases:plan.bundle.cases.length};
 }
+/** Permanent pack withdrawal; the active pointer is cleared only when it names this pack. */
+function withdrawPack(db:DatabaseSync,id:string,version:string,reason:string) {
+  if(!one(db,'SELECT 1 FROM content_packs WHERE pack_id=? AND version=?',id,version))reject('not_found');
+  const old=one(db,'SELECT reason FROM content_pack_withdrawals WHERE pack_id=? AND version=?',id,version);
+  if(old&&old.reason!==reason)reject('content_conflict');
+  if(!old)db.prepare('INSERT INTO content_pack_withdrawals VALUES(?,?,?,?)').run(id,version,reason,utcNow());
+  db.prepare('DELETE FROM content_active_pack WHERE pack_id=? AND pack_version=?').run(id,version);
+}
 export function executeContent(db:DatabaseSync,c:ContentCommand):ObjectValue {
   validateContentCommand(c);requireAssistance(db);
   switch(c.type){
@@ -91,6 +100,7 @@ export function executeContent(db:DatabaseSync,c:ContentCommand):ObjectValue {
     case 'content.topic': {const t=activeContent(db,'topics').find(t=>t.id===c.topicId);if(!t)reject('not_found');return {...t,title:t.label,name:t.label};}
     case 'content.case': {const r=c.version===null?activeContent(db,'cases').find(v=>v.id===c.caseId):one(db,'SELECT body_json FROM content_case_versions WHERE case_id=? AND version=?',c.caseId,c.version);if(!r)reject('not_found');return 'body_json'in r?JSON.parse(String(r.body_json)):r;}
     case 'content.sources': {const sources=new Map();for(const item of [...activeContent(db,'cases'),...activeContent(db,'questions')])for(const s of item.source_records??[])sources.set(s.id,s);return {items:[...sources.values()].sort((a,b)=>a.id.localeCompare(b.id))};}
+    case 'content.pack.withdraw':withdrawPack(db,c.packId,c.version,c.reason);return {id:c.packId,version:c.version,withdrawn:true,reason:c.reason};
     case 'content.withdraw':withdraw(db,c.questionId,c.version,c.reason,c.replacementVersion);return {question_id:c.questionId,version:c.version,withdrawn:true};
   }
 }

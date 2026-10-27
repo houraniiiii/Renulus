@@ -19,6 +19,12 @@ export async function contentCommand(request:IncomingMessage,url:URL,storage:Sto
     // Existing pure Python content.validation owns schema/licence/source validation and owned path resolution.
     const plan=await ports.validatePack(b.path);return {status:200,value:await storage.command({type:'content.install',plan})};
   }
+  if(request.method==='POST'&&path==='/api/v1/content/packs/validate'){
+    const b=await readJsonObject(request,4096);exact(b,['path']);if(typeof b.path!=='string'||!ports)reject('content_validation_unavailable');
+    const plan=await ports.validatePack(b.path);return {status:200,value:{id:plan.manifest.id,version:plan.manifest.version,sha256:plan.sha256,valid:true,questions:plan.bundle.questions.length,cases:plan.bundle.cases.length}};
+  }
+  const pack=/^\/api\/v1\/content\/packs\/([A-Za-z0-9_.:-]+)\/versions\/([A-Za-z0-9_.+-]+)\/withdraw$/.exec(path);
+  if(pack&&request.method==='POST'){const b=await readJsonObject(request,4096);exact(b,['reason']);return {status:200,value:await storage.command({type:'content.pack.withdraw',packId:pack[1],version:pack[2],reason:b.reason as string})};}
   const withdrawn=/^\/api\/v1\/content\/questions\/([A-Za-z0-9_.:-]+)\/versions\/([0-9]+)\/withdraw$/.exec(path);
   if(withdrawn&&request.method==='POST'){const b=await readJsonObject(request,4096);exact(b,['reason',...('replacement_version'in b?['replacement_version']:[])]);return {status:200,value:await storage.command({type:'content.withdraw',questionId:withdrawn[1],version:Number(withdrawn[2]),reason:b.reason as string,replacementVersion:(b.replacement_version??null) as number|null})};}
   return undefined;

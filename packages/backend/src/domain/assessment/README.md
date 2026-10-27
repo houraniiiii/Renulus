@@ -61,3 +61,15 @@ redaction, ambiguous import keys, three-call normalization and exact-artifact
 fictional privacy review with no retained original/hash. No account/provider
 usage, production profile, full package gate or activation is established by
 these tests. Native port composition belongs to the integration owner.
+
+## BF05 finalisation additions
+
+- `assessment.fictional.receipt {idempotencyKey}` returns the saved fictional publication
+  result or `null` from the existing `assessment_test_commands` receipt (Home Quick practice
+  key: `quick-practice:<request_id>`). `fictionalise` reads it before any volatile call, so a
+  restart replay never resends. Nothing about the source or its digest is stored.
+- `tools.ts` exports `createAssessmentTools`/`createAssessmentPlugin` for `renulus_study_help`
+  (commits help exposure on the attempt before returning content; the Study attempt is
+  host-resolved, never an argument) and `renulus_practice_propose` (proposal only).
+- `content.pack.withdraw` (permanent, clears the active pointer) and the
+  `POST /api/v1/content/packs/validate|.../versions/{v}/withdraw` routes complete pack lifecycle.

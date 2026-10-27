@@ -27,6 +27,14 @@ export function publishVersion(db:DatabaseSync,c:Extract<AssessmentCommand,{type
   }
   return record(db,'assessment_test_commands',c.idempotencyKey,'publish_version','saved_test',v.test_id,c,{test_id:v.test_id,version_id:v.id,revision:test(db,v.test_id).revision,status:v.status});
 }
+/** Canonical publication replay for one fictional request key. It reads only the saved
+ * result, so restart replay needs no source, source digest or new inference. A deleted
+ * saved test rejects as not_found instead of reading as "never published". */
+export function fictionalReceipt(db:DatabaseSync,idempotencyKey:string):ObjectValue|null {
+  const r=one(db,"SELECT result_json FROM assessment_test_commands WHERE idempotency_key=? AND operation='publish_version'",idempotencyKey);if(!r)return null;
+  const out=decode(r.result_json);
+  return pinned(db,out.version_id).provenance.fictional_artifact_id?out:null;
+}
 export function versionCommand(db:DatabaseSync,c:AssessmentCommand):ObjectValue {
   assistance(db);
   switch(c.type){

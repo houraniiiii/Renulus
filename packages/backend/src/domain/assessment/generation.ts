@@ -77,6 +77,8 @@ export function createAssessmentGeneration(storage:AssessmentStorage,native:Asse
     async fictionalise(input:{title:string;sourceText:string;instruction:string;count:5|10|20;idempotencyKey:string},signal:AbortSignal){
       text(input.title,1,120);text(input.sourceText,1,32000);text(input.instruction,0,2000);text(input.idempotencyKey,8,128);if(![5,10,20].includes(input.count))reject('fictionalisation_input');
       const initial=await storage.command({type:'assessment.policy'});if(!initial.assistance_allowed)reject('assistance_restricted');
+      // A published request replays from canonical state before any volatile call.
+      const published=await storage.command({type:'assessment.fictional.receipt',idempotencyKey:input.idempotencyKey});if(published)return published;
       // Read the canonical context without persisting source, source digest or a raw job.
       const s=await storage.command({type:'assessment.fictional.stamp'});
       const id='fictional_'+randomUUID().replaceAll('-',''),questions:QuestionSnapshot[]=[];

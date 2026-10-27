@@ -5,6 +5,7 @@ import type { AssessmentCommand,DraftState,HelpContext,ObjectValue,QuestionSnaps
 import { canonical,one,rows } from '../../storage/schema.ts';
 import { reject } from '../../storage/contracts.ts';
 import { questionAvailability,pinnedQuestion } from '../../storage/content.ts';
+import { fictionalReceipt } from './versions.ts';
 import { allowed,assistance,bank,bumpPolicy,decode,deleted,pinned,policy,record,replay,stamp,test,uid } from './local.ts';
 const observations=new WeakMap<DatabaseSync,Map<string,{wall:number;tick:number}>>();
 const terminal=(r:ObjectValue)=>['submitted','ended'].includes(r.status);
@@ -92,9 +93,10 @@ export function requireHelpCurrent(db:DatabaseSync,c:HelpContext) {
   if(r.mode!=='study'||v.id!==c.version_id||q.item_id!==c.item_id||decode(r.committed_json).some((e:ObjectValue)=>e.item_id===c.item_id)||!one(db,'SELECT 1 FROM assessment_attempt_exposure WHERE attempt_id=? AND item_id=? AND kind=?',r.id,q.item_id,c.kind))reject('assistance_changed');
   return {policy_revision:policy(db).revision};
 }
-export function attemptCommand(db:DatabaseSync,c:AssessmentCommand):ObjectValue {
+export function attemptCommand(db:DatabaseSync,c:AssessmentCommand):ObjectValue|null {
   if(c.type==='assessment.policy')return policy(db);
   if(c.type==='assessment.fictional.stamp'){assistance(db);return stamp(db);}
+  if(c.type==='assessment.fictional.receipt'){assistance(db);return fictionalReceipt(db,c.idempotencyKey);}
   if(c.type==='assessment.help.current')return requireHelpCurrent(db,c.context);
   if(c.type==='assessment.attempts.list')return {items:rows(db,'SELECT id,version_id,mode,status,created_at,finalized_at FROM assessment_test_attempts ORDER BY created_at DESC,id LIMIT 100'),policy:policy(db)};
   if(c.type==='assessment.attempts.start'){

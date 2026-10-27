@@ -39,6 +39,7 @@ export interface ImportCandidate { id: string; span: { start: number; end: numbe
 export type AssessmentCommand =
   | { type: 'assessment.policy' }
   | { type: 'assessment.fictional.stamp' }
+  | { type: 'assessment.fictional.receipt'; idempotencyKey: string }
   | { type: 'assessment.tests.list'; lifecycle: 'active'|'archived'; limit: number; before: string | null }
   | { type: 'assessment.tests.get'; testId: string }
   | { type: 'assessment.tests.setup'; versionId: string }
@@ -75,7 +76,9 @@ export type AssessmentCommand =
   | { type: 'assessment.import.normalized'; importId:string; execution:string; candidates:ImportCandidate[] }
   | { type: 'assessment.import.cancel'; importId:string; expectedRevision:number; idempotencyKey:string }
   | { type: 'assessment.import.publish'; importId:string; expectedRevision:number; idempotencyKey:string };
-export type AssessmentResults = { [K in AssessmentCommand['type']]: ObjectValue } & {
+export type AssessmentResults = { [K in Exclude<AssessmentCommand['type'],'assessment.fictional.receipt'>]: ObjectValue } & {
+  /** The saved publication result for this key, or null when nothing was published. */
+  'assessment.fictional.receipt':ObjectValue|null;
   'assessment.policy':Policy; 'assessment.generation.create':GenerationView; 'assessment.generation.get':GenerationView;
   'assessment.generation.claim':GenerationView; 'assessment.generation.checkpoint':GenerationView;
   'assessment.generation.fail':GenerationView; 'assessment.generation.cancel':GenerationView;
