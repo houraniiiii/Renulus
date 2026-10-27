@@ -28,6 +28,9 @@ export interface SavedLearningOptions {
   /** Fresh canonical admission; BF01 pins the exact selected route before native work. */
   onBegin?: (run: RunSnapshot, request: Readonly<SavedSendIntent>) => void | Promise<void>;
   modelCallbacks?: (request: NativeDomainRequest, authority: SavedModelContext) => Promise<NativeDomainReply>;
+  /** Evidence-review children own their callbacks; `root` serves a command against the parent's authority. */
+  children?: { owns(binding: Readonly<Binding>): boolean;
+    handle(request: NativeDomainRequest, root: (request: NativeDomainRequest) => Promise<NativeDomainReply>): Promise<NativeDomainReply> };
 }
 export type SavedSend = Omit<BeginInput, 'identity' | 'runId' | 'attemptId'>;
 export async function openSavedLearningTarget(options: SavedLearningOptions) {
@@ -44,7 +47,8 @@ export async function openSavedLearningTarget(options: SavedLearningOptions) {
   }
   const callbacks = createLearningCallbacks({ storage, identity, library: options.library,
     modelCallbacks: options.modelCallbacks ? async request => options.modelCallbacks!(request, await modelContext(request.binding)) : undefined });
-  const domain = createNativeDomainAdapter({ identity: { profile_id: identity.profileId, store_id: identity.storeId, generation: identity.generation }, handle: callbacks.handle });
+  const domain = createNativeDomainAdapter({ identity: { profile_id: identity.profileId, store_id: identity.storeId, generation: identity.generation },
+    handle: request => options.children?.owns(request.binding) ? options.children.handle(request, callbacks.handle) : callbacks.handle(request) });
   let native: Awaited<ReturnType<typeof openLearningHarness>>;
   try {
     const model = await options.model(domain.domain);

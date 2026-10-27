@@ -13,8 +13,9 @@ export interface NativeCapabilityPorts {
   resolve(native: NativeCapabilityContext): Promise<CapabilityEnvelope>;
   /** Local seal used inside native permission hooks; never await IPC here. */
   localCurrent(sessionID: string): boolean;
-  command(name: 'question'|'permission'|'rename'|'models'|'evidence.fetch'|'evidence.search',
-    input: unknown, envelope: CapabilityEnvelope, signal: AbortSignal): Promise<Tool.Result>;
+  /** Application execution of adapted native tools. A stock tool registers only when its command exists. */
+  commands: Partial<Record<'question'|'permission'|'rename'|'evidence.fetch'|'evidence.search',
+    (input: unknown, envelope: CapabilityEnvelope, signal: AbortSignal) => Promise<Tool.Result>>>;
   skills: readonly { info: Skill.Info; sha256: string }[];
   developer?: {
     /** Explicit separate developer profile; supplying the option is not a grant. */

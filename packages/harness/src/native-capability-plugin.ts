@@ -12,6 +12,8 @@ import { capabilityAction, type NativeCapabilityPorts, type NativeCapabilityCont
 
 const failure=(code:string)=>new Tool.Error({message:code});
 const qualified=(tool:ToolSchema.Info)=>tool.options?.namespace?tool.options.namespace+'.'+tool.name:tool.name;
+/** Adapted stock tools: the application owns their execution through a command. */
+const commandOf:Record<string,keyof NativeCapabilityPorts['commands']>={question:'question',webfetch:'evidence.fetch',websearch:'evidence.search','opencode.session_rename':'rename'};
 /** Install capture before the stock-tool boundary, and plugins after it. No alternate tool bus. */
 export async function createNativeCapabilityPlugin(ports:NativeCapabilityPorts) {
   const stock=new Map<string,ToolSchema.Info>();
@@ -58,8 +60,8 @@ export async function createNativeCapabilityPlugin(ports:NativeCapabilityPorts) 
       if(!action)throw failure('capability_unknown');
       return ports.authority.invoke(envelope,action,input,async(lease,ownedSignal)=>{
         const combined=AbortSignal.any([signal,ownedSignal]);combined.throwIfAborted();
-        const command=({question:'question',webfetch:'evidence.fetch',websearch:'evidence.search','opencode.models':'models','opencode.session_rename':'rename'} as const)[name as 'question'];
-        if(command)return ports.command(command,input,envelope,combined);
+        const command=commandOf[name];
+        if(command)return ports.commands[command]!(input,envelope,combined);
         if(name==='skill') {
           const id=input&&typeof input==='object'&&'name' in input?input.name:null;
           const skill=ports.skills.find(s=>s.info.name===id||s.info.id===id);
@@ -86,6 +88,7 @@ export async function createNativeCapabilityPlugin(ports:NativeCapabilityPorts) 
     yield* ctx.tool.transform(editor=>{
       for(const [name,tool] of stock) {
         if(name==='subagent'&&!child)continue;
+        if(commandOf[name]&&!ports.commands[commandOf[name]])continue;
         if(capabilityAction(name)?.startsWith('developer.')&&!ports.developer)continue;
         if(capabilityAction(name)==='renulus.mcp'&&!ports.mcp)continue;
         editor.add({...tool,execute:(input,native)=>invoke(name,input,native,tool.execute),options:{...tool.options,pinned:undefined,
@@ -114,7 +117,7 @@ export async function createNativeCapabilityPlugin(ports:NativeCapabilityPorts) 
       return Layer.succeed(Permission.Service,{...service,assert:input=>Effect.gen(function*(){
         const owner=yield* Invocation;if(!owner)return yield* service.assert(input);
         if(input.sessionID!==owner.envelope.session_id||!ports.localCurrent(input.sessionID))return yield* new Permission.BlockedError({permission:input.action,resources:input.resources,rules:[],reason:'capability_stale'});
-        const decision=yield* Effect.tryPromise({try:()=>ports.command('permission',{action:input.action,resources:input.resources,source:input.source??null},owner.envelope,owner.signal),
+        const decision=yield* Effect.tryPromise({try:()=>ports.commands.permission!({action:input.action,resources:input.resources,source:input.source??null},owner.envelope,owner.signal),
           catch:()=>new Permission.BlockedError({permission:input.action,resources:input.resources,rules:[],reason:'capability_permission_rejected'})});
         if(decision.metadata?.approved!==true||!ports.localCurrent(input.sessionID))return yield* new Permission.BlockedError({permission:input.action,resources:input.resources,rules:[],reason:'capability_permission_rejected'});
       })});

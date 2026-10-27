@@ -1,5 +1,13 @@
 # BF01 native capability lifecycle
 
+> **Tool registration seam.** `createToolRegistry()` in `plugins/registry.ts`; the connected target builds one
+> per native host in `openLearning` (`host/composition.ts`). Add a trusted tool with one line:
+> `tools.add(createXPlugin(deps), ['renulus.x.read'])` (native `Plugin` + the permission IDs it checks).
+> Provide an adapted native tool's execution with `tools.command('evidence.search', run)`; `webfetch`/`websearch`/
+> `question`/`opencode.models`/`opencode.session_rename` register only when their command exists. Build `deps`
+> from `storage` and `result.native.binding(sessionID)` like `createMemoryTools`. The run's configuration
+> `capabilities` must list each permission ID. Candidate hosts get the same registry (disposable inspection).
+
 `createPluginLifecycle(options)` coordinates reviewed local native OpenCode
 plugins. Its object API is `status`, `stage`, `add`, `edit`, `disable`, `remove`,
 `activate`, `recover`, and `close`. Stage/add/edit/disable/remove inspect the

@@ -511,6 +511,12 @@ export async function openHarness(options: HarnessOptions) {
       if (!binding || !["ready", "recovering"].includes(phase)) throw new Error("native_input_not_admitted");
       return binding;
     },
+    /** Child authority registers its allocated child USER here before native prompt admission. */
+    bindChild(binding: NativeInputBinding) {
+      if (!options.nativeCapabilities?.child || phase !== "ready" || held.has(binding.session_id) || bindings.has(binding.session_id))
+        throw new Error("native_child_binding_conflict");
+      bindings.set(binding.session_id, Object.freeze({ ...binding }));
+    },
     async activateStores() {
       if (options.volatileGraph) throw new Error('volatile_store_activation_forbidden');
       if (!["policy_blocked", "ready", "store_activation_failed"].includes(phase)) throw new Error("harness_policy_blocked");
