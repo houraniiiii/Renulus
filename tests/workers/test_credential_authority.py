@@ -279,6 +279,29 @@ def test_oauth_callback_after_completed_connect_then_explicit_refresh_and_remote
         h.close()
 
 
+def test_rejected_oauth_callback_keeps_legitimate_pending_login(tmp_path):
+    h = harness(tmp_path)
+    try:
+        manager = h.worker.provider_manager
+        calls, _, _, _ = install_oauth(manager)
+        login = h.request("credential.connect", {"provider_id": "codex"})["result"]
+        query = parse_qs(urlsplit(login["authorization_url"]).query)
+
+        async def forged():
+            async with httpx.AsyncClient(trust_env=False, timeout=5) as local:
+                return await local.get(query["redirect_uri"][0], params={"state": "forged",
+                    "code": "forged-code", "client_id": "synthetic-issued-client"})
+        assert asyncio.run(forged()).status_code == 400
+        time.sleep(0.2)
+        assert manager.auth.status(login["login_id"])["status"] == "pending"
+        assert login["login_id"] in credential_owner(manager).logins and calls == []
+        assert asyncio.run(callback(h, login)).status_code == 200
+        assert manager.auth.status(login["login_id"])["status"] == "connected"
+        wait_for(lambda: not credential_owner(manager).logins and not credential_owner(manager).monitors)
+    finally:
+        h.close()
+
+
 @pytest.mark.parametrize("control", ["revoke", "close", "expiry", "login-cancel"])
 def test_oauth_revoke_close_expiry_cancel_close_listener_and_fence_late_callback(tmp_path, control):
     h = harness(tmp_path)

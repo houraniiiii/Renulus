@@ -164,9 +164,13 @@ class _OwnedLogin(CodexLogin):
             # close the socket. Raising here would skip that existing cleanup.
             return self.status(login_id)
         finally:
-            # The callback still has to write and close its owned socket after
-            # complete returns; wait_closed is joined by the lifetime monitor.
-            lease.revoked.set()
+            # A callback rejected before the exchange (wrong state, replay) leaves
+            # the legitimate pending login and its listener untouched. Only a
+            # finished or cancelled attempt ends the lease; the callback still
+            # writes and closes its socket, which the lifetime monitor joins.
+            attempt = self._attempts.get(login_id)
+            if attempt is None or attempt.status != "pending":
+                lease.revoked.set()
 
 
 class CredentialOwner:
