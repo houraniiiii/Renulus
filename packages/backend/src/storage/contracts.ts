@@ -27,6 +27,8 @@ import type { UpdatesCommand, UpdatesResults } from '../domain/updates/contracts
 import { isUpdatesCommand, validateUpdatesCommand } from './updates.ts';
 import type { TemporaryCommand, TemporaryResults } from '../domain/temporary/contracts.ts';
 import { isTemporaryCommand, validateTemporaryCommand } from './temporary.ts';
+import type { EvidenceCommand, EvidenceResults } from '../domain/evidence/contracts.ts';
+import { isEvidenceCommand, validateEvidenceCommand } from '../domain/evidence/commands.ts';
 import type { SelectedWriterAuthority } from './selected-owner.ts';
 export type Scalar = string | number | null;
 export type RecordRow = Record<string, Scalar>;
@@ -104,14 +106,14 @@ export interface CanonicalExport {
   omissions: Record<string, { records: number; reason: string }>;
 }
 
-export type StorageCommand = DispatchCommand | LearningMetadataCommand | LearningDispatchCommand | LearningCommand | MemoryCommand | KnowledgeCommand | StudyCommand | CapabilityCommand | ContentCommand | ProjectCommand | AssessmentCommand | RecoveryCommand | UpdatesCommand | TemporaryCommand
+export type StorageCommand = DispatchCommand | LearningMetadataCommand | LearningDispatchCommand | LearningCommand | MemoryCommand | KnowledgeCommand | StudyCommand | EvidenceCommand | CapabilityCommand | ContentCommand | ProjectCommand | AssessmentCommand | RecoveryCommand | UpdatesCommand | TemporaryCommand
   | { type: 'storage.preview' }
   | { type: 'records.page'; table: string; offset: number; limit: number }
   | { type: 'records.export' }
   | { type: 'learning.rename'; threadId: string; expectedRevision: number; title: string; idempotencyKey: string }
   | { type: 'database.backup'; name: string };
 
-export interface CommandResults extends DispatchResults, LearningResults, LearningDispatchResults, LearningMetadataResults, MemoryResults, KnowledgeResults, StudyResults, CapabilityResults, ContentResults, ProjectResults, AssessmentResults, RecoveryResults, UpdatesResults, TemporaryResults {
+export interface CommandResults extends DispatchResults, LearningResults, LearningDispatchResults, LearningMetadataResults, MemoryResults, KnowledgeResults, StudyResults, EvidenceResults, CapabilityResults, ContentResults, ProjectResults, AssessmentResults, RecoveryResults, UpdatesResults, TemporaryResults {
   'storage.preview': StoragePreview;
   'records.page': { rows: RecordRow[]; nextOffset: number | null };
   'records.export': CanonicalExport;
@@ -153,6 +155,7 @@ export function validateCommand(value: unknown): asserts value is StorageCommand
   if (isMemoryCommand(value)) { validateMemoryCommand(value); return; }
   if (isKnowledgeCommand(value)) { validateKnowledgeCommand(value); return; }
   if (isStudyCommand(value)) { validateStudyCommand(value); return; }
+  if (isEvidenceCommand(value)) { validateEvidenceCommand(value); return; }
   if (isCapabilityCommand(value)) { validateCapabilityCommand(value); return; }
   if (isContentCommand(value)) { validateContentCommand(value); return; }
   if (isProjectCommand(value)) { validateProjectCommand(value); return; }

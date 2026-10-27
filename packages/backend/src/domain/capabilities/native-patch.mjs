@@ -2,7 +2,8 @@
 /** Narrow OpenCode 4b6fea... / published 2.0.26 injection patch, MIT upstream.
  * Apply ONLY to owned build copies. Never patches the shared development cohort.
  * A byte-for-byte manifest is generated from the reviewed installed cohort.
- * Removal: upstream exposes equivalent per-attempt web/MCP and browser attachment/tunnel factories.
+ * Removal: upstream exposes equivalent per-attempt web/MCP and browser attachment/tunnel factories,
+ * and the native execute journey proves redirect re-admission, byte bounds, revocation and header denial without this patch.
  */
 import { readFile, writeFile, realpath, lstat } from 'node:fs/promises';
 import { createHash } from 'node:crypto';

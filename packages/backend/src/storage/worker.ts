@@ -6,6 +6,7 @@ import { executeLearningMetadata, isLearningMetadataCommand } from './conversati
 import { executeMemoryCommand, isMemoryCommand, reconcileMemorySupport, queueMemoryCapture } from './memory.ts';
 import { executeKnowledge, isKnowledgeCommand } from './knowledge.ts';
 import { executeStudy, isStudyCommand } from './study.ts';
+import { executeEvidenceCommand, isEvidenceCommand } from '../domain/evidence/commands.ts';
 import { executeCapabilityCommand, isCapabilityCommand } from '../domain/capabilities/commands.ts';
 import { executeLearningDispatch } from './admission.ts';
 import { executeContent, isContentCommand } from './content.ts';
@@ -96,6 +97,7 @@ async function dispatch(command: StorageCommand) {
     return result;
   });
   if (isStudyCommand(command)) return transaction(true, () => executeStudy(db!, command));
+  if (isEvidenceCommand(command)) return transaction(true, () => executeEvidenceCommand(db!, command));
   if (isCapabilityCommand(command)) return transaction(true, () => executeCapabilityCommand(db!, command));
   if (isContentCommand(command)) return transaction(true, () => executeContent(db!, command));
   if (command.type === 'learning.dispatch.begin') return transaction(true, () => executeLearningDispatch(db!, command));
