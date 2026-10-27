@@ -36,10 +36,10 @@ test('Home native bundle, manual plan override and context/Stop publication fenc
   const study=createStudyCoordinator({storage:f.storage,clock:()=>clock,native:{async suggestions(context){calls++;assert.ok(!JSON.stringify(context.material).includes('correct_option_ids'));return bundle;}},assessment:{generate:async()=>{throw Error('unused');},cancel:async()=>{}}});
   try{
     assert.equal((await f.command({type:'study.nightly.read'})).preferences.enabled,false);
-    const job=await study.refresh();const home=await study.settled(job.id);assert.deepEqual(home.suggestions,bundle);assert.equal(home.suggestions_date,'2026-10-27');await study.refresh();assert.equal(calls,1);
-    const proposed=await f.command({type:'study.plan.read',clock});const accepted=await f.command({type:'study.plan.accept',clock,stamp:proposed.stamp,idempotencyKey:'bf06-plan-accept'});assert.ok(accepted.activities.length);
+    const job=await study.refresh();const home=await study.settled(job.job_id);assert.deepEqual(home.suggestions,bundle);assert.equal(home.suggestions_date,'2026-10-27');await study.refresh();assert.equal(calls,1);
+    const preview=await f.command({type:'study.plan.preview',clock});assert.ok(preview.activities.length);const accepted=await f.command({type:'study.plan.propose',clock});assert.ok(accepted.activities.length);assert.deepEqual(Object.keys(accepted).sort(),['activities','explanation','selection','status','tracks']);
     const first=accepted.activities[0];const changed=await f.command({type:'study.activity.change',id:first.id,expectedRevision:first.revision,dueDate:'2026-11-01',state:null,idempotencyKey:'bf06-plan-manual'});assert.equal(changed.manual_override,true);
-    const newer=await f.command({type:'study.plan.read',clock});await f.command({type:'study.plan.accept',clock,stamp:newer.stamp,idempotencyKey:'bf06-plan-reaccept'});assert.equal((await f.command({type:'study.plan.read',clock})).activities.find(a=>a.id===first.id).due_date,'2026-11-01');
+    await f.command({type:'study.plan.propose',clock});assert.equal((await f.command({type:'study.plan.read'})).activities.find(a=>a.id===first.id).due_date,'2026-11-01');
     assert.equal((await f.command({type:'study.home.read',clock})).suggestions,null);
     const late=await f.command({type:'study.home.begin',clock});await f.command({type:'study.job.stop',jobId:late.job_id,state:'cancelled',errorCode:'cancelled'});await assert.rejects(f.command({type:'study.home.publish',jobId:late.job_id,bundle,clock}),fail('cancelled'));
   }finally{await study.close();await f.close();}

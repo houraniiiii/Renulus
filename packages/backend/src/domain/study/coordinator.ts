@@ -26,7 +26,7 @@ export function createStudyCoordinator(options: { storage: StudyStorage; native:
       }).finally(() => active.delete(job.job_id));
       promise.catch(() => {}); active.set(job.job_id, { controller, promise });
     }
-    return { ...await storage.command({ type: 'study.home.read', clock: clock() }), id: job.job_id };
+    return { job_id: job.job_id, ...await storage.command({ type: 'study.home.read', clock: clock() }) };
   }
   async function stop(id: string) {
     // Commit the late-publication fence before requesting native cancellation.
