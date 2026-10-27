@@ -105,7 +105,7 @@ class SelectedEngines:
         elif format in ("csv", "html", "xml"):
             from renulus.knowledge.reader_extraction import extract_markup
             extracted = extract_markup(self._extractor, body, '.' + format, title)
-        elif format in ("docx", "xlsx"):
+        elif format in ("docx", "xlsx", "pptx"):
             from io import BytesIO
             from renulus.knowledge.office import office_converter, validate_office
             from docling.datamodel.base_models import DocumentStream, ConversionStatus

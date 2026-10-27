@@ -3,7 +3,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { exact, integer, reject, text } from './contracts.ts';
 import { requireAssistance } from './conversation.ts';
 import { canonical, digest, one, rows } from './schema.ts';
-import { bumpKnowledgeContext, currentKnowledgeRevision, deleted, knowledgeId, markDeleted } from './knowledge.ts';
+import { bumpKnowledgeContext, currentKnowledgeRevision, deleted, knowledgeId, knowledgeStamp, markDeleted } from './knowledge.ts';
 import type { GoalInput, ProjectCommand, ProjectResults } from '../domain/projects/contracts.ts';
 
 const now = () => new Date().toISOString();
@@ -23,6 +23,8 @@ export function validateProjectCommand(value: unknown): asserts value is Project
   switch (c.type) {
     case 'project.list': exact(c, ['type', 'limit', 'cursor', 'lifecycle']); integer(c.limit, 1, 100); if (c.cursor !== null) text(c.cursor, 1, 2048); if (!['active', 'archived'].includes(c.lifecycle)) reject('storage_invalid_command'); break;
     case 'project.get': exact(c, ['type', 'projectId']); identifier(c.projectId); break;
+    case 'project.find': exact(c, ['type', 'query', 'lifecycle', 'projectId', 'after', 'limit', 'epoch']); text(c.query, 1, 240); if (!['active', 'archived', 'all'].includes(c.lifecycle)) reject('storage_invalid_command');
+      if (c.projectId !== null) identifier(c.projectId); if (c.after !== null) identifier(c.after); integer(c.limit, 1, 200); if (c.epoch !== null) text(c.epoch, 64, 64); break;
     case 'project.create': exact(c, ['type', 'title', 'idempotencyKey']); text(c.title, 1, 120); text(c.idempotencyKey, 1, 200); break;
     case 'project.change': exact(c, ['type', 'projectId', 'expectedRevision', 'action', 'title', 'idempotencyKey']);
       if (!['rename', 'archive', 'restore', 'delete'].includes(c.action) || (c.action === 'rename') !== (c.title !== null)) reject('storage_invalid_command'); if (c.title !== null) text(c.title, 1, 120); break;
@@ -67,6 +69,14 @@ function evidence(db: DatabaseSync, id: string) {
 }
 export function executeProject<C extends ProjectCommand>(db: DatabaseSync, c: C): ProjectResults[C['type']] {
   validateProjectCommand(c); requireAssistance(db);
+  if (c.type === 'project.find') {
+    const stamp = knowledgeStamp(db); if (c.epoch !== null && c.epoch !== stamp) reject('search_cursor_changed');
+    if (c.projectId !== null) project(db, c.projectId);
+    const selected = rows(db, "SELECT id,title,lifecycle FROM study_projects p WHERE lifecycle!='deleted' AND (?='all' OR lifecycle=?) AND (?='' OR id=?) AND id>? AND instr(lower(title),?)>0 AND NOT EXISTS(SELECT 1 FROM deletion_ledger WHERE entity_type='project' AND entity_id=p.id) ORDER BY id LIMIT ?",
+      c.lifecycle, c.lifecycle, c.projectId ?? '', c.projectId ?? '', c.after ?? '', c.query.toLowerCase(), c.limit + 1);
+    return { items: selected.slice(0, c.limit).map(p => ({ id: String(p.id), title: String(p.title), lifecycle: String(p.lifecycle) })),
+      next: selected.length > c.limit ? String(selected[c.limit - 1].id) : null, epoch: stamp } as ProjectResults[C['type']];
+  }
   if (c.type === 'project.get') return view(db, c.projectId) as unknown as ProjectResults[C['type']];
   if (c.type === 'project.list') {
     let page: { boundary: string; after: [string, string] | null; lifecycle: string } = { boundary: now(), after: null, lifecycle: c.lifecycle };

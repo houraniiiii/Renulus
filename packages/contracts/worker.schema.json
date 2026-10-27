@@ -1760,7 +1760,8 @@
             "html",
             "xml",
             "docx",
-            "xlsx"
+            "xlsx",
+            "pptx"
           ],
           "title": "Format",
           "type": "string"

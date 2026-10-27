@@ -10,7 +10,8 @@ const sha = (body: Uint8Array) => createHash('sha256').update(body).digest('hex'
 const failCode = (error: unknown) => error && typeof error === 'object' && 'code' in error && /^[a-z0-9_-]{1,128}$/.test(String(error.code)) ? String(error.code) : 'import_failed';
 const suffixes: Record<string, string> = { 'text/plain': 'txt', 'text/markdown': 'md', 'text/csv': 'csv', 'text/html': 'html',
   'application/xml': 'xml', 'text/xml': 'xml', 'application/pdf': 'pdf', 'image/png': 'png', 'image/jpeg': 'jpg', 'image/tiff': 'tiff',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx' };
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx' };
 export function ownNoteRights(): Rights { return { display: true, cache: true, index: true, embedding: true, model_input: true, derivation: true,
   evaluation: false, redistribution: false, licence: 'user-owned', permission_reference: 'User deliberately added their own text to the library', attribution: '' }; }
 export interface KnowledgeDomainOptions { storage: KnowledgeStorage; engines: ReturnType<typeof createEngineArtifacts>; native: KnowledgeNativeIO }
@@ -43,14 +44,14 @@ export function createKnowledgeDomain({ storage, engines, native }: KnowledgeDom
       } finally { await engines.release(output.artifact_handle, binding); }
     }
   }
-  async function importOriginal(request: ImportRequest, source: { text: string } | { selected_handle: string }, signal: AbortSignal) {
+  async function importOriginal(request: ImportRequest, source: { bytes: Uint8Array } | { selected_handle: string }, signal: AbortSignal) {
     validateImportRequest(request); const format = suffixes[request.media_type]; if (!format) reject('document_format_unsupported');
     let i = await storage.command({ type: 'knowledge.import.begin', request }); if (i.state === 'ready') return i;
     const binding = { operation_id: i.job_id, attempt_id: i.id }; let staged = false, reserved = false;
     const handles = new Set<string>();
     try {
       await native.reserve(i); reserved = true; await current(i, signal);
-      const body = 'text' in source ? Buffer.from(source.text, 'utf8') : await native.readSelection({ handle: source.selected_handle, intent: i }, signal);
+      const body = 'bytes' in source ? source.bytes : await native.readSelection({ handle: source.selected_handle, intent: i }, signal);
       if (body.byteLength !== request.bytes || sha(body) !== request.sha256) reject('original_digest_mismatch');
       await current(i, signal);
       if (i.state === 'prepared') {
@@ -104,7 +105,12 @@ export function createKnowledgeDomain({ storage, engines, native }: KnowledgeDom
     },
     importText(request: ImportRequest, body: string, signal?: AbortSignal) {
       text(body, 1, 4 * 1024 * 1024); if (Buffer.byteLength(body) > 4 * 1024 * 1024 || body.includes('\0') || !body.trim()) reject('note_limit');
-      return operation(signal, s => importOriginal(request, { text: body }, s));
+      return operation(signal, s => importOriginal(request, { bytes: Buffer.from(body, 'utf8') }, s));
+    },
+    /** Already-read HTTP bytes: an immutable copy is verified against request.sha256 after the native reservation and before publish/extraction. */
+    importBytes(request: ImportRequest, bytes: Uint8Array, signal?: AbortSignal) {
+      integer(bytes.byteLength, 1, 64 * 1024 * 1024); const copy = Uint8Array.from(bytes);
+      return operation(signal, s => importOriginal(request, { bytes: copy }, s));
     },
     saveNote(input: { title: string; text: string; idempotency_key: string; document_id?: string | null; expected_revision_id?: string | null; project_id?: string | null }, signal?: AbortSignal) {
       return operation(signal, async s => {
@@ -118,7 +124,7 @@ export function createKnowledgeDomain({ storage, engines, native }: KnowledgeDom
           notes: [...(metadata.notes as string[] ?? []).filter(v => !v.startsWith('renulus:note-title:')), 'renulus:note-title:' + input.title] };
         const request: ImportRequest = { title: input.title, media_type: 'text/plain', bytes: body.byteLength, sha256: sha(body), metadata, rights,
           document_id: input.document_id ?? null, expected_revision_id: input.expected_revision_id ?? null, project_id: input.project_id ?? null, note: true, idempotency_key: input.idempotency_key };
-        const i = await importOriginal(request, { text: input.text }, s);
+        const i = await importOriginal(request, { bytes: body }, s);
         return api.note(i.document_id, i.revision_id, s);
       });
     },
@@ -135,7 +141,9 @@ export function createKnowledgeDomain({ storage, engines, native }: KnowledgeDom
       validateReaderRequest(request); return operation(signal, async s => {
         const pin = await storage.command({ type: 'knowledge.source.pin', request, operation: 'display' });
         const body = await readBody(pin, s); let payload: ReaderPayload | null = null, error: { code: string; message: string } | null = null;
-        try { payload = await native.payload({ pin, request: position(request), body }, s); } catch (e) { const code = failCode(e); error = { code, message: code }; }
+        // PPTX keeps its original and extraction/index, but has no in-app reader (as in the retained Python reader).
+        if (suffixes[pin.media_type] === 'pptx') error = { code: 'reader_format_unsupported', message: 'reader_format_unsupported' };
+        else try { payload = await native.payload({ pin, request: position(request), body }, s); } catch (e) { const code = failCode(e); error = { code, message: code }; }
         await recheck(pin, s);
         const state = payload ? 'ready' : error?.code === 'reader_format_unsupported' ? 'unsupported' : 'failed';
         return { schema_version: 'reader/1', reference: request.reference, title: pin.title, media_type: pin.media_type, authority: 'knowledge',
@@ -198,7 +206,7 @@ export function createKnowledgeDomain({ storage, engines, native }: KnowledgeDom
         const result = await native.handoff({ pin, action, destination_handle: destinationHandle }, s); await recheck(pin, s); return result;
       });
     },
-    delete(documentId: string, expectedRevisionId: string, idempotencyKey: string, note = false, signal?: AbortSignal) {
+    delete(documentId: string, expectedRevisionId: string | null, idempotencyKey: string, note = false, signal?: AbortSignal) {
       return operation(signal, async s => {
         s.throwIfAborted(); const result = await storage.command({ type: 'knowledge.delete', documentId, expectedRevisionId, idempotencyKey, note });
         // Canonical tombstones suppress reads immediately, even if native cleanup fails.

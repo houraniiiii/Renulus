@@ -35,8 +35,9 @@ export type KnowledgeCommand =
   | { type: 'knowledge.source.dependency'; pin: SourcePin }
   | { type: 'knowledge.notes.list'; projectId: string | null; limit: number; offset: number }
   | { type: 'knowledge.notes.pin'; documentId: string; revisionId: string | null }
-  | { type: 'knowledge.delete'; documentId: string; expectedRevisionId: string; idempotencyKey: string; note: boolean }
-  | { type: 'knowledge.cleanup'; revisionIds: string[] };
+  | { type: 'knowledge.delete'; documentId: string; expectedRevisionId: string | null; idempotencyKey: string; note: boolean }
+  | { type: 'knowledge.cleanup'; revisionIds: string[] }
+  | { type: 'knowledge.find'; query: string; projectId: string | null; after: string | null; limit: number; epoch: string | null };
 export interface KnowledgeResults {
   'knowledge.list': { documents: Record<string, unknown>[]; total: number; limit: number; offset: number };
   'knowledge.get': Record<string, unknown>;
@@ -47,6 +48,7 @@ export interface KnowledgeResults {
   'knowledge.notes.list': { items: NoteSummary[] }; 'knowledge.notes.pin': { summary: NoteSummary; pin: SourcePin };
   'knowledge.delete': { document_id: string; revision_id: string; deleted: true; revision_ids: string[] };
   'knowledge.cleanup': { removed: number };
+  'knowledge.find': { items: { revision_id: string; title: string; status: string; note: boolean; text: string | null; locators_json: string | null }[]; next: string | null; epoch: string };
 }
 export interface KnowledgeStorage { command<C extends KnowledgeCommand>(command: C): Promise<KnowledgeResults[C['type']]> }
 /** Native worker owns chooser/original/destination handle maps and all Windows I/O.

@@ -124,7 +124,8 @@ export function validateKnowledgeCommand(value: unknown): asserts value is Knowl
       validateReaderRequest({ reference: c.pin.reference }); hash(c.pin.fingerprint); hash(c.pin.stamp); if (c.type === 'knowledge.source.recheck' && !['display', 'model_input'].includes(c.operation)) reject('storage_invalid_command'); break;
     case 'knowledge.notes.list': exact(c, ['type', 'projectId', 'limit', 'offset']); nullableId(c.projectId); integer(c.limit, 1, 100); integer(c.offset); break;
     case 'knowledge.notes.pin': exact(c, ['type', 'documentId', 'revisionId']); identifier(c.documentId); nullableId(c.revisionId); break;
-    case 'knowledge.delete': exact(c, ['type', 'documentId', 'expectedRevisionId', 'idempotencyKey', 'note']); identifier(c.documentId); identifier(c.expectedRevisionId); text(c.idempotencyKey, 1, 200); if (typeof c.note !== 'boolean') reject('storage_invalid_command'); break;
+    case 'knowledge.delete': exact(c, ['type', 'documentId', 'expectedRevisionId', 'idempotencyKey', 'note']); identifier(c.documentId); nullableId(c.expectedRevisionId); text(c.idempotencyKey, 1, 200); if (typeof c.note !== 'boolean' || c.note && c.expectedRevisionId === null) reject('storage_invalid_command'); break;
+    case 'knowledge.find': exact(c, ['type', 'query', 'projectId', 'after', 'limit', 'epoch']); text(c.query, 1, 240); nullableId(c.projectId); if (c.after !== null) text(c.after, 1, 256); integer(c.limit, 1, 200); if (c.epoch !== null) hash(c.epoch); break;
     case 'knowledge.cleanup': exact(c, ['type', 'revisionIds']); if (!Array.isArray(c.revisionIds) || c.revisionIds.length > 256) reject('storage_invalid_command'); c.revisionIds.forEach(identifier); break;
     default: reject('storage_invalid_command');
   }
@@ -297,7 +298,7 @@ export function executeKnowledge<C extends KnowledgeCommand>(db: DatabaseSync, c
     case 'knowledge.delete': {
       const key = 'knowledge.target.delete:' + digest(c.idempotencyKey), requestHash = sha(c), previous = pref(db, key);
       if (previous) { const p = parse<{ hash: string; result: unknown }>(previous); if (p.hash !== requestHash) reject('idempotency_conflict'); result = p.result; break; }
-      const d = document(db, c.documentId); if (d.latest_revision !== c.expectedRevisionId) reject('note_revision_conflict'); if (c.note) notePin(db, c.documentId, c.expectedRevisionId);
+      const d = document(db, c.documentId); if (c.expectedRevisionId !== null && d.latest_revision !== c.expectedRevisionId) reject('note_revision_conflict'); if (c.note) notePin(db, c.documentId, c.expectedRevisionId);
       const revisions = rows(db, 'SELECT id FROM knowledge_revisions WHERE document_id=?', c.documentId).map(r => String(r.id));
       for (const revision of revisions) {
         markDeleted(db, 'knowledge-revision', revision); db.prepare("UPDATE knowledge_revisions SET status='deleted' WHERE id=?").run(revision);
@@ -309,7 +310,26 @@ export function executeKnowledge<C extends KnowledgeCommand>(db: DatabaseSync, c
         }
       }
       markDeleted(db, 'knowledge-document', c.documentId); db.prepare('UPDATE knowledge_documents SET deleted_at=?,active_revision=NULL,updated_at=? WHERE id=?').run(now(), now(), c.documentId);
-      bumpKnowledgeContext(db); result = { document_id: c.documentId, revision_id: c.expectedRevisionId, deleted: true, revision_ids: revisions }; put(db, key, { hash: requestHash, result }); break;
+      bumpKnowledgeContext(db); result = { document_id: c.documentId, revision_id: String(d.latest_revision), deleted: true, revision_ids: revisions }; put(db, key, { hash: requestHash, result }); break;
+    }
+    case 'knowledge.find': {
+      const stamp = knowledgeStamp(db); if (c.epoch !== null && c.epoch !== stamp) reject('search_cursor_changed');
+      if (c.projectId !== null && (!one(db, "SELECT 1 FROM study_projects WHERE id=? AND lifecycle!='deleted'", c.projectId) || deleted(db, c.projectId, 'project'))) reject('project_missing');
+      const needle = c.query.toLowerCase(), link = c.projectId === null ? '' : ' JOIN study_project_documents links ON links.revision_id=r.id AND links.project_id=?';
+      const scanned = rows(db, 'SELECT r.id,r.status,d.id AS document_id,d.title,r.rights_json,r.metadata_json FROM knowledge_documents d JOIN knowledge_revisions r ON r.id=COALESCE(d.active_revision,d.latest_revision)' + link +
+        " WHERE d.deleted_at IS NULL AND d.reserved=0 AND d.scope_kind='personal-library' AND d.scope_entity IS NULL AND r.id>? ORDER BY r.id LIMIT ?", ...(c.projectId === null ? [] : [c.projectId]), c.after ?? '', c.limit + 1);
+      const items: KnowledgeResults['knowledge.find']['items'] = [];
+      for (const row of scanned.slice(0, c.limit)) {
+        if (deleted(db, String(row.document_id), 'document', 'knowledge-document') || deleted(db, String(row.id), 'revision', 'knowledge-revision')) continue;
+        let rights: Rights, metadata: Metadata; try { rights = parse(row.rights_json); metadata = parse(row.metadata_json); } catch { continue; }
+        if (rights.display !== true) continue;
+        // Index text only from eligible ready revisions; titles of display-permitted files stay findable.
+        const hit = row.status === 'ready' && eligibleKnowledge(metadata, rights) ? one(db, 'SELECT text,locators_json FROM knowledge_passages WHERE revision_id=? AND instr(lower(text),?)>0 ORDER BY ordinal LIMIT 1', String(row.id), needle) : undefined;
+        if (!hit && !String(row.title).toLowerCase().includes(needle)) continue;
+        items.push({ revision_id: String(row.id), title: String(row.title), status: String(row.status), note: !!metadata.asset_role?.includes('study-note'),
+          text: hit ? String(hit.text) : null, locators_json: hit ? String(hit.locators_json) : null });
+      }
+      result = { items, next: scanned.length > c.limit ? String(scanned[c.limit - 1].id) : null, epoch: stamp }; break;
     }
     case 'knowledge.cleanup':
       for (const id of c.revisionIds) { db.prepare('DELETE FROM knowledge_passages WHERE revision_id=? AND EXISTS(SELECT 1 FROM knowledge_cleanup WHERE revision_id=?)').run(id, id); db.prepare('DELETE FROM knowledge_cleanup WHERE revision_id=? AND remove_original=0').run(id); }

@@ -68,14 +68,14 @@ export function createLearningHistory(storage: LearningStorage, native: NativeRe
     },
     /** Exact literal (case-sensitive) text; one native page per call, no search projection.
      * Cursor pins filter/policy/context and exact canonical references of the open range. */
-    async find(input: { query: string; scope: FindScope; cursor?: string }) {
+    async find(input: { query: string; scope: FindScope; cursor?: string; ignoreCase?: boolean }) {
       text(input.query, 1, 240);
-      const queryHash = digest(input.query), scopeHash = digest(canonical(input.scope));
+      const fold = input.ignoreCase === true, queryHash = digest(fold ? 'ignore-case:' + input.query : input.query), scopeHash = digest(canonical(input.scope));
       const cursor = input.cursor ? decode(input.cursor) : null;
       if (cursor && (cursor.queryHash !== queryHash || cursor.scopeHash !== scopeHash)) reject('learning_cursor_stale');
       const scan = await storage.command({ type: 'learning.scan', scope: input.scope, after: cursor?.after ?? null, limit: 1, epoch: cursor?.epoch ?? null });
       const view = cursor?.threadId ? await storage.command({ type: 'learning.view', threadId: cursor.threadId }) : scan.views[0];
-      if (!view) return { items: [], next_cursor: null };
+      if (!view) return { items: [], next_cursor: null, scanned: null };
       if (cursor?.threadId && cursor.viewStamp !== view.stamp) reject('learning_cursor_stale');
       if ((input.scope.lifecycle !== 'all' && view.conversation.lifecycle !== input.scope.lifecycle) ||
         (input.scope.projectId !== null && view.conversation.project_id !== input.scope.projectId)) reject('learning_cursor_stale');
@@ -91,7 +91,9 @@ export function createLearningHistory(storage: LearningStorage, native: NativeRe
         const ids = allowed(view);
         items = page.messages.flatMap(message => {
           if (ids.get(message.id) !== message.type) return [];
-          const value = nativeText(message), start = value.indexOf(input.query);
+          const value = nativeText(message), lower = value.toLowerCase(), needle = input.query.toLowerCase();
+          // Case folding is used only where it preserves exact character offsets.
+          const folded = fold && lower.length === value.length && needle.length === input.query.length, start = (folded ? lower : value).indexOf(folded ? needle : input.query);
           if (start < 0) return [];
           return [{ conversation: view.conversation, session_id: page.session.id, message_id: message.id, role: message.type,
             start, end: start + input.query.length, snippet: value.slice(Math.max(0, start - 60), start + input.query.length + 100) }];
@@ -101,7 +103,7 @@ export function createLearningHistory(storage: LearningStorage, native: NativeRe
       }
       await check(view);
       await storage.command({ type: 'learning.scan', scope: input.scope, after: null, limit: 1, epoch: scan.epoch });
-      return { items, next_cursor: next };
+      return { items, next_cursor: next, scanned: { conversation: view.conversation, first: !cursor?.nativeCursor } };
     },
   };
 }

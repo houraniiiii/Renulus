@@ -290,7 +290,7 @@ export type ExtractInput = {
   "artifact_revision": number;
   "offset": number;
   "length": number;
-  "format": "txt" | "md" | "pdf" | "png" | "jpg" | "jpeg" | "tif" | "tiff" | "csv" | "html" | "xml" | "docx" | "xlsx";
+  "format": "txt" | "md" | "pdf" | "png" | "jpg" | "jpeg" | "tif" | "tiff" | "csv" | "html" | "xml" | "docx" | "xlsx" | "pptx";
   "title": string;
   "output": OutputGrant;
 };

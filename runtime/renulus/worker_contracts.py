@@ -156,7 +156,7 @@ class ExtractInput(Model):
     artifact_revision: Annotated[int, Field(ge=1, le=9007199254740991)]
     offset: Size
     length: Size
-    format: Literal["txt", "md", "pdf", "png", "jpg", "jpeg", "tif", "tiff", "csv", "html", "xml", "docx", "xlsx"]
+    format: Literal["txt", "md", "pdf", "png", "jpg", "jpeg", "tif", "tiff", "csv", "html", "xml", "docx", "xlsx", "pptx"]
     title: Annotated[str, Field(min_length=1, max_length=256)]
     output: OutputGrant
 

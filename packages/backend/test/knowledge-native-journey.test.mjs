@@ -44,6 +44,24 @@ font=ImageFont.truetype('C:/Windows/Fonts/arial.ttf',42)
 draw.text((30,100),'SYNTHETIC dialysis fistula flow review',fill='black',font=font)
 image.save(root/'synthetic-dialysis.png'); image.close()
 files.append(('synthetic-dialysis.png','image/png',(root/'synthetic-dialysis.png').read_bytes()))
+for ext,fmt,media in (('jpg','JPEG','image/jpeg'),('tiff','TIFF','image/tiff')):
+ image=Image.new('RGB',(1400,400),'white'); draw=ImageDraw.Draw(image)
+ draw.text((30,100),'SYNTHETIC hemodialysis catheter review',fill='black',font=font)
+ image.save(root/('synthetic-catheter.'+ext),fmt); image.close()
+ files.append(('synthetic-catheter.'+ext,media,(root/('synthetic-catheter.'+ext)).read_bytes()))
+from io import BytesIO
+import docx,openpyxl,pptx
+def build(save):
+ buffer=BytesIO(); save(buffer); return buffer.getvalue()
+document=docx.Document(); document.add_heading('SYNTHETIC glomerulonephritis review',1); document.add_paragraph('SYNTHETIC complement pathway notes for a docx reader.')
+workbook=openpyxl.Workbook(); sheet=workbook.active; sheet.title='Labs'; sheet.append(['Test','Result']); sheet.append(['Urine','SYNTHETIC proteinuria quantified'])
+presentation=pptx.Presentation(); slide=presentation.slides.add_slide(presentation.slide_layouts[1]); slide.shapes.title.text='SYNTHETIC peritoneal dialysis'; slide.placeholders[1].text='SYNTHETIC peritoneal membrane transport'
+files+=[('synthetic-lupus.md','text/markdown',b'# SYNTHETIC Lupus\\n\\nSYNTHETIC lupus nephritis class IV study.\\n'),
+ ('synthetic-potassium.html','text/html',b'<html><body><h1>SYNTHETIC potassium</h1><p>SYNTHETIC hyperkalaemia management paragraph.</p></body></html>'),
+ ('synthetic-sodium.xml','application/xml',b'<root><item>SYNTHETIC hyponatraemia evaluation</item></root>'),
+ ('synthetic-gn.docx','application/vnd.openxmlformats-officedocument.wordprocessingml.document',build(document.save)),
+ ('synthetic-labs.xlsx','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',build(workbook.save)),
+ ('synthetic-pd.pptx','application/vnd.openxmlformats-officedocument.presentationml.presentation',build(presentation.save))]
 for name,media,body in files:
  (root/name).write_bytes(body);fixtures[name]={'path':str(root/name),'media_type':media,'bytes':len(body),'sha256':hashlib.sha256(body).hexdigest()}
 print(json.dumps({'database':str(s.paths.database),'files':fixtures}))
@@ -68,19 +86,24 @@ print(json.dumps({'database':str(s.paths.database),'files':fixtures}))
       native: { originals_root: originals, budget_root: managed, ...handles.launch } });
     const engines = createEngineArtifacts(worker.channel, worker.ready.capacity.max_chunk_bytes);
     knowledge = createKnowledgeDomain({ storage, engines, native: createWorkerKnowledgeIO(worker.channel, worker.ready.capacity.max_chunk_bytes) });
+    const queries = { 'synthetic-aki.txt': 'kidney injury', 'synthetic-ckd.csv': 'albuminuria', 'synthetic-transplant.pdf': 'biopsy', 'synthetic-dialysis.png': 'fistula flow',
+      'synthetic-catheter.jpg': 'hemodialysis catheter', 'synthetic-catheter.tiff': 'hemodialysis catheter', 'synthetic-lupus.md': 'lupus nephritis', 'synthetic-potassium.html': 'hyperkalaemia',
+      'synthetic-sodium.xml': 'hyponatraemia', 'synthetic-gn.docx': 'glomerulonephritis', 'synthetic-labs.xlsx': 'proteinuria', 'synthetic-pd.pptx': 'peritoneal' };
     const library = createWorkerLibrary(worker.channel, worker.ready.capacity.max_chunk_bytes), imported = {};
     for (const [filename, file] of Object.entries(prepared.files)) {
       selectedPath = file.path; const selected = await handles.select(); assert.ok(selected);
       const request = { title: filename, media_type: file.media_type, bytes: file.bytes, sha256: file.sha256,
         metadata: { source_id: 'R02', access_class: 'user-owned', original_sha256: file.sha256 }, rights: ownNoteRights(), document_id: null, expected_revision_id: null, project_id: null, note: false, idempotency_key: 'native-import-' + filename };
-      const i = await knowledge.importSelected(request, selected); assert.equal(i.state, 'ready'); imported[filename] = i;
+      // Office/XML/Markdown originals arrive as already-read HTTP bytes; the others use the native chooser handle.
+      const raw = /\.(docx|xlsx|pptx|xml|md)$/.test(filename);
+      const i = raw ? await knowledge.importBytes(request, await readFile(file.path)) : await knowledge.importSelected(request, selected); assert.equal(i.state, 'ready'); imported[filename] = i;
       const reference = { target: { type: 'library_revision', id: i.revision_id } };
-      const resolved = await knowledge.resolve({ reference }); assert.equal(resolved.preview_state, 'ready');
+      const resolved = await knowledge.resolve({ reference }); assert.equal(resolved.preview_state, filename.endsWith('.pptx') ? 'unsupported' : 'ready');
       const original = await knowledge.original({ reference }); assert.equal(createHash('sha256').update(original.body).digest('hex'), file.sha256);
       const doc = await storage.command({ type: 'knowledge.get', documentId: i.document_id }); assert.ok(doc.revisions[0].passage_count > 0);
-      const hits = await library.query({ query: filename.includes('dialysis') ? 'fistula flow' : filename.includes('ckd') ? 'albuminuria' : filename.includes('transplant') ? 'biopsy' : 'kidney injury', limit: 3,
+      const hits = await library.query({ query: queries[filename], limit: 3,
         revisionIds: [i.revision_id], operationId: 'query-' + i.job_id, attemptId: 'attempt_1', signal: new AbortController().signal }); assert.ok(hits.length);
-      if (resolved.payload.asset_id) assert.ok((await knowledge.asset({ reference, asset_id: resolved.payload.asset_id, original_sha256: file.sha256 })).length > 0);
+      if (resolved.payload?.asset_id) assert.ok((await knowledge.asset({ reference, asset_id: resolved.payload.asset_id, original_sha256: file.sha256 })).length > 0);
       if (file.media_type === 'text/plain') {
         const source = await knowledge.source({ reference, expected_policy_revision: resolved.policy_revision, expected_context_epoch: resolved.context_epoch });
         assert.match(source.text, /SYNTHETIC AKI/); assert.equal(source.dependency.target.type, 'library_revision');

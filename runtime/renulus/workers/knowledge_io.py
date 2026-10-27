@@ -23,7 +23,8 @@ SUFFIX = {'text/plain': '.txt', 'text/markdown': '.md', 'text/csv': '.csv',
     'text/html': '.html', 'application/xml': '.xml', 'text/xml': '.xml',
     'application/pdf': '.pdf', 'image/png': '.png', 'image/jpeg': '.jpg', 'image/tiff': '.tiff',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx'}
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx'}
 
 
 def require(current):
