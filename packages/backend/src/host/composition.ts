@@ -7,6 +7,7 @@ import { pathToFileURL } from 'node:url';
 import type { StorageClient } from '../storage/index.ts';
 import { reject } from '../storage/contracts.ts';
 import { canonical } from '../storage/schema.ts';
+import { reconcileRecoveryReservations } from '../storage/reservations.ts';
 import { openEngineWorker, type EngineWorkerOptions } from '../workers/process.ts';
 import { createWorkerLibrary } from '../workers/library.ts';
 import { createWorkerTransport } from '../workers/transport.ts';
@@ -17,6 +18,8 @@ import { CAPABILITY_COHORT } from '../../../harness/src/capability-plugins.ts';
 import { createPluginLifecycle } from '../plugins/lifecycle.ts';
 import { createToolRegistry } from '../plugins/registry.ts';
 import { createNativePorts } from '../plugins/native.ts';
+import { createMcp, type McpSettingsPort } from '../domain/capabilities/mcp.ts';
+import { createMcpBroker } from '../domain/capabilities/mcp-broker.ts';
 import { createChildren } from '../plugins/children.ts';
 import { createQuestions } from '../plugins/questions.ts';
 import { createNativeCapabilityPlugin } from '../../../harness/src/native-capability-plugin.ts';
@@ -36,13 +39,19 @@ import { createMemoryPlugin, createMemoryTools } from '../domain/memory/tools.ts
 import { createEngineArtifacts } from '../workers/artifacts.ts';
 import { createWorkerKnowledgeIO } from '../workers/knowledge.ts';
 import { createKnowledgeDomain } from '../domain/knowledge/index.ts';
+import { createEvidenceDomain } from '../domain/evidence/index.ts';
+import { createEvidencePlugin, createEvidenceTools, type EvidenceToolDependencies } from '../domain/evidence/tools.ts';
 import { createFindDomain } from '../domain/find/index.ts';
 import { createFindPlugin, createFindTools, FIND_PERMISSION } from '../domain/find/tools.ts';
 import { createKnowledgeTools, registerKnowledgeTools } from '../domain/knowledge/tools.ts';
 import { createAssessmentPlugin, createAssessmentTools } from '../domain/assessment/tools.ts';
 import { createAssessmentGeneration, type AssessmentNativePort } from '../domain/assessment/generation.ts';
 import { createStudyCoordinator } from '../domain/study/coordinator.ts';
+import { createStudyPlugin, createStudyTools } from '../domain/study/tools.ts';
+import { createUpdatesPlugin, createUpdatesTools } from '../domain/updates/tools.ts';
+import type { AssessmentToolBridgeOptions } from '../domain/assessment/tools.ts';
 import { createUpdatesCoordinator } from '../domain/updates/coordinator.ts';
+import { createUpdatesRetrieval } from '../domain/updates/retrieval.ts';
 import type { UpdatesNativePort } from '../domain/updates/contracts.ts';
 import { createVolatileDispatchOwner } from '../domain/temporary/dispatch.ts';
 import { createVolatileAssessmentPort } from '../domain/temporary/assessment.ts';
@@ -58,6 +67,7 @@ export interface ConnectedTargetOptions {
   availableModels: readonly string[];
   volatileAssessment?: Pick<AssessmentNativePort, 'fictionalTransform' | 'privacyReview'>;
   retrieval?: Pick<UpdatesNativePort, 'check'>;
+  mcp?: McpSettingsPort;
   /** Separate developer profile (BF03). Absent or not `enabled: true` = Off: no developer tool registers. */
   developer?: Pick<DeveloperOptions, 'configuration' | 'browser' | 'approveWorktreeRemoval'>;
   /** Existing native TestLLM only; an explicit synthetic target is still required. */
@@ -82,10 +92,12 @@ export async function loadInstalledEvidence(items: readonly { path: string; sha2
 
 export async function openConnectedTarget(options: ConnectedTargetOptions) {
   const { storage, identity } = options;
+  await reconcileRecoveryReservations(storage);
   const evidence = [...options.evidence ?? []];
   let revisions: Revisions = { configuration: 0, grant: 0, context: 0, deletion: 0, cancellation: 0 };
   let admission = false, closing = false;
   let selected: Learning | undefined;
+  let mcpAdmin: ReturnType<typeof createMcp>['admin'] | undefined;
   let selectedArtifacts: readonly NativeArtifact[] = [];
   let callbacks: ReturnType<typeof createNativeDispatchCallbacks> | undefined;
   let gateway: Awaited<ReturnType<typeof createLearningGateway>> | undefined;
@@ -94,6 +106,7 @@ export async function openConnectedTarget(options: ConnectedTargetOptions) {
   let configurationRevision = 0;
   let memory: MemoryHost | undefined;
   const questions = createQuestions();
+  let grantable: readonly string[] = [];
   const standalone = new Map<string, { binding: NativeBinding; guard: () => Promise<void>; controller: AbortController; settled: Promise<unknown> }>();
   const worker = await openEngineWorker({ ...options.resources, launchRoot: path.join(options.profileRoot, 'state', 'worker-launch'),
     identity, retention: 'saved', current: () => revisions,
@@ -165,7 +178,7 @@ export async function openConnectedTarget(options: ConnectedTargetOptions) {
     const spec = await storage.command({ type: 'dispatch.configuration', version: snapshot.effective });
     const pinned = await storage.command({ type: 'learning.dispatch.begin', runId: run.receipt.run_id,
       expectedVersion: snapshot.effective, availableModels: [...options.availableModels], operationModel: request.model,
-      capabilities: [...spec.capabilities], fenceBase });
+      capabilities: [...new Set([...spec.capabilities, ...(request.images?.length ? ['image' as const] : [])])], fenceBase });
     runs.set(pinned.run_id, pinned);
     await syncWorker({ context: run.checkpoint.contextEpoch, deletion: run.checkpoint.policyRevision,
       cancellation: run.checkpoint.cancellationEpoch });
@@ -223,6 +236,45 @@ export async function openConnectedTarget(options: ConnectedTargetOptions) {
     });
     // Registration seam: other waves add `tools.add(plugin, permissions)` / `tools.command(name, run)` here.
     const tools = createToolRegistry();
+    const mcp = options.mcp && !disposable ? createMcp({ settings: options.mcp,
+      broker: createMcpBroker({ python: options.resources.python, sourceRoot: options.resources.sourceRoot,
+        profile: root, state: path.join(root, 'state'), workspace: options.developer?.configuration?.enabled ? options.developer.configuration.workspace : undefined }),
+      developer: options.developer?.configuration?.enabled ? { workspace: options.developer.configuration.workspace } : undefined,
+      async open(envelope) {
+        if (closing) return false;
+        if (envelope) {
+          if (!admission) return false;
+          await storage.command({ type: 'dispatch.current', runId: envelope.run_id, fence: envelope.fence,
+            requiredCapabilities: ['renulus.mcp'], permitId: null });
+        }
+        return !closing && (!envelope || admission);
+      } }) : undefined;
+    if (mcp) tools.add(mcp.plugin, ['renulus.mcp']);
+    const evidenceDomain = createEvidenceDomain({ storage, worker: { channel: worker.channel, maxChunkBytes, retention: 'saved' },
+      async check(operationId, signal) {
+        signal.throwIfAborted(); if (!admission || closing || disposable) reject('evidence_stale');
+        const run = await storage.command({ type: 'dispatch.run', runId: operationId });
+        const binding = bindings.get(operationId); if (!binding) reject('learning_binding_conflict');
+        await storage.command({ type: 'learning.current', runId: operationId, binding });
+        await storage.command({ type: 'dispatch.current', runId: operationId, fence: run.fence, requiredCapabilities: [], permitId: null });
+      } });
+    const evidenceDeps: EvidenceToolDependencies = { evidence: evidenceDomain,
+      async resolve(context, signal) {
+        signal.throwIfAborted(); const binding = result.native.binding(context.sessionID);
+        const run = await storage.command({ type: 'dispatch.run', runId: binding.operation_id });
+        return { operationId: binding.operation_id, attemptId: binding.attempt_id, sessionId: binding.session_id, grants: run.effective_capabilities };
+      },
+      async check(authority, signal) {
+        signal.throwIfAborted(); const binding = result.native.binding(authority.sessionId);
+        if (binding.operation_id !== authority.operationId || binding.attempt_id !== authority.attemptId) reject('learning_binding_conflict');
+        await storage.command({ type: 'learning.current', runId: binding.operation_id, binding });
+      } };
+    const evidenceTools = createEvidenceTools(evidenceDeps);
+    tools.add(createEvidencePlugin(evidenceDeps), ['renulus.evidence.search','renulus.evidence.fetch']);
+    tools.command('evidence.search', async (input, envelope, signal) => ({ content: JSON.stringify(await evidenceTools.websearch(input,
+      { sessionID: envelope.session_id, id: envelope.call_id }, signal)) }));
+    tools.command('evidence.fetch', async (input, envelope, signal) => ({ content: JSON.stringify(await evidenceTools.webfetch(input,
+      { sessionID: envelope.session_id, id: envelope.call_id }, signal)) }));
     tools.add(createMemoryPlugin(memoryTools), ['renulus.memory.recall']);
     const finder = createFindDomain({ storage, history: { find: input => result.find(input) } });
     tools.add(createFindPlugin(createFindTools({ find: input => finder.find(input),
@@ -259,6 +311,24 @@ export async function openConnectedTarget(options: ConnectedTargetOptions) {
         const run = await storage.command({ type: 'dispatch.run', runId: binding.operation_id });
         await storage.command({ type: 'dispatch.current', runId: run.run_id, fence: run.fence, requiredCapabilities: [], permitId: null });
       } })), ['renulus.study.help', 'renulus.practice.propose']);
+    const studyUpdatesAuthority: AssessmentToolBridgeOptions = { storage,
+      async resolve(context, signal) {
+        signal.throwIfAborted(); const binding = result.native.binding(context.sessionID);
+        await storage.command({ type: 'learning.current', runId: binding.operation_id, binding });
+        const pin = await storage.command({ type: 'dispatch.run', runId: binding.operation_id });
+        const study = (await storage.command({ type: 'assessment.attempts.list' })).items.filter((a: { mode: string; status: string }) => a.mode === 'study' && a.status === 'active');
+        return { operationId: binding.operation_id, attemptId: binding.attempt_id, sessionId: binding.session_id,
+          studyAttemptId: study.length === 1 ? String(study[0].id) : null, grants: pin.effective_capabilities };
+      },
+      async check(authority, signal) {
+        signal.throwIfAborted(); const binding = result.native.binding(authority.sessionId);
+        if (binding.operation_id !== authority.operationId || binding.attempt_id !== authority.attemptId) reject('learning_binding_conflict');
+        await storage.command({ type: 'learning.current', runId: binding.operation_id, binding });
+        const run = await storage.command({ type: 'dispatch.run', runId: binding.operation_id });
+        await storage.command({ type: 'dispatch.current', runId: run.run_id, fence: run.fence, requiredCapabilities: [], permitId: null });
+      } };
+    tools.add(createStudyPlugin(createStudyTools({ ...studyUpdatesAuthority, storage })), ['renulus.plan.propose']);
+    tools.add(createUpdatesPlugin(createUpdatesTools({ ...studyUpdatesAuthority, storage })), ['renulus.updates.read']);
     // Native Adapters `skill`, `question`, `subagent`, `opencode.models`, `opencode.session_rename`.
     const dispatchModel = (request: Parameters<NonNullable<SavedLearningOptions['modelCallbacks']>>[0]) =>
       disposable || !callbacks || !['model.prepare', 'model.manifest', 'model.dispatch'].includes(request.command)
@@ -273,9 +343,14 @@ export async function openConnectedTarget(options: ConnectedTargetOptions) {
     const resources = { python: options.resources.python, sourceRoot: options.resources.sourceRoot };
     const developer = createDeveloperRuntime({ ...options.developer, resources });
     const nativeCapabilities = await createNativeCapabilityPlugin(createNativePorts({ storage, root, registry: tools, questions,
+      mcp,
+      worker: { channel: worker.channel, maxChunkBytes, retention: 'saved' },
+      developerEndpoints: options.developer?.configuration?.endpoints,
       binding: id => result.native.binding(id), open: () => admission && !closing, children: children.bridge, developer,
       transport: developer && createBrowserTransport({ ...resources, current: lease => storage.command({ type: 'capability.current', id: lease.id,
         envelope: lease.envelope, bytes: 0, now_ms: Date.now() }).then(() => true, () => false) }) }));
+    // Grantable run capabilities come only from what is registered here (never developer actions).
+    grantable = [...new Set([...tools.permissions(), 'renulus.library', 'renulus.skill', 'renulus.models', 'renulus.child'])];
     result = await openSavedLearningTarget({ storage, harness: { ...harness, root, nativeCapabilities,
       trustedPlugins: tools.plugins(),
       capabilityArtifacts: artifacts, capabilityPermissions: [...tools.permissions(), ...developer?.actions ?? [], 'renulus.skill', 'renulus.models', 'renulus.child', 'subagent',
@@ -295,7 +370,8 @@ export async function openConnectedTarget(options: ConnectedTargetOptions) {
       }),
     });
     const close = result.close;
-    result.close = async () => { await close(); await ownGateway?.close(); };
+    result.close = async () => { await close(); await mcp?.admin.close(); await ownGateway?.close(); };
+    if (!disposable) mcpAdmin = mcp?.admin;
     if (!disposable) gateway = ownGateway;
     return result;
   }
@@ -528,6 +604,21 @@ export async function openConnectedTarget(options: ConnectedTargetOptions) {
         source_refs: [], idempotencyKey: request.idempotency_key, origin: 'nightly', schedule: request.nightly }),
       cancel: id => assessment.cancel(id),
     } });
+  if (!options.retrieval) {
+    const checks = new Map<string, Parameters<UpdatesNativePort['check']>[0]>();
+    const evidence = createEvidenceDomain({ storage, worker: { channel: worker.channel, maxChunkBytes, retention: 'saved' },
+      async check(operationId, signal) {
+        signal.throwIfAborted(); if (!admission || closing) reject('evidence_stale');
+        const input = checks.get(operationId); if (!input) reject('updates_check_stale');
+        await storage.command({ type: 'updates.check.current', input });
+      } });
+    const retrieval = createUpdatesRetrieval(evidence);
+    options.retrieval = { async check(input, signal) {
+      checks.set(input.token, input);
+      try { return await retrieval.check(input, signal); }
+      finally { checks.delete(input.token); }
+    } };
+  }
   const updates = createUpdatesCoordinator({ storage, native: {
     check: (input, signal) => { if (!options.retrieval) reject('protected_retrieval_unavailable'); return options.retrieval.check(input, signal); },
     digest: (input, signal) => generateText('updates-digest', {
@@ -612,8 +703,12 @@ export async function openConnectedTarget(options: ConnectedTargetOptions) {
   }
   const configuration = {
     snapshot: () => storage.command({ type: 'dispatch.snapshot' }),
-    activate: (spec: ConfigurationSpec) => serialize(async () => {
+    activate: (requested: ConfigurationSpec) => serialize(async () => {
       if (closing) reject('runtime_stopping');
+      // Every registered permission is grantable under the configuration; an unregistered one never is.
+      // Individual grants stay revocable with dispatch.revoke.
+      const spec = { ...requested, capabilities: [...new Set([...requested.capabilities.filter(name =>
+        !name.startsWith('renulus.') || grantable.includes(name)), ...grantable])] };
       admission = false;
       const pluginStatus = await plugins.status();
       if (pluginStatus.state === 'held' || pluginStatus.state === 'staged') reject('plugin_activation_required');
@@ -682,7 +777,8 @@ export async function openConnectedTarget(options: ConnectedTargetOptions) {
     try { await configuration.activate(await storage.command({ type: 'dispatch.configuration', version: existing.effective })); }
     catch (error) { recoveryError = error && typeof error === 'object' && 'code' in error ? String(error.code) : 'configuration_recovery_held'; }
   }
-  return { learning, find, plugins, credentials, configuration, worker, library, memory, knowledge, assessment, study, updates, close,
+  return { grantable: () => grantable, learning, find, plugins, credentials, configuration, worker, library, memory, knowledge, assessment, study, updates, close,
+    get mcp() { return mcpAdmin; },
     temporary: { open: openTemporaryChat },
     inspect: async () => {
       if (!selected) reject('learning_host_unavailable');

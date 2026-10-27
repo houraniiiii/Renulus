@@ -56,6 +56,8 @@ function boundedClone<T>(value: T, bytes: number): T {
   if (typeof json !== 'string' || Buffer.byteLength(json) > bytes) reject('model_registry_capacity');
   return freeze(structuredClone(value));
 }
+/** Tool grants (enulus.*) are application authority; only model features need route qualification. */
+const modelCapabilities = (run: Readonly<Run>) => run.effective_capabilities.filter(name => !name.startsWith('renulus.'));
 function safeCode(error: unknown): string {
   const code = error && typeof error === 'object' && 'code' in error ? error.code : null;
   return typeof code === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(code) ? code : 'model_dispatch_unavailable';
@@ -95,7 +97,7 @@ export function createNativeDispatchCallbacks(options: NativeDispatchOptions) {
         if (owned.plans.length >= Math.min(run.dispatch_limit, 128)) reject('model_registry_capacity');
         const evidence = options.evidence(run.route);
         if (!evidence || typeof evidence.count !== 'function') reject('deployment_counter_unknown');
-        validateQualification(evidence.metadata, run.route, run.effective_capabilities);
+        validateQualification(evidence.metadata, run.route, modelCapabilities(run));
         const metadata = boundedClone(evidence.metadata, 16384);
         const plan: Plan = { id: randomUUID().replaceAll('-', ''), step: randomUUID().replaceAll('-', ''), run: freeze(run), evidence, metadata,
           kind: previous ? 'tool-continuation' : run.parent_id ? 'child' : 'primary', previous: previous?.permit?.permit_id ?? null, phase: 'prepared' };
@@ -103,7 +105,7 @@ export function createNativeDispatchCallbacks(options: NativeDispatchOptions) {
         const result: Record<string, unknown> = { dispatch_id: plan.id, binding: owned.binding,
           role: { version: run.version, purpose: run.purpose, model_id: run.route.catalog_model_id,
             output_tokens: Math.min(metadata.limits.output_tokens, run.output_tokens), dispatch_limit: run.dispatch_limit },
-          request_kind: plan.kind, route: run.route, limits: metadata.limits, required_capabilities: run.effective_capabilities,
+          request_kind: plan.kind, route: run.route, limits: metadata.limits, required_capabilities: modelCapabilities(run),
           native_capabilities: { tools: run.effective_capabilities.includes('tools'), input: ['text', ...(run.effective_capabilities.includes('image') ? ['image'] : [])], output: ['text'] }, bounds };
         if (plan.previous) result.continuation_of = plan.previous;
         return { outcome: 'committed_reference', result };
@@ -130,7 +132,7 @@ export function createNativeDispatchCallbacks(options: NativeDispatchOptions) {
       const proof: RequestProof = { qualification: plan.metadata, payload_hash: wire.body_sha256, wire_sha256: digest(canonical(serialized)), input_manifest_sha256: wire.input_manifest_sha256,
         body_bytes: wire.body_bytes, input_tokens: tokens, output_tokens: wire.output_tokens };
       plan.permit = await options.storage.command({ type: 'dispatch.reserve', runId: run.run_id, stepId: plan.step, requestKind: plan.kind,
-        continuationOf: plan.previous, requiredCapabilities: plan.run.effective_capabilities, fence: owned.fence, proof });
+        continuationOf: plan.previous, requiredCapabilities: modelCapabilities(plan.run), fence: owned.fence, proof });
       if (plan.permit.state !== 'reserved') reject('dispatch_already_admitted');
       await current(owned, plan, signal);
       plan.permit = await options.storage.command({ type: 'dispatch.admit', permitId: plan.permit.permit_id, fence: owned.fence, proof });

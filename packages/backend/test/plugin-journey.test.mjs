@@ -66,7 +66,10 @@ async function scriptedModel() {
   return { model, push: (...items) => runtime.runPromise(client.push(...items)), requests: () => runtime.runPromise(client.requests()), close: () => runtime.dispose() };
 }
 
-test('registry exploration', { timeout: 180000 }, async () => {
+test('every registered permission is a grantable run capability under the default configuration and revocable', { timeout: 240000 }, async () => {
+  try { await journey(); } catch (error) { writeFileSync('C:/Renulus/scratch/ocf/l1a-error.txt', String(error?.stack ?? error) + ' ' + JSON.stringify(error)); throw error; }
+});
+async function journey() {
   const f = fixture(), m = await scriptedModel();
   const storage = await openIsolatedStorage(f.writer);
   const connected = await openConnectedTarget({ profileRoot: f.root, storage, identity: f.identity, availableModels: ['gpt-6.1-sol'],
@@ -76,7 +79,26 @@ test('registry exploration', { timeout: 180000 }, async () => {
       broker: { profile_root: path.join(f.root, 'broker'), state_root: path.join(f.root, 'broker/state') } } });
   try {
     const registry = await connected.inspect();
-    writeFileSync('C:/Renulus/scratch/ocf/l1a-registry.json', JSON.stringify(registry.registry, null, 1));
-  } catch (error) { console.error('EXPLORE ERROR', error); throw error; }
+    const spec = defaultConfiguration({ provider: 'codex', credential_reference: 'synthetic-unused', credential_revision: 0, selected_model: 'gpt-6.1-sol' }, registry.registry_hash);
+    assert.deepEqual(spec.capabilities, ['text']);
+    const grantable = connected.grantable();
+    for (const id of ['renulus.memory.recall', 'renulus.source.read', 'renulus.skill', 'renulus.question', 'renulus.child', 'renulus.library'])
+      assert.ok(grantable.includes(id), id);
+    assert.ok(!grantable.includes('renulus.unregistered'));
+    // An unregistered permission requested by the caller is dropped, never granted.
+    await connected.configuration.activate({ ...spec, capabilities: ['text', 'renulus.unregistered'] });
+    const snapshot = await storage.command({ type: 'dispatch.snapshot' });
+    const effective = await storage.command({ type: 'dispatch.configuration', version: snapshot.effective });
+    assert.ok(grantable.every(id => effective.capabilities.includes(id)) && !effective.capabilities.includes('renulus.unregistered'));
+    const context = await storage.command({ type: 'study.context' });
+    const fence = { ...f.identity, context_epoch: context.epoch, deletion_epoch: context.policyRevision, cancellation_epoch: 0 };
+    const begin = runId => storage.command({ type: 'dispatch.begin', runId, purpose: 'explain', expectedVersion: snapshot.effective,
+      capabilities: [...effective.capabilities], availableModels: ['gpt-6.1-sol'], operationModel: null, fence, batchSize: null });
+    const pinned = await begin('journey_run_1');
+    assert.ok(grantable.every(id => pinned.effective_capabilities.includes(id)));
+    await storage.command({ type: 'dispatch.revoke', capability: 'renulus.question' });
+    const narrowed = await storage.command({ type: 'dispatch.run', runId: 'journey_run_1' });
+    assert.ok(!narrowed.effective_capabilities.includes('renulus.question') && narrowed.effective_capabilities.includes('renulus.skill'));
+  } catch (error) { writeFileSync('C:/Renulus/scratch/ocf/l1a-error.txt', String(error?.stack ?? error) + ' ' + JSON.stringify(error)); throw error; }
   finally { await connected.close(); await storage.close(); await m.close(); }
-});
+}
