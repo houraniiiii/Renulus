@@ -135,3 +135,82 @@ class CredentialResult(Model):
     login_status: Literal["pending", "exchanging", "connected", "cancelled", "error"] | None = None
     authorization_url: Annotated[str, Field(max_length=8192)] | None = Field(default=None, repr=False)
     remote_revocation: Literal["failed"] | None = None
+
+
+class HttpEndpoint(Model):
+    """One host-granted TCP endpoint. `private_network` is an explicit host grant, never a plan default."""
+    host: Annotated[str, Field(min_length=1, max_length=253, pattern=r"^[A-Za-z0-9.:_-]+$(?![\s\S])")]
+    port: Annotated[int, Field(ge=1, le=65535)]
+    private_network: bool = False
+
+
+class HttpHeader(Model):
+    name: Annotated[str, Field(min_length=1, max_length=64)]
+    value: Annotated[str, Field(max_length=4096)]
+
+
+class HttpCredential(Model):
+    """Reference and revision only. The worker alone resolves and attaches the secret."""
+    ref: Id
+    revision: Counter
+
+
+class HttpPlan(Model):
+    """One admitted HTTP hop (no redirect following). The host re-admits every redirect itself."""
+    permit_id: OpaquePermit = Field(repr=False)
+    admission_receipt: Id
+    identity: Identity
+    revisions: Revisions
+    retention: Retention
+    expires_at_ms: Counter
+    output: OutputGrant
+    endpoints: Annotated[tuple[HttpEndpoint, ...], Field(min_length=1, max_length=32)]
+    method: Literal["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+    url: Endpoint
+    headers: Annotated[tuple[NativeHeader, ...], Field(max_length=8)]
+    body_base64: Annotated[str, Field(max_length=1398104)] = Field(repr=False)
+    body_sha256: Digest
+    credential: HttpCredential | None = None
+    max_response_bytes: Annotated[int, Field(ge=1, le=16 * 1024 * 1024)]
+
+
+class EvidencePlan(Model):
+    """Selected evidence provider work. The worker derives every request from fixed provider tables."""
+    permit_id: OpaquePermit = Field(repr=False)
+    admission_receipt: Id
+    identity: Identity
+    revisions: Revisions
+    retention: Retention
+    expires_at_ms: Counter
+    output: OutputGrant
+    action: Literal["status", "search", "fetch"]
+    provider: Literal["europe-pmc", "pubmed", "brave", "tavily", "exa"] | None = None
+    query: Annotated[str, Field(min_length=1, max_length=240)] | None = None
+    pmcid: Annotated[str, Field(pattern=r"^PMC[1-9][0-9]{0,10}$(?![\s\S])")] | None = None
+    limit: Annotated[int, Field(ge=1, le=20)] = 5
+    # Host-reserved request count; the worker refuses a further hop.
+    max_requests: Annotated[int, Field(ge=0, le=4)] = 0
+    # Exact endpoint and base URL of the provider. Official providers must match the fixed table;
+    # anything else (a synthetic loopback server) needs the host's explicit private-network grant.
+    endpoint: HttpEndpoint | None = None
+    base_url: Endpoint | None = None
+    credential: HttpCredential | None = None
+
+
+class HttpResult(Model):
+    tag: Literal["http"] = "http"
+    admission_receipt: Id
+    identity: Identity
+    revisions: Revisions
+    outcome: Literal["rejected_before_admission", "committed_reference",
+        "cancelled_settled", "uncertain_after_disconnect"]
+    # 'settled' means actual local socket/client cleanup, not that a remote effect was undone.
+    settlement: Literal["settled"] = "settled"
+    effect: Literal["not_sent", "response_received", "uncertain"]
+    network_started: bool
+    # Exact count of requests whose sending began; the host settles its usage reservation with it.
+    requests_started: Annotated[int, Field(ge=0, le=32)] = 0
+    code: Id | None = None
+    http_status: Annotated[int, Field(ge=100, le=599)] | None = None
+    headers: Annotated[tuple[HttpHeader, ...], Field(max_length=16)] = ()
+    artifact: ArtifactResult | None = None

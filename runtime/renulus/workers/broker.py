@@ -45,7 +45,7 @@ from renulus.runtime.provider_adapter import PATHS, SubscriptionRoute, subscript
 from renulus.worker_contracts import payload_digest
 from .contract_base import ArtifactResult, Revisions
 from .broker_models import (BrokerLaunch, CredentialAuthority, CredentialMetadata, CredentialResult,
-    TransportPlan, TransportResult, TransportRoute)
+    EvidencePlan, HttpPlan, HttpResult, TransportPlan, TransportResult, TransportRoute)
 
 
 class BrokerRefused(Exception):
@@ -66,8 +66,9 @@ class _Attempt:
     scope: object
     cancel: Event = field(default_factory=Event)
     started: bool = False
+    requests: int = 0
     settled: bool = False
-    result: TransportResult | None = None
+    result: TransportResult | HttpResult | None = None
 
 
 @dataclass
@@ -190,6 +191,10 @@ class ProtectedBroker:
         return token
 
     def _current(self, plan, attempt, check_current, external_cancel):
+        self._alive(plan, attempt, check_current, external_cancel)
+        self._credential(plan.route)
+
+    def _alive(self, plan, attempt, check_current, external_cancel):
         if self.closed or attempt.cancel.is_set() or external_cancel is not None and external_cancel.is_set():
             _deny("transport_cancelled")
         if check_current is None:
@@ -206,7 +211,6 @@ class ProtectedBroker:
         if (plan.expires_at_ms <= int(time.time() * 1000)
                 or plan.output.expires_at_ms <= int(time.time() * 1000)):
             _deny("transport_expired")
-        self._credential(plan.route)
 
     def _validate(self, plan):
         launch = self.launch
