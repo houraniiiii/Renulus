@@ -31,7 +31,7 @@ export type StudyCommand =
   | { type: 'study.home.read'; clock: LocalClock }
   | { type: 'study.home.begin'; clock: LocalClock }
   | { type: 'study.home.publish'; jobId: string; bundle: SuggestionBundle; clock: LocalClock }
-  | { type: 'study.job.stop'; jobId: string; state: 'failed' | 'cancelled'; errorCode: string }
+  | { type: 'study.job.stop'; jobId: string; operation: 'daily_suggestions' | 'nightly_test'; state: 'failed' | 'cancelled'; errorCode: string }
   | { type: 'study.nightly.read' }
   | { type: 'study.nightly.preferences'; clock: LocalClock; expectedRevision: number; enabled: boolean; localTime: string; count: 5 | 10 | 20; idempotencyKey: string }
   | { type: 'study.nightly.recover'; clock: LocalClock }

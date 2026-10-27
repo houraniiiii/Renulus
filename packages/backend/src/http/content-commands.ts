@@ -9,6 +9,7 @@ export async function contentCommand(request:IncomingMessage,url:URL,storage:Sto
   const path=url.pathname;
   if(request.method==='GET'){
     if(path==='/api/v1/content/manifest')return {status:200,value:(await storage.command({type:'content.active'})).manifest};
+    if(path==='/api/v1/content/tracks')return {status:200,value:(await storage.command({type:'content.tracks'})).items};
     if(path==='/api/v1/content/topics')return {status:200,value:(await storage.command({type:'content.topics'})).items};
     if(path==='/api/v1/content/sources')return {status:200,value:(await storage.command({type:'content.sources'})).items};
     const topic=/^\/api\/v1\/content\/topics\/([A-Za-z0-9_.:-]+)$/.exec(path);if(topic)return {status:200,value:await storage.command({type:'content.topic',topicId:topic[1]})};

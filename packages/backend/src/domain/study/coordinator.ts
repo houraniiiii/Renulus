@@ -21,16 +21,16 @@ export function createStudyCoordinator(options: { storage: StudyStorage; native:
           await storage.command({ type: 'study.home.publish', jobId: job.job_id, bundle, clock: clock() });
         } catch (error) {
           const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : 'suggestions_failed';
-          await storage.command({ type: 'study.job.stop', jobId: job.job_id, state: controller.signal.aborted ? 'cancelled' : 'failed', errorCode: /^[a-z][a-z0-9_]{0,79}$/.test(code) ? code : 'suggestions_failed' });
+          await storage.command({ type: 'study.job.stop', jobId: job.job_id, operation: 'daily_suggestions', state: controller.signal.aborted ? 'cancelled' : 'failed', errorCode: /^[a-z][a-z0-9_]{0,79}$/.test(code) ? code : 'suggestions_failed' });
         }
       }).finally(() => active.delete(job.job_id));
       promise.catch(() => {}); active.set(job.job_id, { controller, promise });
     }
     return { job_id: job.job_id, ...await storage.command({ type: 'study.home.read', clock: clock() }) };
   }
-  async function stop(id: string) {
+  async function stop(id: string, operation: 'daily_suggestions' | 'nightly_test') {
     // Commit the late-publication fence before requesting native cancellation.
-    await storage.command({ type: 'study.job.stop', jobId: id, state: 'cancelled', errorCode: 'cancelled' });
+    await storage.command({ type: 'study.job.stop', jobId: id, operation, state: 'cancelled', errorCode: 'cancelled' });
     active.get(id)?.controller.abort();
     const status = await storage.command({ type: 'study.nightly.read' });
     if ((status.last_job as { id?: string } | null)?.id === id) await assessment.cancel(id);
@@ -45,10 +45,10 @@ export function createStudyCoordinator(options: { storage: StudyStorage; native:
     try {
       await storage.command({ type: 'study.nightly.guard', schedule: request.nightly! });
       const job = await assessment.generate(request, controller.signal); id = job.id;
-      if (closed) { await stop(id); return; }
+      if (closed) { await stop(id, 'nightly_test'); return; }
       await storage.command({ type: 'study.nightly.attach', schedule: request.nightly!, jobId: id });
     } catch (error) {
-      controller.abort(); if (id) await stop(id);
+      controller.abort(); if (id) await stop(id, 'nightly_test');
       throw error;
     }
     return storage.command({ type: 'study.nightly.read' });
@@ -61,7 +61,7 @@ export function createStudyCoordinator(options: { storage: StudyStorage; native:
     const before = await storage.command({ type: 'study.nightly.read' });
     const result = await storage.command(command);
     const job = before.last_job as { id: string; state: string } | null;
-    if (job && ['queued', 'running'].includes(job.state)) await stop(job.id);
+    if (job && ['queued', 'running'].includes(job.state)) await stop(job.id, 'nightly_test');
     return result;
   }
   return {
@@ -78,8 +78,8 @@ export function createStudyCoordinator(options: { storage: StudyStorage; native:
       closed = true; if (timer) clearInterval(timer); timer = undefined;
       const status = await storage.command({ type: 'study.nightly.read' });
       const job = status.last_job as { id: string; state: string } | null;
-      if (job && ['queued', 'running'].includes(job.state)) await stop(job.id);
-      for (const id of active.keys()) await stop(id);
+      if (job && ['queued', 'running'].includes(job.state)) await stop(job.id, 'nightly_test');
+      for (const id of active.keys()) await stop(id, 'daily_suggestions');
       await Promise.allSettled([...active.values()].map(item => item.promise));
       await ticking?.catch(() => {});
     },

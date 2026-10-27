@@ -12,6 +12,12 @@ import { inventory, loadMigrationInventory } from '../src/storage/schema.ts';
 import { createStudyCoordinator } from '../src/domain/study/coordinator.ts';
 import { createUpdatesCoordinator } from '../src/domain/updates/coordinator.ts';
 import { createAssessmentGeneration } from '../src/domain/assessment/generation.ts';
+import { createServer } from 'node:http';
+import { openEngineWorker } from '../src/workers/process.ts';
+import { createEvidenceDomain } from '../src/domain/evidence/index.ts';
+import { createUpdatesRetrieval } from '../src/domain/updates/retrieval.ts';
+import { studyCommand } from '../src/http/study-commands.ts';
+import { contentCommand } from '../src/http/content-commands.ts';
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 async function fixture(seed = () => {}) {
   const root = mkdtempSync('C:/Renulus/scratch/study-updates-bf06-');
@@ -26,7 +32,7 @@ async function fixture(seed = () => {}) {
   writeFileSync(join(root,MARKER),JSON.stringify({contract:'renulus-synthetic-storage/1',profileId:selection.profileId})); writeFileSync(join(root,SELECTOR),JSON.stringify(selection));
   let storage = await openIsolatedStorage({profileRoot:root,selection,migrations,expectedSchemaHash});
   const command=c=>storage.command(c).catch(error=>{error.message=c.type+': '+error.code;throw error;});
-  return { storage:{command}, command, async reopen(){await storage.close();storage=await openIsolatedStorage({profileRoot:root,selection,migrations,expectedSchemaHash});}, async inspect(fn){await storage.close();const db=new DatabaseSync(database);try{return fn(db);}finally{db.close();storage=await openIsolatedStorage({profileRoot:root,selection,migrations,expectedSchemaHash});}}, async close(){await storage.close();assert.ok(resolve(root).toLowerCase().startsWith('c:\\renulus\\scratch\\study-updates-bf06-'));rmSync(root,{recursive:true,force:true});} };
+  return { root, storage:{command}, command, async reopen(){await storage.close();storage=await openIsolatedStorage({profileRoot:root,selection,migrations,expectedSchemaHash});}, async inspect(fn){await storage.close();const db=new DatabaseSync(database);try{return fn(db);}finally{db.close();storage=await openIsolatedStorage({profileRoot:root,selection,migrations,expectedSchemaHash});}}, async close(){await storage.close();assert.ok(resolve(root).toLowerCase().startsWith('c:\\renulus\\scratch\\study-updates-bf06-'));rmSync(root,{recursive:true,force:true});} };
 }
 const fail = code => e => e.code === code;
 const bundle = { explain: Array.from({length:5},(_,i)=>'SYNTHETIC explain topic '+i), case: Array.from({length:5},(_,i)=>'SYNTHETIC fictional case '+i), practice: Array.from({length:5},(_,i)=>'SYNTHETIC practice topic '+i) };
@@ -41,7 +47,13 @@ test('Home native bundle, manual plan override and context/Stop publication fenc
     const first=accepted.activities[0];const changed=await f.command({type:'study.activity.change',id:first.id,expectedRevision:first.revision,dueDate:'2026-11-01',state:null,idempotencyKey:'bf06-plan-manual'});assert.equal(changed.manual_override,true);
     await f.command({type:'study.plan.propose',clock});assert.equal((await f.command({type:'study.plan.read'})).activities.find(a=>a.id===first.id).due_date,'2026-11-01');
     assert.equal((await f.command({type:'study.home.read',clock})).suggestions,null);
-    const late=await f.command({type:'study.home.begin',clock});await f.command({type:'study.job.stop',jobId:late.job_id,state:'cancelled',errorCode:'cancelled'});await assert.rejects(f.command({type:'study.home.publish',jobId:late.job_id,bundle,clock}),fail('cancelled'));
+    const tracks=await contentCommand({method:'GET'},new URL('http://localhost/api/v1/content/tracks'),f.storage);assert.equal(tracks.status,200);assert.deepEqual(tracks.value,(await f.command({type:'study.plan.read'})).tracks);
+    const late=await f.command({type:'study.home.begin',clock});
+    const wrongStop=await studyCommand({method:'POST',headers:{'idempotency-key':'bf06-wrong-route'}},new URL('http://localhost/api/v1/nightly/jobs/'+late.job_id+'/cancel'),f.storage,study);assert.equal(wrongStop.status,404);
+    await f.command({type:'study.home.publish',jobId:late.job_id,bundle,clock});
+    clock={...clock,now:'2026-10-28T18:00:00Z'};const cancelled=await f.command({type:'study.home.begin',clock});
+    const stopped=await studyCommand({method:'POST',headers:{'idempotency-key':'bf06-home-stop'}},new URL('http://localhost/api/v1/home/jobs/'+cancelled.job_id+'/cancel'),f.storage,study);assert.equal(stopped.status,200);
+    await assert.rejects(f.command({type:'study.home.publish',jobId:cancelled.job_id,bundle,clock}),fail('cancelled'));
   }finally{await study.close();await f.close();}
 });
 test('nightly claims once, publishes through assessment Ready, catches up once and rejects Off/restart late publication',async()=>{
@@ -57,6 +69,30 @@ test('nightly claims once, publishes through assessment Ready, catches up once a
     await f.command({type:'study.nightly.guard',schedule:catchup.request.nightly});await study.updateNightly({type:'study.nightly.preferences',clock,expectedRevision:2,enabled:false,localTime:'22:00',count:5,idempotencyKey:'bf06-nightly-off'});await assert.rejects(f.command({type:'study.nightly.guard',schedule:catchup.request.nightly}),fail('nightly_invalidated'));
     await f.command({type:'study.nightly.recover',clock});assert.equal((await f.command({type:'study.nightly.claim',clock})).request,null);
   }finally{await study.close();await generation.close();await f.close();}
+});
+test('Updates source check uses the protected loopback evidence broker and retains discovery-only provenance', {skip:!process.env.RENULUS_BACKEND_TEST_PYTHON}, async()=>{
+  let requests=0;
+  const server=createServer((request,response)=>{requests++;assert.equal(new URL(request.url,'http://localhost').pathname,'/search');response.setHeader('content-type','application/json');response.end(JSON.stringify({resultList:{result:[{id:'12345678',source:'MED',title:'SYNTHETIC renal discovery',firstPublicationDate:'2026-10-27'}]}}));});
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const f=await fixture(db=>db.prepare('INSERT OR IGNORE INTO update_source_checks(source_id,title,url,snapshot_status) VALUES(?,?,?,?)').run('S99','SYNTHETIC renal discovery','https://synthetic.invalid/source','Synthetic'));
+  let worker,updates;
+  try{
+    const revisions={configuration:1,grant:1,context:1,deletion:1,cancellation:0};
+    worker=await openEngineWorker({python:process.env.RENULUS_BACKEND_TEST_PYTHON,sourceRoot:repository,launchRoot:join(f.root,'launch'),retention:'saved',
+      identity:{profile_id:'synthetic-bf06-evidence',domain_store_id:'synthetic-domain',runtime_store_id:'synthetic-native',authority_epoch:1,process_generation:'synthetic-evidence'},current:()=>revisions,
+      broker:{profile_root:f.root,state_root:join(f.root,'state')}});
+    const inputs=new Map();
+    const evidence=createEvidenceDomain({storage:f.storage,worker:{channel:worker.channel,maxChunkBytes:worker.ready.capacity.max_chunk_bytes,retention:'saved'},
+      check:async(id,signal)=>{signal.throwIfAborted();await f.command({type:'updates.check.current',input:inputs.get(id)});},
+      endpoints:{'europe-pmc':{host:'127.0.0.1',port:server.address().port,private_network:true,base_url:'http://127.0.0.1:'+server.address().port}}});
+    const retrieval=createUpdatesRetrieval(evidence);
+    updates=createUpdatesCoordinator({storage:f.storage,native:{check:async(input,signal)=>{inputs.set(input.token,input);try{return await retrieval.check(input,signal);}finally{inputs.delete(input.token);}},digest:async()=>{throw Error('unused');}}});
+    const checked=await updates.check({kind:'source',id:'S99'},true);
+    const entries=(await f.command({type:'updates.entries',state:null,limit:20,offset:0})).entries;
+    const entry=entries.find(e=>e.title==='SYNTHETIC renal discovery');
+    assert.deepEqual({state:checked.state,requests,verification:entry?.source_metadata.verification,passage_evidence:entry?.source_metadata.passage_evidence,review_state:entry?.review_state},
+      {state:'baseline',requests:1,verification:'discovery-only',passage_evidence:false,review_state:'pending'});
+  }finally{await updates?.close();await worker?.close();await f.close();await new Promise(resolve=>server.close(resolve));}
 });
 test('Updates keeps failed-check success date and correction/outbox/source links; digest cannot review',async()=>{
   const f=await fixture(db=>{const at=new Date().toISOString();db.prepare('INSERT OR IGNORE INTO update_source_checks(source_id,title,url,snapshot_status) VALUES(?,?,?,?)').run('S99','SYNTHETIC official source','https://synthetic.invalid/source','Synthetic');db.prepare('INSERT INTO update_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run('synthetic_update','S99','synthetic:entry','SYNTHETIC correction','https://synthetic.invalid/article','publication-change',null,at,null,null,'pending','Inspect','[]',JSON.stringify({canonical_url:'https://synthetic.invalid/article'}),null);});

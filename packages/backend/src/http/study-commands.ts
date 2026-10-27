@@ -64,8 +64,8 @@ async function route(request: IncomingMessage, path: string, method: string | un
     return result(await coordinator.updateNightly({ type: 'study.nightly.preferences', enabled: (b.enabled ?? false) as boolean, localTime: (b.local_time ?? '22:00') as string, count: (b.question_count ?? 5) as 5 | 10 | 20, expectedRevision: b.expected_revision as number, clock: clock(), idempotencyKey: key() }));
   }
   if (method === 'POST' && path === 'home/suggestions/refresh') { key(); return result(await coordinator.refresh(), 202); }
-  const stop = /^(?:nightly|home)\/jobs\/([A-Za-z0-9_.:-]+)\/cancel$/.exec(path);
-  if (method === 'POST' && stop) { key(); return result(await coordinator.stop(stop[1])); }
+  const stop = /^(nightly|home)\/jobs\/([A-Za-z0-9_.:-]+)\/cancel$/.exec(path);
+  if (method === 'POST' && stop) { key(); return result(await coordinator.stop(stop[2], stop[1] === 'nightly' ? 'nightly_test' : 'daily_suggestions')); }
   if (method === 'POST' && path === 'study/plan/propose') return result(await storage.command({ type: 'study.plan.propose', clock: clock() }));
   const change = /^study\/plan\/([A-Za-z0-9_.:-]+)$/.exec(path);
   if (method === 'PATCH' && change) {

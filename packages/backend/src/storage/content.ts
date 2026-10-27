@@ -8,11 +8,12 @@ import { id, list } from '../domain/assessment/validation.ts';
 import { canonical, digest, one, rows } from './schema.ts';
 import { requireAssistance } from './conversation.ts';
 import { utcNow } from './export.ts';
-const types=new Set(['content.active','content.topics','content.sources','content.topic','content.case','content.install','content.withdraw','content.pack.withdraw']);
+import { programmeMetadata } from '../domain/study/programmes.ts';
+const types=new Set(['content.active','content.topics','content.tracks','content.sources','content.topic','content.case','content.install','content.withdraw','content.pack.withdraw']);
 export const isContentCommand=(v:unknown):v is ContentCommand=>!!v&&typeof v==='object'&&'type'in v&&types.has(String(v.type));
 export function validateContentCommand(c:ContentCommand) {
   switch(c.type){
-    case 'content.active':case 'content.topics':case 'content.sources':exact(c,['type']);break;
+    case 'content.active':case 'content.topics':case 'content.tracks':case 'content.sources':exact(c,['type']);break;
     case 'content.topic':exact(c,['type','topicId']);id(c.topicId);break;
     case 'content.case':exact(c,['type','caseId','version']);id(c.caseId);if(c.version!==null)integer(c.version,1);break;
     case 'content.withdraw':exact(c,['type','questionId','version','reason','replacementVersion']);id(c.questionId);integer(c.version,1);text(c.reason,1,2000);if(!c.reason.trim())reject('invalid_request');if(c.replacementVersion!==null)integer(c.replacementVersion,c.version+1);break;
@@ -96,6 +97,7 @@ export function executeContent(db:DatabaseSync,c:ContentCommand):ObjectValue {
   switch(c.type){
     case 'content.install':return install(db,c.plan);
     case 'content.active': {const r=one(db,'SELECT manifest_json FROM content_packs p JOIN content_active_pack a ON a.pack_id=p.pack_id AND a.pack_version=p.version WHERE a.slot=1');return {manifest:r?JSON.parse(String(r.manifest_json)):null};}
+    case 'content.tracks': {const r=one(db,'SELECT manifest_json FROM content_packs p JOIN content_active_pack a ON a.pack_id=p.pack_id AND a.pack_version=p.version WHERE a.slot=1');return {items:programmeMetadata(r?JSON.parse(String(r.manifest_json)):null,activeContent(db,'topics'),activeContent(db,'cases'),activeContent(db,'questions'))};}
     case 'content.topics':return {items:activeContent(db,'topics').map(t=>({...t,title:t.label,name:t.label}))};
     case 'content.topic': {const t=activeContent(db,'topics').find(t=>t.id===c.topicId);if(!t)reject('not_found');return {...t,title:t.label,name:t.label};}
     case 'content.case': {const r=c.version===null?activeContent(db,'cases').find(v=>v.id===c.caseId):one(db,'SELECT body_json FROM content_case_versions WHERE case_id=? AND version=?',c.caseId,c.version);if(!r)reject('not_found');return 'body_json'in r?JSON.parse(String(r.body_json)):r;}
