@@ -49,6 +49,7 @@ import { createAssessmentGeneration, type AssessmentNativePort } from '../domain
 import { createStudyCoordinator } from '../domain/study/coordinator.ts';
 import { createStudyPlugin, createStudyTools } from '../domain/study/tools.ts';
 import { createUpdatesPlugin, createUpdatesTools } from '../domain/updates/tools.ts';
+import { createLearningPlugins, createLearningTools } from '../domain/learning/tools.ts';
 import type { AssessmentToolBridgeOptions } from '../domain/assessment/tools.ts';
 import { createUpdatesCoordinator } from '../domain/updates/coordinator.ts';
 import { createUpdatesRetrieval } from '../domain/updates/retrieval.ts';
@@ -329,6 +330,25 @@ export async function openConnectedTarget(options: ConnectedTargetOptions) {
       } };
     tools.add(createStudyPlugin(createStudyTools({ ...studyUpdatesAuthority, storage })), ['renulus.plan.propose']);
     tools.add(createUpdatesPlugin(createUpdatesTools({ ...studyUpdatesAuthority, storage })), ['renulus.updates.read']);
+    const learningTools = createLearningPlugins(createLearningTools({
+      references: async threadId => (await storage.command({ type: 'learning.view', threadId })).references,
+      range: async (threadId, input) => { const page = await result.range(threadId, input); return { messages: page.messages as never, cursor: page.cursor }; },
+      async resolve(context, signal) {
+        signal.throwIfAborted(); const binding = result.native.binding(context.sessionID);
+        const run = await storage.command({ type: 'learning.current', runId: binding.operation_id, binding });
+        const pin = await storage.command({ type: 'dispatch.run', runId: binding.operation_id });
+        return { operationId: binding.operation_id, attemptId: binding.attempt_id, sessionId: binding.session_id,
+          threadId: run.receipt.conversation.identity.id, checkpoint: run.checkpoint, grants: pin.effective_capabilities };
+      },
+      async check(authority, signal) {
+        signal.throwIfAborted(); const binding = result.native.binding(authority.sessionId);
+        if (binding.operation_id !== authority.operationId || binding.attempt_id !== authority.attemptId) reject('learning_binding_conflict');
+        await storage.command({ type: 'learning.current', runId: binding.operation_id, binding });
+        const run = await storage.command({ type: 'dispatch.run', runId: binding.operation_id });
+        await storage.command({ type: 'dispatch.current', runId: run.run_id, fence: run.fence, requiredCapabilities: [], permitId: null });
+      } }));
+    tools.add(learningTools.context, ['renulus.context.read']);
+    tools.add(learningTools.history, ['renulus.history.read']);
     // Native Adapters `skill`, `question`, `subagent`, `opencode.models`, `opencode.session_rename`.
     const dispatchModel = (request: Parameters<NonNullable<SavedLearningOptions['modelCallbacks']>>[0]) =>
       disposable || !callbacks || !['model.prepare', 'model.manifest', 'model.dispatch'].includes(request.command)

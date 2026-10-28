@@ -4,7 +4,8 @@
 import { randomUUID } from 'node:crypto';
 import { readAttachmentImage, drainAttachmentCleanup } from './learning-attachments.ts';
 import { Effect } from 'effect';
-import { LLMRequest } from '@opencode/ai';
+import { AIError, InvalidRequestError, LLMRequest } from '@opencode/ai';
+import { compactContext, type ContextCompaction } from '../domain/learning/context.ts';
 import { openLearningHarness } from '../../../harness/src/learning-host.ts';
 import type { HarnessOptions, ModelAdapter, PrimaryModelPreparation } from '../../../harness/src/host.ts';
 import type { DomainClient } from '../../../harness/src/domain-ipc.ts';
@@ -31,6 +32,8 @@ export interface SavedLearningOptions {
   onBegin?: (run: RunSnapshot, request: Readonly<SavedSendIntent>) => void | Promise<void>;
   modelCallbacks?: (request: NativeDomainRequest, authority: SavedModelContext) => Promise<NativeDomainReply>;
   /** Evidence-review children own their callbacks; `root` serves a command against the parent's authority. */
+  /** Final-request compaction against the verified route window; absent means no transform. */
+  context?: ContextCompaction;
   children?: { owns(binding: Readonly<Binding>): boolean;
     handle(request: NativeDomainRequest, root: (request: NativeDomainRequest) => Promise<NativeDomainReply>): Promise<NativeDomainReply> };
 }
@@ -64,8 +67,12 @@ export async function openSavedLearningTarget(options: SavedLearningOptions) {
         : 'Teaching style: direct. Explain the answer clearly and directly, then add useful reasoning.' };
       return { resolved: base?.resolved ?? resolved, prepare: (request, settings, unfiltered) => {
         const withStyle = (r: LLMRequest) => LLMRequest.update(r, { system: [...r.system, style] });
-        return Effect.promise(() => modelContext(binding)).pipe(Effect.flatMap(() => base
-          ? base.prepare(withStyle(request), settings, withStyle(unfiltered)) : Effect.succeed(withStyle(request))));
+        const shape = (r: LLMRequest, run: RunSnapshot) => options.context
+          ? Effect.tryPromise({ try: () => compactContext(withStyle(r), options.context!, run.checkpoint),
+            catch: error => new AIError({ reason: new InvalidRequestError({ message: String((error as { code?: string }).code ?? 'context_compaction_blocked') }) }) })
+          : Effect.succeed(withStyle(r));
+        return Effect.promise(() => modelContext(binding)).pipe(Effect.flatMap(({ run }) => shape(request, run)),
+          Effect.flatMap(shaped => base ? base.prepare(shaped, settings, withStyle(unfiltered)) : Effect.succeed(shaped)));
       } } satisfies PrimaryModelPreparation;
     }) };
     native = await openLearningHarness({ ...options.harness, model: styled }, domain.domain);

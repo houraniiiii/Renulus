@@ -34,7 +34,7 @@ with s.db.transaction() as c:
     c.execute("INSERT INTO memory_history VALUES('memory_synthetic_root',1,'Synthetic AKI root','added',?)",(stamp,))
     c.execute("INSERT INTO memory_sources VALUES('manual:synthetic-root','memory_synthetic_root')")
     c.execute("INSERT INTO memory_support_groups VALUES('support:synthetic-root','memory_synthetic_root','manual:synthetic-root','manual','active',NULL)")
-    for name,body in [('echo','Synthetic AKI support echo'),('independent','Synthetic CKD educational learning'),('cancel','Synthetic glomerular educational learning')]:
+    for name,body in [('echo','Synthetic AKI support echo'),('independent','Synthetic CKD educational learning'),('cancel','Synthetic glomerular educational learning'),('echoback','Synthetic CKD answer echoed back')]:
         thread='thread_'+name;run='run_'+name;message='message_'+name;eid='learn-answer:'+run
         c.execute('INSERT INTO learn_threads VALUES(?,?,?,\'direct\',?,?)',(thread,'SYNTHETIC '+name,'aki',stamp,stamp))
         c.execute("INSERT INTO learn_runs VALUES(?,?,?,'completed',NULL,?,?)",(run,thread,'synthetic-key-'+name,stamp,stamp))
@@ -88,6 +88,7 @@ print(json.dumps({'databasePath':str(s.paths.database)}))
         started.resolve(); signal.addEventListener('abort', () => cancelled.resolve(), { once: true });
         await settled.promise; return { status: 'cancelled', output: null };
       }
+      if (prompt.includes('Synthetic CKD answer echoed back')) return { status: 'completed', output: JSON.stringify({ memory: [{ text: 'Corrected CKD learning point' }] }) };
       const memory = prompt.includes('Synthetic AKI support echo') ? 'Derived AKI learning point' : 'CKD educational learning point';
       return { status: 'completed', output: JSON.stringify({ memory: [{ text: memory }] }) };
     } });
@@ -139,6 +140,10 @@ print(json.dumps({'databasePath':str(s.paths.database)}))
     assert.equal((await host.delete(id, 2)).deleted, true);
     assert.ok(!(await search('CKD')).records.some(r => r.id === id));
     assert.ok(!(await storage.command({ type: 'memory.export' })).records.some(r => r.id === id));
+    // A later assistant message that merely echoes the deleted fact cannot recapture it.
+    const echoed = await host.captureEvidence('learn-answer:run_echoback');
+    assert.deepEqual(echoed.records, []);
+    assert.ok(!(await search('CKD')).records.some(r => r.text === 'Corrected CKD learning point'));
     assert.equal((await storage.command({ type: 'memory.purge.pending' })).length, 0);
     assert.equal(worker.channel.state().unsettled, 0);
     await host.close(); await worker.close();

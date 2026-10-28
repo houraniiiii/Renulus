@@ -17,7 +17,7 @@ export interface InputHash { kind: 'artifact' | 'build' | 'role' | 'instruction'
 /** Same canonical JSON shape as Python ConfigurationSpec, including credential references only. */
 export interface ConfigurationSpec {
   connection: ConnectionReference; registry_hash: string; roles: RolePolicy[]; inputs: InputHash[]; capabilities: string[];
-  context: { requested_window_tokens: number; reserve_tokens: number };
+  context: { requested_window_tokens: number; reserve_tokens: number; requested_decimal_tokens?: number };
   attempts: { foreground_dispatches: number; standalone_dispatches: number; title_dispatches: number;
     retries: number; retryable_errors: ('transport_unavailable' | 'summary_invalid')[] };
   children: { max_depth: number; concurrency: number };

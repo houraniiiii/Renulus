@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { exact, integer, reject, text } from '../storage/contracts.ts';
 import { canonical, digest } from '../storage/schema.ts';
+import { effectiveCapacity, requireProfile } from '../domain/learning/context.ts';
 import { PURPOSES, REQUEST_KINDS } from './contracts.ts';
 import type { ConfigurationSpec, ConnectionReference, Fence, Inspection, Limits, Purpose, Qualification, Route, Settlement } from './contracts.ts';
 
@@ -53,7 +54,9 @@ export function validateSpec(spec: ConfigurationSpec) {
     if (!['artifact', 'build', 'role', 'instruction', 'skill', 'tool-schema', 'mcp-identity'].includes(item.kind) || keys.has(item.kind + ':' + item.name)) reject('configuration_invalid');
     keys.add(item.kind + ':' + item.name);
   }
-  exact(spec.context, ['requested_window_tokens', 'reserve_tokens']); integer(spec.context.requested_window_tokens, 1, 262144); integer(spec.context.reserve_tokens, 0, 262144);
+  exact(spec.context, ['requested_window_tokens', 'reserve_tokens', ...'requested_decimal_tokens' in spec.context ? ['requested_decimal_tokens'] : []]);
+  integer(spec.context.requested_window_tokens, 1, 262144); integer(spec.context.reserve_tokens, 0, 262144);
+  if (spec.context.requested_decimal_tokens !== undefined) integer(spec.context.requested_decimal_tokens, 1, 256000);
   exact(spec.attempts, ['foreground_dispatches', 'standalone_dispatches', 'title_dispatches', 'retries', 'retryable_errors']);
   for (const key of ['foreground_dispatches', 'standalone_dispatches', 'title_dispatches'] as const) integer(spec.attempts[key], 0, 128);
   // A new network attempt after failure needs a separate explicit host workflow; native retries remain closed.
@@ -102,7 +105,9 @@ export function validateQualification(q: Qualification, route: Route, required: 
 }
 export function fit(spec: ConfigurationSpec, limits: Limits, input: number, output: number) {
   integer(input); integer(output, 1, 32768);
-  if (output > limits.output_tokens || input > limits.input_tokens || input + output + spec.context.reserve_tokens > Math.min(limits.window_tokens, spec.context.requested_window_tokens)) reject('request_does_not_fit');
+  const requested = spec.context.requested_decimal_tokens ?? spec.context.requested_window_tokens;
+  requireProfile(requested, limits.window_tokens);
+  if (output > limits.output_tokens || input > limits.input_tokens || input + output + spec.context.reserve_tokens > effectiveCapacity(requested, limits.window_tokens)) reject('request_does_not_fit');
 }
 export function inspect(spec: ConfigurationSpec, version: string, epoch: number, value: Inspection) {
   exact(value, ['configuration_version', 'grant_epoch', 'registry_hash', 'loaded_inputs', 'healthy', 'generation_open', 'recovery_open', 'package_acquisition_open', 'mcp_startup_open', 'live_store_writer']);

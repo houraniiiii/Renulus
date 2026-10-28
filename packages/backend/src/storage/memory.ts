@@ -156,7 +156,11 @@ function suppress(db: DatabaseSync, recordId: string, restoring = false) {
     if (String(r.source_key).startsWith('evidence:')) db.prepare("UPDATE memory_jobs SET state='cancelled',error_code='memory_capture_suppressed',updated_at=? WHERE evidence_id=? AND state IN ('queued','running','failed')").run(now(), String(r.source_key).slice(9));
   }
 }
+const textKey = (value: string) => 'text:' + sha(value.toLocaleLowerCase('en').replace(/\s+/g, ' '));
+/** Echoed assistant, summary or child text must not recapture a corrected or deleted fact. */
+const suppressText = (db: DatabaseSync, value: string) => db.prepare('INSERT OR IGNORE INTO memory_suppression VALUES(?,?)').run(textKey(value), now());
 function remove(db: DatabaseSync, recordId: string, restoring = false) {
+  suppressText(db, String(fact(db, recordId).text));
   purgeIntent(db, physicalIds(db, recordId));
   suppress(db, recordId, restoring); db.prepare("INSERT OR IGNORE INTO deletion_ledger VALUES('memory_fact',?,?)").run(recordId, now());
   db.prepare('DELETE FROM memory_facts WHERE id=?').run(recordId);
@@ -300,7 +304,7 @@ function execute(db: DatabaseSync, c: MemoryCommand): unknown {
       const ids = physicalIds(db, c.id);
       if (c.type === 'memory.correct') {
         if (old.text === clean(c.text)) return { record: view(db, c.id), deleted: false, purge: null };
-        suppress(db, c.id); db.prepare("UPDATE memory_support_groups SET state='revoked' WHERE record_id=?").run(c.id);
+        suppress(db, c.id); suppressText(db, String(old.text)); db.prepare("UPDATE memory_support_groups SET state='revoked' WHERE record_id=?").run(c.id);
         db.prepare('UPDATE memory_facts SET text=?,text_hash=?,revision=revision+1,updated_at=? WHERE id=?').run(clean(c.text), sha(clean(c.text).toLocaleLowerCase('en').replace(/\s+/g, ' ')), now(), c.id);
         // Correction removes superseded canonical text as well as all derived history.
         db.prepare('DELETE FROM memory_history WHERE record_id=?').run(c.id);
@@ -351,6 +355,7 @@ function execute(db: DatabaseSync, c: MemoryCommand): unknown {
       const lineage = checkTicket(db, c.ticket), manifest = parse<MemoryManifest>(lineage.manifest_json), groups = roots(db, manifest);
       const identifiers = new Set<string>(), sourceKey = 'evidence:' + c.ticket.evidenceId;
       for (const value of c.facts) {
+        if (one(db, 'SELECT 1 FROM memory_suppression WHERE source_key=?', textKey(clean(value)))) continue;
         const identifier = insert(db, value, 'learning-point', c.ticket.topicId, c.ticket.scope.kind, 'evidence', c.ticket.evidenceId, sourceKey, c.ticket.projectId);
         for (const inputs of groups) support(db, identifier, sourceKey, c.ticket.projectId, inputs, 'generated'); identifiers.add(identifier);
       }
