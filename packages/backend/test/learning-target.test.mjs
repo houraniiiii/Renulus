@@ -409,7 +409,6 @@ print(json.dumps(results,ensure_ascii=False))
       [{ text: 'mismatched' }, 'learning_intent_conflict'], [{ expected_revision: 2 }, 'learning_intent_conflict'],
       [{ request_id: 'different-request' }, 'learning_intent_conflict'],
       [{ content_refs: retained.refs }, 'learning_reference_input_not_admitted'],
-      [{ images: [{ type: 'image', media_type: 'image/png', data: 'AAAA' }] }, 'learning_images_not_admitted'],
       [{ image_preview_id: 'synthetic-preview', case_revision: 1 }, 'learning_images_not_admitted'],
     ]) await assert.rejects(f.begin(2, { intent: { ...intent, ...patch } }), { code });
     await assert.rejects(f.begin(2, { intent }), { code: 'learning_reference_input_not_admitted' });

@@ -87,10 +87,14 @@ export async function openSavedLearningTarget(options: SavedLearningOptions) {
     if (closing) reject('learning_closed');
     const pending = legacyImports.get(threadId);
     if (pending) return pending;
-    const view = await storage.command({ type: 'learning.view', threadId });
+    // A missing conversation has nothing to import; the caller's own command reports it (or its terminal replay).
+    const view = await storage.command({ type: 'learning.view', threadId }).catch(error => {
+      if ((error as { code?: string }).code === 'conversation_missing') return undefined;
+      throw error;
+    });
     if (closing) reject('learning_closed');
     if (legacyImports.has(threadId)) return legacyImports.get(threadId);
-    if (view.mapping) return;
+    if (!view || view.mapping) return;
     const task = importLegacyHistory(storage, native, identity, threadId, expectedRevision ?? view.conversation.revision);
     legacyImports.set(threadId, task);
     try { await task; } finally { legacyImports.delete(threadId); }
@@ -121,7 +125,7 @@ export async function openSavedLearningTarget(options: SavedLearningOptions) {
     if (signal?.aborted) cancel();
     try {
       await storage.command({ type: 'learning.current', runId, binding: null });
-      await options.onBegin?.(structuredClone(initial.run), { ...intents.get(runId)!, ...(images?.length ? { images } : {}) });
+      await options.onBegin?.(structuredClone(initial.run), Object.freeze({ ...intents.get(runId)!, ...(images?.length ? { images } : {}) }));
       await storage.command({ type: 'learning.current', runId, binding: null });
       if (!sessionId) {
         const session = await native.createSession({ operationId: runId, title: initial.run.receipt.conversation.title });

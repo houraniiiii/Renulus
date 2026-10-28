@@ -321,13 +321,14 @@ function execute(db: DatabaseSync, command: LearningCommand): unknown {
       policy(db);
       const reserved = one(db, 'SELECT * FROM legacy_history_imports WHERE thread_id=?', command.threadId);
       if (reserved && reserved.state !== 'reserved') reject('learning_migration_already_imported');
-      const s = summary(db, command.threadId);
-      if (s.conversation.revision !== command.expectedRevision) reject('conversation_revision_conflict');
+      // Only a genuine legacy thread is checked against the caller's revision; any other send is admitted or replayed by learning.begin.
       if (mapping(db, command.threadId)) return null;
-      if (one(db, 'SELECT 1 FROM learn_harness_mappings WHERE thread_id=?', command.threadId) ||
-        one(db, "SELECT 1 FROM learn_runs WHERE thread_id=? AND state='running'", command.threadId)) reject('learning_migration_or_reconciliation_required');
       const legacy = rows(db, 'SELECT m.*,r.state AS run_outcome,r.updated_at AS completed_at FROM learn_messages m LEFT JOIN learn_runs r ON r.id=m.run_id AND r.thread_id=m.thread_id WHERE m.thread_id=? ORDER BY m.created_at,m.rowid LIMIT 4097', command.threadId);
       if (!legacy.length) return null;
+      const s = summary(db, command.threadId);
+      if (s.conversation.revision !== command.expectedRevision) reject('conversation_revision_conflict');
+      if (one(db, 'SELECT 1 FROM learn_harness_mappings WHERE thread_id=?', command.threadId) ||
+        one(db, "SELECT 1 FROM learn_runs WHERE thread_id=? AND state='running'", command.threadId)) reject('learning_migration_or_reconciliation_required');
       if (legacy.length > 4096) reject('learning_migration_budget');
       const messages = legacy.map(m => {
         const citations = json<unknown[]>(m.citations_json);
