@@ -15,13 +15,17 @@ export type RecoveryCommand =
   | { type: 'recovery.snapshot' }
   /** Read-only: applies the merge inside a rolled-back savepoint and reports the same counts. */
   | { type: 'recovery.preview'; incoming: RecoverySnapshot; currentFrontierDigest: string }
+  | { type: 'recovery.rollback'; incoming: RecoverySnapshot; currentFrontierDigest: string }
   | { type: 'recovery.merge'; incoming: RecoverySnapshot; mapping: NativeMapping; currentFrontierDigest: string }
+  | { type: 'recovery.originals'; originals: {table:'knowledge_revisions'|'knowledge_attachment_originals';id:string;handle:string|null}[] }
   | { type: 'storage.reserve'; request: ReservationRequest }
   | { type: 'storage.settle'; id: string; intentId: string; settled: boolean; cleanupDebtBytes: number }
   | { type: 'storage.reservations' };
-export interface ReservationStatus { reservedBytes: number; cleanupDebtBytes: number; reservations: number }
+export interface ReservationStatus { reservedBytes: number; cleanupDebtBytes: number; reservations: number; recovery: {id:string;intentId:string;peakBytes:number}[] }
 export interface RecoveryResults {
   'recovery.snapshot': RecoverySnapshot; 'recovery.preview': RecoveryMerge; 'recovery.merge': RecoveryMerge;
+  'recovery.originals': {updated:number};
+  'recovery.rollback': {compatible:true};
   'storage.reserve': ReservationStatus; 'storage.settle': ReservationStatus; 'storage.reservations': ReservationStatus;
 }
 export interface RecoveryStorage { command<C extends RecoveryCommand>(command:C):Promise<RecoveryResults[C['type']]> }

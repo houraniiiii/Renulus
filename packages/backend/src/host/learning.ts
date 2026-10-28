@@ -2,6 +2,7 @@
 /** Bounded BF02 isolated target assembly. Python remains production canonical until BF08.
  * The native host owns execution/messages/tools. This module owns no agent loop or DB. */
 import { randomUUID } from 'node:crypto';
+import { readAttachmentImage, drainAttachmentCleanup } from './learning-attachments.ts';
 import { Effect } from 'effect';
 import { LLMRequest } from '@opencode/ai';
 import { openLearningHarness } from '../../../harness/src/learning-host.ts';
@@ -80,6 +81,7 @@ export async function openSavedLearningTarget(options: SavedLearningOptions) {
         operationId: p.operation_id, attemptId: p.attempt_id }, 'session.remove', { sessionId: p.session_id });
       await storage.command({ type: 'learning.purge.ack', purgeId: p.purge_id, identity });
     }
+    await drainAttachmentCleanup(options.harness.root, storage);
     return { removed: queued.length };
   }
   async function stop(runId: string, state: 'cancelled' | 'failed' | 'interrupted' = 'cancelled') {
@@ -87,7 +89,7 @@ export async function openSavedLearningTarget(options: SavedLearningOptions) {
     if (stopped.sessionId) await native.cancel(stopped.sessionId);
     return stopped;
   }
-  async function execute(input: SavedSend, runId: string, initial: LearningResults['learning.begin'], signal?: AbortSignal) {
+  async function execute(input: SavedSend, runId: string, initial: LearningResults['learning.begin'], signal?: AbortSignal, images?: SavedSendIntent['images']) {
     let sessionId = initial.run.mapping?.runtime.session_id;
     let created = false, mapped = !!sessionId;
     let cancellation: Promise<unknown> | undefined;
@@ -96,7 +98,7 @@ export async function openSavedLearningTarget(options: SavedLearningOptions) {
     if (signal?.aborted) cancel();
     try {
       await storage.command({ type: 'learning.current', runId, binding: null });
-      await options.onBegin?.(structuredClone(initial.run), intents.get(runId)!);
+      await options.onBegin?.(structuredClone(initial.run), { ...intents.get(runId)!, ...(images?.length ? { images } : {}) });
       await storage.command({ type: 'learning.current', runId, binding: null });
       if (!sessionId) {
         const session = await native.createSession({ operationId: runId, title: initial.run.receipt.conversation.title });
@@ -104,7 +106,7 @@ export async function openSavedLearningTarget(options: SavedLearningOptions) {
         await storage.command({ type: 'learning.map', runId, sessionId }); mapped = true;
       }
       if (signal?.aborted || closing) reject('learning_cancelled');
-      const accepted = await native.submit({ sessionId, operationId: runId, attemptId: initial.run.checkpoint.attemptId, text: input.text });
+      const accepted = await native.submit({ sessionId, operationId: runId, attemptId: initial.run.checkpoint.attemptId, text: input.text, images });
       const binding: Binding = { operation_id: runId, attempt_id: accepted.attemptId, session_id: sessionId, input_id: accepted.inputId, cancellation_id: runId };
       await native.wait(sessionId);
       const messages: NativeMessage[] = [], cursors = new Set<string>();
@@ -122,7 +124,7 @@ export async function openSavedLearningTarget(options: SavedLearningOptions) {
       }
       const boundary = messages.findIndex(m => m.id === binding.input_id), user = messages[boundary];
       if (boundary < 0 || user.type !== 'user' || user.metadata?.operationId !== runId || user.metadata?.attemptId !== binding.attempt_id ||
-        digest(nativeText(user)) !== initial.run.checkpoint.inputSha256) reject('learning_native_input_conflict');
+        digest(nativeText(user)) !== digest(input.text)) reject('learning_native_input_conflict');
       const suffix = messages.slice(boundary + 1);
       if (suffix.some(m => m.type === 'user')) reject('learning_native_input_conflict');
       const answer = suffix.filter(m => m.type === 'assistant'), answerText = answer.map(nativeText).join('');
@@ -178,8 +180,20 @@ export async function openSavedLearningTarget(options: SavedLearningOptions) {
       input.intent = intent;
       const runId = 'run_' + randomUUID().replaceAll('-', '');
       const admitted = await storage.command({ type: 'learning.begin', ...input, runId, attemptId: '1', identity });
-      if (admitted.fresh) intents.set(runId, Object.freeze({ ...intent, content_refs: Object.freeze([]) as unknown as SavedSendIntent['content_refs'] }));
-      const pending = admitted.fresh ? Promise.resolve().then(() => execute(input, runId, admitted, call.signal)) : undefined;
+      const { images: inlineImages, ...pinned } = intent;
+      if (admitted.fresh) intents.set(runId, Object.freeze(pinned));
+      const pending = admitted.fresh ? Promise.resolve().then(async () => {
+        try {
+          const attachments = await storage.command({ type: 'learning.attachments', runId });
+          const images = [...inlineImages ?? []];
+          for (const attachment of attachments) {
+            if (attachment.mediaType === 'application/pdf') input.text += '\n\n' + attachment.text;
+            else images.push(await readAttachmentImage(options.harness.root, attachment));
+          }
+          await storage.command({ type: 'learning.current', runId, binding: null });
+          return await execute(input, runId, admitted, call.signal, images);
+        } catch (error) { await stop(runId, 'interrupted'); throw error; }
+      }) : undefined;
       if (pending) active.set(runId, { threadId: input.threadId, pending });
       // Observation is not job ownership. A detached/throwing observer cannot cancel it.
       try { void Promise.resolve(call.accepted?.(structuredClone(admitted.run.receipt))).catch(() => {}); } catch { /* observer detached */ }

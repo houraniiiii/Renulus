@@ -14,6 +14,7 @@ from .backup import (apply_records, portable_records, record_references, records
 from .database import utc_now
 from .relations import identity
 from .invalidation import invalidate_restored_context
+from .attachment_cleanup import tombstoned_in
 from .recovery_archive import (DEFAULT_LIMITS, backup_to, descriptor_for, original_path,
                                owned_path, strict_json, verify_file)
 from .recovery_archive import (ORIGINAL_TABLES, original_identity, original_rows,
@@ -259,6 +260,8 @@ class Recovery:
                             continue
                         row = original_row_in(conn, entry)
                         if not row:
+                            continue
+                        if table == "knowledge_attachment_originals" and tombstoned_in(conn, row["attachment_id"]):
                             continue
                         require_original_rights(row, code="backup_rights")
                         if descriptor_for(row, entry["path"], limits) != {key: value for key, value in entry.items() if key != "staged"}:

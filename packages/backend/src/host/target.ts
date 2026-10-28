@@ -3,6 +3,7 @@ import { Context, Effect, Layer, ManagedRuntime } from "effect";
 import { openIsolatedStorage, type StorageClient, type WriterOptions } from "../storage/index.ts";
 import { openTargetFacade, type TargetFacadeOptions } from "../http/target.ts";
 import type { ConnectedTargetOptions } from './composition.ts';
+import { createRecoveryPort } from './recovery-select.ts';
 
 export const CanonicalOwner = Context.Service<StorageClient>("renulus/backend/CanonicalOwner");
 export const TargetFacade = Context.Service<Awaited<ReturnType<typeof openTargetFacade>>>("renulus/backend/TargetFacade");
@@ -10,6 +11,8 @@ export const TargetFacade = Context.Service<Awaited<ReturnType<typeof openTarget
 /** Target flows use TS sole authority on an explicitly selected synthetic DB. */
 export async function openTargetApplication(options: WriterOptions & Omit<TargetFacadeOptions, "storage"> & {
   connected?: Omit<ConnectedTargetOptions, 'storage' | 'profileRoot'>;
+  /** Exact bundle verifier; with a selected-owner launch it opens candidate-generation selection. */
+  verifyBinaries?: Parameters<typeof createRecoveryPort>[0]['verifyBinaries'];
 }) {
   const writer: WriterOptions = { profileRoot: options.profileRoot,
     ...('selectedAuthority' in options && options.selectedAuthority ? { selectedAuthority: options.selectedAuthority } : { selection: options.selection! }),
@@ -23,9 +26,11 @@ export async function openTargetApplication(options: WriterOptions & Omit<Target
         ...options.connected, profileRoot: options.profileRoot, storage: owner }) : undefined;
       try {
         return await openTargetFacade({ ...options, storage: owner,
-          ...(connected ? { learning: connected.learning, plugins: connected.plugins, credentials: connected.credentials,
+          ...(options.verifyBinaries && 'selectedAuthority' in options && options.selectedAuthority
+            ? { recovery: createRecoveryPort({ authority: options.selectedAuthority, verifyBinaries: options.verifyBinaries }) } : {}),
+          ...(connected ? { learning: connected.learning, temporary: connected.temporary, plugins: connected.plugins, credentials: connected.credentials,
             configuration: connected.configuration, inspect: connected.inspect, memory: connected.memory,
-            knowledge: connected.knowledge, assessment: connected.assessment, study: connected.study, updates: connected.updates,
+            knowledge: connected.knowledge, find: connected.find, assessment: connected.assessment, study: connected.study, updates: connected.updates,
             settlePlugins: connected.close } : {}) });
       } catch (error) { await connected?.close(); throw error; }
     }),

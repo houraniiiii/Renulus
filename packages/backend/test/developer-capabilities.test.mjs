@@ -195,7 +195,7 @@ function attachment(events = []) {
     async removeNativeAllow() { events.push("allow.removed"); }, async cancelPending() { events.push("pending.cancelled"); } };
 }
 const helperPids = () => execFileSync(process.env.SystemRoot + "\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", ["-NoProfile", "-Command",
-  "(Get-CimInstance Win32_Process -Filter \"CommandLine like '%capability_transport_host%'\" | Select-Object -ExpandProperty ProcessId) -join ','"], { encoding: "utf8", windowsHide: true })
+  `$all = @(Get-CimInstance Win32_Process -Filter "Name = 'python.exe' AND CommandLine like '%capability_transport_host%'"); $parents = @(${process.pid}) + @($all | Where-Object ParentProcessId -eq ${process.pid} | Select-Object -ExpandProperty ProcessId); ($all | Where-Object { $_.ParentProcessId -in $parents } | Select-Object -ExpandProperty ProcessId) -join ','`], { encoding: "utf8", windowsHide: true })
   .trim().split(",").filter(Boolean).map(Number);
 /** The native proxy is the only network path of the owned client: each connection is one CONNECT through it. */
 function connect(proxy, port) {

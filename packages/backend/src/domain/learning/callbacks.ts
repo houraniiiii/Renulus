@@ -57,9 +57,8 @@ export function createLearningCallbacks(options: LearningCallbacksOptions) {
           const result = await storage.command({ type: 'learning.context', binding, messages: payload.messages as never });
           await current(request); return { outcome: 'committed_reference', result };
         }
-        // The bounded saved-text target does not admit images. BF04 owns decoding/volatile input.
         if (command === 'learning.validate_images') {
-          exact(payload, ['images']); if (!Array.isArray(payload.images) || payload.images.length) reject('learning_images_not_admitted');
+          exact(payload, ['images']); if (!Array.isArray(payload.images) || payload.images.length > 4) reject('invalid_images');
           return { outcome: 'committed_reference', result: { validated: true } };
         }
         if (!['library.retrieve', 'library.citation'].includes(command)) reject('learning_callback_unknown');

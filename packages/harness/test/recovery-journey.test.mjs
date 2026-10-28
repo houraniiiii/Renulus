@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import { spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { tmpdir } from "node:os";
 import path, { dirname, join, resolve } from "node:path";
@@ -21,12 +21,16 @@ import { InstructionDiscovery } from "@opencode/core/instruction-discovery";
 import { llmClient } from "@opencode/core/effect/app-node-platform";
 import { Global } from "@opencode/util/global";
 import { createGraphRecovery, mergeRecoveryGraphs } from "../src/graph-recovery.ts";
+import { createRecoveryOwner, publishRecoveryOriginals } from "../src/recovery-owner.ts";
 import { openIsolatedStorage, loadMigrationInventory, MARKER, SELECTOR } from "../../backend/src/storage/index.ts";
 import { createRecoveryCoordinator, sealGeneration } from "../../backend/src/storage/generation.ts";
 import { recoveryFrontierDigest, verifyNativeClosure } from "../../backend/src/storage/recovery.ts";
 import { createRecoveryPort } from "../../backend/src/host/recovery-select.ts";
 import { BACKEND_SELECTOR, GENERATION_MANIFEST, resolveBackendSelection } from "../../backend/src/host/handoff.ts";
+import { openEngineWorker } from "../../backend/src/workers/process.ts";
+import { createWorkerKnowledgeIO } from "../../backend/src/workers/knowledge.ts";
 import { canonical } from "../../backend/src/storage/schema.ts";
+import { reconcileRecoveryReservations } from "../../backend/src/storage/reservations.ts";
 
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const python = process.env.RENULUS_STORAGE_TEST_PYTHON || "C:/Renulus/dev/python/Scripts/python.exe";
@@ -214,7 +218,7 @@ function bytesOf(dir, originals) { return memberFiles(originals).reduce((n, m) =
 function copyNoReplace(from, to) { mkdirSync(dirname(to), { recursive: true }); copyFileSync(from, to, 1); }   // COPYFILE_EXCL
 
 /** Builds the backup generation G0 and the live CURRENT generation (newer M2, new conversation D, attempt A). */
-async function world(t, { g0Originals = { "originals/o1.bin": "synthetic shared original", "originals/o2.bin": "synthetic incoming-only original" } } = {}) {
+async function world(t, { g0Originals = { "originals/o1.bin": "synthetic shared original", "originals/o2.bin": "synthetic incoming-only original" }, originalRecords = false } = {}) {
   const profile = join(root, "world-" + randomUUID().slice(0, 8)), g0 = join(profile, "backups/g0"), g1 = join(profile, "generations/g1");
   const build = async (dir, kind, sessions, storeId, originals) => {
     mkdirSync(join(dir, "state/harness"), { recursive: true });
@@ -225,6 +229,20 @@ async function world(t, { g0Originals = { "originals/o1.bin": "synthetic shared 
     put(dir, "plugins/artifact.json", canonical({ plugin: "synthetic-capability", cohort: hex("b") }));
     put(dir, "schema/inventory.json", canonical({ schemaHash: fixture.schemaHash }));
     for (const [member, text] of Object.entries(originals)) put(dir, member, text);
+    if (originalRecords) {
+      const db = new DatabaseSync(join(dir,"state/renulus.sqlite3"));
+      const rights = {display:true,cache:true,index:true,embedding:true,model_input:true,derivation:true,evaluation:false,redistribution:false,licence:"synthetic",permission_reference:"synthetic",attribution:"synthetic"};
+      db.prepare("INSERT INTO knowledge_documents VALUES('shared-doc','SYNTHETIC shared','synthetic','personal-library',NULL,0,'shared-rev','shared-rev',NULL,'now','now')").run();
+      db.prepare("INSERT INTO knowledge_revisions(id,document_id,ordinal,status,sha256,media_type,bytes,original_path,metadata_json,rights_json,created_at) VALUES('shared-rev','shared-doc',1,'ready',?,'text/plain',?,'originals/o1.bin','{}',?,'now')").run(sha("synthetic shared original"), Buffer.byteLength("synthetic shared original"), canonical(rights));
+      const add = (id,thread,file,body,allowed) => {
+        db.prepare("INSERT INTO knowledge_attachments VALUES(?,'learning',?,'SYNTHETIC attachment','text/plain',1,'not_requested','not_requested','now','now')").run(id,thread);
+        db.prepare("INSERT INTO knowledge_attachment_metadata(attachment_id,filename,source_id,metadata_json,rights_json) VALUES(?,'synthetic.txt','synthetic','{}',?)").run(id,canonical({...rights,cache:allowed}));
+        db.prepare("INSERT INTO knowledge_attachment_originals VALUES(?,?,'original',?,?,?,'now')").run(id+'-original',id,file,sha(body),Buffer.byteLength(body));
+      };
+      add('shared-attachment',fixture.threads[0],'originals/o1.bin','synthetic shared original',kind==='g0');
+      if(kind==='g0')add('owned-attachment',fixture.threads[2],'originals/o2.bin','synthetic incoming-only original',true);
+      db.close();
+    }
   };
   await build(g0, "g0", GRAPHS.g0, STORE_G0, g0Originals);
   const g0Originals_ = Object.keys(g0Originals);
@@ -262,9 +280,9 @@ async function incomingOf(w) {
   try { records = await storage.command({ type: "recovery.snapshot" }); } finally { await storage.close(); }
   return { incoming: manifest, observedMembers, canonical: records, native: await scratchGraph(join(w.g0, "state/harness/opencode.sqlite"), STORE_G0) };
 }
-const originalsOf = dir => Object.fromEntries(["originals/o1.bin", "originals/o2.bin"].filter(m => existsSync(join(dir, m))).map(m => [m, sha(readFileSync(join(dir, m)))]));
+const originalsOf = dir => Object.fromEntries(["originals/o1.bin", "originals/o2.bin", ...(existsSync(join(dir,"owned-originals")) ? readdirSync(join(dir,"owned-originals")).filter(n=>n.startsWith("original_")).map(n=>"owned-originals/"+n) : [])].filter(m => existsSync(join(dir, m))).map(m => [m, sha(readFileSync(join(dir, m)))]));
 
-/** Owners for one world: the stub owner closes in the mandated order and records it. */
+/** Synthetic generation I/O; graph coordination runs through the production owner. */
 function coordinatorOptions(w) {
   const profileLive = w.g1, events = w.events;
   const current = {
@@ -277,25 +295,17 @@ function coordinatorOptions(w) {
       return (w.closed = observe(profileLive, ["originals/o1.bin"]));
     },
   };
-  return {
-    current, currentStorage: w.live.canonical,
+  return createRecoveryOwner({
+    current, storage: w.live.canonical, native: recoveryOf(w.live.native), storeId: STORE_NOW,
     // Synthetic measurement: this development volume has less than the 12 GiB floor; the floor itself is tested below.
     async measure() { return { allocatedBytes: bytesOf(profileLive, ["originals/o1.bin"]), freeBytes: 200_000_000_000, ceilingBytes: 100_000_000_000 }; },
-    async previewNative(incoming, eligible) {
-      const merged = mergeRecoveryGraphs(await recoveryOf(w.live.native).snapshotAll(), incoming, STORE_NOW, s => eligible.has(String(s.info.id)));
-      return { retained: merged.retained, currentOnly: merged.currentOnly, added: merged.added, excluded: merged.excluded };
-    },
     async forkCurrent() {
       const id = "g2", dir = join(w.profile, "generations", id);
       mkdirSync(join(dir, "state/harness"), { recursive: true });
       copyNoReplace(join(profileLive, "state/renulus.sqlite3"), join(dir, "state/renulus.sqlite3"));
       const storage = await openCanonical(dir), native = await openNative(join(dir, "state/harness/opencode.sqlite"), join(w.profile, "scratch", id));
       w.candidates.set(id, { dir, storage, native });
-      return { storage, candidateId: id };
-    },
-    async mergeNative(id, incoming, eligible) {
-      const candidate = w.candidates.get(id), currentGraph = await scratchGraph(join(profileLive, "state/harness/opencode.sqlite"));
-      return (await recoveryOf(candidate.native).importMerged(currentGraph, incoming, s => eligible.has(String(s.info.id)))).mapping;
+      return { storage, candidateId: id, native: recoveryOf(native), close:()=>native.close() };
     },
     async verifyOriginals(id, incoming, records) {
       const candidate = w.candidates.get(id);
@@ -307,10 +317,6 @@ function coordinatorOptions(w) {
       }
       return records;
     },
-    async verifyCanonicalClosure(id) {
-      const candidate = w.candidates.get(id), records = (await candidate.storage.command({ type: "recovery.snapshot" })).records;
-      verifyNativeClosure(records, ids(await recoveryOf(candidate.native).snapshotAll()));
-    },
     async closeCandidate(id) {
       const candidate = w.candidates.get(id);
       await candidate.native.close();
@@ -318,8 +324,8 @@ function coordinatorOptions(w) {
       for (const member of Object.keys(originalsOf(profileLive))) if (!existsSync(join(candidate.dir, member))) copyNoReplace(join(profileLive, member), join(candidate.dir, member));
       return observeAndSeal(candidate.dir, Object.keys(originalsOf(candidate.dir)));
     },
-    async discardCandidate(id) { const candidate = w.candidates.get(id); await candidate?.native.close().catch(() => {}); rmSync(candidate.dir, { recursive: true, force: true }); w.candidates.delete(id); },
-  };
+    async retireCandidate() { throw new Error("recovery_native_retirement_command_missing"); },
+  });
 }
 function observeAndSeal(dir, originals) {
   const manifest = sealGeneration(dir, header(dir, 2, 2), memberFiles(originals));
@@ -395,6 +401,54 @@ test("paired recovery journey: preview is read-only; Restore is additive over ne
   const selector = await createRecoveryPort({ authority: w.authority, verifyBinaries: async () => {} }).select({ generationPath: "generations/g2", rollback: false }, async () => frontier);
   assert.deepEqual([selector.state, selector.generation, selector.authorityEpoch, selector.generationPath], ["held", 2, 2, "generations/g2"]);
   assert.equal(resolveBackendSelection(w.profile).admission, "held");
+});
+
+test("shared and owned attachment originals publish through the native worker; current rights win and handles rebase into the candidate", async t => {
+  const w=await world(t,{originalRecords:true}), input=await incomingOf(w), options=coordinatorOptions(w);
+  const dir=join(w.profile,"generations/g2"), originals=join(dir,"owned-originals"), grants=join(w.profile,"synthetic-grants");
+  let worker, native;
+  t.after(async()=>{await worker?.close();});
+  options.verifyOriginals=async(id,manifest,records)=>{
+    mkdirSync(originals,{recursive:true});mkdirSync(grants,{recursive:true});
+    worker=await openEngineWorker({python,sourceRoot:repository,launchRoot:join(w.profile,"worker-launch"),
+      identity:{profile_id:PROFILE,domain_store_id:"synthetic-domain",runtime_store_id:STORE_NOW,authority_epoch:1,process_generation:randomUUID()},
+      retention:"saved",current:()=>({configuration:0,grant:0,context:0,deletion:0,cancellation:0}),
+      native:{originals_root:originals,budget_root:w.profile,grants_root:grants,grant_token_sha256:hex("a")}});
+    native=createWorkerKnowledgeIO(worker.channel,worker.ready.capacity.max_chunk_bytes);
+    return publishRecoveryOriginals(records,async(table,id,pin)=>readFileSync(join(id==="owned-attachment-original"?w.g0:w.g1,pin.original_handle)),native);
+  };
+  const close=options.closeCandidate;
+  options.closeCandidate=async id=>{await worker.close();return close(id);};
+  finish(w);
+  const prepared=await createRecoveryCoordinator(options).prepare(input);
+  const db=new DatabaseSync(join(dir,"state/renulus.sqlite3"),{readOnly:true});
+  const shared=db.prepare("SELECT original_path FROM knowledge_revisions WHERE id='shared-rev'").get().original_path;
+  const owned=db.prepare("SELECT original_path FROM knowledge_attachment_originals WHERE id='owned-attachment-original'").get().original_path;
+  assert.match(shared,/^original_[a-f0-9]{64}$/);assert.match(owned,/^original_[a-f0-9]{64}$/);
+  assert.equal(db.prepare("SELECT original_path FROM knowledge_attachment_originals WHERE id='shared-attachment-original'").get().original_path,null);
+  assert.equal(readFileSync(join(originals,shared+".txt"),"utf8"),"synthetic shared original");
+  assert.equal(readFileSync(join(originals,owned+".txt"),"utf8"),"synthetic incoming-only original");
+  assert.ok(prepared.manifest.members.some(m=>m.path==="owned-originals/"+owned+".txt"));
+  assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(),[]);db.close();
+});
+
+test("coordinator rollback refuses newer canonical/native loss and prepares a complete target while retaining current frontiers and grants", async t=>{
+  const lost=await world(t), old=await incomingOf(lost), before=readFileSync(join(lost.profile,BACKEND_SELECTOR),"utf8");
+  await rejectsWith(createRecoveryCoordinator(coordinatorOptions(lost)).prepareRollback(old),"recovery_rollback_newer_records");
+  assert.deepEqual(lost.events,[]);assert.equal(readFileSync(join(lost.profile,BACKEND_SELECTOR),"utf8"),before);
+  const w=await world(t), options=coordinatorOptions(w), observed=observe(w.g1,["originals/o1.bin"]);
+  const records=await w.live.canonical.command({type:"recovery.snapshot"});
+  const graph=await recoveryOf(w.live.native).snapshotAll();
+  // The target predates the frontier: current tombstones still govern the prepared rollback.
+  records.records.deletion_ledger=[];
+  const input={incoming:observed.manifest,observedMembers:observed.observedMembers,canonical:records,native:graph};
+  finish(w);const result=await createRecoveryCoordinator(options).prepareRollback(input);
+  assert.equal(result.manifest.generation,2);
+  const db=new DatabaseSync(join(w.profile,"generations/g2/state/renulus.sqlite3"),{readOnly:true});
+  assert.equal(db.prepare("SELECT 1 FROM deletion_ledger WHERE entity_type='learn_thread' AND entity_id=?").all(fixture.threads[1]).length,1);
+  assert.equal(db.prepare("SELECT 1 FROM learn_runs WHERE id='attempt-a'").all().length,1);db.close();
+  const reopened=await scratchGraph(join(w.profile,"generations/g2/state/harness/opencode.sqlite"));
+  assert.deepEqual(reopened.sessions.find(s=>s.info.id===S.C1).info.permissions,graph.sessions.find(s=>s.info.id===S.C1).info.permissions);
 });
 
 test("conflicting immutable identity or incompatible relations refuse the preview and prepare: selector untouched, nothing closed, nothing restored", async t => {
@@ -480,13 +534,20 @@ test("engine death mid-candidate-build and an incomplete snapshot discard the hi
     await rejectsWith(createRecoveryCoordinator(options).prepare(input), failure === "engine-death" ? "synthetic_engine_death" : "recovery_generation_member_mismatch", failure);
     assert.equal(readFileSync(join(w.profile, BACKEND_SELECTOR), "utf8"), selector, failure);       // old owner retained
     assert.equal(resolveBackendSelection(w.profile).admission, "active", failure);
-    assert.equal(existsSync(join(w.profile, "generations/g2")), false, failure);   // the hidden candidate is removed (or never existed)
-    assert.equal(w.candidates.size, 0, failure);
+    assert.equal(existsSync(join(w.profile, "generations/g2")), failure === "engine-death", failure); // unconfirmed retirement retains debt
+    assert.equal(w.candidates.size, failure === "engine-death" ? 1 : 0, failure);
     // Preserve originals and debt: the current generation's bytes are exactly the closed observation.
     assert.equal(readFileSync(join(w.g1, "originals/o1.bin"), "utf8"), "synthetic shared original");
     const reopened = new DatabaseSync(join(w.g1, "state/renulus.sqlite3"), { readOnly: true });
     // The reservation intent persists as uncertain debt/charge until the retained owner reconciles it.
     assert.equal(Object.keys(JSON.parse(reopened.prepare("SELECT value FROM preferences WHERE key='storage.reservations/1'").get().value).active).length, 1, failure);
     reopened.close();
+    const resumed = await openCanonical(w.g1);
+    try {
+      await reconcileRecoveryReservations(resumed);
+      const reconciled = await resumed.command({ type: "storage.reservations" });
+      assert.equal(reconciled.reservations, 0, failure);
+      assert.ok(reconciled.cleanupDebtBytes > 0, failure);
+    } finally { await resumed.close(); }
   }
 });

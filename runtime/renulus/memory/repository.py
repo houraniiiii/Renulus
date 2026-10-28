@@ -6,7 +6,7 @@ from renulus.contracts import ApiError, ContextScope, Scope, durable_id
 from renulus.design_c_contracts import Identity
 from renulus.storage import utc_now
 from renulus.storage.assessment_policy import policy_snapshot, require_assistance
-from renulus.storage.invalidation import MEMORY_RESTORE_CAPTURE_PREFIX, context_epoch_in
+from renulus.storage.invalidation import MEMORY_RESTORE_CAPTURE_PREFIX, MEMORY_RESTORE_BARRIER_PREFIX, context_epoch_in
 
 from .models import ManualFact, clean_text, digest, require_eligible
 from .study_answers import answer_text, answer_reference_in
@@ -352,8 +352,8 @@ class MemoryRepository:
 
     @staticmethod
     def _restore_capture_required_in(conn, evidence_id, material):
-        return material['infer'] and conn.execute('SELECT 1 FROM preferences WHERE key=?',
-            (MEMORY_RESTORE_CAPTURE_PREFIX + evidence_id,)).fetchone() is not None
+        return material['infer'] and conn.execute('SELECT 1 FROM preferences WHERE key IN (?,?)',
+            (MEMORY_RESTORE_CAPTURE_PREFIX + evidence_id, MEMORY_RESTORE_BARRIER_PREFIX + evidence_id)).fetchone() is not None
 
     def enqueue(self, evidence_id, scope: ContextScope, *, automatic=False):
         require_eligible(scope)
@@ -383,7 +383,8 @@ class MemoryRepository:
                         (utc_now(), previous['id']))
                     previous = conn.execute('SELECT * FROM memory_jobs WHERE id=?', (previous['id'],)).fetchone()
                 if previous['state'] in ('queued', 'running', 'completed'):
-                    conn.execute('DELETE FROM preferences WHERE key=?', (MEMORY_RESTORE_CAPTURE_PREFIX + evidence_id,))
+                    conn.execute('DELETE FROM preferences WHERE key IN (?,?)',
+                                 (MEMORY_RESTORE_CAPTURE_PREFIX + evidence_id, MEMORY_RESTORE_BARRIER_PREFIX + evidence_id))
                 return dict(previous)
             if automatic:
                 history = conn.execute('SELECT * FROM memory_jobs WHERE evidence_id=?', (evidence_id,)).fetchall()
@@ -408,7 +409,8 @@ class MemoryRepository:
                          (identifier, evidence_id, material['fingerprint'], scope.model_dump_json(),
                           'queued', 0, None, now, now))
             if not automatic:
-                conn.execute('DELETE FROM preferences WHERE key=?', (MEMORY_RESTORE_CAPTURE_PREFIX + evidence_id,))
+                conn.execute('DELETE FROM preferences WHERE key IN (?,?)',
+                             (MEMORY_RESTORE_CAPTURE_PREFIX + evidence_id, MEMORY_RESTORE_BARRIER_PREFIX + evidence_id))
         return self.job(identifier)
 
     def job(self, identifier):

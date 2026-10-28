@@ -50,8 +50,14 @@ function memoryDependencies(value: MemoryDependency[]) {
 export function learningSendIntent(input: Pick<BeginInput, 'expectedRevision' | 'text' | 'idempotencyKey' | 'intent'>): SavedSendIntent {
   const r = input.intent === undefined ? { expected_revision: input.expectedRevision, text: input.text, request_id: input.idempotencyKey,
     teaching_style: 'direct' as const, topic_id: null, model: null, freshness: null, content_refs: [] } : input.intent;
-  if (r && typeof r === 'object' && ['images', 'image_preview_id', 'case_revision'].some(k => Object.hasOwn(r, k))) reject('learning_images_not_admitted');
-  exact(r, ['expected_revision', 'text', 'request_id', 'teaching_style', 'topic_id', 'model', 'freshness', 'content_refs']);
+  if (r && typeof r === 'object' && ['image_preview_id', 'case_revision'].some(k => Object.hasOwn(r, k))) reject('learning_images_not_admitted');
+  exact(r, ['expected_revision', 'text', 'request_id', 'teaching_style', 'topic_id', 'model', 'freshness', 'content_refs', ...(Object.hasOwn(r, 'images') ? ['images'] : [])]);
+  if (r.images !== undefined && (!Array.isArray(r.images) || r.images.length > 4)) reject('invalid_images');
+  for (const image of r.images ?? []) {
+    exact(image, ['type', 'media_type', 'data']);
+    if (image.type !== 'image' || !['image/png', 'image/jpeg', 'image/webp'].includes(image.media_type)) reject('invalid_images');
+    text(image.data, 1, 11184812);
+  }
   integer(r.expected_revision, 1); text(r.text, 1, 16000); text(r.request_id, 8, 120);
   if (!r.text.trim() || !/^[A-Za-z0-9._-]+$/.test(r.request_id)) reject('storage_invalid_command');
   if (r.expected_revision !== input.expectedRevision || r.text !== input.text || r.request_id !== input.idempotencyKey) reject('learning_intent_conflict');
@@ -60,7 +66,10 @@ export function learningSendIntent(input: Pick<BeginInput, 'expectedRevision' | 
   if (r.model !== null) text(r.model, 0, 128);
   if (r.freshness !== null && typeof r.freshness !== 'boolean') reject('storage_invalid_command');
   if (!Array.isArray(r.content_refs) || r.content_refs.length > 20) reject('storage_invalid_command');
-  if (r.content_refs.length) reject('learning_reference_input_not_admitted');
+  for (const ref of r.content_refs) {
+    exact(ref, ['target', 'locator']); exact(ref.target, ['type', 'id']); identifier(ref.target.id);
+    if (ref.target.type !== 'attachment' || ref.locator !== null) reject('learning_reference_input_not_admitted');
+  }
   return r;
 }
 export function isLearningCommand(value: unknown): value is LearningCommand {
@@ -76,6 +85,8 @@ export function validateLearningCommand(command: LearningCommand): void {
       text(command.text, 1, 16000); if (!command.text.trim()) reject('storage_invalid_command');
       text(command.idempotencyKey, 8, 128); identifier(command.runId); identifier(command.attemptId); identity(command.identity); learningSendIntent(command); break;
     case 'learning.current': exact(value, ['type', 'runId', 'binding']); identifier(command.runId); if (command.binding !== null) binding(command.binding); break;
+    case 'learning.attachments': exact(value, ['type', 'runId']); identifier(command.runId); break;
+    case 'learning.attachment.cleanup': exact(value, ['type', 'removed']); ids(command.removed, 1000); break;
     case 'learning.map': exact(value, ['type', 'runId', 'sessionId']); identifier(command.runId); identifier(command.sessionId); break;
     case 'learning.bind': exact(value, ['type', 'binding']); binding(command.binding); break;
     case 'learning.consume': exact(value, ['type', 'binding', 'references']); binding(command.binding); references(command.references); break;
@@ -174,10 +185,20 @@ function current(db: DatabaseSync, runId: string, native: Binding | null = null,
       native.session_id !== run.mapping?.runtime.session_id || (!admitting && run.inputId !== native.input_id) ||
       (admitting && run.inputId !== null && run.inputId !== native.input_id)) reject('learning_binding_conflict');
   }
+  for (const pin of cp.attachments ?? []) if (attachment(db, run.receipt.conversation.identity.id, pin.id).stamp !== pin.stamp) reject('learning_attachment_changed');
   for (const ref of cp.consumed) passage(db, cp, ref.passage_id, ref);
   for (const dependency of cp.memory ?? []) checkMemoryDependency(db, dependency, cp.projectId);
   for (const ref of cp.history) eligibleAnswer(db, ref.runId, ref.publicationDigest, cp.projectId);
   return { ...run, ancestry: closure(db, cp) };
+}
+function attachment(db: DatabaseSync, threadId: string, id: string) {
+  const row = one(db, "SELECT a.*,m.rights_json,m.extraction_json,o.original_path,o.sha256,o.bytes FROM knowledge_attachments a JOIN knowledge_attachment_metadata m ON m.attachment_id=a.id JOIN knowledge_attachment_originals o ON o.attachment_id=a.id AND o.role='original' WHERE a.id=? AND a.chat_kind='learning' AND a.chat_id=?", id, threadId);
+  if (!row || deleted(db, 'attachment', id) || json<Record<string, unknown>>(row.rights_json).model_input !== true) reject('learning_attachment_unavailable');
+  if (!['image/png', 'image/jpeg', 'image/webp', 'application/pdf'].includes(String(row.media_type))) reject('learning_attachment_unsupported');
+  const extraction = row.extraction_json ? json<{ text?: string; blocks?: { text?: string }[] }>(row.extraction_json) : null;
+  const extracted = extraction?.text ?? extraction?.blocks?.map(b => b.text ?? '').join('\n') ?? '';
+  if (row.media_type === 'application/pdf' && (row.extraction_state !== 'ready' || !extracted.trim())) reject('learning_attachment_extraction_unavailable');
+  return { row, stamp: sha(row), extracted };
 }
 function saveCheckpoint(db: DatabaseSync, runId: string, cp: Checkpoint) { bounded(cp); db.prepare('UPDATE learn_harness_answers SET reference_json=? WHERE run_id=?').run(canonical(cp), runId); }
 function envelope(run: RunSnapshot): LibraryToolEnvelope {
@@ -305,7 +326,8 @@ function execute(db: DatabaseSync, command: LearningCommand): unknown {
       const s = summary(db, command.threadId);
       if (s.conversation.lifecycle !== 'active') reject('conversation_archived');
       if (s.conversation.revision !== command.expectedRevision || s.draftRevision !== command.expectedDraftRevision) reject('conversation_revision_conflict');
-      if (s.draftRefs.length) reject('learning_reference_input_not_admitted');
+      if (s.draftRefs.length && canonical(s.draftRefs) !== canonical(intent.content_refs)) reject('learning_reference_input_not_admitted');
+      const attachments = intent.content_refs.map(ref => ({ id: ref.target.id, stamp: attachment(db, command.threadId, ref.target.id).stamp }));
       if (one(db, "SELECT 1 FROM learn_runs WHERE thread_id=? AND state='running'", command.threadId)) reject('learning_run_busy');
       const m = mapping(db, command.threadId);
       if (m && (m.runtime.profile_id !== command.identity.profileId || m.runtime.store_id !== command.identity.storeId)) reject('learning_mapping_conflict');
@@ -318,7 +340,8 @@ function execute(db: DatabaseSync, command: LearningCommand): unknown {
         projectId: conversation.project_id, projectRevision: s.membership ? Number(s.membership.project_revision) : null,
         membershipRevision: s.membership ? Number(s.membership.membership_revision) : null, revisionIds: conversation.project_id === null ? null :
           rows(db, 'SELECT revision_id FROM study_project_documents WHERE project_id=? ORDER BY revision_id LIMIT 1001', conversation.project_id).map(r => String(r.revision_id)),
-        inputSha256: digest(command.text), consumed: [], memory: [], history: [], intent: (({ text: _text, ...metadata }) => metadata)(intent) };
+        inputSha256: digest(command.text), consumed: [], memory: [], history: [], attachments,
+        intent: (({ text: _text, images: _images, ...metadata }) => metadata)(intent) };
       if (cp.revisionIds && cp.revisionIds.length > 1000) reject('learning_reference_limit');
       const receipt: LearningReceipt = { run_id: command.runId, state: 'running', conversation };
       db.prepare("INSERT INTO learn_runs VALUES(?,?,?,'running',NULL,?,?)").run(command.runId, command.threadId, command.idempotencyKey, now_, now_);
@@ -330,6 +353,21 @@ function execute(db: DatabaseSync, command: LearningCommand): unknown {
       return { fresh: true, run: snapshot(db, command.runId) };
     }
     case 'learning.current': return current(db, command.runId, command.binding);
+    case 'learning.attachments': {
+      const run = current(db, command.runId);
+      return (run.checkpoint.attachments ?? []).map(pin => {
+        const { row, extracted } = attachment(db, run.receipt.conversation.identity.id, pin.id);
+        return { id: pin.id, mediaType: String(row.media_type), path: row.original_path as string | null, sha256: String(row.sha256), bytes: Number(row.bytes), text: extracted };
+      });
+    }
+    case 'learning.attachment.cleanup': {
+      const key = 'design_c.attachment_cleanup';
+      const pending = json<{ attachment_id: string; relative_directory: string }[]>(one(db, 'SELECT value FROM preferences WHERE key=?', key)?.value ?? '[]');
+      const remaining = pending.filter(e => !command.removed.includes(e.attachment_id) || !deleted(db, 'attachment', e.attachment_id) || one(db, 'SELECT 1 FROM knowledge_attachments WHERE id=?', e.attachment_id));
+      if (remaining.length) db.prepare('INSERT INTO preferences VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at').run(key, canonical(remaining), now());
+      else db.prepare('DELETE FROM preferences WHERE key=?').run(key);
+      return remaining.filter(e => deleted(db, 'attachment', e.attachment_id) && !one(db, 'SELECT 1 FROM knowledge_attachments WHERE id=?', e.attachment_id) && !one(db, 'SELECT 1 FROM knowledge_attachment_originals WHERE attachment_id=?', e.attachment_id));
+    }
     case 'learning.map': {
       const run = current(db, command.runId), cp = run.checkpoint;
       const result: Mapping = { contract_version: 'harness/1', conversation: run.receipt.conversation.identity, retention: 'saved',
@@ -439,7 +477,20 @@ function execute(db: DatabaseSync, command: LearningCommand): unknown {
         if (command.projectId) db.prepare("INSERT INTO study_project_chats VALUES(?,?,'learning',?,0,1,?)").run('membership:' + sha([command.projectId, command.threadId]), command.projectId, command.threadId, now());
       }
       if (command.type === 'learning.delete') {
-        if (one(db, "SELECT 1 FROM knowledge_attachments WHERE chat_kind='learning' AND chat_id=? LIMIT 1", command.threadId)) reject('learning_attachment_cleanup_required');
+        const attachments = rows(db, "SELECT id FROM knowledge_attachments WHERE chat_kind='learning' AND chat_id=? LIMIT 201", command.threadId);
+        if (attachments.length > 200) reject('attachment_cleanup_limit');
+        const key = 'design_c.attachment_cleanup';
+        const pending = json<{ attachment_id: string; relative_directory: string }[]>(one(db, 'SELECT value FROM preferences WHERE key=?', key)?.value ?? '[]');
+        for (const a of attachments) {
+          const id = String(a.id); if (!/^[A-Za-z0-9_-]{1,128}$/.test(id)) reject('attachment_id_invalid');
+          db.prepare("INSERT OR IGNORE INTO deletion_ledger VALUES('attachment',?,?)").run(id, now());
+          for (const original of rows(db, 'SELECT id FROM knowledge_attachment_originals WHERE attachment_id=?', id))
+            db.prepare("INSERT OR IGNORE INTO deletion_ledger VALUES('attachment_original',?,?)").run(original.id, now());
+          if (!pending.some(e => e.attachment_id === id)) pending.push({ attachment_id: id, relative_directory: 'library/attachments/' + id });
+        }
+        if (pending.length > 1000 || Buffer.byteLength(canonical(pending)) > 512 * 1024) reject('attachment_cleanup_limit');
+        if (pending.length) db.prepare('INSERT INTO preferences VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at').run(key, canonical(pending), now());
+        db.prepare("DELETE FROM knowledge_attachments WHERE chat_kind='learning' AND chat_id=?").run(command.threadId);
         const m = mapping(db, command.threadId);
         if (m) enqueue(db, { profileId: m.runtime.profile_id, storeId: m.runtime.store_id, generation: 'deletion' }, m.runtime.session_id, command.idempotencyKey, '1');
         const answers = rows(db, 'SELECT run_id FROM learn_harness_answers WHERE thread_id=?', command.threadId);

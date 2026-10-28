@@ -29,12 +29,14 @@ export interface Checkpoint {
   memory: MemoryDependency[];
   /** Text stays in the existing composer/native transcript; only intent metadata is pinned here. */
   intent?: Omit<SavedSendIntent, 'text'>;
+  attachments?: { id: string; stamp: string }[];
 }
 /** Exact fully defaulted Python Send.model_dump(mode='json') for a text send.
  * Media producers are deliberately outside this saved-text admission surface. */
 export interface SavedSendIntent {
   expected_revision: number; text: string; request_id: string; teaching_style: 'direct' | 'guided';
   topic_id: string | null; model: string | null; freshness: boolean | null; content_refs: ContentReference[];
+  images?: { type: 'image'; media_type: 'image/png' | 'image/jpeg' | 'image/webp'; data: string }[];
 }
 export interface LearningMessage {
   id: string; run_id: string; role: 'user' | 'assistant'; content: string;
@@ -64,6 +66,8 @@ export interface Purge { purge_id: string; profile_id: string; store_id: string;
 export type LearningCommand =
   | ({ type: 'learning.begin' } & BeginInput)
   | { type: 'learning.current'; runId: string; binding: Binding | null }
+  | { type: 'learning.attachments'; runId: string }
+  | { type: 'learning.attachment.cleanup'; removed: string[] }
   | { type: 'learning.map'; runId: string; sessionId: string }
   | { type: 'learning.bind'; binding: Binding }
   | { type: 'learning.consume'; binding: Binding; references: LibraryDependency[] }
@@ -85,6 +89,8 @@ export type LearningCommand =
 export interface LearningResults {
   'learning.begin': { fresh: boolean; run: RunSnapshot };
   'learning.current': RunSnapshot;
+  'learning.attachments': { id: string; mediaType: string; path: string | null; sha256: string; bytes: number; text: string }[];
+  'learning.attachment.cleanup': { attachment_id: string; relative_directory: string }[];
   'learning.map': Mapping;
   'learning.bind': RunSnapshot;
   'learning.consume': { recorded: true };

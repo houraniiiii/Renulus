@@ -18,7 +18,7 @@ export function createBrowserTransport(options: BrowserTransportOptions): Omit<C
     const child = launchHelper(options, 'renulus.workers.capability_transport_host', []);
     const pending = new Map<number, { resolve(value: unknown): void; reject(error: Error): void }>();
     let sequence = 0, dead: Error | undefined;
-    const closed = new Promise<void>(resolve => child.once('exit', () => {
+    const closed = new Promise<void>(resolve => child.once('close', () => {
       dead = new Error('capability_transport_died');
       for (const item of pending.values()) item.reject(dead);
       pending.clear(); resolve();
@@ -68,12 +68,12 @@ export function createBrowserTransport(options: BrowserTransportOptions): Omit<C
     /** Destroys every socket of the lease and waits for actual process exit. */
     async release(leaseId) {
       const pending = helpers.get(leaseId); if (!pending) return;
-      const helper = await pending.catch(() => undefined); helpers.delete(leaseId);
-      for (const [id, lease] of sockets) if (lease === leaseId) sockets.delete(id);
-      if (!helper) return;
-      await helper.send('close').catch(() => {});
+      const helper = await pending;
       const timer = setTimeout(helper.kill, 5000); timer.unref();
-      await helper.closed; clearTimeout(timer);
+      try { await helper.send('close').catch(() => {}); await helper.closed; }
+      finally { clearTimeout(timer); }
+      helpers.delete(leaseId);
+      for (const [id, lease] of sockets) if (lease === leaseId) sockets.delete(id);
     },
   };
 }

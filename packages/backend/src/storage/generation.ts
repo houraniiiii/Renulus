@@ -65,7 +65,7 @@ export interface RecoveryCoordinatorOptions<Graph> {
   previewNative(incoming:Graph,eligibleSessions:ReadonlySet<string>):Promise<NativePreview>;
   /** Creates a hidden candidate from the settled CURRENT complete generation. */
   forkCurrent(manifest:CompleteGeneration):Promise<{storage:RecoveryStorage & {close():Promise<void>};candidateId:string}>;
-  mergeNative(candidateId:string,incoming:Graph,eligibleSessions:ReadonlySet<string>):Promise<NativeMapping>;
+  mergeNative(candidateId:string,incoming:Graph,eligibleSessions:ReadonlySet<string>,rollback?:boolean):Promise<NativeMapping>;
   /** Returns native-verified rebased original handles on canonical rows. */
   verifyOriginals(candidateId:string,incoming:CompleteGeneration,canonical:RecoverySnapshot):Promise<RecoverySnapshot>;
   closeCandidate(candidateId:string):Promise<{manifest:CompleteGeneration;observedMembers:GenerationMember[]}>;
@@ -95,14 +95,22 @@ export function createRecoveryCoordinator<Graph>(o:RecoveryCoordinatorOptions<Gr
     return {canonical:canonicalPreview,native,originals:{count:originals.length,bytes:sum(originals),retained,added:originals.length-retained},
       space:{...space,peakBytes,fits:space.allocatedBytes+peakBytes<=space.ceilingBytes&&space.freeBytes-peakBytes>=12*1024**3},frontierDigest:frontier};
   }
-  return {
+  async function prepareRollback(input:Parameters<typeof preview>[0]) {
+    const checked=await preview(input);
+    await o.currentStorage.command({type:'recovery.rollback',incoming:input.canonical,currentFrontierDigest:checked.frontierDigest});
+    if(checked.native.currentOnly)fail('recovery_rollback_newer_records');
+    return coordinator.prepare(input,true);
+  }
+  const coordinator={
+    prepareRollback,
     /** Read-only: nothing is closed, written, reserved or selected. */
     async preview(input:Parameters<typeof preview>[0]):Promise<RestorePreview> {const {frontierDigest:_,...result}=await preview(input);return result;},
-    async prepare(input:Parameters<typeof preview>[0]):Promise<{candidateId:string;manifest:CompleteGeneration;preview:RecoveryMerge;reservationId:string}> {
+    async prepare(input:Parameters<typeof preview>[0],rollback=false):Promise<{candidateId:string;manifest:CompleteGeneration;preview:RecoveryMerge;reservationId:string}> {
       if(running)fail('recovery_busy');running=true;
       try {
         // Conflicts and low space refuse before admission is closed or any peak is reserved.
         const early=await preview(input);
+        if(rollback){await o.currentStorage.command({type:'recovery.rollback',incoming:input.canonical,currentFrontierDigest:early.frontierDigest});if(early.native.currentOnly)fail('recovery_rollback_newer_records');}
         if(!early.space.fits)fail('storage_waiting_space');
         const reservationId='recovery-'+randomUUID();
         await o.currentStorage.command({type:'storage.reserve',request:{id:reservationId,intentId:reservationId,peakBytes:early.space.peakBytes,
@@ -112,10 +120,12 @@ export function createRecoveryCoordinator<Graph>(o:RecoveryCoordinatorOptions<Gr
         try {
           const snapshot=await candidate.storage.command({type:'recovery.snapshot'});
           if(snapshot.frontierDigest!==current.frontierDigest)fail('recovery_frontier_changed');
+          if(rollback)await candidate.storage.command({type:'recovery.rollback',incoming:input.canonical,currentFrontierDigest:snapshot.frontierDigest});
           const eligible=new Set((await candidate.storage.command({type:'recovery.preview',incoming:input.canonical,currentFrontierDigest:snapshot.frontierDigest})).eligibleNativeSessions);
-          const mapping=await o.mergeNative(candidate.candidateId,input.native,eligible);
-          const verifiedCanonical=await o.verifyOriginals(candidate.candidateId,input.incoming,input.canonical);
-          const merged=await candidate.storage.command({type:'recovery.merge',incoming:verifiedCanonical,mapping,currentFrontierDigest:snapshot.frontierDigest});
+          const mapping=await o.mergeNative(candidate.candidateId,input.native,eligible,rollback);
+          const merged=await candidate.storage.command({type:'recovery.merge',incoming:input.canonical,mapping,currentFrontierDigest:snapshot.frontierDigest});
+          const verifiedCanonical=await o.verifyOriginals(candidate.candidateId,input.incoming,await candidate.storage.command({type:'recovery.snapshot'}));
+          await candidate.storage.command({type:'recovery.originals',originals:(['knowledge_revisions','knowledge_attachment_originals'] as const).flatMap(table=>(verifiedCanonical.records[table]??[]).map(r=>({table,id:String(r.id),handle:r.original_path===null?null:String(r.original_path)})))});
           await o.verifyCanonicalClosure(candidate.candidateId);
           // The current owner is closed; the candidate carries the journal copy taken after the reservation.
           await candidate.storage.command({type:'storage.settle',id:reservationId,intentId:reservationId,settled:true,cleanupDebtBytes:0});
@@ -131,4 +141,5 @@ export function createRecoveryCoordinator<Graph>(o:RecoveryCoordinatorOptions<Gr
       }finally{running=false;}
     },
   };
+  return coordinator;
 }

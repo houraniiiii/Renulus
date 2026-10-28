@@ -105,7 +105,7 @@ export function mergeRecoveryGraphs(current:RecoveryGraph,incoming:RecoveryGraph
   validateRecoveryGraph(graph);
   const addedMessages=added.reduce((n,s)=>n+history(s.messages).length,0);
   const currentMessages=current.sessions.reduce((n,s)=>n+history(s.messages).length,0);
-  return {graph,mapping,retained,currentOnly:currentMessages-retained,added:addedMessages+appended,excluded};
+  return {graph,mapping,retained,currentOnly:currentMessages-retained+current.sessions.filter(s=>!s.messages.length&&!bySession.has(String(s.info.id))).length,added:addedMessages+appended,excluded};
 }
 export function createGraphRecovery(o:GraphRecoveryOptions) {
   let busy=false;

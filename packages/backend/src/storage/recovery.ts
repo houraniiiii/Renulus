@@ -27,7 +27,12 @@ export function recoveryFrontierDigest(db:DatabaseSync):string {
   return hash(result);
 }
 function schemaHash(db:DatabaseSync) {return inventory(db,Object.fromEntries(rows(db,'SELECT name,checksum FROM migration_ledger').map(r=>[String(r.name),String(r.checksum)]))).schemaHash;}
-export function snapshotRecovery(db:DatabaseSync):RecoverySnapshot {return {records:exportRecords(db).records,frontierDigest:recoveryFrontierDigest(db),schemaHash:schemaHash(db)};}
+export function snapshotRecovery(db:DatabaseSync):RecoverySnapshot {
+  const records=exportRecords(db).records;
+  for(const table of ['knowledge_revisions','knowledge_attachment_originals'])for(const row of records[table]??[])
+    row.original_path=one(db,`SELECT original_path FROM ${quote(table)} WHERE id=?`,String(row.id))!.original_path;
+  return {records,frontierDigest:recoveryFrontierDigest(db),schemaHash:schemaHash(db)};
+}
 function rewrite(value:unknown,m:NativeMapping,active=false):unknown {
   if(Array.isArray(value))return value.map(v=>rewrite(v,m,active));
   if(!value||typeof value!=='object')return value;
@@ -147,6 +152,16 @@ export function previewRecovery(db:DatabaseSync,incoming:RecoverySnapshot,curren
   try {return mergeRecovery(db,incoming,previewMapping(),currentFrontierDigest);}
   finally {db.exec('ROLLBACK TO recovery_preview; RELEASE recovery_preview');}
 }
+function checkRollback(db:DatabaseSync,incoming:RecoverySnapshot,currentFrontierDigest:string):{compatible:true} {
+  previewRecovery(db,incoming,currentFrontierDigest);
+  const current=snapshotRecovery(db).records;
+  for(const [table,rr]of Object.entries(current)) {
+    if(['deletion_ledger','memory_suppression','preferences'].includes(table)||/^(memory_index_|knowledge_index_)/.test(table))continue;
+    const pk=keys(db,table),incomingIds=new Set((incoming.records[table]??[]).map(r=>identity(table,r,pk)));
+    for(const row of rr)if(!incomingIds.has(identity(table,row,pk)))reject('recovery_rollback_newer_records');
+  }
+  return {compatible:true};
+}
 /** Every canonical native link must resolve in the supplied native graph (current and incoming links alike). */
 export function verifyNativeClosure(records:RecoveryRecords,native:{sessions:ReadonlySet<string>;messages:ReadonlySet<string>}) {
   for(const [table,rr]of Object.entries(records))for(const row of rr) {
@@ -155,14 +170,15 @@ export function verifyNativeClosure(records:RecoveryRecords,native:{sessions:Rea
     if(table==='learn_harness_answers'&&typeof row.input_id==='string'&&!native.messages.has(row.input_id))reject('recovery_native_closure');
   }
 }
-export function isRecoveryCommand(v:unknown):v is RecoveryCommand {return !!v&&typeof v==='object'&&'type'in v&&typeof v.type==='string'&&['recovery.snapshot','recovery.preview','recovery.merge','storage.reserve','storage.settle','storage.reservations'].includes(v.type);}
+export function isRecoveryCommand(v:unknown):v is RecoveryCommand {return !!v&&typeof v==='object'&&'type'in v&&typeof v.type==='string'&&['recovery.snapshot','recovery.preview','recovery.rollback','recovery.merge','recovery.originals','storage.reserve','storage.settle','storage.reservations'].includes(v.type);}
 export function validateRecoveryCommand(v:RecoveryCommand) {
   switch(v.type) {
+    case 'recovery.originals':exact(v,['type','originals']);if(!Array.isArray(v.originals)||v.originals.length>100000)reject('recovery_limit');for(const r of v.originals){exact(r,['table','id','handle']);if(!['knowledge_revisions','knowledge_attachment_originals'].includes(r.table))reject('recovery_table');text(r.id,1,256);if(r.handle!==null)text(r.handle,1,4096);}break;
     case 'recovery.snapshot':case 'storage.reservations':exact(v,['type']);break;
     case 'storage.reserve':exact(v,['type','request']);exact(v.request,['id','intentId','peakBytes','allocatedBytes','freeBytes','ceilingBytes']);text(v.request.id,1,128);text(v.request.intentId,1,128);for(const k of ['peakBytes','allocatedBytes','freeBytes','ceilingBytes']as const)integer(v.request[k]);integer(v.request.peakBytes,1);integer(v.request.ceilingBytes,50_000_000_000,150_000_000_000);break;
     case 'storage.settle':exact(v,['type','id','intentId','settled','cleanupDebtBytes']);text(v.id,1,128);text(v.intentId,1,128);integer(v.cleanupDebtBytes);if(typeof v.settled!=='boolean')reject('storage_invalid_command');break;
-    case 'recovery.preview':exact(v,['type','incoming','currentFrontierDigest']);exact(v.incoming,['records','frontierDigest','schemaHash']);for(const s of [v.currentFrontierDigest,v.incoming.frontierDigest,v.incoming.schemaHash])if(!/^[a-f0-9]{64}$/.test(s))reject('storage_invalid_command');if(Buffer.byteLength(canonical(v.incoming))>16*1024*1024)reject('recovery_limit');break;
+    case 'recovery.rollback':case 'recovery.preview':exact(v,['type','incoming','currentFrontierDigest']);exact(v.incoming,['records','frontierDigest','schemaHash']);for(const s of [v.currentFrontierDigest,v.incoming.frontierDigest,v.incoming.schemaHash])if(!/^[a-f0-9]{64}$/.test(s))reject('storage_invalid_command');if(Buffer.byteLength(canonical(v.incoming))>16*1024*1024)reject('recovery_limit');break;
     case 'recovery.merge':exact(v,['type','incoming','mapping','currentFrontierDigest']);exact(v.incoming,['records','frontierDigest','schemaHash']);exact(v.mapping,['incomingStore','candidateStore','sessions','messages']);for(const s of [v.currentFrontierDigest,v.incoming.frontierDigest,v.incoming.schemaHash])if(!/^[a-f0-9]{64}$/.test(s))reject('storage_invalid_command');text(v.mapping.incomingStore,1,128);text(v.mapping.candidateStore,1,128);if(Buffer.byteLength(canonical(v.incoming))>16*1024*1024)reject('recovery_limit');break;
   }
 }
-export function executeRecovery(db:DatabaseSync,c:RecoveryCommand) {switch(c.type){case 'recovery.snapshot':return snapshotRecovery(db);case 'recovery.preview':return previewRecovery(db,c.incoming,c.currentFrontierDigest);case 'recovery.merge':return mergeRecovery(db,c.incoming,c.mapping,c.currentFrontierDigest);case 'storage.reserve':return reserveStorage(db,c.request);case 'storage.settle':return settleStorage(db,c.id,c.intentId,c.settled,c.cleanupDebtBytes);case 'storage.reservations':return reservationStatus(db);}}
+export function executeRecovery(db:DatabaseSync,c:RecoveryCommand) {switch(c.type){case 'recovery.rollback':return checkRollback(db,c.incoming,c.currentFrontierDigest);case 'recovery.originals':{let updated=0;for(const r of c.originals)updated+=Number(db.prepare(`UPDATE ${quote(r.table)} SET original_path=? WHERE id=?`).run(r.handle,r.id).changes);return {updated};}case 'recovery.snapshot':return snapshotRecovery(db);case 'recovery.preview':return previewRecovery(db,c.incoming,c.currentFrontierDigest);case 'recovery.merge':return mergeRecovery(db,c.incoming,c.mapping,c.currentFrontierDigest);case 'storage.reserve':return reserveStorage(db,c.request);case 'storage.settle':return settleStorage(db,c.id,c.intentId,c.settled,c.cleanupDebtBytes);case 'storage.reservations':return reservationStatus(db);}}

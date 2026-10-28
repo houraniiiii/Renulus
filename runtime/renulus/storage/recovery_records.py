@@ -17,6 +17,18 @@ from .recovery_archive import canonical_json, owned_path, ORIGINAL_TABLES
 from .relations import PARENTS, TOMBSTONES, reconcile_unavailable_references
 
 
+def require_frontier(records):
+    if not isinstance(records, dict) or not isinstance(records.get("deletion_ledger"), list):
+        raise ApiError("recovery_frontier_missing",
+                       "The backup has no deletion frontier; affected records are quarantined and cannot be restored", 409)
+
+
+def refuse_native_links(name, rows):
+    if name.startswith("learn_harness_") and rows:
+        raise ApiError("recovery_native_mapping_required",
+                       "Native links require the TypeScript recovery owner and its validated native graph mapping", 409)
+
+
 def quoted(value):
     # All names originate in trusted installed schemas, never archive values.
     return '"' + value.replace('"', '""') + '"'
@@ -243,8 +255,14 @@ def apply_staged(conn, stage, definitions, limits, exported_at):
     # member from the archive. All SQL below reads only the attached database.
     conn.execute("ATTACH DATABASE ? AS recovery_incoming", (str(stage),))
     conn.execute("PRAGMA recovery_incoming.cache_size=-2048")
+    for name in definitions:
+        if name.startswith("learn_harness_"):
+            refuse_native_links(name, conn.execute(f'SELECT 1 FROM recovery_incoming.{quoted(name)} LIMIT 1').fetchone())
     conn.execute("INSERT INTO main.deletion_ledger SELECT * FROM recovery_incoming.deletion_ledger WHERE 1 "
                  "ON CONFLICT(entity_type,entity_id) DO UPDATE SET deleted_at=MAX(deletion_ledger.deleted_at,excluded.deleted_at)")
+    if "memory_suppression" in definitions:
+        conn.execute("INSERT INTO main.memory_suppression SELECT * FROM recovery_incoming.memory_suppression WHERE 1 "
+                     "ON CONFLICT(source_key) DO NOTHING")
     build_blocked(conn, definitions, limits, incoming=True)
     # Only the small original descriptor columns are retained, never revision
     # extraction/rights/passage payloads or the entire current profile.
@@ -273,6 +291,10 @@ def apply_staged(conn, stage, definitions, limits, exported_at):
             continue
         match = " AND ".join(f'target.{quoted(key)} IS source.{quoted(key)}' for key in table.keys)
         allowed = f'NOT {blocked_condition(table, "source")}'
+        if name == "memory_sources":
+            allowed += " AND NOT EXISTS(SELECT 1 FROM main.memory_suppression s WHERE s.source_key=source.source_key)"
+        if name == "memory_history":
+            allowed += " AND NOT EXISTS(SELECT 1 FROM main.memory_facts f WHERE f.id=source.record_id AND f.revision>source.revision)"
         excluded += conn.execute(f'SELECT COUNT(*) FROM recovery_incoming.{quoted(name)} AS source WHERE NOT ({allowed})').fetchone()[0]
         conflicts = []
         code = "backup_content_conflict"
@@ -295,6 +317,7 @@ def apply_staged(conn, stage, definitions, limits, exported_at):
         # Verified descriptors supply rebased original paths in the promotion
         # transaction. Portable archive paths are never installed as live paths.
         selected = ",".join("NULL" if name in ORIGINAL_TABLES and column == "original_path"
+                            else "'revoked'" if name == "memory_answer_lineage" and column == "state"
                             else "source." + quoted(column) for column in table.columns)
         # Existing identities always win, including the target active bank slot.
         # INSERT OR IGNORE would conceal CHECK/NOT NULL/secondary-key corruption.

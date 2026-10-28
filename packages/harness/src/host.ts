@@ -35,6 +35,7 @@ import type { Plugin as NativePlugin } from "@opencode/plugin/effect/plugin";
 import type { NativeCapabilities } from "./native-capability-plugin.ts";
 import type { LayerNode } from "@opencode/util/effect/layer-node";
 import { SessionTransfer as NativeSessionTransfer } from "@opencode/core/session/transfer";
+import { createGraphRecovery } from './graph-recovery.ts';
 
 export interface ModelAdapter {
   readonly providerId: string;
@@ -392,6 +393,15 @@ export async function openHarness(options: HarnessOptions) {
     finally { admittedWrites.delete(lease); settled(); }
   };
   return {
+    async holdRecovery() {
+      if (!["ready", "policy_blocked", "recovery_hold"].includes(phase)) throw new Error("recovery_requires_quiescence");
+      phase = "recovery_hold";
+      await Promise.all([...admittedWrites]);
+      if ((await run(execution.active)).size || held.size) throw new Error("recovery_requires_quiescence");
+    },
+    recoveryGraph: createGraphRecovery({ sdk, run, storeId: options.storeId,
+      location: Location.Ref.make({ directory: AbsolutePath.make(workspace) }),
+      checkHeld: () => { if (phase !== "recovery_hold" || admittedWrites.size) throw new Error("recovery_requires_quiescence"); } }),
     async transferCommand(frame: TransferFrame, command: TransferCommand, payload: Record<string, unknown>) {
       requireReady();
       if (!transfer || !storesActive) throw new Error("harness_policy_blocked");

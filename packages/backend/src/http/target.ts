@@ -8,17 +8,21 @@ import { readJsonObject, RequestBodyError } from "./body.ts";
 import { pluginCommand, type PluginCommands } from "./plugin-commands.ts";
 import { learningCommand, type SavedLearning } from './learning-commands.ts';
 import { learningStream } from './learning-stream.ts';
+import { temporaryLearning } from './learning-temporary.ts';
 import { credentialCommand, type CredentialCommands } from './credential-commands.ts';
 import type { ConnectedTarget } from '../host/composition.ts';
 import { memoryCommand } from './memory-commands.ts';
 import { knowledgeCommand } from './knowledge-commands.ts';
 import { projectCommand } from './project-commands.ts';
+import { findCommand } from './find-commands.ts';
+import type { FindDomain } from '../domain/find/index.ts';
 import type { KnowledgeDomain } from '../domain/knowledge/index.ts';
 import { assessmentCommand } from './assessment-commands.ts';
 import { contentCommand, type ContentPorts } from './content-commands.ts';
 import type { AssessmentGeneration } from '../domain/assessment/generation.ts';
 import { studyCommand } from './study-commands.ts';
 import { updatesCommand } from './updates-commands.ts';
+import { recoveryCommand, RECOVERY_SELECT, type RecoveryPort } from './recovery-commands.ts';
 
 /** BF00 final-owner target. Its explicit synthetic selector is checked by the
  * canonical thread; it cannot open production profiles or proxy domain writes.
@@ -26,17 +30,21 @@ import { updatesCommand } from './updates-commands.ts';
 export interface TargetFacadeOptions {
   port: number; token: string; storage: StorageClient; plugins?: PluginCommands;
   learning?: SavedLearning;
+  temporary?: ConnectedTarget['temporary'];
   credentials?: CredentialCommands;
   configuration?: ConnectedTarget['configuration'];
   inspect?: ConnectedTarget['inspect'];
   memory?: ConnectedTarget['memory'];
   knowledge?: KnowledgeDomain;
+  find?: FindDomain;
   assessment?: AssessmentGeneration;
   content?: ContentPorts;
   study?: ConnectedTarget['study'];
   updates?: ConnectedTarget['updates'];
   /** Retains actual native/plugin ownership through settlement before SQLite closes. */
   settlePlugins?: () => Promise<void>;
+  /** Candidate-generation selection by the selected owner (expected owner/epoch required). */
+  recovery?: RecoveryPort;
 }
 export async function openTargetFacade(options: TargetFacadeOptions) {
   if (!options.token || !Number.isSafeInteger(options.port) || options.port < 0 || options.port > 65535)
@@ -61,6 +69,16 @@ export async function openTargetFacade(options: TargetFacadeOptions) {
       state = "settled";
     })().catch(error => { settlement = undefined; state = "held"; throw error; });
   };
+  let selection: Promise<unknown> | undefined;
+  /** Logical admission closes first, admitted work drains, and only then does the canonical writer settle. */
+  const closeForSelection = async () => {
+    closing = true;
+    await Promise.all([...ordinary]);
+    const { frontierDigest } = await options.storage.command({ type: "recovery.snapshot" });
+    await settle();
+    return frontierDigest;
+  };
+  const temporary = temporaryLearning(options.storage, options.temporary);
   const server = http.createServer((request, response) => {
     const send = (status: number, value: unknown) => {
       if (response.destroyed) return;
@@ -84,7 +102,8 @@ export async function openTargetFacade(options: TargetFacadeOptions) {
     catch { return failure(422, "invalid_request"); }
     const shutdown = request.method === "POST" && url.pathname === "/api/v1/runtime/shutdown";
     const status = request.method === "GET" && ["/api/v1/meta", "/api/v1/runtime/status", "/api/v1/runtime/plugins"].includes(url.pathname);
-    const control = shutdown || status;
+    const selecting = request.method === "POST" && url.pathname === RECOVERY_SELECT;
+    const control = shutdown || status || selecting;
     if (closing && !control) return failure(503, "runtime_stopping");
     if (!control && active >= 64) return failure(503, "runtime_overloaded");
     const stopping = shutdown ? settle() : undefined;
@@ -95,6 +114,18 @@ export async function openTargetFacade(options: TargetFacadeOptions) {
         send(200, { state: "settled", api_version: 1 });
         setImmediate(() => { void closeFacade().catch(() => {}); });
         return;
+      }
+      if (selecting) {
+        if (!options.recovery) return failure(503, "recovery_unavailable");
+        if (selection) return failure(409, "recovery_selection_in_progress");
+        let closedWriter = false;
+        const result = selection = recoveryCommand(request, options.recovery, () => { closedWriter = true; return closeForSelection(); });
+        try { const { status, value } = await result; return send(status, value); }
+        finally {
+          selection = undefined;
+          // Once the writer settled the process cannot resume; a failed publication leaves the old selector for relaunch.
+          if (closedWriter) setImmediate(() => { void closeFacade().catch(() => {}); });
+        }
       }
       if (request.method === "GET" && url.pathname === "/api/v1/meta")
         return send(200, { version: "0.1.0", api_version: 1, modules: { canonical: { status: "installed" } } });
@@ -129,6 +160,8 @@ export async function openTargetFacade(options: TargetFacadeOptions) {
       if (study) return send(study.status, study.value);
       const updates = options.updates ? await updatesCommand(request, url, options.storage, options.updates) : undefined;
       if (updates) return send(updates.status, updates.value);
+      const found = await findCommand(request, url, options.find);
+      if (found) return send(found.status, found.value);
       const knowledge = await knowledgeCommand(request, url, options.storage, options.knowledge);
       if (knowledge) {
         if ('body' in knowledge) {
@@ -140,6 +173,7 @@ export async function openTargetFacade(options: TargetFacadeOptions) {
         if (!options.plugins) return failure(503, "plugin_host_unavailable");
         return send(200, await pluginCommand(request, url, options.plugins));
       }
+      if (await temporary(request, response, url)) return;
       if (await learningStream(request, response, url, options.storage, options.learning)) return;
       const learning = await learningCommand(request, url, options.storage, options.learning);
       if (learning) return send(learning.status, learning.value);
