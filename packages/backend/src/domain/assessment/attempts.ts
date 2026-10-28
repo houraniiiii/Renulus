@@ -77,7 +77,7 @@ function finalise(db:DatabaseSync,r:ObjectValue,now:string,reason:string) {
 export function reconcileAssessments(db:DatabaseSync) {
   let clock=observations.get(db);if(!clock){clock=new Map();observations.set(db,clock);}
   for(const r of rows(db,"SELECT * FROM assessment_test_attempts WHERE status IN ('active','paused')") as ObjectValue[]){
-    const wall=Date.now(),tick=performance.now(),high=Date.parse(r.clock_high_water_at),previous=clock.get(r.id);
+    const wall=Date.now(),tick=performance.now(),high=Date.parse(r.clock_high_water_at)||0,previous=clock.get(r.id);
     let effective=Math.max(wall,high,previous?previous.wall+Math.max(0,tick-previous.tick):0);
     if(!previous&&r.timing_kind==='timed'&&r.status==='active'&&wall<high-1000)effective=Math.max(effective,Date.parse(r.deadline_at));
     clock.set(r.id,{wall:effective,tick});r.clock_high_water_at=new Date(effective).toISOString();
