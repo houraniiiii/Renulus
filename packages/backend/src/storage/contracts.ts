@@ -13,6 +13,8 @@ import type { StudyCommand, StudyResults } from '../domain/study/contracts.ts';
 import { isStudyCommand, validateStudyCommand } from './study.ts';
 import type { CapabilityCommand, CapabilityResults } from '../domain/capabilities/contracts.ts';
 import { isCapabilityCommand, validateCapabilityCommand } from '../domain/capabilities/commands.ts';
+import type { McpConnectionCommand, McpConnectionResults } from '../domain/capabilities/mcp-commands.ts';
+import { isMcpConnectionCommand, validateMcpConnectionCommand } from '../domain/capabilities/mcp-commands.ts';
 import type { LearningDispatchCommand, LearningDispatchResults } from '../domain/learning/admission-contracts.ts';
 import { validateLearningDispatchCommand } from './admission.ts';
 import type { ContentCommand, ContentResults } from '../domain/content/contracts.ts';
@@ -106,14 +108,14 @@ export interface CanonicalExport {
   omissions: Record<string, { records: number; reason: string }>;
 }
 
-export type StorageCommand = DispatchCommand | LearningMetadataCommand | LearningDispatchCommand | LearningCommand | MemoryCommand | KnowledgeCommand | StudyCommand | EvidenceCommand | CapabilityCommand | ContentCommand | ProjectCommand | AssessmentCommand | RecoveryCommand | UpdatesCommand | TemporaryCommand
+export type StorageCommand = DispatchCommand | LearningMetadataCommand | LearningDispatchCommand | LearningCommand | MemoryCommand | KnowledgeCommand | StudyCommand | EvidenceCommand | CapabilityCommand | McpConnectionCommand | ContentCommand | ProjectCommand | AssessmentCommand | RecoveryCommand | UpdatesCommand | TemporaryCommand
   | { type: 'storage.preview' }
   | { type: 'records.page'; table: string; offset: number; limit: number }
   | { type: 'records.export' }
   | { type: 'learning.rename'; threadId: string; expectedRevision: number; title: string; idempotencyKey: string }
   | { type: 'database.backup'; name: string };
 
-export interface CommandResults extends DispatchResults, LearningResults, LearningDispatchResults, LearningMetadataResults, MemoryResults, KnowledgeResults, StudyResults, EvidenceResults, CapabilityResults, ContentResults, ProjectResults, AssessmentResults, RecoveryResults, UpdatesResults, TemporaryResults {
+export interface CommandResults extends DispatchResults, LearningResults, LearningDispatchResults, LearningMetadataResults, MemoryResults, KnowledgeResults, StudyResults, EvidenceResults, CapabilityResults, McpConnectionResults, ContentResults, ProjectResults, AssessmentResults, RecoveryResults, UpdatesResults, TemporaryResults {
   'storage.preview': StoragePreview;
   'records.page': { rows: RecordRow[]; nextOffset: number | null };
   'records.export': CanonicalExport;
@@ -157,6 +159,7 @@ export function validateCommand(value: unknown): asserts value is StorageCommand
   if (isStudyCommand(value)) { validateStudyCommand(value); return; }
   if (isEvidenceCommand(value)) { validateEvidenceCommand(value); return; }
   if (isCapabilityCommand(value)) { validateCapabilityCommand(value); return; }
+  if (isMcpConnectionCommand(value)) { validateMcpConnectionCommand(value); return; }
   if (isContentCommand(value)) { validateContentCommand(value); return; }
   if (isProjectCommand(value)) { validateProjectCommand(value); return; }
   if (isAssessmentCommand(value)) { validateAssessmentCommand(value); return; }

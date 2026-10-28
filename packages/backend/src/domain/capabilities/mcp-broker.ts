@@ -4,7 +4,7 @@ import { createInterface } from 'node:readline';
 import path from 'node:path';
 
 export type McpBrokerOperation = 'http' | 'http.read' | 'http.close' | 'cleanup' |
-  'credential.discover' | 'credential.refresh' | 'connection.open' | 'connection.close' |
+  'credential.discover' | 'credential.refresh' | 'credential.put' | 'credential.forget' | 'connection.open' | 'connection.close' |
   'stdio.open' | 'stdio.read' | 'stdio.write' | 'stdio.close';
 export interface McpBrokerPort {
   request<T = Record<string, unknown>>(op: McpBrokerOperation, input: Record<string, unknown>): Promise<T>;
@@ -12,7 +12,7 @@ export interface McpBrokerPort {
   close(): Promise<void>;
 }
 
-/** The subprocess sees protected credentials; this pipe carries references and protocol bytes only. */
+/** The subprocess sees protected credentials; this pipe carries references and protocol bytes only, except the explicit Settings `credential.put` handoff (value to DPAPI, never echoed). */
 export function createMcpBroker(options: { python: string; sourceRoot: string; profile: string; state: string; workspace?: string }): McpBrokerPort {
   let child: ChildProcessWithoutNullStreams | undefined, starting: Promise<void> | undefined;
   let check: Parameters<McpBrokerPort['current']>[0] = () => false;
@@ -61,7 +61,7 @@ export function createMcpBroker(options: { python: string; sourceRoot: string; p
     current(value) { check = value; },
     async request<T>(op: McpBrokerOperation, input: Record<string, unknown>): Promise<T> {
       if (closed) throw new Error('mcp_broker_closed');
-      if (!starting && op !== 'connection.open') throw new Error('mcp_connection_required');
+      if (!starting && !['connection.open', 'credential.put', 'credential.forget'].includes(op)) throw new Error('mcp_connection_required');
       await start();
       if (closed) throw new Error('mcp_broker_closed');
       const id = ++sequence;

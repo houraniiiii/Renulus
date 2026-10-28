@@ -65,6 +65,7 @@ class McpBroker:
         self.methods = {"connection.open": self.open, "connection.close": self.close, "http": self.http,
             "http.read": self.http_read, "http.close": self.http_close, "cleanup": self.cleanup,
             "credential.discover": self.discover, "credential.refresh": self.refresh,
+            "credential.put": self.put, "credential.forget": self.forget,
             "stdio.open": self.stdio_open, "stdio.read": self.stdio_read, "stdio.write": self.stdio_write,
             "stdio.close": self.stdio_close}
 
@@ -180,6 +181,17 @@ class McpBroker:
         conn = self._connection(frame)
         return {"credential": await self.credentials.discover(frame["ref"], frame["revision"],
             lambda url: self._json(conn, url))}
+
+    async def put(self, frame):
+        # Explicit Settings handoff only: the broker is the single DPAPI writer, so the value goes caller -> this pipe -> DPAPI.
+        self.credentials.put(frame["ref"], revision=frame["revision"], resource=frame["resource"], client_id=frame["client_id"],
+            access_token=frame["access_token"], refresh_token=frame.get("refresh_token"), expires_at=frame["expires_at"],
+            token_endpoint=frame.get("token_endpoint"))
+        return {"credential": self.credentials.metadata(frame["ref"], frame["revision"])}
+
+    async def forget(self, frame):
+        self.credentials.forget(frame["ref"])
+        return {}
 
     async def _json(self, conn, url):
         status, body = await self._exchange(conn, url)

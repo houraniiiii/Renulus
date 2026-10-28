@@ -6,6 +6,8 @@ import type { Tool } from '@opencode/schema/tool';
 import type { NativeCapabilityPorts } from '../../../../harness/src/capability-authority.ts';
 import type { CapabilityEnvelope } from './contracts.ts';
 import type { McpBrokerPort } from './mcp-broker.ts';
+import type { McpConnection } from './mcp-commands.ts';
+import type { StorageClient } from '../../storage/index.ts';
 
 export interface McpSetting {
   name: string; connected: boolean; endpoint: string; issuer: string;
@@ -27,6 +29,27 @@ export function createMcpSettings(initial: readonly McpSetting[] = []) {
     put(item: McpSetting) { settings.set(item.name, structuredClone(item)); },
   } satisfies McpSettingsPort & { put(item: McpSetting): void };
 }
+/** Canonical `mcp_connections` behind the same port; the cache is written through only after storage commits. */
+export async function createStoredMcpSettings(storage: Pick<StorageClient, 'command'>) {
+  const items = new Map<string, McpConnection>(), epochs = new Map<string, number>();
+  const sync = (item: McpConnection) => {
+    items.set(item.setting.name, item); epochs.set(item.setting.name, Math.max(epochs.get(item.setting.name) ?? 0, item.grantedEpoch)); return item;
+  };
+  const visible = ({ setting, approved }: McpConnection) => structuredClone({ ...setting, connected: setting.connected && approved });
+  for (const item of await storage.command({ type: 'mcp.connection.list' })) sync(item);
+  return {
+    get: (name: string) => { const item = items.get(name); return item && visible(item); },
+    list: () => [...items.values()].map(visible),
+    grantEpoch(name: string, advance?: true) { const epoch = (epochs.get(name) ?? 0) + (advance ? 1 : 0); epochs.set(name, epoch); return epoch; },
+    connection: (name: string) => items.get(name),
+    connections: () => [...items.values()],
+    async save(setting: McpSetting, idempotencyKey: string) { return sync(await storage.command({ type: 'mcp.connection.save', setting, idempotencyKey })); },
+    async approve(name: string, idempotencyKey: string) { return sync(await storage.command({ type: 'mcp.connection.approve', name, idempotencyKey })); },
+    async revoke(name: string, idempotencyKey: string) { return sync(await storage.command({ type: 'mcp.connection.revoke', name, idempotencyKey })); },
+    async remove(name: string, idempotencyKey: string) { const result = await storage.command({ type: 'mcp.connection.remove', name, idempotencyKey }); items.delete(name); return result; },
+  };
+}
+export type StoredMcpSettings = Awaited<ReturnType<typeof createStoredMcpSettings>>;
 type Descriptor = Parameters<NonNullable<NativeCapabilityPorts['approveMcpTool']>>[0];
 export const mcpSchemaHash = (descriptor: Pick<Descriptor, 'inputSchema' | 'outputSchema'>) =>
   createHash('sha256').update(JSON.stringify([descriptor.inputSchema ?? null, descriptor.outputSchema ?? null])).digest('hex');
@@ -244,6 +267,8 @@ export function createMcp(options: { settings: McpSettingsPort; broker: McpBroke
       if (answer === 'always') always.add(item.fingerprint + `${namespace(item.server)}_${namespace(item.tool)}`);
       item.settle();
     },
+    /** Only an explicit owner approval lifts a revocation. */
+    regrant: (name: string) => { revoked.delete(name); },
     async revoke(name: string) {
       settings.grantEpoch(name, true);
       revoked.add(name);
@@ -252,6 +277,11 @@ export function createMcp(options: { settings: McpSettingsPort; broker: McpBroke
         uncertain.push({ reason: 'revoked_connection', connection: id });
         await conn.close(true);
       }
+    },
+    credential: {
+      put: (input: { ref: string; revision: number; resource: string; client_id: string; access_token: string;
+        refresh_token?: string; expires_at: number; token_endpoint?: string }) => broker.request('credential.put', input),
+      forget: (ref: string) => broker.request('credential.forget', { ref }),
     },
     uncertainty: () => [...uncertain],
     async close() {

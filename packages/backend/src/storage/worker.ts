@@ -8,6 +8,7 @@ import { executeKnowledge, isKnowledgeCommand } from './knowledge.ts';
 import { executeStudy, isStudyCommand } from './study.ts';
 import { executeEvidenceCommand, isEvidenceCommand } from '../domain/evidence/commands.ts';
 import { executeCapabilityCommand, isCapabilityCommand } from '../domain/capabilities/commands.ts';
+import { executeMcpConnectionCommand, isMcpConnectionCommand } from '../domain/capabilities/mcp-commands.ts';
 import { executeLearningDispatch } from './admission.ts';
 import { executeContent, isContentCommand } from './content.ts';
 import { executeProject, isProjectCommand } from './projects.ts';
@@ -99,6 +100,7 @@ async function dispatch(command: StorageCommand) {
   if (isStudyCommand(command)) return transaction(true, () => executeStudy(db!, command));
   if (isEvidenceCommand(command)) return transaction(true, () => executeEvidenceCommand(db!, command));
   if (isCapabilityCommand(command)) return transaction(true, () => executeCapabilityCommand(db!, command));
+  if (isMcpConnectionCommand(command)) return transaction(true, () => executeMcpConnectionCommand(db!, command));
   if (isContentCommand(command)) return transaction(true, () => executeContent(db!, command));
   if (command.type === 'learning.dispatch.begin') return transaction(true, () => executeLearningDispatch(db!, command));
   if (isLearningMetadataCommand(command)) return transaction(true, () => executeLearningMetadata(db!, command));
