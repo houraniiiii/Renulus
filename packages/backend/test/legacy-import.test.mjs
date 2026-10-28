@@ -40,6 +40,10 @@ with s.db.transaction() as c:
     c.execute("INSERT INTO learn_runs VALUES('legacy_run',?,'legacy-seed','completed',NULL,?,?)",(thread,now,now))
     c.execute("INSERT INTO learn_messages VALUES('legacy_user',?,'legacy_run','user','SYNTHETIC transplant question','[]',?)",(thread,now))
     c.execute("INSERT INTO learn_messages VALUES('legacy_answer',?,'legacy_run','assistant','SYNTHETIC LEGACYNEEDLE transplant learning','[]',?)",(thread,now))
+    for n,t in ((1,threads[1]['identity']['id']),(2,threads[2]['identity']['id'])):
+        c.execute("INSERT INTO learn_runs VALUES(?,?,?,'completed',NULL,?,?)",('resume_run_%d'%n,t,'resume-seed-%d'%n,now,now))
+        c.execute("INSERT INTO learn_messages VALUES(?,?,?,'user','SYNTHETIC resume question','[]',?)",('resume_user_%d'%n,t,'resume_run_%d'%n,now))
+        c.execute("INSERT INTO learn_messages VALUES(?,?,?,'assistant','SYNTHETIC resume answer','[]',?)",('resume_answer_%d'%n,t,'resume_run_%d'%n,now))
 print(json.dumps({'database':str(s.paths.database),'threads':threads}))
 `;
   const environment = Object.fromEntries(['SystemRoot', 'WINDIR', 'TEMP', 'TMP'].filter(k => process.env[k]).map(k => [k, process.env[k]])); environment.PATH = dirname(python);
@@ -89,6 +93,19 @@ print(json.dumps({'database':str(s.paths.database),'threads':threads}))
     assert.ok(page.items.some(m => m.content.includes('LEGACYNEEDLE')));
     assert.equal((await runtime.runPromise(client.requests())).length, 1);
     await assert.rejects(importLegacyHistory(storage, target.native, identity, thread[0], sent.conversation.revision), { code: 'learning_migration_already_imported' });
+    // Failure after reservation (before activation): the next read resumes exactly once; a changed source is refused.
+    const prepare = id => storage.command({ type: 'learning.legacy.prepare', threadId: id, expectedRevision: 1, identity });
+    const state = id => db.prepare('SELECT state FROM legacy_history_imports WHERE thread_id=?').get(id).state;
+    const interrupted = await prepare(thread[1]);
+    assert.equal(state(thread[1]), 'reserved');
+    assert.equal((await prepare(thread[1])).sourceDigest, interrupted.sourceDigest);
+    assert.ok((await target.messages(thread[1])).items.some(m => m.content.includes('resume answer')));
+    assert.equal(state(thread[1]), 'active');
+    assert.equal(db.prepare('SELECT count(*) AS n FROM legacy_history_imports WHERE thread_id=?').get(thread[1]).n, 1);
+    await prepare(thread[2]);
+    db.prepare("UPDATE learn_messages SET content='SYNTHETIC edited before resume' WHERE id='resume_answer_2'").run();
+    await assert.rejects(target.messages(thread[2]), { code: 'learning_migration_conflict' });
+    assert.equal(state(thread[2]), 'reserved');
     await target.close(); close(); open(); target = await openTarget();
     const finder = createFindDomain({ storage, history: target });
     const hits = []; let cursor = null;

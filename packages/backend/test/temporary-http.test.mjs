@@ -21,7 +21,7 @@ async function fixture() {
         settings: { baseURL: 'https://synthetic.invalid/v1' }, models: { volatile: { limit: { context: 128000, output: 4096 } } } } } } } });
   await host.activate('synthetic-http');
   const session = await host.createSession({ operationId: 'synthetic-create', title: 'Temporary' });
-  const graphs = new Map(), receipts = new Map(); let committed;
+  const graphs = new Map(), receipts = new Map(); let committed, activations = 0;
   const storage = { close: async () => {}, command: async c => {
     if (c.type === 'learning.get') return { identity: { type: 'learn_thread', id: c.threadId }, title: 'Synthetic HTTP', retention: 'saved', revision: 1 };
     if (c.type === 'temporary.save.begin') {
@@ -30,7 +30,12 @@ async function fixture() {
       receipts.set(c.plan.idempotencyKey, committed); return committed;
     }
     if (c.type === 'temporary.save.copied') return { ...committed, state: 'copied' };
-    if (c.type === 'temporary.save.activate') return committed = { ...committed, state: 'active' };
+    if (c.type === 'temporary.save.activate') {
+      activations++; committed = { ...committed, state: 'active' };
+      for (const [key, r] of receipts) if (r.id === committed.id) receipts.set(key, committed);
+      return committed;
+    }
+    if (c.type === 'temporary.save.committed') { const r = receipts.get(c.idempotencyKey); return r?.state === 'active' ? r : null; }
     throw new Error(c.type);
   } };
   const family = createTemporaryFamily({ host, rootSessionId: session.id, storage,
@@ -42,7 +47,7 @@ async function fixture() {
     'x-renulus-token': 'synthetic-token', 'content-type': 'application/json', 'idempotency-key': key }, body: JSON.stringify(body) });
   const created = await request('/api/v1/conversations', { temporary: true, title: 'Synthetic HTTP' });
   assert.equal(created.status, 201); const summary = await created.json();
-  return { family, receipts, summary, base, request, runtime, client,
+  return { family, receipts, storage, activations: () => activations, summary, base, request, runtime, client,
     async close() { await facade.close(); await host.close({ timeoutMs: 10000 }); await runtime.dispose(); rmSync(root, { recursive: true, force: true }); } };
 }
 
@@ -80,5 +85,26 @@ test('Temporary HTTP normal completion detaches; Save replay returns the same co
     const replay = await f.request(path, { expected_revision: 3 }, 'synthetic-http-save');
     assert.equal(replay.status, 200); assert.deepEqual(await replay.json(), first);
     assert.equal(f.family.status().state, 'saved'); assert.equal(f.receipts.size, 1);
+  } finally { await f.close(); }
+});
+
+test('Committed temporary Save replays its durable reference after restart without a second activation', { timeout: 120000 }, async () => {
+  const f = await fixture();
+  try {
+    await f.runtime.runPromise(f.client.push(TestLLM.text('Synthetic glomerular teaching', 'answer')));
+    const sent = await f.request(`/api/v1/conversations/learning/${f.summary.identity.id}/messages`, {
+      expected_revision: 1, text: 'Synthetic glomerular question', request_id: 'synthetic-http-send' }, 'synthetic-http-send');
+    assert.equal(sent.status, 200); await sent.text();
+    const path = `/api/v1/conversations/learning/${f.summary.identity.id}/save`;
+    const first = await (await f.request(path, { expected_revision: 3 }, 'synthetic-http-save')).json();
+    assert.equal(f.activations(), 1);
+    // Restart: a fresh facade over the same canonical storage has no live families.
+    const restarted = await openTargetFacade({ port: 0, token: 'synthetic-token', storage: f.storage, temporary: { open: async () => f.family } });
+    try {
+      const replay = await fetch(`http://127.0.0.1:${restarted.port}${path}`, { method: 'POST', headers: {
+        'x-renulus-token': 'synthetic-token', 'content-type': 'application/json', 'idempotency-key': 'synthetic-http-save' }, body: JSON.stringify({ expected_revision: 3 }) });
+      assert.equal(replay.status, 200); assert.deepEqual(await replay.json(), first);
+      assert.equal(f.activations(), 1);
+    } finally { await restarted.close(); }
   } finally { await f.close(); }
 });

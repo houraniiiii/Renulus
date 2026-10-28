@@ -41,20 +41,27 @@ export function temporaryLearning(storage: StorageClient, temporary?: Temporary)
     }
     const match = /^\/api\/v1\/conversations\/(learning|case)\/([A-Za-z0-9_-]{1,120})(?:\/(messages|save))?$/.exec(url.pathname);
     if (!match) return false;
-    const entry = families.get(match[2]); if (!entry || entry.summary.kind !== match[1]) return false;
+    const saving = match[3] === 'save' && request.method === 'POST';
+    const saveBody = async () => { const body = await readJsonObject(request, 4096); exact(body, ['expected_revision']); integer(body.expected_revision, 1); const saveKey = key; text(saveKey, 8, 128); return { body, saveKey }; };
+    const entry = families.get(match[2]);
+    if (!entry && saving) { // A committed Save replays its durable reference after the in-memory family is gone (restart).
+      const { saveKey } = await saveBody();
+      const committed = await storage.command({ type: 'temporary.save.committed', idempotencyKey: saveKey });
+      return committed ? send(200, await storage.command({ type: 'learning.get', threadId: committed.threadId })) : false;
+    }
+    if (!entry || entry.summary.kind !== match[1]) return false;
     const { family, summary } = entry;
     if (!match[3] && request.method === 'DELETE') {
       const revision = Number(url.searchParams.get('expected_revision')); integer(revision, 1);
       if (revision !== summary.revision) reject('conversation_revision_conflict');
       await family.disconnect(); return send(200, { deleted: true, identity: summary.identity });
     }
-    if (match[3] === 'save' && request.method === 'POST') {
-      const body = await readJsonObject(request, 4096); exact(body, ['expected_revision']); integer(body.expected_revision, 1);
-      text(key, 8, 128);
+    if (saving) {
+      const { body, saveKey } = await saveBody();
       if (!family.status().saved && body.expected_revision !== summary.revision) reject('conversation_revision_conflict');
-      if (entry.saveKey && entry.saveKey !== key) reject('idempotency_conflict');
-      entry.saveKey = key;
-      const saved = await family.save(summary.title, key);
+      if (entry.saveKey && entry.saveKey !== saveKey) reject('idempotency_conflict');
+      entry.saveKey = saveKey;
+      const saved = await family.save(summary.title, saveKey);
       return send(200, await storage.command({ type: 'learning.get', threadId: saved.threadId }));
     }
     if (match[3] !== 'messages' || request.method !== 'POST') return false;

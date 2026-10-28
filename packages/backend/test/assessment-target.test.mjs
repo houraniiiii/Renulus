@@ -143,7 +143,11 @@ test('fictional receipt replays the published request after restart with no infe
     await assert.rejects(afterRestart.fictionalise({...input,idempotencyKey:'quick-practice:bf05-request-2'},signal()),fail('assistance_restricted'));
     await assert.rejects(f.command({type:'assessment.generation.create',input:{title:'SYNTHETIC blocked',count:5,topic_id:null,inputs:[],source_refs:[],idempotencyKey:'bf05-blocked-generation'}}),fail('assistance_restricted'));
     await assert.rejects(f.command(receipt),fail('assistance_restricted'));
+    await assert.rejects(f.command({type:'records.export'}),fail('assistance_restricted'));
+    await assert.rejects(f.command({type:'database.backup',name:'bf05-active-test'}),fail('assistance_restricted'));
     const scored=await f.command({type:'assessment.attempts.submit',attemptId:test.id,expectedRevision:0,latestDraft:null,idempotencyKey:'bf05-fiction-submit'});
+    assert.ok((await f.command({type:'records.export'})).records);
+    assert.ok((await f.command({type:'database.backup',name:'bf05-after-test'})).pages>0);
     assert.equal(scored.result.origin,'generated');assert.equal(scored.result.cohorts.personal.denominator,5);assert.equal(scored.result.cohorts.fresh.denominator,0);
     assert.deepEqual(await f.command(receipt),published);assert.equal(transforms,1);
     await afterRestart.close();await generated.close();

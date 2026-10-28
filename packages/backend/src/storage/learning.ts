@@ -319,7 +319,8 @@ function execute(db: DatabaseSync, command: LearningCommand): unknown {
   switch (command.type) {
     case 'learning.legacy.prepare': {
       policy(db);
-      if (one(db, 'SELECT 1 FROM legacy_history_imports WHERE thread_id=?', command.threadId)) reject('learning_migration_already_imported');
+      const reserved = one(db, 'SELECT * FROM legacy_history_imports WHERE thread_id=?', command.threadId);
+      if (reserved && reserved.state !== 'reserved') reject('learning_migration_already_imported');
       const s = summary(db, command.threadId);
       if (s.conversation.revision !== command.expectedRevision) reject('conversation_revision_conflict');
       if (mapping(db, command.threadId)) return null;
@@ -343,7 +344,11 @@ function execute(db: DatabaseSync, command: LearningCommand): unknown {
       const sessionId = 'ses_' + sha(['renulus-h06-session-v1', command.identity.profileId, command.identity.storeId, command.threadId]);
       const operationId = 'migration_' + sessionId.slice(4), sourceDigest = digest(document), sourceStamp = sha([view(db, command.threadId).stamp, s.draftRevision]);
       const refs = messages.map(m => ({ id: 'msg_' + sha(['renulus-h06-message-v1', sessionId, m.id]), role: m.role, runId: m.runId }));
-      db.prepare("INSERT INTO legacy_history_imports VALUES(?,?,?,?,?,?,?,?,'reserved',?)").run(command.threadId, command.identity.profileId, command.identity.storeId,
+      // An interrupted import resumes only for the same source content; the stamp follows later draft edits.
+      if (reserved) {
+        if (reserved.session_id !== sessionId || reserved.source_digest !== sourceDigest) reject('learning_migration_conflict');
+        db.prepare('UPDATE legacy_history_imports SET source_stamp=? WHERE thread_id=?').run(sourceStamp, command.threadId);
+      } else db.prepare("INSERT INTO legacy_history_imports VALUES(?,?,?,?,?,?,?,?,'reserved',?)").run(command.threadId, command.identity.profileId, command.identity.storeId,
         sessionId, operationId, sourceDigest, sourceStamp, canonical(refs), now());
       return { document, sessionId, sourceDigest, sourceStamp, operationId, messageCount: messages.length };
     }
@@ -358,6 +363,8 @@ function execute(db: DatabaseSync, command: LearningCommand): unknown {
       db.prepare('INSERT INTO learn_harness_mappings(thread_id,profile_id,store_id,session_id,mapping_json,create_request_id,process_generation) VALUES(?,?,?,?,?,?,?)')
         .run(command.threadId, command.identity.profileId, command.identity.storeId, receipt.session_id, canonical(result), receipt.operation_id, command.identity.generation);
       db.prepare("UPDATE legacy_history_imports SET state='active' WHERE thread_id=?").run(command.threadId);
+      // A purge queued by an earlier failed attempt must not remove the session this import just verified.
+      db.prepare("UPDATE learn_harness_purges SET state='removed' WHERE profile_id=? AND store_id=? AND session_id=? AND state='pending'").run(command.identity.profileId, command.identity.storeId, receipt.session_id);
       bump(db); return result;
     }
     case 'learning.begin': {

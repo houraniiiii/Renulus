@@ -7,13 +7,14 @@ import { canonical, digest, one, rows } from './schema.ts';
 import { requireAssistance } from './conversation.ts';
 
 /** Table: runtime/migrations/009-temporary-save-intents.sql. No payload, hash of content or export prefix. */
-const commands = new Set(['temporary.save.begin', 'temporary.save.copied', 'temporary.save.activate', 'temporary.save.cancel', 'temporary.save.retire', 'temporary.save.pending']);
+const commands = new Set(['temporary.save.begin', 'temporary.save.copied', 'temporary.save.activate', 'temporary.save.cancel', 'temporary.save.retire', 'temporary.save.pending', 'temporary.save.committed']);
 export function isTemporaryCommand(value: unknown): value is TemporaryCommand {
   return !!value && typeof value === 'object' && 'type' in value && commands.has(String(value.type));
 }
 const identifier = (value: unknown) => { text(value, 1, 256); if (!/^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(value)) reject('temporary_invalid_id'); };
 export function validateTemporaryCommand(c: TemporaryCommand) {
   if (c.type === 'temporary.save.pending') { exact(c, ['type']); return; }
+  if (c.type === 'temporary.save.committed') { exact(c, ['type', 'idempotencyKey']); identifier(c.idempotencyKey); return; }
   if (c.type === 'temporary.save.begin') {
     exact(c, ['type', 'plan']); const p = c.plan;
     exact(p, ['id', 'threadId', 'title', 'profileId', 'storeId', 'exchanges', 'rootSessionId', 'sessionIds', 'cancellationEpoch', 'contextEpoch', 'policyRevision', 'idempotencyKey']);
@@ -46,9 +47,12 @@ function current(db: DatabaseSync, p: PromotionPlan) {
 }
 export function executeTemporary<C extends TemporaryCommand>(db: DatabaseSync, c: C): TemporaryResults[C['type']] {
   if (!db.isTransaction) reject('temporary_transaction_required'); validateTemporaryCommand(c);
-  const now = new Date().toISOString(); let result: PromotionReceipt | PromotionReceipt[];
+  const now = new Date().toISOString(); let result: PromotionReceipt | PromotionReceipt[] | null;
   if (c.type === 'temporary.save.pending') {
     result = rows(db, "SELECT id FROM temporary_save_intents WHERE state IN ('staged','copied','cancelled') ORDER BY created_at").map(r => receipt(db, String(r.id)));
+  } else if (c.type === 'temporary.save.committed') {
+    const row = one(db, "SELECT id FROM temporary_save_intents WHERE idempotency_key=? AND state='active'", c.idempotencyKey);
+    result = row ? receipt(db, String(row.id)) : null;
   } else if (c.type === 'temporary.save.begin') {
     current(db, c.plan); const hash = digest(canonical(c.plan));
     const prior = one(db, 'SELECT id,request_hash FROM temporary_save_intents WHERE idempotency_key=? OR id=?', c.plan.idempotencyKey, c.plan.id);

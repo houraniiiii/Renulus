@@ -24,7 +24,7 @@ import { reject, validateCommand } from './contracts.ts';
 import type { PreviewOptions, StorageCommand, WriterOptions } from './contracts.ts';
 import { inventory } from './schema.ts';
 import { exportRecords, page } from './export.ts';
-import { renameLearning } from './conversation.ts';
+import { renameLearning, requireAssistance } from './conversation.ts';
 import { acquireOwner, owned } from './ownership.ts';
 
 const port = parentPort!;
@@ -57,6 +57,7 @@ function preview() { return inventory(db!, options.migrations, options.expectedS
 
 async function backupDatabase(name: string) {
   owner!.check();
+  transaction(false, () => requireAssistance(db!));
   const root = resolve(options.profileRoot);
   const directory = owned(root, join(root, 'state', 'backups'));
   mkdirSync(directory, { recursive: true });
@@ -113,7 +114,7 @@ async function dispatch(command: StorageCommand) {
   switch (command.type) {
     case 'storage.preview': return transaction(false, preview);
     case 'records.page': return transaction(false, () => page(db!, command.table, command.offset, command.limit));
-    case 'records.export': return transaction(false, () => exportRecords(db!));
+    case 'records.export': return transaction(false, () => { requireAssistance(db!); return exportRecords(db!); }); // Finish the active Test first.
     case 'learning.rename': return transaction(true, () => renameLearning(db!, command));
     case 'database.backup': return backupDatabase(command.name);
   }
