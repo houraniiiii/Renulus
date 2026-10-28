@@ -9,8 +9,9 @@ import { executeDispatch } from '../../storage/dispatch.ts';
 import { canonical } from '../../storage/schema.ts';
 import { reject } from '../../storage/contracts.ts';
 
-const schemas = ['002-harness-configuration.sql', '004-harness-dispatch-purpose.sql'].map(name =>
-  readFileSync(new URL('../../../../../runtime/renulus/runtime/migrations/' + name, import.meta.url), 'utf8'));
+const schemas = [
+  readFileSync(new URL('../../../../../runtime/renulus/runtime/migrations/002-harness-configuration.sql', import.meta.url), 'utf8'),
+  readFileSync(new URL('../../../../../runtime/renulus/runtime/migrations/004-harness-dispatch-purpose.sql', import.meta.url), 'utf8')];
 
 export async function createVolatileDispatchOwner(options: {
   spec: ConfigurationSpec;

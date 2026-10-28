@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,6 +23,8 @@ sys.path.insert(0,str(Path(sys.argv[1])/'runtime'))
 from renulus.server import create_app
 from renulus.learn.conversation_models import NewConversation
 s=create_app(sys.argv[2]).state.services
+with s.db.transaction() as c:
+    c.execute("INSERT OR REPLACE INTO harness_store_identity VALUES(1,'synthetic-ts-facade','synthetic-domain',1,'4b6fea2875e4f2e3e8a8fee181803e54f7056845')")
 thread=s.registry['conversations'].create(NewConversation(kind='learning',title='SYNTHETIC CKD study'),'synthetic-bf00-create')
 print(json.dumps(thread))
 `, repository, profile], { encoding: "utf8", windowsHide: true,
@@ -36,6 +38,12 @@ print(json.dumps(thread))
     authorityEpoch: 1, writer: "ts", state: "active", ownerId: "synthetic-ts-facade-owner", database: "state/renulus.sqlite3" };
   await writeFile(path.join(profile, ".renulus-synthetic-storage.json"), JSON.stringify({ contract: "renulus-synthetic-storage/1", profileId: selection.profileId }));
   await writeFile(path.join(profile, "state/storage-selector.json"), JSON.stringify(selection));
+  // The connected target (compiled entry) opens a prepared paired harness store.
+  await mkdir(path.join(profile, "state/harness"), { recursive: true });
+  const manifest = JSON.parse(await readFile(path.join(repository, "packages/contracts/fixtures/harness/paired-store-prepared.json"), "utf8"));
+  manifest.profile_id = selection.profileId; manifest.domain_store.store_id = "synthetic-domain"; manifest.domain_store.path = selection.database;
+  manifest.runtime_store.store_id = "synthetic-runtime"; manifest.runtime_store.path = "state/harness/opencode.sqlite";
+  await writeFile(path.join(profile, "state/harness/manifest.json"), JSON.stringify(manifest));
   const token = "synthetic-ts-facade-session";
   const app = await openTargetApplication({ profileRoot: profile, selection, migrations, expectedSchemaHash: preview.schemaHash, port: 0, token });
   const origin = `http://127.0.0.1:${app.port}`;
@@ -60,8 +68,13 @@ print(json.dumps(thread))
   } finally { await app.close(); }
   // The compiled artifact must locate the separately compiled SQLite worker,
   // with no TypeScript loader, Python server or developer PATH at runtime.
-  const child = spawn(process.execPath, [path.join(repository, "packages/backend/dist/main.mjs"), "--target",
-    "--profile", profile, "--source-root", repository, "--port", "0", "--schema-hash", preview.schemaHash], {
+  // The installed launcher always supplies explicit target resources (identity, models and the engine broker).
+  const resources = path.join(profile, "target-resources.json");
+  await writeFile(resources, JSON.stringify({ identity: { profile_id: selection.profileId, domain_store_id: "synthetic-domain",
+    runtime_store_id: "synthetic-runtime", authority_epoch: 1, process_generation: "synthetic-ts-facade-compiled" },
+  available_models: ["gpt-6.1-sol"], broker: { profile_root: path.join(profile, "broker"), state_root: path.join(profile, "broker/state") } }));
+  const child = spawn(process.execPath, [path.join(repository, "packages/backend/dist/main.mjs"), "--target", "--python", python,
+    "--target-resources", resources, "--profile", profile, "--source-root", repository, "--port", "0", "--schema-hash", preview.schemaHash], {
     windowsHide: true, stdio: ["ignore", "pipe", "pipe"], env: { SystemRoot: process.env.SystemRoot,
       WINDIR: process.env.WINDIR, PATH: path.dirname(process.execPath), RENULUS_SESSION_TOKEN: token },
   });

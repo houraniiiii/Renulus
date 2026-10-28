@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-import './owned-environment.mjs';
+await import('./owned-environment.mjs');
+await import('./capability-patch-loader.mjs');
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
@@ -8,21 +9,22 @@ import { mkdtemp, mkdir, readFile, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Context, Effect, Layer, Logger, ManagedRuntime } from 'effect';
-import { OpenCode, AbsolutePath, Location, Agent } from '@opencode/sdk/effect';
-import { Tool } from '@opencode/core/tool';
-import { Instance } from '@opencode/core/instance';
-import { SessionExecution } from '@opencode/core/session/execution';
-import { llmClient } from '@opencode/core/effect/app-node-platform';
-import { LLMClient } from '@opencode/ai';
-import { TestLLM } from '@opencode/ai/testing';
-import { closedHarnessEnvironment } from '../src/capability-plugins.ts';
-import { createNativeCapabilityPlugin } from '../src/native-capability-plugin.ts';
-import { createDeveloperRuntime } from '../src/developer-plugin.ts';
-import { createCapabilityAuthority } from '../../backend/src/domain/capabilities/authority.ts';
-import { CAPABILITY_SCHEMA, executeCapabilityCommand } from '../../backend/src/domain/capabilities/commands.ts';
-import { executeDispatch } from '../../backend/src/storage/dispatch.ts';
-import { defaultConfiguration, ALLOWED_MODELS } from '../../backend/src/dispatch/policy.ts';
-import { digest } from '../../backend/src/storage/schema.ts';
+// Native modules load only after the test-only capability patch loader is registered.
+const { OpenCode, AbsolutePath, Location, Agent } = await import('@opencode/sdk/effect');
+const { Tool } = await import('@opencode/core/tool');
+const { Instance } = await import('@opencode/core/instance');
+const { SessionExecution } = await import('@opencode/core/session/execution');
+const { llmClient } = await import('@opencode/core/effect/app-node-platform');
+const { LLMClient } = await import('@opencode/ai');
+const { TestLLM } = await import('@opencode/ai/testing');
+const { closedHarnessEnvironment } = await import('../src/capability-plugins.ts');
+const { createNativeCapabilityPlugin } = await import('../src/native-capability-plugin.ts');
+const { createDeveloperRuntime } = await import('../src/developer-plugin.ts');
+const { createCapabilityAuthority } = await import('../../backend/src/domain/capabilities/authority.ts');
+const { CAPABILITY_SCHEMA, executeCapabilityCommand } = await import('../../backend/src/domain/capabilities/commands.ts');
+const { executeDispatch } = await import('../../backend/src/storage/dispatch.ts');
+const { defaultConfiguration, ALLOWED_MODELS } = await import('../../backend/src/dispatch/policy.ts');
+const { digest } = await import('../../backend/src/storage/schema.ts');
 
 test('native developer Off omits all developer families; enabled TestLLM write settles with a receipt', { timeout: 60000 }, async () => {
   const root = await realpath(await mkdtemp(path.join(tmpdir(), 'renulus-developer-native-')));

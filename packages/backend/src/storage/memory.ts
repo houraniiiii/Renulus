@@ -160,7 +160,8 @@ const textKey = (value: string) => 'text:' + sha(value.toLocaleLowerCase('en').r
 /** Echoed assistant, summary or child text must not recapture a corrected or deleted fact. */
 const suppressText = (db: DatabaseSync, value: string) => db.prepare('INSERT OR IGNORE INTO memory_suppression VALUES(?,?)').run(textKey(value), now());
 function remove(db: DatabaseSync, recordId: string, restoring = false) {
-  suppressText(db, String(fact(db, recordId).text));
+  // Restore reconciliation is recoverable by an explicit Capture, so it must not suppress the fact text.
+  if (!restoring) suppressText(db, String(fact(db, recordId).text));
   purgeIntent(db, physicalIds(db, recordId));
   suppress(db, recordId, restoring); db.prepare("INSERT OR IGNORE INTO deletion_ledger VALUES('memory_fact',?,?)").run(recordId, now());
   db.prepare('DELETE FROM memory_facts WHERE id=?').run(recordId);
