@@ -75,9 +75,13 @@ export function createWorkerTransport(options: {
   };
 }
 
+/** The part of an admitted capability lease the worker plan reads; callers without a stored lease supply just this. */
+export type WorkerHttpRequest = Omit<import('../domain/capabilities/contracts.ts').HttpPlan, 'lease'> & { lease: {
+  id: string; state: string; envelope: Pick<import('../domain/capabilities/contracts.ts').CapabilityEnvelope, 'run_id' | 'retention'>;
+  grant: Pick<import('../domain/capabilities/contracts.ts').CapabilityGrant, 'expires_at_ms' | 'endpoints'> } };
 export function createWorkerHttp(options: {
   channel: WorkerChannel; maxChunkBytes: number; retention: 'saved' | 'temporary';
-}): import('../domain/capabilities/contracts.ts').CapabilityTransport['http'] {
+}): (plan: WorkerHttpRequest, signal: AbortSignal) => ReturnType<import('../domain/capabilities/contracts.ts').CapabilityTransport['http']> {
   const artifacts = createEngineArtifacts(options.channel, options.maxChunkBytes);
   return async (plan, signal) => {
     signal.throwIfAborted();

@@ -25,7 +25,7 @@ export function validateEvidenceCommand(c: EvidenceCommand): void {
   if (c.type === 'evidence.reserve') {
     exact(c, ['type','id','operation_id','provider','day','requests','credits','request_limit','credit_limit']);
     text(c.operation_id, 1, 256); text(c.day, 10, 10);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(c.day) || !['europe-pmc','pubmed','brave','tavily','exa'].includes(c.provider)) reject('evidence_invalid_reservation');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(c.day) || !['europe-pmc','pubmed','brave','tavily','exa','official-source'].includes(c.provider)) reject('evidence_invalid_reservation');
     integer(c.requests, 1, 4); integer(c.credits, 0, 1); integer(c.request_limit, 0, 10000); integer(c.credit_limit, 0, 10000);
   } else {
     exact(c, ['type','id','requests_started','effect']); integer(c.requests_started, 0, 4);

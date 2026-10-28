@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type { HttpResult, EvidencePlan } from '../../../../contracts/worker.ts';
 import type { DatedDiscovery, EvidenceConnection, EvidenceDomainOptions, EvidencePassage, EvidenceProvider, EvidenceSearch } from './contracts.ts';
 import { createEngineArtifacts } from '../../workers/artifacts.ts';
@@ -9,7 +9,8 @@ export const official = {
   pubmed: 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils', brave: 'https://api.search.brave.com/res/v1/web/search',
   tavily: 'https://api.tavily.com/search', exa: 'https://api.exa.ai/search',
 };
-export function createEvidenceDomain({ storage, worker, check, endpoints = {} }: EvidenceDomainOptions) {
+const pageRedirects = 4, pageDailyRequests = 500;
+export function createEvidenceDomain({ storage, worker, check, endpoints = {}, http }: EvidenceDomainOptions) {
   const artifacts = createEngineArtifacts(worker.channel, worker.maxChunkBytes);
   async function run(operationId: string, signal: AbortSignal, input: Pick<EvidencePlan, 'action'> & Partial<EvidencePlan>,
     settle?: (result: HttpResult | null) => Promise<void>): Promise<Record<string, unknown>> {
@@ -96,10 +97,59 @@ export function createEvidenceDomain({ storage, worker, check, endpoints = {} }:
     }
     return result;
   }
+  /** Fetches one registered official page through the protected broker. Every redirect hop is re-admitted against `hosts`. */
+  async function page(input: { url: string; hosts: string[]; maxBytes: number; operationId: string; signal: AbortSignal }) {
+    if (!http) reject('evidence_http_unavailable');
+    integer(input.maxBytes, 1, 20_000_000);
+    const loopback = endpoints['official-source'];
+    const admit = (value: string) => {
+      const url = new URL(value);
+      const allowed = loopback ? url.hostname === loopback.host && Number(url.port) === loopback.port
+        : url.protocol === 'https:' && !url.username && !url.password && ['', '443'].includes(url.port) && input.hosts.includes(url.hostname);
+      if (!allowed) reject('source_host_blocked');
+      return url;
+    };
+    let url = admit(input.url);
+    const id = 'evidence_reservation_' + randomUUID().replaceAll('-', '');
+    await check(input.operationId, input.signal);
+    await storage.command({ type: 'evidence.reserve', id, operation_id: input.operationId, provider: 'official-source',
+      day: new Date().toISOString().slice(0,10), requests: pageRedirects, credits: 0, request_limit: pageDailyRequests, credit_limit: 0 });
+    let started = 0, effect: 'not_sent' | 'response_received' | 'uncertain' = 'not_sent';
+    try {
+      for (let hop = 0; hop < pageRedirects; hop++) {
+        const endpoint = loopback ?? { host: url.hostname, port: 443, private_network: false };
+        const lease = 'page_' + randomUUID().replaceAll('-', '');
+        started++; effect = 'uncertain';
+        const stream = await http({ lease: { id: lease, state: 'admitted', envelope: { run_id: input.operationId, retention: worker.retention },
+          grant: { expires_at_ms: Date.now() + 120_000, endpoints: [{ host: endpoint.host, port: endpoint.port, private_network: endpoint.private_network }] } },
+          lease_id: lease, url: url.href, method: 'GET', headers: {}, body_base64: '', body_sha256: createHash('sha256').update('').digest('hex'),
+          max_response_bytes: input.maxBytes }, input.signal);
+        try {
+          effect = 'response_received';
+          if ([301, 302, 303, 307, 308].includes(stream.status)) {
+            const location = stream.headers.location;
+            try { url = admit(new URL(location ?? '', url).href); } catch { reject('source_redirect_blocked'); }
+            continue;
+          }
+          if (stream.status < 200 || stream.status > 299) reject('source_fetch_failed');
+          const chunks: Uint8Array[] = []; let size = 0;
+          for (let chunk = await stream.read(input.signal); chunk; chunk = await stream.read(input.signal)) {
+            size += chunk.length; if (size > input.maxBytes) reject('source_metadata_too_large'); chunks.push(chunk);
+          }
+          if (!size) reject('source_empty_response');
+          await check(input.operationId, input.signal);
+          return { body: Buffer.concat(chunks), headers: stream.headers, final_url: url.href };
+        } finally { await stream.close(); }
+      }
+      reject('source_redirect_limit');
+    } finally {
+      await storage.command({ type: 'evidence.settle', id, requests_started: started, effect });
+    }
+  }
   async function current(stamp: string, signal: AbortSignal) {
     signal.throwIfAborted(); await storage.command({ type: 'evidence.current', stamp });
   }
-  return { search: discoverDated, discoverDated, connections, current,
+  return { search: discoverDated, discoverDated, page, connections, current,
     async fetch(input: { pmcid: string; budget: EvidenceSearch['budget']; operationId: string; signal: AbortSignal }) {
       if (typeof input.pmcid !== 'string' || !/^PMC[1-9][0-9]{0,10}$/.test(input.pmcid)) reject('evidence_pmcid_invalid');
       integer(input.budget.max_requests, 0, 100); integer(input.budget.max_credits, 0, 100);

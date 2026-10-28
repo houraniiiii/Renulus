@@ -10,7 +10,7 @@ import { canonical } from '../storage/schema.ts';
 import { reconcileRecoveryReservations } from '../storage/reservations.ts';
 import { openEngineWorker, type EngineWorkerOptions } from '../workers/process.ts';
 import { createWorkerLibrary } from '../workers/library.ts';
-import { createWorkerTransport } from '../workers/transport.ts';
+import { createWorkerTransport, createWorkerHttp } from '../workers/transport.ts';
 import { createCredentialCommands } from '../http/credential-commands.ts';
 import { openSavedLearningTarget, type SavedLearningOptions } from './learning.ts';
 import { createLearningGateway } from '../../../harness/src/learning-gateway.ts';
@@ -639,6 +639,7 @@ export async function openConnectedTarget(options: ConnectedTargetOptions) {
   if (!options.retrieval) {
     const checks = new Map<string, Parameters<UpdatesNativePort['check']>[0]>();
     const evidence = createEvidenceDomain({ storage, worker: { channel: worker.channel, maxChunkBytes, retention: 'saved' },
+      http: createWorkerHttp({ channel: worker.channel, maxChunkBytes, retention: 'saved' }),
       async check(operationId, signal) {
         signal.throwIfAborted(); if (!admission || closing) reject('evidence_stale');
         const input = checks.get(operationId); if (!input) reject('updates_check_stale');

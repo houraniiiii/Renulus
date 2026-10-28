@@ -69,10 +69,13 @@ function publication(row: ObjectValue): ObjectValue {
   const { fetch_metadata_json, ...rest } = row;
   return { ...rest, fetch_metadata: parse(fetch_metadata_json), freshness: freshness(row), enabled: !!row.enabled };
 }
+function hostsOf(urls: string[]) {
+  return [...new Set(urls.flatMap(value => { const host = new URL(value).hostname; return [host, host.startsWith('www.') ? host.slice(4) : 'www.' + host]; }))];
+}
 function publicationCandidate(db: DatabaseSync, sourceId: string, url: string) {
   const source = one(db, 'SELECT * FROM update_source_checks WHERE source_id=?', sourceId); if (!source) reject('source_missing');
   const registered = sourceRegister.get(sourceId) ?? [String(source.url)], host = https(url).hostname;
-  const hosts = new Set(registered.flatMap(value => { const host = new URL(value).hostname; return [host, host.startsWith('www.') ? host.slice(4) : 'www.' + host]; }));
+  const hosts = new Set(hostsOf(registered));
   if (!hosts.has(host)) reject('source_host_blocked');
   const candidates = [
     ...registered.slice(1).filter(value => new URL(value).pathname.toLowerCase().endsWith('.pdf')).map(url => ({ url, title: source.title })),
@@ -84,8 +87,8 @@ function publicationCandidate(db: DatabaseSync, sourceId: string, url: string) {
   return candidate;
 }
 function target(db: DatabaseSync, r: CheckRoute): ObjectValue {
-  if (r.kind === 'source') { const row = one(db, 'SELECT * FROM update_source_checks WHERE source_id=?', r.id); if (!row) reject('source_missing'); return row; }
-  if (r.kind === 'publication') { const row = one(db, 'SELECT * FROM update_publications WHERE id=? AND enabled=1', r.id); if (!row) reject('publication_missing'); return row; }
+  if (r.kind === 'source') { const row = one(db, 'SELECT * FROM update_source_checks WHERE source_id=?', r.id); if (!row) reject('source_missing'); return { ...row, hosts: hostsOf([String(row.url)]) }; }
+  if (r.kind === 'publication') { const row = one(db, 'SELECT * FROM update_publications WHERE id=? AND enabled=1', r.id); if (!row) reject('publication_missing'); return { ...row, hosts: hostsOf(sourceRegister.get(String(row.source_id)) ?? [String(row.url)]) }; }
   if (!one(db, 'SELECT 1 FROM content_topics WHERE topic_id=?', r.id)) reject('topic_missing');
   return one(db, 'SELECT * FROM update_literature_checks WHERE topic_id=?', r.id) ?? { topic_id: r.id };
 }

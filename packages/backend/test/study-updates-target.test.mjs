@@ -13,6 +13,8 @@ import { createStudyCoordinator } from '../src/domain/study/coordinator.ts';
 import { createUpdatesCoordinator } from '../src/domain/updates/coordinator.ts';
 import { createAssessmentGeneration } from '../src/domain/assessment/generation.ts';
 import { createServer } from 'node:http';
+import { createHash } from 'node:crypto';
+import { createWorkerHttp } from '../src/workers/transport.ts';
 import { openEngineWorker } from '../src/workers/process.ts';
 import { createEvidenceDomain } from '../src/domain/evidence/index.ts';
 import { createUpdatesRetrieval } from '../src/domain/updates/retrieval.ts';
@@ -72,7 +74,7 @@ test('nightly claims once, publishes through assessment Ready, catches up once a
     await f.command({type:'study.nightly.recover',clock});assert.equal((await f.command({type:'study.nightly.claim',clock})).request,null);
   }finally{await study.close();await generation.close();await f.close();}
 });
-test('Updates source check uses the protected loopback evidence broker and retains discovery-only provenance', {skip:!process.env.RENULUS_BACKEND_TEST_PYTHON}, async()=>{
+test('Updates literature check uses the protected loopback evidence broker and retains discovery-only provenance', {skip:!process.env.RENULUS_BACKEND_TEST_PYTHON}, async()=>{
   let requests=0;
   const server=createServer((request,response)=>{requests++;assert.equal(new URL(request.url,'http://localhost').pathname,'/search');response.setHeader('content-type','application/json');response.end(JSON.stringify({resultList:{result:[{id:'12345678',source:'MED',title:'SYNTHETIC renal discovery',firstPublicationDate:'2026-10-27'}]}}));});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -89,12 +91,55 @@ test('Updates source check uses the protected loopback evidence broker and retai
       endpoints:{'europe-pmc':{host:'127.0.0.1',port:server.address().port,private_network:true,base_url:'http://127.0.0.1:'+server.address().port}}});
     const retrieval=createUpdatesRetrieval(evidence);
     updates=createUpdatesCoordinator({storage:f.storage,native:{check:async(input,signal)=>{inputs.set(input.token,input);try{return await retrieval.check(input,signal);}finally{inputs.delete(input.token);}},digest:async()=>{throw Error('unused');}}});
-    const checked=await updates.check({kind:'source',id:'S99'},true);
+    const topic=await f.inspect(db=>db.prepare('SELECT topic_id FROM content_topics ORDER BY topic_id LIMIT 1').get().topic_id);const checked=await updates.check({kind:'literature',id:topic},true);
     const entries=(await f.command({type:'updates.entries',state:null,limit:20,offset:0})).entries;
     const entry=entries.find(e=>e.title==='SYNTHETIC renal discovery');
     assert.deepEqual({state:checked.state,requests,verification:entry?.source_metadata.verification,passage_evidence:entry?.source_metadata.passage_evidence,review_state:entry?.review_state},
       {state:'baseline',requests:1,verification:'discovery-only',passage_evidence:false,review_state:'pending'});
   }finally{await updates?.close();await worker?.close();await f.close();await new Promise(resolve=>server.close(resolve));}
+});
+test('Updates source/publication checks hash the registered page bytes through the broker; literature keeps discovery', {skip:!process.env.RENULUS_BACKEND_TEST_PYTHON}, async()=>{
+  const hits={source:0,pdf:0,search:0,moved:0};let page='<a href="https://synthetic.invalid/guideline-v1.pdf">Guideline v1</a><p>Updated 1 Jan</p>',pdf='%PDF-1 SYNTHETIC v1',search='SYNTHETIC search one';
+  const server=createServer((request,response)=>{const path=new URL(request.url,'http://localhost').pathname;
+    if(path==='/source'){hits.source++;response.setHeader('content-type','text/html');response.end(page);}
+    else if(path==='/pub.pdf'){hits.pdf++;response.setHeader('content-type','application/pdf');response.end(pdf);}
+    else if(path==='/moved.pdf'){hits.moved++;response.statusCode=302;response.setHeader('location','https://elsewhere.invalid/x.pdf');response.end();}
+    else if(path==='/search'){hits.search++;response.setHeader('content-type','application/json');response.end(JSON.stringify({resultList:{result:[{id:'12345678',source:'MED',title:search,firstPublicationDate:'2026-10-27'}]}}));}
+    else{response.statusCode=404;response.end();}});
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const base='http://127.0.0.1:'+server.address().port;
+  const f=await fixture(db=>{db.prepare('INSERT OR IGNORE INTO update_source_checks(source_id,title,url,snapshot_status) VALUES(?,?,?,?)').run('S99','SYNTHETIC official source',base+'/source','Synthetic');
+    for(const [id,path] of [['pub_a','/pub.pdf'],['pub_b','/moved.pdf']])db.prepare('INSERT INTO update_publications(id,source_id,url,title,permission_reference,max_bytes,tracked_at) VALUES(?,?,?,?,?,?,?)').run(id,'S99',base+path,'SYNTHETIC publication '+id,'SYNTHETIC permission',4096,new Date().toISOString());});
+  let worker,updates;
+  try{
+    const revisions={configuration:1,grant:1,context:1,deletion:1,cancellation:0};
+    worker=await openEngineWorker({python:process.env.RENULUS_BACKEND_TEST_PYTHON,sourceRoot:repository,launchRoot:join(f.root,'launch'),retention:'saved',
+      identity:{profile_id:'synthetic-s21-pages',domain_store_id:'synthetic-domain',runtime_store_id:'synthetic-native',authority_epoch:1,process_generation:'synthetic-pages'},current:()=>revisions,
+      broker:{profile_root:f.root,state_root:join(f.root,'state')}});
+    const inputs=new Map(),endpoint={host:'127.0.0.1',port:server.address().port,private_network:true,base_url:base},channel={channel:worker.channel,maxChunkBytes:worker.ready.capacity.max_chunk_bytes,retention:'saved'};
+    const evidence=createEvidenceDomain({storage:f.storage,worker:channel,http:createWorkerHttp(channel),check:async(id,signal)=>{signal.throwIfAborted();await f.command({type:'updates.check.current',input:inputs.get(id)});},
+      endpoints:{'europe-pmc':endpoint,'official-source':endpoint}});
+    const retrieval=createUpdatesRetrieval(evidence);
+    updates=createUpdatesCoordinator({storage:f.storage,native:{check:async(input,signal)=>{inputs.set(input.token,input);try{return await retrieval.check(input,signal);}finally{inputs.delete(input.token);}},digest:async()=>{throw Error('unused');}}});
+    const titles=async()=>(await f.command({type:'updates.entries',state:null,limit:50,offset:0})).entries.map(e=>e.kind+':'+e.title).sort();
+    const source={kind:'source',id:'S99'},publication={kind:'publication',id:'pub_a'};
+    assert.equal((await updates.check(source,true)).state,'baseline');assert.equal((await updates.check(publication,true)).state,'baseline');
+    search='SYNTHETIC search two, unrelated to the tracked pages';
+    assert.equal((await updates.check(source,true)).state,'unchanged');assert.equal((await updates.check(publication,true)).state,'unchanged');
+    assert.deepEqual(await titles(),[],'unrelated search results never create events');
+    const sourceRow=(await f.command({type:'updates.sources'})).sources.find(row=>row.source_id==='S99');assert.deepEqual(sourceRow.links,[{url:'https://synthetic.invalid/guideline-v1.pdf',label:'Guideline v1'}]);
+    page='<a href="https://synthetic.invalid/guideline-v2.pdf">Guideline v2</a>';pdf='%PDF-1 SYNTHETIC v2';
+    assert.equal((await updates.check(source,true)).state,'changed');assert.equal((await updates.check(publication,true)).state,'changed');
+    assert.deepEqual(await titles(),['publication-change:Publication bytes changed: SYNTHETIC publication pub_a','source-change:Publication links changed: SYNTHETIC official source']);
+    const tracked=(await f.command({type:'updates.publications'})).publications.find(row=>row.id==='pub_a');assert.equal(tracked.fetch_metadata.sha256,createHash('sha256').update(pdf).digest('hex'));assert.equal(tracked.fetch_metadata.bytes,pdf.length);
+    assert.equal(hits.search,0,'source and publication checks never query discovery');
+    const redirected=await updates.check({kind:'publication',id:'pub_b'},true);assert.equal(redirected.state,'failed');assert.equal(redirected.error_code,'source_redirect_blocked');
+    pdf='%PDF-'+'x'.repeat(5000);assert.equal((await updates.check(publication,true)).error_code,'capability_response_limit');
+    assert.equal((await f.command({type:'updates.publications'})).publications.find(row=>row.id==='pub_a').last_success_at!==null,true,'a failed check keeps the last success');
+    const topic=await f.inspect(db=>db.prepare('SELECT topic_id FROM content_topics ORDER BY topic_id LIMIT 1').get().topic_id);
+    const literature=await updates.check({kind:'literature',id:topic},true);assert.equal(literature.state,'baseline');assert.equal(hits.search,1);
+    assert.ok((await titles()).includes('literature:'+search));
+    await f.inspect(db=>{const usage=db.prepare("SELECT requests FROM retrieval_usage WHERE provider='official-source'").get();assert.ok(usage.requests>=7&&usage.requests<=32,'page fetches are metered, unspent redirect budget refunded: '+usage.requests);});
+  }finally{await f.inspect(db=>{db.prepare('UPDATE update_publications SET enabled=0').run();db.prepare('UPDATE update_source_checks SET url=? WHERE source_id=?').run('https://synthetic.invalid/source','S99');});await updates?.close();await worker?.close();await f.close();await new Promise(resolve=>server.close(resolve));}
 });
 test('Updates keeps failed-check success date and correction/outbox/source links; digest cannot review',async()=>{
   const f=await fixture(db=>{const at=new Date().toISOString();db.prepare('INSERT OR IGNORE INTO update_source_checks(source_id,title,url,snapshot_status) VALUES(?,?,?,?)').run('S99','SYNTHETIC official source','https://synthetic.invalid/source','Synthetic');db.prepare('INSERT INTO update_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run('synthetic_update','S99','synthetic:entry','SYNTHETIC correction','https://synthetic.invalid/article','publication-change',null,at,null,null,'pending','Inspect','[]',JSON.stringify({canonical_url:'https://synthetic.invalid/article'}),null);});
