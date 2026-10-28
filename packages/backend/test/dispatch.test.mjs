@@ -207,6 +207,23 @@ test('stopped-host crash reconciliation preserves uncertainty and revoked overla
   assert.equal(f.command({ type: 'dispatch.snapshot' }).admission_open, false);
 });
 
+test('uncertain attempts from a dead process generation keep their debit and root block but free the concurrency slots', () => {
+  const f = fixture(); f.activate(); const r1 = f.begin('one'), r2 = f.begin('two');
+  const a = reserve(f, r1); admit(f, a, r1); const b = reserve(f, r2); admit(f, b, r2);
+  f.command({ type: 'dispatch.close', version: f.version, expectedEffective: f.version, grantEpoch: 0 });
+  f.command({ type: 'dispatch.reconcile', settlement: f.settle }); f.reopen();
+  f.db().prepare('UPDATE harness_configuration_pointer SET admission_open=1 WHERE id=1').run();
+  const next = { ...fence, process_generation: 'process_b' };
+  const beginNext = runId => f.command({ type: 'dispatch.begin', runId, purpose: 'explain', expectedVersion: f.version, capabilities: ['text'],
+    availableModels: [...ALLOWED_MODELS.codex], operationModel: null, fence: next, batchSize: null });
+  const [r3, r4, r5] = ['three', 'four', 'five'].map(beginNext);
+  assert.equal(reserve(f, r3, 'step_a', 'primary', { fence: next }).state, 'reserved');
+  assert.equal(reserve(f, r4, 'step_a', 'primary', { fence: next }).state, 'reserved');
+  assert.throws(() => reserve(f, r5, 'step_a', 'primary', { fence: next }), { code: 'dispatch_concurrency_exhausted' });
+  assert.equal(f.command({ type: 'dispatch.permit', permitId: a.permit_id }).state, 'uncertain');
+  assert.equal(f.db().prepare("SELECT count(*) AS n FROM harness_configuration_attempts WHERE state='uncertain'").get().n, 2);
+});
+
 test('strict wire parser rejects duplicate JSON keys, extra history, dropped native inputs and auth headers', () => {
   assert.throws(() => parseJson('{"model":"a","model":"b"}'));
   const f = fixture(); f.activate(); const run = f.begin();

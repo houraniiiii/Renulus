@@ -238,7 +238,10 @@ function handle(db: DatabaseSync, c: DispatchCommand): unknown {
       proofFits(db, run, c.proof, c.requiredCapabilities, outputLimit);
       const known = Object.values(data.proofs)[0]?.qualification;
       if (known && canonical(known) !== canonical(c.proof.qualification)) reject('deployment_evidence_stale');
-      if (Number(one(db, "SELECT count(*) AS n FROM harness_configuration_attempts WHERE state IN ('reserved','dispatched','uncertain')")!.n) >= 2) reject('dispatch_concurrency_exhausted');
+      // Slots cover calls that can still be in flight: an uncertain attempt of an earlier process generation is dead
+      // there, so it keeps its debit and root block but no longer holds a slot.
+      if (Number(one(db, `SELECT count(*) AS n FROM harness_configuration_attempts a JOIN harness_configuration_runs r USING(run_id)
+        WHERE a.state IN ('reserved','dispatched') OR a.state='uncertain' AND json_extract(r.route_json,'$.dispatch_target.fence.process_generation')=?`, c.fence.process_generation)!.n) >= 2) reject('dispatch_concurrency_exhausted');
       if (Object.keys(data.proofs).length >= 128) reject('dispatch_budget_exhausted');
       const permitId = uuid(); data.proofs[permitId] = c.proof;
       db.prepare('UPDATE harness_configuration_runs SET route_json=? WHERE run_id=?').run(canonical({ ...raw, dispatch_target: data }), run.run_id);
