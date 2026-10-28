@@ -33,14 +33,18 @@ export function createCapabilityAuthority(options: CapabilityAuthorityOptions) {
     })();
     return item.cleanup;
   }
+  function arm(item: Owned) {
+    clearTimeout(item.timer);
+    item.timer=setTimeout(()=>{ void options.storage.execute({type:'capability.close',root_id:item.lease.envelope.root_id})
+      .then(()=>settle(item,true)).catch(()=>{}); },Math.max(1,item.lease.grant.expires_at_ms-Date.now())); item.timer.unref();
+  }
   async function admit(envelope: CapabilityEnvelope,action:string,input:unknown): Promise<Owned> {
     if(closing || owned.size>=64) reject('capability_closed');
     const frozen=structuredClone(envelope), grant=structuredClone(await options.current(frozen,action));
     const lease=await options.storage.execute({type:'capability.admit',id:'cap_'+randomUUID(),envelope:frozen,action,payload_sha256:sha(canonical(input)),grant});
     const item:Owned={lease,abort:new AbortController(),resources:new Set(),tasks:new Set(),closed:false,timer:undefined!};
     owned.set(lease.id,item);
-    item.timer=setTimeout(()=>{ void options.storage.execute({type:'capability.close',root_id:lease.envelope.root_id})
-      .then(()=>settle(item,true)).catch(()=>{}); },Math.max(1,lease.grant.expires_at_ms-Date.now())); item.timer.unref();
+    arm(item);
     try { await credit(item); return item; } catch(error) { await settle(item); throw error; }
   }
   function endpoint(item:Owned,url:URL) {
@@ -131,6 +135,13 @@ export function createCapabilityAuthority(options: CapabilityAuthorityOptions) {
         async closeSocket(id:string){if(!sockets.has(id))return;await options.transport.tunnelClose(id);sockets.delete(id);},
         async revoke(){await options.storage.execute({type:'capability.close',root_id:envelope.root_id});await settle(item,true);},
       };
+    },
+    /** Explicit direct command only: extends one live, still-granted browser lease by the standard five minutes. */
+    async renew(leaseId:string) {
+      const item=owned.get(leaseId); if(!item||item.closed||closing) reject('capability_stale');
+      await options.current(item.lease.envelope,item.lease.action);
+      item!.lease=await options.storage.execute({type:'capability.renew',id:leaseId,expires_at_ms:Date.now()+299_000}); arm(item!);
+      return {id:leaseId,expires_at_ms:item!.lease.grant.expires_at_ms};
     },
     async stop(root_id:string) {await options.storage.execute({type:'capability.close',root_id});
       const results=await Promise.allSettled([...owned.values()].filter(i=>i.lease.envelope.root_id===root_id).map(i=>settle(i,true)));

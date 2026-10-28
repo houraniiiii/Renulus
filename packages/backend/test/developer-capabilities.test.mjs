@@ -10,6 +10,8 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync
 import { tmpdir } from "node:os";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { Readable } from "node:stream";
+import { createWorktreeApprovals, developerCommand } from "../src/http/developer-commands.ts";
 import { executeDispatch } from "../src/storage/dispatch.ts";
 import { executeCapabilityCommand, CAPABILITY_SCHEMA } from "../src/domain/capabilities/commands.ts";
 import { defaultConfiguration, ALLOWED_MODELS } from "../src/dispatch/policy.ts";
@@ -162,8 +164,8 @@ test("worktrees: owned identity is recorded, destructive removal needs exact ide
   const f = fixture(), { workspace, configuration } = workspaceFor("repo");
   const git = (...args) => execFileSync(configuration.git, args, { cwd: workspace, windowsHide: true, encoding: "utf8" });
   git("init", "-q"); git("-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit", "--allow-empty", "-q", "-m", "synthetic");
-  let approvals = 0;
-  const developer = createDeveloperRuntime({ resources, configuration, approveWorktreeRemoval: async item => { approvals++; return item.force === false; } });
+  const approvals = createWorktreeApprovals();
+  const developer = createDeveloperRuntime({ resources, configuration, approveWorktreeRemoval: approvals.approve });
   const { authority, ports } = direct(developer, f), tree = (tool, input, work = async () => {}) => authority.invoke(f.envelope(), "developer.worktree", input, async (lease, signal) => {
     const guard = await ports.worktree(tool, input, lease, signal); try { await work(); } finally { await guard.close(); } });
   const owned = join(root, "worktree-owned"), foreign = join(root, "worktree-foreign");
@@ -173,10 +175,18 @@ test("worktrees: owned identity is recorded, destructive removal needs exact ide
   git("worktree", "add", "-q", "-b", "foreign", foreign); // not created through the plugin
   await rejects(tree("opencode.worktree_remove", { directory: foreign }), /developer_worktree_unowned/);
   await rejects(tree("opencode.worktree_remove", { directory: "owned" }), /developer_worktree_identity_required/);
-  await rejects(tree("opencode.worktree_remove", { directory: owned, force: true }), /developer_worktree_removal_not_approved/);
+  const answer = async approve => {
+    while (!approvals.pending().length) await new Promise(r => setImmediate(r));
+    const request = Object.assign(Readable.from([Buffer.from(JSON.stringify({ approve }))]), { method: "POST", headers: {} });
+    return developerCommand(request, new URL("http://localhost/api/v1/developer/worktree-removals/" + approvals.pending()[0].id), { approvals, authority });
+  };
+  // Model-supplied approval fields never count: only the direct command answers.
+  const forced = rejects(tree("opencode.worktree_remove", { directory: owned, force: true, approved: true }), /developer_worktree_removal_not_approved/);
+  await answer(false); await forced;
   assert.ok(existsSync(owned));
-  await tree("opencode.worktree_remove", { directory: owned }, async () => git("worktree", "remove", owned));
-  assert.equal(developer.worktrees().length, 0); assert.equal(approvals, 2); assert.ok(existsSync(foreign));
+  const removal = tree("opencode.worktree_remove", { directory: owned, approve: true }, async () => git("worktree", "remove", owned));
+  await answer(true); await removal;
+  assert.equal(developer.worktrees().length, 0); assert.equal(approvals.pending().length, 0); assert.ok(existsSync(foreign));
   await rejects(tree("opencode.session_move", { directory: root }), /developer_root_denied/);
 });
 
@@ -267,6 +277,27 @@ test("revocation closes a live WebSocket-style tunnel and pending read; late byt
   for (let attempt = 0; attempt < 30 && helperPids().some(pid => !pidsBefore.includes(pid)); attempt++) await new Promise(r => setTimeout(r, 200));
   assert.deepEqual(helperPids().filter(pid => !pidsBefore.includes(pid)), []); // owned transport client process is gone
   await h.proxy.close(); h.servers.close();
+});
+
+test("browser exports (files.get, screenshot) write only inside a configured downloads write root", async () => {
+  const f = fixture(), { workspace, configuration } = workspaceFor("exports"), actions = ACTIONS;
+  const exported = (developer, tool) => { const { authority, ports } = direct(developer, f);
+    return authority.invoke(f.envelope(), "developer.browser", {}, async (lease, signal) => (await ports.files(lease, tool, {}, signal)).close()); };
+  await rejects(exported(createDeveloperRuntime({ resources, configuration: { ...configuration, actions } }), "browser.screenshot"), /developer_downloads_root_required/);
+  await rejects(exported(createDeveloperRuntime({ resources, configuration: { ...configuration, actions, downloads: join(root, "elsewhere") } }), "browser.files.get"), /developer_root_denied/);
+  await exported(createDeveloperRuntime({ resources, configuration: { ...configuration, actions, downloads: join(workspace, "downloads") } }), "browser.screenshot");
+  assert.ok(existsSync(join(workspace, "downloads")));
+});
+
+test("lease renewal is an explicit direct command and fails after closure", async () => {
+  const h = await browserHarness(), id = h.owned.lease.id, before = h.owned.lease.grant.expires_at_ms;
+  const renew = leaseId => developerCommand(Object.assign(Readable.from([Buffer.from("{}")]), { method: "POST", headers: {} }),
+    new URL(`http://localhost/api/v1/developer/leases/${leaseId}/renew`), { approvals: createWorktreeApprovals(), authority: h.authority });
+  await new Promise(r => setTimeout(r, 20));
+  assert.ok((await renew(id)).value.expires_at_ms > before);
+  await h.proxy.close(); await h.owned.revoke();
+  await rejects(renew(id), /capability_stale/);
+  h.servers.close();
 });
 
 test("lease expiry and the byte limit close owned sockets; cleanup debt retains the lease until closure is acknowledged", async () => {

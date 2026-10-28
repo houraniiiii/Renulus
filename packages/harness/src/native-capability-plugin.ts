@@ -9,6 +9,7 @@ import type { Plugin } from '@opencode/plugin/effect/plugin';
 import type { Tool as ToolSchema } from '@opencode/schema/tool';
 import { createChildAuthority } from './child-authority.ts';
 import { capabilityAction, type NativeCapabilityPorts, type NativeCapabilityContext } from './capability-authority.ts';
+import { BROWSER_EXPORTS } from './developer-plugin.ts';
 
 const failure=(code:string)=>new Tool.Error({message:code});
 const qualified=(tool:ToolSchema.Info)=>tool.options?.namespace?tool.options.namespace+'.'+tool.name:tool.name;
@@ -72,7 +73,7 @@ export async function createNativeCapabilityPlugin(ports:NativeCapabilityPorts) 
         if(name==='shell')return ports.developer!.shell(input,lease,combined);
         let guard:{close():Promise<void>}|undefined;
         try {
-          if(action.startsWith('developer.files.')||['browser.files.upload','browser.files.drop','browser.preview'].includes(name))guard=await ports.developer!.files(lease,name,input,combined);
+          if(action.startsWith('developer.files.')||['browser.files.upload','browser.files.drop','browser.preview'].includes(name)||BROWSER_EXPORTS.test(name))guard=await ports.developer!.files(lease,name,input,combined);
           if(action==='developer.worktree')guard=await ports.developer!.worktree(name,input,lease,combined);
           return await Effect.runPromiseWith(context)(provide(original(input,native)).pipe(Effect.provideService(Invocation,{envelope,signal:combined})),{signal:combined});
         } finally {await guard?.close();}

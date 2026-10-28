@@ -4,11 +4,13 @@ import os
 from pathlib import Path
 import socket
 import sys
+from io import StringIO
 from tempfile import TemporaryDirectory
+from unittest import mock
 from threading import Event
 import time
 import unittest
-from renulus.workers.capability_shell import TrustedShell
+from renulus.workers.capability_shell import OwnedShell, TrustedShell, serve
 
 
 @unittest.skipUnless(os.name=="nt","Windows Job Object acceptance")
@@ -52,6 +54,46 @@ class TrustedShellTests(unittest.TestCase):
             finally:
                 owner.terminate()
                 server.close()
+
+    def test_doctor_mode_is_refused_and_a_failed_job_query_is_reported_as_uncertain(self):
+        class Heartbeats:
+            def __init__(self,first):self.first=first
+            def readline(self):return self.first
+            def __iter__(self):
+                while True:
+                    time.sleep(.05)
+                    yield "{}"
+        class FailingQuery:
+            def __init__(self,real):self.real=real
+            def __getattr__(self,name):return (lambda *args:0) if name=="QueryInformationJobObject" else getattr(self.real,name)
+        with TemporaryDirectory(prefix="renulus-capability-shell-") as folder:
+            workspace=Path(folder)
+            env={k:os.environ[k] for k in ("SystemRoot","WINDIR","TEMP","TMP") if k in os.environ}
+            start=lambda code,mode="developer":TrustedShell.start([sys.executable,"-c",code],cwd=str(workspace),workspace=str(workspace),
+                environment=env,current=lambda:True,mode=mode,timeout_ms=5000)
+            with self.assertRaisesRegex(Exception,"shell_developer_mode_required"):
+                start("pass",mode="doctor")
+            owner=start("import time;time.sleep(30)")
+            real=owner.kernel.api
+            try:
+                owner.kernel.api=FailingQuery(real)
+                with self.assertRaisesRegex(Exception,"shell_descendants_uncertain"):
+                    owner.terminate()
+            finally:
+                owner.kernel.api=real
+                owner.terminate()
+            original=OwnedShell.__init__
+            def failing_init(self,*args,**kwargs):
+                original(self,*args,**kwargs)
+                self.kernel.api=FailingQuery(self.kernel.api)
+            request={"argv":[sys.executable,"-c","pass"],"cwd":str(workspace),"workspace":str(workspace),"environment":env,
+                "mode":"developer","timeout_ms":5000,"max_output_bytes":4096}
+            out=StringIO()
+            with mock.patch.object(OwnedShell,"__init__",failing_init):
+                serve(Heartbeats(json.dumps(request)),out)
+            reply=json.loads(out.getvalue())
+            self.assertFalse(reply["ok"]);self.assertEqual(reply["error"],"shell_descendants_uncertain")
+            self.assertFalse(reply["descendants_settled"])
 
 
 if __name__=="__main__":unittest.main()

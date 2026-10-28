@@ -14,7 +14,7 @@ export const CAPABILITY_SCHEMA = `CREATE TABLE IF NOT EXISTS capability_effects 
  used_bytes INTEGER NOT NULL DEFAULT 0 CHECK(used_bytes>=0), effect_reference TEXT);
  CREATE INDEX IF NOT EXISTS capability_effects_root ON capability_effects(root_id,state);
  CREATE TABLE IF NOT EXISTS capability_closed_roots(root_id TEXT PRIMARY KEY);`;
-const types = new Set(['capability.admit', 'capability.current', 'capability.close', 'capability.settle', 'capability.pending']);
+const types = new Set(['capability.admit', 'capability.current', 'capability.close', 'capability.settle', 'capability.renew', 'capability.pending']);
 const id = (v: unknown) => { text(v, 1, 256); if (!/^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(v)) reject('capability_invalid_identity'); };
 const sha = (v: unknown) => { text(v, 64, 64); if (!/^[a-f0-9]{64}$/.test(v)) reject('capability_invalid_digest'); };
 export function validateEnvelope(e: CapabilityEnvelope): void {
@@ -41,6 +41,7 @@ export function validateCapabilityCommand(c: CapabilityCommand): void {
   switch(c.type) {
     case 'capability.admit': exact(c,['type','id','envelope','action','payload_sha256','grant']); id(c.id); validateEnvelope(c.envelope); id(c.action); sha(c.payload_sha256); validateGrant(c.grant); break;
     case 'capability.current': exact(c,['type','id','envelope','bytes','now_ms']); id(c.id); validateEnvelope(c.envelope); integer(c.bytes,0,100*1024*1024); integer(c.now_ms,1); break;
+    case 'capability.renew': exact(c,['type','id','expires_at_ms']); id(c.id); integer(c.expires_at_ms,1); break;
     case 'capability.close': case 'capability.pending': exact(c,['type','root_id']); id(c.root_id); break;
     case 'capability.settle': exact(c,['type','id','outcome','effect_reference']); id(c.id); if(!['settled','uncertain'].includes(c.outcome)) reject('capability_invalid_outcome'); if(c.effect_reference !== null) text(c.effect_reference,1,512); break;
     default: reject('storage_invalid_command');
@@ -78,6 +79,12 @@ export function executeCapabilityCommand<C extends CapabilityCommand>(db: Databa
       current(db,c.envelope,lease.action);
       if(lease.grant.expires_at_ms<=Math.max(Date.now(),c.now_ms) || lease.used_bytes+c.bytes>lease.grant.max_bytes) reject('capability_limit');
       db.prepare('UPDATE capability_effects SET used_bytes=used_bytes+? WHERE id=?').run(c.bytes,c.id); result=read(db,c.id); break;
+    }
+    case 'capability.renew': {
+      const lease=read(db,c.id); if(lease.state!=='admitted' || lease.action!=='developer.browser') reject('capability_stale');
+      current(db,lease.envelope,lease.action);
+      if(c.expires_at_ms<=lease.grant.expires_at_ms || c.expires_at_ms>Date.now()+300_000) reject('capability_grant_denied');
+      db.prepare('UPDATE capability_effects SET grant_json=? WHERE id=?').run(canonical({...lease.grant,expires_at_ms:c.expires_at_ms}),c.id); result=read(db,c.id); break;
     }
     case 'capability.close': db.prepare('INSERT OR IGNORE INTO capability_closed_roots VALUES(?)').run(c.root_id);
       result={closed:Number(db.prepare("UPDATE capability_effects SET state='closed' WHERE root_id=? AND state='admitted'").run(c.root_id).changes)}; break;

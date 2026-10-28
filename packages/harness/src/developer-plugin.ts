@@ -5,7 +5,7 @@
 import { spawn, execFile, type ChildProcessByStdio } from 'node:child_process';
 import type { Readable, Writable } from 'node:stream';
 import { createHash } from 'node:crypto';
-import { lstat, readFile, realpath } from 'node:fs/promises';
+import { lstat, mkdir, readFile, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Effect } from 'effect';
@@ -27,6 +27,8 @@ export interface DeveloperConfiguration {
   git?: string;
   /** Exact browser network targets (host:port, resolved address pinned by the transport). */
   endpoints: readonly { host: string; port: number; private_network: boolean }[];
+  /** Directory (inside a write root) that receives browser downloads, screenshots and captures. Without it those tools are refused. */
+  downloads?: string;
 }
 export interface HelperResources { python: string; sourceRoot: string }
 export interface DeveloperReceipt {
@@ -43,6 +45,7 @@ export interface DeveloperOptions {
 }
 export type DeveloperRuntime = NonNullable<ReturnType<typeof createDeveloperRuntime>>;
 
+export const BROWSER_EXPORTS = /^browser\.(files\.get|screenshot|trace|cpu|heap|lighthouse)/;
 const deny = (code: string): never => { throw new Error(code); };
 const sha256 = (bytes: string | Uint8Array) => createHash('sha256').update(bytes).digest('hex');
 const same = (left: string, right: string) => process.platform === 'win32' ? left.toLowerCase() === right.toLowerCase() : left === right;
@@ -74,6 +77,8 @@ export function createDeveloperRuntime(options: DeveloperOptions) {
   if (configuration?.enabled !== true) return undefined;
   const workspace = path.resolve(configuration.workspace);
   if (!path.isAbsolute(configuration.workspace)) return deny('developer_workspace_absolute');
+  // The patched browser plugin saves exports here (never to the OS temp directory); one developer runtime per process.
+  if (configuration.downloads) (globalThis as Record<symbol, unknown>)[Symbol.for('renulus.browser.downloads')] = path.resolve(workspace, configuration.downloads);
   const receipts: DeveloperReceipt[] = [], known = new Map<string, string>(), owned = new Map<string, OwnedWorktree>();
   const key = (file: string) => process.platform === 'win32' ? file.toLowerCase() : file;
   const requireDeveloper = (envelope: CapabilityEnvelope) => {
@@ -118,7 +123,7 @@ export function createDeveloperRuntime(options: DeveloperOptions) {
       if (!configuration.actions.includes(action)) return deny('developer_action_not_enabled');
       const browser = action.startsWith('developer.browser');
       return { actions: [action], roots: configuration.roots.map(root => ({ ...root })), skills: [],
-        endpoints: browser ? configuration.endpoints.map(endpoint => ({ ...endpoint })) : [],
+        endpoints: browser || action === 'developer.http' ? configuration.endpoints.map(endpoint => ({ ...endpoint })) : [],
         max_bytes: browser ? 100 * 1024 * 1024 : 4 * 1024 * 1024, expires_at_ms: Date.now() + 299_000 };
     },
     actions: [...configuration.actions],
@@ -132,6 +137,10 @@ export function createDeveloperRuntime(options: DeveloperOptions) {
           signal.throwIfAborted();
           const fields = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>;
           const writing = lease.action === 'developer.files.write';
+          if (BROWSER_EXPORTS.test(tool)) {
+            await mkdir(await allowed(lease, configuration.downloads ?? deny('developer_downloads_root_required'), 'write'), { recursive: true });
+            return { async close() {} };
+          }
           const raw = tool === 'patch' ? patchPaths(fields.patchText) : tool === 'browser.files.upload' || tool === 'browser.files.drop'
             ? Array.isArray(fields.paths) ? fields.paths : deny('developer_path_required')
             : tool === 'glob' || tool === 'grep' ? [fields.path ?? '.'] : [fields.path];

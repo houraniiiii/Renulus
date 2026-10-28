@@ -40,6 +40,9 @@ export const patches = [
     ['execute: (input, context) => Effect.gen(function* () {','execute: (input, context) => Effect.gen(function* () {\n            const boundary = yield* CapabilityBoundary;\n            if (!boundary) throw new Error("renulus_mcp_authority_required");\n            return yield* boundary.mcpTool({server:tool.server,name:tool.name,inputSchema:tool.inputSchema,outputSchema:tool.outputSchema}, input, context, Effect.gen(function* () {'],
     ['          }).pipe(Effect.mapError((error) => error instanceof ToolFailure', '            }));\n          }).pipe(Effect.mapError((error) => error instanceof ToolFailure'],
   ]},
+  { package:'plugin-browser',file:'dist/files.js',changes:[
+    ['mkdtemp(join(tmpdir(), "opencode-browser-"))','mkdtemp(join(globalThis[Symbol.for("renulus.browser.downloads")] ?? (() => { throw new Error("renulus_browser_downloads_required"); })(), "opencode-browser-"))'],
+  ]},
   { package:'plugin-browser',file:'dist/connection.js',changes:[
     ['import { BrowserTunnel } from "./tunnel.js";','import { CapabilityBoundary } from "@opencode/core/renulus-boundary";'],
     ['    const browsers = new Map();','    const boundary = yield* CapabilityBoundary;\n    if (!boundary) throw new Error("renulus_browser_authority_required");\n    const browsers = new Map();'],

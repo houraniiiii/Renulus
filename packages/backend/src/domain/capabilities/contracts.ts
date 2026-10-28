@@ -22,11 +22,12 @@ export type CapabilityCommand =
   | { type: 'capability.current'; id: string; envelope: CapabilityEnvelope; bytes: number; now_ms: number }
   | { type: 'capability.close'; root_id: string }
   | { type: 'capability.settle'; id: string; outcome: 'settled' | 'uncertain'; effect_reference: string | null }
+  | { type: 'capability.renew'; id: string; expires_at_ms: number }
   | { type: 'capability.pending'; root_id: string };
 export interface CapabilityResults {
   'capability.admit': CapabilityLease; 'capability.current': CapabilityLease;
   'capability.close': { closed: number }; 'capability.settle': CapabilityLease;
-  'capability.pending': CapabilityLease[];
+  'capability.renew': CapabilityLease; 'capability.pending': CapabilityLease[];
 }
 export interface CapabilityStorage {
   execute<C extends CapabilityCommand>(command: C): Promise<CapabilityResults[C['type']]>;
