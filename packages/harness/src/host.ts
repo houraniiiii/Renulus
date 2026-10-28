@@ -1,6 +1,7 @@
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { mkdir } from "node:fs/promises";
+import { DatabaseSync } from "node:sqlite";
 import { Cause, Context, Effect, Layer, Logger, ManagedRuntime, Schema, Stream } from "effect";
 import { AIError, InvalidRequestError, LLMClient, LLMRequest, Media, type LLMClientShape, type Message, type SystemPart } from "@opencode/ai";
 import { OpenCode, AbsolutePath, Location, Session, Agent } from "@opencode/sdk/effect";
@@ -108,6 +109,16 @@ function imageFiles(value: unknown): { uri: string }[] | undefined {
 }
 
 /** A persistent execution owner. Domain records continue to belong to Python. */
+/** The native store is opened inside OpenCode without secure_delete: rewrite the file so removed text leaves no freed page or WAL frame. */
+function eraseFreedPages(file: string) {
+  const database = new DatabaseSync(file, { timeout: 5000 });
+  try {
+    database.exec("VACUUM");
+    const result = database.prepare("PRAGMA wal_checkpoint(TRUNCATE)").get() as { busy: number };
+    if (result.busy) throw new Error("native_store_scrub_busy");
+  } finally { database.close(); }
+}
+
 export async function openHarness(options: HarnessOptions) {
   const selection = options.volatileGraph ? undefined : await verifyPreparedProfile(options);
   if (selection?.state === "active") validateStores(options);
@@ -587,6 +598,7 @@ export async function openHarness(options: HarnessOptions) {
     async removeSession(sessionId: string) { return mutate(async()=>{
       const id=Session.ID.make(sessionId);if(await run(execution.isActive(id)))throw new Error('transfer_requires_quiescence');
       await run(sdk.sessions.remove({sessionID:id}));bindings.delete(sessionId);
+      if(!options.volatileGraph)eraseFreedPages(path.join(state,"opencode.sqlite"));
     }); },
     async listChildren(sessionId: string) { requireReady();return (await run(sdk.sessions.list({parentID:Session.ID.make(sessionId),limit:100}))).data.map(info=>Schema.encodeSync(Session.Info)(info)); },
     async recover(input: { configurationId: string; sessionIds: string[] }) {

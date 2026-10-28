@@ -160,8 +160,10 @@ test('Disconnect wins the serialized boundary mid-Save: no promotion, staging re
   assert.equal(await outcome, 'temporary_cancelled');
   assert.deepEqual(await disconnecting, { state: 'discarded' });
   assert.equal(sql('SELECT count(*) AS n FROM learn_threads')[0].n, threads);
-  // Canonical files only: the native store's own freed SQLite pages are outside this lane's host surface.
   assert.equal(files(join(profile, 'state')).filter(file => /renulus\.sqlite3/.test(file)).some(file => readFileSync(file).includes(Buffer.from(cancelled))), false, 'retired canonical intent carries no content');
+  const nativeFiles = files(join(profile, 'state/harness')).filter(file => /opencode\.sqlite/.test(file));
+  assert.ok(nativeFiles.length >= 1);
+  assert.equal(nativeFiles.some(file => readFileSync(file).includes(Buffer.from(cancelled))), false, 'retired native staging leaves no text in the main db, -wal or -shm');
   const [row] = sql("SELECT id,state,plan_json FROM temporary_save_intents WHERE idempotency_key=?", key('cancel-first'));
   assert.equal(row.state, 'retired'); assert.equal(row.plan_json.includes('Never promoted'), false); assert.equal(row.plan_json.includes('exchanges'), false);
   await assert.rejects(target.native.exportSession(JSON.parse(row.plan_json).rootSessionId), { _tag: 'SessionNotFoundError' });
