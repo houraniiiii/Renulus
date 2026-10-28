@@ -74,8 +74,9 @@ export function createNativePorts(options: NativePortOptions): NativeCapabilityP
     const binding = options.binding(envelope.session_id);
     const run = await storage.command({ type: 'learning.current', runId: binding.operation_id, binding });
     // A proposal only: acceptance is the authenticated rename command with this expected revision.
-    return { content: JSON.stringify({ status: 'proposal', thread_id: run.receipt.conversation.identity.id, title: title.trim(),
-      expected_revision: run.receipt.conversation.revision, requires_explicit_acceptance: true }) };
+    return { output: { sessionID: envelope.session_id, title: title.trim() },
+      content: JSON.stringify({ status: 'proposal', thread_id: run.receipt.conversation.identity.id, title: title.trim(),
+        expected_revision: run.receipt.conversation.revision, requires_explicit_acceptance: true }) };
   });
   return {
     authority, skills, commands: registry.commands, children: options.children,
