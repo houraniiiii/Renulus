@@ -2,6 +2,7 @@
 // Synchronous local functions; the integration-owned worker supplies the transaction.
 import type { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import type { UpdatesCommand, UpdatesResults, ObjectValue, SourceTarget, CheckInput, CheckRoute } from '../domain/updates/contracts.ts';
 import { hash, https, route, validateReview, observation, matches, article } from '../domain/updates/validation.ts';
 import { canonical, digest, one, rows } from './schema.ts';
@@ -11,6 +12,11 @@ import { utcNow } from './export.ts';
 import { studyPreference, saveStudyPreference, bumpStudyContext } from './study.ts';
 import { projectKnowledgeSourceStatus } from './knowledge.ts';
 import { reconcileMemorySupport } from './memory.ts';
+import { executeContent } from './content.ts';
+const sourceRegister = new Map(readFileSync(new URL('../../../../docs/SOURCES.md', import.meta.url), 'utf8').split(/\r?\n/).flatMap(line => {
+  const id = /^\| ([A-Z]\d{2}) — /.exec(line)?.[1], urls = line.split('|')[1]?.match(/https:\/\/[^) ]+/g);
+  return id && !/^[TR]/.test(id) && urls?.length ? [[id, urls] as const] : [];
+}));
 const sha = (value: unknown) => digest(canonical(value));
 const parse = (value: unknown): any => JSON.parse(String(value));
 const uid = (prefix: string) => prefix + '_' + randomUUID().replaceAll('-', '');
@@ -55,6 +61,24 @@ function entry(db: DatabaseSync, id: string): ObjectValue {
 function freshness(row: ObjectValue) {
   if (!row.last_success_at) return 'unchecked';
   return row.state === 'failed' || Date.now() - Date.parse(row.last_success_at) > 7 * 86400_000 ? 'stale' : 'checked-recently';
+}
+function publication(row: ObjectValue): ObjectValue {
+  const { fetch_metadata_json, ...rest } = row;
+  return { ...rest, fetch_metadata: parse(fetch_metadata_json), freshness: freshness(row), enabled: !!row.enabled };
+}
+function publicationCandidate(db: DatabaseSync, sourceId: string, url: string) {
+  const source = one(db, 'SELECT * FROM update_source_checks WHERE source_id=?', sourceId); if (!source) reject('source_missing');
+  const registered = sourceRegister.get(sourceId) ?? [String(source.url)], host = https(url).hostname;
+  const hosts = new Set(registered.flatMap(value => { const host = new URL(value).hostname; return [host, host.startsWith('www.') ? host.slice(4) : 'www.' + host]; }));
+  if (!hosts.has(host)) reject('source_host_blocked');
+  const candidates = [
+    ...registered.slice(1).filter(value => new URL(value).pathname.toLowerCase().endsWith('.pdf')).map(url => ({ url, title: source.title })),
+    ...parse(source.links_json).map((link: ObjectValue) => ({ url: link.url, title: link.label || source.title })),
+    ...executeContent(db, { type: 'content.sources' }).items.filter((s: ObjectValue) => s.register_id === sourceId),
+  ];
+  const candidate = candidates.findLast((item: ObjectValue) => item.url.split('#')[0] === url);
+  if (!candidate) reject('publication_not_registered');
+  return candidate;
 }
 function target(db: DatabaseSync, r: CheckRoute): ObjectValue {
   if (r.kind === 'source') { const row = one(db, 'SELECT * FROM update_source_checks WHERE source_id=?', r.id); if (!row) reject('source_missing'); return row; }
@@ -155,9 +179,15 @@ export function executeUpdates<C extends UpdatesCommand>(db: DatabaseSync, c: C)
       return entry(db, c.id);
     }); break;
     case 'updates.sync': entry(db, c.id); result = sync(db, c.id); break;
-    case 'updates.publications': result = { publications: rows(db, 'SELECT * FROM update_publications ORDER BY tracked_at DESC,id') }; break;
-    case 'updates.publications.track': result = receipt(db, c, () => { if (!one(db, 'SELECT 1 FROM update_source_checks WHERE source_id=?', c.sourceId)) reject('source_missing'); const id = 'publication_' + sha({ source: c.sourceId, url: c.url }).slice(0, 24); const old = one(db, 'SELECT * FROM update_publications WHERE source_id=? AND url=?', c.sourceId, c.url); if (old) return old; db.prepare('INSERT INTO update_publications(id,source_id,url,title,permission_reference,max_bytes,tracked_at) VALUES(?,?,?,?,?,?,?)').run(id, c.sourceId, c.url, c.url, c.permissionReference, c.maxBytes, utcNow()); return one(db, 'SELECT * FROM update_publications WHERE id=?', id)!; }); break;
-    case 'updates.publications.stop': db.prepare('UPDATE update_publications SET enabled=0 WHERE id=?').run(c.id); cancelChecks(db); result = { stopped: true }; break;
+    case 'updates.publications': result = { publications: rows(db, 'SELECT * FROM update_publications WHERE enabled=1 ORDER BY source_id,title,id').map(publication) }; break;
+    case 'updates.publications.track': result = receipt(db, c, () => {
+      const url = c.url.split('#')[0], candidate = publicationCandidate(db, c.sourceId, url), id = 'publication_' + digest(c.sourceId + '\n' + url).slice(0, 24);
+      const old = one(db, 'SELECT * FROM update_publications WHERE source_id=? AND url=?', c.sourceId, url);
+      if (!old?.enabled && Number(one(db, 'SELECT COUNT(*) AS n FROM update_publications WHERE enabled=1')!.n) >= 100) reject('publication_tracking_limit');
+      db.prepare('INSERT INTO update_publications(id,source_id,url,title,permission_reference,max_bytes,tracked_at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET enabled=1,permission_reference=excluded.permission_reference,max_bytes=excluded.max_bytes').run(old?.id ?? id, c.sourceId, url, candidate.title, c.permissionReference.trim(), c.maxBytes, utcNow());
+      return publication(one(db, 'SELECT * FROM update_publications WHERE id=?', old?.id ?? id)!);
+    }); break;
+    case 'updates.publications.stop': if (!one(db, 'SELECT 1 FROM update_publications WHERE id=?', c.id)) reject('publication_missing'); db.prepare('UPDATE update_publications SET enabled=0 WHERE id=?').run(c.id); cancelChecks(db); result = { id: c.id, enabled: false }; break;
     case 'updates.check.begin': {
       const t = target(db, c.route), now = utcNow();
       if (!c.force && t.last_checked_at && Date.now() - Date.parse(t.last_checked_at) < 6 * 3600_000) { result = { input: null, cached: true, state: t.state, error_code: t.error_code ?? null, last_success_at: t.last_success_at ?? null }; break; }
