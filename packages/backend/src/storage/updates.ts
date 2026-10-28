@@ -155,7 +155,7 @@ function schedule(db: DatabaseSync): ObjectValue {
   const literature = sources.find(source => source.source_id === 'L03');
   if (literature && ['europepmc.org', 'www.ebi.ac.uk'].includes(new URL(sourceRegister.get('L03')?.[0] ?? String(literature.url)).hostname))
     options.push(...executeContent(db, { type: 'content.topics' }).items.map((topic: ObjectValue) => ({ kind: 'literature', id: topic.id, source_id: 'L03', title: topic.title, route: 'Europe PMC topic metadata (25 records)' })));
-  const config = one(db, 'SELECT * FROM update_schedule WHERE id=1')!, last_run = one(db, 'SELECT * FROM update_schedule_runs ORDER BY started_at DESC,rowid DESC LIMIT 1');
+  const config = one(db, 'SELECT * FROM update_schedule WHERE id=1')!, last_run = one(db, 'SELECT * FROM update_schedule_runs ORDER BY started_at DESC,rowid DESC LIMIT 1') ?? null;
   const jobs: ObjectValue[] = rows(db, 'SELECT * FROM update_schedule_jobs ORDER BY kind,target_id').map(job => { const option = options.find(option => option.kind === job.kind && option.id === job.target_id); return { ...job, title: option?.title ?? job.target_id, available: !!option }; });
   return { enabled: !!config.enabled, cadence_hours: config.cadence_hours, selection: jobs.map(job => ({ kind: job.kind, id: job.target_id })), jobs, options, last_run,
     next_due_at: config.enabled && jobs.length ? jobs.map(job => String(job.next_due_at)).sort()[0] : null,
@@ -180,7 +180,7 @@ export function executeUpdates<C extends UpdatesCommand>(db: DatabaseSync, c: C)
       const affected = rows(db, 'SELECT * FROM update_affected_versions WHERE entry_id=? ORDER BY kind,entity_id,version,pinned_source_id LIMIT ? OFFSET ?', c.id, c.limit, c.offset).map(({ locators_json, objective_ids_json, ...r }) => ({ ...r, locators: parse(locators_json), objective_ids: parse(objective_ids_json) }));
       result = { affected, total, limit: c.limit, offset: c.offset, next_offset: c.offset + affected.length < total ? c.offset + affected.length : null }; break;
     }
-    case 'updates.annotations': { const annotations = rows(db, 'SELECT a.*,e.url,e.title,e.review_state FROM update_affected_versions a JOIN update_entries e ON e.id=a.entry_id WHERE a.kind=? AND a.entity_id=? AND a.version=? ORDER BY a.detected_at,a.entry_id', c.kind, c.id, c.version); result = { kind: c.kind, id: c.id, version: c.version, needs_re_review: annotations.some(r => r.state === 'needs-re-review'), annotations }; break; }
+    case 'updates.annotations': { const annotations: ObjectValue[] = rows(db, 'SELECT a.*,e.url,e.title,e.review_state FROM update_affected_versions a JOIN update_entries e ON e.id=a.entry_id WHERE a.kind=? AND a.entity_id=? AND a.version=? ORDER BY a.detected_at,a.entry_id,a.pinned_source_id', c.kind, c.id, c.version).map(({ locators_json, objective_ids_json, ...r }) => ({ ...r, locators: parse(locators_json), objective_ids: parse(objective_ids_json) })); result = { kind: c.kind, id: c.id, version: c.version, needs_re_review: annotations.some(r => r.state === 'needs-re-review'), annotations }; break; }
     case 'updates.review': result = receipt(db, c, () => {
       const e = entry(db, c.id), r = c.review, now = utcNow(), reviewId = uid('review'); if (e.revision !== c.expectedRevision) reject('revision_conflict');
       let t = r.target ? { ...r.target, ...article(r.target) } : null, changes = { ...r.changes };
