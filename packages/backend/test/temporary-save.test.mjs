@@ -95,7 +95,7 @@ async function volatile(overrides = {}) {
     removeSession: id => target.native.removeSession(id) };
   const family = createTemporaryFamily({ host, rootSessionId: rootSession.id, storage: overrides.storage ?? storage, saved, identity,
     async current() { const c = await storage.command({ type: 'study.context' }); return { contextEpoch: c.epoch, policyRevision: c.policyRevision }; },
-    settle: async () => 'settled' });
+    settle: overrides.settle ?? (async () => 'settled') });
   cleanups.push(async () => { await host.close({ timeoutMs: 10000 }); await runtime.dispose(); rmSync(volatileRoot, { recursive: true, force: true }); });
   return { host, family, client, volatileRoot, rootId: rootSession.id, push: (...r) => runtime.runPromise(client.push(...r)),
     requests: async () => (await runtime.runPromise(client.requests())).length, wait: n => runtime.runPromise(client.wait(n)) };
@@ -211,15 +211,20 @@ test('A failed Save keeps the RAM family and never reports saved; the same key r
 });
 
 test('Abnormal owner loss with live model work cancels, settles and discards; nothing reaches disk', { timeout: 120000 }, async () => {
-  const f = await volatile(); const never = gate(), unsaved = sentinel + '_never_saved';
-  await f.push(Stream.fromEffect(Effect.promise(() => never.open)).pipe(Stream.flatMap(() => Stream.fromIterable(answer('Never delivered ' + unsaved)))));
+  const aborted = gate(), unsaved = sentinel + '_never_saved';
+  const f = await volatile({ settle: async () => { await aborted.open; return 'settled'; } });
+  await f.push(Stream.fromEffect(Effect.never.pipe(Effect.onInterrupt(() => Effect.sync(() => aborted.release())))));
   const sending = f.family.send({ text: 'In-flight temporary question ' + unsaved }).then(() => 'settled', () => 'settled');
   await f.wait(1);
-  assert.deepEqual(await f.family.disconnect(), { state: 'discarded' });
+  let timer;
+  try {
+    assert.deepEqual(await Promise.race([f.family.disconnect(), new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error('disconnect waited for drain before signalling native cancellation')), 5000);
+    })]), { state: 'discarded' });
+  } finally { clearTimeout(timer); }
   assert.equal(await sending, 'settled', 'the live send is cancelled and settled, never left running');
   assert.throws(() => f.family.range(), { code: 'temporary_family_unavailable' });
   assert.equal(holds(profile, unsaved), false); assert.deepEqual(files(f.volatileRoot), []);
-  never.release();
 });
 
 test('Restart reconciliation removes an orphan staged graph and its canonical intent without reconstructing temporary input', { timeout: 120000 }, async () => {

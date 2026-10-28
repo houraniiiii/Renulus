@@ -68,8 +68,8 @@ export function createTemporaryFamily(options: TemporaryFamilyOptions) {
     if (receipt?.state === 'active') return receipt;
     let stagedFiles: Awaited<ReturnType<NonNullable<TemporaryFamilyOptions['stageFiles']>>> | undefined;
     try {
-      if (await options.settle('save') !== 'settled') reject('temporary_settlement_held');
-      await nativeSettlement();
+      const [settlement] = await Promise.all([options.settle('save'), nativeSettlement()]);
+      if (settlement !== 'settled') reject('temporary_settlement_held');
       const current = await options.current();
       const graph = await exportVolatileFamily(options.host, options.rootSessionId);
       if (!plan) {
@@ -154,8 +154,9 @@ export function createTemporaryFamily(options: TemporaryFamilyOptions) {
       });
       if (selected) return { state: 'detached' as const, saved: selected };
       if (state === 'discarded') return { state: 'discarded' as const };
-      if (await options.settle('disconnect') !== 'settled') { state = 'held'; reject('temporary_settlement_held'); }
-      await nativeSettlement(); await saving?.catch(() => {}); await retireStaging(); await discardRAM();
+      const [settlement] = await Promise.all([options.settle('disconnect'), nativeSettlement()]);
+      if (settlement !== 'settled') { state = 'held'; reject('temporary_settlement_held'); }
+      await saving?.catch(() => {}); await retireStaging(); await discardRAM();
       transferred = undefined; state = 'discarded'; return { state: 'discarded' as const };
     },
   };
