@@ -13,11 +13,15 @@ import { createEvidenceDomain } from '../src/domain/evidence/index.ts';
 import { createEvidenceTools } from '../src/domain/evidence/tools.ts';
 import { executeEvidenceCommand } from '../src/domain/evidence/commands.ts';
 import { openEngineWorker } from '../src/workers/process.ts';
+import { canonical, digest } from '../src/storage/schema.ts';
 const repository = fileURLToPath(new URL('../../..', import.meta.url));
 const sql = await readFile(new URL('../../../runtime/renulus/runtime/migrations/007-l1b1-evidence.sql', import.meta.url), 'utf8');
+const knowledgeSql = await readFile(new URL('../../../runtime/renulus/knowledge/schema.sql', import.meta.url), 'utf8');
+const contentSql = await readFile(new URL('../../../runtime/renulus/content/schema.sql', import.meta.url), 'utf8');
 function storageFixture() {
   const db = new DatabaseSync(':memory:');
   db.exec('CREATE TABLE retrieval_usage(provider TEXT,day TEXT,requests INTEGER,credits INTEGER,PRIMARY KEY(provider,day));' + sql);
+  db.exec(knowledgeSql + contentSql + 'CREATE TABLE assessment_test_attempts(id TEXT,mode TEXT,status TEXT); CREATE TABLE knowledge_source_status_events(id TEXT PRIMARY KEY,source_id TEXT,request_hash TEXT,payload_json TEXT,created_at TEXT);');
   return { db, storage: { async command(c) { db.exec('BEGIN IMMEDIATE'); try {
     const result=executeEvidenceCommand(db,c); db.exec('COMMIT'); return result;
   } catch(error) { db.exec('ROLLBACK'); throw error; } } } };
@@ -70,7 +74,7 @@ test('real evidence providers: Europe PMC, PubMed, saved keyed lane, no quota fa
   const prepared=spawnSync(python,['-I','-X','utf8','-c',script,repository,profile],{env:environment,encoding:'utf8',windowsHide:true});
   assert.equal(prepared.status,0,prepared.stderr);
   const metadata={resultList:{result:[{id:'10001',source:'MED',pmid:'10001',pmcid:'PMC10001',title:'Synthetic kidney study',firstPublicationDate:'2026-09-01',isOpenAccess:'Y',license:'cc by'}]}};
-  const xml=`<article xmlns:xlink="http://www.w3.org/1999/xlink" article-type="research-article"><front><journal-meta><publisher><publisher-name>Synthetic Press</publisher-name></publisher></journal-meta><article-meta><article-id pub-id-type="pmcid">PMC10001</article-id><article-id pub-id-type="pmid">10001</article-id><title-group><article-title>Synthetic kidney study</article-title></title-group><contrib-group><contrib><name><surname>Synthetic Author</surname></name></contrib></contrib-group><pub-date pub-type="epub"><year>2026</year><month>9</month><day>1</day></pub-date><permissions><copyright-holder>Synthetic Author</copyright-holder><license><license-p><ext-link xlink:href="https://creativecommons.org/licenses/by/4.0/">CC BY</ext-link></license-p></license></permissions><abstract><p>Synthetic kidney research abstract.</p></abstract></article-meta></front><body><sec><title>Results</title><p>Synthetic kidney study observations.</p></sec></body></article>`;
+  const xml=`<article xmlns:xlink="http://www.w3.org/1999/xlink" article-type="research-article"><front><journal-meta><publisher><publisher-name>Synthetic Press</publisher-name></publisher></journal-meta><article-meta><article-id pub-id-type="pmcid">PMC10001</article-id><article-id pub-id-type="pmid">10001</article-id><title-group><article-title>Synthetic kidney study</article-title></title-group><contrib-group><contrib><name><surname>Synthetic Author</surname></name></contrib></contrib-group><pub-date pub-type="epub"><year>2026</year><month>9</month><day>1</day></pub-date><permissions><copyright-holder>Synthetic Author</copyright-holder><license><license-p><ext-link xlink:href="https://creativecommons.org/licenses/by/4.0/">CC BY</ext-link></license-p></license></permissions><abstract><p>Synthetic kidney research abstract.</p></abstract></article-meta></front><body><sec><title>Results</title><p>Synthetic kidney study observations.</p><p>Synthetic allowed glomerular research passage.</p></sec></body></article>`;
   const seen=[];let redirect=false;
   const server=createServer((req,res)=>{
     const url=new URL(req.url,'http://localhost');seen.push(url.pathname);
@@ -103,8 +107,20 @@ test('real evidence providers: Europe PMC, PubMed, saved keyed lane, no quota fa
     redirect=true;const blocked=await domain.search({...input,providers:['europe-pmc']});
     assert.equal(blocked['europe-pmc'].error,'retrieval_redirect_blocked');assert.equal(blocked['europe-pmc'].usage.requests,1);assert.ok(!seen.includes('/never-follow'));
     redirect=false;const fetched=await domain.fetch({pmcid:'PMC10001',budget:{max_requests:2,max_credits:0},operationId:input.operationId,signal:input.signal});
-    assert.equal(fetched.source_restrictions_checked,false);assert.ok(fetched.passages.length>0);
+    assert.equal(fetched.source_restrictions_checked,true);assert.ok(fetched.passages.length>0);
     assert.equal(fetched.passages[0].publication_date,'2026-09-01');assert.ok(fetched.passages[0].retrieved_at);assert.match(fetched.passages[0].licence,/CC-BY/);
+    const excluded = fetched.passages[0], allowed = fetched.passages[1];
+    assert.ok(allowed, 'fixture supplies two independently checked passages');
+    db.prepare('INSERT INTO content_question_versions VALUES(?,?,?,?,?)').run('synthetic-reserved',1,'synthetic-family',
+      JSON.stringify({usage:'assessment_reserved',stem:excluded.text}),digest('synthetic-question'));
+    const filtered=await domain.fetch({pmcid:'PMC10001',budget:{max_requests:2,max_credits:0},operationId:input.operationId,signal:input.signal});
+    assert.deepEqual(filtered.passages.map(p=>p.id),[allowed.id]);
+    assert.ok(!JSON.stringify(filtered).includes(excluded.text));
+    const event={source_id:'L03',identity:{pmcid:'PMC10001'},changes:{repository_removed:true}};
+    db.prepare('INSERT INTO knowledge_source_status_events VALUES(?,?,?,?,?)').run('synthetic-exclusion','L03',digest(canonical(event)),JSON.stringify(event),'2026-10-28');
+    await assert.rejects(domain.current(filtered.source_restrictions_revision,input.signal),{code:'source_evidence_changed'});
+    const withdrawn=await domain.fetch({pmcid:'PMC10001',budget:{max_requests:2,max_credits:0},operationId:input.operationId,signal:input.signal});
+    assert.deepEqual(withdrawn.passages,[]);
     assert.equal(worker.channel.state().retained,0);
   } finally {await worker.close();db.close();await new Promise(resolve=>server.close(resolve));}
 });

@@ -1,13 +1,18 @@
 // SPDX-License-Identifier: MIT
 import type { StorageClient } from '../../storage/index.ts';
 import type { WorkerChannel } from '../../workers/channel.ts';
+import type { Metadata, Rights, Json } from '../knowledge/contracts.ts';
+export interface EvidencePassage { id: string; text: string; canonical_url: string; publication_date: string;
+  locators: Json[]; metadata: Metadata; rights: Rights; [key: string]: unknown }
 export type EvidenceProvider = 'europe-pmc' | 'pubmed' | 'brave' | 'tavily' | 'exa';
 export interface EvidenceReservation { id: string; operation_id: string; provider: EvidenceProvider; day: string;
   requests: number; credits: number; started: number; state: 'reserved' | 'settled' | 'uncertain' }
 export type EvidenceCommand = { type: 'evidence.reserve'; id: string; operation_id: string; provider: EvidenceProvider;
   day: string; requests: number; credits: number; request_limit: number; credit_limit: number } |
-  { type: 'evidence.settle'; id: string; requests_started: number; effect: 'not_sent' | 'response_received' | 'uncertain' };
-export interface EvidenceResults { 'evidence.reserve': EvidenceReservation; 'evidence.settle': EvidenceReservation }
+  { type: 'evidence.settle'; id: string; requests_started: number; effect: 'not_sent' | 'response_received' | 'uncertain' } |
+  { type: 'evidence.check'; passages: EvidencePassage[] } | { type: 'evidence.current'; stamp: string };
+export interface EvidenceResults { 'evidence.reserve': EvidenceReservation; 'evidence.settle': EvidenceReservation;
+  'evidence.check': { passages: EvidencePassage[]; stamp: string }; 'evidence.current': { stamp: string } }
 export interface EvidenceBudget { max_requests: number; max_credits: number }
 export interface EvidenceSearch { query: string; providers: EvidenceProvider[]; budget: EvidenceBudget; operationId: string; signal: AbortSignal }
 export interface EvidenceConnection { provider: EvidenceProvider; configured: boolean; enabled: boolean; selected: boolean;

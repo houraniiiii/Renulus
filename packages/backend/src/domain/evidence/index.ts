@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { randomUUID } from 'node:crypto';
 import type { HttpResult, EvidencePlan } from '../../../../contracts/worker.ts';
-import type { DatedDiscovery, EvidenceConnection, EvidenceDomainOptions, EvidenceProvider, EvidenceSearch } from './contracts.ts';
+import type { DatedDiscovery, EvidenceConnection, EvidenceDomainOptions, EvidencePassage, EvidenceProvider, EvidenceSearch } from './contracts.ts';
 import { createEngineArtifacts } from '../../workers/artifacts.ts';
 import { integer, reject, text } from '../../storage/contracts.ts';
 export const official = {
@@ -96,12 +96,18 @@ export function createEvidenceDomain({ storage, worker, check, endpoints = {} }:
     }
     return result;
   }
-  return { search: discoverDated, discoverDated, connections,
+  async function current(stamp: string, signal: AbortSignal) {
+    signal.throwIfAborted(); await storage.command({ type: 'evidence.current', stamp });
+  }
+  return { search: discoverDated, discoverDated, connections, current,
     async fetch(input: { pmcid: string; budget: EvidenceSearch['budget']; operationId: string; signal: AbortSignal }) {
       if (typeof input.pmcid !== 'string' || !/^PMC[1-9][0-9]{0,10}$/.test(input.pmcid)) reject('evidence_pmcid_invalid');
       integer(input.budget.max_requests, 0, 100); integer(input.budget.max_credits, 0, 100);
       const result = await perform('europe-pmc', { ...input, query: input.pmcid, providers: ['europe-pmc'] }, 'fetch', input.pmcid);
-      return { ...result, source_restrictions_checked: false as const };
+      const checked = await storage.command({ type: 'evidence.check', passages: result.passages as EvidencePassage[] });
+      await check(input.operationId, input.signal);
+      await current(checked.stamp, input.signal);
+      return { ...result, passages: checked.passages, source_restrictions_checked: true as const, source_restrictions_revision: checked.stamp };
     } };
 }
 export type EvidenceDomain = ReturnType<typeof createEvidenceDomain>;

@@ -17,6 +17,7 @@ import { createLearningGateway } from '../../../harness/src/learning-gateway.ts'
 import { CAPABILITY_COHORT } from '../../../harness/src/capability-plugins.ts';
 import { createPluginLifecycle } from '../plugins/lifecycle.ts';
 import { createToolRegistry } from '../plugins/registry.ts';
+import { createToolReturnFence } from '../plugins/tool-return-fence.ts';
 import { createNativePorts } from '../plugins/native.ts';
 import { createMcp, type McpSettingsPort } from '../domain/capabilities/mcp.ts';
 import { createMcpBroker } from '../domain/capabilities/mcp-broker.ts';
@@ -372,7 +373,7 @@ export async function openConnectedTarget(options: ConnectedTargetOptions) {
     // Grantable run capabilities come only from what is registered here (never developer actions).
     grantable = [...new Set([...tools.permissions(), 'renulus.library', 'renulus.skill', 'renulus.models', 'renulus.child'])];
     result = await openSavedLearningTarget({ storage, harness: { ...harness, root, nativeCapabilities,
-      trustedPlugins: tools.plugins(),
+      trustedPlugins: [...tools.plugins(), createToolReturnFence(storage, id => result.native.binding(id), () => admission && !closing)],
       capabilityArtifacts: artifacts, capabilityPermissions: [...tools.permissions(), ...developer?.actions ?? [], 'renulus.skill', 'renulus.models', 'renulus.child', 'subagent',
         ...artifacts.flatMap(a => a.manifest.tools.map(t => t.permission))] },
       library, onBegin, children: { owns: children.owns, handle: children.handle }, modelCallbacks: async request => {

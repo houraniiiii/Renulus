@@ -70,7 +70,7 @@ export type DispatchCommand =
       availableModels: string[]; operationModel: string | null; fence: Fence; batchSize: 5 | 10 | 20 | null }
   | { type: 'dispatch.child'; runId: string; parentId: string; purpose: Purpose; capabilities: string[]; operationModel: string | null; fence: Fence }
   | { type: 'dispatch.run'; runId: string }
-  | { type: 'dispatch.current'; runId: string; fence: Fence; requiredCapabilities: string[]; permitId: string | null }
+  | { type: 'dispatch.current'; runId: string; fence: Fence; requiredCapabilities: string[]; permitId: string | null; grantEpoch?: number }
   | { type: 'dispatch.reserve'; runId: string; stepId: string; requestKind: RequestKind; continuationOf: string | null;
       requiredCapabilities: string[]; fence: Fence; proof: RequestProof }
   | { type: 'dispatch.admit'; permitId: string; fence: Fence; proof: RequestProof }

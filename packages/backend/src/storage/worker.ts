@@ -98,7 +98,7 @@ async function dispatch(command: StorageCommand) {
     return result;
   });
   if (isStudyCommand(command)) return transaction(true, () => executeStudy(db!, command));
-  if (isEvidenceCommand(command)) return transaction(true, () => executeEvidenceCommand(db!, command));
+  if (isEvidenceCommand(command)) return transaction(command.type === 'evidence.reserve' || command.type === 'evidence.settle', () => executeEvidenceCommand(db!, command));
   if (isCapabilityCommand(command)) return transaction(true, () => executeCapabilityCommand(db!, command));
   if (isMcpConnectionCommand(command)) return transaction(true, () => executeMcpConnectionCommand(db!, command));
   if (isContentCommand(command)) return transaction(true, () => executeContent(db!, command));

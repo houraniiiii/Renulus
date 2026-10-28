@@ -32,6 +32,7 @@ export function createEvidenceTools(deps: EvidenceToolDependencies) {
     await deps.check(authority, signal);
     const current = await deps.resolve(context, signal);
     if (current.operationId !== authority.operationId || current.attemptId !== authority.attemptId || !current.grants.includes('renulus.evidence.' + action)) reject('evidence_tool_grant_denied');
+    if (action === 'fetch') await deps.evidence.current((value as { source_restrictions_revision: string }).source_restrictions_revision, signal);
     signal.throwIfAborted(); return value;
   }
   return { search: (args: unknown, context: { sessionID: string; id: string }, signal: AbortSignal) => execute('search', args, context, signal),
@@ -59,7 +60,7 @@ export function createEvidencePlugin(deps: EvidenceToolDependencies): Plugin {
   const bridge = createEvidenceTools(deps);
   return { id: 'renulus-evidence', effect: context => context.tool.transform(editor => {
     for (const action of ['search','fetch'] as const) editor.add({ name: 'renulus_evidence_' + action,
-      description: action === 'search' ? 'Discover dated literature records using explicitly selected evidence providers. Discovery is not passage evidence.' : 'Fetch dated, licensed PMC passages. Canonical reviewed-source restrictions must still be applied before use as evidence.',
+      description: action === 'search' ? 'Discover dated literature records using explicitly selected evidence providers. Discovery is not passage evidence.' : 'Fetch dated, licensed PMC passages checked against canonical source restrictions.',
       input: (action === 'search' ? { type: 'object', additionalProperties: false, required: ['query'], properties: {
         query: { type: 'string', minLength: 1, maxLength: 240 }, providers: { type: 'array', minItems: 1, uniqueItems: true,
           items: { enum: ['europe-pmc','pubmed','brave','tavily','exa'] } } } } : { type: 'object', additionalProperties: false,

@@ -214,7 +214,12 @@ function handle(db: DatabaseSync, c: DispatchCommand): unknown {
     case 'dispatch.begin': exact(c, ['type', 'runId', 'purpose', 'expectedVersion', 'capabilities', 'availableModels', 'operationModel', 'fence', 'batchSize']); return insertRun(db, c);
     case 'dispatch.child': exact(c, ['type', 'runId', 'parentId', 'purpose', 'capabilities', 'operationModel', 'fence']); return insertRun(db, c);
     case 'dispatch.run': exact(c, ['type', 'runId']); return projection(db, read(db, 'runs', 'run_id', c.runId));
-    case 'dispatch.current': exact(c, ['type', 'runId', 'fence', 'requiredCapabilities', 'permitId']); return current(db, c.runId, c.fence, c.requiredCapabilities, c.permitId);
+    case 'dispatch.current':
+      exact(c, ['type', 'runId', 'fence', 'requiredCapabilities', 'permitId', ...('grantEpoch' in c ? ['grantEpoch'] : [])]);
+      if ('grantEpoch' in c) {
+        integer(c.grantEpoch); if (snapshot(db).grant_epoch !== c.grantEpoch) reject('grant_epoch_changed');
+      }
+      return current(db, c.runId, c.fence, c.requiredCapabilities, c.permitId);
     case 'dispatch.reserve': {
       exact(c, ['type', 'runId', 'stepId', 'requestKind', 'continuationOf', 'requiredCapabilities', 'fence', 'proof']); id(c.stepId); strings(c.requiredCapabilities);
       const run = current(db, c.runId, c.fence, c.requiredCapabilities, null); requireOpen(db, run.version);

@@ -30,7 +30,7 @@ function urlIds(value: unknown) {
   const pmc = /(?:^|\/)articles\/(PMC\d+)(?:\/|$)/i.exec(path);
   return ['pmc.ncbi.nlm.nih.gov', 'www.ncbi.nlm.nih.gov'].includes(host) && pmc ? articleIds({ pmcid: pmc[1] }) : {};
 }
-function samePublication(metadata: Metadata, event: Event) {
+export function samePublication(metadata: Metadata, event: Event) {
   if (metadata.source_id !== event.source_id) return false;
   const wanted = { ...urlIds(event.identity.canonical_url), ...articleIds(event.identity) }, actual = { ...urlIds(metadata.canonical_url), ...articleIds(metadata) };
   if (Object.keys(wanted).length) return !Object.entries(wanted).some(([key, value]) => actual[key] && actual[key] !== value) && Object.entries(wanted).some(([key, value]) => actual[key] === value);

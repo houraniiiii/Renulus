@@ -248,7 +248,7 @@ async def fetch(plan, hops: Hops) -> dict:
     return {"action": "fetch", "provider": "europe-pmc", "pmcid": plan.pmcid, "fetched_at": utc_now(),
             "title": article["title"], "original_sha256": fetched["sha256"],
             "passages": [{key: row[key] for key in ("id", "title", "text", "canonical_url", "publication_date",
-                "retrieved_at", "locators")} | {"licence": row["rights"]["licence"],
+                "retrieved_at", "locators", "source_kind", "metadata", "rights")} | {"licence": row["rights"]["licence"],
                 "permission_reference": row["rights"]["permission_reference"], "attribution": row["rights"]["attribution"]}
                 for row in passages],
             "verification": "dated-research", "latest_final_verified": False, "source_restrictions_checked": False}
