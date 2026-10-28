@@ -360,6 +360,12 @@ export async function openHarness(options: HarnessOptions) {
   try {
     sdk = await runtime.runPromise(OpenCode.Service);
     for (const id of await run(store.listSuspended())) held.add(id);
+    // The child authority's Job and SessionExecution overrides replace the host's captures above.
+    const child = options.nativeCapabilities?.child?.native();
+    if (child) {
+      ({ jobs, execution } = child);
+      instances = Context.getUnsafe(child.context, Instance.Service);
+    }
     for (const job of await run(jobs.pendingBackground)) {
       if (job.recovery.kind === "subagent") {
         held.add(job.recovery.parentSessionID);

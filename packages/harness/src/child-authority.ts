@@ -102,6 +102,7 @@ export function createChildAuthority(bridge: ChildAuthorityBridge, bounds: Child
   let sessions: Session.Interface | undefined;
   let jobs: Job.Interface | undefined;
   let execution: SessionExecution.Interface | undefined;
+  let executionContext: Context.Context<never> | undefined;
   let inboxes: Pick<SessionInbox.Interface, "list"> | undefined;
   const local = (entry: Entry) => Effect.try({ try: () => {
     if (closing || sealedFamilies.has(familyKey(entry.parent)) || !bridge.localCurrent(entry.parent, entry.grant.grant_epoch))
@@ -232,7 +233,7 @@ export function createChildAuthority(bridge: ChildAuthorityBridge, bounds: Child
     SessionExecution.node.replace(SessionExecution.node.mapLayer(nativeLayer => Layer.effect(SessionExecution.Service, Effect.gen(function* () {
       const native = yield* SessionExecution.Service; execution = native;
       const scope = yield* Scope.Scope;
-      const context = yield* Effect.context<never>();
+      const context = executionContext = yield* Effect.context<never>();
       const track = (entry: Entry) => Effect.suspend(() => {
         if (!entry.session || generationOwners.has(entry.session)) return Effect.void;
         const id = entry.session;
@@ -505,6 +506,7 @@ export function createChildAuthority(bridge: ChildAuthorityBridge, bounds: Child
     }));
   };
   return { plugin, overrides, status, settlement,
+    native: () => ({ jobs: jobs!, execution: execution!, context: executionContext! }),
     familyStop: (parent: Readonly<DomainBinding>, timeout: number) => stop(timeout, parent),
     close: (timeout: number) => stop(timeout) };
 }
