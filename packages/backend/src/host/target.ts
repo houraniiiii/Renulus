@@ -29,6 +29,7 @@ export async function openTargetApplication(options: WriterOptions & Omit<Target
           ...(options.verifyBinaries && 'selectedAuthority' in options && options.selectedAuthority
             ? { recovery: createRecoveryPort({ authority: options.selectedAuthority, verifyBinaries: options.verifyBinaries }) } : {}),
           ...(connected ? { learning: connected.learning, temporary: connected.temporary, plugins: connected.plugins, credentials: connected.credentials,
+            mcp: connected.mcp, developer: connected.developer, questions: connected.questions,
             configuration: connected.configuration, inspect: connected.inspect, memory: connected.memory,
             knowledge: connected.knowledge, find: connected.find, assessment: connected.assessment, study: connected.study, updates: connected.updates,
             settlePlugins: connected.close } : {}) });

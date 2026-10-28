@@ -16,6 +16,7 @@ import { knowledgeCommand } from './knowledge-commands.ts';
 import { projectCommand } from './project-commands.ts';
 import { mcpCommand, type McpCommands } from './mcp-commands.ts';
 import { developerCommand, type DeveloperCommands } from './developer-commands.ts';
+import { questionCommand, type QuestionCommands } from './question-commands.ts';
 import { findCommand } from './find-commands.ts';
 import type { FindDomain } from '../domain/find/index.ts';
 import type { KnowledgeDomain } from '../domain/knowledge/index.ts';
@@ -36,6 +37,7 @@ export interface TargetFacadeOptions {
   credentials?: CredentialCommands;
   mcp?: McpCommands;
   developer?: DeveloperCommands;
+  questions?: QuestionCommands;
   configuration?: ConnectedTarget['configuration'];
   inspect?: ConnectedTarget['inspect'];
   memory?: ConnectedTarget['memory'];
@@ -156,6 +158,8 @@ export async function openTargetFacade(options: TargetFacadeOptions) {
       if (mcp) return send(mcp.status, mcp.value);
       const developer = await developerCommand(request, url, options.developer);
       if (developer) return send(developer.status, developer.value);
+      const question = await questionCommand(request, url, options.questions);
+      if (question) return send(question.status, question.value);
       const memory = await memoryCommand(request, url, options.storage, options.memory);
       if (memory) return send(memory.status, memory.value);
       const project = await projectCommand(request, url, options.storage);

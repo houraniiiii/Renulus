@@ -6,7 +6,7 @@ import { exact, integer, reject, text } from './contracts.ts';
 import { canonical, digest, one, rows } from './schema.ts';
 import { requireAssistance } from './conversation.ts';
 
-/** Table: runtime/migrations/007-l3-temporary-save.sql. No payload, hash of content or export prefix. */
+/** Table: runtime/migrations/009-temporary-save-intents.sql. No payload, hash of content or export prefix. */
 const commands = new Set(['temporary.save.begin', 'temporary.save.copied', 'temporary.save.activate', 'temporary.save.cancel', 'temporary.save.retire', 'temporary.save.pending']);
 export function isTemporaryCommand(value: unknown): value is TemporaryCommand {
   return !!value && typeof value === 'object' && 'type' in value && commands.has(String(value.type));

@@ -15,7 +15,7 @@ import { executeEvidenceCommand } from '../src/domain/evidence/commands.ts';
 import { openEngineWorker } from '../src/workers/process.ts';
 import { canonical, digest } from '../src/storage/schema.ts';
 const repository = fileURLToPath(new URL('../../..', import.meta.url));
-const sql = await readFile(new URL('../../../runtime/renulus/runtime/migrations/007-l1b1-evidence.sql', import.meta.url), 'utf8');
+const sql = await readFile(new URL('../../../runtime/renulus/runtime/migrations/007-evidence-reservations.sql', import.meta.url), 'utf8');
 const knowledgeSql = await readFile(new URL('../../../runtime/renulus/knowledge/schema.sql', import.meta.url), 'utf8');
 const contentSql = await readFile(new URL('../../../runtime/renulus/content/schema.sql', import.meta.url), 'utf8');
 function storageFixture() {

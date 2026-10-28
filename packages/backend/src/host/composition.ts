@@ -19,7 +19,10 @@ import { createPluginLifecycle } from '../plugins/lifecycle.ts';
 import { createToolRegistry } from '../plugins/registry.ts';
 import { createToolReturnFence } from '../plugins/tool-return-fence.ts';
 import { createNativePorts } from '../plugins/native.ts';
-import { createMcp, type McpSettingsPort } from '../domain/capabilities/mcp.ts';
+import { createMcp, type StoredMcpSettings } from '../domain/capabilities/mcp.ts';
+import type { McpCommands } from '../http/mcp-commands.ts';
+import { createWorktreeApprovals, type DeveloperCommands } from '../http/developer-commands.ts';
+import type { QuestionCommands } from '../http/question-commands.ts';
 import { createMcpBroker } from '../domain/capabilities/mcp-broker.ts';
 import { createChildren } from '../plugins/children.ts';
 import { createQuestions } from '../plugins/questions.ts';
@@ -69,9 +72,10 @@ export interface ConnectedTargetOptions {
   availableModels: readonly string[];
   volatileAssessment?: Pick<AssessmentNativePort, 'fictionalTransform' | 'privacyReview'>;
   retrieval?: Pick<UpdatesNativePort, 'check'>;
-  mcp?: McpSettingsPort;
+  /** Opt-in MCP connections; requires the owned native build with the capability boundary patch. */
+  mcp?: StoredMcpSettings;
   /** Separate developer profile (BF03). Absent or not `enabled: true` = Off: no developer tool registers. */
-  developer?: Pick<DeveloperOptions, 'configuration' | 'browser' | 'approveWorktreeRemoval'>;
+  developer?: Pick<DeveloperOptions, 'configuration' | 'browser'>;
   /** Existing native TestLLM only; an explicit synthetic target is still required. */
   testing?: { model: SavedLearningOptions['model'] };
 }
@@ -108,6 +112,8 @@ export async function openConnectedTarget(options: ConnectedTargetOptions) {
   let configurationRevision = 0;
   let memory: MemoryHost | undefined;
   const questions = createQuestions();
+  const worktreeApprovals = createWorktreeApprovals();
+  let capabilityAuthority: { renew(leaseId: string): Promise<unknown> } | undefined;
   let grantable: readonly string[] = [];
   const standalone = new Map<string, { binding: NativeBinding; guard: () => Promise<void>; controller: AbortController; settled: Promise<unknown> }>();
   const worker = await openEngineWorker({ ...options.resources, launchRoot: path.join(options.profileRoot, 'state', 'worker-launch'),
@@ -362,14 +368,16 @@ export async function openConnectedTarget(options: ConnectedTargetOptions) {
         standalone.set(run.run_id, { binding, guard, controller: new AbortController(), settled: Promise.resolve() });
       } });
     const resources = { python: options.resources.python, sourceRoot: options.resources.sourceRoot };
-    const developer = createDeveloperRuntime({ ...options.developer, resources });
-    const nativeCapabilities = await createNativeCapabilityPlugin(createNativePorts({ storage, root, registry: tools, questions,
+    const developer = createDeveloperRuntime({ ...options.developer, resources, approveWorktreeRemoval: worktreeApprovals.approve });
+    const nativePorts = createNativePorts({ storage, root, registry: tools, questions,
       mcp,
       worker: { channel: worker.channel, maxChunkBytes, retention: 'saved' },
       developerEndpoints: options.developer?.configuration?.endpoints,
       binding: id => result.native.binding(id), open: () => admission && !closing, children: children.bridge, developer,
       transport: developer && createBrowserTransport({ ...resources, current: lease => storage.command({ type: 'capability.current', id: lease.id,
-        envelope: lease.envelope, bytes: 0, now_ms: Date.now() }).then(() => true, () => false) }) }));
+        envelope: lease.envelope, bytes: 0, now_ms: Date.now() }).then(() => true, () => false) }) });
+    if (!disposable) capabilityAuthority = nativePorts.authority;
+    const nativeCapabilities = await createNativeCapabilityPlugin(nativePorts);
     // Grantable run capabilities come only from what is registered here (never developer actions).
     grantable = [...new Set([...tools.permissions(), 'renulus.library', 'renulus.skill', 'renulus.models', 'renulus.child'])];
     result = await openSavedLearningTarget({ storage, harness: { ...harness, root, nativeCapabilities,
@@ -799,7 +807,17 @@ export async function openConnectedTarget(options: ConnectedTargetOptions) {
     catch (error) { recoveryError = error && typeof error === 'object' && 'code' in error ? String(error.code) : 'configuration_recovery_held'; }
   }
   return { grantable: () => grantable, learning, find, plugins, credentials, configuration, worker, library, memory, knowledge, assessment, study, updates, close,
-    get mcp() { return mcpAdmin; },
+    mcp: options.mcp && { settings: options.mcp, admin: {
+      revoke: name => (mcpAdmin ?? reject('mcp_host_unavailable')).revoke(name),
+      regrant: name => (mcpAdmin ?? reject('mcp_host_unavailable')).regrant(name),
+      credential: { put: input => (mcpAdmin ?? reject('mcp_host_unavailable')).credential.put(input),
+        forget: ref => (mcpAdmin ?? reject('mcp_host_unavailable')).credential.forget(ref) } } } satisfies McpCommands | undefined,
+    developer: { approvals: worktreeApprovals,
+      authority: { renew: leaseId => (capabilityAuthority ?? reject('developer_host_unavailable')).renew(leaseId) } } satisfies DeveloperCommands,
+    questions: { list: questions.list, reject: questions.reject,
+      async answer(id: string, grantEpoch: number, answers: unknown) {
+        questions.answer(id, grantEpoch, answers, (await storage.command({ type: 'dispatch.snapshot' })).grant_epoch);
+      } } satisfies QuestionCommands,
     temporary: { open: openTemporaryChat },
     inspect: async () => {
       if (!selected) reject('learning_host_unavailable');
