@@ -30,7 +30,7 @@ import { createNativeCapabilityPlugin } from '../../../harness/src/native-capabi
 import { createDeveloperRuntime, type DeveloperOptions } from '../../../harness/src/developer-plugin.ts';
 import { createBrowserTransport } from '../domain/capabilities/transport.ts';
 import type { NativeArtifact, NativeInspectionRequest } from '../plugins/types.ts';
-import { createNativeDispatchCallbacks, type DeploymentEvidence, type NativeBinding } from '../dispatch/native.ts';
+import { createNativeDispatchCallbacks, type DeploymentEvidence, type NativeBinding, type NativeTransport } from '../dispatch/native.ts';
 import type { ConfigurationSpec, Inspection, Permit, Purpose, Route, Run } from '../dispatch/contracts.ts';
 import { createTemporaryFamily, reconcileTemporarySaves } from '../domain/temporary/index.ts';
 import type { StandalonePurpose } from '../../../harness/src/gateway-adapter.ts';
@@ -77,8 +77,9 @@ export interface ConnectedTargetOptions {
   mcp?: StoredMcpSettings;
   /** Separate developer profile (BF03). Absent or not `enabled: true` = Off: no developer tool registers. */
   developer?: Pick<DeveloperOptions, 'configuration' | 'browser'>;
-  /** Existing native TestLLM only; an explicit synthetic target is still required. */
-  testing?: { model: SavedLearningOptions['model'] };
+  /** Existing native TestLLM only; an explicit synthetic target is still required.
+   * `transport` (fixtureOnly) replaces the worker send for standalone producers in isolated synthetic tests. */
+  testing?: { model: SavedLearningOptions['model']; transport?: NativeTransport };
 }
 export type ConnectedTarget = Awaited<ReturnType<typeof openConnectedTarget>>;
 type Learning = Awaited<ReturnType<typeof openSavedLearningTarget>>;
@@ -173,7 +174,7 @@ export async function openConnectedTarget(options: ConnectedTargetOptions) {
         if (run.fence.context_epoch !== learning.checkpoint.contextEpoch || run.fence.deletion_epoch !== learning.checkpoint.policyRevision ||
           run.fence.cancellation_epoch !== learning.checkpoint.cancellationEpoch) reject('learning_context_changed');
       }, evidence: matchingEvidence,
-      transport: createWorkerTransport({ channel: worker.channel, maxChunkBytes, retention: 'saved',
+      transport: options.testing?.transport ?? createWorkerTransport({ channel: worker.channel, maxChunkBytes, retention: 'saved',
         checkCurrent: currentPermit, registryHash: async permit => {
           const run = await storage.command({ type: 'dispatch.run', runId: permit.run_id });
           return (await storage.command({ type: 'dispatch.configuration', version: run.version })).registry_hash;
