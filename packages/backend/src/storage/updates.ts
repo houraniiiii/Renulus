@@ -49,7 +49,12 @@ function entry(db: DatabaseSync, id: string): ObjectValue {
   const row = one(db, 'SELECT * FROM update_entries WHERE id=?', id); if (!row) reject('update_missing');
   const { topic_ids_json, source_metadata_json, ...rest } = row;
   const head = one(db, 'SELECT r.* FROM update_review_heads h JOIN update_reviews r ON r.id=h.review_id WHERE h.entry_id=?', id);
-  return { ...rest, topic_ids: parse(topic_ids_json), source_metadata: parse(source_metadata_json), revision: revision(row), review: head ? { ...head, target: parse(head.target_json), changes: parse(head.changes_json), evidence: parse(head.evidence_json) } : null };
+  return { ...rest, topic_ids: parse(topic_ids_json), source_metadata: parse(source_metadata_json), revision: revision(row), review: head ? { id: head.id, target: parse(head.target_json), changes: parse(head.changes_json), evidence: parse(head.evidence_json), library_sync_state: head.library_sync_state, library_sync_error: head.library_sync_error } : null,
+    library_changes: rows(db, 'SELECT id,state,error_code FROM update_library_changes WHERE entry_id=? ORDER BY rowid', id) };
+}
+function freshness(row: ObjectValue) {
+  if (!row.last_success_at) return 'unchecked';
+  return row.state === 'failed' || Date.now() - Date.parse(row.last_success_at) > 7 * 86400_000 ? 'stale' : 'checked-recently';
 }
 function target(db: DatabaseSync, r: CheckRoute): ObjectValue {
   if (r.kind === 'source') { const row = one(db, 'SELECT * FROM update_source_checks WHERE source_id=?', r.id); if (!row) reject('source_missing'); return row; }
@@ -115,7 +120,7 @@ export function executeUpdates<C extends UpdatesCommand>(db: DatabaseSync, c: C)
   const neutral = ['updates.schedule.read', 'updates.schedule.write', 'updates.schedule.stop', 'updates.schedule.finish', 'updates.recover', 'updates.publications.stop'];
   if (!neutral.includes(c.type)) requireAssistance(db);
   switch (c.type) {
-    case 'updates.sources': result = { sources: rows(db, 'SELECT * FROM update_source_checks ORDER BY source_id').map(r => ({ ...r, links: parse(r.links_json), currentness: 'Source snapshot and checks do not establish clinical review.' })) }; break;
+    case 'updates.sources': result = { sources: rows(db, 'SELECT * FROM update_source_checks ORDER BY source_id').map(({ links_json, ...r }) => ({ ...r, links: parse(links_json), freshness: freshness(r), currentness: 'Source snapshot and checks do not establish clinical review.' })) }; break;
     case 'updates.entries': { const counts = { pending: 0, reviewed: 0, dismissed: 0 }; for (const r of rows(db, 'SELECT review_state,COUNT(*) AS n FROM update_entries GROUP BY review_state')) counts[r.review_state as keyof typeof counts] = Number(r.n); const entries = rows(db, 'SELECT id FROM update_entries ' + (c.state ? 'WHERE review_state=? ' : '') + 'ORDER BY discovered_at DESC,id DESC LIMIT ? OFFSET ?', ...(c.state ? [c.state] : []), c.limit, c.offset).map(r => entry(db, String(r.id))); const total = c.state ? counts[c.state] : Object.values(counts).reduce((a, b) => a + b, 0); result = { entries, counts, total, limit: c.limit, offset: c.offset, next_offset: c.offset + entries.length < total ? c.offset + entries.length : null }; break; }
     case 'updates.entry': result = entry(db, c.id); break;
     case 'updates.read': entry(db, c.id); db.prepare('UPDATE update_entries SET read_at=? WHERE id=?').run(utcNow(), c.id); result = { read: true }; break;
