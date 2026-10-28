@@ -30,13 +30,6 @@ export async function learningCommand(request: IncomingMessage, url: URL, storag
   learning?: SavedLearning): Promise<Response | undefined> {
   const result = (value: unknown, status = 200) => ({ status, value });
   const path = url.pathname;
-  if (path === '/api/v1/find' && request.method === 'GET') {
-    const lifecycle = url.searchParams.get('lifecycle') ?? 'active';
-    if (!['active', 'archived', 'all'].includes(lifecycle)) reject('storage_invalid_command');
-    return result(await native(learning).find({ query: url.searchParams.get('q') ?? '',
-      scope: { lifecycle: lifecycle as 'active' | 'archived' | 'all', projectId: url.searchParams.get('project_id') },
-      ...(url.searchParams.has('cursor') ? { cursor: url.searchParams.get('cursor')! } : {}) }));
-  }
   if (path === '/api/v1/conversations') {
     if (request.method === 'GET') return result(await storage.command({ type: 'learning.list',
       limit: number(url, 'limit', 50), cursor: url.searchParams.get('cursor'),
