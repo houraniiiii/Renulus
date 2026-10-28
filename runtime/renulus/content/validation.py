@@ -39,17 +39,20 @@ def _unique_pairs(pairs):
     return result
 
 
-def _read_json(path: Path):
+def _read_json(path: Path | bytes):
     try:
-        if path.stat().st_size > MAX_FILE_BYTES:
+        if isinstance(path, Path) and path.stat().st_size > MAX_FILE_BYTES:
             raise PackValidationError(f"Pack file exceeds {MAX_FILE_BYTES} bytes: {path.name}")
-        raw = path.read_bytes()
+        raw = path if isinstance(path, bytes) else path.read_bytes()
+        if len(raw) > MAX_FILE_BYTES:
+            raise PackValidationError(f"Pack file exceeds {MAX_FILE_BYTES} bytes")
         value = json.loads(raw.decode("utf-8"), object_pairs_hook=_unique_pairs,
                            parse_constant=lambda token: (_ for _ in ()).throw(
                                PackValidationError(f"Invalid JSON constant: {token}")))
         return value, hashlib.sha256(raw).hexdigest()
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        raise PackValidationError(f"Cannot read {path.name}: {exc}") from exc
+        name = path.name if isinstance(path, Path) else 'pack JSON'
+        raise PackValidationError(f"Cannot read {name}: {exc}") from exc
 
 
 def _by_id(rows, kind):
@@ -93,14 +96,21 @@ class ValidatedPack:
         return self.bundle["manifest"]
 
 
-def validate_pack(path: str | Path, *, known_register_ids: Iterable[str] | None = None) -> ValidatedPack:
+def validate_pack(path: str | Path | dict[str, bytes], *, known_register_ids: Iterable[str] | None = None) -> ValidatedPack:
     if known_register_ids is None:
         # IDs only, derived from the single SOURCES register. This is not a
         # competing source/acquisition catalogue or a permission grant.
         registry = json.loads(Path(__file__).with_name("source_register_ids.json").read_text(encoding="utf-8"))
         known_register_ids = registry["ids"]
-    root = Path(path).resolve()
-    manifest, _ = _read_json(root / "manifest.json")
+    files = path if isinstance(path, dict) else None
+    root = None if files is not None else Path(path).resolve()
+    def read(filename):
+        if files is not None:
+            if filename not in files:
+                raise PackValidationError(f"Missing pack file: {filename}")
+            return _read_json(files[filename])
+        return _read_json(root / filename)
+    manifest, _ = read("manifest.json")
     # Validate the manifest first: do not follow attacker-controlled file paths.
     manifest_schema = BUNDLE_SCHEMA["properties"]["manifest"]
     validator = Draft202012Validator(manifest_schema, format_checker=FormatChecker())
@@ -114,11 +124,11 @@ def validate_pack(path: str | Path, *, known_register_ids: Iterable[str] | None 
         # Packs contain flat JSON snapshots. No drive paths, traversal, links or originals.
         if Path(filename).name != filename or ":" in filename or "\\" in filename or not filename.endswith(".json"):
             raise PackValidationError(f"Unsafe pack path: {filename}")
-        target = root / filename
-        if target.is_symlink() or target.resolve().parent != root or filename in paths:
+        target = root / filename if root is not None else None
+        if filename in paths or target is not None and (target.is_symlink() or target.resolve().parent != root):
             raise PackValidationError(f"Unsafe or duplicate pack path: {filename}")
         paths.add(filename)
-        value, actual_hash = _read_json(target)
+        value, actual_hash = read(filename)
         if actual_hash != entry["sha256"]:
             raise PackValidationError(f"Checksum mismatch: {filename}")
         bundle[name] = value

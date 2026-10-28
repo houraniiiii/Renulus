@@ -223,7 +223,7 @@ class Worker:
             raise Refused("overloaded")
         # expected_revision belongs to the host's canonical domain. This worker
         # checks explicit artifact_revision pins and never opens that domain DB.
-        if (command.command in ("document.extract", "document.chunk", "library.stage", "memory.reconcile", "memory.extract")
+        if (command.command in ("document.extract", "document.chunk", "library.stage", "memory.reconcile", "memory.extract", "content.validate")
                 or command.command == 'native.io' and command.input.action in ('publish', 'payload', 'asset')):
             i = command.input
             job.input_artifact = self.artifacts.pin(i.artifact_handle, i.artifact_revision,
@@ -444,6 +444,10 @@ class Worker:
                         job.output.body.extend(value)
                         job.output.engine = engine
                         result = self.artifacts.reference(job.output)
+                elif command.command == 'content.validate':
+                    from .content import validate_content
+                    value = validate_content(bytes(job.input_artifact.body[i.offset:i.offset + i.length]))
+                    engine = 'renulus-content:1'
                 elif command.command == "embedding.embed":
                     value = self.engines.embed(i.texts, query=i.query)
                     engine = "fastembed:0.8.1"

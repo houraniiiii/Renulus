@@ -20,7 +20,7 @@ OUTCOMES = ("rejected_before_admission", "accepted_pending", "committed_referenc
 UNAVAILABLE_COMMANDS = (
     "native.inspect", "native.publish", "native.dispose", "transport.send", "transport.cancel",
 )
-SUPPORTED_COMMANDS = ("worker.settle", "artifact.upload", "artifact.read",
+SUPPORTED_COMMANDS = ("worker.settle", "artifact.upload", "artifact.read", "content.validate",
                       "embedding.embed", "document.extract", "document.chunk",
                       "library.query", "library.stage", "library.remove", "library.maintain",
                       "memory.extract", "memory.recall", "memory.reconcile", "memory.purge",
@@ -443,12 +443,17 @@ class NativeIOCommand(Envelope):
     input: NativeInput
 
 
+class ContentValidateCommand(Envelope):
+    command: Literal['content.validate']
+    input: ChunkInput
+
+
 Command = Annotated[Union[UploadCommand, ReadCommand, EmbedCommand, ExtractCommand,
                           ChunkCommand, SettleCommand, UnavailableCommand, LibraryQueryCommand,
                           LibraryStageCommand, LibraryRemoveCommand, LibraryMaintainCommand,
                           MemoryRecallCommand, MemoryReconcileCommand, MemoryPurgeCommand,
                           MemoryExtractCommand, TransportExecuteCommand, HttpExecuteCommand, EvidenceRunCommand, CredentialStateCommand,
-                          CredentialCommand, CredentialLoginCommand, NativeIOCommand], Field(discriminator="command")]
+                          CredentialCommand, CredentialLoginCommand, NativeIOCommand, ContentValidateCommand], Field(discriminator="command")]
 COMMAND = TypeAdapter(Command)
 
 
@@ -456,7 +461,7 @@ class ErrorResult(Model):
     tag: Literal["error"] = "error"
     code: Literal["unsupported_command", "invalid_command", "stale_identity", "stale_revision",
                   "digest_mismatch", "duplicate_request", "overloaded", "artifact_denied",
-                  "artifact_invalid", "artifact_limit", "helper_unavailable", "engine_failed",
+                  "artifact_invalid", "artifact_limit", "helper_unavailable", "engine_failed", "invalid_content_pack",
                   "worker_closed", "deadline_exceeded", "stale_target", "broker_unavailable",
                   "broker_not_activated", "credential_command_failed", "credential_command_invalid",
                   "broker_authority_unbound", "credential_authority_invalid", "credential_authority_expired",

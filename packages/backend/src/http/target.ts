@@ -202,7 +202,7 @@ export async function openTargetFacade(options: TargetFacadeOptions) {
     }).catch(error => {
       const code = error instanceof StorageError || error instanceof PluginLifecycleError ? error.code :
         error instanceof RequestBodyError ? "invalid_request" : "backend_operation_failed";
-      return failure(error instanceof RequestBodyError ? error.status : code === "assistance_restricted" ? 423 :
+      return failure(error instanceof RequestBodyError ? error.status : ['invalid_content_pack', 'invalid_pack_path'].includes(code) ? 422 : code === "assistance_restricted" ? 423 :
         error instanceof StorageError || error instanceof PluginLifecycleError ? 409 : 503, code);
     }).finally(() => { if (!control) { active--; ordinary.delete(operation); } });
     if (!control) ordinary.add(operation);

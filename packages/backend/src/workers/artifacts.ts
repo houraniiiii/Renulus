@@ -6,7 +6,7 @@ import { WorkerChannel } from './channel.ts';
 type Binding = Pick<Identity, 'operation_id' | 'attempt_id'>;
 type ArtifactCommand = Extract<WorkerCommand, { command: 'library.query' | 'library.stage' | 'library.remove' |
   'library.maintain' | 'memory.extract' | 'memory.recall' | 'memory.reconcile' | 'memory.purge' |
-  'document.extract' | 'document.chunk' | 'embedding.embed' }>;
+  'document.extract' | 'document.chunk' | 'embedding.embed' | 'content.validate' }>;
 const sha = (body: Uint8Array) => createHash('sha256').update(body).digest('hex');
 const opaque = (prefix: string) => prefix + randomUUID().replaceAll('-', '');
 function refused(code: string): never { throw Object.assign(new Error(code), { code }); }

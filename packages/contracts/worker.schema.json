@@ -527,6 +527,169 @@
       "title": "ChunkInput",
       "type": "object"
     },
+    "ContentValidateCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "profile_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "domain_store_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Domain Store Id",
+          "type": "string"
+        },
+        "runtime_store_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Runtime Store Id",
+          "type": "string"
+        },
+        "authority_epoch": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Authority Epoch",
+          "type": "integer"
+        },
+        "process_generation": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Process Generation",
+          "type": "string"
+        },
+        "operation_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Operation Id",
+          "type": "string"
+        },
+        "attempt_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Attempt Id",
+          "type": "string"
+        },
+        "request_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "protocol": {
+          "const": "renulus-worker/1",
+          "title": "Protocol",
+          "type": "string"
+        },
+        "kind": {
+          "const": "command",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload_sha256": {
+          "pattern": "^[a-f0-9]{64}$(?![\\s\\S])",
+          "title": "Payload Sha256",
+          "type": "string"
+        },
+        "configuration_revision": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Configuration Revision",
+          "type": "integer"
+        },
+        "grant_revision": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Grant Revision",
+          "type": "integer"
+        },
+        "context_epoch": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Context Epoch",
+          "type": "integer"
+        },
+        "deletion_epoch": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Deletion Epoch",
+          "type": "integer"
+        },
+        "cancellation_epoch": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Cancellation Epoch",
+          "type": "integer"
+        },
+        "retention": {
+          "enum": [
+            "saved",
+            "temporary"
+          ],
+          "title": "Retention",
+          "type": "string"
+        },
+        "expected_revision": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Expected Revision"
+        },
+        "limits": {
+          "$ref": "#/$defs/Limits"
+        },
+        "command": {
+          "const": "content.validate",
+          "title": "Command",
+          "type": "string"
+        },
+        "input": {
+          "$ref": "#/$defs/ChunkInput"
+        }
+      },
+      "required": [
+        "profile_id",
+        "domain_store_id",
+        "runtime_store_id",
+        "authority_epoch",
+        "process_generation",
+        "operation_id",
+        "attempt_id",
+        "request_id",
+        "protocol",
+        "kind",
+        "payload_sha256",
+        "configuration_revision",
+        "grant_revision",
+        "context_epoch",
+        "deletion_epoch",
+        "cancellation_epoch",
+        "retention",
+        "expected_revision",
+        "limits",
+        "command",
+        "input"
+      ],
+      "title": "ContentValidateCommand",
+      "type": "object"
+    },
     "CredentialAuthority": {
       "additionalProperties": false,
       "description": "One authenticated Settings intent, minted by the host, never a tool.",
@@ -1527,6 +1690,7 @@
             "artifact_limit",
             "helper_unavailable",
             "engine_failed",
+            "invalid_content_pack",
             "worker_closed",
             "deadline_exceeded",
             "stale_target",
@@ -7411,6 +7575,7 @@
         "mapping": {
           "artifact.read": "#/$defs/ReadCommand",
           "artifact.upload": "#/$defs/UploadCommand",
+          "content.validate": "#/$defs/ContentValidateCommand",
           "credential.activate": "#/$defs/CredentialStateCommand",
           "credential.connect": "#/$defs/CredentialCommand",
           "credential.forget": "#/$defs/CredentialCommand",
@@ -7508,6 +7673,9 @@
         },
         {
           "$ref": "#/$defs/NativeIOCommand"
+        },
+        {
+          "$ref": "#/$defs/ContentValidateCommand"
         }
       ]
     },

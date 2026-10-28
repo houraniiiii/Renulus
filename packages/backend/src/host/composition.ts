@@ -41,6 +41,7 @@ import { createNativeDomainAdapter } from './domain-adapter.ts';
 import { nativeText } from '../domain/learning/history.ts';
 import { createMemoryPlugin, createMemoryTools } from '../domain/memory/tools.ts';
 import { createEngineArtifacts } from '../workers/artifacts.ts';
+import { createWorkerContent } from '../workers/content.ts';
 import { createWorkerKnowledgeIO } from '../workers/knowledge.ts';
 import { createKnowledgeDomain } from '../domain/knowledge/index.ts';
 import { createEvidenceDomain } from '../domain/evidence/index.ts';
@@ -122,6 +123,7 @@ export async function openConnectedTarget(options: ConnectedTargetOptions) {
   const maxChunkBytes = worker.ready.capacity.max_chunk_bytes ?? 0;
   if (!maxChunkBytes) { await worker.close(); reject('worker_chunk_bound'); }
   const library = createWorkerLibrary(worker.channel, maxChunkBytes);
+  const content = createWorkerContent(worker.channel, maxChunkBytes, path.join(options.resources.sourceRoot, 'content', 'packs'));
   const knowledge = createKnowledgeDomain({ storage, engines: createEngineArtifacts(worker.channel, maxChunkBytes),
     native: createWorkerKnowledgeIO(worker.channel, maxChunkBytes) });
   const credentialCommands = createCredentialCommands(worker.channel);
@@ -806,7 +808,7 @@ export async function openConnectedTarget(options: ConnectedTargetOptions) {
     try { await configuration.activate(await storage.command({ type: 'dispatch.configuration', version: existing.effective })); }
     catch (error) { recoveryError = error && typeof error === 'object' && 'code' in error ? String(error.code) : 'configuration_recovery_held'; }
   }
-  return { grantable: () => grantable, learning, find, plugins, credentials, configuration, worker, library, memory, knowledge, assessment, study, updates, close,
+  return { grantable: () => grantable, learning, find, plugins, credentials, configuration, worker, library, memory, knowledge, content, assessment, study, updates, close,
     mcp: options.mcp && { settings: options.mcp, admin: {
       revoke: name => (mcpAdmin ?? reject('mcp_host_unavailable')).revoke(name),
       regrant: name => (mcpAdmin ?? reject('mcp_host_unavailable')).regrant(name),
