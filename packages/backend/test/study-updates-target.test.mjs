@@ -18,6 +18,8 @@ import { createEvidenceDomain } from '../src/domain/evidence/index.ts';
 import { createUpdatesRetrieval } from '../src/domain/updates/retrieval.ts';
 import { studyCommand } from '../src/http/study-commands.ts';
 import { contentCommand } from '../src/http/content-commands.ts';
+import { updatesCommand } from '../src/http/updates-commands.ts';
+import { Readable } from 'node:stream';
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 async function fixture(seed = () => {}) {
   const root = mkdtempSync('C:/Renulus/scratch/study-updates-bf06-');
@@ -111,6 +113,19 @@ test('Updates keeps failed-check success date and correction/outbox/source links
     await assert.rejects(f.command({...track,url:'https://other.invalid/publication.pdf',idempotencyKey:'bf06-publication-host'}),fail('source_host_blocked'));
     await assert.rejects(f.command({...track,url:'https://synthetic.invalid/unregistered.pdf',idempotencyKey:'bf06-publication-unknown'}),fail('publication_not_registered'));
     await assert.rejects(f.command({type:'updates.publications.stop',id:'absent'}),fail('publication_missing'));
+    const api=async(path,method='GET',body)=>updatesCommand(Object.assign(Readable.from(body?[Buffer.from(JSON.stringify(body))]:[]),{method,headers:{'idempotency-key':'bf06-http-request'}}),new URL('http://localhost/api/v1/updates/'+path),f.storage,updates);
+    const failure=await api('sources/S99/check?force=true','POST');assert.deepEqual(Object.keys(failure.value).sort(),['checked_at','error','source_id','state']);assert.equal(failure.value.error.code,'source_fetch_failed');
+    const cachedFailure=await api('sources/S99/check','POST');assert.deepEqual(Object.keys(cachedFailure.value).sort(),['cached','error','source_id','state']);
+    failed=false;
+    const success=await api('sources/S99/check?force=true','POST');assert.deepEqual(Object.keys(success.value).sort(),['checked_at','links','review_required','source_id','state']);assert.deepEqual(success.value.links,[]);
+    assert.deepEqual(Object.keys((await api('sources/S99/check','POST')).value).sort(),['cached','source_id','state']);
+    const publication=await api('publications/'+tracked.id+'/check?force=true','POST');assert.equal(publication.value.enabled,true);assert.deepEqual(publication.value.fetch_metadata,{});assert.equal(publication.value.review_required,false);assert.ok(!('entries' in publication.value));
+    failed=true;const publicationFailure=await api('publications/'+tracked.id+'/check?force=true','POST');assert.equal(publicationFailure.value.error.code,'source_fetch_failed');assert.equal(publicationFailure.value.freshness,'stale');
+    failed=false;const topic=await f.inspect(db=>db.prepare('SELECT topic_id FROM content_topics ORDER BY topic_id LIMIT 1').get().topic_id);
+    const literature=await api('literature/check','POST',{topic_ids:[topic]});assert.equal(literature.value.state,'checked');assert.deepEqual(Object.keys(literature.value).sort(),['checked_at','checks','discovered','max_records_per_topic','review_state','source','state']);assert.deepEqual(literature.value.checks,[{topic_id:topic,state:'checked',discovered:0,records_checked:0,hit_count:null,truncated:false}]);
+    const statuses=(await api('sources/S99/status')).value.statuses;assert.ok(statuses.length);assert.deepEqual(Object.keys(statuses[0]).sort(),['review_id','reviewed_at','reviewer','status','target','target_key']);
+    assert.deepEqual((await api('entries/'+entry.id+'/affected')).value,{affected:[],total:0,limit:100,offset:0,next_offset:null});
+    assert.equal((await api('entries/absent')).status,404);assert.equal((await api('entries?limit=0')).status,422);
     await f.inspect(db=>{assert.equal(db.prepare('SELECT COUNT(*) AS n FROM knowledge_source_status_events').get().n,2);assert.equal(db.prepare("SELECT COUNT(*) AS n FROM update_library_changes WHERE state NOT IN ('applied','no-match')").get().n,0);const matched=JSON.parse(db.prepare('SELECT metadata_json FROM knowledge_revisions WHERE id=?').get('rev_matched').metadata_json),other=JSON.parse(db.prepare('SELECT metadata_json FROM knowledge_revisions WHERE id=?').get('rev_other').metadata_json);assert.equal(matched.content_reviewed,false);assert.equal(matched.latest_final_verified,false);assert.equal(matched.correction,'SYNTHETIC corrigendum');assert.equal(other.content_reviewed,true);assert.equal(other.correction,undefined);});
   }finally{await updates.close();await f.close();}
 });

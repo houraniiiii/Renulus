@@ -148,8 +148,12 @@ export function executeUpdates<C extends UpdatesCommand>(db: DatabaseSync, c: C)
     case 'updates.entries': { const counts = { pending: 0, reviewed: 0, dismissed: 0 }; for (const r of rows(db, 'SELECT review_state,COUNT(*) AS n FROM update_entries GROUP BY review_state')) counts[r.review_state as keyof typeof counts] = Number(r.n); const entries = rows(db, 'SELECT id FROM update_entries ' + (c.state ? 'WHERE review_state=? ' : '') + 'ORDER BY discovered_at DESC,id DESC LIMIT ? OFFSET ?', ...(c.state ? [c.state] : []), c.limit, c.offset).map(r => entry(db, String(r.id))); const total = c.state ? counts[c.state] : Object.values(counts).reduce((a, b) => a + b, 0); result = { entries, counts, total, limit: c.limit, offset: c.offset, next_offset: c.offset + entries.length < total ? c.offset + entries.length : null }; break; }
     case 'updates.entry': result = entry(db, c.id); break;
     case 'updates.read': entry(db, c.id); db.prepare('UPDATE update_entries SET read_at=? WHERE id=?').run(utcNow(), c.id); result = { read: true }; break;
-    case 'updates.statuses': result = { statuses: rows(db, 'SELECT * FROM update_source_statuses').filter(r => parse(r.target_json).register_id === c.sourceId).map(r => ({ target: parse(r.target_json), status: parse(r.status_json), review_id: r.review_id })) }; break;
-    case 'updates.affected': entry(db, c.id); result = { affected: rows(db, 'SELECT * FROM update_affected_versions WHERE entry_id=? ORDER BY kind,entity_id,version LIMIT ? OFFSET ?', c.id, c.limit, c.offset).map(r => ({ ...r, locators: parse(r.locators_json), objective_ids: parse(r.objective_ids_json) })) }; break;
+    case 'updates.statuses': result = { statuses: rows(db, "SELECT s.*,r.reviewed_at,r.reviewer FROM update_source_statuses s JOIN update_reviews r ON r.id=s.review_id WHERE json_extract(s.target_json,'$.register_id')=? ORDER BY s.target_key", c.sourceId).map(r => ({ target_key: r.target_key, target: parse(r.target_json), status: parse(r.status_json), review_id: r.review_id, reviewed_at: r.reviewed_at, reviewer: r.reviewer })) }; break;
+    case 'updates.affected': {
+      entry(db, c.id); const total = Number(one(db, 'SELECT COUNT(*) AS n FROM update_affected_versions WHERE entry_id=?', c.id)!.n);
+      const affected = rows(db, 'SELECT * FROM update_affected_versions WHERE entry_id=? ORDER BY kind,entity_id,version,pinned_source_id LIMIT ? OFFSET ?', c.id, c.limit, c.offset).map(({ locators_json, objective_ids_json, ...r }) => ({ ...r, locators: parse(locators_json), objective_ids: parse(objective_ids_json) }));
+      result = { affected, total, limit: c.limit, offset: c.offset, next_offset: c.offset + affected.length < total ? c.offset + affected.length : null }; break;
+    }
     case 'updates.annotations': { const annotations = rows(db, 'SELECT a.*,e.url,e.title,e.review_state FROM update_affected_versions a JOIN update_entries e ON e.id=a.entry_id WHERE a.kind=? AND a.entity_id=? AND a.version=? ORDER BY a.detected_at,a.entry_id', c.kind, c.id, c.version); result = { kind: c.kind, id: c.id, version: c.version, needs_re_review: annotations.some(r => r.state === 'needs-re-review'), annotations }; break; }
     case 'updates.review': result = receipt(db, c, () => {
       const e = entry(db, c.id), r = c.review, now = utcNow(), reviewId = uid('review'); if (e.revision !== c.expectedRevision) reject('revision_conflict');
@@ -213,7 +217,7 @@ export function executeUpdates<C extends UpdatesCommand>(db: DatabaseSync, c: C)
       }
       saveStudyPreference(db, checkKey(r), { token: c.input.token, state });
       db.prepare('UPDATE update_schedule_jobs SET state=?,last_attempt_at=?,last_success_at=CASE WHEN ?=1 THEN ? ELSE last_success_at END,error_code=?,failure_count=failure_count+? WHERE kind=? AND target_id=?').run(state, now, o ? 1 : 0, now, c.errorCode, o ? 0 : 1, r.kind, r.id);
-      result = { state, checked_at: now, error_code: c.errorCode, entries: discovered, last_success_at: o ? now : t.last_success_at ?? null }; break;
+      result = { state, checked_at: now, error_code: c.errorCode, entries: discovered, links: o?.links ?? [], records_checked: o?.entries.length ?? 0, hit_count: o?.metadata.hit_count ?? null, last_success_at: o ? now : t.last_success_at ?? null }; break;
     }
     case 'updates.literature.checks': result = { checks: rows(db, 'SELECT * FROM update_literature_checks ORDER BY topic_id') }; break;
     case 'updates.schedule.read': result = schedule(db); break;
