@@ -7,14 +7,18 @@ import { StorageError } from './contracts.ts';
 import { owned } from './ownership.ts';
 import { canonical } from './schema.ts';
 export interface GenerationMember { role:'canonical'|'native'|'original'|'plugin'|'selector'|'schema'; path:string; sha256:string; bytes:number }
-export interface CompleteGeneration { profileId:string; generation:number; authorityEpoch:number; schemaHash:string; cohortHash:string; frontierDigest:string; members:readonly GenerationMember[] }
+export interface CompleteGeneration { profileId:string; generation:number; authorityEpoch:number; schemaHash:string; cohortHash:string; frontierDigest:string; members:readonly GenerationMember[];
+  /** Candidates only: stateMarker of the closed generation the candidate was prepared from. */
+  sourceMarker?:string }
 const fail=(code:string):never=>{throw new StorageError(code);};
 const sha=(v:unknown)=>createHash('sha256').update(canonical(v)).digest('hex');
 export const GENERATION_MANIFEST_FILE='.renulus-complete-generation.json';
+/** Identity of a closed generation's mutable state (stores and originals; not selector, schema or plugin members). */
+export const stateMarker=(members:readonly GenerationMember[]):string=>sha(members.filter(m=>['canonical','native','original'].includes(m.role)).map(m=>[m.role,m.path,m.sha256,m.bytes]).sort((a,b)=>String(a[1]).localeCompare(String(b[1]))));
 /** Observations must come from closed owned handles; a manifest cannot attest itself. */
 export function validateCompleteGeneration(manifest:CompleteGeneration,observedMembers:readonly GenerationMember[]):string {
   if(!manifest||typeof manifest.profileId!=='string'||!manifest.profileId||!Number.isSafeInteger(manifest.generation)||manifest.generation<1||!Number.isSafeInteger(manifest.authorityEpoch)||manifest.authorityEpoch<1||
-    ![manifest.schemaHash,manifest.cohortHash,manifest.frontierDigest].every(v=>typeof v==='string'&&/^[a-f0-9]{64}$/.test(v))||!Array.isArray(manifest.members)||manifest.members.length>100000)fail('recovery_generation_invalid');
+    ![manifest.schemaHash,manifest.cohortHash,manifest.frontierDigest].every(v=>typeof v==='string'&&/^[a-f0-9]{64}$/.test(v))||!Array.isArray(manifest.members)||manifest.members.length>100000||manifest.sourceMarker!==undefined&&!/^[a-f0-9]{64}$/.test(manifest.sourceMarker))fail('recovery_generation_invalid');
   const paths=new Set<string>(),roles=new Map<string,number>();
   for(const m of manifest.members) {
     if(!['canonical','native','original','plugin','selector','schema'].includes(m.role)||typeof m.path!=='string'||!m.path||m.path.length>4096||m.path.includes('\\')||m.path.startsWith('/')||m.path.split('/').some(p=>!p||p==='.'||p==='..'||p.includes(':'))||
@@ -68,7 +72,7 @@ export interface RecoveryCoordinatorOptions<Graph> {
   mergeNative(candidateId:string,incoming:Graph,eligibleSessions:ReadonlySet<string>,rollback?:boolean):Promise<NativeMapping>;
   /** Returns native-verified rebased original handles on canonical rows. */
   verifyOriginals(candidateId:string,incoming:CompleteGeneration,canonical:RecoverySnapshot):Promise<RecoverySnapshot>;
-  closeCandidate(candidateId:string):Promise<{manifest:CompleteGeneration;observedMembers:GenerationMember[]}>;
+  closeCandidate(candidateId:string,sourceMarker:string):Promise<{manifest:CompleteGeneration;observedMembers:GenerationMember[]}>;
   verifyCanonicalClosure(candidateId:string):Promise<void>;
   /** Governed removal of an unselected hidden candidate; never touches the selector or the current generation. */
   discardCandidate(candidateId:string):Promise<void>;
@@ -130,7 +134,8 @@ export function createRecoveryCoordinator<Graph>(o:RecoveryCoordinatorOptions<Gr
           // The current owner is closed; the candidate carries the journal copy taken after the reservation.
           await candidate.storage.command({type:'storage.settle',id:reservationId,intentId:reservationId,settled:true,cleanupDebtBytes:0});
           await candidate.storage.close();
-          const closed=await o.closeCandidate(candidate.candidateId);validateCompleteGeneration(closed.manifest,closed.observedMembers);
+          const sourceMarker=stateMarker(current.members),closed=await o.closeCandidate(candidate.candidateId,sourceMarker);validateCompleteGeneration(closed.manifest,closed.observedMembers);
+          if(closed.manifest.sourceMarker!==sourceMarker)fail('recovery_generation_invalid');
           return {candidateId:candidate.candidateId,manifest:closed.manifest,preview:merged,reservationId};
         } catch(error) {
           await candidate.storage.close().catch(()=>{});

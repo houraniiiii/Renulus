@@ -6,6 +6,7 @@ import { join, relative, resolve, sep } from 'node:path';
 import { owned } from '../storage/ownership.ts';
 import { canonical } from '../storage/schema.ts';
 import { reject } from '../storage/contracts.ts';
+import { stateMarker } from '../storage/generation.ts';
 import { verifySelectedAuthority, type SelectedWriterAuthority } from '../storage/selected-owner.ts';
 export { readSelectedOwnerLaunch } from '../storage/selected-owner.ts';
 
@@ -26,7 +27,7 @@ export interface BackendSelector {
 export interface GenerationMember { role: 'canonical' | 'native' | 'original' | 'plugin' | 'selector' | 'schema'; path: string; sha256: string; bytes: number }
 export interface HandoffGeneration {
   profileId: string; generation: number; authorityEpoch: number; schemaHash: string; cohortHash: string;
-  frontierDigest: string; members: readonly GenerationMember[];
+  frontierDigest: string; members: readonly GenerationMember[]; sourceMarker?: string;
 }
 const hash = (bytes: Buffer | string) => createHash('sha256').update(bytes).digest('hex');
 function read(path: string, maximum = 16 * 1024 * 1024) {
@@ -129,6 +130,9 @@ export async function selectPreparedGeneration(options: HandoffOptions & { write
       const target = incoming.get(member.role + ':' + member.path);
       return !target || target.sha256 !== member.sha256 || target.bytes !== member.bytes;
     })) reject('backend_rollback_newer_work');
+  } else if (manifest.sourceMarker !== stateMarker(current.members)) {
+    // The candidate was merged from an earlier state of the current generation; selecting it would drop work added since.
+    reject('recovery_candidate_stale');
   }
   const manifestSha256 = await validateGeneration(generationRoot, manifest);
   await options.verifyBinaries(writer, manifest.schemaHash, manifest.cohortHash);

@@ -177,6 +177,10 @@ function seedCanonical(file, kind) {
     answer("bf00-run", C1, "completed", S.C1, M.u1);
     run("x-run", X, "Synthetic sodium answer");
     answer("x-run", X, "submitted", S.X, M.ux);   // an incoming live claim: must never resume
+    // Snapshot taken after native completion but before canonical publication: the run claim and its receipt are still 'running'.
+    db.prepare("INSERT INTO learn_runs VALUES('x-live',?,'x-live-key','running',NULL,'now','now')").run(X);
+    db.prepare("INSERT INTO conversation_commands VALUES('x-live-key','send','learn_thread',?,?,?,'now')").run(X, hex("e"), canonical({ run_id: "x-live", state: "running", conversation: {} }));
+    answer("x-live", X, "reserved", S.X, M.ax);
     db.prepare("INSERT INTO learning_evidence VALUES('x-evidence','synthetic','aki',?,'{}','now')").run(X);
   } else {
     // X was lost from the current stores without a tombstone; E was deleted with a typed tombstone.
@@ -328,17 +332,17 @@ function coordinatorOptions(w) {
       }
       return records;
     },
-    async closeCandidate(id) {
+    async closeCandidate(id, sourceMarker) {
       const candidate = w.candidates.get(id);
       await candidate.native.close();
       for (const member of MEMBERS.slice(2)) copyNoReplace(join(profileLive, member), join(candidate.dir, member));
       for (const member of Object.keys(originalsOf(profileLive))) if (!existsSync(join(candidate.dir, member))) copyNoReplace(join(profileLive, member), join(candidate.dir, member));
-      return observeAndSeal(candidate.dir, Object.keys(originalsOf(candidate.dir)));
+      return observeAndSeal(candidate.dir, Object.keys(originalsOf(candidate.dir)), sourceMarker);
     },
   });
 }
-function observeAndSeal(dir, originals) {
-  const manifest = sealGeneration(dir, header(dir, 2, 2), memberFiles(originals));
+function observeAndSeal(dir, originals, sourceMarker) {
+  const manifest = sealGeneration(dir, { ...header(dir, 2, 2), sourceMarker }, memberFiles(originals));
   return { manifest, observedMembers: observe(dir, originals).observedMembers };
 }
 const finish = w => { w.remote.resolve(); };
@@ -375,6 +379,10 @@ test("paired recovery journey: preview is read-only; Restore is additive over ne
   assert.equal(JSON.parse(all("SELECT mapping_json FROM learn_harness_mappings WHERE thread_id=?", X)[0].mapping_json).store_id, STORE_NOW);
   assert.equal(all("SELECT 1 FROM learn_harness_mappings WHERE thread_id=?", E).length, 0);
   assert.equal(all("SELECT state FROM learn_harness_answers WHERE run_id='x-run'")[0].state, "cancelled");      // incoming claim never resumes
+  // The imported run claim is terminal, so a new send is not refused with learning_run_busy (the guard in storage/learning.ts learning.begin).
+  assert.equal(all("SELECT 1 FROM learn_runs WHERE thread_id=? AND state='running'", X).length, 0);
+  assert.equal(all("SELECT state FROM learn_runs WHERE id='x-live'")[0].state, "interrupted");
+  assert.equal(JSON.parse(all("SELECT result_json FROM conversation_commands WHERE idempotency_key='x-live-key'")[0].result_json).state, "interrupted");
   assert.equal(all("SELECT value FROM preferences WHERE key='memory.restore_barrier:x-evidence'")[0].value, "explicit-capture-required");
   assert.equal(all("SELECT 1 FROM deletion_ledger WHERE entity_type='learn_thread' AND entity_id=?", E).length, 1);
   assert.deepEqual(JSON.parse(all("SELECT value FROM preferences WHERE key='storage.reservations/1'")[0].value).active, {});   // recovery's own reservation settled
@@ -428,7 +436,7 @@ test("shared and owned attachment originals publish through the native worker; c
     return publishRecoveryOriginals(records,async(table,id,pin)=>readFileSync(join(id==="owned-attachment-original"?w.g0:w.g1,pin.original_handle)),native);
   };
   const close=options.closeCandidate;
-  options.closeCandidate=async id=>{await worker.close();return close(id);};
+  options.closeCandidate=async(id,marker)=>{await worker.close();return close(id,marker);};
   finish(w);
   const prepared=await createRecoveryCoordinator(options).prepare(input);
   const db=new DatabaseSync(join(dir,"state/renulus.sqlite3"),{readOnly:true});

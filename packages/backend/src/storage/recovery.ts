@@ -126,6 +126,9 @@ export function mergeRecovery(db:DatabaseSync,incoming:RecoverySnapshot,mapping:
     if(table==='knowledge_jobs'){staged.state='cancelled';staged.error_code='restore_interrupted';}
     if(table==='learn_harness_answers'&&['reserved','submitted','uncertain'].includes(String(staged.state)))staged.state='cancelled';
     if(table==='memory_answer_lineage')staged.state='revoked';
+    // An incoming run claim never resumes: terminal run and receipt, otherwise the chat refuses sends with learning_run_busy.
+    if(table==='learn_runs'&&staged.state==='running'){staged.state='interrupted';staged.error_code='restore_interrupted';}
+    if(table==='conversation_commands'){const receipt=JSON.parse(String(staged.result_json));if(receipt.state==='running')staged.result_json=canonical({...receipt,state:'interrupted'});}
     // A suppression/correction known in the current profile always wins.
     if(table==='memory_sources'&&one(db,'SELECT 1 FROM memory_suppression WHERE source_key=?',String(staged.source_key))){result.excluded++;continue;}
     if(table==='memory_history'&&one(db,'SELECT revision FROM memory_facts WHERE id=? AND revision>?',String(staged.record_id),Number(staged.revision))){result.excluded++;continue;}

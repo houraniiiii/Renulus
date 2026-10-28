@@ -78,7 +78,7 @@ export function createRecoveryOwner(o:RecoveryOwnerOptions):RecoveryCoordinatorO
       verifyNativeClosure((await c.storage.command({type:'recovery.snapshot'})).records,{
         sessions:new Set(graph.sessions.map(s=>String(s.info.id))),messages:new Set(graph.sessions.flatMap(s=>s.messages.map(m=>String(m.id))))});
     },
-    async closeCandidate(id){await candidates.get(id)!.close();return o.closeCandidate(id);},
+    async closeCandidate(id,sourceMarker){await candidates.get(id)!.close();return o.closeCandidate(id,sourceMarker);},
     async discardCandidate(id){await candidates.get(id)!.close();await o.nativeStorage.retire(id);candidates.delete(id);},
   };
 }

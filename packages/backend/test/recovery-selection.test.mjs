@@ -8,7 +8,7 @@ import { dirname, join, resolve } from 'node:path';
 import { openTargetFacade } from '../src/http/target.ts';
 import { createRecoveryPort } from '../src/host/recovery-select.ts';
 import { activateSelectedGeneration, resolveBackendSelection, BACKEND_SELECTOR, GENERATION_MANIFEST } from '../src/host/handoff.ts';
-import { sealGeneration, validateCompleteGeneration } from '../src/storage/generation.ts';
+import { sealGeneration, stateMarker, validateCompleteGeneration } from '../src/storage/generation.ts';
 import { canonical } from '../src/storage/schema.ts';
 
 const token = 'synthetic-recovery-selection-token';
@@ -25,7 +25,9 @@ function put(root, path, text) { mkdirSync(dirname(join(root, path)), { recursiv
 function seal(profile, name, generation, epoch, contents = {}) {
   const root = join(profile, 'generations', name);
   for (const member of MEMBERS) put(root, member.path, contents[member.path] ?? `synthetic ${member.path}`);
-  return sealGeneration(root, header(generation, epoch), MEMBERS);
+  // A candidate records the closed state of the current generation (g0) it was prepared from.
+  const source = name === 'g0' ? {} : { sourceMarker: stateMarker(JSON.parse(readFileSync(join(profile, 'generations/g0', GENERATION_MANIFEST), 'utf8')).members) };
+  return sealGeneration(root, { ...header(generation, epoch), ...source }, MEMBERS);
 }
 /** A synthetic selected owner whose native proof matches this very process. */
 function selected(t, { epoch = 1 } = {}) {
@@ -154,4 +156,16 @@ test('rollback is a distinct whole-generation action: complete compatible member
   assert.equal((await accepted.call(accepted.request(second.authority, { rollback: true }))).status, 200);
   assert.equal(resolveBackendSelection(second.profile).selection.generation, 2);
   assert.equal(resolve(second.profile), second.profile);
+});
+
+test('ordinary selection refuses a candidate prepared before the current generation gained work', async t => {
+  const { profile, authority } = selected(t); seal(profile, 'g1', 2, 2);
+  // Interrupted preparation: the owner reopens the current generation and adds a record before selecting the older candidate.
+  writeFileSync(join(profile, 'generations/g0/state/renulus.sqlite3'), 'newer canonical work');
+  const before = selectorOf(profile);
+  const { facade, call, request } = await open(t, authority);
+  const refused = await call(request(authority));
+  assert.equal(refused.status, 409); assert.equal((await refused.json()).error.code, 'recovery_candidate_stale');
+  assert.equal(selectorOf(profile), before); assert.equal(resolveBackendSelection(profile).admission, 'active');
+  await facade.closed;
 });
