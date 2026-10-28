@@ -5,16 +5,17 @@ proposed 100 decimal GB default or the requested 50–150 GB envelope.
 
 ## Observed bytes
 
-Printed by `tests/workers/test_native_storage_growth.py` with `-s`:
+Printed by `tests/workers/test_native_storage_growth.py` with `-s` during the
+S6b continuation on 2026-10-28:
 
 | Operation | Phase | Logical | Allocated | Unique | Peak allocated |
 | --- | --- | ---: | ---: | ---: | ---: |
-| Library append | Before | 70335731 | 70350240 | 70350240 | 70401576 |
-| Library append | After | 70360689 | 70401576 | 70401576 | 70401576 |
-| Rebuild | Before | 70360689 | 70401576 | 70401576 | 70453944 |
-| Rebuild | After | 70379694 | 70433152 | 70433152 | 70453944 |
-| Compaction | Before | 70379694 | 70433152 | 70433152 | 70433152 |
-| Compaction | After | 70379694 | 70433152 | 70433152 | 70433152 |
+| Library append | Before | 70356211 | 70370720 | 70370720 | 70422056 |
+| Library append | After | 70381169 | 70422056 | 70422056 | 70422056 |
+| Rebuild | Before | 70381169 | 70422056 | 70422056 | 70474432 |
+| Rebuild | After | 70400183 | 70453640 | 70453640 | 70474432 |
+| Compaction | Before | 70400183 | 70453640 | 70453640 | 70453640 |
+| Compaction | After | 70400183 | 70453640 | 70453640 | 70453640 |
 
 ## Method and limits
 
@@ -49,8 +50,10 @@ Printed by `tests/workers/test_native_storage_growth.py` with `-s`:
   after the edits completed. Only the successful operation measurements above
   supply numbers.
 
-Final measurement gate: **1 passed in 18.49 s**. The table is from this final run;
-small metadata-size differences between runs are retained as actual observations.
+Continuation measurement gate: **1 passed in 43.20 s**. The table is from this
+run, using a unique `G:/s6b-growth-*` test directory and the pre-provisioned
+`C:/Renulus/dev/helper-assets` directory. The earlier checkpoint run passed in
+18.49 s; metadata-size differences are actual observations, not fixed baselines.
 
 ## Python recovery boundary
 
@@ -67,3 +70,54 @@ session/message/tool/child graphs, supply or apply the native owner's stable
 mapping, validate complete graph/order closure, or activate a paired candidate.
 Those operations remain owned by the TypeScript/native recovery route. No native
 graph importer, production authority transfer or BF07/BF08 completion is claimed.
+
+## S6b continuation verification — 2026-10-28
+
+- `tests/workers/test_native_storage.py`: **1 passed**. Patched caller-available
+  bytes refuse a new reservation with `storage_waiting_space` without changing
+  status; unsettled work stays charged and settlement transfers cleanup debt.
+- The existing real Mem0/Qdrant delete/history/restart/reindex journey, canonical
+  history purge, newer-tombstone reconciliation and failed physical purge/rebuild
+  checks: **4 passed**. Real local Qdrant and FastEmbed verify history removal,
+  deleted-fact absence after reopen and the canonical deletion marker. The
+  reconciliation check verifies consumption of an already-present tombstone;
+  the locked-generation check preserves debt until cleanup succeeds.
+- All checks use synthetic profiles and the selected pre-provisioned assets,
+  with `HF_HUB_OFFLINE=1` and `TRANSFORMERS_OFFLINE=1` for engine journeys.
+- `pytest tests/backup tests/integration/test_design_c_migration.py -q`:
+  **174 passed, 22 failed, 4 errors in 1673.68 s**. This was one run, with
+  `RENULUS_RECOVERY_HELPERS=C:/Renulus/dev/helper-assets` and a unique G: base
+  directory. All **24** `test_restore_frontier.py` cases and all **13** Design C
+  migration cases passed. There were no skipped engine tests. The required
+  existing-backup gate is **not green**, so this continuation does not complete
+  BF07 acceptance.
+
+The failed existing checks, grouped by file, are retained explicitly:
+
+| File under `tests/backup/` | Failed | Errors |
+| --- | ---: | ---: |
+| `test_attachment_cleanup.py` | 1 | 0 |
+| `test_content_release_compatibility.py` | 2 | 0 |
+| `test_derived_state_exclusion.py` | 2 | 0 |
+| `test_failure_recovery.py` | 4 | 0 |
+| `test_offline_engine_round_trip.py` | 1 | 0 |
+| `test_prepare_delivery_profile.py` | 2 | 0 |
+| `test_round_trip.py` | 3 | 0 |
+| `test_saved_case_originals.py` | 1 | 0 |
+| `test_segmented_engine_and_history.py` | 2 | 0 |
+| `test_segmented_guards.py` | 2 | 0 |
+| `test_segmented_recovery.py` | 2 | 0 |
+| `test_recovery_capacity_sidecar.py` | 0 | 4 |
+
+Visible tracebacks include `index_owner_busy` when a fixture opens the same
+profile while its original Library owner is retained (including crash children),
+and historical-content equality assertions comparing `current_version=1` with
+the current target's `current_version=2`. The four capacity errors share a
+fixture whose isolated legacy measurement exits 1 before the checks run; its
+synthetic artifacts remain at
+`G:/s6b-backup-981c3ba8ae934810bb5b37b708566c94/capacity0/bench`.
+These observations do not classify every failure. The existing fixture/lifecycle,
+content expectation and capacity failures need separate resolution; no ownership
+policy was weakened or historical-content behavior changed to satisfy them.
+S6b required no further Python implementation changes to pass its frontier,
+reservation, growth and purge checks; the interrupted implementation is retained.
