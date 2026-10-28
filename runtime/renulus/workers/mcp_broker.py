@@ -128,10 +128,14 @@ class McpBroker:
         stream = await conn.transport.http(url=frame["url"], method=frame["method"], headers=frame["headers"],
             body=base64.b64decode(frame["body_base64"], validate=True), body_sha256=frame["body_sha256"],
             credential_ref=ref, credential_revision=revision)
+        secrets = self.credentials.secrets(ref) if ref else []
+        headers = {k.lower(): v for k, v in stream.headers.items() if k.lower() in FORWARDED_HEADERS}
+        if any(secret in value for value in headers.values() for secret in secrets):
+            await stream.close()
+            raise McpBrokerError("mcp_credential_echo")
         identity = "stream_" + uuid4().hex
-        conn.streams[identity] = _Stream(stream, self.credentials.secrets(ref) if ref else [])
-        return {"stream": identity, "status": stream.status,
-            "headers": {k.lower(): v for k, v in stream.headers.items() if k.lower() in FORWARDED_HEADERS}}
+        conn.streams[identity] = _Stream(stream, secrets)
+        return {"stream": identity, "status": stream.status, "headers": headers}
 
     async def http_read(self, frame):
         conn = self._connection(frame)

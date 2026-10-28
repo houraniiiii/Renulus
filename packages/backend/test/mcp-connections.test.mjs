@@ -71,7 +71,8 @@ print(json.dumps({'database':str(create_app(sys.argv[2]).state.services.paths.da
   };
 
   let storage = await open(), settings = await createStoredMcpSettings(storage), mcp, mcps;
-  const bridge = () => createMcp({ settings, open: () => true, broker: createMcpBroker({ python, sourceRoot: repository, profile, state: join(profile, 'state') }) });
+  const bridge = () => createMcp({ settings, open: async () => !(await storage.command({ type: 'dispatch.snapshot' })).revoked.includes('renulus.mcp'),
+    broker: createMcpBroker({ python, sourceRoot: repository, profile, state: join(profile, 'state') }) });
   try {
     mcp = bridge(); mcps = { settings, admin: mcp.admin };
     await assert.rejects(command('PUT', '/synthetic', { ...setting(endpoint), approved: true }), /storage_invalid_command/);
@@ -92,12 +93,32 @@ print(json.dumps({'database':str(create_app(sys.argv[2]).state.services.paths.da
     await assert.rejects(mcp.permission({ action: 'synthetic_echo', source: { id: 'call' } }, envelope, signal), /stale/);
 
     await command('POST', '/synthetic/approve');
+    await command('PUT', '/independent', { ...setting(endpoint), credentialRef: 'independent-ref', credential });
+    await command('POST', '/independent/approve');
+    const independent = await mcp.port.mcp('independent', config(endpoint));
+    const beforeRevoke = settings.connection('synthetic').grantedEpoch;
+    const active = await mcp.port.mcp('synthetic', config(endpoint + '/v2'));
     const second = mcp.approveMcpTool(descriptor, { ...envelope, call_id: 'second' }, signal), refused = assert.rejects(second, /stale/);
     while (!mcp.admin.pending().length) await turn();
     const pending = mcp.admin.pending()[0].id;
     assert.equal((await command('POST', '/synthetic/revoke')).value.approved, false);
     await assert.rejects(mcp.admin.answer(pending, 'always'), /stale/); await refused;
     await assert.rejects(mcp.port.mcp('synthetic', config(endpoint + '/v2')), /stale/);
+    await assert.rejects(active.fetch(endpoint + '/v2', { method: 'POST', body: '{}' }), /stale/);
+    assert.equal(await call(independent), 'synthetic reply');
+    assert.equal(settings.connection('synthetic').grantedEpoch, beforeRevoke + 1);
+    await command('POST', '/synthetic/approve');
+    assert.equal(settings.connection('synthetic').grantedEpoch, beforeRevoke + 2);
+    const reapproved = await mcp.port.mcp('synthetic', config(endpoint + '/v2'));
+    const renewedReply = await reapproved.fetch(endpoint + '/v2', { method: 'POST', body: JSON.stringify({ id: 2 }) });
+    assert.equal((await renewedReply.json()).result.content[0].text, 'synthetic reply');
+    await reapproved.close();
+    await assert.rejects(mcp.admin.answer(pending, 'always'), /stale/);
+    const renewedApproval = mcp.approveMcpTool(descriptor, { ...envelope, call_id: 'renewed' }, signal);
+    while (!mcp.admin.pending().length) await turn();
+    await mcp.admin.answer(mcp.admin.pending()[0].id, 'once'); await renewedApproval;
+    await command('POST', '/synthetic/revoke');
+    assert.equal(await call(independent), 'synthetic reply');
 
     await mcp.admin.close(); await storage.close();
     storage = await open(); settings = await createStoredMcpSettings(storage); mcp = bridge(); mcps = { settings, admin: mcp.admin };
@@ -106,7 +127,9 @@ print(json.dumps({'database':str(create_app(sys.argv[2]).state.services.paths.da
     await assert.rejects(mcp.port.mcp('synthetic', config(endpoint + '/v2')), /stale/);
 
     await command('DELETE', '/synthetic');
-    assert.deepEqual((await command('GET', '')).value, []);
+    assert.deepEqual((await command('GET', '')).value.map(item => item.setting.name), ['independent']);
+    const surviving = await mcp.port.mcp('independent', config(endpoint));
+    assert.equal(await call(surviving), 'synthetic reply'); await surviving.close();
     // A revision-1 handoff only succeeds once the removed reference was really forgotten.
     await command('PUT', '/synthetic', { ...setting(endpoint), credential });
     await mcp.admin.close(); await storage.close(); scan(profile);

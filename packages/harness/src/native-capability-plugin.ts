@@ -113,16 +113,17 @@ export async function createNativeCapabilityPlugin(ports:NativeCapabilityPorts) 
     }));
   })};
   const overrides=[
-    Permission.node.replace(Permission.node.mapLayer(original=>Layer.flatMap(original,context=>{
-      const service=Context.get(context,Permission.Service);
-      return Layer.succeed(Permission.Service,{...service,assert:input=>Effect.gen(function*(){
+    Permission.node.replace(Permission.node.mapLayer(original=>Layer.effect(Permission.Service,Effect.gen(function*(){
+      const service=yield* Permission.Service;
+      const mediated=Permission.Service.of({...service,assert:input=>Effect.gen(function*(){
         const owner=yield* Invocation;if(!owner)return yield* service.assert(input);
         if(input.sessionID!==owner.envelope.session_id||!ports.localCurrent(input.sessionID))return yield* new Permission.BlockedError({permission:input.action,resources:input.resources,rules:[],reason:'capability_stale'});
         const decision=yield* Effect.tryPromise({try:()=>ports.commands.permission!({action:input.action,resources:input.resources,source:input.source??null},owner.envelope,owner.signal),
           catch:()=>new Permission.BlockedError({permission:input.action,resources:input.resources,rules:[],reason:'capability_permission_rejected'})});
         if(decision.metadata?.approved!==true||!ports.localCurrent(input.sessionID))return yield* new Permission.BlockedError({permission:input.action,resources:input.resources,rules:[],reason:'capability_permission_rejected'});
       })});
-    }))),
+      return child?yield* child.guardPermission(mediated):mediated;
+    })).pipe(Layer.provide(original)))),
     // Skill construction never scans home/workspace/remote directories.
     Skill.node.replace(Layer.sync(Skill.Service,()=>{
       const state=State.create<Map<string,Skill.Info>,Skill.Editor>({initial:()=>new Map(ports.skills.map(s=>[s.info.id,s.info])),

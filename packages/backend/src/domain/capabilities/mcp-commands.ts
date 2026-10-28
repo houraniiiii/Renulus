@@ -3,7 +3,6 @@ import type { DatabaseSync } from 'node:sqlite';
 import type { McpSetting } from './mcp.ts';
 import { exact, integer, reject, text } from '../../storage/contracts.ts';
 import { canonical, digest, one, rows } from '../../storage/schema.ts';
-import { executeDispatch } from '../../storage/dispatch.ts';
 
 export interface McpConnection { setting: McpSetting; approved: boolean; grantedEpoch: number }
 export type McpConnectionCommand =
@@ -68,7 +67,6 @@ export function executeMcpConnectionCommand<C extends McpConnectionCommand>(db: 
   } else {
     if (!old) reject('mcp_server_unknown');
     if (c.type === 'mcp.connection.revoke' || c.type === 'mcp.connection.remove') {
-      executeDispatch(db,{type:'dispatch.revoke',capability:'renulus.mcp'});
       db.prepare('UPDATE mcp_connections SET approved=0,granted_epoch=granted_epoch+1,updated_at=? WHERE name=?').run(now,name);
     }
     if (c.type === 'mcp.connection.approve') db.prepare('UPDATE mcp_connections SET approved=1,granted_epoch=granted_epoch+1,updated_at=? WHERE name=?').run(now,name);

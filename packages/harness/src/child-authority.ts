@@ -68,7 +68,8 @@ function reservation(value: unknown): Reservation {
 
 /**
  * Native H07 integration; canonical authority remains in the authenticated parent.
- * Install both plugin and overrides. Bounds include retained metadata for this
+ * Install plugin and overrides, and compose guardPermission into the final
+ * Permission replacement. Bounds include retained metadata for this
  * adapter generation. Keep native restart recovery closed: this module neither
  * rehydrates grants nor adopts reports across a root/generation. Canonical family
  * sealing precedes familyStop; its timeout observes retained cleanup, never
@@ -197,6 +198,21 @@ export function createChildAuthority(bridge: ChildAuthorityBridge, bounds: Child
         "tool" in raw && raw.tool === "subagent" && "input" in raw ?
       Effect.try({ try: () => { work(raw.input); }, catch: () => failure("child_invalid_work") }) : Effect.void;
   };
+  const guardPermission = (native: Permission.Interface) => Effect.gen(function* () {
+    permissionServices.add(native);
+    yield* Effect.addFinalizer(() => Effect.sync(() => { permissionServices.delete(native); }));
+    return Permission.Service.of({ ...native, assert: input => Effect.gen(function* () {
+      if (input.action !== "subagent") return yield* native.assert(input);
+      const entry = yield* Invocation;
+      const blocked = () => new Permission.BlockedError({ permission: input.action, resources: input.resources,
+        rules: [], reason: "child_authority_stale" });
+      if (!entry || input.sessionID !== entry.parent.session_id || input.resources.length !== 1 || input.resources[0] !== "evidence-review")
+        return yield* blocked();
+      yield* local(entry).pipe(Effect.mapError(blocked));
+      yield* native.assert(input);
+      yield* check(entry, "after_permission").pipe(Effect.mapError(blocked));
+    }) });
+  });
   const overrides: NonNullable<OpenCode.EmbedOptions["overrides"]> = [
     PluginHooks.node.replace(PluginHooks.node.mapLayer(nativeLayer => Layer.effect(PluginHooks.Service, Effect.gen(function* () {
       const native = yield* PluginHooks.Service;
@@ -388,22 +404,6 @@ export function createChildAuthority(bridge: ChildAuthorityBridge, bounds: Child
         if (info) yield* notify(recovery, info.started_at);
       }) });
     })).pipe(Layer.provide(nativeLayer)))),
-    Permission.node.replace(Permission.node.mapLayer(nativeLayer => Layer.effect(Permission.Service, Effect.gen(function* () {
-      const native = yield* Permission.Service;
-      permissionServices.add(native);
-      yield* Effect.addFinalizer(() => Effect.sync(() => { permissionServices.delete(native); }));
-      return Permission.Service.of({ ...native, assert: input => Effect.gen(function* () {
-        if (input.action !== "subagent") return yield* native.assert(input);
-        const entry = yield* Invocation;
-        const blocked = () => new Permission.BlockedError({ permission: input.action, resources: input.resources,
-          rules: [], reason: "child_authority_stale" });
-        if (!entry || input.sessionID !== entry.parent.session_id || input.resources.length !== 1 || input.resources[0] !== "evidence-review")
-          return yield* blocked();
-        yield* local(entry).pipe(Effect.mapError(blocked));
-        yield* native.assert(input);
-        yield* check(entry, "after_permission").pipe(Effect.mapError(blocked));
-      }) });
-    })).pipe(Layer.provide(nativeLayer)))),
     Job.node.replace(Job.node.mapLayer(nativeLayer => Layer.effect(Job.Service, Effect.gen(function* () {
       const native = yield* Job.Service;
       jobs = native;
@@ -505,7 +505,7 @@ export function createChildAuthority(bridge: ChildAuthorityBridge, bounds: Child
       return yield* restore(settlement(timeout, bound));
     }));
   };
-  return { plugin, overrides, guardHook, status, settlement,
+  return { plugin, overrides, guardHook, guardPermission, status, settlement,
     native: () => ({ jobs: jobs!, execution: execution!, context: executionContext! }),
     familyStop: (parent: Readonly<DomainBinding>, timeout: number) => stop(timeout, parent),
     close: (timeout: number) => stop(timeout) };

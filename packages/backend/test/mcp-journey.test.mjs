@@ -10,12 +10,19 @@ import { mkdtemp, mkdir, readdir, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Effect } from 'effect';
+import { Effect, Layer, ManagedRuntime } from 'effect';
 import { createMcpBroker } from '../src/domain/capabilities/mcp-broker.ts';
 import { createMcp, createMcpSettings, mcpSchemaHash } from '../src/domain/capabilities/mcp.ts';
 const { connect } = await import('@opencode/core/mcp/client');
 const { CapabilityBoundary } = await import('@opencode/core/renulus-boundary');
 const { createNativeCapabilityPlugin } = await import('../../harness/src/native-capability-plugin.ts');
+const { OpenCode, AbsolutePath, Location, Agent } = await import('@opencode/sdk/effect');
+const { Permission } = await import('@opencode/core/permission');
+const { Config } = await import('@opencode/core/config');
+const { InstructionDiscovery } = await import('@opencode/core/instruction-discovery');
+const { TestLLM } = await import('@opencode/ai/testing');
+const { LLMClient } = await import('@opencode/ai');
+const { llmClient } = await import('@opencode/core/effect/app-node-platform');
 
 const python = 'C:/Renulus/dev/python/Scripts/python.exe';
 const sourceRoot = fileURLToPath(new URL('../../../', import.meta.url));
@@ -102,11 +109,42 @@ test('native MCP → authenticated Python broker: streams, approvals, refresh, r
   const capabilities = await createNativeCapabilityPlugin({ ...mcp.port, approveMcpTool: mcp.approveMcpTool,
     authority: { invoke: async (_e, _a, _i, execute) => execute({}, new AbortController().signal), close: async () => {}, status: () => ({}) },
     resolve: async native => ({ ...envelope, call_id: String(native.id) }), localCurrent: () => applicationOpen,
-    commands: { permission: mcp.permission }, skills: [] });
+    commands: { permission: mcp.permission }, skills: [],
+    children: { resolveParent() { throw new Error('unexpected_child'); }, request: () => Effect.die('unexpected_child'),
+      localCurrent: () => false, bindInput() { throw new Error('unexpected_child'); } } });
+  let permission;
+  const nativeConfig = JSON.stringify({ model: 'synthetic/unused', compaction: { auto: false },
+    providers: { synthetic: { package: '@opencode/ai/providers/openai-compatible',
+      settings: { baseURL: 'https://synthetic.invalid/v1', apiKey: 'synthetic-unused' },
+      models: { unused: { limit: { context: 128000, output: 4096 } } } } },
+    agents: { doctor: { mode: 'primary', permissions: [{ action: '*', resource: '*', effect: 'deny' }] }, title: { disabled: true } } });
+  const modelRuntime = ManagedRuntime.make(TestLLM.testLayer());
+  const modelClient = await modelRuntime.runPromise(TestLLM.Test);
+  const runtime = ManagedRuntime.make(Layer.effect(OpenCode.Service, OpenCode.create({
+    app: { name: 'renulus-mcp-permission-test', version: 's12' }, database: { path: path.join(root, 'native.sqlite') },
+    plugins: [capabilities.capture, ...capabilities.plugins, { id: 'permission-fixture', effect: ctx => ctx.command.transform(editor =>
+      editor.add({ name: 'fixture_permission', execute: () => Effect.gen(function* () { permission = yield* Permission.Service; }) })) }],
+    config: { directory: path.join(root, 'config'), project: false, content: nativeConfig },
+    models: { fetch: false, snapshot: false }, fs: { filewatcher: false, fff: false }, events: { persist: false },
+  }, { overrides: [...capabilities.overrides,
+    Config.node.replace(Config.configured({ project: false, global: false, content: nativeConfig })),
+    InstructionDiscovery.node.replace(InstructionDiscovery.configured({ project: false, global: false })),
+    llmClient.replace(Layer.succeed(LLMClient.Service, modelClient)),
+  ] })));
   const stockFetch = globalThis.fetch;
-  globalThis.fetch = () => { direct++; throw new Error('direct native fetch forbidden'); };
+  globalThis.fetch = input => {
+    if (new URL(input instanceof Request ? input.url : String(input)).origin === issuer) direct++;
+    throw new Error('direct native fetch forbidden');
+  };
   const config = { type: 'remote', url: endpoint, oauth: false, codemode: false, timeout: { startup: 5000, catalog: 5000, execution: 5000 } };
   try {
+    const sdk = await runtime.runPromise(OpenCode.Service);
+    const session = await runtime.runPromise(sdk.sessions.create({ title: 'Synthetic MCP permission', agent: Agent.ID.make('doctor'),
+      location: Location.Ref.make({ directory: AbsolutePath.make(root) }) }));
+    envelope.session_id = session.id;
+    await runtime.runPromise(sdk.sessions.command({ sessionID: session.id, name: 'fixture_permission', text: '' }));
+    await assert.rejects(Effect.runPromise(permission.assert({ sessionID: session.id, agent: Agent.ID.make('doctor'),
+      action: 'synthetic_echo', resources: ['*'] })), /denied|blocked/i);
     // Real native connect, catalogue and tool client inside the patched capabilities scope.
     await Effect.runPromise(capabilities.provide(Effect.scoped(Effect.gen(function* () {
       const client = yield* connect('synthetic', config, root);
@@ -117,11 +155,11 @@ test('native MCP → authenticated Python broker: streams, approvals, refresh, r
       assert.equal(refreshes, 2); assert.equal(unauthorized, 1);
       assert.equal(frames.filter(f => f.op === 'credential.refresh').length, 1);
       const boundary = yield* CapabilityBoundary;
-      const native = { sessionID: 'session', messageID: 'message', id: 'call', agent: 'test' };
+      const native = { sessionID: session.id, messageID: 'message', id: 'call', agent: 'doctor' };
       const signal = new AbortController().signal;
       const call = Effect.runPromise(boundary.mcpTool(descriptor, {}, native, Effect.gen(function* () {
-        const permission = yield* Effect.promise(() => mcp.permission({ action: 'synthetic_echo', source: { id: 'call' } }, envelope, signal));
-        assert.equal(permission.metadata.approved, true);
+        yield* permission.assert({ sessionID: session.id, agent: Agent.ID.make('doctor'), action: 'synthetic_echo', resources: ['*'],
+          source: { type: 'tool', messageID: 'message', id: 'call' } });
         return yield* client.callTool({ name: 'echo', args: {} });
       })));
       const id = yield* Effect.promise(() => pending(mcp));
@@ -169,7 +207,7 @@ test('native MCP → authenticated Python broker: streams, approvals, refresh, r
     await scan(process.env.XDG_STATE_HOME, [OLD, REFRESH, fresh(1), fresh(2)]);
   } finally {
     globalThis.fetch = stockFetch;
-    releaseReconnect?.(); await mcp.admin.close(); await capabilities.close();
+    releaseReconnect?.(); await runtime.dispose(); await modelRuntime.dispose(); await mcp.admin.close(); await capabilities.close();
     server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
   }
 });

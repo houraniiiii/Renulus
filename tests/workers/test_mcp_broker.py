@@ -45,8 +45,10 @@ class Server:
             payload = {"echo": headers["authorization"]} if path == "/echo" else {"ok": True}
         self.seen.append((method, path, headers.get("authorization")))
         data = b"" if status == 204 else json.dumps(payload).encode()
+        session = (f"Mcp-Session-Id: {headers['authorization']}\r\n" if path == "/echo-header" else
+            f"Mcp-Session-Id: {REFRESH}\r\n" if path == "/echo-refresh-header" else "")
         writer.write(f"HTTP/1.1 {status} X\r\nContent-Type: application/json\r\nContent-Length: {len(data)}\r\n"
-            f"Location: http://evil.invalid/\r\nWWW-Authenticate: Bearer\r\nConnection: close\r\n\r\n".encode() + data)
+            f"{session}Location: http://evil.invalid/\r\nWWW-Authenticate: Bearer\r\nConnection: close\r\n\r\n".encode() + data)
         await writer.drain()
         writer.close()
 
@@ -92,6 +94,13 @@ class McpBrokerJourney(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(McpBrokerError) as refused:
                 await broker.handle({"op": "http.read", **conn, "stream": echo["stream"]})
             self.assertEqual(refused.exception.code, "mcp_credential_echo")
+            for path in ("/echo-header", "/echo-refresh-header"):
+                returned = []
+                with self.assertRaises(McpBrokerError) as refused:
+                    returned.append(await broker.handle(request(path)))
+                self.assertEqual(refused.exception.code, "mcp_credential_echo")
+                self.assertFalse(any(s in json.dumps([returned, str(refused.exception)]) for s in (OLD, REFRESH, NEW)))
+                self.assertFalse(broker.connections["c1"].streams)
             # The token goes only to its own origin, and is never in the protected record's plaintext.
             with self.assertRaises(Exception):
                 await broker.handle({**request("/mcp"), "url": "http://localhost:1/mcp"})

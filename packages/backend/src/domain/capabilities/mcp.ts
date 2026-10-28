@@ -31,7 +31,7 @@ export function createMcpSettings(initial: readonly McpSetting[] = []) {
 }
 /** Canonical `mcp_connections` behind the same port; the cache is written through only after storage commits. */
 export async function createStoredMcpSettings(storage: Pick<StorageClient, 'command'>) {
-  const items = new Map<string, McpConnection>(), epochs = new Map<string, number>();
+  const items = new Map<string, McpConnection>(), epochs = new Map<string, number>(), revocations = new Map<string, number>();
   const sync = (item: McpConnection) => {
     items.set(item.setting.name, item); epochs.set(item.setting.name, Math.max(epochs.get(item.setting.name) ?? 0, item.grantedEpoch)); return item;
   };
@@ -40,7 +40,10 @@ export async function createStoredMcpSettings(storage: Pick<StorageClient, 'comm
   return {
     get: (name: string) => { const item = items.get(name); return item && visible(item); },
     list: () => [...items.values()].map(visible),
-    grantEpoch(name: string, advance?: true) { const epoch = (epochs.get(name) ?? 0) + (advance ? 1 : 0); epochs.set(name, epoch); return epoch; },
+    grantEpoch(name: string, advance?: true) {
+      const revoked = (revocations.get(name) ?? 0) + (advance ? 1 : 0);
+      revocations.set(name, revoked); return (epochs.get(name) ?? 0) + revoked;
+    },
     connection: (name: string) => items.get(name),
     connections: () => [...items.values()],
     async save(setting: McpSetting, idempotencyKey: string) { return sync(await storage.command({ type: 'mcp.connection.save', setting, idempotencyKey })); },

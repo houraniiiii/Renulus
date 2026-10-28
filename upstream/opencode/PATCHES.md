@@ -10,7 +10,7 @@ See [UPSTREAM.md](UPSTREAM.md) for the pinned inputs and procedure.
 owned copies of published 2.0.26 (MIT); never the shared cohort. It substitutes the
 Code Mode web extension, MCP transport/credential boundary and browser attachment/tunnel
 factories, preserving native execution/protocols. The exact-source test loader applies the
-same transformations in memory. Five original-file SHA-256 preconditions:
+same transformations in memory. Six original-file SHA-256 preconditions:
 
 | Published file | Original SHA-256 |
 | --- | --- |
@@ -19,6 +19,13 @@ same transformations in memory. Five original-file SHA-256 preconditions:
 | `core/dist/mcp/client.js` | `0d97f9cb1f7540eb75e2be40f21c4c6ed5fce9e58be3711e2dcfe18f684650f5` |
 | `core/dist/chunks/agent-4ahpts8n.js` | `fc5b998e53031c185e2391eca6985e9d712224e6ec557f65386c267d2cee31ef` |
 | `plugin-browser/dist/connection.js` | `b78bd47fb5321a1248e8b3c1feeee47d0af0995d4d63278a648cc07b591b51e8` |
+| `plugin-browser/dist/files.js` | `2403d98ac1f526344fe57b62d2785bcd6b162287f7bd174a23750d704ee08386` |
+
+The `plugin-browser/dist/files.js` change roots browser exports in the owned
+`renulus.browser.downloads` directory and refuses an absent root. Remove this
+change when upstream accepts an application-owned export directory and the
+connected browser export journey proves every exported file stays within it
+without this transformation.
 
 The patch also emits `core/dist/renulus-boundary.js`; it has no upstream original.
 Remove when upstream exposes equivalent per-attempt web/MCP and browser attachment/tunnel
