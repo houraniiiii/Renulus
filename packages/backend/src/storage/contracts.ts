@@ -113,7 +113,8 @@ export type StorageCommand = DispatchCommand | LearningMetadataCommand | Learnin
   | { type: 'records.page'; table: string; offset: number; limit: number }
   | { type: 'records.export' }
   | { type: 'learning.rename'; threadId: string; expectedRevision: number; title: string; idempotencyKey: string }
-  | { type: 'database.backup'; name: string };
+  /** `inspection` is a disposable internal snapshot (plugin candidate inspection); it is never exposed to the user. */
+  | { type: 'database.backup'; name: string; purpose?: 'inspection' };
 
 export interface CommandResults extends DispatchResults, LearningResults, LearningDispatchResults, LearningMetadataResults, MemoryResults, KnowledgeResults, StudyResults, EvidenceResults, CapabilityResults, McpConnectionResults, ContentResults, ProjectResults, AssessmentResults, RecoveryResults, UpdatesResults, TemporaryResults {
   'storage.preview': StoragePreview;
@@ -180,7 +181,8 @@ export function validateCommand(value: unknown): asserts value is StorageCommand
       text(command.threadId, 1, 120); text(command.title, 1, 120);
       text(command.idempotencyKey, 8, 128); integer(command.expectedRevision, 1); break;
     case 'database.backup':
-      exact(value, ['type', 'name']); text(command.name, 1, 80);
+      exact(value, ['type', 'name', ...command.purpose === undefined ? [] : ['purpose']]); text(command.name, 1, 80);
+      if (command.purpose !== undefined && command.purpose !== 'inspection') reject('storage_invalid_command');
       if (!/^[a-zA-Z0-9_-]+$/.test(command.name)) reject('storage_invalid_command'); break;
     default: reject('storage_invalid_command');
   }

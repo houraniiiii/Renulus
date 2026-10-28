@@ -55,9 +55,9 @@ function transaction<T>(write: boolean, action: () => T): T {
 }
 function preview() { return inventory(db!, options.migrations, options.expectedSchemaHash); }
 
-async function backupDatabase(name: string) {
+async function backupDatabase(name: string, purpose?: 'inspection') {
   owner!.check();
-  transaction(false, () => requireAssistance(db!));
+  if (purpose !== 'inspection') transaction(false, () => requireAssistance(db!)); // Finish the active Test before a user-visible backup.
   const root = resolve(options.profileRoot);
   const directory = owned(root, join(root, 'state', 'backups'));
   mkdirSync(directory, { recursive: true });
@@ -116,7 +116,7 @@ async function dispatch(command: StorageCommand) {
     case 'records.page': return transaction(false, () => page(db!, command.table, command.offset, command.limit));
     case 'records.export': return transaction(false, () => { requireAssistance(db!); return exportRecords(db!); }); // Finish the active Test first.
     case 'learning.rename': return transaction(true, () => renameLearning(db!, command));
-    case 'database.backup': return backupDatabase(command.name);
+    case 'database.backup': return backupDatabase(command.name, command.purpose);
   }
 }
 

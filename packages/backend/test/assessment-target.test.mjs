@@ -145,6 +145,7 @@ test('fictional receipt replays the published request after restart with no infe
     await assert.rejects(f.command(receipt),fail('assistance_restricted'));
     await assert.rejects(f.command({type:'records.export'}),fail('assistance_restricted'));
     await assert.rejects(f.command({type:'database.backup',name:'bf05-active-test'}),fail('assistance_restricted'));
+    assert.ok((await f.command({type:'database.backup',name:'bf05-inspection',purpose:'inspection'})).pages>0); // disposable plugin-inspection snapshot is neutral admin work
     const scored=await f.command({type:'assessment.attempts.submit',attemptId:test.id,expectedRevision:0,latestDraft:null,idempotencyKey:'bf05-fiction-submit'});
     assert.ok((await f.command({type:'records.export'})).records);
     assert.ok((await f.command({type:'database.backup',name:'bf05-after-test'})).pages>0);

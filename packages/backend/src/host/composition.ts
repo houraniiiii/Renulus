@@ -480,7 +480,7 @@ export async function openConnectedTarget(options: ConnectedTargetOptions) {
     // writer is opened. Candidate callbacks and generation stay denied.
     const root = path.join(options.profileRoot, 'state', 'plugin-lifecycle', 'candidates', request.operation_id);
     await mkdir(path.join(root, 'state', 'harness'), { recursive: true });
-    const backup = await storage.command({ type: 'database.backup', name: 'candidate-' + randomUUID().replaceAll('-', '') });
+    const backup = await storage.command({ type: 'database.backup', name: 'candidate-' + randomUUID().replaceAll('-', ''), purpose: 'inspection' });
     await copyFile(backup.path, path.join(root, 'state', 'renulus.sqlite3'));
     await unlink(backup.path);
     const manifest = JSON.parse(await readFile(path.join(options.profileRoot, 'state', 'harness', 'manifest.json'), 'utf8'));
