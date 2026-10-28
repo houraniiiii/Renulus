@@ -113,7 +113,7 @@ test('Updates keeps failed-check success date and correction/outbox/source links
     await assert.rejects(f.command({...track,url:'https://other.invalid/publication.pdf',idempotencyKey:'bf06-publication-host'}),fail('source_host_blocked'));
     await assert.rejects(f.command({...track,url:'https://synthetic.invalid/unregistered.pdf',idempotencyKey:'bf06-publication-unknown'}),fail('publication_not_registered'));
     await assert.rejects(f.command({type:'updates.publications.stop',id:'absent'}),fail('publication_missing'));
-    const api=async(path,method='GET',body)=>updatesCommand(Object.assign(Readable.from(body?[Buffer.from(JSON.stringify(body))]:[]),{method,headers:{'idempotency-key':'bf06-http-request'}}),new URL('http://localhost/api/v1/updates/'+path),f.storage,updates);
+    let apiSequence=0;const api=async(path,method='GET',body)=>updatesCommand(Object.assign(Readable.from(body?[Buffer.from(JSON.stringify(body))]:[]),{method,headers:{'idempotency-key':'bf06-http-request-'+(++apiSequence)}}),new URL('http://localhost/api/v1/updates/'+path),f.storage,updates);
     const failure=await api('sources/S99/check?force=true','POST');assert.deepEqual(Object.keys(failure.value).sort(),['checked_at','error','source_id','state']);assert.equal(failure.value.error.code,'source_fetch_failed');
     const cachedFailure=await api('sources/S99/check','POST');assert.deepEqual(Object.keys(cachedFailure.value).sort(),['cached','error','source_id','state']);
     failed=false;
@@ -126,6 +126,19 @@ test('Updates keeps failed-check success date and correction/outbox/source links
     const statuses=(await api('sources/S99/status')).value.statuses;assert.ok(statuses.length);assert.deepEqual(Object.keys(statuses[0]).sort(),['review_id','reviewed_at','reviewer','status','target','target_key']);
     assert.deepEqual((await api('entries/'+entry.id+'/affected')).value,{affected:[],total:0,limit:100,offset:0,next_offset:null});
     assert.equal((await api('entries/absent')).status,404);assert.equal((await api('entries?limit=0')).status,422);
+    const initialSchedule=(await api('schedule')).value;assert.deepEqual(Object.keys(initialSchedule).sort(),['app_running_only','cadence_hours','enabled','jobs','last_run','max_batch','max_retries','max_selection','next_due_at','options','revision','running','selection']);assert.equal(initialSchedule.enabled,false);assert.equal(initialSchedule.running,false);assert.ok(initialSchedule.options.some(option=>option.kind==='literature'&&option.id===topic));assert.ok(!initialSchedule.options.some(option=>option.id==='S99'));
+    const official=initialSchedule.options.find(option=>option.kind==='source'&&option.id==='K01');assert.ok(official);
+    const pdf='https://kdigo.org/wp-content/uploads/synthetic-bf06.pdf';await f.inspect(db=>db.prepare('UPDATE update_source_checks SET links_json=? WHERE source_id=?').run(JSON.stringify([{url:pdf,label:'SYNTHETIC official PDF'}]),official.id));
+    const publicPdf=await f.command({...track,sourceId:official.id,url:pdf,idempotencyKey:'bf06-public-pdf'});
+    const selected=[{kind:'source',id:official.id},{kind:'publication',id:publicPdf.id},{kind:'literature',id:topic}];
+    const configured=await api('schedule','PUT',{enabled:true,cadence_hours:24,selection:selected});assert.equal(configured.status,200);assert.equal(configured.value.enabled,true);assert.equal(configured.value.jobs.length,3);assert.ok(configured.value.jobs.every(job=>job.available&&job.title));assert.ok(configured.value.next_due_at);assert.equal(configured.value.max_batch,5);
+    const write={type:'updates.schedule.write',enabled:true,cadenceHours:24,selection:selected,expectedRevision:configured.value.revision,idempotencyKey:'bf06-schedule-change'};
+    await assert.rejects(f.command({...write,selection:[{kind:'source',id:'S99'}]}),fail('schedule_selection_invalid'));
+    await assert.rejects(f.command({...write,selection:[]}),fail('schedule_selection_required'));
+    const claim=await f.command({type:'updates.schedule.claim',manual:true});assert.ok(claim.id);assert.equal((await api('schedule')).value.running,true);await assert.rejects(f.command(write),fail('schedule_busy'));
+    await f.command({type:'updates.schedule.finish',id:claim.id,checked:0,failed:0,errorCode:null});
+    await f.command({type:'updates.publications.stop',id:publicPdf.id});assert.equal((await api('schedule')).value.jobs.find(job=>job.target_id===publicPdf.id).available,false);
+    const invalidSelection=await api('schedule','PUT',{enabled:true,cadence_hours:24,selection:selected});assert.equal(invalidSelection.status,422);assert.equal(invalidSelection.value.error.code,'schedule_selection_invalid');
     await f.inspect(db=>{assert.equal(db.prepare('SELECT COUNT(*) AS n FROM knowledge_source_status_events').get().n,2);assert.equal(db.prepare("SELECT COUNT(*) AS n FROM update_library_changes WHERE state NOT IN ('applied','no-match')").get().n,0);const matched=JSON.parse(db.prepare('SELECT metadata_json FROM knowledge_revisions WHERE id=?').get('rev_matched').metadata_json),other=JSON.parse(db.prepare('SELECT metadata_json FROM knowledge_revisions WHERE id=?').get('rev_other').metadata_json);assert.equal(matched.content_reviewed,false);assert.equal(matched.latest_final_verified,false);assert.equal(matched.correction,'SYNTHETIC corrigendum');assert.equal(other.content_reviewed,true);assert.equal(other.correction,undefined);});
   }finally{await updates.close();await f.close();}
 });

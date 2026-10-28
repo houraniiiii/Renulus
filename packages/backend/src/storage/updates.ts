@@ -37,7 +37,10 @@ export function validateUpdatesCommand(c: UpdatesCommand): void {
     case 'updates.check.begin': exact(c, ['type', 'route', 'force']); route(c.route); if (typeof c.force !== 'boolean') reject('updates_invalid'); break;
     case 'updates.check.current': exact(c, ['type', 'input']); checkpoint(c.input); break;
     case 'updates.check.finish': exact(c, ['type', 'input', 'observation', 'errorCode']); checkpoint(c.input); if (c.observation !== null) observation(c.observation); if (c.errorCode !== null) text(c.errorCode, 1, 80); if ((c.observation === null) === (c.errorCode === null)) reject('updates_invalid'); break;
-    case 'updates.schedule.write': exact(c, ['type', 'enabled', 'cadenceHours', 'selection', 'expectedRevision', 'idempotencyKey']); if (typeof c.enabled !== 'boolean' || !Array.isArray(c.selection) || c.selection.length > 20) reject('updates_invalid'); integer(c.cadenceHours, 24, 720); integer(c.expectedRevision, 1); c.selection.forEach(route); if (new Set(c.selection.map(v => v.kind + ':' + v.id)).size !== c.selection.length) reject('updates_invalid'); break;
+    case 'updates.schedule.write':
+      exact(c, ['type', 'enabled', 'cadenceHours', 'selection', 'expectedRevision', 'idempotencyKey']); if (typeof c.enabled !== 'boolean') reject('updates_invalid');
+      if (!Array.isArray(c.selection) || c.selection.length > 20 || c.selection.some(r => !r || Object.keys(r).length !== 2 || !['source', 'publication', 'literature'].includes(r.kind) || typeof r.id !== 'string' || !r.id.length || r.id.length > 200)) reject('schedule_selection_invalid');
+      if (!Number.isInteger(c.cadenceHours) || c.cadenceHours < 24 || c.cadenceHours > 720) reject('schedule_cadence_invalid'); integer(c.expectedRevision, 1); break;
     case 'updates.schedule.claim': exact(c, ['type', 'manual']); if (typeof c.manual !== 'boolean') reject('updates_invalid'); break;
     case 'updates.schedule.finish': exact(c, ['type', 'id', 'checked', 'failed', 'errorCode']); text(c.id, 1, 128); integer(c.checked, 0, 20); integer(c.failed, 0, 20); if (c.errorCode !== null) text(c.errorCode, 1, 80); break;
     case 'updates.digest.input': exact(c, ['type', 'limit']); integer(c.limit, 1, 50); break;
@@ -134,7 +137,30 @@ function affected(db: DatabaseSync, entryId: string, t: SourceTarget, reason: st
     }
   }
 }
-function schedule(db: DatabaseSync): ObjectValue { return { ...one(db, 'SELECT * FROM update_schedule WHERE id=1'), revision: studyPreference(db, 'updates.schedule_revision', 1), selection: rows(db, 'SELECT kind,target_id AS id,next_due_at,last_attempt_at,last_success_at,state,error_code FROM update_schedule_jobs ORDER BY kind,target_id'), app_running_only: true, running: one(db, "SELECT * FROM update_schedule_runs WHERE state='running' ORDER BY started_at DESC LIMIT 1") ?? null }; }
+function schedule(db: DatabaseSync): ObjectValue {
+  const sources = rows(db, 'SELECT * FROM update_source_checks ORDER BY source_id'), options: ObjectValue[] = [];
+  for (const source of sources) {
+    const url = https(sourceRegister.get(String(source.source_id))?.[0] ?? source.url), host = url.hostname.replace(/^www\./, '');
+    const eligible = /^K(0\d|1[0-8])$/.test(String(source.source_id)) ? host === 'kdigo.org' && url.pathname.startsWith('/guidelines/') :
+      source.source_id === 'G01' && host === 'era-online.org' && url.pathname.replace(/\/$/, '') === '/era-guidance' ||
+      source.source_id === 'G02' && host === 'ukkidney.org' && url.pathname.replace(/\/$/, '') === '/health-professionals/guidelines/guidelines-commentaries';
+    if (eligible && !url.search && !url.hash) options.push({ kind: 'source', id: source.source_id, source_id: source.source_id, title: source.title, route: 'public publication links' });
+  }
+  const eligibleSources = new Set(options.map(option => option.id));
+  for (const row of rows(db, 'SELECT * FROM update_publications WHERE enabled=1 ORDER BY source_id,title,id')) {
+    const url = https(row.url), host = url.hostname.replace(/^www\./, '');
+    if (eligibleSources.has(row.source_id) && row.source_id !== 'G01' && ['kdigo.org', 'ukkidney.org'].includes(host) && String(row.permission_reference).trim() && url.pathname.toLowerCase().endsWith('.pdf') && ['/wp-content/uploads/', '/sites/', '/health-professionals/'].some(prefix => url.pathname.startsWith(prefix)))
+      options.push({ kind: 'publication', id: row.id, source_id: row.source_id, title: row.title, route: 'tracked public publication digest' });
+  }
+  const literature = sources.find(source => source.source_id === 'L03');
+  if (literature && ['europepmc.org', 'www.ebi.ac.uk'].includes(new URL(sourceRegister.get('L03')?.[0] ?? String(literature.url)).hostname))
+    options.push(...executeContent(db, { type: 'content.topics' }).items.map((topic: ObjectValue) => ({ kind: 'literature', id: topic.id, source_id: 'L03', title: topic.title, route: 'Europe PMC topic metadata (25 records)' })));
+  const config = one(db, 'SELECT * FROM update_schedule WHERE id=1')!, last_run = one(db, 'SELECT * FROM update_schedule_runs ORDER BY started_at DESC,rowid DESC LIMIT 1');
+  const jobs: ObjectValue[] = rows(db, 'SELECT * FROM update_schedule_jobs ORDER BY kind,target_id').map(job => { const option = options.find(option => option.kind === job.kind && option.id === job.target_id); return { ...job, title: option?.title ?? job.target_id, available: !!option }; });
+  return { enabled: !!config.enabled, cadence_hours: config.cadence_hours, selection: jobs.map(job => ({ kind: job.kind, id: job.target_id })), jobs, options, last_run,
+    next_due_at: config.enabled && jobs.length ? jobs.map(job => String(job.next_due_at)).sort()[0] : null,
+    running: !!one(db, "SELECT 1 FROM update_schedule_runs WHERE state='running'"), max_batch: 5, max_selection: 20, max_retries: 2, app_running_only: true, revision: studyPreference(db, 'updates.schedule_revision', 1) };
+}
 function digestInput(db: DatabaseSync, limit: number) {
   requireAssistance(db); const entries = rows(db, 'SELECT id,title,url,review_state,summary,reviewed_at,discovered_at,source_id FROM update_entries ORDER BY discovered_at DESC,id DESC LIMIT ?', limit);
   return { stamp: sha({ context: stamp(db), entries }), entries, checked_at: utcNow(), limit };
@@ -221,8 +247,17 @@ export function executeUpdates<C extends UpdatesCommand>(db: DatabaseSync, c: C)
     }
     case 'updates.literature.checks': result = { checks: rows(db, 'SELECT * FROM update_literature_checks ORDER BY topic_id') }; break;
     case 'updates.schedule.read': result = schedule(db); break;
-    case 'updates.schedule.write': result = receipt(db, c, () => { if (c.expectedRevision !== studyPreference(db, 'updates.schedule_revision', 1)) reject('revision_conflict'); c.selection.forEach(r => target(db, r)); db.prepare('UPDATE update_schedule SET enabled=?,cadence_hours=?,updated_at=? WHERE id=1').run(c.enabled ? 1 : 0, c.cadenceHours, utcNow()); db.prepare('DELETE FROM update_schedule_jobs').run(); for (const r of c.selection) db.prepare('INSERT INTO update_schedule_jobs(kind,target_id,next_due_at) VALUES(?,?,?)').run(r.kind, r.id, utcNow()); saveStudyPreference(db, 'updates.schedule_revision', c.expectedRevision + 1); cancelChecks(db); return schedule(db); }); break;
-    case 'updates.schedule.claim': { requireAssistance(db); const s = schedule(db); if (s.running || !c.manual && !s.enabled) { result = { id: null, selection: [] }; break; } const due = rows(db, 'SELECT kind,target_id AS id FROM update_schedule_jobs ' + (c.manual ? '' : 'WHERE next_due_at<=? ') + 'ORDER BY next_due_at,kind,target_id LIMIT 20', ...(c.manual ? [] : [utcNow()])); if (!due.length) { result = { id: null, selection: [] }; break; } const id = uid('updates_run'), now = utcNow(), next = new Date(Date.now() + Number(s.cadence_hours) * 3600_000).toISOString(); db.prepare("INSERT INTO update_schedule_runs(id,trigger,started_at,state) VALUES(?,?,?,'running')").run(id, c.manual ? 'manual' : 'schedule', now); for (const r of due) db.prepare("UPDATE update_schedule_jobs SET next_due_at=?,last_attempt_at=?,state='running' WHERE kind=? AND target_id=?").run(next, now, r.kind, r.id); result = { id, selection: due }; break; }
+    case 'updates.schedule.write': result = receipt(db, c, () => {
+      const previous = schedule(db); if (previous.running) reject('schedule_busy'); if (c.expectedRevision !== previous.revision) reject('revision_conflict');
+      if (c.selection.some(r => !previous.options.some((option: ObjectValue) => option.kind === r.kind && option.id === r.id))) reject('schedule_selection_invalid');
+      if (c.enabled && !c.selection.length) reject('schedule_selection_required');
+      const now = utcNow(); db.prepare('UPDATE update_schedule SET enabled=?,cadence_hours=?,updated_at=? WHERE id=1').run(c.enabled ? 1 : 0, c.cadenceHours, now);
+      for (const job of previous.jobs) if (!c.selection.some(r => r.kind === job.kind && r.id === job.target_id)) db.prepare('DELETE FROM update_schedule_jobs WHERE kind=? AND target_id=?').run(job.kind, job.target_id);
+      for (const r of c.selection) db.prepare('INSERT OR IGNORE INTO update_schedule_jobs(kind,target_id,next_due_at) VALUES(?,?,?)').run(r.kind, r.id, now);
+      if (previous.cadence_hours !== c.cadenceHours) for (const job of rows(db, 'SELECT * FROM update_schedule_jobs WHERE retry_count=0 AND last_attempt_at IS NOT NULL')) db.prepare('UPDATE update_schedule_jobs SET next_due_at=? WHERE kind=? AND target_id=?').run(new Date(Math.max(Date.now(), Date.parse(String(job.last_attempt_at)) + c.cadenceHours * 3600_000)).toISOString(), job.kind, job.target_id);
+      saveStudyPreference(db, 'updates.schedule_revision', c.expectedRevision + 1); cancelChecks(db); return schedule(db);
+    }); break;
+    case 'updates.schedule.claim': { requireAssistance(db); const s = schedule(db); if (s.running || !c.manual && !s.enabled) { result = { id: null, selection: [] }; break; } const due = rows(db, 'SELECT kind,target_id AS id FROM update_schedule_jobs ' + (c.manual ? '' : 'WHERE next_due_at<=? ') + 'ORDER BY next_due_at,kind,target_id LIMIT 5', ...(c.manual ? [] : [utcNow()])); if (!due.length) { result = { id: null, selection: [] }; break; } const id = uid('updates_run'), now = utcNow(), next = new Date(Date.now() + Number(s.cadence_hours) * 3600_000).toISOString(); db.prepare("INSERT INTO update_schedule_runs(id,trigger,started_at,state) VALUES(?,?,?,'running')").run(id, c.manual ? 'manual' : 'schedule', now); for (const r of due) db.prepare("UPDATE update_schedule_jobs SET next_due_at=?,last_attempt_at=?,state='running' WHERE kind=? AND target_id=?").run(next, now, r.kind, r.id); result = { id, selection: due }; break; }
     case 'updates.schedule.finish': db.prepare("UPDATE update_schedule_runs SET state=?,checked=?,failed=?,error_code=?,finished_at=? WHERE id=? AND state='running'").run(c.errorCode === 'cancelled' ? 'cancelled' : c.failed ? 'failed' : 'completed', c.checked, c.failed, c.errorCode, utcNow(), c.id); result = schedule(db); break;
     case 'updates.schedule.stop': cancelChecks(db); db.prepare("UPDATE update_schedule_runs SET state='cancelled',error_code='cancelled',finished_at=? WHERE state='running'").run(utcNow()); result = { cancelled: true }; break;
     case 'updates.recover': saveStudyPreference(db, 'updates.cancel_revision', studyPreference(db, 'updates.cancel_revision', 0) + 1); db.prepare("UPDATE update_schedule_runs SET state='failed',error_code='interrupted',finished_at=? WHERE state='running'").run(utcNow()); for (const r of rows(db, "SELECT key,value FROM preferences WHERE key LIKE 'updates.check.%'")) { const v = parse(r.value); if (v.state === 'running') saveStudyPreference(db, String(r.key), { ...v, state: 'interrupted' }); } for (const r of rows(db, "SELECT DISTINCT entry_id FROM update_library_changes WHERE state NOT IN ('applied','no-match')")) sync(db, String(r.entry_id)); result = { recovered: true }; break;
