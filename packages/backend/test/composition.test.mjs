@@ -167,7 +167,7 @@ test('actual native serializer → canonical dispatch permit → protected worke
       method: 'POST', headers: { 'x-renulus-token': 'synthetic-noaccount', 'content-type': 'application/json', 'idempotency-key': 'synthetic-noaccount-send' },
       body: JSON.stringify({ expected_revision: chat.revision, text: 'Explain SYNTHETIC CKD.', request_id: 'synthetic-noaccount-send' }) });
     const stream = await response.text();
-    assert.match(stream, /event: started/); assert.match(stream, /event: error/); assert.equal(counted, 1);
+    assert.match(stream, /event: started/); assert.match(stream, /event: error/); assert.equal(counted, 2, 'one context count pass, then the final dispatch count');
     assert.equal(actual.worker.channel.state().retained, 0);
     await facade.close(); facade = undefined;
     const db = new DatabaseSync(path.join(f.root, 'state/renulus.sqlite3'), { readOnly: true });

@@ -33,7 +33,7 @@ export interface SavedLearningOptions {
   modelCallbacks?: (request: NativeDomainRequest, authority: SavedModelContext) => Promise<NativeDomainReply>;
   /** Evidence-review children own their callbacks; `root` serves a command against the parent's authority. */
   /** Final-request compaction against the verified route window; absent means no transform. */
-  context?: ContextCompaction;
+  context?: ContextCompaction | ((authority: SavedModelContext, signal: AbortSignal) => Promise<ContextCompaction | undefined>);
   children?: { owns(binding: Readonly<Binding>): boolean;
     handle(request: NativeDomainRequest, root: (request: NativeDomainRequest) => Promise<NativeDomainReply>): Promise<NativeDomainReply> };
 }
@@ -68,11 +68,13 @@ export async function openSavedLearningTarget(options: SavedLearningOptions) {
       return { resolved: base?.resolved ?? resolved, prepare: (request, settings, unfiltered) => {
         const withStyle = (r: LLMRequest) => LLMRequest.update(r, { system: [...r.system, style] });
         const shape = (r: LLMRequest, run: RunSnapshot) => options.context
-          ? Effect.tryPromise({ try: () => compactContext(withStyle(r), options.context!, run.checkpoint),
-            catch: error => new AIError({ reason: new InvalidRequestError({ message: String((error as { code?: string }).code ?? 'context_compaction_blocked') }) }) })
+          ? Effect.tryPromise({ try: async signal => {
+              const context = typeof options.context === 'function' ? await options.context({ run, request: authority.request }, signal) : options.context;
+              return context ? compactContext(withStyle(r), context, run.checkpoint) : withStyle(r);
+            }, catch: error => new AIError({ reason: new InvalidRequestError({ message: String((error as { code?: string }).code ?? 'context_compaction_blocked') }) }) })
           : Effect.succeed(withStyle(r));
         return Effect.promise(() => modelContext(binding)).pipe(Effect.flatMap(({ run }) => shape(request, run)),
-          Effect.flatMap(shaped => base ? base.prepare(shaped, settings, withStyle(unfiltered)) : Effect.succeed(shaped)));
+          Effect.flatMap(shaped => base ? base.prepare(shaped, settings, options.context ? shaped : withStyle(unfiltered)) : Effect.succeed(shaped)));
       } } satisfies PrimaryModelPreparation;
     }) };
     native = await openLearningHarness({ ...options.harness, model: styled }, domain.domain);
