@@ -113,7 +113,7 @@ test('Updates keeps failed-check success date and correction/outbox/source links
     await assert.rejects(f.command({...track,url:'https://other.invalid/publication.pdf',idempotencyKey:'bf06-publication-host'}),fail('source_host_blocked'));
     await assert.rejects(f.command({...track,url:'https://synthetic.invalid/unregistered.pdf',idempotencyKey:'bf06-publication-unknown'}),fail('publication_not_registered'));
     await assert.rejects(f.command({type:'updates.publications.stop',id:'absent'}),fail('publication_missing'));
-    let apiSequence=0;const api=async(path,method='GET',body)=>updatesCommand(Object.assign(Readable.from(body?[Buffer.from(JSON.stringify(body))]:[]),{method,headers:{'idempotency-key':'bf06-http-request-'+(++apiSequence)}}),new URL('http://localhost/api/v1/updates/'+path),f.storage,updates);
+    const api=async(path,method='GET',body)=>updatesCommand(Object.assign(Readable.from(body?[Buffer.from(JSON.stringify(body))]:[]),{method,headers:{}}),new URL('http://localhost/api/v1/updates/'+path),f.storage,updates);
     const failure=await api('sources/S99/check?force=true','POST');assert.deepEqual(Object.keys(failure.value).sort(),['checked_at','error','source_id','state']);assert.equal(failure.value.error.code,'source_fetch_failed');
     const cachedFailure=await api('sources/S99/check','POST');assert.deepEqual(Object.keys(cachedFailure.value).sort(),['cached','error','source_id','state']);
     failed=false;
@@ -138,6 +138,9 @@ test('Updates keeps failed-check success date and correction/outbox/source links
     const claim=await f.command({type:'updates.schedule.claim',manual:true});assert.ok(claim.id);assert.equal((await api('schedule')).value.running,true);await assert.rejects(f.command(write),fail('schedule_busy'));
     await f.command({type:'updates.schedule.finish',id:claim.id,checked:0,failed:0,errorCode:null});
     await f.command({type:'updates.publications.stop',id:publicPdf.id});assert.equal((await api('schedule')).value.jobs.find(job=>job.target_id===publicPdf.id).available,false);
+    const retracked=await api('publications','POST',{source_id:official.id,url:pdf,permission_reference:'SYNTHETIC public permission'});assert.equal(retracked.value.enabled,true);assert.equal(retracked.value.id,publicPdf.id);
+    const dismissed=await api('entries/'+entry.id+'/review','POST',{summary:'SYNTHETIC dismissed after inspection',state:'dismissed'});assert.equal(dismissed.status,200);assert.equal(dismissed.value.review_state,'dismissed');
+    await f.command({type:'updates.publications.stop',id:publicPdf.id});
     const invalidSelection=await api('schedule','PUT',{enabled:true,cadence_hours:24,selection:selected});assert.equal(invalidSelection.status,422);assert.equal(invalidSelection.value.error.code,'schedule_selection_invalid');
     await f.inspect(db=>{assert.equal(db.prepare('SELECT COUNT(*) AS n FROM knowledge_source_status_events').get().n,2);assert.equal(db.prepare("SELECT COUNT(*) AS n FROM update_library_changes WHERE state NOT IN ('applied','no-match')").get().n,0);const matched=JSON.parse(db.prepare('SELECT metadata_json FROM knowledge_revisions WHERE id=?').get('rev_matched').metadata_json),other=JSON.parse(db.prepare('SELECT metadata_json FROM knowledge_revisions WHERE id=?').get('rev_other').metadata_json);assert.equal(matched.content_reviewed,false);assert.equal(matched.latest_final_verified,false);assert.equal(matched.correction,'SYNTHETIC corrigendum');assert.equal(other.content_reviewed,true);assert.equal(other.correction,undefined);});
   }finally{await updates.close();await f.close();}

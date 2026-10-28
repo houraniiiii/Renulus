@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 import type { IncomingMessage } from 'node:http';
+import { randomUUID } from 'node:crypto';
 import type { UpdatesStorage, Review, CheckRoute, ObjectValue } from '../domain/updates/contracts.ts';
 import type { UpdatesCoordinator } from '../domain/updates/coordinator.ts';
 import { exact, reject, StorageError } from '../storage/contracts.ts';
@@ -20,7 +21,7 @@ async function route(request: IncomingMessage, url: URL, storage: UpdatesStorage
   const path = url.pathname.slice('/api/v1/updates/'.length), method = request.method, query = url.searchParams;
   const result = (value: unknown, status = 200) => ({ status, value });
   const body = () => readJsonObject(request, 128_000);
-  const key = () => { const value = request.headers['idempotency-key']; if (typeof value !== 'string') reject('invalid_request'); return value; };
+  const key = () => { const value = request.headers['idempotency-key']; if (value !== undefined && typeof value !== 'string') reject('invalid_request'); return value ?? 'updates-' + randomUUID(); };
   async function shapeCheck(route: CheckRoute, checked: ObjectValue): Promise<ObjectValue> {
     if (route.kind === 'publication') {
       const row = (await storage.command({ type: 'updates.publications' })).publications.find((row: ObjectValue) => row.id === route.id);
