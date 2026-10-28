@@ -139,3 +139,54 @@ test('standalone producers run through the connected target, native dispatch and
     assert.equal(db.prepare('SELECT COUNT(*) AS n FROM harness_configuration_attempts').get().n, 5);
   } finally { db.close(); }
 });
+
+test('a generation job left running by a killed host reopens, keeps its uncertain debit and resumes only the missing batch', { timeout: 240000 }, async () => {
+  const f = fixture(), m = await savedModel(), { evidence, calls } = syntheticEvidence(CONNECTION, MODEL), scripted = scriptedTransport(MODEL);
+  const open = async (storage, first) => {
+    const connected = await openConnectedTarget({ profileRoot: f.root, storage, identity: f.identity, availableModels: [MODEL], evidence: [evidence],
+      testing: { model: async () => m.model, transport: scripted.transport },
+      resources: { python, sourceRoot: repository, helpers: { helpers_root: helpersRoot, source_root: repository, cache_root: path.join(f.root, 'cache') },
+        derived: { root: path.join(f.root, 'derived'), namespace: 'synthetic-producers', library_tombstones: [], memory_tombstones: [] },
+        broker: { profile_root: path.join(f.root, 'broker'), state_root: path.join(f.root, 'broker/state') } } });
+    if (first) await connected.configuration.activate(defaultConfiguration(CONNECTION, (await connected.inspect()).registry_hash));
+    return connected;
+  };
+  const second = { items: practice.items.map((q, i) => ({ ...q, stem: 'SYNTHETIC second batch ' + ['renal tubular acidosis', 'nephrotic syndrome', 'hyponatraemia', 'hyperkalaemia', 'lupus nephritis'][i] })) };
+  let job, storage = await openIsolatedStorage(f.writer), connected = await open(storage, true);
+  try {
+    // First batch is answered; the second call is the one the host dies in.
+    scripted.push(JSON.stringify(practice));
+    job = await connected.assessment.create({ title: 'SYNTHETIC interrupted ten', count: 10, topic_id: null, inputs: [], source_refs: [], idempotencyKey: 'producers-interrupted' });
+    assert.equal((await connected.assessment.settled(job.id)).validated_count, 5);
+  } finally { await connected.close(); await storage.close(); }
+  // The state a killed host leaves: job still running, the last model call dispatched but never answered.
+  const killed = new DatabaseSync(path.join(f.root, 'state/renulus.sqlite3'));
+  try {
+    killed.prepare("UPDATE assessment_test_jobs SET state='running',error_code=NULL WHERE id=?").run(job.id);
+    const run = killed.prepare("SELECT run_id FROM harness_configuration_runs WHERE purpose='generated-practice' ORDER BY created_at DESC, rowid DESC LIMIT 1").get().run_id;
+    killed.prepare("UPDATE harness_configuration_runs SET state='active' WHERE run_id=?").run(run);
+    killed.prepare("UPDATE harness_configuration_attempts SET state='dispatched',result_reference=NULL,failure_code=NULL WHERE run_id=?").run(run);
+  } finally { killed.close(); }
+
+  storage = await openIsolatedStorage(f.writer); connected = await open(storage, false);
+  const sentBefore = scripted.sent.length;
+  try {
+    // The restart recovers the persisted configuration; the killed host's debris must not hold it.
+    assert.deepEqual({ ...connected.status(), worker: undefined }, { admission: 'open', recovery_error: null, worker: undefined });
+    const view = await connected.assessment.read(job.id);
+    assert.equal(view.state, 'running'); assert.equal(view.validated_count, 5);
+    scripted.push(JSON.stringify(second));
+    await connected.assessment.resume(job.id);
+    const done = await connected.assessment.settled(job.id);
+    assert.equal(done.state, 'published'); assert.equal(done.accepted_count, 10);
+    assert.equal(scripted.sent.length - sentBefore, 1, 'only the missing batch is sent');
+    assert.deepEqual(done.checkpoint.batches[0].map(q => q.stem), practice.items.map(q => q.stem), 'the retained first batch is not regenerated');
+    assert.equal((await storage.command({ type: 'assessment.tests.setup', versionId: done.published_version_id })).version.item_count, 10);
+    assert.equal(new Set(done.checkpoint.batches.flat().map(q => q.stem)).size, 10, 'no item is published twice');
+  } finally { await connected.close(); await storage.close(); await m.runtime.dispose(); }
+  const db = new DatabaseSync(path.join(f.root, 'state/renulus.sqlite3'), { readOnly: true });
+  try {
+    const attempts = db.prepare("SELECT r.state AS run, a.state, a.failure_code FROM harness_configuration_attempts a JOIN harness_configuration_runs r USING(run_id) WHERE r.purpose='generated-practice' ORDER BY a.created_at, a.rowid").all().map(r => ({ ...r }));
+    assert.deepEqual(attempts, [{ run: 'settled', state: 'confirmed', failure_code: null }, { run: 'settled', state: 'uncertain', failure_code: 'broker_lost' }, { run: 'settled', state: 'confirmed', failure_code: null }]);
+  } finally { db.close(); }
+});

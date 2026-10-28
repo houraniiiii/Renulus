@@ -295,6 +295,8 @@ function handle(db: DatabaseSync, c: DispatchCommand): unknown {
       if (p.admission_open) reject('restart_boundary_required');
       db.prepare("UPDATE harness_configuration_attempts SET state='uncertain',failure_code='broker_lost' WHERE state='dispatched'").run();
       db.prepare("UPDATE harness_configuration_attempts SET state='cancelled_before_send' WHERE state='reserved'").run();
+      // The stopped host's runs have no execution left; their possibly-sent calls stay uncertain above.
+      db.prepare("UPDATE harness_configuration_runs SET state='settled' WHERE state='active'").run();
       if (p.activating) {
         db.prepare("UPDATE harness_configuration_health SET state='failed',failure_code='activation_interrupted' WHERE version=?").run(p.activating);
         db.prepare("UPDATE harness_configuration_pointer SET effective=previous,previous=NULL,failed=activating,activating=NULL,failure_code='activation_interrupted' WHERE id=1").run();

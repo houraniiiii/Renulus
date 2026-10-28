@@ -581,6 +581,8 @@ export async function openConnectedTarget(options: ConnectedTargetOptions) {
     try { return JSON.parse(value); } catch { return reject('generation_invalid'); }
   };
   const assessment = createAssessmentGeneration(storage, {
+    // A `running` job without a producer here belongs to a killed host; activation already reconciled that host's dispatches before admission opened.
+    settleInterrupted: async () => admission ? 'settled' : 'held',
     async generate(input) {
       const initial = await storage.command({ type: 'assessment.generation.get', jobId: input.jobId });
       const check = async () => {
@@ -761,6 +763,9 @@ export async function openConnectedTarget(options: ConnectedTargetOptions) {
       if (!(await storage.command({ type: 'dispatch.inspect', inspection })).ready) reject('configuration_not_ready');
       await storage.command({ type: 'dispatch.close', version: staged.version, expectedEffective: snapshot.effective, grantEpoch: snapshot.grant_epoch });
       await selected.close(); selected = undefined;
+      // Runs a killed host left behind keep their uncertain debit but must not hold the new configuration.
+      if (snapshot.effective) await storage.command({ type: 'dispatch.reconcile', settlement: { configuration_version: snapshot.effective,
+        grant_epoch: snapshot.grant_epoch, admission_closed: true, runtime_stopped: true, domain_settled: true } });
       await storage.command({ type: 'dispatch.activate', version: staged.version, expectedEffective: snapshot.effective,
         settlement: { configuration_version: staged.version, grant_epoch: snapshot.grant_epoch,
           admission_closed: true, runtime_stopped: true, domain_settled: true } });
