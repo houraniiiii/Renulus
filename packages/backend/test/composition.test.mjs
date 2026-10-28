@@ -76,7 +76,7 @@ test('connected HTTP native Library/citation/receipt/history/Finder/archive/dele
       broker: { profile_root: path.join(f.root, 'broker'), state_root: path.join(f.root, 'broker/state') } } };
   async function open() {
     storage = await openIsolatedStorage(f.writer); connected = await openConnectedTarget({ ...options, storage });
-    facade = await openTargetFacade({ port: 0, token: 'synthetic-composition-token', storage, learning: connected.learning,
+    facade = await openTargetFacade({ port: 0, token: 'synthetic-composition-token', storage, learning: connected.learning, find: connected.find,
       plugins: connected.plugins, credentials: connected.credentials, configuration: connected.configuration, inspect: connected.inspect,
       memory: connected.memory, settlePlugins: connected.close });
   }

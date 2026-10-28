@@ -189,7 +189,20 @@ export function createChildAuthority(bridge: ChildAuthorityBridge, bounds: Child
       });
     }));
   }) };
+  // The native input-repair hook strips unknown keys and coerces booleans.
+  // Reject raw child work before any hook can erase that authority evidence.
+  const guardHook = (domain: PropertyKey, name: PropertyKey, event: unknown) => {
+    const raw = event;
+    return domain === "tool" && name === "execute.before" && typeof raw === "object" && raw !== null &&
+        "tool" in raw && raw.tool === "subagent" && "input" in raw ?
+      Effect.try({ try: () => { work(raw.input); }, catch: () => failure("child_invalid_work") }) : Effect.void;
+  };
   const overrides: NonNullable<OpenCode.EmbedOptions["overrides"]> = [
+    PluginHooks.node.replace(PluginHooks.node.mapLayer(nativeLayer => Layer.effect(PluginHooks.Service, Effect.gen(function* () {
+      const native = yield* PluginHooks.Service;
+      const trigger = ((domain, name, event) => guardHook(domain, name, event).pipe(Effect.andThen(native.trigger(domain, name, event)))) as PluginHooks.Interface["trigger"];
+      return PluginHooks.Service.of({ ...native, trigger });
+    })).pipe(Layer.provide(nativeLayer)))),
     Bus.node.replace(Bus.node.mapLayer(nativeLayer => Layer.effect(Bus.Service, Effect.gen(function* () {
       const native = yield* Bus.Service;
       const publish: Bus.Interface["publish"] = (definition, data, options) => {
@@ -216,19 +229,6 @@ export function createChildAuthority(bridge: ChildAuthorityBridge, bounds: Child
         });
       };
       return Bus.Service.of({ ...native, publish });
-    })).pipe(Layer.provide(nativeLayer)))),
-    PluginHooks.node.replace(PluginHooks.node.mapLayer(nativeLayer => Layer.effect(PluginHooks.Service, Effect.gen(function* () {
-      const native = yield* PluginHooks.Service;
-      // The native input-repair hook strips unknown keys and coerces booleans.
-      // Reject raw child work before any hook can erase that authority evidence.
-      const trigger = ((domain, name, event) => {
-        const raw: unknown = event;
-        const guard = domain === "tool" && name === "execute.before" && typeof raw === "object" && raw !== null &&
-            "tool" in raw && raw.tool === "subagent" && "input" in raw ?
-          Effect.try({ try: () => { work(raw.input); }, catch: () => failure("child_invalid_work") }) : Effect.void;
-        return guard.pipe(Effect.andThen(native.trigger(domain, name, event)));
-      }) as PluginHooks.Interface["trigger"];
-      return PluginHooks.Service.of({ ...native, trigger });
     })).pipe(Layer.provide(nativeLayer)))),
     SessionExecution.node.replace(SessionExecution.node.mapLayer(nativeLayer => Layer.effect(SessionExecution.Service, Effect.gen(function* () {
       const native = yield* SessionExecution.Service; execution = native;
@@ -505,7 +505,7 @@ export function createChildAuthority(bridge: ChildAuthorityBridge, bounds: Child
       return yield* restore(settlement(timeout, bound));
     }));
   };
-  return { plugin, overrides, status, settlement,
+  return { plugin, overrides, guardHook, status, settlement,
     native: () => ({ jobs: jobs!, execution: execution!, context: executionContext! }),
     familyStop: (parent: Readonly<DomainBinding>, timeout: number) => stop(timeout, parent),
     close: (timeout: number) => stop(timeout) };

@@ -244,38 +244,6 @@ export async function openHarness(options: HarnessOptions) {
         }),
       });
     }))),
-    PluginHooks.node.replace(PluginHooks.node.mapLayer(original => Layer.flatMap(original, context => {
-      const service = Context.get(context, PluginHooks.Service);
-      const trigger: typeof service.trigger = (domain, name, event) => service.trigger(domain, name, event).pipe(
-        Effect.flatMap(shaped => Effect.gen(function* () {
-          if (domain !== "session" || name !== "context") return shaped;
-          const draft = shaped as SessionContext;
-          const current = primaryContexts.get(draft.sessionID);
-          if (!current) return shaped;
-          const requireCurrent = () => {
-            if (primaryContexts.get(draft.sessionID) !== current ||
-                !["ready", "recovering"].includes(phase) || held.has(draft.sessionID) ||
-                (current.binding && bindings.get(draft.sessionID) !== current.binding)) throw denied();
-          };
-          requireCurrent();
-          if (options.selectContext) {
-            if (!current.binding) throw denied();
-            const selected = yield* Effect.promise(() => options.selectContext!(current.binding!, draft.messages));
-            if ("messages" in selected) {
-              draft.messages = [...selected.messages];
-              draft.system = [...draft.system, ...(selected.additionalSystem ?? [])];
-            } else draft.messages = [...selected];
-            requireCurrent();
-          }
-          // This is the shaped native context before unsupportedParts/boundImages.
-          // Copy it while owned; final preparation receives the same surviving
-          // tool definitions that native preparation advertises.
-          current.snapshot = structuredClone({ system: draft.system, messages: draft.messages });
-          return shaped;
-        })),
-      );
-      return Layer.succeed(PluginHooks.Service, { ...service, trigger });
-    }))),
     SessionModelRequest.node.replace(SessionModelRequest.node.mapLayer(original => Layer.flatMap(original, context => {
       const service = Context.get(context, SessionModelRequest.Service);
       return Layer.succeed(SessionModelRequest.Service, {
@@ -334,6 +302,40 @@ export async function openHarness(options: HarnessOptions) {
       });
     }))),
     ...(options.nativeCapabilities?.overrides ?? []),
+    // After the native overrides, so the child authority's hook replacement cannot displace this capture.
+    PluginHooks.node.replace(PluginHooks.node.mapLayer(original => Layer.flatMap(original, context => {
+      const service = Context.get(context, PluginHooks.Service);
+      const trigger = ((domain, name, event) => (options.nativeCapabilities?.child?.guardHook(domain, name, event) ?? Effect.void).pipe(
+        Effect.andThen(service.trigger(domain, name, event)),
+        Effect.flatMap(shaped => Effect.gen(function* () {
+          if (domain !== "session" || name !== "context") return shaped;
+          const draft = shaped as SessionContext;
+          const current = primaryContexts.get(draft.sessionID);
+          if (!current) return shaped;
+          const requireCurrent = () => {
+            if (primaryContexts.get(draft.sessionID) !== current ||
+                !["ready", "recovering"].includes(phase) || held.has(draft.sessionID) ||
+                (current.binding && bindings.get(draft.sessionID) !== current.binding)) throw denied();
+          };
+          requireCurrent();
+          if (options.selectContext) {
+            if (!current.binding) throw denied();
+            const selected = yield* Effect.promise(() => options.selectContext!(current.binding!, draft.messages));
+            if ("messages" in selected) {
+              draft.messages = [...selected.messages];
+              draft.system = [...draft.system, ...(selected.additionalSystem ?? [])];
+            } else draft.messages = [...selected];
+            requireCurrent();
+          }
+          // This is the shaped native context before unsupportedParts/boundImages.
+          // Copy it while owned; final preparation receives the same surviving
+          // tool definitions that native preparation advertises.
+          current.snapshot = structuredClone({ system: draft.system, messages: draft.messages });
+          return shaped;
+        })),
+      )) as typeof service.trigger;
+      return Layer.succeed(PluginHooks.Service, { ...service, trigger });
+    }))),
     ...(options.volatileGraph?.overrides ?? []),
   ];
   const creation = OpenCode.create({
