@@ -2,6 +2,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { ArtifactResult, WorkerCommand, NativeIntent, NativePin } from '../../../contracts/worker.ts';
 import type { ImportIntent, KnowledgeNativeIO, ReaderPayload, ReaderRequest, SourcePin } from '../domain/knowledge/contracts.ts';
+import type { SpaceMeasurement } from '../storage/generation.ts';
 import type { WorkerChannel } from './channel.ts';
 import { createEngineArtifacts } from './artifacts.ts';
 
@@ -15,11 +16,18 @@ const pin = (p: SourcePin): NativePin => ({ revision_id: p.revision_id, original
   bytes: p.bytes, sha256: p.sha256, media_type: p.media_type });
 const position = (r: ReaderRequest) => ({ page: r.page ?? 1, sheet: r.sheet ?? null, first_row: r.first_row ?? 1, row_limit: r.row_limit ?? 100 });
 
+/** Budget of the profile's native stores and governed retirement of a discarded candidate generation. */
+export interface NativeStorageIO {
+  measure(): Promise<SpaceMeasurement>;
+  /** Refuses unknown and selected generations; retains the candidate's bytes as cleanup debt, never deleting by pathname. Idempotent. */
+  retire(candidateId: string): Promise<{ result: 'retained_as_debt'; debt_bytes: number }>;
+}
+
 /** Implements the exact Knowledge port over the existing authenticated worker.
  * Bytes use retained, bounded artifacts; only opaque chooser/original handles
  * and canonical intent/pin metadata enter native command frames.
  */
-export function createWorkerKnowledgeIO(channel: WorkerChannel, maxChunkBytes: number): KnowledgeNativeIO {
+export function createWorkerKnowledgeIO(channel: WorkerChannel, maxChunkBytes: number): KnowledgeNativeIO & NativeStorageIO {
   const artifacts = createEngineArtifacts(channel, maxChunkBytes);
   async function call(input: CallInput, body?: Uint8Array, signal?: AbortSignal, binary = false): Promise<Buffer> {
     const binding = { operation_id: 'native_' + randomUUID().replaceAll('-', ''), attempt_id: 'attempt_1' };
@@ -62,6 +70,15 @@ export function createWorkerKnowledgeIO(channel: WorkerChannel, maxChunkBytes: n
     },
     async asset({ pin: p, request, body, asset_id }, signal) {
       return call({ action: 'asset', pin: pin(p), position: position(request), asset_id }, body, signal, true);
+    },
+    async measure() {
+      const value = await json({ action: 'measure' });
+      return { allocatedBytes: value.allocated_bytes, freeBytes: value.free_bytes, ceilingBytes: value.ceiling_bytes };
+    },
+    async retire(candidateId) {
+      const value = await json({ action: 'retire', candidate_id: candidateId });
+      if (value?.result !== 'retained_as_debt') refused('native_reply_invalid');
+      return value;
     },
     async handoff({ pin: p, action, destination_handle }, signal) {
       const value = await json({ action: 'handoff', pin: pin(p), operation: action, destination_handle }, undefined, signal);

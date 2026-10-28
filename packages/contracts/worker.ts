@@ -783,7 +783,7 @@ export type NativeIOCommand = {
   "expected_revision": (string | null);
   "limits": Limits;
   "command": "native.io";
-  "input": (NativeReserve | NativeSelection | NativePublish | NativeSettle | NativeRead | NativePayload | NativeAsset | NativeHandoff);
+  "input": (NativeReserve | NativeSelection | NativePublish | NativeSettle | NativeRead | NativePayload | NativeAsset | NativeHandoff | NativeMeasure | NativeRetire);
 };
 
 export type NativeIntent = {
@@ -794,6 +794,11 @@ export type NativeIntent = {
   "sha256": string;
   "stamp": string;
   "media_type": string;
+};
+
+export type NativeMeasure = {
+  "action": "measure";
+  "output": OutputGrant;
 };
 
 export type NativePaths = {
@@ -855,6 +860,12 @@ export type NativeRequest = {
 export type NativeReserve = {
   "action": "reserve";
   "intent": NativeIntent;
+  "output": OutputGrant;
+};
+
+export type NativeRetire = {
+  "action": "retire";
+  "candidate_id": string;
   "output": OutputGrant;
 };
 

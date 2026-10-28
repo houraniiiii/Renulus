@@ -6,6 +6,7 @@ import { createGraphRecovery, mergeRecoveryGraphs, type RecoveryGraph } from './
 import { createHash, randomUUID } from 'node:crypto';
 import type { RecoverySnapshot } from '../../backend/src/domain/recovery/contracts.ts';
 import type { KnowledgeNativeIO, SourcePin, Rights, ImportIntent } from '../../backend/src/domain/knowledge/contracts.ts';
+import type { NativeStorageIO } from '../../backend/src/workers/knowledge.ts';
 
 /** Only surviving canonical originals are published; shared bytes remain available
  * to other eligible owners when one attachment has lost its cache rights. */
@@ -46,13 +47,12 @@ export interface RecoveryOwnerOptions {
   storage: RecoveryStorage;
   native: ReturnType<typeof createGraphRecovery>;
   storeId: string;
-  measure: RecoveryCoordinatorOptions<RecoveryGraph>['measure'];
+  /** The owned native storage worker: budget measurement and governed candidate retirement. */
+  nativeStorage: NativeStorageIO;
   /** Native owner supplies a closed canonical clone and an EMPTY held native host. */
   forkCurrent(manifest:CompleteGeneration):Promise<{candidateId:string;storage:RecoveryStorage & {close():Promise<void>};native:ReturnType<typeof createGraphRecovery>;close():Promise<void>}>;
   verifyOriginals: RecoveryCoordinatorOptions<RecoveryGraph>['verifyOriginals'];
   closeCandidate: RecoveryCoordinatorOptions<RecoveryGraph>['closeCandidate'];
-  /** Must retain owned-handle cleanup debt if native retirement cannot be confirmed. */
-  retireCandidate(candidateId:string):Promise<void>;
 }
 
 /** Uses the live harness sessions API; no inference, SDK database opener or pathname cleanup. */
@@ -61,7 +61,7 @@ export function createRecoveryOwner(o:RecoveryOwnerOptions):RecoveryCoordinatorO
   let settled:RecoveryGraph|undefined;
   return {
     current:{...o.current,async snapshotClosed(){settled=await native.snapshotAll();return o.current.snapshotClosed();}},
-    currentStorage:o.storage,measure:o.measure,
+    currentStorage:o.storage,measure:()=>o.nativeStorage.measure(),
     async previewNative(incoming,eligible){
       const merged=mergeRecoveryGraphs(await native.snapshotAll(),incoming,o.storeId,s=>eligible.has(String(s.info.id)));
       return {retained:merged.retained,currentOnly:merged.currentOnly,added:merged.added,excluded:merged.excluded};
@@ -79,6 +79,6 @@ export function createRecoveryOwner(o:RecoveryOwnerOptions):RecoveryCoordinatorO
         sessions:new Set(graph.sessions.map(s=>String(s.info.id))),messages:new Set(graph.sessions.flatMap(s=>s.messages.map(m=>String(m.id))))});
     },
     async closeCandidate(id){await candidates.get(id)!.close();return o.closeCandidate(id);},
-    async discardCandidate(id){await candidates.get(id)!.close();await o.retireCandidate(id);candidates.delete(id);},
+    async discardCandidate(id){await candidates.get(id)!.close();await o.nativeStorage.retire(id);candidates.delete(id);},
   };
 }

@@ -8,6 +8,7 @@ settlement; uncertainty retains both charge and cleanup debt. No eviction/deleti
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from pathlib import Path
 from threading import RLock
 
@@ -71,6 +72,25 @@ class NativeStorage:
             if cleanup_debt_bytes:
                 self._debt[reservation_id] = cleanup_debt_bytes
             return self.status()
+
+    def retire(self, profile_root, candidate_id):
+        """Whole-object deletion is unfenced across streams, so a discarded candidate's
+        bytes are retained as owned cleanup debt. Unknown and selected generations refuse."""
+        with self._lock:
+            profile, relative = fs.canonical_path(Path(profile_root)), "generations/" + candidate_id
+            selector = profile / ".renulus-backend-selector.json"
+            if fs.path_exists(selector):
+                with fs.opened_file(selector) as resource:
+                    if json.loads(resource.read(limit=16384)).get("generationPath") == relative:
+                        raise ValueError("storage_generation_current")
+            key = "generation:" + candidate_id
+            if key not in self._debt:
+                directory = profile / relative
+                if not fs.path_exists(directory):
+                    raise ValueError("storage_generation_unknown")
+                with fs.metadata_inventory([directory], max_entries=self.max_entries) as inventory:
+                    self._debt[key] = inventory.measurement.allocated_bytes
+            return {"result": "retained_as_debt", "debt_bytes": self._debt[key]}
 
     def status(self):
         with self._lock:

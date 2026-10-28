@@ -250,8 +250,20 @@ async function world(t, { g0Originals = { "originals/o1.bin": "synthetic shared 
   await build(g1, "current", GRAPHS.current, STORE_NOW, { "originals/o1.bin": "synthetic shared original" });
   sealGeneration(g1, header(g1, 1, 1), memberFiles(["originals/o1.bin"]));
   const live = { canonical: await openCanonical(g1), native: await openNative(join(g1, "state/harness/opencode.sqlite"), join(profile, "scratch/live")) };
-  const w = { profile, g0, g1, g0Originals: g0Originals_, live, events: [], remote: Promise.withResolvers(), candidates: new Map(), authority: publish(profile, "g1", 1, 1) };
-  t.after(async () => { await live.canonical.close().catch(() => {}); });
+  // The real native storage worker, opened on first use. Only free space is synthetic: this development volume is below the 12 GiB floor.
+  let worker, io;
+  const open = async () => {
+    if (io) return io;
+    mkdirSync(join(profile, "native-originals"), { recursive: true }); mkdirSync(join(profile, "native-grants"), { recursive: true });
+    worker = await openEngineWorker({ python, sourceRoot: repository, launchRoot: join(profile, "worker-launch-storage"),
+      identity: { profile_id: PROFILE, domain_store_id: "synthetic-domain", runtime_store_id: STORE_NOW, authority_epoch: 1, process_generation: randomUUID() },
+      retention: "saved", current: () => ({ configuration: 0, grant: 0, context: 0, deletion: 0, cancellation: 0 }),
+      native: { originals_root: join(profile, "native-originals"), budget_root: profile, grants_root: join(profile, "native-grants"), grant_token_sha256: hex("a") } });
+    return io = createWorkerKnowledgeIO(worker.channel, worker.ready.capacity.max_chunk_bytes);
+  };
+  const storage = { async measure() { return { ...await (await open()).measure(), freeBytes: 200_000_000_000 }; }, async retire(id) { return (await open()).retire(id); } };
+  const w = { profile, g0, g1, g0Originals: g0Originals_, live, events: [], remote: Promise.withResolvers(), candidates: new Map(), authority: publish(profile, "g1", 1, 1), storage };
+  t.after(async () => { await live.canonical.close().catch(() => {}); await worker?.close(); });
   return w;
 }
 function publish(profile, name, generation, epoch) {
@@ -297,8 +309,7 @@ function coordinatorOptions(w) {
   };
   return createRecoveryOwner({
     current, storage: w.live.canonical, native: recoveryOf(w.live.native), storeId: STORE_NOW,
-    // Synthetic measurement: this development volume has less than the 12 GiB floor; the floor itself is tested below.
-    async measure() { return { allocatedBytes: bytesOf(profileLive, ["originals/o1.bin"]), freeBytes: 200_000_000_000, ceilingBytes: 100_000_000_000 }; },
+    nativeStorage: w.storage,
     async forkCurrent() {
       const id = "g2", dir = join(w.profile, "generations", id);
       mkdirSync(join(dir, "state/harness"), { recursive: true });
@@ -324,7 +335,6 @@ function coordinatorOptions(w) {
       for (const member of Object.keys(originalsOf(profileLive))) if (!existsSync(join(candidate.dir, member))) copyNoReplace(join(profileLive, member), join(candidate.dir, member));
       return observeAndSeal(candidate.dir, Object.keys(originalsOf(candidate.dir)));
     },
-    async retireCandidate() { throw new Error("recovery_native_retirement_command_missing"); },
   });
 }
 function observeAndSeal(dir, originals) {
@@ -536,6 +546,10 @@ test("engine death mid-candidate-build and an incomplete snapshot discard the hi
     assert.equal(resolveBackendSelection(w.profile).admission, "active", failure);
     assert.equal(existsSync(join(w.profile, "generations/g2")), failure === "engine-death", failure); // unconfirmed retirement retains debt
     assert.equal(w.candidates.size, failure === "engine-death" ? 1 : 0, failure);
+    if (failure === "engine-death") {   // the real worker retained the discarded candidate as debt and refuses the selected generation
+      assert.equal((await w.storage.retire("g2")).result, "retained_as_debt");
+      await assert.rejects(w.storage.retire("g1"));
+    }
     // Preserve originals and debt: the current generation's bytes are exactly the closed observation.
     assert.equal(readFileSync(join(w.g1, "originals/o1.bin"), "utf8"), "synthetic shared original");
     const reopened = new DatabaseSync(join(w.g1, "state/renulus.sqlite3"), { readOnly: true });

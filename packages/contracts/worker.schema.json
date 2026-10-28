@@ -4792,11 +4792,13 @@
             "mapping": {
               "asset": "#/$defs/NativeAsset",
               "handoff": "#/$defs/NativeHandoff",
+              "measure": "#/$defs/NativeMeasure",
               "payload": "#/$defs/NativePayload",
               "publish": "#/$defs/NativePublish",
               "read": "#/$defs/NativeRead",
               "read_selection": "#/$defs/NativeSelection",
               "reserve": "#/$defs/NativeReserve",
+              "retire": "#/$defs/NativeRetire",
               "settle": "#/$defs/NativeSettle"
             },
             "propertyName": "action"
@@ -4825,6 +4827,12 @@
             },
             {
               "$ref": "#/$defs/NativeHandoff"
+            },
+            {
+              "$ref": "#/$defs/NativeMeasure"
+            },
+            {
+              "$ref": "#/$defs/NativeRetire"
             }
           ],
           "title": "Input"
@@ -4914,6 +4922,25 @@
         "media_type"
       ],
       "title": "NativeIntent",
+      "type": "object"
+    },
+    "NativeMeasure": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "measure",
+          "title": "Action",
+          "type": "string"
+        },
+        "output": {
+          "$ref": "#/$defs/OutputGrant"
+        }
+      },
+      "required": [
+        "action",
+        "output"
+      ],
+      "title": "NativeMeasure",
       "type": "object"
     },
     "NativePayload": {
@@ -5192,6 +5219,33 @@
         "output"
       ],
       "title": "NativeReserve",
+      "type": "object"
+    },
+    "NativeRetire": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "retire",
+          "title": "Action",
+          "type": "string"
+        },
+        "candidate_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$(?![\\s\\S])",
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "output": {
+          "$ref": "#/$defs/OutputGrant"
+        }
+      },
+      "required": [
+        "action",
+        "candidate_id",
+        "output"
+      ],
+      "title": "NativeRetire",
       "type": "object"
     },
     "NativeSelection": {

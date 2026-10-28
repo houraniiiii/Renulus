@@ -99,5 +99,16 @@ class NativeHandoff(Model):
     output: OutputGrant
 
 
+class NativeMeasure(Model):
+    action: Literal['measure']
+    output: OutputGrant
+
+
+class NativeRetire(Model):
+    action: Literal['retire']
+    candidate_id: Id
+    output: OutputGrant
+
+
 NativeInput = Annotated[Union[NativeReserve, NativeSelection, NativePublish, NativeSettle,
-    NativeRead, NativePayload, NativeAsset, NativeHandoff], Field(discriminator='action')]
+    NativeRead, NativePayload, NativeAsset, NativeHandoff, NativeMeasure, NativeRetire], Field(discriminator='action')]

@@ -224,6 +224,13 @@ class KnowledgeIO:
                 self.storage.settle(i.reservation_id, i.intent_id, cleanup_debt_bytes=debt)
                 record['settled'] = True
                 return {'settled': True}
+            if action == 'measure':
+                return {**self.storage.measure(), **self.storage.status(), 'ceiling_bytes': self.storage.ceiling}
+            if action == 'retire':
+                try:
+                    return self.storage.retire(self.config.budget_root, input.candidate_id)
+                except ValueError:
+                    raise Refused('invalid_command')
             p = input.pin
             if action == 'read':
                 return self._read(self._path(p), p.bytes, p.sha256, current)
