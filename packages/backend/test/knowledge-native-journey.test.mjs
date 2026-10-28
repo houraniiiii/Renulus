@@ -16,6 +16,8 @@ import { createEngineArtifacts } from '../src/workers/artifacts.ts';
 import { createWorkerLibrary } from '../src/workers/library.ts';
 import { createWorkerKnowledgeIO } from '../src/workers/knowledge.ts';
 import { createKnowledgeHandleAuthority } from '../src/workers/knowledge-handles.ts';
+import { createKnowledgeTools } from '../src/domain/knowledge/tools.ts';
+import { openTargetFacade } from '../src/http/target.ts';
 
 test('actual native selected text/PDF/image/table -> selected engines -> canonical ready -> reader/source/note revision/delete', {
   skip: !process.env.RENULUS_KNOWLEDGE_NATIVE_JOURNEY, timeout: 360_000,
@@ -75,7 +77,7 @@ print(json.dumps({'database':str(s.paths.database),'files':fixtures}))
   await writeFile(path.join(profile, SELECTOR), JSON.stringify(selection));
   let selectedPath = prepared.files['synthetic-aki.txt'].path;
   const handles = await createKnowledgeHandleAuthority({ root: path.join(root, 'chooser'), chooseSelection: async () => selectedPath, chooseDestination: async () => savedCopy });
-  let storage, worker, knowledge;
+  let storage, worker, knowledge, facade;
   const revisions = { configuration: 1, grant: 1, context: 1, deletion: 1, cancellation: 0 };
   try {
     storage = await openIsolatedStorage({ profileRoot: profile, selection, migrations, expectedSchemaHash: schemaHash });
@@ -99,6 +101,10 @@ print(json.dumps({'database':str(s.paths.database),'files':fixtures}))
       const i = raw ? await knowledge.importBytes(request, await readFile(file.path)) : await knowledge.importSelected(request, selected); assert.equal(i.state, 'ready'); imported[filename] = i;
       const reference = { target: { type: 'library_revision', id: i.revision_id } };
       const resolved = await knowledge.resolve({ reference }); assert.equal(resolved.preview_state, filename.endsWith('.pptx') ? 'unsupported' : 'ready');
+      if (filename.endsWith('.pptx')) {
+        assert.equal(resolved.extraction_state, 'ready'); assert.equal(resolved.payload, null);
+        assert.equal(resolved.error.code, 'reader_format_unsupported');
+      }
       const original = await knowledge.original({ reference }); assert.equal(createHash('sha256').update(original.body).digest('hex'), file.sha256);
       const doc = await storage.command({ type: 'knowledge.get', documentId: i.document_id }); assert.ok(doc.revisions[0].passage_count > 0);
       const hits = await library.query({ query: queries[filename], limit: 3,
@@ -118,7 +124,29 @@ print(json.dumps({'database':str(s.paths.database),'files':fixtures}))
       }
       t.diagnostic(filename + ': native original/reader + selected extraction/index/query passed');
     }
-    const note = await knowledge.saveNote({ title: 'SYNTHETIC GN note', text: 'SYNTHETIC glomerular disease complement study.', idempotency_key: 'native-note-1' });
+    const pin = await storage.command({ type: 'knowledge.source.pin', operation: 'display',
+      request: { reference: { target: { type: 'library_revision', id: imported['synthetic-aki.txt'].revision_id } } } });
+    const tools = createKnowledgeTools({ knowledge, storage,
+      resolve: async () => ({ operationId: 'synthetic-note-proposal', attemptId: '1', sessionId: 'synthetic-note-session',
+        policyRevision: pin.policy_revision, contextEpoch: pin.context_epoch, allowedRevisionIds: [], projectId: null, grants: ['renulus.note.propose'] }),
+      check: async () => { await storage.command({ type: 'knowledge.source.recheck', pin, operation: 'display' }); },
+      consume: async () => assert.fail('a note proposal consumes no source') });
+    const proposal = await tools.execute('renulus_note_propose', { title: 'SYNTHETIC GN note', text: 'SYNTHETIC glomerular disease complement study.' },
+      { sessionID: 'synthetic-note-session', id: 'synthetic-proposal-call' }, new AbortController().signal);
+    assert.equal(proposal.requires_explicit_save, true);
+    assert.deepEqual((await storage.command({ type: 'knowledge.notes.list', projectId: null, limit: 10, offset: 0 })).items, []);
+    facade = await openTargetFacade({ port: 0, token: 'synthetic-notes-token', storage, knowledge });
+    const base = 'http://127.0.0.1:' + facade.port + '/api/v1/library/notes';
+    const headers = { 'x-renulus-token': 'synthetic-notes-token', 'content-type': 'application/json' };
+    const saved = await fetch(base, { method: 'POST', headers, body: JSON.stringify({ title: proposal.title, text: proposal.text,
+      project_id: proposal.project_id, idempotency_key: 'native-note-1' }) });
+    assert.equal(saved.status, 201); const note = await saved.json();
+    const noteHits = await library.query({ query: 'glomerular complement', limit: 3, revisionIds: [note.revision_id],
+      operationId: 'native-note-http-query', attemptId: '1', signal: new AbortController().signal });
+    assert.ok(noteHits.some(hit => hit.revision_id === note.revision_id));
+    const reopened = await fetch(base + '/' + note.document_id, { headers });
+    assert.equal(reopened.status, 200); const reopenedNote = await reopened.json();
+    assert.equal(reopenedNote.revision_id, note.revision_id); assert.equal(reopenedNote.text, proposal.text);
     const edited = await knowledge.saveNote({ title: 'SYNTHETIC GN revised', text: 'SYNTHETIC glomerular disease immunology revised study.', document_id: note.document_id, expected_revision_id: note.revision_id, idempotency_key: 'native-note-2' });
     assert.notEqual(note.revision_id, edited.revision_id); assert.match((await knowledge.note(note.document_id, note.revision_id)).text, /complement/);
     assert.match((await knowledge.note(note.document_id)).text, /immunology/);
@@ -129,7 +157,7 @@ print(json.dumps({'database':str(s.paths.database),'files':fixtures}))
     for (const file of Object.values(prepared.files)) assert.equal(createHash('sha256').update(await readFile(file.path)).digest('hex'), file.sha256);
     assert.equal(worker.channel.state().unsettled, 0);
   } finally {
-    await knowledge?.close(); await worker?.close(); await storage?.close();
+    await knowledge?.close(); await worker?.close(); await facade?.close(); await storage?.close();
     assert.equal(path.dirname(root), path.resolve(tmpdir())); assert.match(path.basename(root), /^renulus-knowledge-native-/); await rm(root, { recursive: true, force: true });
   }
 });

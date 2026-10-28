@@ -144,12 +144,16 @@ export function createKnowledgeDomain({ storage, engines, native }: KnowledgeDom
         // PPTX keeps its original and extraction/index, but has no in-app reader (as in the retained Python reader).
         if (suffixes[pin.media_type] === 'pptx') error = { code: 'reader_format_unsupported', message: 'reader_format_unsupported' };
         else try { payload = await native.payload({ pin, request: position(request), body }, s); } catch (e) { const code = failCode(e); error = { code, message: code }; }
+        const document = pin.document_id ? await storage.command({ type: 'knowledge.get', documentId: pin.document_id }) : null;
+        const extractionReady = document
+          ? (document.revisions as { id: string; status: string }[]).some(r => r.id === pin.revision_id && r.status === 'ready')
+          : !!payload && !!(payload.blocks?.length || payload.table);
         await recheck(pin, s);
         const state = payload ? 'ready' : error?.code === 'reader_format_unsupported' ? 'unsupported' : 'failed';
         return { schema_version: 'reader/1', reference: request.reference, title: pin.title, media_type: pin.media_type, authority: 'knowledge',
           original: { id: pin.revision_id, sha256: pin.sha256, bytes: pin.bytes, filename: pin.filename, available: true },
           attachment_revision: pin.attachment_revision, preview_state: state, policy_revision: pin.policy_revision, context_epoch: pin.context_epoch,
-          extraction_state: payload && (payload.blocks?.length || payload.table) ? 'ready' : 'unavailable',
+          extraction_state: extractionReady ? 'ready' : 'unavailable',
           capabilities: { read: !!payload, original: true, passage: pin.rights.model_input && !!payload && !!(payload.blocks?.length || payload.table), ocr: false, model_image: false }, payload, error };
       });
     },
