@@ -79,6 +79,10 @@ export function isLearningCommand(value: unknown): value is LearningCommand {
 export function validateLearningCommand(command: LearningCommand): void {
   const value = command as unknown as Record<string, unknown>;
   switch (command.type) {
+    case 'learning.legacy.prepare':
+      exact(value, ['type', 'threadId', 'expectedRevision', 'identity']); identifier(command.threadId); integer(command.expectedRevision, 1); identity(command.identity); break;
+    case 'learning.legacy.activate':
+      exact(value, ['type', 'threadId', 'sourceDigest', 'sourceStamp', 'identity']); identifier(command.threadId); hash(command.sourceDigest); hash(command.sourceStamp); identity(command.identity); break;
     case 'learning.begin':
       exact(value, ['type', 'threadId', 'expectedRevision', 'expectedDraftRevision', 'text', 'idempotencyKey', 'runId', 'attemptId', 'identity', ...(Object.hasOwn(value, 'intent') ? ['intent'] : [])]);
       identifier(command.threadId); integer(command.expectedRevision, 1); integer(command.expectedDraftRevision);
@@ -285,6 +289,7 @@ function view(db: DatabaseSync, threadId: string): ReadView {
   const base = { conversation: s.conversation, mapping: mapping(db, threadId), references: refs.map(a => ({ reference: json<AnswerReference>(a.reference_json), publicationDigest: String(a.publication_digest) }))
     .filter(({ reference }) => !deleted(db, 'learn_run', reference.run_id) && !deleted(db, 'learning_evidence', 'learn-answer:' + reference.run_id) &&
       ![reference.input_id, ...reference.message_ids].some(id => deleted(db, 'learn_message', id))),
+    legacyReferences: json<NonNullable<ReadView['legacyReferences']>>(one(db, "SELECT message_refs_json FROM legacy_history_imports WHERE thread_id=? AND state='active'", threadId)?.message_refs_json ?? '[]'),
     contextEpoch: epoch(db), policyRevision };
   return { ...base, stamp: sha(base) };
 }
@@ -312,6 +317,49 @@ export function executeLearning<C extends LearningCommand>(db: DatabaseSync, com
 }
 function execute(db: DatabaseSync, command: LearningCommand): unknown {
   switch (command.type) {
+    case 'learning.legacy.prepare': {
+      policy(db);
+      if (one(db, 'SELECT 1 FROM legacy_history_imports WHERE thread_id=?', command.threadId)) reject('learning_migration_already_imported');
+      const s = summary(db, command.threadId);
+      if (s.conversation.revision !== command.expectedRevision) reject('conversation_revision_conflict');
+      if (mapping(db, command.threadId)) return null;
+      if (one(db, 'SELECT 1 FROM learn_harness_mappings WHERE thread_id=?', command.threadId) ||
+        one(db, "SELECT 1 FROM learn_runs WHERE thread_id=? AND state='running'", command.threadId)) reject('learning_migration_or_reconciliation_required');
+      const legacy = rows(db, 'SELECT m.*,r.state AS run_outcome,r.updated_at AS completed_at FROM learn_messages m LEFT JOIN learn_runs r ON r.id=m.run_id AND r.thread_id=m.thread_id WHERE m.thread_id=? ORDER BY m.created_at,m.rowid LIMIT 4097', command.threadId);
+      if (!legacy.length) return null;
+      if (legacy.length > 4096) reject('learning_migration_budget');
+      const messages = legacy.map(m => {
+        const citations = json<unknown[]>(m.citations_json);
+        if (!Array.isArray(citations) || citations.some(c => !c || typeof c !== 'object' || Array.isArray(c)) ||
+          !Number.isFinite(Date.parse(String(m.created_at))) || !/(?:Z|[+-]\d\d:\d\d)$/.test(String(m.created_at))) reject('learning_migration_source');
+        if (m.role === 'assistant' && (!['completed', 'cancelled', 'failed', 'interrupted'].includes(String(m.run_outcome)) ||
+          !Number.isFinite(Date.parse(String(m.completed_at))) || !/(?:Z|[+-]\d\d:\d\d)$/.test(String(m.completed_at)) ||
+          Date.parse(String(m.completed_at)) < Date.parse(String(m.created_at)))) reject('learning_migration_source');
+        return { id: String(m.id), role: String(m.role), content: String(m.content), runId: String(m.run_id), createdAt: String(m.created_at), citations,
+          ...(m.role === 'assistant' ? { completedAt: String(m.completed_at), legacyOutcome: String(m.run_outcome) } : {}) };
+      });
+      const document = canonical({ format: 'renulus.saved-session/1', conversationId: command.threadId, title: s.conversation.title, messages });
+      if (Buffer.byteLength(document) > 8 * 1024 * 1024) reject('learning_migration_budget');
+      const sessionId = 'ses_' + sha(['renulus-h06-session-v1', command.identity.profileId, command.identity.storeId, command.threadId]);
+      const operationId = 'migration_' + sessionId.slice(4), sourceDigest = digest(document), sourceStamp = sha([view(db, command.threadId).stamp, s.draftRevision]);
+      const refs = messages.map(m => ({ id: 'msg_' + sha(['renulus-h06-message-v1', sessionId, m.id]), role: m.role, runId: m.runId }));
+      db.prepare("INSERT INTO legacy_history_imports VALUES(?,?,?,?,?,?,?,?,'reserved',?)").run(command.threadId, command.identity.profileId, command.identity.storeId,
+        sessionId, operationId, sourceDigest, sourceStamp, canonical(refs), now());
+      return { document, sessionId, sourceDigest, sourceStamp, operationId, messageCount: messages.length };
+    }
+    case 'learning.legacy.activate': {
+      const s = summary(db, command.threadId), stamp = sha([view(db, command.threadId).stamp, s.draftRevision]);
+      const receipt = one(db, "SELECT * FROM legacy_history_imports WHERE thread_id=? AND state='reserved'", command.threadId);
+      if (!receipt || receipt.profile_id !== command.identity.profileId || receipt.store_id !== command.identity.storeId ||
+        receipt.source_digest !== command.sourceDigest || receipt.source_stamp !== command.sourceStamp || stamp !== command.sourceStamp) reject('learning_migration_conflict');
+      const result: Mapping = { contract_version: 'harness/1', conversation: { type: 'learn_thread', id: command.threadId }, retention: 'saved',
+        runtime: { contract_version: 'harness/1', profile_id: command.identity.profileId, store_id: command.identity.storeId,
+          engine: { name: 'opencode', version: '2.0.26', source_commit: SOURCE }, session_id: String(receipt.session_id) } };
+      db.prepare('INSERT INTO learn_harness_mappings(thread_id,profile_id,store_id,session_id,mapping_json,create_request_id,process_generation) VALUES(?,?,?,?,?,?,?)')
+        .run(command.threadId, command.identity.profileId, command.identity.storeId, receipt.session_id, canonical(result), receipt.operation_id, command.identity.generation);
+      db.prepare("UPDATE legacy_history_imports SET state='active' WHERE thread_id=?").run(command.threadId);
+      bump(db); return result;
+    }
     case 'learning.begin': {
       const p = policy(db); commandCurrent(db, command.idempotencyKey); summary(db, command.threadId);
       const existingMapping = mapping(db, command.threadId);
@@ -477,6 +525,11 @@ function execute(db: DatabaseSync, command: LearningCommand): unknown {
         if (command.projectId) db.prepare("INSERT INTO study_project_chats VALUES(?,?,'learning',?,0,1,?)").run('membership:' + sha([command.projectId, command.threadId]), command.projectId, command.threadId, now());
       }
       if (command.type === 'learning.delete') {
+        const imported = one(db, 'SELECT * FROM legacy_history_imports WHERE thread_id=?', command.threadId);
+        if (imported) {
+          db.prepare("UPDATE legacy_history_imports SET state='deleted',message_refs_json='[]' WHERE thread_id=?").run(command.threadId);
+          enqueue(db, { profileId: String(imported.profile_id), storeId: String(imported.store_id), generation: 'deletion' }, String(imported.session_id), command.idempotencyKey, '1');
+        }
         const attachments = rows(db, "SELECT id FROM knowledge_attachments WHERE chat_kind='learning' AND chat_id=? LIMIT 201", command.threadId);
         if (attachments.length > 200) reject('attachment_cleanup_limit');
         const key = 'design_c.attachment_cleanup';

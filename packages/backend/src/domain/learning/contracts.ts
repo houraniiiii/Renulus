@@ -59,11 +59,14 @@ export interface FindScope { lifecycle: 'active' | 'archived' | 'all'; projectId
 export interface ReadView {
   conversation: ConversationSummary; mapping: Mapping | null;
   references: { reference: AnswerReference; publicationDigest: string }[];
+  legacyReferences?: { id: string; role: 'user' | 'assistant'; runId: string }[];
   contextEpoch: number; policyRevision: number; stamp: string;
 }
 export interface Purge { purge_id: string; profile_id: string; store_id: string; session_id: string;
   operation_id: string; attempt_id: string; state: 'pending' | 'removed' }
 export type LearningCommand =
+  | { type: 'learning.legacy.prepare'; threadId: string; expectedRevision: number; identity: RuntimeIdentity }
+  | { type: 'learning.legacy.activate'; threadId: string; sourceDigest: string; sourceStamp: string; identity: RuntimeIdentity }
   | ({ type: 'learning.begin' } & BeginInput)
   | { type: 'learning.current'; runId: string; binding: Binding | null }
   | { type: 'learning.attachments'; runId: string }
@@ -87,6 +90,8 @@ export type LearningCommand =
   | { type: 'learning.purge.list'; identity: RuntimeIdentity }
   | { type: 'learning.purge.ack'; purgeId: string; identity: RuntimeIdentity };
 export interface LearningResults {
+  'learning.legacy.prepare': { document: string; sessionId: string; sourceDigest: string; sourceStamp: string; operationId: string; messageCount: number } | null;
+  'learning.legacy.activate': Mapping;
   'learning.begin': { fresh: boolean; run: RunSnapshot };
   'learning.current': RunSnapshot;
   'learning.attachments': { id: string; mediaType: string; path: string | null; sha256: string; bytes: number; text: string }[];

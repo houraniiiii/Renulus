@@ -27,8 +27,9 @@ export function nativeText(message: NativeMessage) {
   return (message.content ?? []).filter(p => p.type === 'text').map(p => p.text ?? '').join('');
 }
 function allowed(view: ReadView) {
-  return new Map(view.references.flatMap(({ reference }) => [[reference.input_id, 'user'] as const,
-    ...reference.message_ids.map(id => [id, 'assistant'] as const)]));
+  return new Map<string, string>([...(view.legacyReferences ?? []).map(r => [r.id, r.role] as const),
+    ...view.references.flatMap(({ reference }) => [[reference.input_id, 'user'] as const,
+    ...reference.message_ids.map(id => [id, 'assistant'] as const)])]);
 }
 interface FindCursor {
   version: 1; queryHash: string; scopeHash: string; epoch: string; after: string | null;

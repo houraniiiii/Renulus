@@ -13,6 +13,7 @@ import { createLearningCallbacks, type LibraryQueryBridge } from '../domain/lear
 import { createLearningHistory, nativeText, type NativeMessage, type NativePage } from '../domain/learning/history.ts';
 import { canonical, digest } from '../storage/schema.ts';
 import { learningSendIntent } from '../storage/learning.ts';
+import { importLegacyHistory } from '../domain/learning/legacy-import.ts';
 import { reject } from '../storage/contracts.ts';
 import type { AnswerReference, BeginInput, Binding, LearningCommand, LearningMessage, LearningReceipt, LearningResults,
   LearningStorage, RunSnapshot, RuntimeIdentity, SavedSendIntent } from '../domain/learning/contracts.ts';
@@ -72,6 +73,19 @@ export async function openSavedLearningTarget(options: SavedLearningOptions) {
   catch (error) { await domain.close(); throw error; }
   const active = new Map<string, { threadId: string; pending: Promise<unknown> }>();
   let closing = false;
+  const legacyImports = new Map<string, Promise<void>>();
+  async function ensureLegacy(threadId: string, expectedRevision?: number) {
+    if (closing) reject('learning_closed');
+    const pending = legacyImports.get(threadId);
+    if (pending) return pending;
+    const view = await storage.command({ type: 'learning.view', threadId });
+    if (closing) reject('learning_closed');
+    if (legacyImports.has(threadId)) return legacyImports.get(threadId);
+    if (view.mapping) return;
+    const task = importLegacyHistory(storage, native, identity, threadId, expectedRevision ?? view.conversation.revision);
+    legacyImports.set(threadId, task);
+    try { await task; } finally { legacyImports.delete(threadId); }
+  }
   const history = createLearningHistory(storage, native as unknown as { observe: (sessionId: string, input: { limit: number; order?: 'asc'; cursor?: string }) => Promise<NativePage> });
   async function purge() {
     const queued = await storage.command({ type: 'learning.purge.list', identity });
@@ -151,9 +165,11 @@ export async function openSavedLearningTarget(options: SavedLearningOptions) {
     ...history,
     /** Public UI projection; the raw owning-host range remains available for tools/tests. */
     async messages(threadId: string, input: { limit?: number; cursor?: string } = {}) {
+      await ensureLegacy(threadId);
       const view = await storage.command({ type: 'learning.view', threadId });
       const page = await history.range(threadId, input);
       const owners = new Map<string, { runId: string; role: 'user' | 'assistant' }>();
+      for (const ref of view.legacyReferences ?? []) owners.set(ref.id, { runId: ref.runId, role: ref.role });
       for (const { reference } of view.references) {
         for (const id of [reference.input_id, ...reference.message_ids]) {
           if (owners.has(id)) reject('learning_native_reference_conflict');
@@ -178,6 +194,7 @@ export async function openSavedLearningTarget(options: SavedLearningOptions) {
       const intent = learningSendIntent(input);
       if ((intent.model !== null || intent.freshness === true) && !options.onBegin) reject('learning_model_intent_unavailable');
       input.intent = intent;
+      await ensureLegacy(input.threadId, input.expectedRevision);
       const runId = 'run_' + randomUUID().replaceAll('-', '');
       const admitted = await storage.command({ type: 'learning.begin', ...input, runId, attemptId: '1', identity });
       const { images: inlineImages, ...pinned } = intent;
@@ -207,6 +224,7 @@ export async function openSavedLearningTarget(options: SavedLearningOptions) {
       const view = await storage.command({ type: 'learning.view', threadId: command.threadId });
       const result = await storage.command(command);
       if (view.mapping) await native.cancel(view.mapping.runtime.session_id);
+      await Promise.allSettled([legacyImports.get(command.threadId)]);
       await Promise.allSettled([...active.values()].filter(a => a.threadId === command.threadId).map(a => a.pending));
       await purge(); return result;
     },
@@ -214,6 +232,7 @@ export async function openSavedLearningTarget(options: SavedLearningOptions) {
     status() { return { closing, active: active.size, domain: domain.domain.state() }; },
     async close() {
       closing = true;
+      await Promise.allSettled([...legacyImports.values()]);
       await Promise.all([...active.keys()].map(id => stop(id, 'interrupted')));
       await Promise.allSettled([...active.values()].map(a => a.pending));
       callbacks.seal();
