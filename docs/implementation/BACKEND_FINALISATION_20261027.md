@@ -1,9 +1,9 @@
 # Backend finalisation implementation record - 27/28 October 2026
 
 Authority: the owner's October 27 instruction to implement `docs/planning/BACKEND_FINALISATION_SPEC.md`, preserving the existing interface, records, selected engines,
-subscriptions and models. Scope of this record: **BF00-BF07**. **BF08 (profile-wide authority handoff, matching bundle, populated migration, Electron/packaged
-acceptance) was not requested and is not done.** No production cutover occurred: Python remains the canonical writer/dispatch authority of every owner profile and the
-ordinary launcher; the TypeScript target runs only on isolated synthetic profiles. No owner profile, credential, paid provider or account was used.
+subscriptions and models. Scope of this record: **BF00-BF07**, plus the **BF08** handoff/launch/bundle implementation added on 28-30 October (section "BF08" below).
+No production cutover occurred: Python remains the canonical writer/dispatch authority of every owner profile and the ordinary launcher; the TypeScript target and the
+handoff ran only on isolated synthetic profiles. No owner profile, credential, paid provider or account was used.
 
 Branch `codex/backend-finalisation` (from `codex/design-c-integration` at `1a40d9fc`), tracking PR [#30](https://github.com/houraniiiii/Renulus/pull/30), 54 commits after the
 checkpoint `ac2d05f8`. This is **implementation evidence, not an acceptance declaration**: every item under "Open" below keeps its H/BF obligation open.
@@ -51,9 +51,35 @@ A real Windows libuv assertion occasionally aborts the child in `facade.test.mjs
   lockout after crashes); all fixed at the source.
 - Provider notes: Kimi K3.1 returned HTTP 402 (insufficient credits) and was not used; no credits were purchased and no application model/route was changed.
 
+## BF08 authority handoff, launch and bundle (28-30 October)
+
+| Piece | Implementation |
+| --- | --- |
+| Handoff | `packages/backend/src/host/initial-handoff.ts`: `main.mjs --handoff preview\|apply\|activate\|rollback`, run only as a maintenance launch under the native profile supervisor (`renulus.workers.profile_owner --maintenance`, whose mutex proves the app is closed). Preview is read-only (source/contract hashes, schema version, table counts, originals). Apply never writes the Python profile: it migrates a copy into a new exclusive `generations/gN` (`packaging/backend_migration.py`), moves originals to content handles, binds the store identity, seals the generation and publishes the selector `writer=ts, state=held` last; a separate `activate` makes it `active`. |
+| Rollback | Retires the exact current selector by one rename (`.renulus-backend-selector.retired.json`) only when the TS generation holds no newer work: per-table record digests, native messages, and every original's exact bytes. Otherwise `backend_rollback_newer_work`, selector unchanged. A later handoff continues the authority epoch from the retired selector. |
+| Python fence | `runtime/renulus/storage/database.py` refuses a canonical writer (constructor **and every connection**) while a live selector exists for the profile or any of its generations. |
+| Launch | Electron `apps/desktop/electron/backend-selection.ts`: no selector → today's Python server unchanged; `held` → refuses with a plain message, nothing opened; `ts active` → profile supervisor → bundled Node `launch.mjs` with a sanitized environment (no PATH/home/account variables) and installed target resources (selected five routes, broker on the profile's existing credential state, originals in the selected generation). |
+| Bundle | `packaging/backend_bundle.py` stages one closed directory serving both launch modes (Python `bundle.json`/`inventory.json` + TS `backend-bundle.json`/`backend-inventory.json`), refuses links/other file types, pins Node/Python/lock files, adds the one graph edge the capability patch requires (plugin-browser → core). `host/bundle-verify.ts` re-verifies closed membership and every byte before the selected writer opens and before any generation selection. |
+| Capabilities | MCP (stored connections) and the developer plugin (separate hash-pinned configuration, default Off) are selected at the application entry; without the patched native build both report `disabled: native_capability_patch_required` (HTTP 409) instead of crashing. |
+
+Verification (synthetic only; `TEMP` on `G:` because `C:` is below the 12 GiB Library floor):
+
+- `packages/backend/test/handoff.test.mjs` 2/2 through the real Python supervisor on populated schema-2 profiles built by the Python app (learn/knowledge/notes/memory/imported test/attempt/project, a deleted chat, a revoked grant, Library originals, a native OpenCode session): preview read-only; apply/held/activate; TS export equals the Python export; deletion frontier and revocation preserved; originals served with identical SHA-256; Python refused on both stores; new TS write; rollback refused after it; crash-leftover candidate never reused; stale apply leaves no selector; edited original refuses rollback; clean rollback restores Python byte-identical; second handoff at epoch 2 reopens.
+- Real staged bundle: BF08_REAL_BUNDLE_RESULT
+- Desktop `tsc` clean, `electron/` vitest 122/127; the 5 failures (`harness-settings-fixture`, `harness-learning-fixture`) fail identically with the BF08 desktop edits stashed (fixed fixture paths of this PC).
+- Python: workers + domain process + desktop harness + restore frontier + design-C contracts 240/244 and `test_backend_selector_authority.py` 2/2; the 4 failures (two `knowledge_low_space` under the 12 GiB floor, the E06 source-register row and the module-row relation proposal in `test_design_c_contracts.py`) fail identically with the BF08 Python edits stashed.
+- Independent review (GPT 6.1 Sol, high): 3 findings, all fixed: constructor-only Python fence (now per connection), TS bundle verifier ignoring extra files and checking only four files at launch (now closed membership + every byte), rollback ignoring edited original bytes (now compared).
+
+BF08 limits (open):
+- **Owner cutover not performed.** The connected target admits model dispatch only with installed route/counter evidence; none exists for the owner's real accounts (live qualification, L). Switching the owner's profile now would stop chat that works today. The handoff is a deliberate maintenance command, not run automatically.
+- A standalone developer `python -m renulus.server` without `--desktop-harness` does not take the profile mutex; a commit landing between the handoff's final re-observation and the selector rename is not fenced. Electron always launches through the owner scope.
+- Schema-1 populated profiles: preview passes on a hand-built schema-1 file, but migration of that file fails (`table knowledge_documents already exists`); no real schema-1 fixture exists. Not proven.
+- Electron does not yet bridge its file chooser into the TS grant root: native path grants are unavailable on a TS-selected profile (bytes upload works).
+- Packaged installer/electron-builder run, physical dialogs/auth, shortcut/reopen on a packaged build (W) were not performed.
+
 ## Open required work and known limits (not done, not hidden)
 
-1. **BF08**: authority handoff, matching bundle/packaging, populated production migration, Electron launch, `verifyBinaries` in `main.ts`, selecting MCP and the developer plugin in the application entry (both are opt-in options that need the patched native build).
+1. **BF08 remainder**: owner-profile cutover (blocked on live qualification), packaged installer acceptance, schema-1 migration proof, chooser bridge for TS native grants, profile mutex for standalone Python entries (see "BF08 limits").
 2. **Live account qualification (L)**: real Codex/OpenCode Go route, tokenizer/counter, tool and image capability, 128K/256K limits; the synthetic route proves wiring only.
 3. **Physical Windows acceptance (W)**: dialogs/auth/original Open, no-follow/long-path proof for original publication, hidden-Electron browser attach provider for the developer browser (only the explicit
    "missing attachment" report is proven), developer settings loading (activation is not granted).

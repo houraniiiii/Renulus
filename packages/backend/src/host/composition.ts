@@ -104,6 +104,19 @@ export async function loadInstalledEvidence(items: readonly { path: string; sha2
   return result;
 }
 
+/** The separate developer configuration (spec section 4): an explicitly selected, hash-pinned local file.
+ * Anything but an exact `enabled: true` configuration leaves the developer plugin Off. */
+export async function loadDeveloperConfiguration(item: { path: string; sha256: string }): Promise<ConnectedTargetOptions['developer']> {
+  if (!item || !path.isAbsolute(item.path) || !/^[a-f0-9]{64}$/.test(item.sha256)) reject('developer_configuration_invalid');
+  const bytes = await readFile(item.path);
+  if (bytes.length > 65536 || createHash('sha256').update(bytes).digest('hex') !== item.sha256) reject('developer_configuration_mismatch');
+  const value = JSON.parse(bytes.toString('utf8'));
+  if (value?.enabled !== true) return undefined;
+  if (typeof value.workspace !== 'string' || !path.isAbsolute(value.workspace) || !Array.isArray(value.actions) || !Array.isArray(value.roots) ||
+    !Array.isArray(value.endpoints) || !value.executables || typeof value.executables !== 'object') reject('developer_configuration_invalid');
+  return { configuration: value };
+}
+
 export async function openConnectedTarget(options: ConnectedTargetOptions) {
   const { storage, identity } = options;
   await reconcileRecoveryReservations(storage);

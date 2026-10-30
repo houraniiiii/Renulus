@@ -51,6 +51,8 @@ export interface TargetFacadeOptions {
   settlePlugins?: () => Promise<void>;
   /** Candidate-generation selection by the selected owner (expected owner/epoch required). */
   recovery?: RecoveryPort;
+  /** Opt-in capability selection at the application entry; `disabled` carries the recoverable reason. */
+  capabilities?: Readonly<Record<'mcp' | 'developer', { state: 'on' | 'off' | 'disabled'; code?: string }>>;
 }
 export async function openTargetFacade(options: TargetFacadeOptions) {
   if (!options.token || !Number.isSafeInteger(options.port) || options.port < 0 || options.port > 65535)
@@ -136,7 +138,8 @@ export async function openTargetFacade(options: TargetFacadeOptions) {
       if (request.method === "GET" && url.pathname === "/api/v1/meta")
         return send(200, { version: "0.1.0", api_version: 1, modules: { canonical: { status: "installed" } } });
       if (request.method === "GET" && url.pathname === "/api/v1/runtime/status")
-        return send(200, { state, admission: closing ? "closed" : "open", active_operations: active, api_version: 1 });
+        return send(200, { state, admission: closing ? "closed" : "open", active_operations: active, api_version: 1,
+          ...(options.capabilities ? { capabilities: options.capabilities } : {}) });
       if (request.method === "GET" && url.pathname === "/api/v1/data/export")
         return send(200, await options.storage.command({ type: "records.export" }));
       if (url.pathname === '/api/v1/runtime/configuration') {
@@ -154,6 +157,8 @@ export async function openTargetFacade(options: TargetFacadeOptions) {
       }
       const credential = await credentialCommand(request, url, options.credentials);
       if (credential) return send(credential.status, credential.value);
+      for (const [name, prefix] of [['mcp', '/api/v1/mcp/'], ['developer', '/api/v1/developer/']] as const)
+        if (url.pathname.startsWith(prefix) && options.capabilities?.[name].state === 'disabled') return failure(409, options.capabilities[name].code!);
       const mcp = await mcpCommand(request, url, options.mcp);
       if (mcp) return send(mcp.status, mcp.value);
       const developer = await developerCommand(request, url, options.developer);

@@ -10,6 +10,22 @@ from typing import Iterable
 from .publication import check_publication
 
 SUPPORTED_SCHEMA = 2
+BACKEND_SELECTOR = ".renulus-backend-selector.json"
+
+
+def require_python_authority(path: Path):
+    """Python is the canonical writer only while its profile has no backend selector.
+
+    After the profile-wide handoff the selector names the TypeScript writer; the
+    original profile and every generation beneath it are then refused here, so
+    no Python process (server or worker) can open a second canonical writer.
+    """
+    profile = path.parent.parent
+    roots = [profile]
+    if profile.parent.name == "generations":
+        roots.append(profile.parent.parent)
+    if any((root / BACKEND_SELECTOR).exists() for root in roots):
+        raise RuntimeError("backend_canonical_authority_ts")
 
 
 def utc_now() -> str:
@@ -19,6 +35,7 @@ def utc_now() -> str:
 class Database:
     def __init__(self, path: str | Path, *, migration_inventory: dict[str, str] | None = None):
         self.path = Path(path).resolve()
+        require_python_authority(self.path)
         self._writer_state = Lock()
         self._active_writers = 0
         self._writers_paused = False
@@ -45,6 +62,8 @@ class Database:
             conn.execute(f"PRAGMA user_version={SUPPORTED_SCHEMA}")
 
     def connect(self) -> sqlite3.Connection:
+        # Rechecked per connection: a Database built before the handoff cannot keep writing after it.
+        require_python_authority(self.path)
         conn = sqlite3.connect(self.path, timeout=15)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys=ON")

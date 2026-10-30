@@ -22,6 +22,15 @@ export function backendEnvironment(profile: DesktopProfile, token: string, runti
   return { ...result, PYTHONPATH: [runtimeRoot, upstreamRoot].join(path.delimiter), PYTHONUTF8: '1', PYTHONDONTWRITEBYTECODE: '1', PYTHONUNBUFFERED: '1', RENULUS_SESSION_TOKEN: token, HERMES_HOME: path.join(profile.root, 'hermes') };
 }
 
+/** The selected-owner supervisor gets no PATH, home or account variables; it forwards only these to bundled Node. */
+export function supervisorEnvironment(token: string, runtimeRoot: string, inherited: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+  const result: NodeJS.ProcessEnv = {};
+  for (const name of ['SystemRoot', 'WINDIR', 'COMSPEC', 'PATHEXT', 'TEMP', 'TMP']) {
+    if (inherited[name]) result[name] = inherited[name];
+  }
+  return { ...result, PYTHONPATH: runtimeRoot, PYTHONUTF8: '1', PYTHONDONTWRITEBYTECODE: '1', PYTHONUNBUFFERED: '1', RENULUS_SESSION_TOKEN: token };
+}
+
 export function allowedAuthorizationUrl(value: string): boolean {
   try {
     const url = new URL(value);

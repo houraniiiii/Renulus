@@ -11,6 +11,9 @@ import { verifySelectedAuthority, type SelectedWriterAuthority } from '../storag
 export { readSelectedOwnerLaunch } from '../storage/selected-owner.ts';
 
 export const BACKEND_SELECTOR = '.renulus-backend-selector.json';
+/** A rolled-back selector is renamed here: no live selector means the Python writer, and the
+ * retained epoch keeps a later handoff's authority epoch monotonic. It never selects anything. */
+export const RETIRED_SELECTOR = '.renulus-backend-selector.retired.json';
 export const GENERATION_MANIFEST = '.renulus-complete-generation.json';
 export interface BackendSelector {
   contract: 'renulus-backend-selector/1';
@@ -59,6 +62,15 @@ export function resolveBackendSelection(profileRoot: string) {
     reject('backend_generation_changed');
   return { writer: selector.writer, profileRoot: generationRoot, selection: selector, expectedSchemaHash: selector.schemaHash,
     authorityEpoch: selector.authorityEpoch, admission: selector.state, selectorSha256: hash(bytes) };
+}
+
+/** Highest epoch any earlier, rolled-back TS selection used on this profile (0 when none). */
+export function retiredSelectorEpoch(profileRoot: string) {
+  const path = owned(profileRoot, join(profileRoot, RETIRED_SELECTOR));
+  if (!existsSync(path)) return 0;
+  const value = JSON.parse(read(path, 16384).toString('utf8')) as BackendSelector;
+  validSelector(value);
+  return value.authorityEpoch;
 }
 
 export function observeGeneration(generationRoot: string, manifest: HandoffGeneration): GenerationMember[] {
@@ -118,8 +130,11 @@ export async function selectPreparedGeneration(options: HandoffOptions & { write
   const current = await options.closeAndSnapshot();
   verifySelectedAuthority(authority);
   const before = resolveBackendSelection(root);
+  // The initial Python->TS handoff has no selector (the supervisor issues epoch 0 and a null selector hash);
+  // its epoch continues from any earlier rolled-back TS selection. An existing TS authority is unchanged.
+  const base = authority.selectorSha256 === null && !before.selection ? retiredSelectorEpoch(root) : authority.authorityEpoch;
   if (manifest.profileId !== current.profileId || manifest.profileId !== (before.selection?.profileId ?? manifest.profileId) ||
-      manifest.authorityEpoch !== authority.authorityEpoch + 1) reject('backend_generation_identity_changed');
+      manifest.authorityEpoch !== base + 1) reject('backend_generation_identity_changed');
   if (options.rollback) {
     // A rollback candidate must include every current closed member unchanged.
     // This intentionally refuses an old backup when newer work exists. BF07 may
@@ -160,4 +175,17 @@ export async function activateSelectedGeneration(authority: SelectedWriterAuthor
   const selector = { ...resolved.selection, state: 'active' as const };
   atomicSelection(authority.profileRoot, selector, authority.selectorSha256);
   return selector;
+}
+
+/** Rollback to the untouched Python profile: one atomic rename retires the exact current TS selector.
+ * Before it the TS selection stands; after it no selector exists and only Python may write. The caller
+ * proves settlement, compatibility and the absence of newer work first. */
+export function retireSelection(authority: SelectedWriterAuthority) {
+  verifySelectedAuthority(authority);
+  const root = authority.profileRoot, target = owned(root, join(root, BACKEND_SELECTOR));
+  const retired = owned(root, join(root, RETIRED_SELECTOR));
+  if (authority.selectorSha256 === null || !existsSync(target) || hash(read(target, 16384)) !== authority.selectorSha256)
+    reject('backend_selector_stale');
+  if (existsSync(retired)) read(retired, 16384); // An earlier record must be an owned regular file before replacement.
+  renameSync(target, retired);
 }

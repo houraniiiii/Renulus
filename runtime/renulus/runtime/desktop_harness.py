@@ -31,6 +31,14 @@ from .harness_profile_owner import ProfileOwnerScope, acquire_profile_owner
 
 
 NODE = Path('C:/Renulus/scratch/ocf/tools/node-v26.4.0-win-x64/node.exe')
+
+
+def native_entry(source):
+    """A staged backend bundle (packaging/backend_bundle.py) carries its pinned Node
+    and closed-graph launcher; a source checkout keeps the reviewed developer Node."""
+    if (source / 'backend-bundle.json').is_file():
+        return source / 'node/node.exe', source / 'harness-launch.mjs'
+    return NODE, source / 'packages/harness/src/main.mjs'
 # Deliberate app policy, NOT vendor limits, an exact tokenizer or account evidence.
 # Each UTF-8 content byte costs one local unit, plus generous framing reserves.
 INPUT_BUDGET = 49152
@@ -218,8 +226,9 @@ def create_desktop_app(profile, *, token=None, source_root=None, provider_http_t
     root = Path(profile).expanduser().resolve()
     source = Path(source_root).resolve() if source_root else Path(__file__).resolve().parents[3]
     profile_id = 'desktop-' + hashlib.sha256(str(root).casefold().encode()).hexdigest()[:32]
-    config = HarnessProcessConfig(node_executable=NODE.resolve(),
-        host_entry=source / 'packages/harness/src/main.mjs', profile_root=root,
+    node, entry = native_entry(source)
+    config = HarnessProcessConfig(node_executable=node.resolve(),
+        host_entry=entry, profile_root=root,
         profile_id=profile_id, store_id=profile_id + '-runtime',
         domain_store_id=profile_id + '-domain', domain_path='state/renulus.sqlite3',
         max_frame_bytes=4194304, start_timeout=60)
