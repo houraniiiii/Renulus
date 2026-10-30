@@ -64,12 +64,17 @@ def enqueue_in(conn, plan):
     _write(conn, entries)
 
 
+def tombstoned_in(conn, attachment_id):
+    return conn.execute("SELECT 1 FROM deletion_ledger WHERE entity_type='attachment' AND entity_id=?",
+                        (attachment_id,)).fetchone() is not None
+
+
 def drain(services):
     """Run after commit/startup. Interrupted or locked files remain journalled."""
     with services.db.transaction() as conn:
         entries = _pending(conn)
         eligible = [entry for identifier, entry in entries.items() if
-            conn.execute("SELECT 1 FROM deletion_ledger WHERE entity_type='attachment' AND entity_id=?", (identifier,)).fetchone() and
+            tombstoned_in(conn, identifier) and
             not conn.execute("SELECT 1 FROM knowledge_attachments WHERE id=?", (identifier,)).fetchone() and
             not conn.execute("SELECT 1 FROM knowledge_attachment_originals WHERE attachment_id=?", (identifier,)).fetchone()]
     removed = []

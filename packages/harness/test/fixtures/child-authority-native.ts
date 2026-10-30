@@ -21,6 +21,7 @@ export async function childAuthorityNativeFixture(options: { permission?: "allow
   const { InstructionDiscovery } = await import("@opencode/core/instruction-discovery");
   const { SessionRestart } = await import("@opencode/core/session/execution/restart");
   const { Job } = await import("@opencode/core/job");
+  const { Permission } = await import("@opencode/core/permission");
   const { Bus } = await import("@opencode/core/bus");
   const { SessionEvent } = await import("@opencode/core/session/event");
   const { llmClient } = await import("@opencode/core/effect/app-node-platform");
@@ -81,6 +82,8 @@ export async function childAuthorityNativeFixture(options: { permission?: "allow
     models: { fetch: false, snapshot: false }, fs: { filewatcher: false, fff: false }, events: { persist: false },
   }, { overrides: [
     ...children.overrides,
+    Permission.node.replace(Permission.node.mapLayer(native => Layer.effect(Permission.Service,
+      Effect.flatMap(Permission.Service, children.guardPermission)).pipe(Layer.provide(native)))),
     Global.node.replace(Global.layerWith(Object.fromEntries(["home", "data", "cache", "config",
       "state", "tmp", "bin", "log", "repos"].map(key => [key, path.join(root, key)])))),
     Config.node.replace(Config.configured({ project: false, global: false, content: config })),

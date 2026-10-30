@@ -265,7 +265,11 @@ def blocked_ids(conn, current, incoming, deleted_ids):
 
 def apply_records(conn, bundle):
     """Caller owns the SQLite transaction and any original-file promotion."""
+    from .recovery_records import require_frontier, refuse_native_links
     records = validate_records(conn, bundle)
+    require_frontier(records)
+    for name, rows in records.items():
+        refuse_native_links(name, rows)
     current = snapshot_in(conn)["records"]
     conn.execute("PRAGMA defer_foreign_keys=ON")
     for row in records.get("deletion_ledger", []):
@@ -274,6 +278,9 @@ def apply_records(conn, bundle):
                      (row["entity_type"], row["entity_id"], row["deleted_at"]))
     deleted = [dict(row) for row in conn.execute("SELECT entity_type,entity_id FROM deletion_ledger")]
     blocked = blocked_ids(conn, current, records, deleted)
+    for row in records.get("memory_suppression", []):
+        conn.execute("INSERT INTO memory_suppression VALUES(?,?) ON CONFLICT(source_key) DO NOTHING",
+                     (row["source_key"], row["suppressed_at"]))
     removed = 0
     for name, rows in current.items():
         if name == "deletion_ledger":
@@ -292,6 +299,14 @@ def apply_records(conn, bundle):
         where = " AND ".join(f'"{key}"=?' for key in keys)
         for row in rows:
             if not allow_row(name, row, keys, blocked):
+                excluded += 1
+                continue
+            if name == "memory_sources" and conn.execute("SELECT 1 FROM memory_suppression WHERE source_key=?",
+                                                         (row["source_key"],)).fetchone():
+                excluded += 1
+                continue
+            if name == "memory_history" and conn.execute("SELECT 1 FROM memory_facts WHERE id=? AND revision>?",
+                                                         (row["record_id"], row["revision"])).fetchone():
                 excluded += 1
                 continue
             existing = conn.execute(f'SELECT * FROM "{name}" WHERE {where}',
@@ -313,6 +328,8 @@ def apply_records(conn, bundle):
                 raise ApiError('backup_case_original_conflict', 'A saved case original differs from this profile; no records were restored', 409)
             if existing:
                 continue
+            if name == "memory_answer_lineage":
+                row = {**row, "state": "revoked"}
             names = list(row)
             columns_sql = ",".join(f'"{column}"' for column in names)
             placeholders = ",".join("?" for _ in names)
@@ -367,6 +384,8 @@ def restore_records(services, bundle, *, confirm_older=False):
         safe = {**bundle, "schema_version": SUPPORTED_SCHEMA, "records": portable_records(records)}
         try:
             result, _, _ = apply_records(conn, safe)
+            from .invalidation import invalidate_restored_context
+            invalidate_restored_context(conn)
         except sqlite3.DatabaseError:
             raise ApiError("backup_references", "The export has invalid or incomplete linked records; no records were restored") from None
     conn = services.db.connect()

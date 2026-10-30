@@ -14,9 +14,10 @@ work. Keep edits scoped to the user's current request.
   practising in the EU, with specialisation, active study and staying current at
   its centre. Use existing models; the project owner will not host a service or
   model inference. Use the selected OpenCode Go and/or Codex subscriptions and
-  exact model list in docs/DECISIONS.md; authentication is still integration
-  work. Do not substitute conversational models or add paid API/user-managed
-  local-runtime requirements. Small CPU models bundled and managed by Renulus
+  exact model list in docs/DECISIONS.md. The October 20 MVP verified one live
+  Codex/Sol text answer; account-specific Go/tool/image acceptance remains
+  separately scoped. Do not substitute conversational models or add paid API
+  or user-managed local-runtime requirements. Small CPU models bundled and managed by Renulus
   for embeddings/OCR are explicitly accepted; no GPU, Docker, model server or
   setup is required of doctors.
 - Support education across nephrology from the outset. The user explicitly
@@ -39,7 +40,9 @@ work. Keep edits scoped to the user's current request.
   corrigenda, chapter replacements, retractions and access-specific user imports.
   References are dated evidence and candidates, not product requirements or
   claims of implemented functionality, educational efficacy or clinical accuracy.
-- Design C is the selected replacement for the current Flow UI. For this
+- Design C is the selected UI and the October 19/20 source MVP is selected by
+  this PC's ordinary shortcut. The former packaged Flow app remains for recovery;
+  full packaged acceptance is not established by this local cutover. For this
   migration, read `docs/planning/DESIGN_C_IMPLEMENTATION_SPEC.md`, including the
   relevant ticket, dependencies and shared behaviour rules. Confirmed user
   decisions govern; labelled planning defaults remain adaptable with a recorded
@@ -49,20 +52,29 @@ work. Keep edits scoped to the user's current request.
   The older Round 3 implementation plan retains foundation guidance but does not
   override later UI or retention decisions. Use `codex/` branches from the shared
   committed baseline. Every feature must deliver a connected working flow.
-- OpenCode v2 is the selected replacement harness target as of 2026-10-10;
-  follow `docs/planning/OPENCODE_V2_INTEGRATION_PLAN.md` and its tickets.
-  The completed Design C baseline still uses Hermes. Preserve its working
-  adapters and Electron/React components until the connected migration replaces
-  them; a foundation host does not authorize default cutover. Preserve upstream
-  licences and patch provenance. Supermemory was evaluated
+- OpenCode v2 is the selected harness direction as of 2026-10-10;
+  the October 26 target is full integration with TypeScript/Effect and Python,
+  retaining the selected data engines. Follow
+  `docs/planning/BACKEND_FINALISATION_SPEC.md` for finalisation and its mapping of
+  `docs/planning/OPENCODE_V2_INTEGRATION_PLAN.md` and the existing H tickets.
+  Specification authority does not itself authorise runtime implementation.
+  The later October 19/20 MVP instruction authorizes this PC's source-app
+  cutover: saved learning chat now uses OpenCode v2. Read
+  `docs/implementation/MVP_20261019.md` for its actual evidence and limits;
+  other producers retain their existing implementations. Preserve working
+  Hermes adapters and Electron/React components until each connected migration
+  replaces them. This bounded delivery does not pass the full H20/package gate.
+  Preserve upstream licences and patch provenance. Supermemory was evaluated
   and is now excluded from adoption by the user's later research request;
   replacement engines must themselves be open source.
 - The user approved the starting stack on 2026-10-04: Mem0 OSS through Hermes's
   in-process integration, Docling/Docling-core HybridChunker, FastEmbed and
   LanceDB OSS. SQLite owns canonical records; Mem0 initially uses its local
-  Qdrant client for a derived memory index. Reuse Hermes context management.
-  Exact versions/helper artifacts and adapter behaviour still need verification;
-  alternatives retained in research are not selected extra dependencies.
+  Qdrant client for a derived memory index. Preserve Hermes context management
+  for legacy producers; migrated saved chat uses the OpenCode context seam.
+  Pinned versions, helper artifacts and adapters have scoped implementation
+  evidence; remaining account, workflow and delivery gates remain separate.
+  Alternatives retained in research are not selected extra dependencies.
   Keep the selection and dated evidence linked in the planning files.
 - Renulus's own code uses MIT; original teaching content uses CC BY 4.0.
   Third-party and user-owned material retain their own terms. Add scoped licence

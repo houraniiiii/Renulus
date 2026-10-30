@@ -38,6 +38,9 @@ export interface StatelessExtractionInput {
   readonly system: string;
   readonly user: string;
 }
+export const STANDALONE_PURPOSES = ['generated-practice', 'test-import', 'test-result-narrative',
+  'daily_suggestions', 'updates-digest', 'summary', 'compaction'] as const;
+export type StandalonePurpose = typeof STANDALONE_PURPOSES[number];
 export interface StatelessModelPreparation {
   readonly request: LLMRequest;
   /** Available only after native client cleanup; publication also requires a successful generation. */
@@ -58,6 +61,7 @@ export interface GatewayAdapter {
   preparePrimary(binding: DomainBinding, resolved: SessionRunnerModel.Resolved): Effect.Effect<GatewayPrimaryPreparation, AIError>;
   /** One scoped, text-only memory-extraction primary. The caller uses LLM.generate with this client. */
   prepareStateless(binding: DomainBinding, input: StatelessExtractionInput): Effect.Effect<StatelessModelPreparation, AIError, Scope.Scope>;
+  prepareStandalone(binding: DomainBinding, purpose: StandalonePurpose, input: StatelessExtractionInput): Effect.Effect<StatelessModelPreparation, AIError, Scope.Scope>;
   receipt(request: LLMRequest): Readonly<GatewayReceipt> | undefined;
   close(): Promise<void>;
 }
@@ -302,7 +306,8 @@ export async function createGatewayAdapter(options: GatewayAdapterOptions): Prom
       return Object.freeze(primary);
     }, catch: safeFailure }).pipe(Effect.onExit(exit => exit._tag === "Failure" ? finish(entry) : Effect.void))));
   });
-  const prepareStateless: GatewayAdapter["prepareStateless"] = (binding, input) => Effect.suspend(() => {
+  const stateless = (binding: DomainBinding, purpose: 'memory-extraction' | StandalonePurpose,
+    input: StatelessExtractionInput): Effect.Effect<StatelessModelPreparation, AIError, Scope.Scope> => Effect.suspend(() => {
     if (typeof options.registerManifest !== "function" || !input || typeof input !== "object"
         || Object.keys(input).sort().join(",") !== "system,user"
         || typeof input.system !== "string" || !input.system.length
@@ -311,7 +316,8 @@ export async function createGatewayAdapter(options: GatewayAdapterOptions): Prom
     return Effect.acquireRelease(open(binding), entry => releaseScoped(entry)).pipe(Effect.flatMap(entry =>
       use(entry, () => Effect.gen(function* () {
         const plan = entry.plan;
-        if (plan.role.purpose !== "memory-extraction" || plan.role.dispatch_limit !== 1
+        if (plan.role.purpose !== purpose || (purpose === 'memory-extraction' ? plan.role.dispatch_limit !== 1 :
+            !STANDALONE_PURPOSES.includes(purpose) || plan.role.dispatch_limit < 1 || plan.role.dispatch_limit > 128)
             || plan.request_kind !== "primary" || plan.continuation_of !== undefined
             || plan.native_capabilities.tools || plan.native_capabilities.input.join(",") !== "text"
             || plan.native_capabilities.output.join(",") !== "text"
@@ -327,6 +333,9 @@ export async function createGatewayAdapter(options: GatewayAdapterOptions): Prom
       }))),
     ));
   });
+  const prepareStateless: GatewayAdapter['prepareStateless'] = (binding, input) => stateless(binding, 'memory-extraction', input);
+  const prepareStandalone: GatewayAdapter['prepareStandalone'] = (binding, purpose, input) =>
+    STANDALONE_PURPOSES.includes(purpose) ? stateless(binding, purpose, input) : Effect.fail(denied());
   const claim = (request: LLMRequest) => {
     const entry = entries.get(request);
     if (closing || !entry || entry.used || entry.sealed || entry.finalizer) throw denied();
@@ -359,7 +368,7 @@ export async function createGatewayAdapter(options: GatewayAdapterOptions): Prom
           : Stream.fail(entry.failure ?? safeFailure(Option.getOrUndefined(Cause.findErrorOption(cause))))))))),
     compact: () => Effect.fail(denied()),
   };
-  return { client, prepare, preparePrimary, prepareStateless, receipt: request => entries.get(request)?.receipt,
+  return { client, prepare, preparePrimary, prepareStateless, prepareStandalone, receipt: request => entries.get(request)?.receipt,
     close: () => {
       closing = true;
       for (const controller of controllers) controller.abort();

@@ -2,7 +2,8 @@ import { spawn, execFileSync, type ChildProcess } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import path from 'node:path';
-import { backendEnvironment, type DesktopProfile } from './profile';
+import { backendEnvironment, supervisorEnvironment, type DesktopProfile } from './profile';
+import { handoffHeldError, prepareSelectedOwnerLaunch, resolveBackendSelection, type BackendSelection } from './backend-selection';
 import { stopBackendChild, waitForBackendExit } from './upstream/backend-child';
 import { runBackendStartStep } from './upstream/backend-start-cancellation';
 import { validateHarnessSettingsFixture, type HarnessSettingsFixtureLaunch } from './harness-settings-fixture';
@@ -34,6 +35,11 @@ export async function startBackend(options: { profile: DesktopProfile; token: st
   }
   const python = process.env.RENULUS_PYTHON ?? path.join(workspace, '.venv', 'Scripts', 'python.exe');
   const bundleRoot = path.join(resources, 'backend');
+  const fixture = options.learningFixture ?? options.settingsFixture;
+  // Synthetic fixtures keep their fixed Python entries. Every other launch obeys
+  // the profile selector: absent or Python keeps today's server, held opens no writer.
+  const selection: BackendSelection = fixture ? { route: 'python' } : resolveBackendSelection(profile.root);
+  if (selection.route === 'held') throw handoffHeldError();
   if (packaged) {
     const manifest = JSON.parse(readFileSync(path.join(bundleRoot, 'bundle.json'), 'utf8')) as { version: number; format: string; python: { executable: string }; bootstrap: string };
     if (manifest.version !== 1 || manifest.format !== 'embedded-cpython-windows-v1' || manifest.python.executable !== 'python/python.exe' || manifest.bootstrap !== 'bootstrap.py') throw new Error('The packaged runtime launch contract is invalid.');
@@ -41,8 +47,8 @@ export async function startBackend(options: { profile: DesktopProfile; token: st
   const command = packaged ? path.join(bundleRoot, 'python', 'python.exe') : python;
   if (!path.isAbsolute(command) || !existsSync(command)) throw new Error('The Renulus Python runtime is not available. Set RENULUS_PYTHON for development.');
   const port = await runBackendStartStep(signal, freeLoopbackPort);
-  const fixture = options.learningFixture ?? options.settingsFixture;
-  const args = [...(fixture ? [path.join(workspace, 'tools/renulus-control', options.learningFixture ? 'harness-learning-backend.py' : 'harness-settings-backend.py')]
+  const selected = selection.route === 'ts' ? prepareSelectedOwnerLaunch({ selection, python: command, packaged, bundleRoot, workspace, port, node: process.env.RENULUS_NODE }) : undefined;
+  const args = selected ? selected.args : [...(fixture ? [path.join(workspace, 'tools/renulus-control', options.learningFixture ? 'harness-learning-backend.py' : 'harness-settings-backend.py')]
     : packaged ? ['-I', '-B', '-X', 'utf8', path.join(bundleRoot, 'bootstrap.py')] : ['-m', 'renulus.server']),
     '--profile', profile.root, '--port', String(port), ...(packaged ? ['--source-root', bundleRoot] : []),
     ...(fixture ? ['--harness-startup', fixture.startupDocument, '--harness-startup-sha256', fixture.startupSha256, '--helper-assets', fixture.helperAssets] : ['--desktop-harness'])];
@@ -55,7 +61,8 @@ export async function startBackend(options: { profile: DesktopProfile; token: st
   };
   signal.throwIfAborted();
   const source = packaged ? bundleRoot : workspace;
-  const child = spawn(command, args, { cwd: source, env: backendEnvironment(profile, token, path.join(source, 'runtime'), path.join(source, 'upstream', 'hermes')), windowsHide: true, detached: process.platform !== 'win32', stdio: ['ignore', 'ignore', 'ignore'] });
+  const env = selected ? supervisorEnvironment(token, selected.runtimeRoot) : backendEnvironment(profile, token, path.join(source, 'runtime'), path.join(source, 'upstream', 'hermes'));
+  const child = spawn(command, args, { cwd: selected?.cwd ?? source, env, windowsHide: true, detached: process.platform !== 'win32', stdio: ['ignore', 'ignore', 'ignore'] });
   let stopped: Promise<void> | undefined;
   let failed = false;
   let ready = false;

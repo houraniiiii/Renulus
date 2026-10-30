@@ -1,0 +1,192 @@
+// SPDX-License-Identifier: MIT
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { spawnSync } from 'node:child_process';
+import { DatabaseSync } from 'node:sqlite';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { openIsolatedStorage } from '../src/storage/index.ts';
+import { MARKER, SELECTOR } from '../src/storage/ownership.ts';
+import { inventory, loadMigrationInventory } from '../src/storage/schema.ts';
+import { createStudyCoordinator } from '../src/domain/study/coordinator.ts';
+import { createUpdatesCoordinator } from '../src/domain/updates/coordinator.ts';
+import { createAssessmentGeneration } from '../src/domain/assessment/generation.ts';
+import { createServer } from 'node:http';
+import { createHash } from 'node:crypto';
+import { createWorkerHttp } from '../src/workers/transport.ts';
+import { openEngineWorker } from '../src/workers/process.ts';
+import { createEvidenceDomain } from '../src/domain/evidence/index.ts';
+import { createUpdatesRetrieval } from '../src/domain/updates/retrieval.ts';
+import { studyCommand } from '../src/http/study-commands.ts';
+import { contentCommand } from '../src/http/content-commands.ts';
+import { updatesCommand } from '../src/http/updates-commands.ts';
+import { Readable } from 'node:stream';
+const repository = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
+async function fixture(seed = () => {}) {
+  const root = mkdtempSync('C:/Renulus/scratch/study-updates-bf06-');
+  const python = 'C:/Renulus/dev/python/Scripts/python.exe';
+  const script = `import sys\nfrom pathlib import Path\nsys.path.insert(0,str(Path(sys.argv[1])/'runtime'))\nfrom renulus.server import create_app\ns=create_app(Path(sys.argv[2])).state.services\nprint(s.paths.database)`;
+  const env = Object.fromEntries(['SystemRoot','WINDIR','TEMP','TMP'].filter(k => process.env[k]).map(k => [k,process.env[k]])); env.PATH = dirname(python);
+  const prepared = spawnSync(python, ['-I','-X','utf8','-c',script,repository,root], { encoding:'utf8',env,timeout:60_000 });
+  assert.equal(prepared.status,0,prepared.stderr);
+  const database = prepared.stdout.trim(), migrations = loadMigrationInventory(repository), db = new DatabaseSync(database); seed(db);
+  const expectedSchemaHash = inventory(db,migrations).schemaHash; db.close();
+  const selection = { contract:'renulus-storage-selector/1',isolation:'synthetic',profileId:'bf06-synthetic',generation:1,authorityEpoch:1,writer:'ts',state:'active',ownerId:'bf06-synthetic-owner',database:'state/renulus.sqlite3' };
+  writeFileSync(join(root,MARKER),JSON.stringify({contract:'renulus-synthetic-storage/1',profileId:selection.profileId})); writeFileSync(join(root,SELECTOR),JSON.stringify(selection));
+  let storage = await openIsolatedStorage({profileRoot:root,selection,migrations,expectedSchemaHash});
+  const command=c=>storage.command(c).catch(error=>{error.message=c.type+': '+error.code;throw error;});
+  return { root, storage:{command}, command, async reopen(){await storage.close();storage=await openIsolatedStorage({profileRoot:root,selection,migrations,expectedSchemaHash});}, async inspect(fn){await storage.close();const db=new DatabaseSync(database);try{return fn(db);}finally{db.close();storage=await openIsolatedStorage({profileRoot:root,selection,migrations,expectedSchemaHash});}}, async close(){await storage.close();assert.ok(resolve(root).toLowerCase().startsWith('c:\\renulus\\scratch\\study-updates-bf06-'));rmSync(root,{recursive:true,force:true});} };
+}
+const fail = code => e => e.code === code;
+const bundle = { explain: Array.from({length:5},(_,i)=>'SYNTHETIC explain topic '+i), case: Array.from({length:5},(_,i)=>'SYNTHETIC fictional case '+i), practice: Array.from({length:5},(_,i)=>'SYNTHETIC practice topic '+i) };
+const batch = {items:Array.from({length:5},(_,i)=>({stem:'SYNTHETIC renal question '+i,options:[{id:'a',text:'Choice A'},{id:'b',text:'Choice B'},{id:'c',text:'Choice C'},{id:'d',text:'Choice D'}],correct_option_id:'a',explanation:'SYNTHETIC educational explanation.'}))};
+test('Home native bundle, manual plan override and context/Stop publication fences use actual canonical worker',async()=>{
+  const f=await fixture();let clock={now:'2026-10-27T18:00:00Z',timezone:'Europe/Warsaw'},calls=0;
+  const study=createStudyCoordinator({storage:f.storage,clock:()=>clock,native:{async suggestions(context){calls++;assert.ok(!JSON.stringify(context.material).includes('correct_option_ids'));return bundle;}},assessment:{generate:async()=>{throw Error('unused');},cancel:async()=>{}}});
+  try{
+    assert.equal((await f.command({type:'study.nightly.read'})).preferences.enabled,false);
+    const job=await study.refresh();const home=await study.settled(job.job_id);assert.deepEqual(home.suggestions,bundle);assert.equal(home.suggestions_date,'2026-10-27');await study.refresh();assert.equal(calls,1);
+    const preview=await f.command({type:'study.plan.preview',clock});assert.ok(preview.activities.length);const accepted=await f.command({type:'study.plan.propose',clock});assert.ok(accepted.activities.length);assert.deepEqual(Object.keys(accepted).sort(),['activities','explanation','selection','status','tracks']);
+    const first=accepted.activities[0];const changed=await f.command({type:'study.activity.change',id:first.id,expectedRevision:first.revision,dueDate:'2026-11-01',state:null,idempotencyKey:'bf06-plan-manual'});assert.equal(changed.manual_override,true);
+    await f.command({type:'study.plan.propose',clock});assert.equal((await f.command({type:'study.plan.read'})).activities.find(a=>a.id===first.id).due_date,'2026-11-01');
+    assert.equal((await f.command({type:'study.home.read',clock})).suggestions,null);
+    const tracks=await contentCommand({method:'GET'},new URL('http://localhost/api/v1/content/tracks'),f.storage);assert.equal(tracks.status,200);assert.deepEqual(tracks.value,(await f.command({type:'study.plan.read'})).tracks);
+    const late=await f.command({type:'study.home.begin',clock});
+    const wrongStop=await studyCommand({method:'POST',headers:{'idempotency-key':'bf06-wrong-route'}},new URL('http://localhost/api/v1/nightly/jobs/'+late.job_id+'/cancel'),f.storage,study);assert.equal(wrongStop.status,404);
+    await f.command({type:'study.home.publish',jobId:late.job_id,bundle,clock});
+    clock={...clock,now:'2026-10-28T18:00:00Z'};const cancelled=await f.command({type:'study.home.begin',clock});
+    const stopped=await studyCommand({method:'POST',headers:{'idempotency-key':'bf06-home-stop'}},new URL('http://localhost/api/v1/home/jobs/'+cancelled.job_id+'/cancel'),f.storage,study);assert.equal(stopped.status,200);
+    await assert.rejects(f.command({type:'study.home.publish',jobId:cancelled.job_id,bundle,clock}),fail('cancelled'));
+  }finally{await study.close();await f.close();}
+});
+test('nightly claims once, publishes through assessment Ready, catches up once and rejects Off/restart late publication',async()=>{
+  const f=await fixture();let clock={now:'2026-10-27T18:00:00Z',timezone:'Europe/Warsaw'};
+  const generation=createAssessmentGeneration(f.storage,{generate:async()=>batch});
+  const study=createStudyCoordinator({storage:f.storage,clock:()=>clock,native:{suggestions:async()=>bundle},assessment:{generate:async r=>generation.create({title:r.title,count:r.count,topic_id:null,inputs:r.inputs,source_refs:[],idempotencyKey:r.idempotency_key,origin:'nightly',schedule:r.nightly}),cancel:id=>generation.cancel(id)}});
+  try{
+    await study.start();await study.updateNightly({type:'study.nightly.preferences',clock,expectedRevision:1,enabled:true,localTime:'22:00',count:5,idempotencyKey:'bf06-nightly-on'});
+    assert.equal((await f.command({type:'study.nightly.claim',clock})).request,null);clock={...clock,now:'2026-10-27T21:01:00Z'};
+    const status=await study.tick();const id=status.last_job.id;await generation.settled(id);const job=await generation.read(id);assert.equal(job.state,'published');assert.equal(job.accepted_count,5);assert.equal((await f.command({type:'study.nightly.claim',clock})).request,null);
+    const test=await f.command({type:'assessment.tests.setup',versionId:job.published_version_id});assert.equal(test.version.origin,'nightly');
+    clock={...clock,now:'2026-11-01T08:00:00Z'};const catchup=await f.command({type:'study.nightly.claim',clock});assert.equal(catchup.request.nightly.day,'2026-10-31');assert.equal((await f.command({type:'study.nightly.claim',clock})).request,null);
+    await f.command({type:'study.nightly.guard',schedule:catchup.request.nightly});await study.updateNightly({type:'study.nightly.preferences',clock,expectedRevision:2,enabled:false,localTime:'22:00',count:5,idempotencyKey:'bf06-nightly-off'});await assert.rejects(f.command({type:'study.nightly.guard',schedule:catchup.request.nightly}),fail('nightly_invalidated'));
+    await f.command({type:'study.nightly.recover',clock});assert.equal((await f.command({type:'study.nightly.claim',clock})).request,null);
+  }finally{await study.close();await generation.close();await f.close();}
+});
+test('Updates literature check uses the protected loopback evidence broker and retains discovery-only provenance', {skip:!process.env.RENULUS_BACKEND_TEST_PYTHON}, async()=>{
+  let requests=0;
+  const server=createServer((request,response)=>{requests++;assert.equal(new URL(request.url,'http://localhost').pathname,'/search');response.setHeader('content-type','application/json');response.end(JSON.stringify({resultList:{result:[{id:'12345678',source:'MED',title:'SYNTHETIC renal discovery',firstPublicationDate:'2026-10-27'}]}}));});
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const f=await fixture(db=>db.prepare('INSERT OR IGNORE INTO update_source_checks(source_id,title,url,snapshot_status) VALUES(?,?,?,?)').run('S99','SYNTHETIC renal discovery','https://synthetic.invalid/source','Synthetic'));
+  let worker,updates;
+  try{
+    const revisions={configuration:1,grant:1,context:1,deletion:1,cancellation:0};
+    worker=await openEngineWorker({python:process.env.RENULUS_BACKEND_TEST_PYTHON,sourceRoot:repository,launchRoot:join(f.root,'launch'),retention:'saved',
+      identity:{profile_id:'synthetic-bf06-evidence',domain_store_id:'synthetic-domain',runtime_store_id:'synthetic-native',authority_epoch:1,process_generation:'synthetic-evidence'},current:()=>revisions,
+      broker:{profile_root:f.root,state_root:join(f.root,'state')}});
+    const inputs=new Map();
+    const evidence=createEvidenceDomain({storage:f.storage,worker:{channel:worker.channel,maxChunkBytes:worker.ready.capacity.max_chunk_bytes,retention:'saved'},
+      check:async(id,signal)=>{signal.throwIfAborted();await f.command({type:'updates.check.current',input:inputs.get(id)});},
+      endpoints:{'europe-pmc':{host:'127.0.0.1',port:server.address().port,private_network:true,base_url:'http://127.0.0.1:'+server.address().port}}});
+    const retrieval=createUpdatesRetrieval(evidence);
+    updates=createUpdatesCoordinator({storage:f.storage,native:{check:async(input,signal)=>{inputs.set(input.token,input);try{return await retrieval.check(input,signal);}finally{inputs.delete(input.token);}},digest:async()=>{throw Error('unused');}}});
+    const topic=await f.inspect(db=>db.prepare('SELECT topic_id FROM content_topics ORDER BY topic_id LIMIT 1').get().topic_id);const checked=await updates.check({kind:'literature',id:topic},true);
+    const entries=(await f.command({type:'updates.entries',state:null,limit:20,offset:0})).entries;
+    const entry=entries.find(e=>e.title==='SYNTHETIC renal discovery');
+    assert.deepEqual({state:checked.state,requests,verification:entry?.source_metadata.verification,passage_evidence:entry?.source_metadata.passage_evidence,review_state:entry?.review_state},
+      {state:'baseline',requests:1,verification:'discovery-only',passage_evidence:false,review_state:'pending'});
+  }finally{await updates?.close();await worker?.close();await f.close();await new Promise(resolve=>server.close(resolve));}
+});
+test('Updates source/publication checks hash the registered page bytes through the broker; literature keeps discovery', {skip:!process.env.RENULUS_BACKEND_TEST_PYTHON}, async()=>{
+  const hits={source:0,pdf:0,search:0,moved:0};let page='<a href="https://synthetic.invalid/guideline-v1.pdf">Guideline v1</a><p>Updated 1 Jan</p>',pdf='%PDF-1 SYNTHETIC v1',search='SYNTHETIC search one';
+  const server=createServer((request,response)=>{const path=new URL(request.url,'http://localhost').pathname;
+    if(path==='/source'){hits.source++;response.setHeader('content-type','text/html');response.end(page);}
+    else if(path==='/pub.pdf'){hits.pdf++;response.setHeader('content-type','application/pdf');response.end(pdf);}
+    else if(path==='/moved.pdf'){hits.moved++;response.statusCode=302;response.setHeader('location','https://elsewhere.invalid/x.pdf');response.end();}
+    else if(path==='/search'){hits.search++;response.setHeader('content-type','application/json');response.end(JSON.stringify({resultList:{result:[{id:'12345678',source:'MED',title:search,firstPublicationDate:'2026-10-27'}]}}));}
+    else{response.statusCode=404;response.end();}});
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const base='http://127.0.0.1:'+server.address().port;
+  const f=await fixture(db=>{db.prepare('INSERT OR IGNORE INTO update_source_checks(source_id,title,url,snapshot_status) VALUES(?,?,?,?)').run('S99','SYNTHETIC official source',base+'/source','Synthetic');
+    for(const [id,path] of [['pub_a','/pub.pdf'],['pub_b','/moved.pdf']])db.prepare('INSERT INTO update_publications(id,source_id,url,title,permission_reference,max_bytes,tracked_at) VALUES(?,?,?,?,?,?,?)').run(id,'S99',base+path,'SYNTHETIC publication '+id,'SYNTHETIC permission',4096,new Date().toISOString());});
+  let worker,updates;
+  try{
+    const revisions={configuration:1,grant:1,context:1,deletion:1,cancellation:0};
+    worker=await openEngineWorker({python:process.env.RENULUS_BACKEND_TEST_PYTHON,sourceRoot:repository,launchRoot:join(f.root,'launch'),retention:'saved',
+      identity:{profile_id:'synthetic-s21-pages',domain_store_id:'synthetic-domain',runtime_store_id:'synthetic-native',authority_epoch:1,process_generation:'synthetic-pages'},current:()=>revisions,
+      broker:{profile_root:f.root,state_root:join(f.root,'state')}});
+    const inputs=new Map(),endpoint={host:'127.0.0.1',port:server.address().port,private_network:true,base_url:base},channel={channel:worker.channel,maxChunkBytes:worker.ready.capacity.max_chunk_bytes,retention:'saved'};
+    const evidence=createEvidenceDomain({storage:f.storage,worker:channel,http:createWorkerHttp(channel),check:async(id,signal)=>{signal.throwIfAborted();await f.command({type:'updates.check.current',input:inputs.get(id)});},
+      endpoints:{'europe-pmc':endpoint,'official-source':endpoint}});
+    const retrieval=createUpdatesRetrieval(evidence);
+    updates=createUpdatesCoordinator({storage:f.storage,native:{check:async(input,signal)=>{inputs.set(input.token,input);try{return await retrieval.check(input,signal);}finally{inputs.delete(input.token);}},digest:async()=>{throw Error('unused');}}});
+    const titles=async()=>(await f.command({type:'updates.entries',state:null,limit:50,offset:0})).entries.map(e=>e.kind+':'+e.title).sort();
+    const source={kind:'source',id:'S99'},publication={kind:'publication',id:'pub_a'};
+    assert.equal((await updates.check(source,true)).state,'baseline');assert.equal((await updates.check(publication,true)).state,'baseline');
+    search='SYNTHETIC search two, unrelated to the tracked pages';
+    assert.equal((await updates.check(source,true)).state,'unchanged');assert.equal((await updates.check(publication,true)).state,'unchanged');
+    assert.deepEqual(await titles(),[],'unrelated search results never create events');
+    const sourceRow=(await f.command({type:'updates.sources'})).sources.find(row=>row.source_id==='S99');assert.deepEqual(sourceRow.links,[{url:'https://synthetic.invalid/guideline-v1.pdf',label:'Guideline v1'}]);
+    page='<a href="https://synthetic.invalid/guideline-v2.pdf">Guideline v2</a>';pdf='%PDF-1 SYNTHETIC v2';
+    assert.equal((await updates.check(source,true)).state,'changed');assert.equal((await updates.check(publication,true)).state,'changed');
+    assert.deepEqual(await titles(),['publication-change:Publication bytes changed: SYNTHETIC publication pub_a','source-change:Publication links changed: SYNTHETIC official source']);
+    const tracked=(await f.command({type:'updates.publications'})).publications.find(row=>row.id==='pub_a');assert.equal(tracked.fetch_metadata.sha256,createHash('sha256').update(pdf).digest('hex'));assert.equal(tracked.fetch_metadata.bytes,pdf.length);
+    assert.equal(hits.search,0,'source and publication checks never query discovery');
+    const redirected=await updates.check({kind:'publication',id:'pub_b'},true);assert.equal(redirected.state,'failed');assert.equal(redirected.error_code,'source_redirect_blocked');
+    pdf='%PDF-'+'x'.repeat(5000);assert.equal((await updates.check(publication,true)).error_code,'capability_response_limit');
+    assert.equal((await f.command({type:'updates.publications'})).publications.find(row=>row.id==='pub_a').last_success_at!==null,true,'a failed check keeps the last success');
+    const topic=await f.inspect(db=>db.prepare('SELECT topic_id FROM content_topics ORDER BY topic_id LIMIT 1').get().topic_id);
+    const literature=await updates.check({kind:'literature',id:topic},true);assert.equal(literature.state,'baseline');assert.equal(hits.search,1);
+    assert.ok((await titles()).includes('literature:'+search));
+    await f.inspect(db=>{const usage=db.prepare("SELECT requests FROM retrieval_usage WHERE provider='official-source'").get();assert.ok(usage.requests>=7&&usage.requests<=32,'page fetches are metered, unspent redirect budget refunded: '+usage.requests);});
+  }finally{await f.inspect(db=>{db.prepare('UPDATE update_publications SET enabled=0').run();db.prepare('UPDATE update_source_checks SET url=? WHERE source_id=?').run('https://synthetic.invalid/source','S99');});await updates?.close();await worker?.close();await f.close();await new Promise(resolve=>server.close(resolve));}
+});
+test('Updates keeps failed-check success date and correction/outbox/source links; digest cannot review',async()=>{
+  const f=await fixture(db=>{const at=new Date().toISOString();db.prepare('INSERT OR IGNORE INTO update_source_checks(source_id,title,url,snapshot_status) VALUES(?,?,?,?)').run('S99','SYNTHETIC official source','https://synthetic.invalid/source','Synthetic');db.prepare('INSERT INTO update_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run('synthetic_update','S99','synthetic:entry','SYNTHETIC correction','https://synthetic.invalid/article','publication-change',null,at,null,null,'pending','Inspect','[]',JSON.stringify({canonical_url:'https://synthetic.invalid/article'}),null);});
+  await f.inspect(db=>{const at=new Date().toISOString();for(const [id,url] of [['matched','https://synthetic.invalid/article'],['other','https://synthetic.invalid/other']]){db.prepare('INSERT INTO knowledge_documents(id,title,source_id,scope_kind,active_revision,latest_revision,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)').run('doc_'+id,'SYNTHETIC '+id,'S99','personal-library','rev_'+id,'rev_'+id,at,at);db.prepare('INSERT INTO knowledge_revisions(id,document_id,ordinal,status,sha256,media_type,bytes,metadata_json,rights_json,created_at) VALUES(?,?,1,?,?,?,?,?,?,?)').run('rev_'+id,'doc_'+id,'ready','b'.repeat(64),'text/plain',10,JSON.stringify({source_id:'S99',canonical_url:url,publication_status:'final',content_reviewed:true,latest_final_verified:true}),JSON.stringify({display:true,model_input:true,derivation:true}),at);}});
+  let failed=false;const updates=createUpdatesCoordinator({storage:f.storage,native:{async check(){if(failed)throw Object.assign(Error('synthetic failure'),{code:'source_fetch_failed'});return {digest:'a'.repeat(64),links:[],entries:[],metadata:{}};},async digest(input){return 'SYNTHETIC digest of '+input.entries[0].url;}}});
+  try{
+    await updates.check({kind:'source',id:'S99'},true);const before=(await f.command({type:'updates.sources'})).sources.find(s=>s.source_id==='S99');failed=true;const check=await updates.check({kind:'source',id:'S99'},true);assert.equal(check.state,'failed');const after=(await f.command({type:'updates.sources'})).sources.find(s=>s.source_id==='S99');assert.equal(after.last_success_at,before.last_success_at);assert.equal(after.error_code,'source_fetch_failed');assert.equal(before.freshness,'checked-recently');assert.equal(after.freshness,'stale');
+    const entry=await f.command({type:'updates.entry',id:'synthetic_update'});const review={summary:'SYNTHETIC correction needs re-review',topic_ids:[],reviewer:'learner',state:'reviewed',evidence:[{url:entry.url,locator:'Correction notice',finding:'SYNTHETIC educational change',checked_on:'2026-10-27',inspected:true}],target:{register_id:'S99',canonical_url:entry.url},changes:{publication_status:'final',correction:'SYNTHETIC corrigendum',latest_final_verified:true,content_reviewed:true}};
+    const command={type:'updates.review',id:entry.id,review,expectedRevision:entry.revision,idempotencyKey:'bf06-source-correction'};const reviewed=await f.command(command);assert.deepEqual(Object.keys(reviewed.review).sort(),['changes','evidence','id','library_sync_error','library_sync_state','target']);assert.equal(reviewed.library_changes.length,2);assert.deepEqual(Object.keys(reviewed.library_changes[0]).sort(),['error_code','id','state']);assert.equal(reviewed.review.changes.latest_final_verified,false);assert.equal(reviewed.review.changes.content_reviewed,false);assert.equal((await f.command(command)).revision,reviewed.revision);
+    const digest=await updates.digest();assert.ok(digest.text.includes(entry.url));assert.equal((await f.command({type:'updates.entry',id:entry.id})).revision,reviewed.revision);
+    await f.inspect(db=>db.prepare('UPDATE update_source_checks SET links_json=? WHERE source_id=?').run(JSON.stringify([{url:'https://synthetic.invalid/publication.pdf',label:'SYNTHETIC publication'}]),'S99'));
+    const track={type:'updates.publications.track',sourceId:'S99',url:'https://synthetic.invalid/publication.pdf#page=2',permissionReference:'SYNTHETIC public permission',maxBytes:1024,idempotencyKey:'bf06-publication-track'};
+    const tracked=await f.command(track);assert.equal(tracked.enabled,true);assert.deepEqual(tracked.fetch_metadata,{});assert.equal(tracked.freshness,'unchecked');assert.equal(tracked.title,'SYNTHETIC publication');
+    assert.deepEqual(await f.command({type:'updates.publications.stop',id:tracked.id}),{id:tracked.id,enabled:false});assert.deepEqual((await f.command({type:'updates.publications'})).publications,[]);
+    const resumed=await f.command({...track,permissionReference:'SYNTHETIC renewed permission',idempotencyKey:'bf06-publication-resume'});assert.equal(resumed.id,tracked.id);assert.equal(resumed.enabled,true);assert.equal(resumed.permission_reference,'SYNTHETIC renewed permission');
+    await assert.rejects(f.command({...track,url:'https://other.invalid/publication.pdf',idempotencyKey:'bf06-publication-host'}),fail('source_host_blocked'));
+    await assert.rejects(f.command({...track,url:'https://synthetic.invalid/unregistered.pdf',idempotencyKey:'bf06-publication-unknown'}),fail('publication_not_registered'));
+    await assert.rejects(f.command({type:'updates.publications.stop',id:'absent'}),fail('publication_missing'));
+    const api=async(path,method='GET',body)=>updatesCommand(Object.assign(Readable.from(body?[Buffer.from(JSON.stringify(body))]:[]),{method,headers:{}}),new URL('http://localhost/api/v1/updates/'+path),f.storage,updates);
+    const failure=await api('sources/S99/check?force=true','POST');assert.deepEqual(Object.keys(failure.value).sort(),['checked_at','error','source_id','state']);assert.equal(failure.value.error.code,'source_fetch_failed');
+    const cachedFailure=await api('sources/S99/check','POST');assert.deepEqual(Object.keys(cachedFailure.value).sort(),['cached','error','source_id','state']);
+    failed=false;
+    const success=await api('sources/S99/check?force=true','POST');assert.deepEqual(Object.keys(success.value).sort(),['checked_at','links','review_required','source_id','state']);assert.deepEqual(success.value.links,[]);
+    assert.deepEqual(Object.keys((await api('sources/S99/check','POST')).value).sort(),['cached','source_id','state']);
+    const publication=await api('publications/'+tracked.id+'/check?force=true','POST');assert.equal(publication.value.enabled,true);assert.deepEqual(publication.value.fetch_metadata,{});assert.equal(publication.value.review_required,false);assert.ok(!('entries' in publication.value));
+    failed=true;const publicationFailure=await api('publications/'+tracked.id+'/check?force=true','POST');assert.equal(publicationFailure.value.error.code,'source_fetch_failed');assert.equal(publicationFailure.value.freshness,'stale');
+    failed=false;const topic=await f.inspect(db=>db.prepare('SELECT topic_id FROM content_topics ORDER BY topic_id LIMIT 1').get().topic_id);
+    const literature=await api('literature/check','POST',{topic_ids:[topic]});assert.equal(literature.value.state,'checked');assert.deepEqual(Object.keys(literature.value).sort(),['checked_at','checks','discovered','max_records_per_topic','review_state','source','state']);assert.deepEqual(literature.value.checks,[{topic_id:topic,state:'checked',discovered:0,records_checked:0,hit_count:null,truncated:false}]);
+    const statuses=(await api('sources/S99/status')).value.statuses;assert.ok(statuses.length);assert.deepEqual(Object.keys(statuses[0]).sort(),['review_id','reviewed_at','reviewer','status','target','target_key']);
+    assert.deepEqual((await api('entries/'+entry.id+'/affected')).value,{affected:[],total:0,limit:100,offset:0,next_offset:null});
+    assert.equal((await api('entries/absent')).status,404);assert.equal((await api('entries?limit=0')).status,422);
+    const initialSchedule=(await api('schedule')).value;assert.deepEqual(Object.keys(initialSchedule).sort(),['app_running_only','cadence_hours','enabled','jobs','last_run','max_batch','max_retries','max_selection','next_due_at','options','revision','running','selection']);assert.equal(initialSchedule.enabled,false);assert.equal(initialSchedule.running,false);assert.ok(initialSchedule.options.some(option=>option.kind==='literature'&&option.id===topic));assert.ok(!initialSchedule.options.some(option=>option.id==='S99'));
+    const official=initialSchedule.options.find(option=>option.kind==='source'&&option.id==='K01');assert.ok(official);
+    const pdf='https://kdigo.org/wp-content/uploads/synthetic-bf06.pdf';await f.inspect(db=>db.prepare('UPDATE update_source_checks SET links_json=? WHERE source_id=?').run(JSON.stringify([{url:pdf,label:'SYNTHETIC official PDF'}]),official.id));
+    const publicPdf=await f.command({...track,sourceId:official.id,url:pdf,idempotencyKey:'bf06-public-pdf'});
+    const selected=[{kind:'source',id:official.id},{kind:'publication',id:publicPdf.id},{kind:'literature',id:topic}];
+    const configured=await api('schedule','PUT',{enabled:true,cadence_hours:24,selection:selected});assert.equal(configured.status,200);assert.equal(configured.value.enabled,true);assert.equal(configured.value.jobs.length,3);assert.ok(configured.value.jobs.every(job=>job.available&&job.title));assert.ok(configured.value.next_due_at);assert.equal(configured.value.max_batch,5);
+    const write={type:'updates.schedule.write',enabled:true,cadenceHours:24,selection:selected,expectedRevision:configured.value.revision,idempotencyKey:'bf06-schedule-change'};
+    await assert.rejects(f.command({...write,selection:[{kind:'source',id:'S99'}]}),fail('schedule_selection_invalid'));
+    await assert.rejects(f.command({...write,selection:[]}),fail('schedule_selection_required'));
+    const claim=await f.command({type:'updates.schedule.claim',manual:true});assert.ok(claim.id);assert.equal((await api('schedule')).value.running,true);await assert.rejects(f.command(write),fail('schedule_busy'));
+    await f.command({type:'updates.schedule.finish',id:claim.id,checked:0,failed:0,errorCode:null});
+    await f.command({type:'updates.publications.stop',id:publicPdf.id});assert.equal((await api('schedule')).value.jobs.find(job=>job.target_id===publicPdf.id).available,false);
+    const retracked=await api('publications','POST',{source_id:official.id,url:pdf,permission_reference:'SYNTHETIC public permission'});assert.equal(retracked.value.enabled,true);assert.equal(retracked.value.id,publicPdf.id);
+    const dismissed=await api('entries/'+entry.id+'/review','POST',{summary:'SYNTHETIC dismissed after inspection',state:'dismissed'});assert.equal(dismissed.status,200);assert.equal(dismissed.value.review_state,'dismissed');
+    await f.command({type:'updates.publications.stop',id:publicPdf.id});
+    const invalidSelection=await api('schedule','PUT',{enabled:true,cadence_hours:24,selection:selected});assert.equal(invalidSelection.status,422);assert.equal(invalidSelection.value.error.code,'schedule_selection_invalid');
+    await f.inspect(db=>{assert.equal(db.prepare('SELECT COUNT(*) AS n FROM knowledge_source_status_events').get().n,2);assert.equal(db.prepare("SELECT COUNT(*) AS n FROM update_library_changes WHERE state NOT IN ('applied','no-match')").get().n,0);const matched=JSON.parse(db.prepare('SELECT metadata_json FROM knowledge_revisions WHERE id=?').get('rev_matched').metadata_json),other=JSON.parse(db.prepare('SELECT metadata_json FROM knowledge_revisions WHERE id=?').get('rev_other').metadata_json);assert.equal(matched.content_reviewed,false);assert.equal(matched.latest_final_verified,false);assert.equal(matched.correction,'SYNTHETIC corrigendum');assert.equal(other.content_reviewed,true);assert.equal(other.correction,undefined);});
+  }finally{await updates.close();await f.close();}
+});

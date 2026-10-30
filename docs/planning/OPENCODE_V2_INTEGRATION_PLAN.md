@@ -1,5 +1,13 @@
 # OpenCode v2 integration plan
 
+**October 26 finalisation target:** the owner's later TypeScript/Effect + Python,
+full-tool and plugin-lifecycle instruction is consolidated in the
+[single backend finalisation spec](BACKEND_FINALISATION_SPEC.md). It governs the
+new target and migration wave order. Retain the H criteria, confirmed product
+rules and dated evidence below; their older status headers do not override the
+later MVP or current acceptance maps. The new spec is a planning deliverable,
+not evidence of implementation or release.
+
 **Canonical handoff amendment:** the exact older working draft is preserved in
 `75b4b503` and its [snapshot manifest](../implementation/opencode-plan-snapshot/manifest.json).
 The bounded Design C closeout repairs H00 in `fa3b590c`; H12 consumes that

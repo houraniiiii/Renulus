@@ -4,10 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { startBackend } from './backend';
 import { resolveProfile } from './profile';
 
-const io = vi.hoisted(() => ({ spawn: vi.fn(), execFileSync: vi.fn(), existsSync: vi.fn(), readFileSync: vi.fn(), createServer: vi.fn() }));
+const io = vi.hoisted(() => ({ spawn: vi.fn(), execFileSync: vi.fn(), existsSync: vi.fn(), readFileSync: vi.fn(), createServer: vi.fn(), selection: vi.fn(), selectedLaunch: vi.fn() }));
 vi.mock('node:child_process', () => ({ spawn: io.spawn, execFileSync: io.execFileSync }));
 vi.mock('node:fs', () => ({ existsSync: io.existsSync, readFileSync: io.readFileSync }));
 vi.mock('node:net', () => ({ createServer: io.createServer }));
+vi.mock('./backend-selection', async original => ({ ...await original<typeof import('./backend-selection')>(),
+  resolveBackendSelection: io.selection, prepareSelectedOwnerLaunch: io.selectedLaunch }));
 
 let child: EventEmitter & { pid: number; exitCode: number | null; signalCode: NodeJS.Signals | null; killed: boolean; kill: ReturnType<typeof vi.fn> };
 const workspace = path.resolve('.local/synthetic-startup');
@@ -19,6 +21,7 @@ beforeEach(() => {
   vi.stubEnv('RENULUS_PYTHON', undefined);
   child = Object.assign(new EventEmitter(), { pid: 424242, exitCode: null, signalCode: null, killed: false, kill: vi.fn() });
   io.spawn.mockReturnValue(child);
+  io.selection.mockReturnValue({ route: 'python' });
   io.existsSync.mockReturnValue(true);
   io.readFileSync.mockReturnValue(JSON.stringify({ version: 1, format: 'embedded-cpython-windows-v1', python: { executable: 'python/python.exe' }, bootstrap: 'bootstrap.py' }));
   io.execFileSync.mockImplementation(() => { child.killed = true; child.exitCode = 0; child.emit('exit'); return Buffer.alloc(0); });
@@ -408,5 +411,59 @@ describe('owned backend shutdown', () => {
     await backend.stop();
     expect(transport).toHaveBeenCalledTimes(2);
     expect(io.execFileSync).toHaveBeenCalledOnce();
+  });
+});
+
+describe('profile backend selection', () => {
+  const ready = () => vi.stubGlobal('fetch', vi.fn(async (url: string) => new Response(JSON.stringify(
+    url.endsWith('/api/v1/runtime/shutdown') ? { state: 'settled', api_version: 1 } : { api_version: 1 }))));
+
+  it.each([false, true])('keeps the existing Python server when the profile selects Python (packaged=%s)', async packaged => {
+    ready();
+    const backend = await startBackend(options(packaged));
+    expect(io.selection).toHaveBeenCalledExactlyOnceWith(profile.root);
+    expect(io.selectedLaunch).not.toHaveBeenCalled();
+    const [command, args, spawned] = io.spawn.mock.calls[0];
+    expect(command).toBe(packaged ? path.join(workspace, 'resources', 'backend', 'python', 'python.exe') : path.join(workspace, '.venv', 'Scripts', 'python.exe'));
+    expect(args).toEqual([...(packaged ? ['-I', '-B', '-X', 'utf8', path.join(workspace, 'resources', 'backend', 'bootstrap.py')] : ['-m', 'renulus.server']),
+      '--profile', profile.root, '--port', '18777', ...(packaged ? ['--source-root', path.join(workspace, 'resources', 'backend')] : []), '--desktop-harness']);
+    expect(spawned.env).toHaveProperty('HERMES_HOME');
+    await backend.stop();
+  });
+
+  it('opens no writer while a handoff is held', async () => {
+    io.selection.mockReturnValue({ route: 'held', writer: 'ts' });
+    await expect(startBackend(options(true))).rejects.toMatchObject({ code: 'backend_handoff_held', message: expect.stringMatching(/records are unchanged/) });
+    expect(io.createServer).not.toHaveBeenCalled();
+    expect(io.spawn).not.toHaveBeenCalled();
+  });
+
+  it('refuses an invalid selector instead of falling back to Python', async () => {
+    const refusal = Object.assign(new Error('Synthetic ambiguous selector'), { code: 'backend_selector_invalid' });
+    io.selection.mockImplementation(() => { throw refusal; });
+    await expect(startBackend(options(false))).rejects.toBe(refusal);
+    expect(io.spawn).not.toHaveBeenCalled();
+  });
+
+  it('launches a ts selection through the owner supervisor with a sanitized environment', async () => {
+    ready();
+    vi.stubEnv('PATH', 'C:\\developer\\tools');
+    vi.stubEnv('OPENAI_API_KEY', 'synthetic-should-not-pass');
+    const selection = { route: 'ts', profileRoot: profile.root, generationRoot: path.join(profile.root, 'generations', 'g1'), profileId: 'desktop-synthetic', authorityEpoch: 2 };
+    io.selection.mockReturnValue(selection);
+    const bundle = path.join(workspace, 'resources', 'backend');
+    io.selectedLaunch.mockReturnValue({ args: ['-I', '-m', 'renulus.workers.profile_owner', '--', '--target'], cwd: bundle, runtimeRoot: path.join(bundle, 'runtime') });
+    const backend = await startBackend(options(true));
+    expect(io.selectedLaunch).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ selection, packaged: true, bundleRoot: bundle, port: 18777,
+      python: path.join(bundle, 'python', 'python.exe') }));
+    const [command, args, spawned] = io.spawn.mock.calls[0];
+    expect(command).toBe(path.join(bundle, 'python', 'python.exe'));
+    expect(args).toEqual(['-I', '-m', 'renulus.workers.profile_owner', '--', '--target']);
+    expect(spawned).toMatchObject({ cwd: bundle, windowsHide: true, stdio: ['ignore', 'ignore', 'ignore'] });
+    expect(spawned.env).toMatchObject({ RENULUS_SESSION_TOKEN: 'synthetic-app-session', PYTHONPATH: path.join(bundle, 'runtime') });
+    for (const name of ['PATH', 'Path', 'OPENAI_API_KEY', 'HERMES_HOME', 'USERPROFILE', 'LOCALAPPDATA', 'APPDATA']) expect(spawned.env).not.toHaveProperty(name);
+    await backend.stop();
+    expect(fetch).toHaveBeenLastCalledWith('http://127.0.0.1:18777/api/v1/runtime/shutdown', expect.objectContaining({ method: 'POST' }));
+    expect(io.execFileSync).toHaveBeenCalledExactlyOnceWith('taskkill', ['/PID', '424242', '/T', '/F'], expect.any(Object));
   });
 });

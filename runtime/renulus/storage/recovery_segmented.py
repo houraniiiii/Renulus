@@ -171,6 +171,8 @@ def _metadata(manifest, definitions, limits):
     tables, segments = canonical["tables"], canonical["segments"]
     if not isinstance(tables, dict) or len(tables) > limits.tables or any(name not in definitions or type(count) is not int or not 0 <= count <= limits.records for name, count in tables.items()):
         raise ApiError("backup_table", "The backup contains an unsupported canonical table/count")
+    if "deletion_ledger" not in tables:
+        raise ApiError("recovery_frontier_missing", "The backup has no deletion frontier; affected records are quarantined", 409)
     if sum(tables.values()) != canonical["records"] or not isinstance(segments, list) or len(segments) > limits.segments:
         raise ApiError("backup_manifest", "Canonical table/segment counts disagree")
     counts, total, sequences, previous = {name: 0 for name in tables}, 0, {}, None
@@ -268,10 +270,12 @@ class ValidatedRecordStage:
 
 def stage_legacy_bundle(services, directory, bundle, limits=SEGMENTED_LIMITS):
     """Keep legacy incoming bounds while merging into a bounded disk target."""
+    from .recovery_records import require_frontier
     owned_path(services.paths, directory.relative_to(services.paths.root).as_posix())
     try:
         with closing(services.db.connect()) as source:
             records = validate_records(source, bundle)
+            require_frontier(records)
             definitions = installed_schema(source, limits)
         path = directory / "records.sqlite3"
         size, counts = 0, {name: 0 for name in definitions}

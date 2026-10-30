@@ -1,10 +1,41 @@
 # OpenCode cohort patch provenance
 
 2026-10-10; upstream commit
-`4b6fea2875e4f2e3e8a8fee181803e54f7056845`. Renulus applies **no upstream
-OpenCode source-code patches** for this cohort. Staged package manifest
-rewrites belong to local materialization only; source manifests remain
-unchanged. See [UPSTREAM.md](UPSTREAM.md) for the pinned inputs and procedure.
+`4b6fea2875e4f2e3e8a8fee181803e54f7056845`. Source manifests remain unchanged.
+See [UPSTREAM.md](UPSTREAM.md) for the pinned inputs and procedure.
+
+## Renulus narrow capability injection (2026-10-27)
+
+`packages/backend/src/domain/capabilities/native-patch.mjs` applies only to validated,
+owned copies of published 2.0.26 (MIT); never the shared cohort. It substitutes the
+Code Mode web extension, MCP transport/credential boundary and browser attachment/tunnel
+factories, preserving native execution/protocols. The exact-source test loader applies the
+same transformations in memory. Six original-file SHA-256 preconditions:
+
+| Published file | Original SHA-256 |
+| --- | --- |
+| `core/dist/chunks/agent-82v73sw7.js` | `d80823d0ba4fa9978972aa792684a9c7a082c8ddf3055eb07e197246ac8bfb33` |
+| `core/dist/chunks/agent-63648xmm.js` | `a7cccd5a258c37811932306639029f3e56593b599813e2c303385f415a7d59c3` |
+| `core/dist/mcp/client.js` | `0d97f9cb1f7540eb75e2be40f21c4c6ed5fce9e58be3711e2dcfe18f684650f5` |
+| `core/dist/chunks/agent-4ahpts8n.js` | `fc5b998e53031c185e2391eca6985e9d712224e6ec557f65386c267d2cee31ef` |
+| `plugin-browser/dist/connection.js` | `b78bd47fb5321a1248e8b3c1feeee47d0af0995d4d63278a648cc07b591b51e8` |
+| `plugin-browser/dist/files.js` | `2403d98ac1f526344fe57b62d2785bcd6b162287f7bd174a23750d704ee08386` |
+
+The `plugin-browser/dist/files.js` change roots browser exports in the owned
+`renulus.browser.downloads` directory and refuses an absent root. Remove this
+change when upstream accepts an application-owned export directory and the
+connected browser export journey proves every exported file stays within it
+without this transformation.
+
+OpenCode activates `plugin-browser` as a built-in in every session, so its
+`connection.js` change resolves the boundary without failing activation; each
+browser connection is refused (`renulus_browser_authority_required`) when no
+boundary is supplied, which is the case whenever the developer plugin is Off.
+
+The patch also emits `core/dist/renulus-boundary.js`; it has no upstream original.
+Remove when upstream exposes equivalent per-attempt web/MCP and browser attachment/tunnel
+factories and the native execute journey passes redirect, byte-limit, revocation and
+header-denial assertions without the patch. This is not full packaged acceptance.
 
 The source root `package.json` declares the dependency patches below. These are
 upstream-authored inputs, not Renulus patches. SHA-256 values were computed
@@ -64,3 +95,9 @@ from independently comparing the patch against an unmodified registry artifact.
 
 This records input provenance, not redistribution clearance or H20 acceptance.
 See `cohort.json` and the local full inventory for the materialized byte identities.
+
+## MCP injection evidence and removal condition — October 27, 2026
+
+| Surface / pinned emitted files | Injection and connected evidence | Removal condition |
+| --- | --- | --- |
+| MCP: core `dist/mcp/client.js`, `dist/chunks/agent-4ahpts8n.js`, `dist/chunks/agent-63648xmm.js` | Existing `CapabilityBoundary.mcp` supplies credential-free fetch / Effect local transport / scoped close; stock OAuth provider and request headers are disabled. `mcpTool` checks application approval before and after native execution. `packages/backend/test/mcp-journey.test.mjs` exercises real native connect through the Python broker against a synthetic authenticated server. Upstream MIT, commit `4b6fea2875e4f2e3e8a8fee181803e54f7056845`, published 2.0.26; no new patch added by S1b-C. | Upstream supplies equivalent connection-scoped transport/auth factory plus before/after tool approval hooks, with native token persistence disabled and the connected journey passing without these transformations. |

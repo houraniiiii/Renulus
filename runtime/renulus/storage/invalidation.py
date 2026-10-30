@@ -5,6 +5,7 @@ from .database import utc_now
 CONTEXT_EPOCH = "design_c.context_epoch"
 LIBRARY_DIRTY = "knowledge.restore_dirty"
 MEMORY_RESTORE_CAPTURE_PREFIX = "memory.restore_capture:"
+MEMORY_RESTORE_BARRIER_PREFIX = "memory.restore_barrier:"
 
 
 def context_epoch(db):
@@ -43,6 +44,9 @@ def invalidate_restored_context(conn):
         "SELECT ? || id,?,? FROM learning_evidence WHERE 1 "
         "ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at",
         (MEMORY_RESTORE_CAPTURE_PREFIX, str(context_epoch_in(conn)), utc_now()))
+    conn.execute("INSERT INTO preferences(key,value,updated_at) "
+        "SELECT ? || id,'explicit-capture-required',? FROM learning_evidence WHERE 1 "
+        "ON CONFLICT(key) DO NOTHING", (MEMORY_RESTORE_BARRIER_PREFIX, utc_now()))
     # Epoch integers belong to one profile. An imported producer can coincidentally
     # carry the destination's next epoch, but its process/task cannot be restored.
     # Keep validated checkpoints; require an explicit retry rather than adopting

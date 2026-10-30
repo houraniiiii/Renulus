@@ -1,5 +1,12 @@
 # Renulus implementation architecture
 
+**October 26 backend target:** the
+[backend finalisation spec](BACKEND_FINALISATION_SPEC.md) defines the requested
+TS/Effect + Python ownership transition, native plugins and connected completion
+criteria. Preserve the domain ownership, canonical records and behaviour below
+through migration; the new target does not claim that existing Python modules
+have already been replaced.
+
 The [October 10 Design C spec](DESIGN_C_IMPLEMENTATION_SPEC.md) defines current
 migration contracts and overrides older layout/retention assumptions below.
 Preserve this document's module ownership and canonical-store boundaries; the C

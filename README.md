@@ -1,86 +1,82 @@
 # Renulus
 
-Renulus is an independent open-source Windows learning application
-for nephrologists practising in the EU. It supports learning during specialisation,
-active study, case discussion, examination preparation and staying current.
-The first product is English only and supports learning across nephrology.
-It uses the selected existing models through Codex and/or OpenCode Go
-subscriptions, without retraining.
-The project owner will not host a service or model inference.
+Renulus is an independent, open-source, English-first learning harness for nephrologists practising in the EU, for Windows PCs. It supports specialisation, active study and staying current: explain a topic, discuss a case, practise with reviewed questions, keep and cite your own sources, and follow new guidelines and research. It runs existing models through your own Codex and/or OpenCode Go subscription. The project hosts no service and no model inference, has no paid-API fallback, and needs no GPU, Docker or local model server; small CPU helpers for embeddings and OCR are bundled and managed by the app. Code is MIT, original teaching content is CC BY 4.0. Educational use only: no claim of clinical accuracy or educational efficacy is made.
 
-This repository contains the Windows app, Design C interface, original teaching
-packs and dated evidence. The owner's October 19 instruction authorized a local
-MVP and shortcut cutover. The normal `C:/Renulus/Start-Renulus.cmd` now selects
-the source build on `codex/renulus-mvp` at
-`C:/Users/karol/.codex/worktrees/renulus-mvp/repo`, using the existing
-`C:/Renulus/data/learning` profile. Saved learning chat uses the pinned OpenCode
-v2 host; other producers retain their existing implementation. The bounded
-Library cleanup and index-growth fixes are included. This is a source delivery
-on this PC, with Node and helper dependencies supplied by the development setup.
-The previous **f1c49444** installation remains at `C:/Renulus/app` for recovery.
-Read the [MVP delivery record](docs/implementation/MVP_20261019.md) for verification,
-account failures, recovery and remaining scope. An October 20 live check through
-the production desktop assembly successfully generated and saved a short answer
-with the selected Codex GPT 6.1 Sol route, removed its synthetic conversation and
-closed cleanly. The earlier quota failure is retained as historical evidence;
-live OpenCode Go acceptance remains unverified.
+## What it looks like
 
-The canonical checkout is `C:/Renulus/dev/repo`. The earlier
-[Design C handoff](docs/implementation/DESIGN_C_OPENCODE_HANDOFF.md) and
-[implementation spec](docs/planning/DESIGN_C_IMPLEMENTATION_SPEC.md) retain their
-dated acceptance scopes; they do not describe the current shortcut selection.
-See the [October 8 storage cleanup](docs/implementation/storage-cleanup-20261008.md).
-Content1.4.2 has251 questions and59 cases across27
-topics, with General and partial ESENeph preparation. The final bounded composite accepts
-new T18 teaching/questions, retained history, ready corrected Memory and
-normal reopen. Earlier actual Sol/practice/automatic capture, both approved Go
-models, Library/originals, dated evidence, Updates and recovery keep their exact
-source qualification. Physical Windows speech/scaling/high contrast remain
-issue21; dated source/rights/currentness and examination limits remain explicit.
-Read the [delivery](docs/implementation/DELIVERY_20261007.md),
-[running guide](docs/implementation/RUNNING.md) and
-[continuation](docs/implementation/FINISH_20261007.md).
+Screenshots are from the real Design C app on a synthetic profile, with no account connected.
 
-The repository is `houraniiiii/Renulus`, with independent Git history.
-`Start-Renulus.cmd` opens this learning app. The archived clinical MVP has its own
-explicit reference launcher and is separate from Renulus implementation evidence.
+| ![New chat home](docs/assets/screenshots/01-home.png) | ![Library](docs/assets/screenshots/02-library.png) |
+|---|---|
+| **New chat.** Greeting, composer, Explain a topic / Discuss a case / Quick practice. | **Library.** Your sources, passage search and literature discovery. |
 
-- [Project brief](docs/PROJECT_BRIEF.md) — audience, purpose and current status.
-- [Windows delivery](docs/implementation/DELIVERY_20261007.md) — runnable installation, connected evidence and exact remaining scope.
-- [Previous Windows handover](docs/implementation/DELIVERY_20261006.md) — retained October 6 installation and recovery evidence.
-- [Run the app](docs/implementation/RUNNING.md) — Windows delivery and contributor startup.
-- [Control the development app](docs/implementation/APP_CONTROL.md) — hidden app-scoped MCP/Playwright input and screenshots while the owner uses this PC.
-- [Use Renulus](docs/implementation/USING_RENULUS.md) — subscriptions, study, Library, Cases, Memory and recovery.
-- [Implementation run](docs/implementation/EXECUTION.md) — current C coordination and dated implementation evidence.
-- [Decisions](docs/DECISIONS.md) — confirmed choices and unresolved work.
-- [Design C implementation spec](docs/planning/DESIGN_C_IMPLEMENTATION_SPEC.md) — current UI replacement target, ordered tickets, backend gaps and acceptance.
-- [Implementation stages](docs/planning/IMPLEMENTATION_PLAN.md) — original foundation plan; the C spec governs the UI replacement.
-- [Architecture](docs/planning/ARCHITECTURE.md) — module ownership, records and interfaces.
-- [Parallel work](docs/planning/PARALLEL_WORK.md) — dependencies, worktrees and integration rules.
-- [User answers](docs/planning/2026-10-04-user-answers.md) — confirmed product, stack, source-acquisition and optional retrieval-key choices.
-- [Decision queue](docs/planning/DECISION_QUEUE.md) — settled choices and remaining engineering checks.
-- [Memory, documents and RAG research](docs/research/2026-10-04-context-framework-recommendation.md) — investigation and rationale for the approved stack, with retained alternatives.
-- [Starting-stack evidence](docs/research/2026-10-04-starting-stack-evidence.md) — decision provenance, primary sources and remaining implementation checks.
-- [Review record](docs/planning/REVIEW_LOG.md) — three subagent review waves and resolved findings.
-- [Selected brand](assets/brand/README.md) — C — Renal flow and asset provenance.
-- [Workspace](docs/WORKSPACE.md) — repository boundaries and the separate archive.
-- [Sources](docs/SOURCES.md) — the single development source register, current editions, all access levels and developer/user acquisition methods.
-- [Design tools](docs/DESIGN_TOOLS.md) — retained development skills and their limits.
-- [References](references/README.md) — selected, dated material for later work.
+| ![Reviewed question in Study mode](docs/assets/screenshots/03-tests-study.png) | ![Original teaching case](docs/assets/screenshots/04-cases.png) |
+|---|---|
+| **Tests.** Reviewed question bank, committed answers, then feedback. | **Cases.** Original synthetic teaching cases, revealed stage by stage. |
 
-The foundation is a scoped fork of [Nous Research's Hermes](https://github.com/NousResearch/hermes-agent),
-reusing its Python runtime and suitable Electron/React desktop components with
-upstream attribution. Renulus's own code uses MIT and original teaching
-content CC BY 4.0; third-party terms remain independent. Source import and scoped
-licence files accompany adopted code, helpers and content. Each stage must deliver
-real working functionality; a prototype alone does not pass.
+| ![Learning memory](docs/assets/screenshots/05-memory.png) | ![Updates](docs/assets/screenshots/06-updates.png) |
+|---|---|
+| **Memory.** Retained learning you can inspect, edit and delete. | **Updates.** Dated source checks and recent research for review. |
 
-The user-approved memory/document stack adds **Mem0 OSS, Docling with
-HybridChunker, FastEmbed and LanceDB OSS** behind Hermes. SQLite holds canonical
-records; engine indexes are derived. Renulus manages CPU helpers in the
-background. Dependencies and public helper artifacts are pinned; actual offline
-extraction, embeddings, retrieval, memory and rebuild evidence is recorded in
-`docs/implementation/`. Live subscription generation and matching installed
-acceptance on the owner's Windows PC must be established separately from
-synthetic application checks. The owner selected unsigned current-PC delivery
-on October 5; signing and separate clean-machine tests are future options.
+| ![Connections](docs/assets/screenshots/07-connections.png) | |
+|---|---|
+| **Connections.** Codex and OpenCode Go with their approved models. | |
+
+## For doctors
+
+Renulus is pre-release: there is no signed public installer yet. The Design C app currently runs from source on the owner's PC, and the earlier unsigned packaged build was accepted only there ([status](docs/implementation/RUNNING.md)). Full guide: [Using Renulus](docs/implementation/USING_RENULUS.md).
+
+1. Start Renulus from its shortcut or `Start-Renulus.cmd`, and wait for the managed runtime to become ready.
+2. Open **Settings & connections > Learning subscriptions**. For Codex choose **Continue with ChatGPT**; for OpenCode Go save your subscription key.
+3. Choose **Check models**, then **Use Codex** or **Use OpenCode Go**, and confirm the **Selected** badge. A connected account alone selects nothing.
+4. Approved models: Codex `gpt-6.1-sol`, `gpt-6-astra`, `gpt-6-luna`; OpenCode Go `mimo-v2.6-pro`, `deepseek-v4.1-flash`. There is no silent switch of subscription.
+5. Reviewed Tests, teaching Cases, saved Library material and Memory editing work without any connection. Back up under Settings > Your study data; backups never contain credentials.
+
+## For contributors
+
+Prerequisites: Windows; Git; Node 22.22+ or 24.11+ for `apps/desktop` (checked on 24.15; its UI tests fail on Node 26); exactly Node 26.4.0 for `packages/backend` and `packages/harness`; Python 3.12 to 3.14 with `uv`.
+
+```powershell
+uv sync --extra test                         # Python environment (uv.lock)
+cd apps/desktop; npm ci                      # desktop dependencies
+npm run build                                # typecheck, renderer and Electron entry
+npm run dev:electron                         # isolated dev profile; set an absolute RENULUS_PROFILE to keep one
+npm test                                     # vitest, synthetic data only (set RENULUS_TEST_PYTHON to the Python above)
+python scripts/check_workspace.py            # layout and link checks (from the repo root)
+```
+
+Backend packages (Node 26.4.0 on `PATH`): `npm run typecheck`, `npm run build` (backend only; `dist/` is git-ignored and required by the facade tests) and `npm test` in `packages/backend` and `packages/harness`; Python: `python -m pytest tests/workers tests/runtime/test_domain_process.py tests/backup/test_restore_frontier.py`. The full backend suite takes about 25 minutes and needs offline helpers, fresh scratch roots and a drive with more than 12 GiB free; use the exact environment under "Final verification" in [the backend finalisation record](docs/implementation/BACKEND_FINALISATION_20261027.md).
+
+| Path | Contents |
+|---|---|
+| `apps/desktop` | Design C React renderer, Electron main process, packaging scripts |
+| `packages/backend`, `packages/harness`, `packages/contracts` | TypeScript/Effect backend target, managed OpenCode v2 harness, shared contracts |
+| `runtime/renulus` | Python backend: canonical SQLite services and engine adapters (Mem0, Docling, FastEmbed, LanceDB) |
+| `content` | Versioned original teaching packs (pack 1.4.2: 27 topics, 251 questions, 59 cases) |
+| `upstream` | Pinned Hermes and OpenCode sources with patch provenance |
+| `packaging`, `scripts`, `tests` | Backend bundling, launchers and checks, test suites |
+| `tools/renulus-control` | Hidden, app-scoped Playwright controller for UI checks ([how](docs/implementation/APP_CONTROL.md)) |
+| `docs`, `assets`, `references` | Decisions, specs, evidence, brand, dated references |
+
+UI checks: `npm ci --ignore-scripts --prefix tools/renulus-control`, build the renderer, then drive the controller with `node tools/renulus-control/client.mjs` using the fixed options in [APP_CONTROL](docs/implementation/APP_CONTROL.md). It uses its own synthetic profile and hidden windows.
+
+## For coding agents
+
+- Read [AGENTS.md](AGENTS.md) first, then this README, [PROJECT_BRIEF](docs/PROJECT_BRIEF.md) and [WORKSPACE](docs/WORKSPACE.md). Keep edits to the request; research does not authorise implementation.
+- Confirmed choices and open work live in [DECISIONS](docs/DECISIONS.md) and [user answers](docs/planning/2026-10-04-user-answers.md); do not turn proposals into decisions. Sources: [SOURCES](docs/SOURCES.md).
+- Use synthetic data only. Never read, copy, commit or transport secrets, patient records, the owner's learning profile or accounts.
+- Do not add conversational models, paid-provider fallbacks or user-managed local runtimes; do not train, deploy or call paid providers incidentally.
+- Work on `codex/` branches from the shared committed baseline; follow [ARCHITECTURE](docs/planning/ARCHITECTURE.md) and [PARALLEL_WORK](docs/planning/PARALLEL_WORK.md); check branch and tree before handoff.
+- Check the UI only through the [app-control tool](docs/implementation/APP_CONTROL.md): no Computer Use, OS input, `focus()` or `bringToFront()`.
+- Specs: [Backend finalisation](docs/planning/BACKEND_FINALISATION_SPEC.md), [Design C](docs/planning/DESIGN_C_IMPLEMENTATION_SPEC.md), [OpenCode v2 plan](docs/planning/OPENCODE_V2_INTEGRATION_PLAN.md).
+
+## Current status
+
+- **Delivered locally (MVP, October 20):** Design C source app on the owner's PC; saved learning chat on OpenCode v2; one live Codex GPT 6.1 Sol text answer through the production backend. Not shown: live OpenCode Go, images, packaged acceptance ([record](docs/implementation/MVP_20261019.md)).
+- **Backend finalisation BF00 to BF08** (branch `codex/backend-finalisation`): TypeScript/Effect backend, native OpenCode plugins, and the profile-wide Python → TypeScript handoff with rollback, selector-routed Electron launch and a closed, verified backend bundle. All proven on isolated synthetic profiles only; this is implementation evidence, not acceptance ([record](docs/implementation/BACKEND_FINALISATION_20261027.md)).
+- **Not switched:** the owner's profile still runs on the Python writer. Cutover waits for live account qualification, because the new backend refuses model calls without installed route evidence.
+- **Open:** live account qualification, packaged installer and physical Windows acceptance, schema-1 migration proof, storage reclamation, OAuth for MCP.
+
+## Licences and notices
+
+Code: MIT ([LICENSE](LICENSE)). Teaching content: CC BY 4.0 ([content/LICENSE](content/LICENSE)). Third-party and user-owned material keep their own terms ([notices](THIRD_PARTY_NOTICES.md)); the foundation reuses [Hermes](upstream/hermes/README.md) and [OpenCode](upstream/opencode/PATCHES.md) with attribution. Brand: [C, Renal flow](assets/brand/README.md).

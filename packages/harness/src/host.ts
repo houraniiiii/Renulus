@@ -1,10 +1,12 @@
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { mkdir } from "node:fs/promises";
+import { DatabaseSync } from "node:sqlite";
 import { Cause, Context, Effect, Layer, Logger, ManagedRuntime, Schema, Stream } from "effect";
 import { AIError, InvalidRequestError, LLMClient, LLMRequest, Media, type LLMClientShape, type Message, type SystemPart } from "@opencode/ai";
 import { OpenCode, AbsolutePath, Location, Session, Agent } from "@opencode/sdk/effect";
 import { Config } from "@opencode/core/config";
+import { ConfigPluginSource } from "@opencode/core/config/plugin/source";
 import { Agent as NativeAgent } from "@opencode/core/agent";
 import { InstructionDiscovery } from "@opencode/core/instruction-discovery";
 import { llmClient } from "@opencode/core/effect/app-node-platform";
@@ -29,6 +31,12 @@ import { acquireStore } from "./ownership.ts";
 import { verifyPreparedProfile, type ProfileSelection } from "./manifest.ts";
 import { activateStores, validateStores } from "./stores.ts";
 import { createLibraryPlugin, type LibraryToolBridge } from "./domain-tools.ts";
+import { closedHarnessEnvironment, verifyCapabilityArtifacts, type NativeArtifactDescriptor } from "./capability-plugins.ts";
+import type { Plugin as NativePlugin } from "@opencode/plugin/effect/plugin";
+import type { NativeCapabilities } from "./native-capability-plugin.ts";
+import type { LayerNode } from "@opencode/util/effect/layer-node";
+import { SessionTransfer as NativeSessionTransfer } from "@opencode/core/session/transfer";
+import { createGraphRecovery } from './graph-recovery.ts';
 
 export interface ModelAdapter {
   readonly providerId: string;
@@ -50,6 +58,15 @@ export interface HarnessOptions extends ProfileSelection {
   readonly processGeneration?: string;
   readonly model?: ModelAdapter;
   readonly library?: LibraryToolBridge;
+  /** Reviewed immutable local bytes, selected by the owning backend. */
+  readonly capabilityArtifacts?: readonly NativeArtifactDescriptor[];
+  /** Current host-resolved native permission IDs; plugin bytes cannot mint them. */
+  readonly capabilityPermissions?: readonly string[];
+  /** Trusted application built-ins only; never accepted from JSON/artifact code. */
+  readonly trustedPlugins?: readonly NativePlugin[];
+  readonly nativeCapabilities?: NativeCapabilities;
+  /** Trusted RAM graph composition; caller supplies the pinned database and no-spill FS replacements. */
+  readonly volatileGraph?: { readonly overrides: LayerNode.Replacements };
   readonly admitInput?: (binding: NativeInputBinding) => Promise<void>;
   readonly selectContext?: (binding: NativeInputBinding, messages: readonly Message[]) =>
     Promise<readonly Message[] | NativeContextSelection>;
@@ -92,17 +109,36 @@ function imageFiles(value: unknown): { uri: string }[] | undefined {
 }
 
 /** A persistent execution owner. Domain records continue to belong to Python. */
+/** The native store is opened inside OpenCode without secure_delete: rewrite the file so removed text leaves no freed page or WAL frame. */
+function eraseFreedPages(file: string) {
+  const database = new DatabaseSync(file, { timeout: 5000 });
+  try {
+    database.exec("VACUUM");
+    const result = database.prepare("PRAGMA wal_checkpoint(TRUNCATE)").get() as { busy: number };
+    if (result.busy) throw new Error("native_store_scrub_busy");
+  } finally { database.close(); }
+}
+
 export async function openHarness(options: HarnessOptions) {
-  const selection = await verifyPreparedProfile(options);
-  if (selection.state === "active") validateStores(options);
-  let storesActive = selection.state === "active";
+  const selection = options.volatileGraph ? undefined : await verifyPreparedProfile(options);
+  if (selection?.state === "active") validateStores(options);
+  let storesActive = selection?.state === "active";
   const root = path.resolve(options.root);
   const state = path.join(root, "state", "harness");
   const workspace = path.join(root, "harness-workspace");
-  await mkdir(state, { recursive: true });
-  await mkdir(workspace, { recursive: true });
-  const ownership = await acquireStore(state, options.storeId);
+  const capabilityArtifacts = structuredClone(options.capabilityArtifacts ?? []);
+  const capabilityPermissions = [...(options.capabilityPermissions ?? [])];
+  if (capabilityPermissions.some(value => !/^[a-z][a-z0-9_.-]{0,159}$/.test(value)))
+    throw new Error("harness_capability_permission_invalid");
+  const checkCapabilityArtifacts = () => verifyCapabilityArtifacts(capabilityArtifacts);
+  await checkCapabilityArtifacts();
+  if (!options.volatileGraph) { await mkdir(state, { recursive: true }); await mkdir(workspace, { recursive: true }); }
+  const ownership = options.volatileGraph ? { release: async () => {} } : await acquireStore(state, options.storeId);
   let phase = "policy_blocked";
+  let capabilityObservation: {
+    plugins: { id: string; source_type: "local" | "sdk" | "builtin" | "package"; source_path: string | null; status: "active" | "failed" }[];
+    artifact_hashes: Record<string, string>;
+  } | undefined;
   let configurationId: string | undefined;
   let store!: SessionStore.Interface;
   let execution!: SessionExecution.Interface;
@@ -147,26 +183,25 @@ export async function openHarness(options: HarnessOptions) {
       renulus: { mode: "primary", system: "Support nephrology education. Use the supplied learning request.", permissions: [
         { action: "*", resource: "*", effect: "deny" },
         ...(options.library ? [{ action: "renulus.library", resource: "*", effect: "allow" }] : []),
+        ...capabilityPermissions.map(action => ({ action, resource: "*", effect: "allow" })),
       ] },
       title: { disabled: true },
+      ...(options.nativeCapabilities?.child ? { 'evidence-review': { mode: 'subagent',
+        system: 'Review the bounded supplied nephrology learning evidence and return a concise cited report.',
+        permissions: [{ action: '*', resource: '*', effect: 'deny' },
+          ...(options.library ? [{ action: 'renulus.library', resource: '*', effect: 'allow' }] : [])] } } : {}),
     },
   });
   const overrides = [
-    Global.node.replace(Global.layerWith(Object.fromEntries(
-      ["home", "data", "cache", "config", "state", "tmp", "bin", "log", "repos"].map(key => [key, path.join(state, key)]),
-    ))),
-    Config.node.replace(Config.configured({ project: false, global: false, content: config })),
-    InstructionDiscovery.node.replace(InstructionDiscovery.configured({ project: false, global: false })),
+    ...closedHarnessEnvironment(state, config),
+    ConfigPluginSource.node.replace(Layer.succeed(ConfigPluginSource.Service, {
+      operations: () => Effect.succeed(capabilityArtifacts.map(artifact => ({ type: "add" as const,
+        target: path.dirname(artifact.path), options: {}, mtime: 0 }))),
+      changes: () => Stream.never,
+    })),
     llmClient.replace(Layer.succeed(LLMClient.Service, client)),
     // The reviewed cohort is already bundled. Candidate and admitted hosts
     // cannot acquire or update executable packages at runtime.
-    Npm.node.replace(Layer.succeed(Npm.Service, {
-      add: () => Effect.die(new Error("harness_package_acquisition_closed")),
-      update: () => Effect.die(new Error("harness_package_acquisition_closed")),
-      resolve: () => Effect.die(new Error("harness_package_acquisition_closed")),
-      check: () => Effect.succeed(false),
-      which: () => Effect.succeed(undefined),
-    })),
     SessionStore.node.replace(SessionStore.node.mapLayer(original => Layer.flatMap(original, context => {
       store = Context.get(context, SessionStore.Service);
       return Layer.succeed(SessionStore.Service, store);
@@ -220,38 +255,6 @@ export async function openHarness(options: HarnessOptions) {
         }),
       });
     }))),
-    PluginHooks.node.replace(PluginHooks.node.mapLayer(original => Layer.flatMap(original, context => {
-      const service = Context.get(context, PluginHooks.Service);
-      const trigger: typeof service.trigger = (domain, name, event) => service.trigger(domain, name, event).pipe(
-        Effect.flatMap(shaped => Effect.gen(function* () {
-          if (domain !== "session" || name !== "context") return shaped;
-          const draft = shaped as SessionContext;
-          const current = primaryContexts.get(draft.sessionID);
-          if (!current) return shaped;
-          const requireCurrent = () => {
-            if (primaryContexts.get(draft.sessionID) !== current ||
-                !["ready", "recovering"].includes(phase) || held.has(draft.sessionID) ||
-                (current.binding && bindings.get(draft.sessionID) !== current.binding)) throw denied();
-          };
-          requireCurrent();
-          if (options.selectContext) {
-            if (!current.binding) throw denied();
-            const selected = yield* Effect.promise(() => options.selectContext!(current.binding!, draft.messages));
-            if ("messages" in selected) {
-              draft.messages = [...selected.messages];
-              draft.system = [...draft.system, ...(selected.additionalSystem ?? [])];
-            } else draft.messages = [...selected];
-            requireCurrent();
-          }
-          // This is the shaped native context before unsupportedParts/boundImages.
-          // Copy it while owned; final preparation receives the same surviving
-          // tool definitions that native preparation advertises.
-          current.snapshot = structuredClone({ system: draft.system, messages: draft.messages });
-          return shaped;
-        })),
-      );
-      return Layer.succeed(PluginHooks.Service, { ...service, trigger });
-    }))),
     SessionModelRequest.node.replace(SessionModelRequest.node.mapLayer(original => Layer.flatMap(original, context => {
       const service = Context.get(context, SessionModelRequest.Service);
       return Layer.succeed(SessionModelRequest.Service, {
@@ -303,32 +306,79 @@ export async function openHarness(options: HarnessOptions) {
     SessionRestart.node.replace(SessionRestart.node.mapLayer(original => Layer.flatMap(original, context => {
       const service = Context.get(context, SessionRestart.Service);
       return Layer.succeed(SessionRestart.Service, {
-        resumeSuspendedSessions: Effect.promise(() => recoveryPermit).pipe(
+        resumeSuspendedSessions: options.volatileGraph ? Effect.sync(recovered) : Effect.promise(() => recoveryPermit).pipe(
           Effect.andThen(service.resumeSuspendedSessions), Effect.tap(() => Effect.sync(recovered)),
           Effect.onExit(exit => Effect.sync(() => { if (exit._tag === "Failure") recoveryFailed(Cause.squash(exit.cause)); })),
         ),
       });
     }))),
+    ...(options.nativeCapabilities?.overrides ?? []),
+    // After the native overrides, so the child authority's hook replacement cannot displace this capture.
+    PluginHooks.node.replace(PluginHooks.node.mapLayer(original => Layer.flatMap(original, context => {
+      const service = Context.get(context, PluginHooks.Service);
+      const trigger = ((domain, name, event) => (options.nativeCapabilities?.child?.guardHook(domain, name, event) ?? Effect.void).pipe(
+        Effect.andThen(service.trigger(domain, name, event)),
+        Effect.flatMap(shaped => Effect.gen(function* () {
+          if (domain !== "session" || name !== "context") return shaped;
+          const draft = shaped as SessionContext;
+          const current = primaryContexts.get(draft.sessionID);
+          if (!current) return shaped;
+          const requireCurrent = () => {
+            if (primaryContexts.get(draft.sessionID) !== current ||
+                !["ready", "recovering"].includes(phase) || held.has(draft.sessionID) ||
+                (current.binding && bindings.get(draft.sessionID) !== current.binding)) throw denied();
+          };
+          requireCurrent();
+          if (options.selectContext) {
+            if (!current.binding) throw denied();
+            const selected = yield* Effect.promise(() => options.selectContext!(current.binding!, draft.messages));
+            if ("messages" in selected) {
+              draft.messages = [...selected.messages];
+              draft.system = [...draft.system, ...(selected.additionalSystem ?? [])];
+            } else draft.messages = [...selected];
+            requireCurrent();
+          }
+          // This is the shaped native context before unsupportedParts/boundImages.
+          // Copy it while owned; final preparation receives the same surviving
+          // tool definitions that native preparation advertises.
+          current.snapshot = structuredClone({ system: draft.system, messages: draft.messages });
+          return shaped;
+        })),
+      )) as typeof service.trigger;
+      return Layer.succeed(PluginHooks.Service, { ...service, trigger });
+    }))),
+    ...(options.volatileGraph?.overrides ?? []),
   ];
-  const runtime = ManagedRuntime.make(Layer.effect(OpenCode.Service, OpenCode.create({
+  const creation = OpenCode.create({
     app: { name: "renulus", version: "opencode-foundation-1" },
-    database: { path: path.join(state, "opencode.sqlite") },
+    database: { path: options.volatileGraph ? ':memory:' : path.join(state, "opencode.sqlite") },
     config: { directory: path.join(state, "config"), project: false, content: config },
     models: { fetch: false, snapshot: false },
     fs: { filewatcher: false, fff: false },
     events: { persist: false },
-    plugins: options.library ? [{
+    plugins: options.library || options.capabilityArtifacts !== undefined || options.trustedPlugins || options.nativeCapabilities ? [
+      ...(options.nativeCapabilities ? [options.nativeCapabilities.capture] : []), {
       id: "renulus-internal-tool-boundary",
       effect: context => context.tool.transform(editor => {
         for (const tool of editor.list()) editor.remove(tool.id);
       }).pipe(Effect.asVoid),
-    }, createLibraryPlugin(options.library)] : [],
-  }, { overrides })).pipe(Layer.provideMerge(Logger.layer([], { mergeWithExisting: false }))));
+    }, ...(options.library ? [createLibraryPlugin(options.library)] : []),
+      ...(options.trustedPlugins ?? []), ...(options.nativeCapabilities?.plugins ?? [])] : [],
+  }, { overrides });
+  const runtime = ManagedRuntime.make(Layer.effect(OpenCode.Service,
+    options.nativeCapabilities ? options.nativeCapabilities.provide(creation) : creation
+  ).pipe(Layer.provideMerge(Logger.layer([], { mergeWithExisting: false }))));
   const run = <A, E>(effect: Effect.Effect<A, E>) => runtime.runPromise(effect);
   let sdk: OpenCode.Interface;
   try {
     sdk = await runtime.runPromise(OpenCode.Service);
     for (const id of await run(store.listSuspended())) held.add(id);
+    // The child authority's Job and SessionExecution overrides replace the host's captures above.
+    const child = options.nativeCapabilities?.child?.native();
+    if (child) {
+      ({ jobs, execution } = child);
+      instances = Context.getUnsafe(child.context, Instance.Service);
+    }
     for (const job of await run(jobs.pendingBackground)) {
       if (job.recovery.kind === "subagent") {
         held.add(job.recovery.parentSessionID);
@@ -346,7 +396,7 @@ export async function openHarness(options: HarnessOptions) {
   const requireReady = () => {
     if (phase !== "ready" || !configurationId || !options.model) throw new Error("harness_policy_blocked");
   };
-  const transfer = options.processGeneration ? createSessionTransfer({ sdk, run,
+  const transfer = options.processGeneration && !options.volatileGraph ? createSessionTransfer({ sdk, run,
     scope: { profileId: options.profileId, storeId: options.storeId, generation: options.processGeneration,
       location: Location.Ref.make({ directory: AbsolutePath.make(workspace) }) },
     checkCurrent: () => {
@@ -362,6 +412,15 @@ export async function openHarness(options: HarnessOptions) {
     finally { admittedWrites.delete(lease); settled(); }
   };
   return {
+    async holdRecovery() {
+      if (!["ready", "policy_blocked", "recovery_hold"].includes(phase)) throw new Error("recovery_requires_quiescence");
+      phase = "recovery_hold";
+      await Promise.all([...admittedWrites]);
+      if ((await run(execution.active)).size || held.size) throw new Error("recovery_requires_quiescence");
+    },
+    recoveryGraph: createGraphRecovery({ sdk, run, storeId: options.storeId,
+      location: Location.Ref.make({ directory: AbsolutePath.make(workspace) }),
+      checkHeld: () => { if (phase !== "recovery_hold" || admittedWrites.size) throw new Error("recovery_requires_quiescence"); } }),
     async transferCommand(frame: TransferFrame, command: TransferCommand, payload: Record<string, unknown>) {
       requireReady();
       if (!transfer || !storesActive) throw new Error("harness_policy_blocked");
@@ -399,19 +458,38 @@ export async function openHarness(options: HarnessOptions) {
         probe = await run(sdk.sessions.create({ title: "Renulus candidate registry probe",
           agent: Agent.ID.make("renulus"), location: Location.Ref.make({ directory: AbsolutePath.make(workspace) }) }));
         const session = probe;
-        const definitions = await run(Effect.gen(function* () {
+        const observed = await run(Effect.gen(function* () {
             yield* Plugin.awaitActivation;
             const plugins = yield* Plugin.Service;
-            if ((yield* plugins.list()).some(plugin => plugin.state.status === "failed")) {
-              throw new Error("harness_candidate_plugin_failed");
+            const inventory = yield* plugins.list();
+            const failed = inventory.filter(plugin => plugin.state.status === "failed");
+            if (failed.length) {
+              // Plugin IDs and native reasons only (no payloads), so a refused launch names its cause.
+              throw new Error("harness_candidate_plugin_failed: " + failed.map(plugin =>
+                `${plugin.id ?? "?"} (${String((plugin.state as { error?: unknown }).error ?? "").slice(0, 300)})`).join("; "));
             }
             const agents = yield* NativeAgent.Service;
             const agent = yield* agents.get(Agent.ID.make("renulus"));
             if (!agent) throw new Error("harness_candidate_agent_missing");
             const tools = yield* Tool.Service;
-            return (yield* tools.snapshot(agent.permissions)).definitions;
+            // Inspect the complete final transform, independently of execution
+            // permissions. Otherwise an undeclared denied tool could be hidden
+            // from the immutable registry receipt and become visible later.
+            return { definitions: (yield* tools.snapshot([{ action: "execute", resource: "*", effect: "deny" }])).definitions, inventory };
         }).pipe(instances.provide(session)));
-        const registry = definitions.map(tool => ({ ...tool }))
+        const artifact_hashes = await checkCapabilityArtifacts();
+        const inventory = observed.inventory.map(plugin => ({ id: plugin.id ?? "", source_type: plugin.source.type,
+          source_path: plugin.source.type === "local" ? plugin.source.path : null, status: plugin.state.status }));
+        const expected = new Map(capabilityArtifacts.map(artifact => [artifact.manifest.native_id, artifact]));
+        for (const item of inventory) {
+          if (item.source_type === "package" || item.source_type === "local" && (!expected.has(item.id) ||
+              path.resolve(item.source_path!).toLowerCase() !== path.resolve(expected.get(item.id)!.path).toLowerCase()))
+            throw new Error("harness_capability_identity_mismatch");
+        }
+        if ([...expected.keys()].some(id => !inventory.some(item => item.id === id && item.status === "active")))
+          throw new Error("harness_capability_identity_missing");
+        capabilityObservation = { plugins: inventory, artifact_hashes };
+        const registry = observed.definitions.map(tool => ({ ...tool }))
           .sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
         const canonical = (value: unknown): unknown => Array.isArray(value) ? value.map(canonical)
           : value !== null && typeof value === "object" ? Object.fromEntries(Object.entries(value)
@@ -428,6 +506,14 @@ export async function openHarness(options: HarnessOptions) {
           settled();
         }
       }
+    },
+    /** Additive in-process observation; harness/1 host.inspect keeps its shape. */
+    async inspectCapabilities(isolation: "disposable" | "selected-profile") {
+      const result = await this.inspect();
+      return { contract: "renulus-native-plugin-observation/1" as const, isolation,
+        ...capabilityObservation!, registry: result.registry, registry_hash: result.registry_hash,
+        quiescent: true, recovery_held: !recoveryStarted, package_acquisition_closed: true,
+        effects_denied: true };
     },
     async findSession(operationId: string) {
       if (!operationId || ["closing", "closed"].includes(phase)) throw new Error("harness_closing");
@@ -457,7 +543,14 @@ export async function openHarness(options: HarnessOptions) {
       if (!binding || !["ready", "recovering"].includes(phase)) throw new Error("native_input_not_admitted");
       return binding;
     },
+    /** Child authority registers its allocated child USER here before native prompt admission. */
+    bindChild(binding: NativeInputBinding) {
+      if (!options.nativeCapabilities?.child || phase !== "ready" || held.has(binding.session_id) || bindings.has(binding.session_id))
+        throw new Error("native_child_binding_conflict");
+      bindings.set(binding.session_id, Object.freeze({ ...binding }));
+    },
     async activateStores() {
+      if (options.volatileGraph) throw new Error('volatile_store_activation_forbidden');
       if (!["policy_blocked", "ready", "store_activation_failed"].includes(phase)) throw new Error("harness_policy_blocked");
       const prior = phase;
       phase = "store_validating";
@@ -489,6 +582,28 @@ export async function openHarness(options: HarnessOptions) {
       return { state: phase, configurationId, heldSessionIds: [...held].sort(),
         activeSessionIds: phase === "closing" ? null : phase === "closed" ? [] : [...await run(execution.active)].sort() };
     },
+    async exportSession(sessionId: string) {
+      return mutate(async () => {
+        const id=Session.ID.make(sessionId);if(await run(execution.isActive(id)))throw new Error('transfer_requires_quiescence');
+        return Schema.encodeSync(NativeSessionTransfer.Data)(await run(sdk.sessions.export({sessionID:id,sanitize:false})));
+      });
+    },
+    async importSession(data: typeof NativeSessionTransfer.Data.Encoded) {
+      return mutate(async () => {
+        if((await run(execution.active)).size)throw new Error('transfer_requires_quiescence');
+        const decoded=Schema.decodeUnknownSync(NativeSessionTransfer.Data)(data);
+        const imported=await run(sdk.sessions.import({...decoded,info:{...decoded.info,permissions:[{action:'*',resource:'*',effect:'deny'}]},
+          location:Location.Ref.make({directory:AbsolutePath.make(workspace)})}));
+        await run(sdk.sessions.update({sessionID:imported.id,permissions:[{action:'*',resource:'*',effect:'deny'}]}));
+        return Schema.encodeSync(Session.Info)(imported);
+      });
+    },
+    async removeSession(sessionId: string) { return mutate(async()=>{
+      const id=Session.ID.make(sessionId);if(await run(execution.isActive(id)))throw new Error('transfer_requires_quiescence');
+      await run(sdk.sessions.remove({sessionID:id}));bindings.delete(sessionId);
+      if(!options.volatileGraph)eraseFreedPages(path.join(state,"opencode.sqlite"));
+    }); },
+    async listChildren(sessionId: string) { requireReady();return (await run(sdk.sessions.list({parentID:Session.ID.make(sessionId),limit:100}))).data.map(info=>Schema.encodeSync(Session.Info)(info)); },
     async recover(input: { configurationId: string; sessionIds: string[] }) {
       requireReady();
       if (input.configurationId !== configurationId || JSON.stringify([...input.sessionIds].sort()) !== JSON.stringify([...held].sort())) {
@@ -570,6 +685,8 @@ export async function openHarness(options: HarnessOptions) {
       if (held.has(sessionId)) throw new Error("recovery_required");
       const id = Session.ID.make(sessionId);
       await run(sdk.sessions.get({ sessionID: id }));
+      const binding = bindings.get(sessionId);
+      if (binding) await options.nativeCapabilities?.stop(binding.operation_id, binding);
       const interrupted = await run(execution.interrupt(id, { resume: false, reason: "user", awaitSettlement: true }));
       bindings.delete(sessionId);
       return { interrupted, outcome: "cancelled_settled" };
@@ -604,6 +721,7 @@ export async function openHarness(options: HarnessOptions) {
       closing ??= (async () => {
         await Promise.all([...admittedWrites]);
         await transfer?.settled();
+        await options.nativeCapabilities?.close();
         await runtime.dispose();
         await ownership.release();
         phase = "closed";
