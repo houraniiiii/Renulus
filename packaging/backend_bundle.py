@@ -29,7 +29,10 @@ const graph = JSON.parse(readFileSync(new URL('./cohort/graph.json', import.meta
 const packages = new Map(graph.packages.map(p=>[p.path,p]));
 const edges = new Map(graph.links.map(l=>[l.path,l.target]));
 const metadata = new Map();
+let selfResolving = false;
 registerHooks({ resolve(specifier, context, next) {
+  // The inner self-reference below is Node's own, from inside the already-selected package.
+  if (selfResolving) return next(specifier, context);
   if (isBuiltin(specifier) || specifier.startsWith('.') || specifier.startsWith('/') ||
       specifier.startsWith('file:') || specifier.startsWith('#') || /^[a-z]:/i.test(specifier)) return next(specifier, context);
   if (specifier.includes(':')) throw new Error('bundle_module_scheme_refused');
@@ -45,10 +48,17 @@ registerHooks({ resolve(specifier, context, next) {
   if(!target)throw new Error('bundle_module_not_in_closed_graph:'+name);
   const directory=path.join(root,target), manifest=path.join(directory,'package.json');
   let pkg=metadata.get(target);if(!pkg){pkg=JSON.parse(readFileSync(manifest,'utf8'));metadata.set(target,pkg);}
-  if(pkg.exports) return next(pkg.name+sub,{...context,parentURL:pathToFileURL(manifest).href});
   const req=createRequire(manifest);
+  // require() resolves exports through the package's own self-reference; the CJS default
+  // resolver ignores a replaced parentURL, so it cannot be delegated.
+  if(pkg.exports&&context.conditions?.includes('require')){
+    selfResolving=true;
+    try{return {url:pathToFileURL(req.resolve(pkg.name+sub)).href,shortCircuit:true};}finally{selfResolving=false;}
+  }
+  if(pkg.exports) return next(pkg.name+sub,{...context,parentURL:pathToFileURL(manifest).href});
   const entry=req.resolve(sub?'./'+sub.slice(1):'./'+(pkg.main||'index.js'));
-  return next(pathToFileURL(entry).href,context);
+  // A resolved result, not a re-resolve: require() cannot re-resolve a file: URL specifier.
+  return {url:pathToFileURL(entry).href,shortCircuit:true};
 }});
 """
 
@@ -62,6 +72,11 @@ await import('./packages/backend/dist/main.mjs');
 HARNESS_LAUNCH = """// SPDX-License-Identifier: MIT
 import './graph-loader.mjs';
 await import('./packages/harness/src/main.mjs');
+"""
+
+WORKER_SHIM = """// SPDX-License-Identifier: MIT
+import '../../../graph-loader.mjs';
+await import('./storage-worker-impl.mjs');
 """
 
 # Bundle-level metadata written after the payload; never part of its own record.
@@ -177,6 +192,11 @@ def stage(source: Path, prepared_python: Path, node: Path, cohort: Path, target:
     # Every compiled top-level entry/worker that exists after scripts/build.mjs.
     for file in sorted((source / "packages/backend/dist").glob("*.mjs")):
         copy_checked(file, target / "packages/backend/dist" / file.name)
+    # Module hooks are per thread: the storage Worker (new URL('./storage-worker.mjs')) registers the
+    # closed-graph loader itself before loading the compiled worker and its external imports.
+    worker = target / "packages/backend/dist/storage-worker.mjs"
+    worker.rename(worker.with_name("storage-worker-impl.mjs"))
+    worker.write_text(WORKER_SHIM, encoding="utf-8")
     for name in ("backend_migration.py", "backend_bundle.py"):
         copy_checked(source / "packaging" / name, target / "packaging" / name)
     # The Python launch contract: packaged Electron runs bootstrap.py, which imports helper_copy.

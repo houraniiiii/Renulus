@@ -462,8 +462,11 @@ export async function openHarness(options: HarnessOptions) {
             yield* Plugin.awaitActivation;
             const plugins = yield* Plugin.Service;
             const inventory = yield* plugins.list();
-            if (inventory.some(plugin => plugin.state.status === "failed")) {
-              throw new Error("harness_candidate_plugin_failed");
+            const failed = inventory.filter(plugin => plugin.state.status === "failed");
+            if (failed.length) {
+              // Plugin IDs and native reasons only (no payloads), so a refused launch names its cause.
+              throw new Error("harness_candidate_plugin_failed: " + failed.map(plugin =>
+                `${plugin.id ?? "?"} (${String((plugin.state as { error?: unknown }).error ?? "").slice(0, 300)})`).join("; "));
             }
             const agents = yield* NativeAgent.Service;
             const agent = yield* agents.get(Agent.ID.make("renulus"));

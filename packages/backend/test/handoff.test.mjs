@@ -33,6 +33,7 @@ const skip = !python || process.versions.node !== '26.4.0';
 const root = realpathSync(mkdtempSync(join(tmpdir(), 'renulus-bf08-handoff-')));
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const hex = char => char.repeat(64);
+const patched = Boolean(process.env.RENULUS_BF08_PATCHED || process.env.RENULUS_BF08_BUNDLE);
 const DEVELOPER_PATH = join(root, 'developer-tools');   // a sentinel developer PATH entry that must never reach Node
 let bundle;
 
@@ -192,13 +193,20 @@ function stageBundle() {
   // The frozen external package graph resolves from the bundle's parent, outside the closed verified tree
   // (the staged bundle uses its graph loader instead).
   symlinkSync(realpathSync(join(repository, 'packages/backend/node_modules')), join(root, 'node_modules'), 'junction');
-  const inventory = ['node/node.exe', 'packages/backend/dist/main.mjs', 'packages/backend/dist/storage-worker.mjs', 'cohort/source-inventory.json', 'python/python.exe']
+  // RENULUS_BF08_PATCHED: the entry first registers the test-only exact-source capability patch loader,
+  // so the synthetic bundle exercises the patched native build (MCP/boundary on), as a staged bundle does.
+  if (process.env.RENULUS_BF08_PATCHED) writeFileSync(join(target, 'packages/backend/dist/patched.mjs'),
+    `await import(${JSON.stringify(pathToFileURL(join(repository, 'packages/harness/test/capability-patch-loader.mjs')).href)});
+await import('./main.mjs');
+`);
+  const inventory = [...(process.env.RENULUS_BF08_PATCHED ? ['packages/backend/dist/patched.mjs'] : []), 'node/node.exe', 'packages/backend/dist/main.mjs', 'packages/backend/dist/storage-worker.mjs', 'cohort/source-inventory.json', 'python/python.exe']
     .map(name => ({ path: name, sha256: sha(readFileSync(join(target, name))), bytes: statSync(join(target, name)).size }));
   writeFileSync(join(target, 'backend-inventory.json'), JSON.stringify(inventory));
   writeFileSync(join(target, 'backend-bundle.json'), JSON.stringify({ contract: 'renulus-backend-bundle/1', node: 'node/node.exe', nodeSha256: NODE_SHA256,
     python: 'python/python.exe', entrypoint: 'packages/backend/dist/main.mjs', cohortHash: sha(readFileSync(join(target, 'cohort/source-inventory.json'))),
     inventorySha256: sha(readFileSync(join(target, 'backend-inventory.json'))) }, null, 2));
-  return { root: target, node: join(target, 'node/node.exe'), entry: join(target, 'packages/backend/dist/main.mjs'), python, source: repository,
+  return { root: target, node: join(target, 'node/node.exe'), python, source: repository,
+    entry: join(target, 'packages/backend/dist', process.env.RENULUS_BF08_PATCHED ? 'patched.mjs' : 'main.mjs'),
     cohortHash: sha(readFileSync(join(target, 'cohort/source-inventory.json'))) };
 }
 /** python -m renulus.workers.profile_owner, given a deliberately polluted developer environment. */
@@ -315,10 +323,17 @@ test('schema-2 Python profile: preview, apply, activate and open the TS owner th
     assert.equal(exported.status, 200);
     assertSameRecords(fixture.source, exported.body);
     const status = await target.call('/api/v1/runtime/status');
-    // The development cohort is not the patched native build: MCP is reported disabled, not crashed; developer Off.
-    assert.deepEqual(status.body.capabilities, { mcp: { state: 'disabled', code: 'native_capability_patch_required' }, developer: { state: 'off' } });
     const mcp = await target.call('/api/v1/mcp/connections');
-    assert.equal(mcp.status, 409); assert.equal(mcp.body.error.code, 'native_capability_patch_required');
+    if (patched) {
+      // Patched native build (staged bundle or the exact-source patch loader): stored MCP is on, developer Off,
+      // and OpenCode's built-in browser plugin activates without any browser authority.
+      assert.deepEqual(status.body.capabilities, { mcp: { state: 'on' }, developer: { state: 'off' } });
+      assert.equal(mcp.status, 200, JSON.stringify(mcp.body));
+    } else {
+      // The development cohort is not the patched build: MCP is reported disabled, not crashed; developer Off.
+      assert.deepEqual(status.body.capabilities, { mcp: { state: 'disabled', code: 'native_capability_patch_required' }, developer: { state: 'off' } });
+      assert.equal(mcp.status, 409); assert.equal(mcp.body.error.code, 'native_capability_patch_required');
+    }
     const configuration = await target.call('/api/v1/runtime/configuration');
     assert.ok(configuration.body.revoked.includes('renulus.memory.recall'), JSON.stringify(configuration.body));
     assert.equal(configuration.body.grant_epoch, fixture.revoked_epoch);

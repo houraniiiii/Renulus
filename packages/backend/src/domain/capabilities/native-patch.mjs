@@ -43,11 +43,12 @@ export const patches = [
   { package:'plugin-browser',file:'dist/files.js',changes:[
     ['mkdtemp(join(tmpdir(), "opencode-browser-"))','mkdtemp(join(globalThis[Symbol.for("renulus.browser.downloads")] ?? (() => { throw new Error("renulus_browser_downloads_required"); })(), "opencode-browser-"))'],
   ]},
+  // OpenCode always activates this built-in; without the boundary each connection is refused, not activation.
   { package:'plugin-browser',file:'dist/connection.js',changes:[
     ['import { BrowserTunnel } from "./tunnel.js";','import { CapabilityBoundary } from "@opencode/core/renulus-boundary";'],
-    ['    const browsers = new Map();','    const boundary = yield* CapabilityBoundary;\n    if (!boundary) throw new Error("renulus_browser_authority_required");\n    const browsers = new Map();'],
+    ['    const browsers = new Map();','    const boundary = yield* CapabilityBoundary;\n    const browsers = new Map();'],
     ['        browser.tunnels.dispose();','        yield* Effect.promise(() => browser.owned.revoke());'],
-    ['                const browser = {','                const owned = yield* Effect.tryPromise(() => boundary.browser(input));\n                const browser = {\n                    owned,'],
+    ['                const browser = {','                const owned = yield* Effect.tryPromise(() => boundary ? boundary.browser(input) : Promise.reject(new Error("renulus_browser_authority_required")));\n                const browser = {\n                    owned,'],
     ['                    tunnels: BrowserTunnel.make(),','                    tunnels: owned.tunnels,'],
     ['            browser.state = input.state;','            yield* Effect.tryPromise(() => browser.owned.current());\n            browser.state = input.state;'],
     ['            return pending.command;','            yield* Effect.tryPromise(() => browser.owned.current());\n            return pending.command;'],

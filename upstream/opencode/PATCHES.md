@@ -27,6 +27,11 @@ change when upstream accepts an application-owned export directory and the
 connected browser export journey proves every exported file stays within it
 without this transformation.
 
+OpenCode activates `plugin-browser` as a built-in in every session, so its
+`connection.js` change resolves the boundary without failing activation; each
+browser connection is refused (`renulus_browser_authority_required`) when no
+boundary is supplied, which is the case whenever the developer plugin is Off.
+
 The patch also emits `core/dist/renulus-boundary.js`; it has no upstream original.
 Remove when upstream exposes equivalent per-attempt web/MCP and browser attachment/tunnel
 factories and the native execute journey passes redirect, byte-limit, revocation and
